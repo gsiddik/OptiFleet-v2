@@ -602,10 +602,20 @@ export interface MaintenanceJobItem {
 export interface WorkOrderPlannedPartItem {
   id: string;
   maintenance_job_id: string | null;
+  product_id: string | null;
+  warehouse_id: string | null;
   product_reference: string | null;
   description: string;
   quantity: string;
   notes: string | null;
+  status: 'PLANNED' | 'REQUESTED' | 'RESERVED' | 'PARTIALLY_RESERVED' | 'ISSUED' | 'PARTIALLY_ISSUED' | 'CONSUMED' | 'RETURNED' | 'CANCELLED';
+  planned_quantity: string;
+  reserved_quantity: string;
+  issued_quantity: string;
+  consumed_quantity: string;
+  returned_quantity: string;
+  unit_cost_at_issue: string | null;
+  total_cost: string | null;
 }
 
 export interface WorkOrderAdditionalWorkItem {
@@ -737,4 +747,488 @@ export interface HistoryEventItem {
   at: string;
   summary: string;
   work_order_id?: string;
+}
+
+// --- Phase 4: Supply Chain & Asset Lifecycle ---
+
+export interface ProductCategoryItem {
+  id: string;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: string;
+}
+
+export interface UomItem {
+  id: string;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: string;
+}
+
+export interface ProductCompatibilityItem {
+  id: string;
+  product_id: string;
+  component_group_id: string | null;
+  vehicle_category_id: string | null;
+  vehicle_brand: string | null;
+  vehicle_model: string | null;
+  component_group?: ComponentGroup;
+  vehicle_category?: VehicleCategory;
+}
+
+export interface ProductItem {
+  id: string;
+  code: string;
+  sku: string;
+  name: string;
+  product_category_id: string;
+  product_type: 'SPARE_PART' | 'TOOL' | 'TIRE' | 'CONSUMABLE' | 'EQUIPMENT' | 'OTHER';
+  uom_id: string;
+  brand: string | null;
+  manufacturer_part_number: string | null;
+  track_serial_number: boolean;
+  track_batch: boolean;
+  is_system: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  category?: ProductCategoryItem;
+  uom?: UomItem;
+  component_groups?: ComponentGroup[];
+  compatibilities?: ProductCompatibilityItem[];
+}
+
+export interface WarehouseStockItem {
+  id: string;
+  tenant_id: string;
+  warehouse_id: string;
+  product_id: string;
+  quantity_on_hand: string;
+  quantity_reserved: string;
+  quantity_available: number;
+  minimum_stock: string;
+  maximum_stock: string | null;
+  reorder_point: string;
+  average_unit_cost: string;
+  reorder_status: 'HEALTHY' | 'LOW_STOCK' | 'REORDER_REQUIRED' | 'OUT_OF_STOCK';
+  warehouse?: Warehouse;
+  product?: ProductItem;
+}
+
+export interface StockMovementItem {
+  id: string;
+  warehouse_id: string;
+  product_id: string;
+  movement_type: 'OPENING' | 'RECEIPT' | 'RESERVATION' | 'RELEASE_RESERVATION' | 'ISSUE' | 'RETURN' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT_PLUS' | 'ADJUSTMENT_MINUS' | 'STOCK_OPNAME' | 'SCRAP';
+  quantity: string;
+  unit_cost: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  occurred_at: string;
+  reason: string | null;
+  warehouse?: Warehouse;
+  product?: ProductItem;
+}
+
+export interface StockReservationItemLine {
+  id: string;
+  product_id: string;
+  work_order_planned_part_id: string | null;
+  requested_quantity: string;
+  reserved_quantity: string;
+  product?: ProductItem;
+}
+
+export interface StockReservationItem {
+  id: string;
+  tenant_id: string;
+  work_order_id: string;
+  warehouse_id: string;
+  status: 'DRAFT' | 'RESERVED' | 'PARTIALLY_RESERVED' | 'RELEASED' | 'CONSUMED' | 'CANCELLED';
+  warehouse?: Warehouse;
+  work_order?: WorkOrderItem;
+  items?: StockReservationItemLine[];
+}
+
+export interface StockOpnameItemLine {
+  id: string;
+  product_id: string;
+  system_quantity: string;
+  physical_quantity: string | null;
+  notes: string | null;
+  product?: ProductItem;
+}
+
+export interface StockOpnameItem {
+  id: string;
+  opname_number: string;
+  warehouse_id: string;
+  status: 'DRAFT' | 'COUNTING' | 'SUBMITTED' | 'APPROVED' | 'POSTED';
+  warehouse?: Warehouse;
+  items?: StockOpnameItemLine[];
+}
+
+export interface StockTransferItemLine {
+  id: string;
+  product_id: string;
+  quantity_sent: string;
+  quantity_received: string | null;
+  quantity_damaged: string | null;
+  quantity_lost: string | null;
+  unit_cost: string | null;
+  discrepancy_reason: string | null;
+  product?: ProductItem;
+}
+
+export interface StockTransferItem {
+  id: string;
+  transfer_number: string;
+  from_warehouse_id: string;
+  to_warehouse_id: string;
+  status: 'DRAFT' | 'REQUESTED' | 'APPROVED' | 'PREPARED' | 'DISPATCHED' | 'IN_TRANSIT' | 'RECEIVED' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
+  dispatched_at: string | null;
+  received_at: string | null;
+  from_warehouse?: Warehouse;
+  to_warehouse?: Warehouse;
+  items?: StockTransferItemLine[];
+}
+
+export interface PartnerPerformanceSummary {
+  purchase_orders_issued: number;
+  deliveries_on_time: number;
+  deliveries_late: number;
+  on_time_rate: number | null;
+  quantity_accepted: number;
+  quantity_rejected: number;
+  total_purchase_value: number;
+  returns: number;
+}
+
+export interface PartnerItem {
+  id: string;
+  code: string;
+  name: string;
+  partner_type: 'SUPPLIER' | 'SPARE_PART_SUPPLIER' | 'TIRE_SUPPLIER' | 'EXTERNAL_WORKSHOP' | 'TOWING_PROVIDER' | 'OTHER_SERVICE_PROVIDER';
+  contact_name: string | null;
+  contact_phone: string | null;
+  contact_email: string | null;
+  address: string | null;
+  tax_id: string | null;
+  payment_terms: string | null;
+  status: 'ACTIVE' | 'INACTIVE';
+  performance?: PartnerPerformanceSummary;
+}
+
+export interface PurchaseRequestItemLine {
+  id: string;
+  product_id: string;
+  requested_quantity: string;
+  estimated_unit_price: string | null;
+  notes: string | null;
+  product?: ProductItem;
+}
+
+export interface PurchaseRequestItem {
+  id: string;
+  pr_number: string;
+  warehouse_id: string;
+  source_type: 'MANUAL' | 'WORK_ORDER' | 'REORDER_POINT' | 'STOCK_PLANNING';
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'PROCUREMENT' | 'REJECTED' | 'CANCELLED';
+  required_date: string | null;
+  notes: string | null;
+  warehouse?: Warehouse;
+  items?: PurchaseRequestItemLine[];
+}
+
+export interface RfqItemLine {
+  id: string;
+  product_id: string;
+  quantity: string;
+  product?: ProductItem;
+}
+
+export interface RfqItem {
+  id: string;
+  rfq_number: string;
+  warehouse_id: string;
+  purchase_request_id: string | null;
+  status: 'DRAFT' | 'ISSUED' | 'CLOSED' | 'CANCELLED';
+  issue_date: string | null;
+  response_deadline: string | null;
+  warehouse?: Warehouse;
+  items?: RfqItemLine[];
+  vendors?: PartnerItem[];
+  quotations?: VendorQuotationItem[];
+}
+
+export interface VendorQuotationItemLine {
+  id: string;
+  product_id: string;
+  quantity: string;
+  unit_price: string;
+  discount_percent: string;
+  tax_percent: string;
+  line_total: string;
+  product?: ProductItem;
+}
+
+export interface VendorQuotationItem {
+  id: string;
+  rfq_id: string;
+  partner_id: string;
+  status: 'SUBMITTED' | 'SELECTED' | 'REJECTED';
+  lead_time_days: number | null;
+  payment_terms: string | null;
+  freight_cost: string | null;
+  subtotal: string;
+  tax_total: string;
+  total: string;
+  validity_date: string | null;
+  partner?: PartnerItem;
+  items?: VendorQuotationItemLine[];
+}
+
+export interface PurchaseOrderItemLine {
+  id: string;
+  product_id: string;
+  quantity_ordered: string;
+  quantity_received: string;
+  unit_price: string;
+  discount_percent: string;
+  tax_percent: string;
+  line_total: string;
+  product?: ProductItem;
+}
+
+export interface PurchaseOrderItem {
+  id: string;
+  po_number: string;
+  partner_id: string;
+  delivery_warehouse_id: string;
+  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'ISSUED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CLOSED' | 'REJECTED' | 'CANCELLED';
+  order_date: string | null;
+  expected_delivery_date: string | null;
+  subtotal: string;
+  tax_total: string;
+  freight_cost: string;
+  total: string;
+  partner?: PartnerItem;
+  delivery_warehouse?: Warehouse;
+  items?: PurchaseOrderItemLine[];
+  goods_receipts?: GoodsReceiptItem[];
+}
+
+export interface GoodsReceiptItemLine {
+  id: string;
+  purchase_order_item_id: string;
+  product_id: string;
+  quantity_accepted: string;
+  quantity_rejected: string;
+  quantity_damaged: string;
+  batch_number: string | null;
+  unit_cost: string;
+  product?: ProductItem;
+}
+
+export interface GoodsReceiptItem {
+  id: string;
+  gr_number: string;
+  purchase_order_id: string;
+  warehouse_id: string;
+  partner_id: string;
+  status: 'DRAFT' | 'POSTED';
+  received_at: string | null;
+  notes: string | null;
+  warehouse?: Warehouse;
+  partner?: PartnerItem;
+  purchase_order?: PurchaseOrderItem;
+  items?: GoodsReceiptItemLine[];
+}
+
+export interface VendorInvoiceReferenceItem {
+  id: string;
+  partner_id: string;
+  purchase_order_id: string | null;
+  goods_receipt_id: string | null;
+  vendor_invoice_number: string;
+  vendor_invoice_date: string | null;
+  amount: string | null;
+  status: 'RECEIVED' | 'VERIFIED' | 'DISPUTED';
+  notes: string | null;
+  attachment_path: string | null;
+  partner?: PartnerItem;
+  purchase_order?: PurchaseOrderItem;
+}
+
+export interface WheelConfigurationItem {
+  id: string;
+  vehicle_category_id: string;
+  position_code: string;
+  label: string;
+  axle_number: number | null;
+  sequence: number | null;
+  vehicle_category?: VehicleCategory;
+}
+
+export interface TireInstallationItem {
+  id: string;
+  tire_id: string;
+  vehicle_id: string;
+  wheel_position: string;
+  installed_at: string;
+  installation_odometer: string | null;
+  removed_at: string | null;
+  vehicle?: VehicleItem;
+}
+
+export interface TireRotationItem {
+  id: string;
+  tire_id: string;
+  from_position: string | null;
+  to_position: string;
+  odometer: string | null;
+  occurred_at: string;
+}
+
+export interface TireInspectionItem {
+  id: string;
+  tire_id: string;
+  tread_depth_mm: string | null;
+  pressure_psi: string | null;
+  condition: string | null;
+  damage: string | null;
+  recommendation: string | null;
+  inspected_at: string;
+}
+
+export interface TireRemovalItem {
+  id: string;
+  tire_id: string;
+  removal_odometer: string | null;
+  removal_reason: string;
+  disposition: 'REUSE' | 'RETREAD' | 'SCRAP';
+  removed_at: string;
+  replaced_by_tire_id: string | null;
+}
+
+export interface TireRetreadItem {
+  id: string;
+  tire_id: string;
+  cycle_number: number;
+  sent_at: string;
+  received_at: string | null;
+  partner_id: string | null;
+  cost: string | null;
+}
+
+export interface TireItem {
+  id: string;
+  product_id: string;
+  serial_number: string;
+  manufacturer: string | null;
+  tire_size: string | null;
+  pattern: string | null;
+  purchase_date: string | null;
+  purchase_cost: string | null;
+  warranty_months: number | null;
+  warranty_km: number | null;
+  current_status: 'IN_STOCK' | 'RESERVED' | 'INSTALLED' | 'IN_USE' | 'REMOVED' | 'UNDER_INSPECTION' | 'RETREAD' | 'SCRAPPED' | 'LOST';
+  current_vehicle_id: string | null;
+  current_position: string | null;
+  current_warehouse_id: string | null;
+  product?: ProductItem;
+  current_vehicle?: VehicleItem;
+  current_warehouse?: Warehouse;
+  installations?: TireInstallationItem[];
+  rotations?: TireRotationItem[];
+  inspections?: TireInspectionItem[];
+  removals?: TireRemovalItem[];
+  retreads?: TireRetreadItem[];
+}
+
+export interface ComponentInstallationItem {
+  id: string;
+  component_asset_id: string;
+  vehicle_id: string;
+  position_location: string | null;
+  installed_at: string;
+  installation_odometer: string | null;
+  removed_at: string | null;
+  vehicle?: VehicleItem;
+}
+
+export interface ComponentRemovalItem {
+  id: string;
+  component_asset_id: string;
+  removal_odometer: string | null;
+  removal_reason: string;
+  disposition: 'REUSE' | 'REPAIR' | 'SCRAP';
+  diagnosis_note: string | null;
+  removed_at: string;
+  replaced_by_asset_id: string | null;
+}
+
+export interface ComponentRepairItem {
+  id: string;
+  component_asset_id: string;
+  description: string;
+  started_at: string;
+  completed_at: string | null;
+  outcome: 'RECONDITIONED' | 'SCRAPPED' | 'RETURNED_TO_SERVICE' | null;
+  cost: string | null;
+}
+
+export interface ComponentAssetItem {
+  id: string;
+  product_id: string | null;
+  component_group_id: string | null;
+  serial_number: string | null;
+  asset_number: string | null;
+  purchase_date: string | null;
+  purchase_cost: string | null;
+  current_status: 'IN_STOCK' | 'INSTALLED' | 'ACTIVE' | 'FAILED' | 'REMOVED' | 'UNDER_REPAIR' | 'RECONDITIONED' | 'SCRAPPED';
+  current_vehicle_id: string | null;
+  product?: ProductItem;
+  component_group?: ComponentGroup;
+  current_vehicle?: VehicleItem;
+  installations?: ComponentInstallationItem[];
+  removals?: ComponentRemovalItem[];
+  repairs?: ComponentRepairItem[];
+}
+
+export interface WarrantyItem {
+  id: string;
+  coverage_basis: 'DATE' | 'MILEAGE' | 'ENGINE_HOUR' | 'COMBINATION';
+  duration_months: number | null;
+  duration_km: number | null;
+  duration_engine_hours: number | null;
+  starts_at: string;
+  partner_id: string | null;
+  product_id: string | null;
+  component_asset_id: string | null;
+  tire_id: string | null;
+  status: 'ACTIVE' | 'EXPIRED' | 'VOID';
+  notes: string | null;
+  partner?: PartnerItem;
+  product?: ProductItem;
+}
+
+export interface WarrantyClaimItem {
+  id: string;
+  claim_number: string;
+  warranty_id: string | null;
+  partner_id: string | null;
+  vehicle_id: string;
+  component_asset_id: string | null;
+  tire_id: string | null;
+  failure_date: string;
+  failure_odometer: string | null;
+  claim_amount: string | null;
+  reason: string;
+  status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'REJECTED' | 'REPLACEMENT' | 'REPAIR' | 'SETTLED' | 'CLOSED';
+  review_note: string | null;
+  vehicle?: VehicleItem;
+  partner?: PartnerItem;
+  warranty?: WarrantyItem;
 }

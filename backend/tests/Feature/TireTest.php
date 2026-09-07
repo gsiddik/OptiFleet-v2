@@ -1,0 +1,174 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Domain\Tire\Models\Tire;
+use Tests\TestCase;
+
+class TireTest extends TestCase
+{
+    private function setUpScenario(): array
+    {
+        $tenant = $this->makeTenant(['code' => 'TIRE-'.\Illuminate\Support\Str::random(4)]);
+        $this->grantModule($tenant, 'VEHICLE');
+        $this->grantModule($tenant, 'INVENTORY');
+        $this->grantModule($tenant, 'TIRE');
+        $branch = $this->makeBranch($tenant);
+        $category = $this->makeVehicleCategory();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category);
+        $product = $this->makeProduct($tenant, null, null, ['product_type' => 'TIRE']);
+
+        return [$tenant, $vehicle, $product];
+    }
+
+    private function makeTirePermissions(): array
+    {
+        return ['tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap'];
+    }
+
+    public function test_tire_creation_and_installation(): void
+    {
+        [$tenant, $vehicle, $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/tires', [
+            'serial_number' => 'TIRE-SN-001', 'product_id' => $product->id, 'manufacturer' => 'Bridgestone', 'tire_size' => '295/80R22.5',
+        ], $headers)->assertStatus(201);
+        $tireId = $create->json('data.id');
+
+        $this->postJson("/api/v1/app/tires/{$tireId}/install", [
+            'vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_LEFT', 'odometer' => 10000,
+        ], $headers)->assertStatus(201);
+
+        $tire = Tire::query()->findOrFail($tireId);
+        $this->assertSame('INSTALLED', $tire->current_status);
+        $this->assertSame($vehicle->id, $tire->current_vehicle_id);
+        $this->assertSame('FRONT_LEFT', $tire->current_position);
+    }
+
+    public function test_duplicate_active_position_installation_is_rejected(): void
+    {
+        [$tenant, $vehicle, $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+        $headers = $this->authHeaders($token);
+
+        $tireA = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-A', 'current_status' => 'IN_STOCK']);
+        $tireB = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-B', 'current_status' => 'IN_STOCK']);
+
+        $this->postJson("/api/v1/app/tires/{$tireA->id}/install", [
+            'vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_LEFT',
+        ], $headers)->assertStatus(201);
+
+        $this->postJson("/api/v1/app/tires/{$tireB->id}/install", [
+            'vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_LEFT',
+        ], $headers)->assertStatus(422);
+    }
+
+    public function test_same_tire_cannot_be_installed_on_two_vehicles(): void
+    {
+        [$tenant, $vehicle, $product] = $this->setUpScenario();
+        $branch = \App\Domain\Organization\Models\Branch::query()->where('tenant_id', $tenant->id)->first();
+        $category = \App\Domain\MasterData\Models\VehicleCategory::query()->first();
+        $vehicle2 = $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'REG-OTHER']);
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+        $headers = $this->authHeaders($token);
+
+        $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-DUP', 'current_status' => 'IN_STOCK']);
+
+        $this->postJson("/api/v1/app/tires/{$tire->id}/install", [
+            'vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_LEFT',
+        ], $headers)->assertStatus(201);
+
+        // Tire is now INSTALLED, so the service's own status guard should reject a second install.
+        $this->postJson("/api/v1/app/tires/{$tire->id}/install", [
+            'vehicle_id' => $vehicle2->id, 'wheel_position' => 'FRONT_RIGHT',
+        ], $headers)->assertStatus(422);
+    }
+
+    public function test_tire_rotation_records_position_history(): void
+    {
+        [$tenant, $vehicle, $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+        $headers = $this->authHeaders($token);
+
+        $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-ROT', 'current_status' => 'IN_STOCK']);
+        $this->postJson("/api/v1/app/tires/{$tire->id}/install", [
+            'vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_LEFT', 'odometer' => 10000,
+        ], $headers)->assertStatus(201);
+
+        $this->postJson("/api/v1/app/tires/{$tire->id}/rotate", [
+            'to_position' => 'REAR_RIGHT', 'odometer' => 15000,
+        ], $headers)->assertStatus(201);
+
+        $tire->refresh();
+        $this->assertSame('REAR_RIGHT', $tire->current_position);
+        $this->assertSame(1, $tire->rotations()->count());
+    }
+
+    public function test_tire_removal_calculates_usage_and_updates_status(): void
+    {
+        [$tenant, $vehicle, $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+        $headers = $this->authHeaders($token);
+
+        $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-REM', 'current_status' => 'IN_STOCK']);
+        $this->postJson("/api/v1/app/tires/{$tire->id}/install", [
+            'vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_LEFT', 'odometer' => 10000,
+        ], $headers)->assertStatus(201);
+
+        $removeResponse = $this->postJson("/api/v1/app/tires/{$tire->id}/remove", [
+            'removal_reason' => 'Worn out', 'disposition' => 'SCRAP', 'odometer' => 45000,
+        ], $headers)->assertStatus(201);
+
+        $installation = $tire->installations()->first();
+        $usage = 45000 - (float) $installation->installation_odometer;
+        $this->assertSame(35000.0, $usage);
+
+        $tire->refresh();
+        $this->assertSame('SCRAPPED', $tire->current_status);
+        $this->assertNull($tire->current_vehicle_id);
+    }
+
+    public function test_tire_scrap_endpoint(): void
+    {
+        [$tenant, , $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+        $headers = $this->authHeaders($token);
+
+        $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-SCRAP', 'current_status' => 'IN_STOCK']);
+
+        $this->postJson("/api/v1/app/tires/{$tire->id}/scrap", ['reason' => 'Damaged beyond repair'], $headers)->assertOk();
+
+        $tire->refresh();
+        $this->assertSame('SCRAPPED', $tire->current_status);
+    }
+
+    public function test_branch_scoped_user_cannot_see_or_access_tire_installed_in_another_branch(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'TIREB-'.\Illuminate\Support\Str::random(4)]);
+        $this->grantModule($tenant, 'VEHICLE');
+        $this->grantModule($tenant, 'INVENTORY');
+        $this->grantModule($tenant, 'TIRE');
+        $branchA = $this->makeBranch($tenant, ['code' => 'BR-A']);
+        $branchB = $this->makeBranch($tenant, ['code' => 'BR-B']);
+        $category = $this->makeVehicleCategory();
+        $vehicleA = $this->makeVehicle($tenant, $branchA, $category, ['registration_number' => 'REG-A']);
+        $vehicleB = $this->makeVehicle($tenant, $branchB, $category, ['registration_number' => 'REG-B']);
+        $product = $this->makeProduct($tenant, null, null, ['product_type' => 'TIRE']);
+
+        [, $ownerToken] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+        $tireA = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-BR-A', 'current_status' => 'IN_STOCK']);
+        $tireB = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-BR-B', 'current_status' => 'IN_STOCK']);
+        $this->postJson("/api/v1/app/tires/{$tireA->id}/install", ['vehicle_id' => $vehicleA->id, 'wheel_position' => 'FRONT_LEFT'], $this->authHeaders($ownerToken))->assertStatus(201);
+        $this->postJson("/api/v1/app/tires/{$tireB->id}/install", ['vehicle_id' => $vehicleB->id, 'wheel_position' => 'FRONT_LEFT'], $this->authHeaders($ownerToken))->assertStatus(201);
+
+        [, $scopedToken] = $this->makeTenantUser($tenant, ['tire.view'], ['BRANCH' => $branchA->id]);
+        $list = $this->getJson('/api/v1/app/tires', $this->authHeaders($scopedToken))->assertOk();
+        $serials = collect($list->json('data'))->pluck('serial_number');
+        $this->assertTrue($serials->contains('SN-BR-A'));
+        $this->assertFalse($serials->contains('SN-BR-B'));
+
+        $this->getJson("/api/v1/app/tires/{$tireB->id}", $this->authHeaders($scopedToken))->assertStatus(403);
+    }
+}

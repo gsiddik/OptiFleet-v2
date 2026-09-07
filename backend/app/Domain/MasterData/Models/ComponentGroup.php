@@ -50,4 +50,12 @@ class ComponentGroup extends Model
             'vehicle_category_component_groups'
         )->withTimestamps();
     }
+
+    public function products(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \App\Domain\ProductMaster\Models\Product::class,
+            'product_component_groups'
+        )->withTimestamps();
+    }
 }

@@ -290,4 +290,67 @@ abstract class TestCase extends BaseTestCase
             'status' => 'ACTIVE',
         ], $overrides));
     }
+
+    protected function makeWarehouse(Tenant $tenant, ?\App\Domain\Organization\Models\Branch $branch = null, ?\App\Domain\Organization\Models\Workshop $workshop = null, array $overrides = []): \App\Domain\Organization\Models\Warehouse
+    {
+        return \App\Domain\Organization\Models\Warehouse::query()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'branch_id' => $branch?->id,
+            'workshop_id' => $workshop?->id,
+            'code' => 'WH-'.Str::upper(Str::random(6)),
+            'name' => 'Test Warehouse',
+            'warehouse_type' => 'BRANCH',
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeProductCategory(array $overrides = []): \App\Domain\ProductMaster\Models\ProductCategory
+    {
+        return \App\Domain\ProductMaster\Models\ProductCategory::query()->create(array_merge([
+            'tenant_id' => null,
+            'code' => 'PC-'.Str::upper(Str::random(6)),
+            'name' => 'Test Product Category',
+            'is_system' => true,
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeUom(array $overrides = []): \App\Domain\ProductMaster\Models\Uom
+    {
+        return \App\Domain\ProductMaster\Models\Uom::query()->create(array_merge([
+            'tenant_id' => null,
+            'code' => 'U-'.Str::upper(Str::random(4)),
+            'name' => 'Piece',
+            'is_system' => true,
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeProduct(Tenant $tenant, ?\App\Domain\ProductMaster\Models\ProductCategory $category = null, ?\App\Domain\ProductMaster\Models\Uom $uom = null, array $overrides = []): \App\Domain\ProductMaster\Models\Product
+    {
+        $category ??= $this->makeProductCategory();
+        $uom ??= $this->makeUom();
+
+        return \App\Domain\ProductMaster\Models\Product::query()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'code' => 'PRD-'.Str::upper(Str::random(6)),
+            'sku' => 'SKU-'.Str::upper(Str::random(6)),
+            'name' => 'Test Product',
+            'product_category_id' => $category->id,
+            'product_type' => 'SPARE_PART',
+            'uom_id' => $uom->id,
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makePartner(Tenant $tenant, array $overrides = []): \App\Domain\Partner\Models\Partner
+    {
+        return \App\Domain\Partner\Models\Partner::query()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'code' => 'VND-'.Str::upper(Str::random(6)),
+            'name' => 'Test Vendor',
+            'partner_type' => 'SPARE_PART_SUPPLIER',
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
 }

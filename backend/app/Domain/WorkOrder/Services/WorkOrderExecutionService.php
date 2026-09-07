@@ -13,8 +13,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Sections 25/26/34/35: Complaint -> Finding -> Diagnosis -> Root Cause ->
- * Corrective Action, the WO's job list, planned (not stocked — Phase 4)
- * parts, and the additional-work request/approve/reject sub-flow. A WO
+ * Corrective Action, the WO's job list, planned parts (reservation/issue/
+ * return lifecycle lives in WorkOrderPartService, Phase 4), and the
+ * additional-work request/approve/reject sub-flow. A WO
  * only accepts execution activity while genuinely being worked
  * (IN_PROGRESS/ON_HOLD/WAITING_PART) or still open for review
  * (ASSIGNED/SCHEDULED) — never once it has left the active workflow.
@@ -89,7 +90,14 @@ class WorkOrderExecutionService
     {
         $this->assertExecutable($workOrder);
 
-        return WorkOrderPlannedPart::query()->create(array_merge($attributes, ['work_order_id' => $workOrder->id]));
+        $quantity = (float) ($attributes['quantity'] ?? 1);
+
+        return WorkOrderPlannedPart::query()->create(array_merge($attributes, [
+            'work_order_id' => $workOrder->id,
+            'quantity' => $quantity,
+            'planned_quantity' => $quantity,
+            'status' => 'PLANNED',
+        ]));
     }
 
     public function requestAdditionalWork(WorkOrder $workOrder, string $description, ?string $userId = null): WorkOrderAdditionalWork
@@ -133,7 +141,7 @@ class WorkOrderExecutionService
         });
     }
 
-    private function assertExecutable(WorkOrder $workOrder): void
+    public function assertExecutable(WorkOrder $workOrder): void
     {
         if (! in_array($workOrder->status, self::EXECUTABLE_STATUSES, true)) {
             throw new WorkOrderException("Work Order execution actions are not allowed while status is {$workOrder->status}.");

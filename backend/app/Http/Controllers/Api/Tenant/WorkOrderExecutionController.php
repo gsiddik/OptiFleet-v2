@@ -6,7 +6,9 @@ use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\WorkOrder\Models\MaintenanceJob;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderAdditionalWork;
+use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
+use App\Domain\WorkOrder\Services\WorkOrderPartService;
 use App\Domain\Workshop\Models\Worker;
 use App\Domain\Workshop\Models\WorkOrderLaborLog;
 use App\Domain\Workshop\Models\WorkOrderMechanicAssignment;
@@ -20,6 +22,7 @@ class WorkOrderExecutionController extends Controller
 {
     public function __construct(
         private readonly WorkOrderExecutionService $execution,
+        private readonly WorkOrderPartService $parts,
         private readonly MechanicAssignmentService $mechanics,
         private readonly LaborTimerService $laborTimer,
         private readonly DataScopeService $scope,
@@ -89,6 +92,7 @@ class WorkOrderExecutionController extends Controller
         $this->authorizeScope($workOrder);
         $validated = $request->validate([
             'maintenance_job_id' => ['nullable', 'uuid', 'exists:maintenance_jobs,id'],
+            'product_id' => ['nullable', 'uuid', 'exists:products,id'],
             'product_reference' => ['nullable', 'string', 'max:255'],
             'description' => ['required', 'string', 'max:255'],
             'quantity' => ['nullable', 'numeric', 'min:0.01'],
@@ -96,6 +100,45 @@ class WorkOrderExecutionController extends Controller
         ]);
 
         return $this->ok($this->execution->addPlannedPart($workOrder, $validated), 201);
+    }
+
+    public function reservePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+        $validated = $request->validate([
+            'warehouse_id' => ['nullable', 'uuid', 'exists:warehouses,id'],
+            'quantity' => ['nullable', 'numeric', 'gt:0'],
+        ]);
+
+        return $this->ok($this->parts->reserve($plannedPart, $validated['warehouse_id'] ?? null, isset($validated['quantity']) ? (float) $validated['quantity'] : null, $this->context->user()->id));
+    }
+
+    public function issuePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+        $validated = $request->validate(['quantity' => ['nullable', 'numeric', 'gt:0']]);
+
+        return $this->ok($this->parts->issue($plannedPart, isset($validated['quantity']) ? (float) $validated['quantity'] : null, $this->context->user()->id));
+    }
+
+    public function returnPlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+        $validated = $request->validate(['quantity' => ['required', 'numeric', 'gt:0'], 'reason' => ['nullable', 'string']]);
+
+        return $this->ok($this->parts->returnPart($plannedPart, (float) $validated['quantity'], $this->context->user()->id, $validated['reason'] ?? null));
+    }
+
+    public function consumePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+        $validated = $request->validate(['quantity' => ['nullable', 'numeric', 'gt:0']]);
+
+        return $this->ok($this->parts->consume($plannedPart, isset($validated['quantity']) ? (float) $validated['quantity'] : null));
     }
 
     public function requestAdditionalWork(Request $request, WorkOrder $workOrder)

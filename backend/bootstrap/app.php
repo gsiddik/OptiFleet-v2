@@ -160,4 +160,28 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\App\Domain\VehicleRelease\Services\VehicleReleaseException $e, Request $request) {
             return response()->json(['message' => $e->getMessage()], 422);
         });
+
+        $exceptions->render(function (\App\Domain\Inventory\Services\InventoryException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Inventory\Services\StockTransferException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Procurement\Services\ProcurementException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Tire\Services\TireException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\ComponentAsset\Services\ComponentAssetException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Warranty\Services\WarrantyException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
     })->create();

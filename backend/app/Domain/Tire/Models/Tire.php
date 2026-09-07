@@ -1,0 +1,70 @@
+<?php
+
+namespace App\Domain\Tire\Models;
+
+use App\Domain\Audit\Concerns\Auditable;
+use App\Domain\Organization\Models\Warehouse;
+use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Shared\Concerns\BelongsToTenant;
+use App\Domain\Vehicle\Models\Vehicle;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Tire extends Model
+{
+    use Auditable, BelongsToTenant, HasUuids, SoftDeletes;
+
+    protected $fillable = [
+        'tenant_id', 'serial_number', 'product_id', 'manufacturer', 'tire_size', 'pattern',
+        'purchase_date', 'purchase_cost', 'warranty_months', 'warranty_km',
+        'current_status', 'current_vehicle_id', 'current_position', 'current_warehouse_id',
+    ];
+
+    protected function casts(): array
+    {
+        return ['purchase_date' => 'date', 'purchase_cost' => 'decimal:4'];
+    }
+
+    public function product(): BelongsTo
+    {
+        return $this->belongsTo(Product::class);
+    }
+
+    public function currentVehicle(): BelongsTo
+    {
+        return $this->belongsTo(Vehicle::class, 'current_vehicle_id');
+    }
+
+    public function currentWarehouse(): BelongsTo
+    {
+        return $this->belongsTo(Warehouse::class, 'current_warehouse_id');
+    }
+
+    public function installations(): HasMany
+    {
+        return $this->hasMany(TireInstallation::class);
+    }
+
+    public function rotations(): HasMany
+    {
+        return $this->hasMany(TireRotation::class);
+    }
+
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(TireInspection::class);
+    }
+
+    public function removals(): HasMany
+    {
+        return $this->hasMany(TireRemoval::class);
+    }
+
+    public function retreads(): HasMany
+    {
+        return $this->hasMany(TireRetread::class);
+    }
+}

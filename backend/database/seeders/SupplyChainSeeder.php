@@ -1,0 +1,237 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Domain\AccessControl\Models\DataScopeAssignment;
+use App\Domain\AccessControl\Models\Role;
+use App\Domain\AccessControl\Models\RoleAssignment;
+use App\Domain\ComponentAsset\Models\ComponentAsset;
+use App\Domain\ComponentAsset\Services\ComponentAssetService;
+use App\Domain\Identity\Models\Tenant;
+use App\Domain\Identity\Models\TenantUser;
+use App\Domain\Inventory\Services\InventoryService;
+use App\Domain\MasterData\Models\ComponentGroup;
+use App\Domain\MasterData\Models\VehicleCategory;
+use App\Domain\Organization\Models\Warehouse;
+use App\Domain\Partner\Models\Partner;
+use App\Domain\Procurement\Services\GoodsReceiptService;
+use App\Domain\Procurement\Services\PurchaseOrderService;
+use App\Domain\Procurement\Services\PurchaseRequestService;
+use App\Domain\Procurement\Services\RfqService;
+use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Models\ProductCategory;
+use App\Domain\ProductMaster\Models\ProductCompatibility;
+use App\Domain\ProductMaster\Models\Uom;
+use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Services\TireService;
+use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Warranty\Models\Warranty;
+use App\Domain\Warranty\Services\WarrantyClaimService;
+use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
+use App\Domain\WorkOrder\Services\WorkOrderService;
+use App\Models\User;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+/**
+ * Phase 4 demo/dev data for ALPHA (the only tenant entitled to the supply
+ * chain modules — see DemoDataSeeder): a product catalog with compatibility
+ * mapping, stock balances across the two existing branch warehouses, an
+ * open reservation on a live Work Order, a full PR -> RFQ -> quotation ->
+ * PO -> partial receipt procurement chain, a tire installed with rotation
+ * and inspection history, an installed component asset under warranty with
+ * an in-flight claim. Built through the real domain services, mirroring
+ * OperationsSeeder's approach, so seeded state matches what the API would
+ * produce.
+ */
+class SupplyChainSeeder extends Seeder
+{
+    public function run(): void
+    {
+        $tenant = Tenant::query()->where('code', 'ALPHA')->firstOrFail();
+        $jktWarehouse = Warehouse::query()->where('tenant_id', $tenant->id)->where('code', 'ALPHA-JKT-WH1')->firstOrFail();
+        $bdgWarehouse = Warehouse::query()->where('tenant_id', $tenant->id)->where('code', 'ALPHA-BDG-WH1')->firstOrFail();
+        $truck = VehicleCategory::query()->where('code', 'VC-TRUCK')->whereNull('tenant_id')->firstOrFail();
+        $brakeGroup = ComponentGroup::query()->where('code', 'CG-BRAKE')->whereNull('tenant_id')->firstOrFail();
+        $engineGroup = ComponentGroup::query()->where('code', 'CG-ENGINE')->whereNull('tenant_id')->firstOrFail();
+        $elecGroup = ComponentGroup::query()->where('code', 'CG-ELEC')->whereNull('tenant_id')->firstOrFail();
+        $vehicle1 = Vehicle::query()->where('tenant_id', $tenant->id)->where('registration_number', 'B 1001 ALP')->firstOrFail();
+        $vehicle2 = Vehicle::query()->where('tenant_id', $tenant->id)->where('registration_number', 'B 1002 ALP')->firstOrFail();
+
+        // Warehouse Manager, scoped to the Bandung warehouse only (Section
+        // 47's example: a WH-BDG-01-scoped user must not see/reserve/issue
+        // JKT-WH1 stock).
+        $warehouseManagerRole = Role::query()->where('tenant_id', $tenant->id)->where('name', 'Warehouse Manager')->first();
+        $warehouseManager = User::query()->updateOrCreate(
+            ['email' => 'alpha.warehousemanager@optifleet.test'],
+            ['name' => 'ALPHA Warehouse Manager (Bandung)', 'password' => Hash::make('password'), 'user_type' => 'tenant', 'status' => 'active']
+        );
+        TenantUser::query()->firstOrCreate(['tenant_id' => $tenant->id, 'user_id' => $warehouseManager->id], ['status' => 'active', 'joined_at' => now()]);
+        if ($warehouseManagerRole) {
+            RoleAssignment::query()->firstOrCreate(['user_id' => $warehouseManager->id, 'tenant_id' => $tenant->id, 'role_id' => $warehouseManagerRole->id]);
+        }
+        DataScopeAssignment::query()->firstOrCreate([
+            'user_id' => $warehouseManager->id, 'tenant_id' => $tenant->id, 'scope_type' => 'WAREHOUSE', 'scope_resource_id' => $bdgWarehouse->id,
+        ]);
+
+        // --- Product master ---
+        $uomPcs = Uom::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PCS'], ['name' => 'Piece', 'is_system' => true, 'status' => 'ACTIVE']);
+        $sparePartCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-SPARE'], ['name' => 'Spare Parts', 'is_system' => true, 'status' => 'ACTIVE']);
+        $tireCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-TIRE'], ['name' => 'Tires', 'is_system' => true, 'status' => 'ACTIVE']);
+        $toolCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-TOOL'], ['name' => 'Tools', 'is_system' => true, 'status' => 'ACTIVE']);
+
+        $brakePad = Product::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'SP-BRK-PAD'],
+            ['sku' => 'SKU-BRK-PAD', 'name' => 'Brake Pad Set (Front)', 'product_category_id' => $sparePartCategory->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uomPcs->id, 'status' => 'ACTIVE']
+        );
+        $oilFilter = Product::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'SP-OIL-FLT'],
+            ['sku' => 'SKU-OIL-FLT', 'name' => 'Engine Oil Filter', 'product_category_id' => $sparePartCategory->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uomPcs->id, 'status' => 'ACTIVE']
+        );
+        $battery = Product::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'SP-BATTERY'],
+            ['sku' => 'SKU-BATTERY', 'name' => 'Truck Battery 12V 100Ah', 'product_category_id' => $sparePartCategory->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uomPcs->id, 'track_serial_number' => true, 'status' => 'ACTIVE']
+        );
+        $tireProduct = Product::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'TR-295-80-R225'],
+            ['sku' => 'SKU-TR-29580', 'name' => 'Truck Tire 295/80R22.5', 'product_category_id' => $tireCategory->id, 'product_type' => 'TIRE', 'uom_id' => $uomPcs->id, 'track_serial_number' => true, 'status' => 'ACTIVE']
+        );
+        Product::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'TL-IMPACT-WR'],
+            ['sku' => 'SKU-IMPACT-WR', 'name' => 'Impact Wrench', 'product_category_id' => $toolCategory->id, 'product_type' => 'TOOL', 'uom_id' => $uomPcs->id, 'status' => 'ACTIVE']
+        );
+
+        ProductCompatibility::query()->firstOrCreate([
+            'tenant_id' => $tenant->id, 'product_id' => $brakePad->id, 'component_group_id' => $brakeGroup->id, 'vehicle_category_id' => $truck->id,
+        ]);
+        ProductCompatibility::query()->firstOrCreate([
+            'tenant_id' => $tenant->id, 'product_id' => $oilFilter->id, 'component_group_id' => $engineGroup->id, 'vehicle_category_id' => $truck->id,
+        ]);
+        ProductCompatibility::query()->firstOrCreate([
+            'tenant_id' => $tenant->id, 'product_id' => $battery->id, 'component_group_id' => $elecGroup->id, 'vehicle_category_id' => $truck->id,
+        ]);
+
+        // --- Stock balances across both warehouses ---
+        $inventory = app(InventoryService::class);
+        if (! \App\Domain\Inventory\Models\StockMovement::query()->where('warehouse_id', $jktWarehouse->id)->where('product_id', $brakePad->id)->exists()) {
+            $inventory->receive($jktWarehouse, $brakePad, 6, 250000, 'OPENING', null, null, $warehouseManager->id);
+            $inventory->receive($jktWarehouse, $oilFilter, 12, 85000, 'OPENING', null, null, $warehouseManager->id);
+            $inventory->receive($bdgWarehouse, $brakePad, 3, 250000, 'OPENING', null, null, $warehouseManager->id);
+            $inventory->receive($bdgWarehouse, $oilFilter, 5, 85000, 'OPENING', null, null, $warehouseManager->id);
+        }
+
+        // --- A Work Order needing parts: reserve brake pads against a live WO ---
+        $needsPartsComplaint = 'Brake pads worn, replacement needed.';
+        if (! \App\Domain\WorkOrder\Models\WorkOrder::query()->where('tenant_id', $tenant->id)->where('complaint', $needsPartsComplaint)->exists()) {
+            $workOrders = app(WorkOrderService::class);
+            $jktWorkshopId = $vehicle1->default_workshop_id;
+            $wo = $workOrders->create($vehicle1, [
+                'workshop_id' => $jktWorkshopId, 'maintenance_type' => 'CORRECTIVE', 'complaint' => $needsPartsComplaint,
+            ], $warehouseManager->id);
+            $wo = $workOrders->submit($wo);
+            $wo = $workOrders->approve($wo);
+            $wo = $workOrders->assign($wo);
+            $wo = $workOrders->schedule($wo);
+            $wo = $workOrders->start($wo);
+
+            $execution = app(WorkOrderExecutionService::class);
+            $plannedPart = $execution->addPlannedPart($wo, [
+                'product_id' => $brakePad->id, 'description' => 'Brake Pad Set (Front)', 'quantity' => 2,
+            ]);
+            app(\App\Domain\WorkOrder\Services\WorkOrderPartService::class)->reserve($plannedPart, $jktWarehouse->id, null, $warehouseManager->id);
+        }
+
+        // --- Vendors ---
+        $sparePartVendor = Partner::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'VND-SINAR'],
+            ['name' => 'PT Sinar Suku Cadang', 'partner_type' => 'SPARE_PART_SUPPLIER', 'contact_name' => 'Hendra Wijaya', 'contact_phone' => '021-5551234', 'payment_terms' => 'NET_30', 'status' => 'ACTIVE']
+        );
+        Partner::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'VND-BANPRIMA'],
+            ['name' => 'PT Ban Prima', 'partner_type' => 'TIRE_SUPPLIER', 'contact_name' => 'Rudi Hartono', 'contact_phone' => '021-5555678', 'payment_terms' => 'NET_14', 'status' => 'ACTIVE']
+        );
+
+        // --- Procurement chain: PR -> RFQ -> quotation -> PO -> partial receipt ---
+        if (! \App\Domain\Procurement\Models\PurchaseOrder::query()->where('tenant_id', $tenant->id)->exists()) {
+            $prService = app(PurchaseRequestService::class);
+            $pr = $prService->create($jktWarehouse, [
+                'source_type' => 'MANUAL', 'priority' => 'MEDIUM', 'notes' => 'Restock oil filters ahead of scheduled services.',
+            ], [
+                ['product_id' => $oilFilter->id, 'requested_quantity' => 50, 'estimated_unit_price' => 85000],
+            ], $warehouseManager->id);
+            $pr = $prService->transition($pr, 'SUBMITTED');
+            $pr = $prService->transition($pr, 'UNDER_REVIEW');
+            $pr = $prService->transition($pr, 'APPROVED');
+
+            $rfqService = app(RfqService::class);
+            $rfq = $rfqService->create($jktWarehouse, [], [
+                ['product_id' => $oilFilter->id, 'quantity' => 50],
+            ], $pr);
+            $rfq = $rfqService->inviteVendors($rfq, [$sparePartVendor->id]);
+            $quotation = $rfqService->submitQuotation($rfq, $sparePartVendor, [
+                'lead_time_days' => 7, 'payment_terms' => 'NET_30',
+            ], [
+                ['product_id' => $oilFilter->id, 'quantity' => 50, 'unit_price' => 85000, 'tax_percent' => 11],
+            ]);
+            $quotation = $rfqService->selectVendor($quotation);
+
+            $poService = app(PurchaseOrderService::class);
+            $po = $poService->createFromQuotation($quotation, $jktWarehouse, [], $warehouseManager->id);
+            $po = $poService->transition($po, 'SUBMITTED');
+            $po = $poService->approve($po, $warehouseManager->id);
+            $po = $poService->transition($po, 'ISSUED');
+
+            $poItem = $po->items()->first();
+            app(GoodsReceiptService::class)->post($po, $jktWarehouse, [
+                ['purchase_order_item_id' => $poItem->id, 'quantity_accepted' => 30],
+            ], $warehouseManager->id, 'Partial delivery — remaining 20 backordered by vendor.');
+        }
+
+        // --- Tire lifecycle: spare in stock + one installed with rotation & inspection ---
+        $spareTire = Tire::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'serial_number' => 'TIRE-ALPHA-SPARE-01'],
+            ['product_id' => $tireProduct->id, 'manufacturer' => 'Bridgestone', 'tire_size' => '295/80R22.5', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $jktWarehouse->id]
+        );
+        $installedTire = Tire::query()->firstOrCreate(
+            ['tenant_id' => $tenant->id, 'serial_number' => 'TIRE-ALPHA-INSTALLED-01'],
+            ['product_id' => $tireProduct->id, 'manufacturer' => 'Bridgestone', 'tire_size' => '295/80R22.5', 'current_status' => 'IN_STOCK']
+        );
+        if ($installedTire->current_status === 'IN_STOCK') {
+            $tireService = app(TireService::class);
+            $tireService->install($installedTire, $vehicle1, 'FRONT_LEFT', (float) $vehicle1->current_odometer, null, $warehouseManager->id);
+            $tireService->rotate($installedTire->fresh(), 'REAR_LEFT', (float) $vehicle1->current_odometer + 5000, null, $warehouseManager->id);
+            $tireService->inspect($installedTire->fresh(), [
+                'tread_depth_mm' => 9.5, 'pressure_psi' => 110, 'condition' => 'GOOD', 'recommendation' => 'Continue in service.',
+            ], $warehouseManager->id);
+        }
+
+        // --- Component asset: installed battery under warranty, with an in-flight claim ---
+        $batteryAsset = ComponentAsset::query()->firstOrCreate(
+            ['tenant_id' => $tenant->id, 'serial_number' => 'BAT-ALPHA-01'],
+            ['product_id' => $battery->id, 'component_group_id' => $elecGroup->id, 'purchase_date' => now()->subMonths(4), 'purchase_cost' => 1800000, 'current_status' => 'IN_STOCK']
+        );
+        if ($batteryAsset->current_status === 'IN_STOCK') {
+            app(ComponentAssetService::class)->install($batteryAsset, $vehicle2, 'ENGINE_BAY', (float) $vehicle2->current_odometer, null, $warehouseManager->id);
+        }
+
+        $warranty = Warranty::query()->firstOrCreate(
+            ['tenant_id' => $tenant->id, 'component_asset_id' => $batteryAsset->id],
+            [
+                'coverage_basis' => 'COMBINATION', 'duration_months' => 12, 'duration_km' => 40000,
+                'starts_at' => now()->subMonths(4), 'start_odometer' => (float) $vehicle2->current_odometer,
+                'partner_id' => $sparePartVendor->id, 'status' => 'ACTIVE',
+            ]
+        );
+
+        if (! \App\Domain\Warranty\Models\WarrantyClaim::query()->where('tenant_id', $tenant->id)->exists()) {
+            $claimService = app(WarrantyClaimService::class);
+            $claim = $claimService->create($vehicle2, [
+                'warranty_id' => $warranty->id, 'partner_id' => $sparePartVendor->id, 'component_asset_id' => $batteryAsset->id,
+                'failure_date' => now()->subDays(2)->toDateString(), 'failure_odometer' => (float) $vehicle2->current_odometer,
+                'reason' => 'Battery not holding charge, suspected cell failure.',
+            ], $warehouseManager->id);
+            $claim = $claimService->transition($claim, 'SUBMITTED');
+            $claimService->transition($claim, 'UNDER_REVIEW');
+        }
+    }
+}

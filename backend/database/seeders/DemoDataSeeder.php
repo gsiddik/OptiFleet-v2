@@ -37,7 +37,7 @@ class DemoDataSeeder extends Seeder
         $alpha = $this->buildTenant('ALPHA', 'PT Alpha Fleet', [
             ['code' => 'ALPHA-JKT', 'name' => 'Jakarta Branch', 'city' => 'Jakarta', 'province' => 'DKI Jakarta'],
             ['code' => 'ALPHA-BDG', 'name' => 'Bandung Branch', 'city' => 'Bandung', 'province' => 'West Java'],
-        ], ['CORE', 'ORGANIZATION', 'ACCESS_MANAGEMENT', 'CONFIGURATION', 'VEHICLE', 'INSPECTION', 'MAINTENANCE', 'WORK_ORDER', 'WORKSHOP', 'HISTORY', 'INVENTORY'], [
+        ], ['CORE', 'ORGANIZATION', 'ACCESS_MANAGEMENT', 'CONFIGURATION', 'VEHICLE', 'INSPECTION', 'MAINTENANCE', 'WORK_ORDER', 'WORKSHOP', 'HISTORY', 'INVENTORY', 'PROCUREMENT', 'PARTNER', 'TIRE', 'COMPONENT', 'WARRANTY'], [
             'branch' => 5, 'user' => 20, 'workshop' => 10, 'warehouse' => 10, 'vehicle' => 100,
         ]);
 
@@ -87,6 +87,22 @@ class DemoDataSeeder extends Seeder
                 'workspace.view', 'workspace.manage', 'workspace.reserve', 'workspace.block',
                 'qc.view', 'qc.perform', 'qc.approve', 'qc.reject',
                 'vehicle_release.perform', 'maintenance_history.view',
+            ])
+            ->pluck('id')->all());
+        // Phase 4: warehouse-scoped supply-chain operator (assigned to a
+        // specific warehouse below to exercise Section 47's cross-warehouse
+        // scope example).
+        $warehouseManagerRole = $this->makeTenantRole($tenant, 'Warehouse Manager', Permission::query()->where('scope', 'tenant')
+            ->whereIn('name', [
+                'product.view',
+                'inventory.view', 'inventory.reserve', 'inventory.issue', 'inventory.return', 'inventory.adjust', 'inventory.stock_opname',
+                'stock_transfer.view', 'stock_transfer.create', 'stock_transfer.dispatch', 'stock_transfer.receive',
+                'purchase_request.view', 'purchase_request.create',
+                'goods_receipt.view', 'goods_receipt.create', 'goods_receipt.post',
+                'partner.view',
+                'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap',
+                'component_asset.view', 'component_asset.manage', 'component_asset.install', 'component_asset.remove', 'component_asset.replace',
+                'warranty.view', 'warranty.manage', 'warranty_claim.create',
             ])
             ->pluck('id')->all());
         $this->makeTenantRole($tenant, 'Auditor', Permission::query()->where('scope', 'tenant')

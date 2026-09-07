@@ -50,6 +50,21 @@ class PermissionSeeder extends Seeder
             'qc' => ['view', 'perform', 'approve', 'reject'],
             'vehicle_release' => ['perform'],
             'maintenance_history' => ['view'],
+
+            // Phase 4: Supply Chain & Asset Lifecycle (Section 46)
+            'product' => ['view', 'create', 'update'],
+            'inventory' => ['view', 'reserve', 'issue', 'return', 'adjust', 'stock_opname'],
+            'stock_transfer' => ['view', 'create', 'approve', 'dispatch', 'receive'],
+            'purchase_request' => ['view', 'create', 'submit', 'approve'],
+            'rfq' => ['view', 'manage'],
+            'quotation' => ['view', 'manage', 'select'],
+            'purchase_order' => ['view', 'create', 'approve', 'issue'],
+            'goods_receipt' => ['view', 'create', 'post'],
+            'partner' => ['view', 'manage'],
+            'tire' => ['view', 'manage', 'install', 'rotate', 'inspect', 'remove', 'scrap'],
+            'component_asset' => ['view', 'manage', 'install', 'remove', 'replace'],
+            'warranty' => ['view', 'manage'],
+            'warranty_claim' => ['create', 'review', 'approve'],
         ];
 
         $bothScopes = [

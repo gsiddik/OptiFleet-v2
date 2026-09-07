@@ -80,7 +80,7 @@ class WorkOrderController extends Controller
 
         return $this->ok($workOrder->load([
             'vehicle', 'branch', 'workshop', 'findings', 'diagnoses', 'correctiveActions',
-            'jobs.laborLogs', 'plannedParts', 'additionalWorks', 'mechanicAssignments.worker',
+            'jobs.laborLogs', 'plannedParts.product', 'plannedParts.warehouse', 'additionalWorks', 'mechanicAssignments.worker',
             'roadTests', 'vehicleRelease',
         ]));
     }

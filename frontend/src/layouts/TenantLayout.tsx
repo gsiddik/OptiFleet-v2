@@ -56,6 +56,72 @@ const NAV_GROUPS: NavGroup[] = [
     items: [{ to: '/app/vehicle-history', label: 'Maintenance History', permission: 'maintenance_history.view', module: null }],
   },
   {
+    label: 'Inventory',
+    items: [
+      { to: '/app/products', label: 'Product', permission: 'product.view', module: 'INVENTORY' },
+      { to: '/app/inventory', label: 'Warehouse Stock', permission: 'inventory.view', module: 'INVENTORY' },
+      { to: '/app/stock-reservations', label: 'Reservation', permission: 'inventory.view', module: 'INVENTORY' },
+      { to: '/app/work-orders', label: 'Issue', permission: 'inventory.issue', module: 'INVENTORY' },
+      { to: '/app/work-orders', label: 'Return', permission: 'inventory.return', module: 'INVENTORY' },
+      { to: '/app/stock-transfers', label: 'Transfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
+      { to: '/app/goods-receipts', label: 'Receiving', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
+      { to: '/app/inventory', label: 'Adjustment', permission: 'inventory.adjust', module: 'INVENTORY' },
+      { to: '/app/stock-opnames', label: 'Stock Opname', permission: 'inventory.stock_opname', module: 'INVENTORY' },
+      { to: '/app/stock-movements', label: 'Stock Movement', permission: 'inventory.view', module: 'INVENTORY' },
+    ],
+  },
+  {
+    label: 'Procurement',
+    items: [
+      { to: '/app/purchase-requests', label: 'Purchase Request', permission: 'purchase_request.view', module: 'PROCUREMENT' },
+      { to: '/app/rfqs', label: 'RFQ', permission: 'rfq.view', module: 'PROCUREMENT' },
+      { to: '/app/quotations', label: 'Quotation', permission: 'quotation.view', module: 'PROCUREMENT' },
+      { to: '/app/purchase-orders', label: 'Purchase Order', permission: 'purchase_order.view', module: 'PROCUREMENT' },
+      { to: '/app/goods-receipts', label: 'Goods Receipt', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
+      { to: '/app/vendor-invoice-references', label: 'Vendor Invoice Reference', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
+    ],
+  },
+  {
+    label: 'Partner',
+    items: [
+      { to: '/app/partners', label: 'Vendor', permission: 'partner.view', module: 'PARTNER' },
+      { to: '/app/partners', label: 'Vendor Performance', permission: 'partner.view', module: 'PARTNER' },
+    ],
+  },
+  {
+    label: 'Tire Management',
+    items: [
+      { to: '/app/tires', label: 'Tire List', permission: 'tire.view', module: 'TIRE' },
+      { to: '/app/tires', label: 'Inventory', permission: 'tire.view', module: 'TIRE' },
+      { to: '/app/wheel-configurations', label: 'Wheel Configuration', permission: 'tire.view', module: 'TIRE' },
+      { to: '/app/tires', label: 'Installation', permission: 'tire.install', module: 'TIRE' },
+      { to: '/app/tires', label: 'Rotation', permission: 'tire.rotate', module: 'TIRE' },
+      { to: '/app/tires', label: 'Inspection', permission: 'tire.inspect', module: 'TIRE' },
+      { to: '/app/tires', label: 'Retread', permission: 'tire.manage', module: 'TIRE' },
+      { to: '/app/tires', label: 'Scrap', permission: 'tire.scrap', module: 'TIRE' },
+      { to: '/app/tires', label: 'History', permission: 'tire.view', module: 'TIRE' },
+    ],
+  },
+  {
+    label: 'Component Management',
+    items: [
+      { to: '/app/component-assets', label: 'Component Assets', permission: 'component_asset.view', module: 'COMPONENT' },
+      { to: '/app/component-assets', label: 'Installation', permission: 'component_asset.install', module: 'COMPONENT' },
+      { to: '/app/component-assets', label: 'Removal', permission: 'component_asset.remove', module: 'COMPONENT' },
+      { to: '/app/component-assets', label: 'Replacement', permission: 'component_asset.replace', module: 'COMPONENT' },
+      { to: '/app/component-assets', label: 'Repair / Recondition', permission: 'component_asset.manage', module: 'COMPONENT' },
+      { to: '/app/component-assets', label: 'History', permission: 'component_asset.view', module: 'COMPONENT' },
+    ],
+  },
+  {
+    label: 'Warranty',
+    items: [
+      { to: '/app/warranties', label: 'Warranty', permission: 'warranty.view', module: 'WARRANTY' },
+      { to: '/app/warranties', label: 'Eligibility', permission: 'warranty.view', module: 'WARRANTY' },
+      { to: '/app/warranty-claims', label: 'Claims', permission: 'warranty.view', module: 'WARRANTY' },
+    ],
+  },
+  {
     label: 'Organization',
     items: [
       { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view', module: 'ORGANIZATION' },
@@ -128,7 +194,7 @@ export function TenantLayout() {
                 )}
                 {items.map((item) => (
                   <NavLink
-                    key={item.to}
+                    key={`${group.label ?? ''}:${item.label}`}
                     to={item.to}
                     style={({ isActive }) => ({
                       display: 'block',

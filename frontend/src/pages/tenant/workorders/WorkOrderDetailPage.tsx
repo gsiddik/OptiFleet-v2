@@ -641,16 +641,40 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('1');
   const [notes, setNotes] = useState('');
+  const [productId, setProductId] = useState('');
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const canManage = hasPermission('maintenance_job.manage');
+  const canReserve = hasPermission('inventory.reserve');
+  const canIssue = hasPermission('inventory.issue');
+  const canReturn = hasPermission('inventory.return');
+
+  useEffect(() => {
+    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
+  }, []);
 
   async function addPart() {
     setBusy(true);
     try {
-      await apiClient.post(`/app/work-orders/${wo.id}/planned-parts`, { description, quantity, notes: notes || undefined });
+      await apiClient.post(`/app/work-orders/${wo.id}/planned-parts`, { description, quantity, notes: notes || undefined, product_id: productId || undefined });
       setDescription('');
       setNotes('');
+      setProductId('');
       onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function partAction(partId: string, action: 'reserve' | 'issue' | 'return' | 'consume', body?: Record<string, unknown>) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/planned-parts/${partId}/${action}`, body ?? {});
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
     } finally {
       setBusy(false);
     }
@@ -659,18 +683,66 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   return (
     <div className="card">
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Planned Parts</h3>
-      <p style={{ fontSize: 12, color: '#9ca3af', marginTop: -6 }}>
-        Planned parts only — no stock reservation or inventory movement in this phase.
-      </p>
+      {error && <ErrorState message={error} />}
       {(wo.planned_parts ?? []).length === 0 && <EmptyState label="No planned parts." />}
       {(wo.planned_parts ?? []).map((p) => (
-        <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-          {p.description} — qty {p.quantity} {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
+        <div key={p.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span>
+              {p.description} — planned {p.planned_quantity} {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
+            </span>
+            <StatusBadge status={p.status} />
+          </div>
+          {p.product_id && (
+            <>
+              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
+                reserved {p.reserved_quantity} · issued {p.issued_quantity} · consumed {p.consumed_quantity} · returned {p.returned_quantity}
+                {p.unit_cost_at_issue && ` · unit cost ${p.unit_cost_at_issue} · total cost ${p.total_cost}`}
+              </div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {canReserve && Number(p.reserved_quantity) < Number(p.planned_quantity) && !['CONSUMED', 'RETURNED', 'CANCELLED'].includes(p.status) && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => partAction(p.id, 'reserve')}>
+                    Reserve
+                  </button>
+                )}
+                {canIssue && Number(p.reserved_quantity) > 0 && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => partAction(p.id, 'issue')}>
+                    Issue
+                  </button>
+                )}
+                {canIssue && Number(p.issued_quantity) - Number(p.consumed_quantity) - Number(p.returned_quantity) > 0 && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => partAction(p.id, 'consume')}>
+                    Consume
+                  </button>
+                )}
+                {canReturn && Number(p.issued_quantity) - Number(p.returned_quantity) > 0 && (
+                  <button
+                    className="btn-secondary"
+                    disabled={busy}
+                    onClick={() => {
+                      const qty = window.prompt('Quantity to return:');
+                      if (qty) partAction(p.id, 'return', { quantity: qty, reason: window.prompt('Reason (optional):') ?? undefined });
+                    }}
+                  >
+                    Return
+                  </button>
+                )}
+              </div>
+            </>
+          )}
         </div>
       ))}
       {canManage && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <input placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
+          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+            <option value="">No catalog product</option>
+            {products.map((prod) => (
+              <option key={prod.id} value={prod.id}>
+                {prod.name}
+              </option>
+            ))}
+          </select>
           <input type="number" step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !description} onClick={addPart}>

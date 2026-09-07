@@ -33,6 +33,26 @@ use App\Http\Controllers\Api\Tenant\WorkshopSchedulerController;
 use App\Http\Controllers\Api\Tenant\WorkspaceController;
 use App\Http\Controllers\Api\Tenant\WorkspaceReservationController;
 use App\Http\Controllers\Api\Tenant\VehicleReleaseController;
+use App\Http\Controllers\Api\Tenant\ProductCategoryController;
+use App\Http\Controllers\Api\Tenant\UomController;
+use App\Http\Controllers\Api\Tenant\ProductController;
+use App\Http\Controllers\Api\Tenant\StockMovementController;
+use App\Http\Controllers\Api\Tenant\WarehouseStockController;
+use App\Http\Controllers\Api\Tenant\StockReservationController;
+use App\Http\Controllers\Api\Tenant\StockOpnameController;
+use App\Http\Controllers\Api\Tenant\StockTransferController;
+use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
+use App\Http\Controllers\Api\Tenant\RfqController;
+use App\Http\Controllers\Api\Tenant\VendorQuotationController;
+use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
+use App\Http\Controllers\Api\Tenant\GoodsReceiptController;
+use App\Http\Controllers\Api\Tenant\VendorInvoiceReferenceController;
+use App\Http\Controllers\Api\Tenant\PartnerController;
+use App\Http\Controllers\Api\Tenant\TireController;
+use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
+use App\Http\Controllers\Api\Tenant\ComponentAssetController;
+use App\Http\Controllers\Api\Tenant\WarrantyController;
+use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('app')->middleware('tenant.scope')->group(function () {
@@ -249,6 +269,162 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/workspace-reservations/{reservation}/cancel', [WorkspaceReservationController::class, 'cancel'])->middleware('permission:workspace.reserve');
 
             Route::get('/workshop-scheduler', [WorkshopSchedulerController::class, 'index'])->middleware('permission:workspace.view');
+        });
+
+        Route::middleware('module:INVENTORY')->group(function () {
+            Route::get('/product-categories', [ProductCategoryController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/product-categories', [ProductCategoryController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->middleware('permission:product.update');
+
+            Route::get('/uoms', [UomController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/uoms', [UomController::class, 'store'])->middleware('permission:product.create');
+
+            Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');
+            Route::get('/products/compatible', [ProductController::class, 'compatibleFor'])->middleware('permission:product.view');
+            Route::get('/products/{product}', [ProductController::class, 'show'])->middleware('permission:product.view');
+            Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:product.update');
+            Route::post('/products/{product}/component-groups', [ProductController::class, 'syncComponentGroups'])->middleware('permission:product.update');
+            Route::post('/products/{product}/compatibilities', [ProductController::class, 'addCompatibility'])->middleware('permission:product.update');
+            Route::delete('/products/{product}/compatibilities/{compatibility}', [ProductController::class, 'destroyCompatibility'])->middleware('permission:product.update');
+
+            Route::get('/inventory', [WarehouseStockController::class, 'index'])->middleware('permission:inventory.view');
+            Route::post('/inventory/adjust', [WarehouseStockController::class, 'adjust'])->middleware('permission:inventory.adjust');
+            Route::get('/inventory/{warehouseStock}', [WarehouseStockController::class, 'show'])->middleware('permission:inventory.view');
+            Route::put('/inventory/{warehouseStock}/thresholds', [WarehouseStockController::class, 'updateThresholds'])->middleware('permission:inventory.adjust');
+
+            Route::get('/stock-movements', [StockMovementController::class, 'index'])->middleware('permission:inventory.view');
+
+            Route::get('/stock-reservations', [StockReservationController::class, 'index'])->middleware('permission:inventory.view');
+            Route::get('/stock-reservations/{stockReservation}', [StockReservationController::class, 'show'])->middleware('permission:inventory.view');
+            Route::post('/stock-reservations/{stockReservation}/cancel', [StockReservationController::class, 'cancel'])->middleware('permission:inventory.reserve');
+
+            Route::get('/stock-opnames', [StockOpnameController::class, 'index'])->middleware('permission:inventory.stock_opname');
+            Route::post('/stock-opnames', [StockOpnameController::class, 'store'])->middleware('permission:inventory.stock_opname');
+            Route::get('/stock-opnames/{stockOpname}', [StockOpnameController::class, 'show'])->middleware('permission:inventory.stock_opname');
+            Route::post('/stock-opnames/{stockOpname}/items/{item}/count', [StockOpnameController::class, 'recordCount'])->middleware('permission:inventory.stock_opname');
+            Route::post('/stock-opnames/{stockOpname}/counting', [StockOpnameController::class, 'transitionToCounting'])->middleware('permission:inventory.stock_opname');
+            Route::post('/stock-opnames/{stockOpname}/submit', [StockOpnameController::class, 'submit'])->middleware('permission:inventory.stock_opname');
+            Route::post('/stock-opnames/{stockOpname}/approve', [StockOpnameController::class, 'approve'])->middleware('permission:inventory.stock_opname');
+            Route::post('/stock-opnames/{stockOpname}/post', [StockOpnameController::class, 'post'])->middleware('permission:inventory.stock_opname');
+
+            Route::get('/stock-transfers', [StockTransferController::class, 'index'])->middleware('permission:stock_transfer.view');
+            Route::post('/stock-transfers', [StockTransferController::class, 'store'])->middleware('permission:stock_transfer.create');
+            Route::get('/stock-transfers/{stockTransfer}', [StockTransferController::class, 'show'])->middleware('permission:stock_transfer.view');
+            Route::post('/stock-transfers/{stockTransfer}/submit', [StockTransferController::class, 'submit'])->middleware('permission:stock_transfer.create');
+            Route::post('/stock-transfers/{stockTransfer}/approve', [StockTransferController::class, 'approve'])->middleware('permission:stock_transfer.approve');
+            Route::post('/stock-transfers/{stockTransfer}/prepare', [StockTransferController::class, 'prepare'])->middleware('permission:stock_transfer.approve');
+            Route::post('/stock-transfers/{stockTransfer}/dispatch', [StockTransferController::class, 'dispatch'])->middleware('permission:stock_transfer.dispatch');
+            Route::post('/stock-transfers/{stockTransfer}/in-transit', [StockTransferController::class, 'markInTransit'])->middleware('permission:stock_transfer.dispatch');
+            Route::post('/stock-transfers/{stockTransfer}/receive', [StockTransferController::class, 'receive'])->middleware('permission:stock_transfer.receive');
+            Route::post('/stock-transfers/{stockTransfer}/complete', [StockTransferController::class, 'complete'])->middleware('permission:stock_transfer.receive');
+            Route::post('/stock-transfers/{stockTransfer}/reject', [StockTransferController::class, 'reject'])->middleware('permission:stock_transfer.approve');
+            Route::post('/stock-transfers/{stockTransfer}/cancel', [StockTransferController::class, 'cancel'])->middleware('permission:stock_transfer.create');
+
+            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/reserve', [WorkOrderExecutionController::class, 'reservePlannedPart'])->middleware('permission:inventory.reserve');
+            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/issue', [WorkOrderExecutionController::class, 'issuePlannedPart'])->middleware('permission:inventory.issue');
+            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return', [WorkOrderExecutionController::class, 'returnPlannedPart'])->middleware('permission:inventory.return');
+            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/consume', [WorkOrderExecutionController::class, 'consumePlannedPart'])->middleware('permission:inventory.issue');
+        });
+
+        Route::middleware('module:PROCUREMENT')->group(function () {
+            Route::get('/purchase-requests', [PurchaseRequestController::class, 'index'])->middleware('permission:purchase_request.view');
+            Route::post('/purchase-requests', [PurchaseRequestController::class, 'store'])->middleware('permission:purchase_request.create');
+            Route::get('/purchase-requests/{purchaseRequest}', [PurchaseRequestController::class, 'show'])->middleware('permission:purchase_request.view');
+            Route::post('/purchase-requests/{purchaseRequest}/submit', [PurchaseRequestController::class, 'submit'])->middleware('permission:purchase_request.submit');
+            Route::post('/purchase-requests/{purchaseRequest}/review', [PurchaseRequestController::class, 'review'])->middleware('permission:purchase_request.approve');
+            Route::post('/purchase-requests/{purchaseRequest}/approve', [PurchaseRequestController::class, 'approve'])->middleware('permission:purchase_request.approve');
+            Route::post('/purchase-requests/{purchaseRequest}/reject', [PurchaseRequestController::class, 'reject'])->middleware('permission:purchase_request.approve');
+            Route::post('/purchase-requests/{purchaseRequest}/cancel', [PurchaseRequestController::class, 'cancel'])->middleware('permission:purchase_request.create');
+
+            Route::get('/rfqs', [RfqController::class, 'index'])->middleware('permission:rfq.view');
+            Route::post('/rfqs', [RfqController::class, 'store'])->middleware('permission:rfq.manage');
+            Route::get('/rfqs/{rfq}', [RfqController::class, 'show'])->middleware('permission:rfq.view');
+            Route::post('/rfqs/{rfq}/vendors', [RfqController::class, 'inviteVendors'])->middleware('permission:rfq.manage');
+            Route::post('/rfqs/{rfq}/close', [RfqController::class, 'close'])->middleware('permission:rfq.manage');
+            Route::post('/rfqs/{rfq}/cancel', [RfqController::class, 'cancel'])->middleware('permission:rfq.manage');
+            Route::get('/rfqs/{rfq}/compare', [RfqController::class, 'compare'])->middleware('permission:quotation.view');
+            Route::post('/rfqs/{rfq}/quotations', [VendorQuotationController::class, 'store'])->middleware('permission:quotation.manage');
+
+            Route::get('/quotations', [VendorQuotationController::class, 'index'])->middleware('permission:quotation.view');
+            Route::get('/quotations/{quotation}', [VendorQuotationController::class, 'show'])->middleware('permission:quotation.view');
+            Route::post('/quotations/{quotation}/select', [VendorQuotationController::class, 'select'])->middleware('permission:quotation.select');
+            Route::post('/quotations/{quotation}/purchase-order', [PurchaseOrderController::class, 'storeFromQuotation'])->middleware('permission:purchase_order.create');
+
+            Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('permission:purchase_order.view');
+            Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:purchase_order.create');
+            Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->middleware('permission:purchase_order.view');
+            Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit'])->middleware('permission:purchase_order.create');
+            Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:purchase_order.approve');
+            Route::post('/purchase-orders/{purchaseOrder}/reject', [PurchaseOrderController::class, 'reject'])->middleware('permission:purchase_order.approve');
+            Route::post('/purchase-orders/{purchaseOrder}/issue', [PurchaseOrderController::class, 'issue'])->middleware('permission:purchase_order.issue');
+            Route::post('/purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->middleware('permission:purchase_order.approve');
+            Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:purchase_order.create');
+            Route::post('/purchase-orders/{purchaseOrder}/goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('permission:goods_receipt.post');
+
+            Route::get('/goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('permission:goods_receipt.view');
+            Route::get('/goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('permission:goods_receipt.view');
+
+            Route::get('/vendor-invoice-references', [VendorInvoiceReferenceController::class, 'index'])->middleware('permission:goods_receipt.view');
+            Route::post('/vendor-invoice-references', [VendorInvoiceReferenceController::class, 'store'])->middleware('permission:goods_receipt.create');
+            Route::get('/vendor-invoice-references/{vendorInvoiceReference}', [VendorInvoiceReferenceController::class, 'show'])->middleware('permission:goods_receipt.view');
+            Route::get('/vendor-invoice-references/{vendorInvoiceReference}/download', [VendorInvoiceReferenceController::class, 'download'])->middleware('permission:goods_receipt.view');
+            Route::post('/vendor-invoice-references/{vendorInvoiceReference}/status', [VendorInvoiceReferenceController::class, 'updateStatus'])->middleware('permission:goods_receipt.create');
+        });
+
+        Route::middleware('module:PARTNER')->group(function () {
+            Route::get('/partners', [PartnerController::class, 'index'])->middleware('permission:partner.view');
+            Route::post('/partners', [PartnerController::class, 'store'])->middleware('permission:partner.manage');
+            Route::get('/partners/{partner}', [PartnerController::class, 'show'])->middleware('permission:partner.view');
+            Route::put('/partners/{partner}', [PartnerController::class, 'update'])->middleware('permission:partner.manage');
+        });
+
+        Route::middleware('module:TIRE')->group(function () {
+            Route::get('/wheel-configurations', [WheelConfigurationController::class, 'index'])->middleware('permission:tire.view');
+            Route::post('/wheel-configurations', [WheelConfigurationController::class, 'store'])->middleware('permission:tire.manage');
+
+            Route::get('/tires', [TireController::class, 'index'])->middleware('permission:tire.view');
+            Route::post('/tires', [TireController::class, 'store'])->middleware('permission:tire.manage');
+            Route::get('/tires/{tire}', [TireController::class, 'show'])->middleware('permission:tire.view');
+            Route::post('/tires/{tire}/install', [TireController::class, 'install'])->middleware('permission:tire.install');
+            Route::post('/tires/{tire}/rotate', [TireController::class, 'rotate'])->middleware('permission:tire.rotate');
+            Route::post('/tires/{tire}/inspect', [TireController::class, 'inspect'])->middleware('permission:tire.inspect');
+            Route::post('/tires/{tire}/remove', [TireController::class, 'remove'])->middleware('permission:tire.remove');
+            Route::post('/tires/{tire}/replace', [TireController::class, 'replace'])->middleware('permission:tire.remove');
+            Route::post('/tires/{tire}/retread', [TireController::class, 'sendForRetread'])->middleware('permission:tire.manage');
+            Route::post('/tires/{tire}/retreads/{retread}/receive', [TireController::class, 'receiveRetread'])->middleware('permission:tire.manage');
+            Route::post('/tires/{tire}/scrap', [TireController::class, 'scrap'])->middleware('permission:tire.scrap');
+        });
+
+        Route::middleware('module:COMPONENT')->group(function () {
+            Route::get('/component-assets', [ComponentAssetController::class, 'index'])->middleware('permission:component_asset.view');
+            Route::post('/component-assets', [ComponentAssetController::class, 'store'])->middleware('permission:component_asset.manage');
+            Route::get('/component-assets/{componentAsset}', [ComponentAssetController::class, 'show'])->middleware('permission:component_asset.view');
+            Route::post('/component-assets/{componentAsset}/install', [ComponentAssetController::class, 'install'])->middleware('permission:component_asset.install');
+            Route::post('/component-assets/{componentAsset}/remove', [ComponentAssetController::class, 'remove'])->middleware('permission:component_asset.remove');
+            Route::post('/component-assets/{componentAsset}/replace', [ComponentAssetController::class, 'replace'])->middleware('permission:component_asset.replace');
+            Route::post('/component-assets/{componentAsset}/repairs', [ComponentAssetController::class, 'startRepair'])->middleware('permission:component_asset.manage');
+            Route::post('/component-assets/{componentAsset}/repairs/{repair}/complete', [ComponentAssetController::class, 'completeRepair'])->middleware('permission:component_asset.manage');
+        });
+
+        Route::middleware('module:WARRANTY')->group(function () {
+            Route::get('/warranties', [WarrantyController::class, 'index'])->middleware('permission:warranty.view');
+            Route::post('/warranties', [WarrantyController::class, 'store'])->middleware('permission:warranty.manage');
+            Route::get('/warranties/{warranty}', [WarrantyController::class, 'show'])->middleware('permission:warranty.view');
+            Route::post('/warranties/{warranty}/eligibility', [WarrantyController::class, 'checkEligibility'])->middleware('permission:warranty.view');
+            Route::post('/warranties/{warranty}/void', [WarrantyController::class, 'void'])->middleware('permission:warranty.manage');
+
+            Route::get('/warranty-claims', [WarrantyClaimController::class, 'index'])->middleware('permission:warranty.view');
+            Route::post('/warranty-claims', [WarrantyClaimController::class, 'store'])->middleware('permission:warranty_claim.create');
+            Route::get('/warranty-claims/{warrantyClaim}', [WarrantyClaimController::class, 'show'])->middleware('permission:warranty.view');
+            Route::post('/warranty-claims/{warrantyClaim}/submit', [WarrantyClaimController::class, 'submit'])->middleware('permission:warranty_claim.create');
+            Route::post('/warranty-claims/{warrantyClaim}/review', [WarrantyClaimController::class, 'review'])->middleware('permission:warranty_claim.review');
+            Route::post('/warranty-claims/{warrantyClaim}/approve', [WarrantyClaimController::class, 'approve'])->middleware('permission:warranty_claim.approve');
+            Route::post('/warranty-claims/{warrantyClaim}/reject', [WarrantyClaimController::class, 'reject'])->middleware('permission:warranty_claim.approve');
+            Route::post('/warranty-claims/{warrantyClaim}/replacement', [WarrantyClaimController::class, 'markReplacement'])->middleware('permission:warranty_claim.approve');
+            Route::post('/warranty-claims/{warrantyClaim}/repair', [WarrantyClaimController::class, 'markRepair'])->middleware('permission:warranty_claim.approve');
+            Route::post('/warranty-claims/{warrantyClaim}/settle', [WarrantyClaimController::class, 'settle'])->middleware('permission:warranty_claim.approve');
+            Route::post('/warranty-claims/{warrantyClaim}/close', [WarrantyClaimController::class, 'close'])->middleware('permission:warranty_claim.approve');
         });
 
         Route::middleware('module:ACCESS_MANAGEMENT')->group(function () {

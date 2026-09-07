@@ -21,6 +21,19 @@ interface DashboardData {
   work_orders_pending_qc?: number;
   workspaces_available?: number;
   workspaces_occupied?: number;
+  inventory_total_value?: number;
+  inventory_reserved_stock?: number;
+  inventory_low_stock?: number;
+  inventory_out_of_stock?: number;
+  transfers_open?: number;
+  transfers_in_transit?: number;
+  purchase_requests_open?: number;
+  purchase_orders_open?: number;
+  goods_receipts_pending?: number;
+  tires_in_use?: number;
+  tires_due_replacement?: number;
+  component_assets_installed?: number;
+  warranty_claims_active?: number;
 }
 
 export function TenantDashboardPage() {
@@ -125,6 +138,66 @@ export function TenantDashboardPage() {
                 <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value ?? 0}</div>
               </div>
             ))}
+          </div>
+        </>
+      )}
+
+      {data.active_modules.includes('INVENTORY') && (
+        <>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Supply Chain — Inventory</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
+            {[
+              { label: 'Total Inventory Value', value: data.inventory_total_value },
+              { label: 'Reserved Stock', value: data.inventory_reserved_stock },
+              { label: 'Low Stock', value: data.inventory_low_stock },
+              { label: 'Out of Stock', value: data.inventory_out_of_stock },
+              { label: 'Open Transfers', value: data.transfers_open },
+              { label: 'In-Transit Transfers', value: data.transfers_in_transit },
+            ].map((s) => (
+              <div key={s.label} className="card">
+                <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value ?? 0}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {data.active_modules.includes('PROCUREMENT') && (
+        <>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Supply Chain — Procurement</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
+            {[
+              { label: 'Open Purchase Requests', value: data.purchase_requests_open },
+              { label: 'Open Purchase Orders', value: data.purchase_orders_open },
+              { label: 'Pending Goods Receipt', value: data.goods_receipts_pending },
+            ].map((s) => (
+              <div key={s.label} className="card">
+                <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value ?? 0}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {(data.active_modules.includes('TIRE') || data.active_modules.includes('COMPONENT') || data.active_modules.includes('WARRANTY')) && (
+        <>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Asset Lifecycle</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
+            {[
+              data.active_modules.includes('TIRE') && { label: 'Tires In Use', value: data.tires_in_use },
+              data.active_modules.includes('TIRE') && { label: 'Tires Due Replacement', value: data.tires_due_replacement },
+              data.active_modules.includes('COMPONENT') && { label: 'Component Assets Installed', value: data.component_assets_installed },
+              data.active_modules.includes('WARRANTY') && { label: 'Active Warranty Claims', value: data.warranty_claims_active },
+            ]
+              .filter((s): s is { label: string; value: number | undefined } => Boolean(s))
+              .map((s) => (
+                <div key={s.label} className="card">
+                  <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value ?? 0}</div>
+                </div>
+              ))}
           </div>
         </>
       )}

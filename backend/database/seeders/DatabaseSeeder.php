@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             DemoDataSeeder::class,
             CommercialSeeder::class,
             OperationsSeeder::class,
+            SupplyChainSeeder::class,
         ]);
     }
 }

@@ -62,6 +62,37 @@ import { WorkshopSchedulerPage } from './pages/tenant/workshop/WorkshopScheduler
 import { WorkspaceReservationListPage } from './pages/tenant/workshop/WorkspaceReservationListPage';
 import { WorkloadPage } from './pages/tenant/workshop/WorkloadPage';
 
+import { ProductListPage } from './pages/tenant/inventory/ProductListPage';
+import { ProductDetailPage } from './pages/tenant/inventory/ProductDetailPage';
+import { WarehouseStockListPage } from './pages/tenant/inventory/WarehouseStockListPage';
+import { StockReservationListPage } from './pages/tenant/inventory/StockReservationListPage';
+import { StockTransferListPage } from './pages/tenant/inventory/StockTransferListPage';
+import { StockTransferDetailPage } from './pages/tenant/inventory/StockTransferDetailPage';
+import { StockOpnameListPage } from './pages/tenant/inventory/StockOpnameListPage';
+import { StockOpnameDetailPage } from './pages/tenant/inventory/StockOpnameDetailPage';
+import { StockMovementListPage } from './pages/tenant/inventory/StockMovementListPage';
+import { PurchaseRequestListPage } from './pages/tenant/procurement/PurchaseRequestListPage';
+import { PurchaseRequestDetailPage } from './pages/tenant/procurement/PurchaseRequestDetailPage';
+import { RfqListPage } from './pages/tenant/procurement/RfqListPage';
+import { RfqDetailPage } from './pages/tenant/procurement/RfqDetailPage';
+import { VendorQuotationListPage } from './pages/tenant/procurement/VendorQuotationListPage';
+import { CreatePurchaseOrderFromQuotationPage } from './pages/tenant/procurement/CreatePurchaseOrderFromQuotationPage';
+import { PurchaseOrderListPage } from './pages/tenant/procurement/PurchaseOrderListPage';
+import { PurchaseOrderDetailPage } from './pages/tenant/procurement/PurchaseOrderDetailPage';
+import { GoodsReceiptListPage } from './pages/tenant/procurement/GoodsReceiptListPage';
+import { VendorInvoiceReferenceListPage } from './pages/tenant/procurement/VendorInvoiceReferenceListPage';
+import { PartnerListPage } from './pages/tenant/partners/PartnerListPage';
+import { PartnerDetailPage } from './pages/tenant/partners/PartnerDetailPage';
+import { TireListPage } from './pages/tenant/tires/TireListPage';
+import { TireDetailPage } from './pages/tenant/tires/TireDetailPage';
+import { WheelConfigurationListPage } from './pages/tenant/tires/WheelConfigurationListPage';
+import { ComponentAssetListPage } from './pages/tenant/components/ComponentAssetListPage';
+import { ComponentAssetDetailPage } from './pages/tenant/components/ComponentAssetDetailPage';
+import { WarrantyListPage } from './pages/tenant/warranty/WarrantyListPage';
+import { WarrantyDetailPage } from './pages/tenant/warranty/WarrantyDetailPage';
+import { WarrantyClaimListPage } from './pages/tenant/warranty/WarrantyClaimListPage';
+import { WarrantyClaimDetailPage } from './pages/tenant/warranty/WarrantyClaimDetailPage';
+
 function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <LoadingState />;
@@ -505,6 +536,42 @@ export default function App() {
                 </RequirePermission>
               }
             />
+
+            <Route path="products" element={<RequirePermission permission="product.view"><ProductListPage /></RequirePermission>} />
+            <Route path="products/:id" element={<RequirePermission permission="product.view"><ProductDetailPage /></RequirePermission>} />
+            <Route path="inventory" element={<RequirePermission permission="inventory.view"><WarehouseStockListPage /></RequirePermission>} />
+            <Route path="stock-reservations" element={<RequirePermission permission="inventory.view"><StockReservationListPage /></RequirePermission>} />
+            <Route path="stock-transfers" element={<RequirePermission permission="stock_transfer.view"><StockTransferListPage /></RequirePermission>} />
+            <Route path="stock-transfers/:id" element={<RequirePermission permission="stock_transfer.view"><StockTransferDetailPage /></RequirePermission>} />
+            <Route path="stock-opnames" element={<RequirePermission permission="inventory.stock_opname"><StockOpnameListPage /></RequirePermission>} />
+            <Route path="stock-opnames/:id" element={<RequirePermission permission="inventory.stock_opname"><StockOpnameDetailPage /></RequirePermission>} />
+            <Route path="stock-movements" element={<RequirePermission permission="inventory.view"><StockMovementListPage /></RequirePermission>} />
+
+            <Route path="purchase-requests" element={<RequirePermission permission="purchase_request.view"><PurchaseRequestListPage /></RequirePermission>} />
+            <Route path="purchase-requests/:id" element={<RequirePermission permission="purchase_request.view"><PurchaseRequestDetailPage /></RequirePermission>} />
+            <Route path="rfqs" element={<RequirePermission permission="rfq.view"><RfqListPage /></RequirePermission>} />
+            <Route path="rfqs/:id" element={<RequirePermission permission="rfq.view"><RfqDetailPage /></RequirePermission>} />
+            <Route path="quotations" element={<RequirePermission permission="quotation.view"><VendorQuotationListPage /></RequirePermission>} />
+            <Route path="quotations/:quotationId/create-po" element={<RequirePermission permission="purchase_order.create"><CreatePurchaseOrderFromQuotationPage /></RequirePermission>} />
+            <Route path="purchase-orders" element={<RequirePermission permission="purchase_order.view"><PurchaseOrderListPage /></RequirePermission>} />
+            <Route path="purchase-orders/:id" element={<RequirePermission permission="purchase_order.view"><PurchaseOrderDetailPage /></RequirePermission>} />
+            <Route path="goods-receipts" element={<RequirePermission permission="goods_receipt.view"><GoodsReceiptListPage /></RequirePermission>} />
+            <Route path="vendor-invoice-references" element={<RequirePermission permission="goods_receipt.view"><VendorInvoiceReferenceListPage /></RequirePermission>} />
+
+            <Route path="partners" element={<RequirePermission permission="partner.view"><PartnerListPage /></RequirePermission>} />
+            <Route path="partners/:id" element={<RequirePermission permission="partner.view"><PartnerDetailPage /></RequirePermission>} />
+
+            <Route path="tires" element={<RequirePermission permission="tire.view"><TireListPage /></RequirePermission>} />
+            <Route path="tires/:id" element={<RequirePermission permission="tire.view"><TireDetailPage /></RequirePermission>} />
+            <Route path="wheel-configurations" element={<RequirePermission permission="tire.view"><WheelConfigurationListPage /></RequirePermission>} />
+
+            <Route path="component-assets" element={<RequirePermission permission="component_asset.view"><ComponentAssetListPage /></RequirePermission>} />
+            <Route path="component-assets/:id" element={<RequirePermission permission="component_asset.view"><ComponentAssetDetailPage /></RequirePermission>} />
+
+            <Route path="warranties" element={<RequirePermission permission="warranty.view"><WarrantyListPage /></RequirePermission>} />
+            <Route path="warranties/:id" element={<RequirePermission permission="warranty.view"><WarrantyDetailPage /></RequirePermission>} />
+            <Route path="warranty-claims" element={<RequirePermission permission="warranty.view"><WarrantyClaimListPage /></RequirePermission>} />
+            <Route path="warranty-claims/:id" element={<RequirePermission permission="warranty.view"><WarrantyClaimDetailPage /></RequirePermission>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
