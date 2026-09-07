@@ -2,7 +2,7 @@
 
 namespace App\Domain\Procurement\Services;
 
-use App\Domain\Invoice\Services\NumberSequenceService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseRequest;
@@ -21,7 +21,7 @@ use Illuminate\Support\Facades\DB;
  */
 class RfqService
 {
-    public function __construct(private readonly NumberSequenceService $numbers) {}
+    public function __construct(private readonly DocumentNumberingService $numbers) {}
 
     public function create(Warehouse $warehouse, array $attributes, array $items, ?PurchaseRequest $purchaseRequest = null): Rfq
     {
@@ -30,11 +30,12 @@ class RfqService
         }
 
         return DB::transaction(function () use ($warehouse, $attributes, $items, $purchaseRequest) {
-            $number = sprintf('RFQ/%d/%06d', (int) now()->format('Y'), $this->numbers->next('rfq', (int) now()->format('Y')));
+            $number = $this->numbers->generate('rfq', $warehouse->tenant_id, null, null, $warehouse->id);
 
             $rfq = Rfq::query()->create(array_merge($attributes, [
                 'tenant_id' => $warehouse->tenant_id,
-                'rfq_number' => $number,
+                'rfq_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
                 'warehouse_id' => $warehouse->id,
                 'purchase_request_id' => $purchaseRequest?->id,
                 'status' => 'DRAFT',

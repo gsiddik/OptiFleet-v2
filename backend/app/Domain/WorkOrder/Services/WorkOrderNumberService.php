@@ -2,23 +2,21 @@
 
 namespace App\Domain\WorkOrder\Services;
 
-use App\Domain\Invoice\Services\NumberSequenceService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 
 /**
- * Section 22: temporary built-in numbering, deliberately isolated behind
- * this one-method service so a future configurable numbering engine
- * (Phase 5) can replace it without touching WorkOrderService callers.
+ * Section 3-6: thin wrapper delegating to the Phase 5 configurable
+ * numbering engine, preserving this class's call-site signature so
+ * WorkOrderService doesn't need to change beyond capturing the returned
+ * configuration_version_id.
  */
 class WorkOrderNumberService
 {
-    public function __construct(private readonly NumberSequenceService $sequence) {}
+    public function __construct(private readonly DocumentNumberingService $numbering) {}
 
-    public function generate(?\DateTimeInterface $date = null): string
+    /** @return array{document_number:string, configuration_version_id:string} */
+    public function generate(string $tenantId, ?string $branchId = null, ?string $workshopId = null): array
     {
-        $date ??= now();
-        $year = (int) $date->format('Y');
-        $number = $this->sequence->next('work_order', $year);
-
-        return sprintf('WO/OPTIFLEET/%d/%06d', $year, $number);
+        return $this->numbering->generate('work_order', $tenantId, $branchId, $workshopId);
     }
 }

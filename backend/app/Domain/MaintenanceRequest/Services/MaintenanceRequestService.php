@@ -28,10 +28,14 @@ class MaintenanceRequestService
     public function create(Vehicle $vehicle, array $attributes, ?string $requestedByUserId = null): MaintenanceRequest
     {
         return DB::transaction(function () use ($vehicle, $attributes, $requestedByUserId) {
+            $branchId = $attributes['branch_id'] ?? $vehicle->branch_id;
+            $number = $this->numbers->generate($vehicle->tenant_id, $branchId);
+
             return MaintenanceRequest::query()->create(array_merge($attributes, [
-                'request_number' => $this->numbers->generate(),
+                'request_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
                 'tenant_id' => $vehicle->tenant_id,
-                'branch_id' => $attributes['branch_id'] ?? $vehicle->branch_id,
+                'branch_id' => $branchId,
                 'vehicle_id' => $vehicle->id,
                 'requested_by' => $requestedByUserId,
                 'status' => $attributes['status'] ?? 'DRAFT',

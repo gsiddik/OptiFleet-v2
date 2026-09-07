@@ -14,7 +14,7 @@ class StockTransfer extends Model
     use BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'transfer_number', 'from_warehouse_id', 'to_warehouse_id', 'status',
+        'tenant_id', 'transfer_number', 'numbering_configuration_version_id', 'from_warehouse_id', 'to_warehouse_id', 'status',
         'requested_by', 'approved_by', 'dispatched_at', 'received_at', 'notes',
     ];
 

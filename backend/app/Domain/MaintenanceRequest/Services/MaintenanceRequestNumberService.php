@@ -2,23 +2,16 @@
 
 namespace App\Domain\MaintenanceRequest\Services;
 
-use App\Domain\Invoice\Services\NumberSequenceService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 
+/** Section 3-6: thin wrapper delegating to the Phase 5 configurable numbering engine. */
 class MaintenanceRequestNumberService
 {
-    public function __construct(private readonly NumberSequenceService $sequence) {}
+    public function __construct(private readonly DocumentNumberingService $numbering) {}
 
-    /**
-     * Must be called inside the same DB transaction as the request insert
-     * so the sequence row lock covers the whole operation (same pattern as
-     * InvoiceNumberService/ContractNumberService).
-     */
-    public function generate(?\DateTimeInterface $date = null): string
+    /** @return array{document_number:string, configuration_version_id:string} */
+    public function generate(string $tenantId, ?string $branchId = null): array
     {
-        $date ??= now();
-        $year = (int) $date->format('Y');
-        $number = $this->sequence->next('maintenance_request', $year);
-
-        return sprintf('MR/OPTIFLEET/%d/%06d', $year, $number);
+        return $this->numbering->generate('maintenance_request', $tenantId, $branchId);
     }
 }

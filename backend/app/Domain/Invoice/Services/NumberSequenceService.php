@@ -12,14 +12,14 @@ use Illuminate\Support\Facades\DB;
  */
 class NumberSequenceService
 {
-    public function next(string $type, ?int $year = null): int
+    public function next(string $type, ?int $year = null, int $startAt = 0): int
     {
         $year ??= (int) now()->format('Y');
         $key = "{$type}:{$year}";
 
         DB::statement(
-            'INSERT INTO commercial_number_sequences (sequence_key, last_number) VALUES (?, 0) ON CONFLICT (sequence_key) DO NOTHING',
-            [$key]
+            'INSERT INTO commercial_number_sequences (sequence_key, last_number) VALUES (?, ?) ON CONFLICT (sequence_key) DO NOTHING',
+            [$key, max(0, $startAt - 1)]
         );
 
         $row = DB::table('commercial_number_sequences')

@@ -5,7 +5,7 @@ namespace App\Domain\Inventory\Services;
 use App\Domain\Inventory\Models\StockTransfer;
 use App\Domain\Inventory\Models\StockTransferItem;
 use App\Domain\Inventory\Models\WarehouseStock;
-use App\Domain\Invoice\Services\NumberSequenceService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +36,7 @@ class StockTransferService
 
     public function __construct(
         private readonly InventoryService $inventory,
-        private readonly NumberSequenceService $numbers,
+        private readonly DocumentNumberingService $numbers,
     ) {}
 
     public function create(Warehouse $from, Warehouse $to, array $items, ?string $userId): StockTransfer
@@ -49,11 +49,12 @@ class StockTransferService
         }
 
         return DB::transaction(function () use ($from, $to, $items, $userId) {
-            $number = sprintf('TRF/%d/%06d', (int) now()->format('Y'), $this->numbers->next('stock_transfer', (int) now()->format('Y')));
+            $number = $this->numbers->generate('stock_transfer', $from->tenant_id, $from->branch_id ?? null, $from->workshop_id ?? null, $from->id);
 
             $transfer = StockTransfer::query()->create([
                 'tenant_id' => $from->tenant_id,
-                'transfer_number' => $number,
+                'transfer_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
                 'from_warehouse_id' => $from->id,
                 'to_warehouse_id' => $to->id,
                 'status' => 'DRAFT',

@@ -3,7 +3,7 @@
 namespace App\Domain\Procurement\Services;
 
 use App\Domain\Inventory\Services\InventoryService;
-use App\Domain\Invoice\Services\NumberSequenceService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Partner\Services\PartnerPerformanceService;
@@ -26,7 +26,7 @@ class GoodsReceiptService
 {
     public function __construct(
         private readonly InventoryService $inventory,
-        private readonly NumberSequenceService $numbers,
+        private readonly DocumentNumberingService $numbers,
         private readonly PartnerPerformanceService $performance,
     ) {}
 
@@ -45,11 +45,12 @@ class GoodsReceiptService
         return DB::transaction(function () use ($po, $warehouse, $lines, $userId, $notes) {
             $lockedPo = PurchaseOrder::query()->lockForUpdate()->findOrFail($po->id);
 
-            $number = sprintf('GR/%d/%06d', (int) now()->format('Y'), $this->numbers->next('goods_receipt', (int) now()->format('Y')));
+            $number = $this->numbers->generate('goods_receipt', $lockedPo->tenant_id, null, null, $warehouse->id);
 
             $receipt = GoodsReceipt::query()->create([
                 'tenant_id' => $lockedPo->tenant_id,
-                'gr_number' => $number,
+                'gr_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
                 'purchase_order_id' => $lockedPo->id,
                 'warehouse_id' => $warehouse->id,
                 'partner_id' => $lockedPo->partner_id,

@@ -15,7 +15,7 @@ class GoodsReceipt extends Model
 {
     use Auditable, BelongsToTenant, HasUuids;
 
-    protected $fillable = ['tenant_id', 'gr_number', 'purchase_order_id', 'warehouse_id', 'partner_id', 'status', 'received_by', 'received_at', 'notes'];
+    protected $fillable = ['tenant_id', 'gr_number', 'numbering_configuration_version_id', 'purchase_order_id', 'warehouse_id', 'partner_id', 'status', 'received_by', 'received_at', 'notes'];
 
     protected function casts(): array
     {

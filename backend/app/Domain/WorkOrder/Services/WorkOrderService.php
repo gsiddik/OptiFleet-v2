@@ -20,11 +20,16 @@ class WorkOrderService
     public function create(Vehicle $vehicle, array $attributes, ?string $createdByUserId = null): WorkOrder
     {
         return DB::transaction(function () use ($vehicle, $attributes, $createdByUserId) {
+            $branchId = $attributes['branch_id'] ?? $vehicle->branch_id;
+            $workshopId = $attributes['workshop_id'] ?? $vehicle->default_workshop_id;
+            $number = $this->numbers->generate($vehicle->tenant_id, $branchId, $workshopId);
+
             $workOrder = WorkOrder::query()->create(array_merge($attributes, [
-                'wo_number' => $this->numbers->generate(),
+                'wo_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
                 'tenant_id' => $vehicle->tenant_id,
-                'branch_id' => $attributes['branch_id'] ?? $vehicle->branch_id,
-                'workshop_id' => $attributes['workshop_id'] ?? $vehicle->default_workshop_id,
+                'branch_id' => $branchId,
+                'workshop_id' => $workshopId,
                 'vehicle_id' => $vehicle->id,
                 'current_odometer' => $attributes['current_odometer'] ?? $vehicle->current_odometer,
                 'status' => 'DRAFT',

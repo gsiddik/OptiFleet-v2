@@ -22,6 +22,7 @@ abstract class TestCase extends BaseTestCase
 
         $this->seed(\Database\Seeders\PermissionSeeder::class);
         $this->seed(\Database\Seeders\ModuleSeeder::class);
+        $this->seed(\Database\Seeders\ConfigurationDefaultsSeeder::class);
     }
 
     protected function makeTenant(array $attributes = []): Tenant

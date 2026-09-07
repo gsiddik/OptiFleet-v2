@@ -2,6 +2,7 @@
 
 namespace App\Domain\Vehicle\Services;
 
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Vehicle\Models\VehicleAssignment;
 use App\Domain\Vehicle\Models\VehicleTransfer;
@@ -25,20 +26,28 @@ class VehicleTransferService
         'RECEIVED' => ['COMPLETED'],
     ];
 
+    public function __construct(private readonly DocumentNumberingService $numbers) {}
+
     public function createDraft(Vehicle $vehicle, array $attributes, string $requestedByUserId): VehicleTransfer
     {
         if ($vehicle->transfers()->whereNotIn('status', ['COMPLETED', 'REJECTED', 'CANCELLED'])->exists()) {
             throw new VehicleException('This vehicle already has an in-progress transfer.');
         }
 
-        return VehicleTransfer::query()->create(array_merge($attributes, [
-            'tenant_id' => $vehicle->tenant_id,
-            'vehicle_id' => $vehicle->id,
-            'from_branch_id' => $vehicle->branch_id,
-            'from_workshop_id' => $vehicle->default_workshop_id,
-            'status' => 'DRAFT',
-            'requested_by' => $requestedByUserId,
-        ]));
+        return DB::transaction(function () use ($vehicle, $attributes, $requestedByUserId) {
+            $number = $this->numbers->generate('vehicle_transfer', $vehicle->tenant_id, $vehicle->branch_id, $vehicle->default_workshop_id);
+
+            return VehicleTransfer::query()->create(array_merge($attributes, [
+                'tenant_id' => $vehicle->tenant_id,
+                'transfer_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
+                'vehicle_id' => $vehicle->id,
+                'from_branch_id' => $vehicle->branch_id,
+                'from_workshop_id' => $vehicle->default_workshop_id,
+                'status' => 'DRAFT',
+                'requested_by' => $requestedByUserId,
+            ]));
+        });
     }
 
     public function transition(VehicleTransfer $transfer, string $to, ?string $actorUserId = null, ?string $note = null): VehicleTransfer

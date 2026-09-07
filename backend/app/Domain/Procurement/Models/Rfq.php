@@ -15,7 +15,7 @@ class Rfq extends Model
 {
     use Auditable, BelongsToTenant, HasUuids;
 
-    protected $fillable = ['tenant_id', 'rfq_number', 'purchase_request_id', 'warehouse_id', 'issue_date', 'response_deadline', 'status', 'notes'];
+    protected $fillable = ['tenant_id', 'rfq_number', 'numbering_configuration_version_id', 'purchase_request_id', 'warehouse_id', 'issue_date', 'response_deadline', 'status', 'notes'];
 
     protected function casts(): array
     {

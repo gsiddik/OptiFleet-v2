@@ -19,7 +19,7 @@ class WorkOrder extends Model
     use Auditable, BelongsToTenant, HasUuids, SoftDeletes;
 
     protected $fillable = [
-        'wo_number', 'tenant_id', 'branch_id', 'workshop_id', 'workspace_id', 'vehicle_id',
+        'wo_number', 'numbering_configuration_version_id', 'tenant_id', 'branch_id', 'workshop_id', 'workspace_id', 'vehicle_id',
         'maintenance_request_id', 'maintenance_schedule_id', 'breakdown_id',
         'maintenance_type', 'priority', 'complaint', 'current_odometer', 'engine_hour',
         'target_start_at', 'target_completion_at', 'started_at', 'completed_at', 'closed_at',

@@ -2,7 +2,7 @@
 
 namespace App\Domain\Warranty\Services;
 
-use App\Domain\Invoice\Services\NumberSequenceService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Warranty\Models\WarrantyClaim;
 use Illuminate\Support\Facades\DB;
@@ -28,16 +28,17 @@ class WarrantyClaimService
         'REJECTED' => ['CLOSED'],
     ];
 
-    public function __construct(private readonly NumberSequenceService $numbers) {}
+    public function __construct(private readonly DocumentNumberingService $numbers) {}
 
     public function create(Vehicle $vehicle, array $attributes, ?string $userId): WarrantyClaim
     {
         return DB::transaction(function () use ($vehicle, $attributes, $userId) {
-            $number = sprintf('WC/%d/%06d', (int) now()->format('Y'), $this->numbers->next('warranty_claim', (int) now()->format('Y')));
+            $number = $this->numbers->generate('warranty_claim', $vehicle->tenant_id, $vehicle->branch_id ?? null);
 
             return WarrantyClaim::query()->create(array_merge($attributes, [
                 'tenant_id' => $vehicle->tenant_id,
-                'claim_number' => $number,
+                'claim_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
                 'vehicle_id' => $vehicle->id,
                 'status' => 'DRAFT',
             ]));

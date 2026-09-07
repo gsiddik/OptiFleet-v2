@@ -2,7 +2,7 @@
 
 namespace App\Domain\Procurement\Services;
 
-use App\Domain\Invoice\Services\NumberSequenceService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Partner\Services\PartnerPerformanceService;
@@ -29,7 +29,7 @@ class PurchaseOrderService
     ];
 
     public function __construct(
-        private readonly NumberSequenceService $numbers,
+        private readonly DocumentNumberingService $numbers,
         private readonly PartnerPerformanceService $performance,
     ) {}
 
@@ -77,11 +77,12 @@ class PurchaseOrderService
         }
 
         return DB::transaction(function () use ($partner, $deliveryWarehouse, $attributes, $items, $userId) {
-            $number = sprintf('PO/%d/%06d', (int) now()->format('Y'), $this->numbers->next('purchase_order', (int) now()->format('Y')));
+            $number = $this->numbers->generate('purchase_order', $partner->tenant_id, null, null, $deliveryWarehouse->id);
 
             $po = PurchaseOrder::query()->create(array_merge($attributes, [
                 'tenant_id' => $partner->tenant_id,
-                'po_number' => $number,
+                'po_number' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
                 'partner_id' => $partner->id,
                 'delivery_warehouse_id' => $deliveryWarehouse->id,
                 'status' => 'DRAFT',

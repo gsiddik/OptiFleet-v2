@@ -16,7 +16,7 @@ class PurchaseOrder extends Model
     use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'po_number', 'purchase_request_id', 'vendor_quotation_id', 'partner_id', 'delivery_warehouse_id',
+        'tenant_id', 'po_number', 'numbering_configuration_version_id', 'purchase_request_id', 'vendor_quotation_id', 'partner_id', 'delivery_warehouse_id',
         'status', 'order_date', 'expected_delivery_date', 'subtotal', 'tax_total', 'freight_cost', 'total',
         'created_by', 'approved_by', 'notes',
     ];
