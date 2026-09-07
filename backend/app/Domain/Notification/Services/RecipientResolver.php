@@ -55,7 +55,10 @@ class RecipientResolver
         $identifier = $rule['identifier'] ?? null;
 
         return match ($type) {
-            'EXPLICIT_USER' => $identifier ? [['user_id' => $identifier]] : [],
+            // Section 51: EXPLICIT_USER is tenant-authored config data, so it goes through
+            // ApprovalResolver's tenant-membership check — never trust a raw identifier
+            // into a delivery target without confirming it belongs to this tenant.
+            'EXPLICIT_USER' => array_map(fn ($id) => ['user_id' => $id], $this->rbac->resolveUserIds($tenantId, 'EXPLICIT_USER', (string) $identifier)),
             'PERMISSION' => array_map(fn ($id) => ['user_id' => $id], $this->rbac->resolveUserIds($tenantId, 'PERMISSION', $identifier)),
             'ROLE' => array_map(fn ($id) => ['user_id' => $id], $this->rbac->resolveUserIds($tenantId, 'ROLE', $identifier)),
             'BRANCH_MANAGER' => $this->resolveScopedRole($tenantId, 'Branch Manager', $context['branch_id'] ?? null, 'branch'),

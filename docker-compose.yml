@@ -68,6 +68,76 @@ services:
       QUEUE_CONNECTION: redis
       LOG_CHANNEL: stderr
 
+  # Phase 5 Section 34: notifications are dispatched as queued jobs
+  # (SendNotificationJob) so delivery never blocks the request that raised
+  # the event — something has to actually process that queue. Phase 2's
+  # scheduled commands (billing:generate etc.) had the same latent gap;
+  # Phase 5's notification requirement is what makes it acute enough to
+  # fix here. Same image as `backend`, only the container command differs.
+  queue-worker:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_NAME: OptiFleet
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-optifleet}
+      DB_USERNAME: ${DB_USERNAME:-optifleet}
+      DB_PASSWORD: ${DB_PASSWORD:-optifleet}
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_CHANNEL: stderr
+    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600"]
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: docker/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_NAME: OptiFleet
+      APP_ENV: ${APP_ENV:-local}
+      APP_KEY: ${APP_KEY}
+      APP_DEBUG: ${APP_DEBUG:-true}
+      APP_URL: ${APP_URL:-http://localhost:8000}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-optifleet}
+      DB_USERNAME: ${DB_USERNAME:-optifleet}
+      DB_PASSWORD: ${DB_PASSWORD:-optifleet}
+      REDIS_CLIENT: predis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      QUEUE_CONNECTION: redis
+      LOG_CHANNEL: stderr
+    command: ["php", "artisan", "schedule:work"]
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped

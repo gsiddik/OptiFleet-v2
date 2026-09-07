@@ -174,6 +174,21 @@ class ConfigurationApiTest extends TestCase
         ], $this->authHeaders($token))->assertStatus(403);
     }
 
+    public function test_publish_without_publish_permission_is_denied_even_with_manage_permission(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'CFG3-'.Str::random(4)]);
+        [, $token] = $this->makeTenantUser($tenant, ['configuration.view', 'numbering.manage']); // no numbering.publish
+        $headers = $this->authHeaders($token);
+
+        $draft = $this->postJson('/api/v1/app/configuration/versions', [
+            'type' => 'NUMBERING', 'code' => 'stock_transfer', 'name' => 'ST Numbering',
+            'payload' => ['format' => '{DOC}/{SEQ:4}', 'doc_code' => 'ST'],
+        ], $headers)->assertStatus(201);
+
+        $this->postJson("/api/v1/app/configuration/versions/{$draft->json('data.id')}/publish", [], $headers)
+            ->assertStatus(403);
+    }
+
     public function test_notification_rule_crud_via_api(): void
     {
         [$tenant, $token] = $this->tenantWithConfigPermissions();

@@ -95,6 +95,45 @@ class NotificationEngineTest extends TestCase
         $this->assertNotContains($userB->id, $ids);
     }
 
+    public function test_recipient_resolver_explicit_user_rejects_a_user_outside_the_tenant(): void
+    {
+        $tenantA = $this->makeTenant(['code' => 'NOT4C-'.Str::random(4)]);
+        $tenantB = $this->makeTenant(['code' => 'NOT4D-'.Str::random(4)]);
+        [$outsiderFromB] = $this->makeTenantUser($tenantB, []);
+        [$memberOfA] = $this->makeTenantUser($tenantA, []);
+
+        $resolver = app(RecipientResolver::class);
+
+        // A malicious/careless tenant-A rule naming a tenant-B user id must resolve to nothing.
+        $leaked = $resolver->resolve([['type' => 'EXPLICIT_USER', 'identifier' => $outsiderFromB->id]], $tenantA->id, []);
+        $this->assertSame([], $leaked);
+
+        // The same rule naming a genuine tenant-A member resolves normally.
+        $legit = $resolver->resolve([['type' => 'EXPLICIT_USER', 'identifier' => $memberOfA->id]], $tenantA->id, []);
+        $this->assertSame([['user_id' => $memberOfA->id]], $legit);
+    }
+
+    public function test_rendered_email_subject_strips_header_injection_attempts(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'NOT4E-'.Str::random(4)]);
+        $configService = app(\App\Domain\Configuration\Services\ConfigurationService::class);
+        $set = $configService->findOrCreateSet($tenant->id, 'NOTIFICATION', 'breakdown.reported', 'TENANT', null, 'Subject Injection Test');
+        $version = $configService->publish($configService->createDraft($set, [
+            'channels' => ['EMAIL' => ['subject' => 'Alert: {{breakdown.description}}', 'body' => '{{breakdown.description}}']],
+        ], null), null, fn (array $p) => app(\App\Domain\Notification\Services\NotificationTemplateValidator::class)->validate('breakdown.reported', $p));
+
+        $templates = app(\App\Domain\Notification\Services\NotificationTemplateService::class);
+        $rendered = $templates->render($version, 'EMAIL', [
+            'breakdown' => ['description' => "Flat tire\r\nBcc: attacker@evil.test"],
+        ]);
+
+        // No CRLF survives into the subject — the one thing that actually enables
+        // header injection (a literal "Bcc:" substring on the same line is harmless).
+        $this->assertStringNotContainsString("\r", $rendered['subject']);
+        $this->assertStringNotContainsString("\n", $rendered['subject']);
+        $this->assertSame('Alert: Flat tire  Bcc: attacker@evil.test', $rendered['subject']);
+    }
+
     public function test_recipient_resolver_custom_email_requires_valid_format(): void
     {
         $resolver = app(RecipientResolver::class);

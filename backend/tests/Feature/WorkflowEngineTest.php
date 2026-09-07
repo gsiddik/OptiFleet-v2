@@ -268,6 +268,19 @@ class WorkflowEngineTest extends TestCase
         $this->assertSame([$permUser->id], $byExplicit);
     }
 
+    public function test_approval_resolver_explicit_user_rejects_a_user_outside_the_tenant(): void
+    {
+        $tenantA = $this->makeTenant(['code' => 'WF11B-'.Str::random(4)]);
+        $tenantB = $this->makeTenant(['code' => 'WF11C-'.Str::random(4)]);
+        [$outsiderFromB] = $this->makeTenantUser($tenantB, []);
+
+        $resolver = app(ApprovalResolver::class);
+
+        // A tenant-A approval rule naming a tenant-B user id must not resolve to an approver —
+        // otherwise a workflow config could grant approval authority to an outside account.
+        $this->assertSame([], $resolver->resolveUserIds($tenantA->id, 'EXPLICIT_USER', $outsiderFromB->id));
+    }
+
     public function test_single_step_approval_completes_request_on_approve(): void
     {
         $tenant = $this->makeTenant(['code' => 'WF12-'.Str::random(4)]);
