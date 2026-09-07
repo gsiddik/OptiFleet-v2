@@ -37,7 +37,7 @@ class DemoDataSeeder extends Seeder
         $alpha = $this->buildTenant('ALPHA', 'PT Alpha Fleet', [
             ['code' => 'ALPHA-JKT', 'name' => 'Jakarta Branch', 'city' => 'Jakarta', 'province' => 'DKI Jakarta'],
             ['code' => 'ALPHA-BDG', 'name' => 'Bandung Branch', 'city' => 'Bandung', 'province' => 'West Java'],
-        ], ['CORE', 'ORGANIZATION', 'ACCESS_MANAGEMENT', 'CONFIGURATION', 'VEHICLE', 'INSPECTION', 'MAINTENANCE', 'WORKSHOP', 'INVENTORY'], [
+        ], ['CORE', 'ORGANIZATION', 'ACCESS_MANAGEMENT', 'CONFIGURATION', 'VEHICLE', 'INSPECTION', 'MAINTENANCE', 'WORK_ORDER', 'WORKSHOP', 'HISTORY', 'INVENTORY'], [
             'branch' => 5, 'user' => 20, 'workshop' => 10, 'warehouse' => 10, 'vehicle' => 100,
         ]);
 
@@ -58,7 +58,36 @@ class DemoDataSeeder extends Seeder
         // Roles
         $adminRole = $this->makeTenantRole($tenant, 'Tenant Admin', Permission::query()->where('scope', 'tenant')->pluck('id')->all());
         $fleetManagerRole = $this->makeTenantRole($tenant, 'Fleet Manager', Permission::query()->where('scope', 'tenant')
-            ->whereIn('name', ['branch.view', 'workshop.view', 'workshop.update', 'warehouse.view', 'warehouse.update', 'vehicle_category.view', 'component_group.view'])
+            ->whereIn('name', array_merge(
+                ['branch.view', 'workshop.view', 'workshop.update', 'warehouse.view', 'warehouse.update', 'vehicle_category.view', 'component_group.view'],
+                // Phase 3: day-to-day operational access, short of final approvals/QC sign-off.
+                ['vehicle.view', 'vehicle.create', 'vehicle.update', 'vehicle.assign', 'vehicle.transfer', 'vehicle.status.update'],
+                ['inspection.view', 'inspection.create', 'inspection.perform', 'inspection.submit'],
+                ['maintenance_policy.view', 'maintenance_schedule.view'],
+                ['maintenance_request.view', 'maintenance_request.create'],
+                ['breakdown.view', 'breakdown.report'],
+                ['work_order.view', 'work_order.create', 'work_order.update'],
+                ['diagnosis.manage', 'maintenance_job.manage'],
+                ['worker.view', 'workspace.view'],
+                ['maintenance_history.view'],
+            ))
+            ->pluck('id')->all());
+        // Phase 3: workshop-side approvals/execution oversight, scoped to a
+        // single workshop per Section 48's example (assigned below).
+        $workshopManagerRole = $this->makeTenantRole($tenant, 'Workshop Manager', Permission::query()->where('scope', 'tenant')
+            ->whereIn('name', [
+                'vehicle.view', 'vehicle.status.update',
+                'inspection.view', 'inspection.review',
+                'maintenance_policy.view', 'maintenance_schedule.view', 'maintenance_schedule.manage',
+                'maintenance_request.view', 'maintenance_request.review', 'maintenance_request.approve', 'maintenance_request.reject', 'maintenance_request.convert_work_order',
+                'breakdown.view', 'breakdown.review', 'breakdown.resolve',
+                'work_order.view', 'work_order.submit', 'work_order.approve', 'work_order.reject', 'work_order.assign', 'work_order.schedule', 'work_order.start', 'work_order.pause', 'work_order.complete', 'work_order.cancel', 'work_order.close',
+                'diagnosis.manage', 'maintenance_job.manage',
+                'worker.view', 'worker.manage', 'worker.assign',
+                'workspace.view', 'workspace.manage', 'workspace.reserve', 'workspace.block',
+                'qc.view', 'qc.perform', 'qc.approve', 'qc.reject',
+                'vehicle_release.perform', 'maintenance_history.view',
+            ])
             ->pluck('id')->all());
         $this->makeTenantRole($tenant, 'Auditor', Permission::query()->where('scope', 'tenant')
             ->where(function ($q) {

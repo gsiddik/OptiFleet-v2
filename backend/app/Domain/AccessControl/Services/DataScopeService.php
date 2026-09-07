@@ -108,24 +108,31 @@ class DataScopeService
         return $allowed === null || in_array($warehouseId, $allowed, true);
     }
 
-    public function applyBranchScope(Builder $query, User $user, string $tenantId): Builder
+    /**
+     * $column defaults to 'id' to preserve the original behavior (used on
+     * Branch itself, e.g. BranchController::index). Phase 3 resources that
+     * merely *belong to* a branch (Vehicle, Inspection, MaintenanceRequest,
+     * ...) must pass their own foreign key, e.g. applyBranchScope($query,
+     * $user, $tenantId, 'branch_id').
+     */
+    public function applyBranchScope(Builder $query, User $user, string $tenantId, string $column = 'id'): Builder
     {
         $allowed = $this->allowedBranchIds($user, $tenantId);
 
-        return $allowed === null ? $query : $query->whereIn('id', $allowed);
+        return $allowed === null ? $query : $query->whereIn($column, $allowed);
     }
 
-    public function applyWorkshopScope(Builder $query, User $user, string $tenantId): Builder
+    public function applyWorkshopScope(Builder $query, User $user, string $tenantId, string $column = 'id'): Builder
     {
         $allowed = $this->allowedWorkshopIds($user, $tenantId);
 
-        return $allowed === null ? $query : $query->whereIn('id', $allowed);
+        return $allowed === null ? $query : $query->whereIn($column, $allowed);
     }
 
-    public function applyWarehouseScope(Builder $query, User $user, string $tenantId): Builder
+    public function applyWarehouseScope(Builder $query, User $user, string $tenantId, string $column = 'id'): Builder
     {
         $allowed = $this->allowedWarehouseIds($user, $tenantId);
 
-        return $allowed === null ? $query : $query->whereIn('id', $allowed);
+        return $allowed === null ? $query : $query->whereIn($column, $allowed);
     }
 }

@@ -1,0 +1,118 @@
+<?php
+
+namespace Tests\Feature;
+
+use Tests\TestCase;
+
+class WorkspaceReservationTest extends TestCase
+{
+    private function setUpWorkshop(): array
+    {
+        $tenant = $this->makeTenant(['code' => 'WSR-'.\Illuminate\Support\Str::random(4)]);
+        $this->grantModule($tenant, 'VEHICLE');
+        $this->grantModule($tenant, 'WORKSHOP');
+        $branch = $this->makeBranch($tenant);
+        $workshop = $this->makeWorkshop($tenant, $branch);
+
+        return [$tenant, $branch, $workshop];
+    }
+
+    public function test_workspace_crud(): void
+    {
+        [$tenant, , $workshop] = $this->setUpWorkshop();
+        [, $token] = $this->makeTenantUser($tenant, ['workspace.view', 'workspace.manage', 'workspace.block']);
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/workspaces', [
+            'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1', 'workspace_type' => 'GENERAL_SERVICE_BAY',
+        ], $headers)->assertStatus(201);
+        $id = $create->json('data.id');
+
+        $this->getJson("/api/v1/app/workspaces/{$id}", $headers)->assertOk()->assertJsonPath('data.status', 'AVAILABLE');
+        $this->postJson("/api/v1/app/workspaces/{$id}/block", [], $headers)->assertOk()->assertJsonPath('data.status', 'BLOCKED');
+        $this->postJson("/api/v1/app/workspaces/{$id}/unblock", [], $headers)->assertOk()->assertJsonPath('data.status', 'AVAILABLE');
+    }
+
+    public function test_reservation_lifecycle(): void
+    {
+        [$tenant, , $workshop] = $this->setUpWorkshop();
+        $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
+            'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
+            'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
+        ]);
+
+        [, $token] = $this->makeTenantUser($tenant, ['workspace.view', 'workspace.reserve']);
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id,
+            'start_at' => now()->addHour()->toIso8601String(),
+            'end_at' => now()->addHours(2)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+        $id = $create->json('data.id');
+
+        $this->postJson("/api/v1/app/workspace-reservations/{$id}/activate", [], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'ACTIVE');
+        $this->assertSame('OCCUPIED', $workspace->fresh()->status);
+
+        $this->postJson("/api/v1/app/workspace-reservations/{$id}/complete", [], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'COMPLETED');
+        $this->assertSame('AVAILABLE', $workspace->fresh()->status);
+    }
+
+    public function test_overlapping_reservation_is_rejected(): void
+    {
+        [$tenant, , $workshop] = $this->setUpWorkshop();
+        $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
+            'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
+            'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
+        ]);
+
+        [, $token] = $this->makeTenantUser($tenant, ['workspace.reserve']);
+        $headers = $this->authHeaders($token);
+
+        $start = now()->addHour();
+        $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id, 'start_at' => $start->toIso8601String(), 'end_at' => $start->copy()->addHours(2)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+
+        // Overlapping window (starts inside the first reservation).
+        $overlap = $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id,
+            'start_at' => $start->copy()->addMinutes(30)->toIso8601String(),
+            'end_at' => $start->copy()->addHours(3)->toIso8601String(),
+        ], $headers);
+        $overlap->assertStatus(422);
+
+        // Back-to-back (non-overlapping) reservation is allowed.
+        $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id,
+            'start_at' => $start->copy()->addHours(2)->toIso8601String(),
+            'end_at' => $start->copy()->addHours(3)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+    }
+
+    public function test_cancelled_reservation_frees_the_slot(): void
+    {
+        [$tenant, , $workshop] = $this->setUpWorkshop();
+        $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
+            'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
+            'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
+        ]);
+        [, $token] = $this->makeTenantUser($tenant, ['workspace.reserve']);
+        $headers = $this->authHeaders($token);
+
+        $start = now()->addHour();
+        $first = $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id, 'start_at' => $start->toIso8601String(), 'end_at' => $start->copy()->addHours(2)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+
+        $this->postJson("/api/v1/app/workspace-reservations/{$first->json('data.id')}/cancel", [], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'CANCELLED');
+
+        // Same window is now free.
+        $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id, 'start_at' => $start->toIso8601String(), 'end_at' => $start->copy()->addHours(2)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+    }
+}

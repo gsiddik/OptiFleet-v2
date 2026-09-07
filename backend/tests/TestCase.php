@@ -216,4 +216,78 @@ abstract class TestCase extends BaseTestCase
 
         return $contracts->approve($contract, $approver->id);
     }
+
+    // --- Phase 3 helpers ---
+
+    protected function makeBranch(Tenant $tenant, array $overrides = []): \App\Domain\Organization\Models\Branch
+    {
+        return \App\Domain\Organization\Models\Branch::query()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'code' => 'BR-'.Str::upper(Str::random(6)),
+            'name' => 'Test Branch',
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeWorkshop(Tenant $tenant, \App\Domain\Organization\Models\Branch $branch, array $overrides = []): \App\Domain\Organization\Models\Workshop
+    {
+        return \App\Domain\Organization\Models\Workshop::query()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'branch_id' => $branch->id,
+            'code' => 'WS-'.Str::upper(Str::random(6)),
+            'name' => 'Test Workshop',
+            'workshop_type' => 'INTERNAL',
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeVehicleCategory(array $overrides = []): \App\Domain\MasterData\Models\VehicleCategory
+    {
+        return \App\Domain\MasterData\Models\VehicleCategory::query()->create(array_merge([
+            'tenant_id' => null,
+            'code' => 'VC-'.Str::upper(Str::random(6)),
+            'name' => 'Test Category',
+            'is_system' => true,
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeComponentGroup(array $overrides = []): \App\Domain\MasterData\Models\ComponentGroup
+    {
+        return \App\Domain\MasterData\Models\ComponentGroup::query()->create(array_merge([
+            'tenant_id' => null,
+            'code' => 'CG-'.Str::upper(Str::random(6)),
+            'name' => 'Test Component',
+            'is_system' => true,
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeVehicle(Tenant $tenant, \App\Domain\Organization\Models\Branch $branch, \App\Domain\MasterData\Models\VehicleCategory $category, array $overrides = []): \App\Domain\Vehicle\Models\Vehicle
+    {
+        return \App\Domain\Vehicle\Models\Vehicle::query()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'branch_id' => $branch->id,
+            'vehicle_category_id' => $category->id,
+            'brand' => 'TestBrand',
+            'model' => 'TestModel',
+            'registration_number' => 'REG-'.Str::upper(Str::random(6)),
+            'current_odometer' => 10000,
+            'status' => 'ACTIVE',
+            'operational_status' => 'AVAILABLE',
+        ], $overrides));
+    }
+
+    protected function makeWorker(Tenant $tenant, \App\Domain\Organization\Models\Branch $branch, ?\App\Domain\Organization\Models\Workshop $workshop = null, array $overrides = []): \App\Domain\Workshop\Models\Worker
+    {
+        return \App\Domain\Workshop\Models\Worker::query()->create(array_merge([
+            'tenant_id' => $tenant->id,
+            'employee_code' => 'EMP-'.Str::upper(Str::random(6)),
+            'name' => 'Test Worker',
+            'branch_id' => $branch->id,
+            'workshop_id' => $workshop?->id,
+            'worker_type' => 'MECHANIC',
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
 }

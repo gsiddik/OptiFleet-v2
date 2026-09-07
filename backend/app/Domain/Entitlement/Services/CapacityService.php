@@ -7,6 +7,7 @@ use App\Domain\Identity\Models\TenantUser;
 use App\Domain\Organization\Models\Branch;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Organization\Models\Workshop;
+use App\Domain\Vehicle\Models\Vehicle;
 
 /**
  * Enforces per-resource capacity limits for a tenant. A resource counts
@@ -31,7 +32,7 @@ class CapacityService
             'workshop' => Workshop::query()->where('tenant_id', $tenantId)->where('status', '!=', 'CLOSED')->count(),
             'warehouse' => Warehouse::query()->where('tenant_id', $tenantId)->where('status', '!=', 'CLOSED')->count(),
             'user' => TenantUser::query()->where('tenant_id', $tenantId)->where('status', 'active')->count(),
-            'vehicle' => 0, // Vehicle module is out of scope for Phase 1
+            'vehicle' => Vehicle::query()->where('tenant_id', $tenantId)->where('status', '!=', 'DISPOSED')->count(),
             default => 0,
         };
     }

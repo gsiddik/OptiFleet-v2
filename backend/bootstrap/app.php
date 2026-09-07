@@ -124,4 +124,40 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\App\Domain\Payment\Services\PaymentException $e, Request $request) {
             return response()->json(['message' => $e->getMessage()], 422);
         });
+
+        $exceptions->render(function (\App\Domain\Vehicle\Services\VehicleException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Inspection\Services\InspectionException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\MaintenancePolicy\Services\MaintenancePolicyException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\MaintenanceRequest\Services\MaintenanceRequestException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Breakdown\Services\BreakdownException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\WorkOrder\Services\WorkOrderException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Workshop\Services\WorkshopOpsException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\QualityControl\Services\QualityControlException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\VehicleRelease\Services\VehicleReleaseException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
     })->create();

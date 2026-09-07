@@ -21,6 +21,9 @@ class AuditLogController extends Controller
         if ($resourceType = $request->string('resource_type')->value()) {
             $query->where('resource_type', $resourceType);
         }
+        if ($resourceId = $request->string('resource_id')->value()) {
+            $query->where('resource_id', $resourceId);
+        }
         if ($action = $request->string('action')->value()) {
             $query->where('action', $action);
         }

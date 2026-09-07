@@ -1,0 +1,185 @@
+<?php
+
+namespace App\Http\Controllers\Api\Tenant;
+
+use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\History\Services\DowntimeService;
+use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
+use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Services\WorkOrderService;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Tenant\StoreWorkOrderRequest;
+use App\Support\TenantContext;
+use Illuminate\Http\Request;
+
+class WorkOrderController extends Controller
+{
+    public function __construct(
+        private readonly WorkOrderService $workOrders,
+        private readonly DowntimeService $downtime,
+        private readonly DataScopeService $scope,
+        private readonly TenantContext $context,
+    ) {}
+
+    public function index(Request $request)
+    {
+        $user = $this->context->user();
+        $tenantId = $this->context->tenantId();
+
+        $query = WorkOrder::query()->with(['vehicle', 'branch', 'workshop']);
+        $this->scope->applyWorkshopScope($query, $user, $tenantId, 'workshop_id');
+
+        foreach (['status', 'priority', 'maintenance_type', 'vehicle_id', 'branch_id', 'workshop_id'] as $filter) {
+            if ($value = $request->string($filter)->value()) {
+                $query->where($filter, $value);
+            }
+        }
+        if ($from = $request->string('date_from')->value()) {
+            $query->whereDate('created_at', '>=', $from);
+        }
+        if ($to = $request->string('date_to')->value()) {
+            $query->whereDate('created_at', '<=', $to);
+        }
+
+        return $this->paginated($query->latest('created_at')->paginate($request->integer('per_page', 15)));
+    }
+
+    public function store(StoreWorkOrderRequest $request)
+    {
+        $tenantId = $this->context->tenantId();
+        $vehicle = Vehicle::query()->findOrFail($request->input('vehicle_id'));
+        abort_unless($vehicle->tenant_id === $tenantId, 404);
+
+        $targetWorkshopId = $request->input('workshop_id') ?? $vehicle->default_workshop_id;
+        abort_unless(
+            $this->scope->canAccessWorkshop($this->context->user(), $tenantId, $targetWorkshopId),
+            403,
+            'This workshop is outside your assigned data scope.'
+        );
+
+        $workOrder = $this->workOrders->create($vehicle, $request->validated(), $this->context->user()->id);
+
+        return $this->ok($workOrder, 201);
+    }
+
+    public function fromMaintenanceRequest(Request $request, MaintenanceRequest $maintenanceRequest)
+    {
+        $tenantId = $this->context->tenantId();
+        abort_unless($maintenanceRequest->tenant_id === $tenantId, 404);
+        abort_unless($this->scope->canAccessBranch($this->context->user(), $tenantId, $maintenanceRequest->branch_id), 403);
+
+        $workOrder = $this->workOrders->fromMaintenanceRequest($maintenanceRequest, $request->only(['maintenance_type', 'priority', 'complaint', 'workshop_id']), $this->context->user()->id);
+
+        return $this->ok($workOrder, 201);
+    }
+
+    public function show(WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+
+        return $this->ok($workOrder->load([
+            'vehicle', 'branch', 'workshop', 'findings', 'diagnoses', 'correctiveActions',
+            'jobs.laborLogs', 'plannedParts', 'additionalWorks', 'mechanicAssignments.worker',
+            'roadTests', 'vehicleRelease',
+        ]));
+    }
+
+    public function submit(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'submit');
+    }
+
+    public function approve(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'approve');
+    }
+
+    public function reject(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'reject');
+    }
+
+    public function assign(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'assign');
+    }
+
+    public function schedule(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+
+        $updated = $this->workOrders->schedule(
+            $workOrder,
+            $request->input('workspace_id'),
+            $request->input('target_start_at') ? new \DateTimeImmutable($request->input('target_start_at')) : null,
+            $request->input('target_completion_at') ? new \DateTimeImmutable($request->input('target_completion_at')) : null,
+        );
+
+        return $this->ok($updated);
+    }
+
+    public function start(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'start');
+    }
+
+    public function hold(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'hold');
+    }
+
+    public function resume(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'resume');
+    }
+
+    public function waitForPart(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'waitForPart');
+    }
+
+    public function submitToQc(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'submitToQc');
+    }
+
+    public function complete(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'complete');
+    }
+
+    public function close(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'close');
+    }
+
+    public function cancel(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'cancel');
+    }
+
+    public function downtime(WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+
+        return $this->ok($this->downtime->forWorkOrder($workOrder));
+    }
+
+    private function act(WorkOrder $workOrder, string $method)
+    {
+        $this->authorizeScope($workOrder);
+
+        return $this->ok($this->workOrders->{$method}($workOrder));
+    }
+
+    private function authorizeScope(WorkOrder $workOrder): void
+    {
+        abort_unless($workOrder->tenant_id === $this->context->tenantId(), 404);
+        abort_unless(
+            $this->scope->canAccessWorkshop($this->context->user(), $this->context->tenantId(), $workOrder->workshop_id),
+            403,
+            'This Work Order is outside your assigned data scope.'
+        );
+    }
+}

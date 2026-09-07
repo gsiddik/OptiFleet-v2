@@ -34,6 +34,22 @@ class PermissionSeeder extends Seeder
             'warehouse' => ['view', 'create', 'update', 'activate', 'deactivate'],
             'vehicle_category' => ['view', 'create', 'update'],
             'component_group' => ['view', 'create', 'update', 'map'],
+
+            // Phase 3: Core VMS Operations (Section 47)
+            'vehicle' => ['view', 'create', 'update', 'assign', 'transfer', 'status.update'],
+            'inspection' => ['view', 'create', 'perform', 'submit', 'review'],
+            'maintenance_policy' => ['view', 'manage'],
+            'maintenance_schedule' => ['view', 'manage'],
+            'maintenance_request' => ['view', 'create', 'review', 'approve', 'reject', 'convert_work_order'],
+            'breakdown' => ['view', 'report', 'review', 'resolve'],
+            'work_order' => ['view', 'create', 'update', 'submit', 'approve', 'reject', 'assign', 'schedule', 'start', 'pause', 'complete', 'cancel', 'close'],
+            'diagnosis' => ['manage'],
+            'maintenance_job' => ['manage'],
+            'worker' => ['view', 'manage', 'assign'],
+            'workspace' => ['view', 'manage', 'reserve', 'block'],
+            'qc' => ['view', 'perform', 'approve', 'reject'],
+            'vehicle_release' => ['perform'],
+            'maintenance_history' => ['view'],
         ];
 
         $bothScopes = [

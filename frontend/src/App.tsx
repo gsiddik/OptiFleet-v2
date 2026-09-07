@@ -42,6 +42,26 @@ import { AccountPaymentListPage } from './pages/tenant/account/AccountPaymentLis
 import { AccountPaymentDetailPage } from './pages/tenant/account/AccountPaymentDetailPage';
 import { LoadingState } from './components/States';
 
+import { VehicleListPage } from './pages/tenant/vehicles/VehicleListPage';
+import { VehicleDetailPage } from './pages/tenant/vehicles/VehicleDetailPage';
+import { VehicleTransferListPage } from './pages/tenant/vehicles/VehicleTransferListPage';
+import { VehicleHistoryPage } from './pages/tenant/vehicles/VehicleHistoryPage';
+import { InspectionListPage } from './pages/tenant/inspections/InspectionListPage';
+import { InspectionDetailPage } from './pages/tenant/inspections/InspectionDetailPage';
+import { InspectionTemplateListPage } from './pages/tenant/inspections/InspectionTemplateListPage';
+import { MaintenanceSchedulePage } from './pages/tenant/maintenance/MaintenanceSchedulePage';
+import { MaintenanceRequestListPage } from './pages/tenant/maintenance/MaintenanceRequestListPage';
+import { MaintenanceRequestDetailPage } from './pages/tenant/maintenance/MaintenanceRequestDetailPage';
+import { BreakdownListPage } from './pages/tenant/maintenance/BreakdownListPage';
+import { BreakdownDetailPage } from './pages/tenant/maintenance/BreakdownDetailPage';
+import { WorkOrderListPage } from './pages/tenant/workorders/WorkOrderListPage';
+import { WorkOrderDetailPage } from './pages/tenant/workorders/WorkOrderDetailPage';
+import { WorkspaceListPage } from './pages/tenant/workshop/WorkspaceListPage';
+import { WorkerListPage } from './pages/tenant/workshop/WorkerListPage';
+import { WorkshopSchedulerPage } from './pages/tenant/workshop/WorkshopSchedulerPage';
+import { WorkspaceReservationListPage } from './pages/tenant/workshop/WorkspaceReservationListPage';
+import { WorkloadPage } from './pages/tenant/workshop/WorkloadPage';
+
 function RootRedirect() {
   const { user, loading } = useAuth();
   if (loading) return <LoadingState />;
@@ -221,6 +241,158 @@ export default function App() {
             }
           >
             <Route path="dashboard" element={<TenantDashboardPage />} />
+            <Route
+              path="vehicles"
+              element={
+                <RequirePermission permission="vehicle.view">
+                  <VehicleListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="vehicles/:id"
+              element={
+                <RequirePermission permission="vehicle.view">
+                  <VehicleDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="vehicle-transfers"
+              element={
+                <RequirePermission permission="vehicle.transfer">
+                  <VehicleTransferListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="vehicle-history"
+              element={
+                <RequirePermission permission="maintenance_history.view">
+                  <VehicleHistoryPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="inspections"
+              element={
+                <RequirePermission permission="inspection.view">
+                  <InspectionListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="inspections/:id"
+              element={
+                <RequirePermission permission="inspection.view">
+                  <InspectionDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="inspection-templates"
+              element={
+                <RequirePermission permission="inspection.view">
+                  <InspectionTemplateListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="maintenance-schedules"
+              element={
+                <RequirePermission permission="maintenance_schedule.view">
+                  <MaintenanceSchedulePage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="maintenance-requests"
+              element={
+                <RequirePermission permission="maintenance_request.view">
+                  <MaintenanceRequestListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="maintenance-requests/:id"
+              element={
+                <RequirePermission permission="maintenance_request.view">
+                  <MaintenanceRequestDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="breakdowns"
+              element={
+                <RequirePermission permission="breakdown.view">
+                  <BreakdownListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="breakdowns/:id"
+              element={
+                <RequirePermission permission="breakdown.view">
+                  <BreakdownDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="work-orders"
+              element={
+                <RequirePermission permission="work_order.view">
+                  <WorkOrderListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="work-orders/:id"
+              element={
+                <RequirePermission permission="work_order.view">
+                  <WorkOrderDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="workspaces"
+              element={
+                <RequirePermission permission="workspace.view">
+                  <WorkspaceListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="workers"
+              element={
+                <RequirePermission permission="worker.view">
+                  <WorkerListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="workshop-scheduler"
+              element={
+                <RequirePermission permission="workspace.view">
+                  <WorkshopSchedulerPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="workspace-reservations"
+              element={
+                <RequirePermission permission="workspace.view">
+                  <WorkspaceReservationListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="workers/workload"
+              element={
+                <RequirePermission permission="worker.view">
+                  <WorkloadPage />
+                </RequirePermission>
+              }
+            />
             <Route
               path="organization/branches"
               element={

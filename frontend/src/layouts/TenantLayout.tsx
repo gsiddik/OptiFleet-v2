@@ -3,16 +3,81 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 
-const NAV = [
-  { to: '/app/dashboard', label: 'Dashboard', permission: null, module: null },
-  { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view', module: 'ORGANIZATION' },
-  { to: '/app/organization/workshops', label: 'Workshops', permission: 'workshop.view', module: 'ORGANIZATION' },
-  { to: '/app/organization/warehouses', label: 'Warehouses', permission: 'warehouse.view', module: 'ORGANIZATION' },
-  { to: '/app/master-data/vehicle-categories', label: 'Vehicle Categories', permission: 'vehicle_category.view', module: 'CORE' },
-  { to: '/app/master-data/component-groups', label: 'Component Groups', permission: 'component_group.view', module: 'CORE' },
-  { to: '/app/access/users', label: 'Users', permission: 'user.view', module: 'ACCESS_MANAGEMENT' },
-  { to: '/app/access/roles', label: 'Roles', permission: 'role.view', module: 'ACCESS_MANAGEMENT' },
-  { to: '/app/audit-logs', label: 'Audit Log', permission: 'audit.view', module: null },
+interface NavItem {
+  to: string;
+  label: string;
+  permission: string | null;
+  module: string | null;
+}
+interface NavGroup {
+  label: string | null;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  { label: null, items: [{ to: '/app/dashboard', label: 'Dashboard', permission: null, module: null }] },
+  {
+    label: 'Vehicle',
+    items: [
+      { to: '/app/vehicles', label: 'List', permission: 'vehicle.view', module: 'VEHICLE' },
+      { to: '/app/vehicle-transfers', label: 'Transfer', permission: 'vehicle.transfer', module: 'VEHICLE' },
+      { to: '/app/vehicle-history', label: 'History', permission: 'maintenance_history.view', module: 'VEHICLE' },
+    ],
+  },
+  {
+    label: 'Inspection',
+    items: [
+      { to: '/app/inspections', label: 'Inspections', permission: 'inspection.view', module: 'INSPECTION' },
+      { to: '/app/inspection-templates', label: 'Templates', permission: 'inspection.view', module: 'INSPECTION' },
+    ],
+  },
+  {
+    label: 'Maintenance',
+    items: [
+      { to: '/app/maintenance-schedules', label: 'Planning & Schedule', permission: 'maintenance_schedule.view', module: 'MAINTENANCE' },
+      { to: '/app/maintenance-requests', label: 'Maintenance Request', permission: 'maintenance_request.view', module: 'MAINTENANCE' },
+      { to: '/app/work-orders', label: 'Work Order', permission: 'work_order.view', module: 'WORK_ORDER' },
+      { to: '/app/breakdowns', label: 'Breakdown', permission: 'breakdown.view', module: 'MAINTENANCE' },
+      { to: '/app/work-orders?status=QC_PENDING', label: 'Quality Control', permission: 'qc.view', module: 'WORK_ORDER' },
+    ],
+  },
+  {
+    label: 'Workshop Operations',
+    items: [
+      { to: '/app/workspaces', label: 'Workspace', permission: 'workspace.view', module: 'WORKSHOP' },
+      { to: '/app/workshop-scheduler', label: 'Scheduler', permission: 'workspace.view', module: 'WORKSHOP' },
+      { to: '/app/workers', label: 'Mechanic', permission: 'worker.view', module: 'WORKSHOP' },
+      { to: '/app/workspace-reservations', label: 'Assignment', permission: 'workspace.view', module: 'WORKSHOP' },
+      { to: '/app/workers/workload', label: 'Workload', permission: 'worker.view', module: 'WORKSHOP' },
+    ],
+  },
+  {
+    label: 'History',
+    items: [{ to: '/app/vehicle-history', label: 'Maintenance History', permission: 'maintenance_history.view', module: null }],
+  },
+  {
+    label: 'Organization',
+    items: [
+      { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view', module: 'ORGANIZATION' },
+      { to: '/app/organization/workshops', label: 'Workshops', permission: 'workshop.view', module: 'ORGANIZATION' },
+      { to: '/app/organization/warehouses', label: 'Warehouses', permission: 'warehouse.view', module: 'ORGANIZATION' },
+    ],
+  },
+  {
+    label: 'Master Data',
+    items: [
+      { to: '/app/master-data/vehicle-categories', label: 'Vehicle Categories', permission: 'vehicle_category.view', module: 'CORE' },
+      { to: '/app/master-data/component-groups', label: 'Component Groups', permission: 'component_group.view', module: 'CORE' },
+    ],
+  },
+  {
+    label: 'Access',
+    items: [
+      { to: '/app/access/users', label: 'Users', permission: 'user.view', module: 'ACCESS_MANAGEMENT' },
+      { to: '/app/access/roles', label: 'Roles', permission: 'role.view', module: 'ACCESS_MANAGEMENT' },
+    ],
+  },
+  { label: null, items: [{ to: '/app/audit-logs', label: 'Audit Log', permission: 'audit.view', module: null }] },
 ];
 
 const ACCOUNT_NAV = [
@@ -49,24 +114,38 @@ export function TenantLayout() {
           Tenant Portal
         </div>
         <nav>
-          {NAV.filter((item) => !item.permission || hasPermission(item.permission))
-            .filter((item) => !item.module || activeModules === null || activeModules.includes(item.module))
-            .map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                style={({ isActive }) => ({
-                  display: 'block',
-                  padding: '10px 20px',
-                  color: isActive ? '#fff' : '#cbd5e1',
-                  background: isActive ? '#1d4ed8' : 'transparent',
-                  textDecoration: 'none',
-                  fontSize: 14,
-                })}
-              >
-                {item.label}
-              </NavLink>
-            ))}
+          {NAV_GROUPS.map((group) => {
+            const items = group.items
+              .filter((item) => !item.permission || hasPermission(item.permission))
+              .filter((item) => !item.module || activeModules === null || activeModules.includes(item.module));
+            if (items.length === 0) return null;
+            return (
+              <div key={group.label ?? items[0].to}>
+                {group.label && (
+                  <div style={{ padding: '14px 20px 4px', fontSize: 11, textTransform: 'uppercase', color: '#6b7280', letterSpacing: 1 }}>
+                    {group.label}
+                  </div>
+                )}
+                {items.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    style={({ isActive }) => ({
+                      display: 'block',
+                      padding: '8px 20px',
+                      paddingLeft: group.label ? 28 : 20,
+                      color: isActive ? '#fff' : '#cbd5e1',
+                      background: isActive ? '#1d4ed8' : 'transparent',
+                      textDecoration: 'none',
+                      fontSize: 14,
+                    })}
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            );
+          })}
         </nav>
         <div style={{ padding: '16px 20px 8px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>Account</div>
         <nav>
