@@ -8,6 +8,7 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -25,18 +26,12 @@ use Illuminate\Support\Facades\DB;
  */
 class StockTransferService
 {
-    private const TRANSITIONS = [
-        'DRAFT' => ['REQUESTED', 'CANCELLED'],
-        'REQUESTED' => ['APPROVED', 'REJECTED', 'CANCELLED'],
-        'APPROVED' => ['PREPARED', 'CANCELLED'],
-        'PREPARED' => ['CANCELLED'], // DISPATCHED reached only via dispatch()
-        'DISPATCHED' => ['IN_TRANSIT'],
-        'RECEIVED' => ['COMPLETED'],
-    ];
+    private const RESOURCE_TYPE = 'stock_transfer';
 
     public function __construct(
         private readonly InventoryService $inventory,
         private readonly DocumentNumberingService $numbers,
+        private readonly WorkflowEngine $workflow,
     ) {}
 
     public function create(Warehouse $from, Warehouse $to, array $items, ?string $userId): StockTransfer
@@ -50,11 +45,13 @@ class StockTransferService
 
         return DB::transaction(function () use ($from, $to, $items, $userId) {
             $number = $this->numbers->generate('stock_transfer', $from->tenant_id, $from->branch_id ?? null, $from->workshop_id ?? null, $from->id);
+            $workflowVersion = $this->workflow->resolveEffective(self::RESOURCE_TYPE, $from->tenant_id, $from->branch_id ?? null, $from->workshop_id ?? null);
 
             $transfer = StockTransfer::query()->create([
                 'tenant_id' => $from->tenant_id,
                 'transfer_number' => $number['document_number'],
                 'numbering_configuration_version_id' => $number['configuration_version_id'],
+                'workflow_configuration_version_id' => $workflowVersion?->id,
                 'from_warehouse_id' => $from->id,
                 'to_warehouse_id' => $to->id,
                 'status' => 'DRAFT',
@@ -78,7 +75,8 @@ class StockTransferService
         return DB::transaction(function () use ($transfer, $to) {
             $locked = StockTransfer::query()->lockForUpdate()->findOrFail($transfer->id);
 
-            if (! in_array($to, self::TRANSITIONS[$locked->status] ?? [], true)) {
+            $version = $this->workflow->resolvePinnedOrEffective($locked->workflow_configuration_version_id, self::RESOURCE_TYPE, $locked->tenant_id);
+            if (! $this->workflow->isTransitionAllowedForVersion($version, $locked->status, $to)) {
                 throw new StockTransferException("Cannot transition Stock Transfer from {$locked->status} to {$to}.");
             }
 

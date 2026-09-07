@@ -19,7 +19,7 @@ class WarrantyClaim extends Model
     use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'claim_number', 'numbering_configuration_version_id', 'warranty_id', 'partner_id', 'product_id', 'component_asset_id', 'tire_id',
+        'tenant_id', 'claim_number', 'numbering_configuration_version_id', 'workflow_configuration_version_id', 'warranty_id', 'partner_id', 'product_id', 'component_asset_id', 'tire_id',
         'vehicle_id', 'work_order_id', 'failure_date', 'failure_odometer', 'claim_amount', 'evidence', 'reason',
         'status', 'reviewed_by', 'reviewed_at', 'review_note', 'settled_at',
     ];

@@ -9,6 +9,7 @@ use App\Domain\Partner\Services\PartnerPerformanceService;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\Procurement\Models\VendorQuotation;
+use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -21,16 +22,12 @@ use Illuminate\Support\Facades\DB;
  */
 class PurchaseOrderService
 {
-    private const TRANSITIONS = [
-        'DRAFT' => ['SUBMITTED', 'CANCELLED'],
-        'SUBMITTED' => ['APPROVED', 'REJECTED', 'CANCELLED'],
-        'APPROVED' => ['ISSUED', 'CANCELLED'],
-        'RECEIVED' => ['CLOSED'],
-    ];
+    private const RESOURCE_TYPE = 'purchase_order';
 
     public function __construct(
         private readonly DocumentNumberingService $numbers,
         private readonly PartnerPerformanceService $performance,
+        private readonly WorkflowEngine $workflow,
     ) {}
 
     /**
@@ -78,11 +75,13 @@ class PurchaseOrderService
 
         return DB::transaction(function () use ($partner, $deliveryWarehouse, $attributes, $items, $userId) {
             $number = $this->numbers->generate('purchase_order', $partner->tenant_id, null, null, $deliveryWarehouse->id);
+            $workflowVersion = $this->workflow->resolveEffective(self::RESOURCE_TYPE, $partner->tenant_id, null, null);
 
             $po = PurchaseOrder::query()->create(array_merge($attributes, [
                 'tenant_id' => $partner->tenant_id,
                 'po_number' => $number['document_number'],
                 'numbering_configuration_version_id' => $number['configuration_version_id'],
+                'workflow_configuration_version_id' => $workflowVersion?->id,
                 'partner_id' => $partner->id,
                 'delivery_warehouse_id' => $deliveryWarehouse->id,
                 'status' => 'DRAFT',
@@ -133,7 +132,8 @@ class PurchaseOrderService
         return DB::transaction(function () use ($po, $to) {
             $locked = PurchaseOrder::query()->lockForUpdate()->findOrFail($po->id);
 
-            if (! in_array($to, self::TRANSITIONS[$locked->status] ?? [], true)) {
+            $version = $this->workflow->resolvePinnedOrEffective($locked->workflow_configuration_version_id, self::RESOURCE_TYPE, $locked->tenant_id);
+            if (! $this->workflow->isTransitionAllowedForVersion($version, $locked->status, $to)) {
                 throw new ProcurementException("Cannot transition Purchase Order from {$locked->status} to {$to}.");
             }
 

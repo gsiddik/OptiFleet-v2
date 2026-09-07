@@ -15,7 +15,7 @@ class PurchaseRequest extends Model
     use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'pr_number', 'numbering_configuration_version_id', 'branch_id', 'workshop_id', 'warehouse_id', 'source_type', 'source_reference',
+        'tenant_id', 'pr_number', 'numbering_configuration_version_id', 'workflow_configuration_version_id', 'branch_id', 'workshop_id', 'warehouse_id', 'source_type', 'source_reference',
         'requested_by', 'required_date', 'priority', 'status', 'notes',
     ];
 

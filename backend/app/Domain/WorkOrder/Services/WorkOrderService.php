@@ -6,6 +6,7 @@ use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
 
@@ -15,6 +16,7 @@ class WorkOrderService
         private readonly WorkOrderNumberService $numbers,
         private readonly WorkOrderTransitionService $transitions,
         private readonly MaintenanceRequestService $requests,
+        private readonly WorkflowEngine $workflow,
     ) {}
 
     public function create(Vehicle $vehicle, array $attributes, ?string $createdByUserId = null): WorkOrder
@@ -23,10 +25,12 @@ class WorkOrderService
             $branchId = $attributes['branch_id'] ?? $vehicle->branch_id;
             $workshopId = $attributes['workshop_id'] ?? $vehicle->default_workshop_id;
             $number = $this->numbers->generate($vehicle->tenant_id, $branchId, $workshopId);
+            $workflowVersion = $this->workflow->resolveEffective('work_order', $vehicle->tenant_id, $branchId, $workshopId);
 
             $workOrder = WorkOrder::query()->create(array_merge($attributes, [
                 'wo_number' => $number['document_number'],
                 'numbering_configuration_version_id' => $number['configuration_version_id'],
+                'workflow_configuration_version_id' => $workflowVersion?->id,
                 'tenant_id' => $vehicle->tenant_id,
                 'branch_id' => $branchId,
                 'workshop_id' => $workshopId,

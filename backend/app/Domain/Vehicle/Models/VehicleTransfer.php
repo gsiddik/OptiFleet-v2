@@ -14,7 +14,7 @@ class VehicleTransfer extends Model
     use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'transfer_number', 'numbering_configuration_version_id', 'vehicle_id', 'from_branch_id', 'to_branch_id',
+        'tenant_id', 'transfer_number', 'numbering_configuration_version_id', 'workflow_configuration_version_id', 'vehicle_id', 'from_branch_id', 'to_branch_id',
         'from_workshop_id', 'to_workshop_id', 'status', 'reason',
         'requested_by', 'approved_by', 'requested_at', 'approved_at',
         'dispatched_at', 'received_at', 'completed_at', 'notes',

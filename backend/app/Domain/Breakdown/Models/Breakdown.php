@@ -15,7 +15,7 @@ class Breakdown extends Model
     use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'branch_id', 'vehicle_id', 'reported_by', 'reported_at',
+        'tenant_id', 'workflow_configuration_version_id', 'branch_id', 'vehicle_id', 'reported_by', 'reported_at',
         'location', 'severity', 'description', 'evidence', 'response_notes',
         'downtime_start_at', 'status', 'maintenance_request_id', 'work_order_id', 'resolved_at',
     ];

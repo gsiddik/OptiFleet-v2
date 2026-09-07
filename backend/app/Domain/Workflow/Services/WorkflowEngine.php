@@ -51,6 +51,37 @@ class WorkflowEngine
         return $available;
     }
 
+    /**
+     * Section 25: the version a resource pinned at creation always wins —
+     * an in-flight resource is validated against exactly that version
+     * forever, never whatever is currently published. Only a legacy
+     * resource with no pinned version (created before this migration)
+     * falls back to resolving the tenant's current effective workflow.
+     */
+    public function resolvePinnedOrEffective(?string $pinnedVersionId, string $resourceType, string $tenantId, ?string $branchId = null, ?string $workshopId = null): ?ConfigurationVersion
+    {
+        if ($pinnedVersionId) {
+            return ConfigurationVersion::query()->find($pinnedVersionId);
+        }
+
+        return $this->resolveEffective($resourceType, $tenantId, $branchId, $workshopId);
+    }
+
+    public function isTransitionAllowedForVersion(?ConfigurationVersion $version, string $fromStatus, string $toStatus): bool
+    {
+        if (! $version) {
+            return false;
+        }
+
+        foreach ($version->payload['transitions'] ?? [] as $t) {
+            if (($t['from_status'] ?? null) === $fromStatus && ($t['to_status'] ?? null) === $toStatus) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public function findTransition(ConfigurationVersion $version, string $fromStatus, string $actionCode): ?array
     {
         foreach ($version->payload['transitions'] ?? [] as $t) {

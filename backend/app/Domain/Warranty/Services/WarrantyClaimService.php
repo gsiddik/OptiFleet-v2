@@ -5,40 +5,38 @@ namespace App\Domain\Warranty\Services;
 use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Warranty\Models\WarrantyClaim;
+use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Section 41: DRAFT -> SUBMITTED -> UNDER_REVIEW -> APPROVED ->
+ * Section 41/25: DRAFT -> SUBMITTED -> UNDER_REVIEW -> APPROVED ->
  * REPLACEMENT|REPAIR -> SETTLED -> CLOSED, with REJECTED as the
- * under-review side branch. A row-locked re-check on every transition
- * (Section 51/56: "never accept ... trusted financial totals" — the same
- * discipline extends to never letting two concurrent reviewers both act on
- * one claim).
+ * under-review side branch, now validated through the Phase 5 workflow
+ * engine against the version pinned at creation. A row-locked re-check on
+ * every transition (Section 51/56: "never accept ... trusted financial
+ * totals" — the same discipline extends to never letting two concurrent
+ * reviewers both act on one claim).
  */
 class WarrantyClaimService
 {
-    private const TRANSITIONS = [
-        'DRAFT' => ['SUBMITTED'],
-        'SUBMITTED' => ['UNDER_REVIEW'],
-        'UNDER_REVIEW' => ['APPROVED', 'REJECTED'],
-        'APPROVED' => ['REPLACEMENT', 'REPAIR'],
-        'REPLACEMENT' => ['SETTLED'],
-        'REPAIR' => ['SETTLED'],
-        'SETTLED' => ['CLOSED'],
-        'REJECTED' => ['CLOSED'],
-    ];
+    private const RESOURCE_TYPE = 'warranty_claim';
 
-    public function __construct(private readonly DocumentNumberingService $numbers) {}
+    public function __construct(
+        private readonly DocumentNumberingService $numbers,
+        private readonly WorkflowEngine $workflow,
+    ) {}
 
     public function create(Vehicle $vehicle, array $attributes, ?string $userId): WarrantyClaim
     {
         return DB::transaction(function () use ($vehicle, $attributes, $userId) {
             $number = $this->numbers->generate('warranty_claim', $vehicle->tenant_id, $vehicle->branch_id ?? null);
+            $workflowVersion = $this->workflow->resolveEffective(self::RESOURCE_TYPE, $vehicle->tenant_id, $vehicle->branch_id ?? null);
 
             return WarrantyClaim::query()->create(array_merge($attributes, [
                 'tenant_id' => $vehicle->tenant_id,
                 'claim_number' => $number['document_number'],
                 'numbering_configuration_version_id' => $number['configuration_version_id'],
+                'workflow_configuration_version_id' => $workflowVersion?->id,
                 'vehicle_id' => $vehicle->id,
                 'status' => 'DRAFT',
             ]));
@@ -50,7 +48,8 @@ class WarrantyClaimService
         return DB::transaction(function () use ($claim, $to, $userId, $note) {
             $locked = WarrantyClaim::query()->lockForUpdate()->findOrFail($claim->id);
 
-            if (! in_array($to, self::TRANSITIONS[$locked->status] ?? [], true)) {
+            $version = $this->workflow->resolvePinnedOrEffective($locked->workflow_configuration_version_id, self::RESOURCE_TYPE, $locked->tenant_id);
+            if (! $this->workflow->isTransitionAllowedForVersion($version, $locked->status, $to)) {
                 throw new WarrantyException("Cannot transition Warranty Claim from {$locked->status} to {$to}.");
             }
 

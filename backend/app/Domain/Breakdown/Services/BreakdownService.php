@@ -5,33 +5,35 @@ namespace App\Domain\Breakdown\Services;
 use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Section 20: REPORTED -> VERIFIED -> ASSESSED -> REPAIR_REQUIRED ->
- * WORK_ORDER_CREATED -> RESOLVED. Reporting a breakdown also flips the
- * vehicle into BREAKDOWN status immediately (Section 3) — the vehicle is
- * off-road from the moment it's reported, not from some later review step.
+ * Section 20/25: REPORTED -> VERIFIED -> ASSESSED -> REPAIR_REQUIRED ->
+ * WORK_ORDER_CREATED -> RESOLVED, now validated through the Phase 5
+ * workflow engine against the version pinned at report() time. Reporting a
+ * breakdown also flips the vehicle into BREAKDOWN status immediately
+ * (Section 3) — the vehicle is off-road from the moment it's reported, not
+ * from some later review step.
  */
 class BreakdownService
 {
-    private const TRANSITIONS = [
-        'REPORTED' => ['VERIFIED'],
-        'VERIFIED' => ['ASSESSED'],
-        'ASSESSED' => ['REPAIR_REQUIRED', 'RESOLVED'],
-        'REPAIR_REQUIRED' => ['WORK_ORDER_CREATED'],
-        'WORK_ORDER_CREATED' => ['RESOLVED'],
-    ];
+    private const RESOURCE_TYPE = 'breakdown';
 
-    public function __construct(private readonly MaintenanceRequestService $requests) {}
+    public function __construct(
+        private readonly MaintenanceRequestService $requests,
+        private readonly WorkflowEngine $workflow,
+    ) {}
 
     public function report(Vehicle $vehicle, array $attributes, ?string $reportedByUserId = null): Breakdown
     {
         return DB::transaction(function () use ($vehicle, $attributes, $reportedByUserId) {
             $vehicle = Vehicle::query()->lockForUpdate()->findOrFail($vehicle->id);
+            $workflowVersion = $this->workflow->resolveEffective(self::RESOURCE_TYPE, $vehicle->tenant_id, $vehicle->branch_id);
 
             $breakdown = Breakdown::query()->create(array_merge($attributes, [
                 'tenant_id' => $vehicle->tenant_id,
+                'workflow_configuration_version_id' => $workflowVersion?->id,
                 'branch_id' => $vehicle->branch_id,
                 'vehicle_id' => $vehicle->id,
                 'reported_by' => $reportedByUserId,
@@ -51,8 +53,8 @@ class BreakdownService
         return DB::transaction(function () use ($breakdown, $to, $note) {
             $breakdown = Breakdown::query()->lockForUpdate()->findOrFail($breakdown->id);
 
-            $allowed = self::TRANSITIONS[$breakdown->status] ?? [];
-            if (! in_array($to, $allowed, true)) {
+            $version = $this->workflow->resolvePinnedOrEffective($breakdown->workflow_configuration_version_id, self::RESOURCE_TYPE, $breakdown->tenant_id, $breakdown->branch_id);
+            if (! $this->workflow->isTransitionAllowedForVersion($version, $breakdown->status, $to)) {
                 throw new BreakdownException("Cannot transition breakdown from {$breakdown->status} to {$to}.");
             }
 

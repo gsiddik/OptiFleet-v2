@@ -2,37 +2,33 @@
 
 namespace App\Domain\WorkOrder\Services;
 
+use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Section 24: a single reusable transition table rather than status writes
- * scattered across controllers — Phase 5's configurable workflow engine is
- * meant to replace the table this class consults, not the callers of
- * transition(). Every call row-locks the WO first (Section 51/52): the
- * status guard is re-checked against the locked row, never the caller's
- * possibly-stale model instance, so two concurrent transitions on the same
- * WO can't both win.
+ * Section 24/25: a single reusable transition entry point rather than
+ * status writes scattered across controllers. Transition validity is
+ * delegated to the Phase 5 workflow engine, checked against exactly the
+ * "work_order" workflow version this WO was created under (Section 25 —
+ * an in-flight WO never has its rules silently changed by a later
+ * republish) — this graph includes the intentional QC_PENDING -> REWORK
+ * -> IN_PROGRESS loop. Every call row-locks the WO first (Section 51/52):
+ * the status guard is re-checked against the locked row, never the
+ * caller's possibly-stale model instance, so two concurrent transitions on
+ * the same WO can't both win.
  */
 class WorkOrderTransitionService
 {
-    private const TRANSITIONS = [
-        'DRAFT' => ['SUBMITTED', 'CANCELLED'],
-        'SUBMITTED' => ['APPROVED', 'REJECTED', 'CANCELLED'],
-        'APPROVED' => ['ASSIGNED', 'CANCELLED'],
-        'ASSIGNED' => ['SCHEDULED', 'CANCELLED'],
-        'SCHEDULED' => ['IN_PROGRESS', 'CANCELLED'],
-        'IN_PROGRESS' => ['QC_PENDING', 'ON_HOLD', 'WAITING_PART', 'CANCELLED'],
-        'ON_HOLD' => ['IN_PROGRESS', 'CANCELLED'],
-        'WAITING_PART' => ['IN_PROGRESS', 'CANCELLED'],
-        'QC_PENDING' => ['COMPLETED', 'REWORK'],
-        'REWORK' => ['IN_PROGRESS'],
-        'COMPLETED' => ['CLOSED'],
-    ];
+    private const RESOURCE_TYPE = 'work_order';
 
-    public function canTransition(string $from, string $to): bool
+    public function __construct(private readonly WorkflowEngine $workflow) {}
+
+    public function canTransition(WorkOrder $workOrder, string $to): bool
     {
-        return in_array($to, self::TRANSITIONS[$from] ?? [], true);
+        $version = $this->workflow->resolvePinnedOrEffective($workOrder->workflow_configuration_version_id, self::RESOURCE_TYPE, $workOrder->tenant_id, $workOrder->branch_id, $workOrder->workshop_id);
+
+        return $this->workflow->isTransitionAllowedForVersion($version, $workOrder->status, $to);
     }
 
     public function transition(WorkOrder $workOrder, string $to, array $extra = []): WorkOrder
@@ -40,7 +36,7 @@ class WorkOrderTransitionService
         return DB::transaction(function () use ($workOrder, $to, $extra) {
             $locked = WorkOrder::query()->lockForUpdate()->findOrFail($workOrder->id);
 
-            if (! $this->canTransition($locked->status, $to)) {
+            if (! $this->canTransition($locked, $to)) {
                 throw new WorkOrderException("Cannot transition Work Order from {$locked->status} to {$to}.");
             }
 
