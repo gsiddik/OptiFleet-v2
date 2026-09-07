@@ -49,11 +49,16 @@ class SubscriptionService
 
     public function activate(Subscription $subscription): Subscription
     {
-        if (in_array($subscription->status, ['CANCELLED', 'EXPIRED'], true)) {
-            throw new SubscriptionException("Cannot activate a subscription in status {$subscription->status}.");
-        }
-
         return DB::transaction(function () use ($subscription) {
+            // Row-locked re-check: activate() can be reached concurrently
+            // from both a payment verification and a non-payment-required
+            // contract approval for the same subscription; the lock
+            // serializes them so entitlement provisioning never double-fires.
+            $subscription = Subscription::query()->lockForUpdate()->findOrFail($subscription->id);
+            if (in_array($subscription->status, ['CANCELLED', 'EXPIRED'], true)) {
+                throw new SubscriptionException("Cannot activate a subscription in status {$subscription->status}.");
+            }
+
             $contract = $subscription->contract;
 
             $subscription->update([

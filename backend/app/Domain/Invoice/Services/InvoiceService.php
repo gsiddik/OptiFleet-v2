@@ -6,12 +6,20 @@ use App\Domain\Billing\Models\Billing;
 use App\Domain\Invoice\Models\Invoice;
 use App\Domain\Invoice\Models\InvoiceItem;
 use App\Domain\Pricing\Support\Money;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
 {
     public function __construct(private readonly InvoiceNumberService $numbers) {}
 
+    /**
+     * Idempotent like BillingGenerationService::generateForSubscription():
+     * the pre-check below is a fast path only, not the source of safety —
+     * the unique index invoices_billing_id_unique is — and the catch below
+     * turns a concurrent duplicate attempt into a lookup of the row the
+     * other process just created.
+     */
     public function generateFromBilling(Billing $billing): Invoice
     {
         $existing = Invoice::query()->where('billing_id', $billing->id)->first();
@@ -19,6 +27,18 @@ class InvoiceService
             return $existing;
         }
 
+        try {
+            return $this->createFromBilling($billing);
+        } catch (QueryException $e) {
+            if (str_contains($e->getMessage(), 'invoices_billing_id_unique')) {
+                return Invoice::query()->where('billing_id', $billing->id)->firstOrFail();
+            }
+            throw $e;
+        }
+    }
+
+    private function createFromBilling(Billing $billing): Invoice
+    {
         return DB::transaction(function () use ($billing) {
             $invoice = Invoice::query()->create([
                 'invoice_number' => $this->numbers->generate(),

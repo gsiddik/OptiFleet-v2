@@ -206,6 +206,23 @@ Tests run against a real PostgreSQL database (`optifleet_test`), not SQLite,
 so PostgreSQL-specific behavior (composite FKs, partial unique indexes) is
 exercised.
 
+### Concurrency validation
+
+Every idempotent/racy commercial write path is backed by a DB constraint,
+not just an application-level check-then-act guard: billing generation
+(`billings_period_unique`), invoice generation from a billing
+(`invoices_billing_id_unique`), invoice numbering (`NumberSequenceService`'s
+`INSERT ... ON CONFLICT` + `SELECT ... FOR UPDATE`), and row-locked
+re-checks (`lockForUpdate()`) on contract approval, subscription
+activation, and payment verification/rejection so two concurrent callers
+racing the same status transition can't both win it. `php artisan
+concurrency:smoke-test` forks real OS worker processes (PHP's built-in dev
+server serializes requests closely enough to never race, so this bypasses
+it) to race 12 workers generating billing/invoices for the identical period
+and 10 workers verifying the same payment, then asserts exactly one billing/
+invoice/verified-payment resulted and invoice numbers stayed globally
+unique — a manual release-gate tool, not part of the automated suite.
+
 ## Known non-blocking limitations
 
 - The `vehicle` capacity resource type has no counting source yet since the

@@ -133,11 +133,15 @@ class ContractService
      */
     public function approve(Contract $contract, string $approverUserId, ?string $note = null): Contract
     {
-        if ($contract->status !== 'PENDING_APPROVAL') {
-            throw new ContractException('Only a contract pending approval can be approved.');
-        }
-
         return DB::transaction(function () use ($contract, $approverUserId, $note) {
+            // Row-locked re-check: guards against two concurrent approve()
+            // calls both passing a pre-transaction status check and racing
+            // to provision a second subscription for the same contract.
+            $contract = Contract::query()->lockForUpdate()->findOrFail($contract->id);
+            if ($contract->status !== 'PENDING_APPROVAL') {
+                throw new ContractException('Only a contract pending approval can be approved.');
+            }
+
             ContractApproval::query()->create([
                 'contract_id' => $contract->id,
                 'approver_user_id' => $approverUserId,

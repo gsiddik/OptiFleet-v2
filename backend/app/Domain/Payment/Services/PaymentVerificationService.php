@@ -24,11 +24,16 @@ class PaymentVerificationService
 
     public function verify(Payment $payment, string $verifierUserId, ?string $note = null): Payment
     {
-        if (! in_array($payment->status, ['SUBMITTED', 'UNDER_REVIEW'], true)) {
-            throw new PaymentException('Only a submitted payment under review can be verified.');
-        }
-
         return DB::transaction(function () use ($payment, $verifierUserId, $note) {
+            // Row-locked re-check: the pre-transaction status on $payment can
+            // be stale under concurrent verify()/reject() calls on the same
+            // row, so the authoritative check happens here, against the
+            // locked row, not the caller's possibly-stale model instance.
+            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            if (! in_array($payment->status, ['SUBMITTED', 'UNDER_REVIEW'], true)) {
+                throw new PaymentException('Only a submitted payment under review can be verified.');
+            }
+
             $payment->update([
                 'status' => 'VERIFIED',
                 'verified_by' => $verifierUserId,
@@ -57,17 +62,20 @@ class PaymentVerificationService
 
     public function reject(Payment $payment, string $verifierUserId, string $note): Payment
     {
-        if (! in_array($payment->status, ['SUBMITTED', 'UNDER_REVIEW'], true)) {
-            throw new PaymentException('Only a submitted payment under review can be rejected.');
-        }
+        return DB::transaction(function () use ($payment, $verifierUserId, $note) {
+            $payment = Payment::query()->lockForUpdate()->findOrFail($payment->id);
+            if (! in_array($payment->status, ['SUBMITTED', 'UNDER_REVIEW'], true)) {
+                throw new PaymentException('Only a submitted payment under review can be rejected.');
+            }
 
-        $payment->update([
-            'status' => 'REJECTED',
-            'verified_by' => $verifierUserId,
-            'verified_at' => now(),
-            'verification_note' => $note,
-        ]);
+            $payment->update([
+                'status' => 'REJECTED',
+                'verified_by' => $verifierUserId,
+                'verified_at' => now(),
+                'verification_note' => $note,
+            ]);
 
-        return $payment->fresh();
+            return $payment->fresh();
+        });
     }
 }
