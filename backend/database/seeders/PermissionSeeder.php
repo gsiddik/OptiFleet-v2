@@ -17,6 +17,15 @@ class PermissionSeeder extends Seeder
             'tenant' => ['view', 'create', 'update', 'activate', 'deactivate'],
             'module' => ['view', 'manage'],
             'entitlement' => ['view', 'manage'],
+
+            // Phase 2: commercial SaaS (Section 42)
+            'bundle' => ['view', 'create', 'update', 'publish'],
+            'pricing' => ['view', 'create', 'update', 'publish'],
+            'contract' => ['view', 'create', 'update', 'submit', 'approve', 'amend', 'renew', 'terminate'],
+            'subscription' => ['view', 'activate', 'suspend', 'reactivate'],
+            'billing' => ['view', 'generate', 'adjust'],
+            'invoice' => ['view', 'generate', 'issue', 'void'],
+            'payment' => ['view', 'verify', 'reject'],
         ];
 
         $tenantOnly = [
@@ -44,6 +53,23 @@ class PermissionSeeder extends Seeder
         foreach ($bothScopes as $group => $actions) {
             $this->seedGroup($group, $actions, 'platform');
             $this->seedGroup($group, $actions, 'tenant');
+        }
+
+        // Tenant billing-portal permissions (Section 42/44) — 3-level dotted
+        // names, seeded explicitly rather than through seedGroup's
+        // "group.action" convention.
+        foreach ([
+            'account.subscription.view',
+            'account.contract.view',
+            'account.invoice.view',
+            'account.invoice.download',
+            'account.payment.submit',
+            'account.payment.view',
+        ] as $name) {
+            Permission::query()->updateOrCreate(
+                ['name' => $name, 'scope' => 'tenant'],
+                ['group' => 'account', 'description' => str_replace('.', ' ', $name)]
+            );
         }
     }
 

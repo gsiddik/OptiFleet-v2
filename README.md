@@ -1,23 +1,77 @@
-# OptiFleet — Phase 1: SaaS Foundation
+# OptiFleet — Phase 1 + Phase 2: Commercial SaaS
 
-Multi-tenant Vehicle Maintenance Management SaaS platform. This repository
-contains Phase 1 only: application foundation, authentication, multi-tenancy,
-dynamic RBAC, organizational data scope, module catalog/dependency/entitlement,
-capacity entitlement, organization management (branch/workshop/warehouse),
-master data (vehicle category/component group), audit trail, and both the
-Platform and Tenant portals.
+Multi-tenant Vehicle Maintenance Management SaaS platform. Phase 1 delivered
+the application foundation: authentication, multi-tenancy, dynamic RBAC,
+organizational data scope, module catalog/dependency/entitlement, capacity
+entitlement, organization management (branch/workshop/warehouse), master data
+(vehicle category/component group), audit trail, and both the Platform and
+Tenant portals. Phase 2 adds the full commercial SaaS lifecycle on top of
+that stable baseline, unchanged: Bundle → Pricing → Contract → Subscription →
+Entitlement Provisioning → Billing → Invoice → Payment → Verification →
+Activation/Renewal/Suspension/Reactivation.
 
 ## Architecture
 
 - **Backend**: Laravel 11 (PHP 8.3), modular monolith under
   `backend/app/Domain/{Identity,AccessControl,ProductCatalog,Entitlement,
-  Organization,MasterData,Audit}`, plus `Platform`/`Tenant` API controllers.
+  Organization,MasterData,Audit,Pricing,Contract,Subscription,Billing,
+  Invoice,Payment}`, plus `Platform`/`Tenant` API controllers (Tenant split
+  further into operational controllers and a billing-only `Tenant/Account`
+  namespace, see below).
 - **Frontend**: React 19 + TypeScript + Vite, React Router, Axios.
-- **Database**: PostgreSQL (shared schema, `tenant_id`-scoped tables).
+- **Database**: PostgreSQL (shared schema, `tenant_id`-scoped tables). All
+  money columns are `decimal(14,2)` — never floating point.
 - **Cache / Queue**: Redis.
 - **Auth**: Laravel Sanctum personal access tokens. The active tenant is
   encoded as a token *ability* (`tenant:<uuid>`) at issuance time — never
   trusted from a client header — so switching tenants issues a fresh token.
+
+### Commercial SaaS lifecycle (Phase 2)
+
+- **Bundles** (`ProductCatalog\Bundle`) group modules into a sellable
+  product; publishing a bundle snapshots its module composition into an
+  immutable `BundleVersion` so past contracts remain valid even after the
+  bundle definition changes.
+- **Pricing** (`Pricing\Pricing`/`PricingVersion`) is versioned per
+  priceable (module/bundle/add-on/capacity) × billing frequency, with an
+  optional tenant-specific override (`TenantCustomPricing`) resolved with
+  priority TENANT_CUSTOM > STANDARD. All arithmetic goes through
+  `Pricing\Support\Money`, backed by `brick/math` `BigDecimal` — never
+  native float math — and rounds half-up to 2 decimals.
+- **Contracts** (`Contract\Contract`/`ContractItem`) are the commercial/legal
+  agreement: draft → items (pricing frozen at add-time) → submit → approve
+  → active, with amendments (add/remove items, reverse-dependency checked)
+  and renewals as first-class sub-flows. The server always recalculates
+  totals from line items — a contract's `subtotal`/`discount`/`tax`/`total`
+  are never accepted from the client (Sections 57–58 of the Phase 2 brief).
+- **Subscriptions** (`Subscription\Subscription`) are the technical access
+  period a contract provisions; `EntitlementProvisioningService` grants the
+  underlying module entitlements in dependency order (topological sort) by
+  reusing Phase 1's `TenantModuleEntitlement`/`TenantCapacityLimit` tables
+  (extended additively with nullable `contract_id`/`contract_item_id`
+  provenance columns) — there is no second, parallel entitlement system.
+- **Billing → Invoice → Payment → Verification**: `BillingGenerationService`
+  is idempotent (a DB unique constraint on
+  `(subscription_id, billing_period_start, billing_period_end)` makes a
+  duplicate generation a no-op, not an error) and prorates partial periods
+  via `Money::prorate()`. Invoices get a concurrency-safe sequential number
+  (`INSERT ... ON CONFLICT DO NOTHING` + `SELECT ... FOR UPDATE`) and a
+  server-rendered PDF (Dompdf). Tenants submit payments with a proof file
+  (MIME/size-validated, UUID-named, stored on the private `local` disk —
+  never web-accessible, never trusting the client-supplied filename);
+  platform operators verify or reject, which recalculates the invoice's
+  paid/outstanding amount and — once fully paid — (re)activates the
+  subscription and restores entitlements, all inside one DB transaction.
+- **Suspension**: a daily scheduled dunning pipeline (`billing:generate`,
+  `invoices:evaluate-overdue`, `subscriptions:evaluate-grace-period`,
+  `contracts:evaluate-expiry`) moves overdue subscriptions through
+  PAST_DUE → GRACE_PERIOD → SUSPENDED. A suspended tenant keeps access to
+  its billing-only `Account` routes (`/app/account/*` — subscription,
+  contract, invoices, payment submission) so it can pay its way out, while
+  every operational route is blocked by the `RestrictSuspendedTenant`
+  middleware (alias `subscription.access`) with a `403
+  SUBSCRIPTION_SUSPENDED` response. The tenant portal shows a persistent
+  suspension banner driven by the same `/app/account/subscription` call.
 
 ### Multi-tenancy & isolation
 
@@ -122,6 +176,14 @@ to verify manually. Log in as `alpha.admin@optifleet.test` in one browser
 and `beta.admin@optifleet.test` in another (or an incognito window) to see
 tenant isolation in action — each only ever sees its own data.
 
+`CommercialSeeder` (Phase 2) additionally seeds four tenants covering the
+distinct commercial states: `ALPHA` (active subscription, paid invoice),
+`BETA` (past-due subscription, overdue invoice — `beta.admin@optifleet.test`),
+`GAMMA` (pending subscription, approved contract not yet activated —
+`gamma.admin@optifleet.test`), `DELTA` (suspended subscription, restricted
+to billing-only access — `delta.admin@optifleet.test`), all with password
+`password`.
+
 ## Tests
 
 ```bash
@@ -129,26 +191,29 @@ cd backend
 php artisan test
 ```
 
-50 automated tests cover: authentication, tenant switching, platform/tenant
-scope separation, cross-tenant GET/UPDATE/DEACTIVATE/CREATE denial (IDOR),
-dynamic RBAC (grant/revoke), organizational data scope (branch/workshop/
-warehouse cascade), module entitlement (grant/revoke, dependency
-enforcement), capacity limits, module dependency resolution (direct,
-transitive, reverse, circular rejection), vehicle category / component
-group CRUD, system-master protection, the many-to-many mapping in both
-directions, and audit log creation + isolation.
+93 automated tests: 50 Phase 1 regression tests (authentication, tenant
+switching, platform/tenant scope separation, cross-tenant GET/UPDATE/
+DEACTIVATE/CREATE denial (IDOR), dynamic RBAC, organizational data scope,
+module entitlement, capacity limits, module dependency resolution, master
+data CRUD, audit log isolation) plus 43 Phase 2 tests covering bundle
+publishing/versioning, pricing resolution and proration math, the full
+contract lifecycle (draft → approve → active → amend → renew), billing
+generation idempotency, invoice numbering, payment submission/verification/
+rejection/resubmission, the dunning pipeline (past-due → grace → suspend →
+reactivate), and cross-tenant denial of contracts/invoices/payments.
 
 Tests run against a real PostgreSQL database (`optifleet_test`), not SQLite,
 so PostgreSQL-specific behavior (composite FKs, partial unique indexes) is
 exercised.
 
-## Known non-blocking limitations (Phase 1 scope)
+## Known non-blocking limitations
 
-- Pricing, contracts, billing, invoices, payments — intentionally out of
-  scope per the Phase 1 brief.
 - The `vehicle` capacity resource type has no counting source yet since the
-  Vehicle module itself is a Phase 2 concern; the limit can be configured
-  but is not yet enforced against real records.
+  Vehicle module itself is out of scope for Phase 1/2; the limit can be
+  configured but is not yet enforced against real records.
 - Docker image builds could not be executed inside this development
   session (see note above) — the configuration itself is complete and
   passed `docker compose config` validation.
+- `bcmath` is unavailable in this sandbox's PHP build; the pure-PHP
+  `brick/math` library is used instead for all money arithmetic, which is
+  precision-equivalent and requires no server configuration change.

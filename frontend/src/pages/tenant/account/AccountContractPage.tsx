@@ -1,0 +1,63 @@
+import { useEffect, useState } from 'react';
+import { apiClient, extractApiError } from '../../../api/client';
+import { ErrorState, LoadingState } from '../../../components/States';
+import { StatusBadge } from '../../../components/StatusBadge';
+import type { ContractItem } from '../../../types';
+
+export function AccountContractPage() {
+  const [contracts, setContracts] = useState<ContractItem[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient
+      .get('/app/account/contracts')
+      .then((res) => setContracts(res.data.data))
+      .catch((err) => setError(extractApiError(err).message));
+  }, []);
+
+  if (error) return <ErrorState message={error} />;
+  if (!contracts) return <LoadingState />;
+
+  return (
+    <div>
+      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Contracts</h1>
+      {contracts.length === 0 && <div className="card" style={{ color: '#9ca3af' }}>No contracts found.</div>}
+      {contracts.map((c) => (
+        <div key={c.id} className="card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+            <strong style={{ fontSize: 15 }}>{c.contract_number}</strong>
+            <StatusBadge status={c.status} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, fontSize: 13, color: '#374151' }}>
+            <div>Start: {c.start_date}</div>
+            <div>End: {c.end_date}</div>
+            <div>Billing Cycle: {c.billing_cycle}</div>
+            <div>
+              Total: {c.currency} {Number(c.total).toLocaleString()}
+            </div>
+          </div>
+          {c.items && c.items.length > 0 && (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginTop: 12 }}>
+              <thead>
+                <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
+                  <th style={{ padding: '6px 8px' }}>Item</th>
+                  <th style={{ padding: '6px 8px' }}>Qty</th>
+                  <th style={{ padding: '6px 8px' }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {c.items.map((it) => (
+                  <tr key={it.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '6px 8px' }}>{it.description}</td>
+                    <td style={{ padding: '6px 8px' }}>{it.quantity}</td>
+                    <td style={{ padding: '6px 8px' }}>{Number(it.final_amount).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}

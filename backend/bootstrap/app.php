@@ -4,6 +4,7 @@ use App\Http\Middleware\CheckModuleEntitlement;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsurePlatformScope;
 use App\Http\Middleware\EnsureTenantScope;
+use App\Http\Middleware\RestrictSuspendedTenant;
 use App\Http\Middleware\TenantContextMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant.scope' => EnsureTenantScope::class,
             'permission' => CheckPermission::class,
             'module' => CheckModuleEntitlement::class,
+            'subscription.access' => RestrictSuspendedTenant::class,
         ]);
 
         // TenantContextMiddleware must run before route-model-binding
@@ -88,6 +90,38 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $exceptions->render(function (\App\Domain\ProductCatalog\Services\ModuleDependencyException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\ProductCatalog\Services\BundleException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Pricing\Services\PricingException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Contract\Services\ContractException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Contract\Services\AmendmentException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Subscription\Services\SubscriptionException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Billing\Services\BillingException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Invoice\Services\InvoiceException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Payment\Services\PaymentException $e, Request $request) {
             return response()->json(['message' => $e->getMessage()], 422);
         });
     })->create();

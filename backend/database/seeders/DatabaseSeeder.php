@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             ModuleSeeder::class,
             MasterDataSeeder::class,
             DemoDataSeeder::class,
+            CommercialSeeder::class,
         ]);
     }
 }

@@ -140,4 +140,80 @@ abstract class TestCase extends BaseTestCase
             ['active' => true, 'source' => 'test']
         );
     }
+
+    // --- Phase 2 helpers ---
+
+    protected function makeBundle(string $code, array $moduleCodes, bool $publish = true): \App\Domain\ProductCatalog\Models\Bundle
+    {
+        $bundle = \App\Domain\ProductCatalog\Models\Bundle::query()->create([
+            'code' => $code,
+            'name' => $code,
+            'status' => 'DRAFT',
+            'is_active' => true,
+        ]);
+
+        $moduleIds = \App\Domain\ProductCatalog\Models\Module::query()->whereIn('code', $moduleCodes)->pluck('id')->all();
+        app(\App\Domain\ProductCatalog\Services\BundleService::class)->syncModules($bundle, $moduleIds);
+
+        if ($publish) {
+            app(\App\Domain\ProductCatalog\Services\BundleService::class)->publish($bundle);
+        }
+
+        return $bundle->fresh();
+    }
+
+    protected function makePricing(string $priceableType, string $priceableCode, string $amount, string $frequency = 'MONTHLY'): \App\Domain\Pricing\Models\Pricing
+    {
+        $pricing = \App\Domain\Pricing\Models\Pricing::query()->create([
+            'priceable_type' => $priceableType,
+            'priceable_code' => $priceableCode,
+            'pricing_method' => 'FLAT',
+            'billing_frequency' => $frequency,
+            'currency' => 'IDR',
+            'status' => 'DRAFT',
+        ]);
+
+        app(\App\Domain\Pricing\Services\PricingResolutionService::class)->publishVersion($pricing, [
+            'amount' => $amount,
+            'effective_from' => now()->subYear()->toDateString(),
+        ]);
+
+        return $pricing->fresh();
+    }
+
+    /**
+     * Creates a DRAFT contract for a bundle item via the real ContractService
+     * (so pricing resolution/proration logic is exercised the same way the
+     * API would trigger it), without going through HTTP.
+     */
+    protected function makeContractDraft(Tenant $tenant, string $bundleCode, array $overrides = []): \App\Domain\Contract\Models\Contract
+    {
+        return app(\App\Domain\Contract\Services\ContractService::class)->createDraft($tenant->id, array_merge([
+            'start_date' => now()->toDateString(),
+            'end_date' => now()->addYear()->toDateString(),
+            'billing_cycle' => 'MONTHLY',
+            'payment_terms_days' => 14,
+            'grace_period_days' => 7,
+            'currency' => 'IDR',
+            'activation_requires_payment' => false,
+        ], $overrides), [
+            [
+                'product_type' => 'BUNDLE',
+                'product_reference' => $bundleCode,
+                'description' => "{$bundleCode} subscription",
+                'quantity' => 1,
+                'billing_frequency' => 'MONTHLY',
+                'valid_from' => $overrides['start_date'] ?? now()->toDateString(),
+            ],
+        ]);
+    }
+
+    protected function approveContract(\App\Domain\Contract\Models\Contract $contract): \App\Domain\Contract\Models\Contract
+    {
+        $contracts = app(\App\Domain\Contract\Services\ContractService::class);
+        $contract = $contracts->submitForApproval($contract);
+        [$approver] = $this->makePlatformUser(['contract.approve']);
+
+        return $contracts->approve($contract, $approver->id);
+    }
 }

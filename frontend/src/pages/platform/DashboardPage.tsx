@@ -9,6 +9,13 @@ interface DashboardData {
   tenant_users_total: number;
   modules_total: number;
   recent_audit_logs: { id: string; resource_type: string; action: string; created_at: string }[];
+  subscriptions_pending: number;
+  subscriptions_active: number;
+  subscriptions_suspended: number;
+  contracts_expiring: number;
+  invoices_outstanding: number;
+  invoices_overdue: number;
+  payments_pending_verification: number;
 }
 
 export function PlatformDashboardPage() {
@@ -33,6 +40,16 @@ export function PlatformDashboardPage() {
     { label: 'Modules', value: data.modules_total },
   ];
 
+  const commercialStats = [
+    { label: 'Pending Subscriptions', value: data.subscriptions_pending },
+    { label: 'Active Subscriptions', value: data.subscriptions_active },
+    { label: 'Suspended Subscriptions', value: data.subscriptions_suspended, alert: data.subscriptions_suspended > 0 },
+    { label: 'Contracts Expiring', value: data.contracts_expiring, alert: data.contracts_expiring > 0 },
+    { label: 'Invoices Outstanding', value: data.invoices_outstanding },
+    { label: 'Invoices Overdue', value: data.invoices_overdue, alert: data.invoices_overdue > 0 },
+    { label: 'Payments Pending Verification', value: data.payments_pending_verification, alert: data.payments_pending_verification > 0 },
+  ];
+
   return (
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 20 }}>Platform Dashboard</h1>
@@ -41,6 +58,16 @@ export function PlatformDashboardPage() {
           <div key={s.label} className="card">
             <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
             <div style={{ fontSize: 28, fontWeight: 700 }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+
+      <h2 style={{ fontSize: 16, marginBottom: 12 }}>Commercial Overview</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 28 }}>
+        {commercialStats.map((s) => (
+          <div key={s.label} className="card">
+            <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
+            <div style={{ fontSize: 28, fontWeight: 700, color: s.alert ? '#b91c1c' : undefined }}>{s.value}</div>
           </div>
         ))}
       </div>
