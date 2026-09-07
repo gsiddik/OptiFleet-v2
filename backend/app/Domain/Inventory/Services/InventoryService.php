@@ -4,6 +4,7 @@ namespace App\Domain\Inventory\Services;
 
 use App\Domain\Inventory\Models\StockMovement;
 use App\Domain\Inventory\Models\WarehouseStock;
+use App\Domain\Notification\Services\NotificationDispatchService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use Illuminate\Database\QueryException;
@@ -21,6 +22,8 @@ use Illuminate\Support\Facades\DB;
  */
 class InventoryService
 {
+    public function __construct(private readonly NotificationDispatchService $notifications) {}
+
     public function reserve(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): array
     {
         if ($quantity <= 0) {
@@ -92,7 +95,10 @@ class InventoryService
 
             $this->writeMovement($stock, 'ISSUE', $quantity, $unitCost, $referenceType, $referenceId, $userId, $reason);
 
-            return ['unit_cost' => $unitCost, 'total_cost' => round($unitCost * $quantity, 4), 'stock' => $stock->fresh()];
+            $fresh = $stock->fresh();
+            $this->notifyIfLowStock($warehouse, $product, $fresh);
+
+            return ['unit_cost' => $unitCost, 'total_cost' => round($unitCost * $quantity, 4), 'stock' => $fresh];
         });
     }
 
@@ -192,7 +198,10 @@ class InventoryService
             $stock->decrement('quantity_on_hand', $quantity);
             $this->writeMovement($stock, 'TRANSFER_OUT', $quantity, (float) $stock->average_unit_cost, $referenceType, $referenceId, $userId, null);
 
-            return $stock->fresh();
+            $fresh = $stock->fresh();
+            $this->notifyIfLowStock($warehouse, $product, $fresh);
+
+            return $fresh;
         });
     }
 
@@ -225,6 +234,27 @@ class InventoryService
      * to locking the winner's row rather than raising a raw 500 (mirrors
      * the same phantom-row fix applied to Phase 3's workspace reservation).
      */
+    /**
+     * Section 53: fires 'inventory.low_stock' whenever a consuming
+     * movement (issue/transfer-out) leaves stock at or below its reorder
+     * point — dispatchEvent() is exception-safe, so a broken notification
+     * rule can never affect the stock movement that triggered this check.
+     */
+    private function notifyIfLowStock(Warehouse $warehouse, Product $product, WarehouseStock $stock): void
+    {
+        $status = $stock->reorderStatus();
+        if ($status === 'HEALTHY') {
+            return;
+        }
+
+        $this->notifications->dispatchEvent('inventory.low_stock', $warehouse->tenant_id, [
+            'product' => ['name' => $product->name, 'sku' => $product->sku],
+            'warehouse' => ['name' => $warehouse->name],
+            'stock' => ['available' => $stock->quantityAvailable(), 'reorder_point' => (float) $stock->reorder_point],
+            'warehouse_id' => $warehouse->id,
+        ], 'warehouse_stock', $stock->id);
+    }
+
     private function lockOrCreateStock(Warehouse $warehouse, Product $product): WarehouseStock
     {
         $stock = WarehouseStock::query()

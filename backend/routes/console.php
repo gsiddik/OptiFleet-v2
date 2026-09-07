@@ -15,3 +15,7 @@ Schedule::command('billing:generate')->dailyAt('01:00')->withoutOverlapping();
 Schedule::command('invoices:evaluate-overdue')->dailyAt('02:00')->withoutOverlapping();
 Schedule::command('subscriptions:evaluate-grace-period')->dailyAt('02:15')->withoutOverlapping();
 Schedule::command('contracts:evaluate-expiry')->dailyAt('02:30')->withoutOverlapping();
+
+// Phase 5 Section 32: escalate unresolved notifications on a short cycle —
+// escalation waits are typically measured in minutes/hours, not days.
+Schedule::command('notifications:process-escalations')->everyFiveMinutes()->withoutOverlapping();

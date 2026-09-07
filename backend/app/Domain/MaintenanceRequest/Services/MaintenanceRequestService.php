@@ -3,6 +3,7 @@
 namespace App\Domain\MaintenanceRequest\Services;
 
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
+use App\Domain\Notification\Services\NotificationDispatchService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,7 @@ class MaintenanceRequestService
     public function __construct(
         private readonly MaintenanceRequestNumberService $numbers,
         private readonly WorkflowEngine $workflow,
+        private readonly NotificationDispatchService $notifications,
     ) {}
 
     public function create(Vehicle $vehicle, array $attributes, ?string $requestedByUserId = null): MaintenanceRequest
@@ -63,6 +65,17 @@ class MaintenanceRequestService
             }
 
             $request->update($attributes);
+
+            if ($to === 'SUBMITTED') {
+                $vehicle = Vehicle::query()->find($request->vehicle_id);
+                $this->notifications->dispatchEvent('maintenance_request.submitted', $request->tenant_id, [
+                    'request' => ['number' => $request->request_number, 'priority' => $request->priority, 'complaint' => $request->complaint],
+                    'vehicle' => ['registration_number' => $vehicle?->registration_number],
+                    'branch_id' => $request->branch_id,
+                    'workshop_id' => $request->workshop_id,
+                    'requester_user_id' => $request->requested_by,
+                ], self::RESOURCE_TYPE, $request->id);
+            }
 
             return $request->fresh();
         });

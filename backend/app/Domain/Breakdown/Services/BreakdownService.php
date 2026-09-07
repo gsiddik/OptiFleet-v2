@@ -4,6 +4,7 @@ namespace App\Domain\Breakdown\Services;
 
 use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
+use App\Domain\Notification\Services\NotificationDispatchService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +24,7 @@ class BreakdownService
     public function __construct(
         private readonly MaintenanceRequestService $requests,
         private readonly WorkflowEngine $workflow,
+        private readonly NotificationDispatchService $notifications,
     ) {}
 
     public function report(Vehicle $vehicle, array $attributes, ?string $reportedByUserId = null): Breakdown
@@ -43,6 +45,13 @@ class BreakdownService
             ]));
 
             $vehicle->update(['status' => 'BREAKDOWN', 'operational_status' => 'ON_HOLD']);
+
+            $this->notifications->dispatchEvent('breakdown.reported', $vehicle->tenant_id, [
+                'breakdown' => ['severity' => $breakdown->severity, 'location' => $breakdown->location, 'description' => $breakdown->description],
+                'vehicle' => ['registration_number' => $vehicle->registration_number],
+                'branch_id' => $vehicle->branch_id,
+                'requester_user_id' => $reportedByUserId,
+            ], self::RESOURCE_TYPE, $breakdown->id);
 
             return $breakdown;
         });

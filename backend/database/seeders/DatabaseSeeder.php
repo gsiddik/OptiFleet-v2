@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             ModuleSeeder::class,
             ConfigurationDefaultsSeeder::class,
             WorkflowDefaultsSeeder::class,
+            NotificationDefaultsSeeder::class,
             MasterDataSeeder::class,
             DemoDataSeeder::class,
             CommercialSeeder::class,
