@@ -1232,3 +1232,65 @@ export interface WarrantyClaimItem {
   partner?: PartnerItem;
   warranty?: WarrantyItem;
 }
+
+// --- Phase 5: Tenant Configuration & Business Rules ---
+
+export type ConfigurationType = 'NUMBERING' | 'TEMPLATE' | 'WORKFLOW' | 'NOTIFICATION';
+export type ConfigurationVersionStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+
+export interface ConfigurationVersionItem {
+  id: string;
+  configuration_set_id: string;
+  version_number: number;
+  status: ConfigurationVersionStatus;
+  payload: Record<string, unknown>;
+  change_summary: string | null;
+  created_by: string | null;
+  published_by: string | null;
+  published_at: string | null;
+  archived_at: string | null;
+}
+
+export interface ConfigurationSetItem {
+  id: string;
+  tenant_id: string | null;
+  type: ConfigurationType;
+  code: string;
+  scope_type: string;
+  name: string;
+  is_system: boolean;
+  versions: ConfigurationVersionItem[];
+}
+
+export interface ConfigurationHistoryRow {
+  id: string;
+  type: ConfigurationType;
+  code: string;
+  name: string;
+  version_number: number;
+  status: ConfigurationVersionStatus;
+  created_by: string | null;
+  published_by: string | null;
+  published_at: string | null;
+  archived_at: string | null;
+  change_summary: string | null;
+}
+
+export interface NotificationRuleItem {
+  id: string;
+  tenant_id: string | null;
+  event_code: string;
+  name: string;
+  is_active: boolean;
+  is_system: boolean;
+  condition_set: Record<string, unknown> | null;
+  recipient_rules: Array<{ type: string; identifier?: string }>;
+  channels: string[];
+  escalation: Record<string, unknown> | null;
+}
+
+export interface NotificationEventInfo {
+  code: string;
+  platform_locked: boolean;
+  variables: { scalars: string[]; sections: Record<string, string[]> };
+}

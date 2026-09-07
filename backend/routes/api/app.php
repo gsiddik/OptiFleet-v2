@@ -5,6 +5,8 @@ use App\Http\Controllers\Api\Tenant\Account\AccountInvoiceController;
 use App\Http\Controllers\Api\Tenant\Account\AccountPaymentController;
 use App\Http\Controllers\Api\Tenant\Account\AccountSubscriptionController;
 use App\Http\Controllers\Api\Tenant\AuditLogController;
+use App\Http\Controllers\Api\Tenant\ConfigurationController;
+use App\Http\Controllers\Api\Tenant\NotificationRuleController;
 use App\Http\Controllers\Api\Tenant\BranchController;
 use App\Http\Controllers\Api\Tenant\ComponentGroupController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
@@ -449,5 +451,32 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
         });
 
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:audit.view');
+
+        // Phase 5 Section 39: Configuration — gated by permission only (not
+        // a module), same as Audit Log above.
+        Route::prefix('configuration')->group(function () {
+            Route::get('/sets', [ConfigurationController::class, 'index'])->middleware('permission:configuration.view');
+            Route::get('/sets/{set}', [ConfigurationController::class, 'show'])->middleware('permission:configuration.view');
+            Route::get('/history', [ConfigurationController::class, 'history'])->middleware('permission:configuration_history.view');
+            Route::get('/metadata', [ConfigurationController::class, 'metadata'])->middleware('permission:configuration.view');
+            Route::post('/preview', [ConfigurationController::class, 'preview'])->middleware('permission:configuration.view');
+            // These 4 span all 3 versioned types (NUMBERING/TEMPLATE/WORKFLOW), so the
+            // matching manage/publish permission is checked inside the controller
+            // (PermissionService, keyed off the set's type) rather than one fixed
+            // route-level permission.
+            Route::post('/versions', [ConfigurationController::class, 'store']);
+            Route::put('/versions/{version}', [ConfigurationController::class, 'updateDraft']);
+            Route::post('/versions/{version}/publish', [ConfigurationController::class, 'publish']);
+            Route::post('/versions/{version}/archive', [ConfigurationController::class, 'archive']);
+        });
+
+        Route::prefix('notification-rules')->group(function () {
+            Route::get('/', [NotificationRuleController::class, 'index'])->middleware('permission:configuration.view');
+            Route::get('/events', [NotificationRuleController::class, 'events'])->middleware('permission:configuration.view');
+            Route::post('/', [NotificationRuleController::class, 'store'])->middleware('permission:notification_rule.manage');
+            Route::put('/{rule}', [NotificationRuleController::class, 'update'])->middleware('permission:notification_rule.manage');
+            Route::post('/{rule}/activate', [NotificationRuleController::class, 'activate'])->middleware('permission:notification_rule.manage');
+            Route::post('/{rule}/deactivate', [NotificationRuleController::class, 'deactivate'])->middleware('permission:notification_rule.manage');
+        });
     });
 });

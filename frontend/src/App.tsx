@@ -34,6 +34,11 @@ import { ComponentGroupsPage } from './pages/tenant/masterdata/ComponentGroupsPa
 import { TenantUsersPage } from './pages/tenant/access/TenantUsersPage';
 import { TenantRolesPage } from './pages/tenant/access/TenantRolesPage';
 import { TenantAuditLogPage } from './pages/tenant/audit/TenantAuditLogPage';
+import { NumberingConfigPage } from './pages/tenant/configuration/NumberingConfigPage';
+import { DocumentTemplateConfigPage } from './pages/tenant/configuration/DocumentTemplateConfigPage';
+import { WorkflowConfigPage } from './pages/tenant/configuration/WorkflowConfigPage';
+import { NotificationRulesPage } from './pages/tenant/configuration/NotificationRulesPage';
+import { ConfigurationHistoryPage } from './pages/tenant/configuration/ConfigurationHistoryPage';
 import { AccountSubscriptionPage } from './pages/tenant/account/AccountSubscriptionPage';
 import { AccountContractPage } from './pages/tenant/account/AccountContractPage';
 import { AccountInvoiceListPage } from './pages/tenant/account/AccountInvoiceListPage';
@@ -485,6 +490,46 @@ export default function App() {
               element={
                 <RequirePermission permission="audit.view">
                   <TenantAuditLogPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="configuration/numbering"
+              element={
+                <RequirePermission permission="configuration.view">
+                  <NumberingConfigPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="configuration/document-templates"
+              element={
+                <RequirePermission permission="configuration.view">
+                  <DocumentTemplateConfigPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="configuration/workflows"
+              element={
+                <RequirePermission permission="configuration.view">
+                  <WorkflowConfigPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="configuration/notifications"
+              element={
+                <RequirePermission permission="configuration.view">
+                  <NotificationRulesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="configuration/history"
+              element={
+                <RequirePermission permission="configuration_history.view">
+                  <ConfigurationHistoryPage />
                 </RequirePermission>
               }
             />

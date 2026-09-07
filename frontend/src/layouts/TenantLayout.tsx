@@ -144,6 +144,16 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   { label: null, items: [{ to: '/app/audit-logs', label: 'Audit Log', permission: 'audit.view', module: null }] },
+  {
+    label: 'Configuration',
+    items: [
+      { to: '/app/configuration/numbering', label: 'Document Numbering', permission: 'configuration.view', module: null },
+      { to: '/app/configuration/document-templates', label: 'Document Template', permission: 'configuration.view', module: null },
+      { to: '/app/configuration/workflows', label: 'Workflow', permission: 'configuration.view', module: null },
+      { to: '/app/configuration/notifications', label: 'Notification', permission: 'configuration.view', module: null },
+      { to: '/app/configuration/history', label: 'Configuration History', permission: 'configuration_history.view', module: null },
+    ],
+  },
 ];
 
 const ACCOUNT_NAV = [

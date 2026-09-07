@@ -1,0 +1,80 @@
+import { useState } from 'react';
+import { Pagination } from '../../../components/Pagination';
+import { StatusBadge } from '../../../components/StatusBadge';
+import { Toolbar } from '../../../components/Toolbar';
+import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
+import { useApiList } from '../../../hooks/useApiList';
+import type { ConfigurationHistoryRow, ConfigurationType } from '../../../types';
+
+const TYPES: Array<{ value: ConfigurationType | ''; label: string }> = [
+  { value: '', label: 'All types' },
+  { value: 'NUMBERING', label: 'Numbering' },
+  { value: 'TEMPLATE', label: 'Document Template' },
+  { value: 'WORKFLOW', label: 'Workflow' },
+  { value: 'NOTIFICATION', label: 'Notification Template' },
+];
+
+/** Section 44: one centralized view across every configuration subsystem. */
+export function ConfigurationHistoryPage() {
+  const [type, setType] = useState<ConfigurationType | ''>('');
+  const [page, setPage] = useState(1);
+  const { data, meta, loading, error } = useApiList<ConfigurationHistoryRow>('/app/configuration/history', { type: type || undefined, page }, 0);
+
+  return (
+    <div>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Configuration History</h1>
+      <Toolbar>
+        <select
+          value={type}
+          onChange={(e) => {
+            setType(e.target.value as ConfigurationType | '');
+            setPage(1);
+          }}
+          style={{ padding: '8px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 14 }}
+        >
+          {TYPES.map((t) => (
+            <option key={t.value} value={t.value}>
+              {t.label}
+            </option>
+          ))}
+        </select>
+      </Toolbar>
+      {error && <ErrorState message={error} />}
+      {!error && loading && <LoadingState />}
+      {!error && !loading && data.length === 0 && <EmptyState label="No configuration history yet." />}
+      {!error && !loading && data.length > 0 && (
+        <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+          <thead>
+            <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
+              <th style={{ padding: 10 }}>Type</th>
+              <th style={{ padding: 10 }}>Code</th>
+              <th style={{ padding: 10 }}>Name</th>
+              <th style={{ padding: 10 }}>Version</th>
+              <th style={{ padding: 10 }}>Status</th>
+              <th style={{ padding: 10 }}>Published</th>
+              <th style={{ padding: 10 }}>Archived</th>
+              <th style={{ padding: 10 }}>Change Summary</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.id} style={{ borderTop: '1px solid #f1f5f9' }}>
+                <td style={{ padding: 10 }}>{row.type}</td>
+                <td style={{ padding: 10 }}>{row.code}</td>
+                <td style={{ padding: 10 }}>{row.name}</td>
+                <td style={{ padding: 10 }}>v{row.version_number}</td>
+                <td style={{ padding: 10 }}>
+                  <StatusBadge status={row.status} />
+                </td>
+                <td style={{ padding: 10 }}>{row.published_at ? new Date(row.published_at).toLocaleString() : '—'}</td>
+                <td style={{ padding: 10 }}>{row.archived_at ? new Date(row.archived_at).toLocaleString() : '—'}</td>
+                <td style={{ padding: 10, color: '#6b7280' }}>{row.change_summary ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      {meta && <Pagination meta={meta} onPageChange={setPage} />}
+    </div>
+  );
+}

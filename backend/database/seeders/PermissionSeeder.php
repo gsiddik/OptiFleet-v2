@@ -65,6 +65,14 @@ class PermissionSeeder extends Seeder
             'component_asset' => ['view', 'manage', 'install', 'remove', 'replace'],
             'warranty' => ['view', 'manage'],
             'warranty_claim' => ['create', 'review', 'approve'],
+
+            // Phase 5: Tenant Configuration & Business Rules (Section 37)
+            'configuration' => ['view'],
+            'numbering' => ['manage', 'publish'],
+            'document_template' => ['manage', 'publish'],
+            'workflow' => ['manage', 'publish', 'simulate'],
+            'notification_rule' => ['manage'],
+            'configuration_history' => ['view'],
         ];
 
         $bothScopes = [

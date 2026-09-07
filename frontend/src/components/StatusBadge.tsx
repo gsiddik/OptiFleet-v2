@@ -6,6 +6,8 @@ const COLORS: Record<string, string> = {
   inactive: '#6b7280',
   CLOSED: '#b91c1c',
   SUSPENDED: '#b91c1c',
+  PUBLISHED: '#15803d',
+  ARCHIVED: '#6b7280',
 };
 
 export function StatusBadge({ status }: { status: string }) {

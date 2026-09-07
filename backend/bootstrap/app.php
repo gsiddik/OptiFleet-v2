@@ -184,4 +184,35 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (\App\Domain\Warranty\Services\WarrantyException $e, Request $request) {
             return response()->json(['message' => $e->getMessage()], 422);
         });
+
+        // Phase 5: Tenant Configuration & Business Rules (Section 51 —
+        // configuration errors are user-correctable input problems, never
+        // server errors).
+        $exceptions->render(function (\App\Domain\Configuration\Services\ConfigurationException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Configuration\Services\NumberingException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Configuration\Services\TemplateValidationException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Configuration\Services\TemplateParseException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Workflow\Services\WorkflowException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Workflow\Services\WorkflowValidationException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
+        $exceptions->render(function (\App\Domain\Notification\Services\NotificationException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
     })->create();
