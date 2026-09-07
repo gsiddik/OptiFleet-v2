@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Configuration\Services\DocumentPdfService;
+use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
+use App\Domain\Configuration\Services\DocumentTemplateRenderService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseOrder;
@@ -91,6 +94,24 @@ class PurchaseOrderController extends Controller
         $this->authorizeScope($purchaseOrder);
 
         return $this->ok($purchaseOrder->load(['partner', 'deliveryWarehouse', 'items.product', 'goodsReceipts']));
+    }
+
+    /**
+     * Section 13: renders the tenant's effective published Purchase Order
+     * template into a PDF, preserving the document number/numbering config
+     * version/template version used at generation time.
+     */
+    public function print(PurchaseOrder $purchaseOrder, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    {
+        $this->authorizeScope($purchaseOrder);
+
+        $context = DocumentTemplateContextBuilder::forPurchaseOrder($purchaseOrder);
+        $rendered = $templates->render('purchase_order', $context, $purchaseOrder->tenant_id, null, null, $purchaseOrder->delivery_warehouse_id);
+
+        return response($pdf->fromHtml($rendered['html']), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$purchaseOrder->po_number.'.pdf"',
+        ]);
     }
 
     public function submit(PurchaseOrder $purchaseOrder)

@@ -205,6 +205,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders', [WorkOrderController::class, 'store'])->middleware('permission:work_order.create');
             Route::post('/maintenance-requests/{maintenanceRequest}/work-order', [WorkOrderController::class, 'fromMaintenanceRequest'])->middleware('permission:maintenance_request.convert_work_order');
             Route::get('/work-orders/{workOrder}', [WorkOrderController::class, 'show'])->middleware('permission:work_order.view');
+            Route::get('/work-orders/{workOrder}/print', [WorkOrderController::class, 'print'])->middleware('permission:work_order.view');
             Route::post('/work-orders/{workOrder}/submit', [WorkOrderController::class, 'submit'])->middleware('permission:work_order.submit');
             Route::post('/work-orders/{workOrder}/approve', [WorkOrderController::class, 'approve'])->middleware('permission:work_order.approve');
             Route::post('/work-orders/{workOrder}/reject', [WorkOrderController::class, 'reject'])->middleware('permission:work_order.approve');
@@ -354,6 +355,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->middleware('permission:purchase_order.view');
             Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:purchase_order.create');
             Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->middleware('permission:purchase_order.view');
+            Route::get('/purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->middleware('permission:purchase_order.view');
             Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit'])->middleware('permission:purchase_order.create');
             Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:purchase_order.approve');
             Route::post('/purchase-orders/{purchaseOrder}/reject', [PurchaseOrderController::class, 'reject'])->middleware('permission:purchase_order.approve');

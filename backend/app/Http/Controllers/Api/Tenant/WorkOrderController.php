@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Configuration\Services\DocumentPdfService;
+use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
+use App\Domain\Configuration\Services\DocumentTemplateRenderService;
 use App\Domain\History\Services\DowntimeService;
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
 use App\Domain\Vehicle\Models\Vehicle;
@@ -83,6 +86,25 @@ class WorkOrderController extends Controller
             'jobs.laborLogs', 'plannedParts.product', 'plannedParts.warehouse', 'additionalWorks', 'mechanicAssignments.worker',
             'roadTests', 'vehicleRelease',
         ]));
+    }
+
+    /**
+     * Section 13: renders the tenant's effective (Workshop -> Branch ->
+     * Tenant -> Platform fallback) published Work Order template into a
+     * PDF, preserving which document number, numbering config version, and
+     * template version were in effect at generation time.
+     */
+    public function print(WorkOrder $workOrder, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    {
+        $this->authorizeScope($workOrder);
+
+        $context = DocumentTemplateContextBuilder::forWorkOrder($workOrder);
+        $rendered = $templates->render('work_order', $context, $workOrder->tenant_id, $workOrder->branch_id, $workOrder->workshop_id);
+
+        return response($pdf->fromHtml($rendered['html']), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$workOrder->wo_number.'.pdf"',
+        ]);
     }
 
     public function submit(WorkOrder $workOrder)
