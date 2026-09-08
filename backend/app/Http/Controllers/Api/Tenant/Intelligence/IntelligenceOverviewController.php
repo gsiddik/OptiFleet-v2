@@ -55,11 +55,24 @@ class IntelligenceOverviewController extends Controller
         $predictedFailures7d = $riskDocs->filter(fn ($d) => in_array($d->risk_level, ['HIGH', 'CRITICAL'], true) && ($d->horizon_days ?? 0) <= 7)->count();
         $predictedFailures30d = $riskDocs->filter(fn ($d) => in_array($d->risk_level, ['HIGH', 'CRITICAL'], true))->count();
 
+        // tire_rul documents carry vehicle_id as a separate field (their
+        // own entity_id is the tire, not the vehicle) — scope on whichever
+        // field actually identifies the vehicle for each row, otherwise a
+        // scoped caller would either leak tire_rul rows unfiltered or have
+        // every tire_rul row silently (and incorrectly) excluded.
         $lowRulCount = DB::connection('mongodb')->table('intelligence_predictions')
             ->where('tenant_id', $tenantId)->whereIn('prediction_type', ['vehicle_rul', 'tire_rul'])
             ->whereIn('risk_level', ['CRITICAL', 'HIGH'])
-            ->when($allowedVehicleIds !== null, fn ($q) => $q->whereIn('entity_id', $allowedVehicleIds))
-            ->get(['entity_id'])->pluck('entity_id')->unique()->count();
+            ->get(['entity_type', 'entity_id', 'vehicle_id'])
+            ->filter(function ($d) use ($allowedVehicleIds) {
+                if ($allowedVehicleIds === null) {
+                    return true;
+                }
+                $vehicleId = $d->entity_type === 'vehicle' ? $d->entity_id : ($d->vehicle_id ?? null);
+
+                return $vehicleId !== null && in_array($vehicleId, $allowedVehicleIds, true);
+            })
+            ->pluck('entity_id')->unique()->count();
 
         $repeatFailureCount = DB::connection('mongodb')->table('intelligence_predictions')
             ->where('tenant_id', $tenantId)->where('prediction_type', 'repeat_failure')
@@ -77,7 +90,9 @@ class IntelligenceOverviewController extends Controller
             'vehicles_critical' => $statusCounts['CRITICAL'] ?? 0,
             'high_risk_components' => DB::connection('mongodb')->table('intelligence_predictions')
                 ->where('tenant_id', $tenantId)->where('prediction_type', 'component_health_score')
-                ->whereIn('risk_level', ['AT_RISK', 'CRITICAL'])->count(),
+                ->whereIn('risk_level', ['AT_RISK', 'CRITICAL'])
+                ->when($allowedVehicleIds !== null, fn ($q) => $q->whereIn('vehicle_id', $allowedVehicleIds))
+                ->count(),
             'predicted_failures_7d' => $predictedFailures7d,
             'predicted_failures_30d' => $predictedFailures30d,
             'low_rul_count' => $lowRulCount,

@@ -76,6 +76,37 @@ class IntelligenceApiTest extends TestCase
         $this->getJson("/api/v1/app/intelligence/vehicles/{$vehicleB->id}", $this->authHeaders($token))->assertStatus(403);
     }
 
+    public function test_overview_high_risk_component_and_rul_counts_respect_branch_scope(): void
+    {
+        [$tenant, $branchA, , $vehicleA, $vehicleB] = $this->setUpTenantWithHealthData();
+
+        // component_health_score/tire_rul for the OUT-OF-SCOPE vehicle (branch B).
+        DB::connection('mongodb')->table('intelligence_predictions')->insert([
+            'tenant_id' => $tenant->id, 'entity_type' => 'component', 'entity_id' => 'comp-b',
+            'vehicle_id' => $vehicleB->id, 'prediction_type' => 'component_health_score',
+            'risk_level' => 'CRITICAL', 'business_date' => self::FEATURE_DATE,
+        ]);
+        DB::connection('mongodb')->table('intelligence_predictions')->insert([
+            'tenant_id' => $tenant->id, 'entity_type' => 'tire', 'entity_id' => 'tire-b',
+            'vehicle_id' => $vehicleB->id, 'prediction_type' => 'tire_rul',
+            'risk_level' => 'CRITICAL', 'business_date' => self::FEATURE_DATE,
+        ]);
+        // Same for the IN-SCOPE vehicle (branch A), so a nonzero count is actually expected.
+        DB::connection('mongodb')->table('intelligence_predictions')->insert([
+            'tenant_id' => $tenant->id, 'entity_type' => 'component', 'entity_id' => 'comp-a',
+            'vehicle_id' => $vehicleA->id, 'prediction_type' => 'component_health_score',
+            'risk_level' => 'CRITICAL', 'business_date' => self::FEATURE_DATE,
+        ]);
+
+        [, $token] = $this->makeTenantUser($tenant, ['intelligence.overview.view'], ['BRANCH' => $branchA->id]);
+
+        $response = $this->getJson('/api/v1/app/intelligence/overview', $this->authHeaders($token));
+
+        $response->assertOk();
+        $this->assertSame(1, $response->json('data.high_risk_components'), 'Only branch A\'s high-risk component must be counted.');
+        $this->assertSame(0, $response->json('data.low_rul_count'), 'Branch B\'s tire RUL must not leak into a branch-A-scoped count.');
+    }
+
     public function test_cross_tenant_isolation_on_overview(): void
     {
         [$tenantA] = $this->setUpTenantWithHealthData();

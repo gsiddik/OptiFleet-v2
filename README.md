@@ -22,7 +22,8 @@ of scope for Phase 3 (planned for Phase 4+).
   `backend/app/Domain/{Identity,AccessControl,ProductCatalog,Entitlement,
   Organization,MasterData,Audit,Pricing,Contract,Subscription,Billing,
   Invoice,Payment,Vehicle,Inspection,MaintenancePolicy,MaintenanceRequest,
-  Breakdown,WorkOrder,Workshop,QualityControl,VehicleRelease,History}`, plus
+  Breakdown,WorkOrder,Workshop,QualityControl,VehicleRelease,History,
+  Analytics,Intelligence}`, plus
   `Platform`/`Tenant` API controllers (Tenant split further into operational
   controllers and a billing-only `Tenant/Account` namespace, see below).
 - **Frontend**: React 19 + TypeScript + Vite, React Router, Axios.
@@ -232,6 +233,67 @@ is read/write only within the Analytics domain.
   prediction, remaining-useful-life, anomaly detection, prescriptive/
   AI-generated recommendations, automatic predictive Work Order creation.
 
+### Maintenance Intelligence (Phase 7)
+
+An explainable intelligence layer on top of the Phase 6 feature store —
+descriptive → diagnostic → predictive → prescriptive, in that order of
+maturity, with every stored insight tagged `insight_level` so a health
+score, an anomaly, a risk prediction and a recommendation are never
+presented as the same kind of claim.
+
+- **Feature store** (`App\Domain\Intelligence\Extractors`) — daily
+  `vehicle_daily_features` / `component_daily_features` /
+  `tire_daily_features`, built from Phase 1–5 data with the same
+  temporal-cutoff discipline as Phase 6 (nothing after the business
+  date's boundary ever enters a feature row — covered by a dedicated
+  leakage test).
+- **ML**: one real trainable target, `vehicle_failure_risk` — logistic
+  regression in pure PHP (no external ML library, no Python service;
+  data volume at this scale doesn't justify either). Training splits
+  strictly by date (earliest 70% train / latest 30% test, never random),
+  gates on `DataReadinessAssessmentService` (READY/LIMITED/NOT_READY),
+  and only activates a model that clears its own documented
+  precision/recall acceptance criteria — never automatically on
+  training completion. Every other target (health scores, RUL, repeat
+  failure, anomaly, tire/spare-part/demand) is deliberately
+  deterministic/statistical, matching Section 12's "a small number of
+  real ML targets, not dozens."
+- **Deterministic fallback always serves** — `PredictionService` tries
+  an ACTIVE tenant model, then an ACTIVE global model, then a
+  config-driven rule-based scorer; the response's `source` field
+  (`ML_MODEL` vs `RULE_BASED`) is never ambiguous, and `risk_level` is
+  always reported alongside a separate `confidence` level.
+- **Model registry** (`intelligence_models`) — versioned, never
+  overwritten, artifact embedded directly in the document (no
+  filesystem/path-based load, which closes model-artifact-path
+  injection by construction). Exactly one ACTIVE version per
+  (model_code, scope, tenant_id) at a time.
+- **Recommendations** (`intelligence_recommendations`) — a simple
+  NEW→REVIEWED→ACCEPTED→CONVERTED_TO_ACTION/REJECTED/EXPIRED status
+  graph (not the heavyweight Configuration WorkflowEngine — this flow
+  is system-driven, not tenant-customizable). Accepting one only ever
+  creates a Maintenance Request through the existing
+  `MaintenanceRequestService` (`source_type = INTELLIGENCE`, linked via
+  `source_recommendation_id`/`source_prediction_id`) — Phase 7 never
+  closes a Work Order, issues stock, or takes any operational action
+  directly.
+- **Outcome feedback** — `OutcomeFeedbackService` reuses the exact
+  `LabelBuilder` a target's training pipeline uses to check matured
+  predictions against ground truth, feeding `ModelMonitoringService`
+  (prediction volume, confidence, precision/recall over time) and
+  `DriftAssessmentService` (fleet feature-distribution drift,
+  STABLE/WATCH/DRIFTED — a signal to review, never an auto-retrigger).
+- **APIs**: `/api/v1/app/intelligence/{overview,vehicles,components,
+  tires,inventory,predictions,recommendations}` (tenant, module
+  `MAINTENANCE_INTELLIGENCE` + per-route permission + branch data-scope
+  via `EntityScopeResolver`, since predictions carry `vehicle_id` rather
+  than `branch_id` directly) and `/api/v1/platform/intelligence/
+  {models,training,monitoring}` (platform, audited).
+- **Not implemented in Phase 7** (by design — Phase 8+ scope, per the
+  spec's own "no ML" list): failure-prediction for targets beyond
+  vehicle_failure_risk, survival-analysis RUL, generative/LLM-based
+  recommendations, automatic predictive Work Order creation.
+
 ### Multi-tenancy & isolation
 
 Tenant isolation is enforced in three independent layers (defense-in-depth):
@@ -373,6 +435,25 @@ php artisan tinker --execute="
 php artisan analytics:run --tenant=<ALPHA tenant id> --sync
 ```
 
+Phase 7's `MAINTENANCE_INTELLIGENCE` module is likewise **not** granted by
+default (depends on `VEHICLE`/`MAINTENANCE`/`HISTORY`/`ANALYTICS`). To see
+the Maintenance Intelligence section, grant it the same way and then run the
+pipeline in order (each stage reads the previous one's output for the same
+business date):
+
+```bash
+php artisan tinker --execute="
+  \$t = App\Domain\Identity\Models\Tenant::where('code','ALPHA')->first();
+  \$m = App\Domain\ProductCatalog\Models\Module::where('code','MAINTENANCE_INTELLIGENCE')->first();
+  app(App\Domain\Entitlement\Services\EntitlementService::class)->grant(\$t->id, \$m);
+"
+php artisan intelligence:generate-features --tenant=<ALPHA tenant id> --sync
+php artisan intelligence:predict --tenant=<ALPHA tenant id> --sync
+php artisan intelligence:health --tenant=<ALPHA tenant id> --sync
+php artisan intelligence:diagnostics --tenant=<ALPHA tenant id> --sync
+php artisan intelligence:recommendations --tenant=<ALPHA tenant id>
+```
+
 ## Tests
 
 ```bash
@@ -445,6 +526,57 @@ real MongoDB database (`MONGO_DATABASE=optifleet_analytics_test`, set in
   same scope restriction, platform-only ETL admin permission + audit
   logging, malformed date input rejected with 422 (not a 500),
   reconciliation matching real counts.
+
+### Phase 7 — Maintenance Intelligence tests
+
+56 additional feature tests under `tests/Feature/Intelligence/`, run
+against the same real PostgreSQL + MongoDB test databases:
+
+- `FeaturePipelineTest` — feature extraction fields and explicit-null
+  handling for missing data, idempotent re-run, tenant isolation, and a
+  release-critical temporal-cutoff test proving a breakdown reported
+  *after* a feature date never influences that day's feature row.
+- `ModelRegistryTest` / `DataReadinessTest` — version increment (never
+  overwritten), activation blocked by an unmet acceptance criterion,
+  activating a new version retiring the prior ACTIVE one (exactly one
+  ACTIVE at a time), a DRAFT model rejected for direct activation,
+  per-tenant training isolation, and a label whose 30-day horizon hasn't
+  elapsed yet correctly excluded from the training sample (not coerced
+  into a negative).
+- `TrainingPipelineTest` — insufficient data fails gracefully with no
+  model created; a real training run on a small synthetic fixture reaches
+  EVALUATED with computed precision/recall/ROC-AUC; a model failing its
+  own acceptance criteria cannot be activated; training never pools data
+  across tenants.
+- `PredictionPipelineTest` — falls back to the deterministic scorer with
+  no ACTIVE model (labeled `RULE_BASED`, never presented as ML), uses an
+  ACTIVE model when one exists (labeled `ML_MODEL`), idempotent re-run
+  for one business date, prediction history preserved across distinct
+  dates, freshness reflecting source-data age, and an explanation
+  independently traced back to the exact feature value that produced it.
+- `HealthScoreTest`, `DiagnosticsTest` — a degraded vehicle scoring lower
+  than a healthy one with an explainable subscore breakdown; RUL always
+  returned as a low/high range labeled `INTERVAL_BASED`, never a fake
+  precise number; repeat-failure detection tagged `DIAGNOSTIC`, not
+  `PREDICTIVE`; all of it idempotent and tenant-isolated.
+- `InventoryAndTireIntelligenceTest` — consumption ranking/trend, a
+  demand forecast that flags shortage risk while independently verified
+  to never create a Purchase Order, tire product performance from a real
+  installation fixture.
+- `RecommendationTest`, `OutcomeFeedbackTest` — a high-risk prediction
+  generating exactly one recommendation (idempotent per prediction, not
+  per day), an invalid review-status transition rejected, an accepted
+  recommendation converting to a Maintenance Request through the
+  existing service with the linkage columns populated, matured
+  predictions evaluated against ground truth exactly once.
+- `IntelligenceApiTest`, `IntelligenceAdminApiTest`, `MonitoringAndDriftTest`
+  — permission/module-entitlement denial, branch-scoped access denied for
+  a vehicle outside scope, a targeted regression test for a real bug this
+  phase found and fixed (an overview count that forgot to apply branch
+  scope to component/tire predictions, which don't carry `branch_id`
+  directly), cross-tenant isolation, platform-only model activation with
+  audit logging, and model monitoring/drift computed only from each
+  tenant's own data.
 
 ### Concurrency validation
 
@@ -538,3 +670,38 @@ throwaway tenant, so it never depends on prior seed-run state.
   join `work_orders` + `audit_logs` on every page view). The seeded demo
   dataset is too small for a wall-clock benchmark to be meaningful either
   way.
+
+**Phase 7:**
+
+- Only `vehicle_failure_risk` has a real trainable ML path (logistic
+  regression). Every other target (component/breakdown/repeat-failure/
+  tire-replacement/maintenance-overdue risk beyond the built-in
+  deterministic scorers) is intentionally rule-based only, per Section
+  12's "a small number of real ML targets, not dozens" — the
+  registry/readiness/prediction pipeline is fully generic, so adding a
+  trained model for another target needs no redesign, only a
+  `RiskScorer`/`LabelBuilder` pair and a config entry.
+- On this project's own synthetic demo/test fixtures, a real training
+  run correctly stays *below* its activation bar (precision/recall too
+  low for the acceptance gate) rather than being force-activated — this
+  is the intended safe behavior when data volume is limited, not a
+  defect, and the deterministic fallback is what actually serves
+  `vehicle_failure_risk` predictions on the seeded demo tenant today.
+- Vehicle/component/tire RUL is `INTERVAL_BASED` (derived from the
+  vehicle's own maintenance-schedule next-due fields, or an assumed
+  typical tire service life) — Phase 1-5 has no component/tire service-
+  interval table, so a true ML-estimated RUL is architecturally
+  supported (the same `rul` response shape) but not populated for
+  those entity types yet.
+- Anomaly detection is fleet-wide cross-sectional (this business day's
+  vehicles compared to each other), not a per-vehicle time series — the
+  operational history in the seeded/test fixtures is too short for a
+  per-vehicle series to be statistically meaningful yet; the
+  `AnomalyDetectionService` interface does not change when richer
+  history exists.
+- No dedicated CSV/XLSX export endpoint for Intelligence data (unlike
+  Phase 6's analytics export) — the spec's own Phase 7 API list does not
+  include one; the list/detail endpoints already provide full table
+  access to every value shown.
+- No caching layer, for the same reasoning as Phase 6's analytics API —
+  added only if a real production load profile shows it's needed.
