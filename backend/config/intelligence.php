@@ -42,6 +42,33 @@ return [
     ],
     'feature_lookback_days' => (int) env('INTELLIGENCE_FEATURE_LOOKBACK_DAYS', 90),
 
+    /** entity_type => Mongo collection, and entity_type => id field name in that collection. */
+    'feature_collections' => [
+        'vehicle' => 'vehicle_daily_features',
+        'component' => 'component_daily_features',
+        'tire' => 'tire_daily_features',
+    ],
+    'feature_entity_id_field' => [
+        'vehicle' => 'vehicle_id',
+        'component' => 'component_asset_id',
+        'tire' => 'tire_id',
+    ],
+    /** Nullable-in-normal-operation numeric fields used for the missingness readiness check (Section 7). */
+    'core_numeric_fields' => [
+        'vehicle' => ['km_per_day', 'days_since_last_maintenance', 'km_since_last_maintenance', 'mttr_hours', 'mtbf_days'],
+        'component' => ['usage_km'],
+        'tire' => ['usage_km', 'cost_per_km'],
+    ],
+    /** Numeric feature fields actually used by the trainable logistic-regression model, in fixed order. */
+    'model_feature_fields' => [
+        'vehicle' => [
+            'vehicle_age_days', 'current_odometer', 'km_per_day', 'overdue_maintenance_count',
+            'breakdown_count_30d', 'breakdown_count_60d', 'breakdown_count_90d', 'repeat_repair_count_90d',
+            'critical_inspection_finding_count_90d', 'downtime_minutes_90d', 'component_replacement_count_90d',
+            'tire_replacement_count_90d', 'warranty_claim_count_90d',
+        ],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Data readiness (Section 7)

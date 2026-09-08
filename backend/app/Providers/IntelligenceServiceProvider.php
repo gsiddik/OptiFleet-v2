@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Domain\Intelligence\Labels\LabelBuilderRegistry;
 use App\Domain\Intelligence\Services\FeatureDatasetRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -23,6 +24,23 @@ class IntelligenceServiceProvider extends ServiceProvider
 
             return $registry;
         });
+
+        $this->app->singleton(LabelBuilderRegistry::class, function ($app) {
+            $registry = new LabelBuilderRegistry;
+            foreach ($this->labelBuilderClasses() as $class) {
+                $registry->register($app->make($class));
+            }
+
+            return $registry;
+        });
+    }
+
+    /** @return class-string[] */
+    private function labelBuilderClasses(): array
+    {
+        return [
+            \App\Domain\Intelligence\Labels\VehicleFailureLabelBuilder::class,
+        ];
     }
 
     /** @return class-string[] */
