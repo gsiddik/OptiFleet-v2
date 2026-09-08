@@ -161,6 +161,77 @@ of scope for Phase 3 (planned for Phase 4+).
   derived from timestamps the domain already records, reusable as-is by a
   later analytics phase.
 
+### Analytics & Data Warehouse (Phase 6)
+
+PostgreSQL remains the sole transactional source of truth; MongoDB (a
+dedicated `mongodb` connection, `config/database.php`) holds only
+read-optimized analytical projections built by an ETL layer under
+`App\Domain\Analytics`. Nothing in the analytics stack ever performs an
+operational mutation (approving a Work Order, issuing stock, etc.) — it
+is read/write only within the Analytics domain.
+
+- **ETL orchestration** — a three-tier queued job tree
+  (`RunDailyAnalyticsJob → RunTenantAnalyticsJob → RunDatasetEtlJob`) so
+  one tenant's or one dataset's failure never blocks another. Retry uses
+  Laravel's own queue `tries`/`backoff` (`config/analytics.php`), not a
+  custom loop. `analytics:run` / `analytics:backfill` share the exact
+  same execution path as the queued jobs (`AnalyticsRunService::
+  runDataset()`) via a `--sync` flag, so CLI smoke checks and tests never
+  need a running worker.
+- **Idempotency** — every `daily_*` Mongo collection has a unique index
+  on `(tenant_id, snapshot_date, <dimension>)`; re-running a business
+  date upserts the same document in place (observable via
+  `AnalyticsUpsertWriter`'s inserted/updated/**skipped** counters — an
+  unchanged re-run produces all "skipped", not "updated"). This is also
+  what makes late-arriving corrections safe: reprocessing an already-ETL'd
+  date (via `analytics:backfill`) simply refreshes that one document.
+- **Business date & timezone** — storage stays UTC everywhere (matching
+  the existing `APP_TIMEZONE=UTC` convention); a `business_date` is the
+  calendar date obtained by converting a UTC instant into the *tenant's*
+  own timezone (`tenants.timezone`, additive column, default `UTC`). See
+  `App\Domain\Analytics\Support\BusinessDateResolver`.
+- **15 analytics datasets**: fleet snapshot, vehicle health (deterministic
+  point-deduction score — config-driven weights, explicitly not machine
+  learning), maintenance, work order, breakdown, downtime/MTTR/MTBF,
+  workshop (incl. workspace utilization), mechanic, inventory, procurement,
+  vendor, maintenance cost, tire, component failure, and warranty. Every
+  extractor's formula — and any simplification forced by what Phase 1-5
+  actually records (e.g. no point-in-time vehicle-status history table, so
+  fleet/vehicle-health snapshots reflect status as of ETL execution time)
+  — is documented in that extractor's own docblock.
+- **KPI engine** (`App\Domain\Analytics\Kpi`) — 18 documented KPIs
+  (Fleet Availability, MTTR, MTBF, Workshop/Mechanic Utilization, Vendor
+  On-Time Delivery, Maintenance Cost per Vehicle/Km, ...), each a fixed,
+  reviewed calculator closure (not a scripting engine) that aggregates the
+  daily Mongo collections over a date range rather than re-querying
+  PostgreSQL, always returning the numerator/denominator alongside the
+  value.
+- **Analytical API** — `/api/v1/app/analytics/{overview,fleet,maintenance,
+  work-orders,breakdowns,downtime,workshops,mechanics,inventory,
+  procurement,vendors,cost,tires,components,warranty}`, one shared
+  `AnalyticsDomainController` per Section-41 endpoint list, each enforcing
+  the same tenant context/permission/module-entitlement/data-scope as the
+  transactional APIs (a branch/workshop/warehouse-scoped user with no
+  explicit filter sees their own allowed documents, never the tenant-wide
+  rollup). CSV export (`/analytics/export/{domain}`) uses the identical
+  filters/scope, streamed and capped rather than loaded into memory.
+- **ETL administration** (`/api/v1/platform/analytics/etl/*`,
+  `.../analytics/reconciliation`) is platform-scope, not tenant-scope —
+  it operates across tenants by accepting an explicit `tenant_id` rather
+  than resolving one from context. Every manual run/backfill/retry is
+  audited. `AnalyticsReconciliationService` independently re-derives 4
+  critical counts from PostgreSQL and compares them to the matching Mongo
+  document (`analytics:reconcile` is the CLI form).
+- **Frontend** — one generic `AnalyticsDomainPage` renders every domain
+  (KPI cards, a dependency-free inline-SVG trend chart, a full numeric
+  table with a raw-JSON detail view per row, date-range presets, an
+  optional dimension filter, CSV export) plus a freshness banner
+  (`data_as_of` / `last_successful_etl_at`) so a stale snapshot is never
+  presented as real-time.
+- **Not implemented in Phase 6** (by design — Phase 7 scope): failure
+  prediction, remaining-useful-life, anomaly detection, prescriptive/
+  AI-generated recommendations, automatic predictive Work Order creation.
+
 ### Multi-tenancy & isolation
 
 Tenant isolation is enforced in three independent layers (defense-in-depth):
@@ -211,6 +282,7 @@ docker compose exec backend php artisan db:seed --force
 - Backend API: http://localhost:8000/api/v1
 - Postgres: localhost:5432 (user/pass/db: `optifleet`)
 - Redis: localhost:6379
+- MongoDB (Phase 6 analytics projection only): localhost:27017
 
 Migrations run automatically on backend container start
 (`docker/backend/entrypoint.sh`). Seeding is a one-time manual step so
@@ -226,16 +298,17 @@ restarting the stack never silently re-seeds demo data.
 
 ## Running locally without Docker
 
-Requires PHP 8.3+, Composer, Node 20+, PostgreSQL 16, Redis.
+Requires PHP 8.3+ with the `mongodb` extension (Phase 6), Composer,
+Node 20+, PostgreSQL 16, Redis, MongoDB 7.
 
 ```bash
 # Backend
 cd backend
-cp .env.example .env      # then set APP_KEY, DB_*, REDIS_* for your machine
+cp .env.example .env      # then set APP_KEY, DB_*, REDIS_*, MONGO_* for your machine
 php artisan key:generate
 createdb optifleet        # and optifleet_test for running tests
 composer install
-php artisan migrate
+php artisan migrate       # also provisions the Mongo analytics collections/indexes
 php artisan db:seed
 
 # Frontend
@@ -287,6 +360,19 @@ breakdown-in-progress are left in earlier states for list/status variety.
 `INSPECTION`/`MAINTENANCE`/`WORK_ORDER`) so entitlement denial is visible
 without extra setup.
 
+Phase 6's `ANALYTICS` module is **not** granted by the seeders by default
+(it depends only on `HISTORY`, but analytics dashboards are meaningless
+without at least one ETL run). To see the Analytics section:
+
+```bash
+php artisan tinker --execute="
+  \$t = App\Domain\Identity\Models\Tenant::where('code','ALPHA')->first();
+  \$m = App\Domain\ProductCatalog\Models\Module::where('code','ANALYTICS')->first();
+  app(App\Domain\Entitlement\Services\EntitlementService::class)->grant(\$t->id, \$m);
+"
+php artisan analytics:run --tenant=<ALPHA tenant id> --sync
+```
+
 ## Tests
 
 ```bash
@@ -321,6 +407,44 @@ prevention, and history/downtime aggregation.
 Tests run against a real PostgreSQL database (`optifleet_test`), not SQLite,
 so PostgreSQL-specific behavior (composite FKs, partial unique indexes) is
 exercised.
+
+### Phase 6 — Analytics & Data Warehouse tests
+
+42 additional feature tests under `tests/Feature/Analytics/`, run against a
+real MongoDB database (`MONGO_DATABASE=optifleet_analytics_test`, set in
+`phpunit.xml`) alongside the same PostgreSQL test database — not a mock:
+
+- `AnalyticsEtlFoundationTest` — Mongo connectivity, ETL run tracking
+  metadata, idempotent re-run, retry-after-failure with an incrementing
+  `retry_count`, partial-failure status, one tenant's dataset failure not
+  affecting another's, cross-tenant Mongo document isolation.
+- `FleetMaintenanceWorkOrderBreakdownAnalyticsTest`,
+  `WorkshopMechanicDowntimeAnalyticsTest`,
+  `InventoryProcurementVendorAnalyticsTest`,
+  `CostTireComponentWarrantyAnalyticsTest` — the actual formula for every
+  one of the 15 datasets (e.g. MTTR excludes CANCELLED Work Orders even
+  though they carry timestamps; workspace utilization correctly clips a
+  reservation spanning midnight to only the portion inside the business
+  day; a blocked workspace is excluded from available capacity).
+- `KpiCatalogTest` — a KPI reads the latest snapshot in range for
+  point-in-time figures, and (this is the one that would silently break
+  if MongoDB's `$sum` stopped supporting a dotted field path like
+  `"workspace_utilization.occupied_minutes"`) correctly sums a nested
+  field across multiple days.
+- `AnalyticsBackfillAndScopeTest` — the `analytics:backfill` CLI actually
+  reprocesses every date in a range; a late-arriving correction
+  (Work Order data changed after its business date's ETL already ran) is
+  picked up by reprocessing that original date, in place, not as a
+  duplicate; extraction for one business date provably does not read the
+  next day's source rows (incremental, not a full scan); workshop- and
+  warehouse-scoped users on the analytics API see only their own
+  dimension's documents (branch scope is covered in `AnalyticsApiTest`).
+- `AnalyticsApiTest` — permission denial, module-entitlement denial,
+  data-scope-restricted dimension access (403 on a value outside scope,
+  own-scope-only documents with no explicit filter), CSV export using the
+  same scope restriction, platform-only ETL admin permission + audit
+  logging, malformed date input rejected with 422 (not a 500),
+  reconciliation matching real counts.
 
 ### Concurrency validation
 
@@ -372,3 +496,45 @@ throwaway tenant, so it never depends on prior seed-run state.
   vehicle), unlike workspace reservation which is a genuinely contested
   everyday action and was fixed outright — tracked here rather than fixed
   to keep the release gate scoped.
+
+**Phase 6:**
+
+- Fleet snapshot and vehicle-health status distributions reflect vehicle
+  status *as of ETL execution time* — Phase 1-5 has no point-in-time
+  vehicle-status-history table, so backfilling a past business date
+  re-labels the current distribution under that date rather than
+  reconstructing history that was never captured. Every affected
+  extractor documents this in its own docblock rather than silently
+  presenting it as historically accurate.
+- `labor_cost` and `external_service_cost` in Maintenance Cost Analytics
+  are explicitly `null` — Phase 1-5 records labor *time*
+  (`work_order_labor_logs.actual_minutes`) but no per-worker hourly rate,
+  and no external-service invoice amount distinct from parts procurement,
+  so neither can be derived without fabricating a rate (Section 39: only
+  expose what the source data supports).
+- Mechanic utilization is measured against a configured standard shift
+  length (`ANALYTICS_MECHANIC_SHIFT_MINUTES`, default 480), not each
+  mechanic's actual scheduled hours — no shift/roster table exists to
+  measure real availability.
+- Export is CSV only; no XLSX writer library exists in this project's
+  dependencies, and Section 47 makes XLSX conditional on one already
+  being present.
+- Drill-down (Section 46: overview → dimension → operational resource) is
+  not implemented in the UI beyond showing raw IDs in the metrics table's
+  detail view — clicking through to the underlying PostgreSQL operational
+  record (e.g. a specific Work Order from a breakdown row) would need a
+  small amount of additional routing, not new backend capability (every
+  analytics document already carries the operational IDs, and the
+  existing operational APIs already enforce their own authorization).
+- No caching layer sits in front of the analytics API; every request re-
+  reads MongoDB directly. At the data volumes this phase's own KPI/
+  dashboard queries are designed for (aggregating a bounded date range of
+  daily documents, not scanning PostgreSQL), this was not a bottleneck in
+  testing — added if a real production load profile shows otherwise.
+- Performance validation (Section 62) was structural, not a
+  representative-scale load test: confirmed indexes exist and are used,
+  and that dashboard queries read one pre-aggregated collection instead
+  of joining several PostgreSQL tables (e.g. rework rate would otherwise
+  join `work_orders` + `audit_logs` on every page view). The seeded demo
+  dataset is too small for a wall-clock benchmark to be meaningful either
+  way.
