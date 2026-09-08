@@ -97,6 +97,21 @@ import { WarrantyListPage } from './pages/tenant/warranty/WarrantyListPage';
 import { WarrantyDetailPage } from './pages/tenant/warranty/WarrantyDetailPage';
 import { WarrantyClaimListPage } from './pages/tenant/warranty/WarrantyClaimListPage';
 import { WarrantyClaimDetailPage } from './pages/tenant/warranty/WarrantyClaimDetailPage';
+import { AnalyticsOverviewPage } from './pages/tenant/analytics/AnalyticsOverviewPage';
+import { FleetAnalyticsPage } from './pages/tenant/analytics/FleetAnalyticsPage';
+import { MaintenanceAnalyticsPage } from './pages/tenant/analytics/MaintenanceAnalyticsPage';
+import { WorkOrderAnalyticsPage } from './pages/tenant/analytics/WorkOrderAnalyticsPage';
+import { BreakdownAnalyticsPage } from './pages/tenant/analytics/BreakdownAnalyticsPage';
+import { DowntimeAnalyticsPage } from './pages/tenant/analytics/DowntimeAnalyticsPage';
+import { WorkshopAnalyticsPage } from './pages/tenant/analytics/WorkshopAnalyticsPage';
+import { MechanicAnalyticsPage } from './pages/tenant/analytics/MechanicAnalyticsPage';
+import { InventoryAnalyticsPage } from './pages/tenant/analytics/InventoryAnalyticsPage';
+import { ProcurementAnalyticsPage } from './pages/tenant/analytics/ProcurementAnalyticsPage';
+import { VendorAnalyticsPage } from './pages/tenant/analytics/VendorAnalyticsPage';
+import { CostAnalyticsPage } from './pages/tenant/analytics/CostAnalyticsPage';
+import { TireAnalyticsPage } from './pages/tenant/analytics/TireAnalyticsPage';
+import { ComponentAnalyticsPage } from './pages/tenant/analytics/ComponentAnalyticsPage';
+import { WarrantyAnalyticsPage } from './pages/tenant/analytics/WarrantyAnalyticsPage';
 
 function RootRedirect() {
   const { user, loading } = useAuth();
@@ -617,6 +632,22 @@ export default function App() {
             <Route path="warranties/:id" element={<RequirePermission permission="warranty.view"><WarrantyDetailPage /></RequirePermission>} />
             <Route path="warranty-claims" element={<RequirePermission permission="warranty.view"><WarrantyClaimListPage /></RequirePermission>} />
             <Route path="warranty-claims/:id" element={<RequirePermission permission="warranty.view"><WarrantyClaimDetailPage /></RequirePermission>} />
+
+            <Route path="analytics/overview" element={<RequirePermission permission="analytics.overview.view"><AnalyticsOverviewPage /></RequirePermission>} />
+            <Route path="analytics/fleet" element={<RequirePermission permission="analytics.fleet.view"><FleetAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/maintenance" element={<RequirePermission permission="analytics.maintenance.view"><MaintenanceAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/work-orders" element={<RequirePermission permission="analytics.work_order.view"><WorkOrderAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/breakdowns" element={<RequirePermission permission="analytics.breakdown.view"><BreakdownAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/downtime" element={<RequirePermission permission="analytics.breakdown.view"><DowntimeAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/workshops" element={<RequirePermission permission="analytics.workshop.view"><WorkshopAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/mechanics" element={<RequirePermission permission="analytics.mechanic.view"><MechanicAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/inventory" element={<RequirePermission permission="analytics.inventory.view"><InventoryAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/procurement" element={<RequirePermission permission="analytics.procurement.view"><ProcurementAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/vendors" element={<RequirePermission permission="analytics.vendor.view"><VendorAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/cost" element={<RequirePermission permission="analytics.cost.view"><CostAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/tires" element={<RequirePermission permission="analytics.tire.view"><TireAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/components" element={<RequirePermission permission="analytics.component.view"><ComponentAnalyticsPage /></RequirePermission>} />
+            <Route path="analytics/warranty" element={<RequirePermission permission="analytics.warranty.view"><WarrantyAnalyticsPage /></RequirePermission>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

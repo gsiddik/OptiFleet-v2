@@ -122,6 +122,26 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Analytics',
+    items: [
+      { to: '/app/analytics/overview', label: 'Overview', permission: 'analytics.overview.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/fleet', label: 'Fleet', permission: 'analytics.fleet.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/maintenance', label: 'Maintenance', permission: 'analytics.maintenance.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/work-orders', label: 'Work Order', permission: 'analytics.work_order.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/breakdowns', label: 'Breakdown', permission: 'analytics.breakdown.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/downtime', label: 'Downtime (MTTR/MTBF)', permission: 'analytics.breakdown.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/workshops', label: 'Workshop', permission: 'analytics.workshop.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/mechanics', label: 'Mechanic', permission: 'analytics.mechanic.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/inventory', label: 'Inventory', permission: 'analytics.inventory.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/procurement', label: 'Procurement', permission: 'analytics.procurement.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/vendors', label: 'Vendor', permission: 'analytics.vendor.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/cost', label: 'Cost', permission: 'analytics.cost.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/tires', label: 'Tire', permission: 'analytics.tire.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/components', label: 'Component Reliability', permission: 'analytics.component.view', module: 'ANALYTICS' },
+      { to: '/app/analytics/warranty', label: 'Warranty', permission: 'analytics.warranty.view', module: 'ANALYTICS' },
+    ],
+  },
+  {
     label: 'Organization',
     items: [
       { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view', module: 'ORGANIZATION' },
