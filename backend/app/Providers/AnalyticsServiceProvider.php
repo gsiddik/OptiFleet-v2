@@ -38,7 +38,10 @@ class AnalyticsServiceProvider extends ServiceProvider
             \App\Domain\Analytics\Extractors\DowntimeMetricsExtractor::class,
             \App\Domain\Analytics\Extractors\WorkshopMetricsExtractor::class,
             \App\Domain\Analytics\Extractors\MechanicMetricsExtractor::class,
-            // Batches E-F append their extractor classes here.
+            \App\Domain\Analytics\Extractors\InventoryMetricsExtractor::class,
+            \App\Domain\Analytics\Extractors\ProcurementMetricsExtractor::class,
+            \App\Domain\Analytics\Extractors\VendorMetricsExtractor::class,
+            // Batch F appends its extractor classes here.
         ];
     }
 }
