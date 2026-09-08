@@ -109,6 +109,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mechanic utilization assumption (Section 28)
+    |--------------------------------------------------------------------------
+    |
+    | Phase 1-5 has no shift/roster table recording a mechanic's actual
+    | scheduled working minutes per day, so utilization is computed
+    | against this configurable standard shift length (documented
+    | assumption, not measured availability).
+    |
+    */
+    'mechanic_standard_shift_minutes' => (int) env('ANALYTICS_MECHANIC_SHIFT_MINUTES', 480),
+
+    /*
+    |--------------------------------------------------------------------------
     | Data retention (Section 52)
     |--------------------------------------------------------------------------
     |
