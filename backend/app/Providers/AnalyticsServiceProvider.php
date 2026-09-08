@@ -30,7 +30,12 @@ class AnalyticsServiceProvider extends ServiceProvider
     private function extractorClasses(): array
     {
         return [
-            // Batches C-F append their extractor classes here.
+            \App\Domain\Analytics\Extractors\FleetSnapshotExtractor::class,
+            \App\Domain\Analytics\Extractors\VehicleHealthExtractor::class,
+            \App\Domain\Analytics\Extractors\MaintenanceMetricsExtractor::class,
+            \App\Domain\Analytics\Extractors\WorkOrderMetricsExtractor::class,
+            \App\Domain\Analytics\Extractors\BreakdownMetricsExtractor::class,
+            // Batches D-F append their extractor classes here.
         ];
     }
 }

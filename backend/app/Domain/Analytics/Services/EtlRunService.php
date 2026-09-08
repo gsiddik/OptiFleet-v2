@@ -60,7 +60,7 @@ class EtlRunService
         $run->fill(array_merge($result->toArray(), [
             'status' => $status,
             'completed_at' => $completedAt,
-            'duration_ms' => $run->started_at ? $completedAt->diffInMilliseconds($run->started_at) : null,
+            'duration_ms' => $run->started_at ? $run->started_at->diffInMilliseconds($completedAt) : null,
         ]));
         $run->save();
 
@@ -74,7 +74,7 @@ class EtlRunService
         $run->fill([
             'status' => EtlRun::STATUS_FAILED,
             'completed_at' => $completedAt,
-            'duration_ms' => $run->started_at ? $completedAt->diffInMilliseconds($run->started_at) : null,
+            'duration_ms' => $run->started_at ? $run->started_at->diffInMilliseconds($completedAt) : null,
             'error_summary' => [$e->getMessage()],
         ]);
         $run->save();
