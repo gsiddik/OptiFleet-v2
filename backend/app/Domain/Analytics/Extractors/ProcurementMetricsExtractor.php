@@ -135,7 +135,11 @@ class ProcurementMetricsExtractor implements DatasetExtractor
             'partial_receipt' => $partialReceipt,
             'late_receipt' => $lateReceipts,
             'rejection_damage_quantity' => $rejectionDamageQty,
-            'procurement_lead_time_days' => $leadTimeDays->isNotEmpty() ? round($leadTimeDays->avg(), 1) : null,
+            'procurement_lead_time' => [
+                'sample_size' => $leadTimeDays->count(),
+                'total_days' => round($leadTimeDays->sum(), 2),
+                'avg_days' => $leadTimeDays->isNotEmpty() ? round($leadTimeDays->avg(), 1) : null,
+            ],
             'generated_at' => CarbonImmutable::now()->toIso8601String(),
         ];
 

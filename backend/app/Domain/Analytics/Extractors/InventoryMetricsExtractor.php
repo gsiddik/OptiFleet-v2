@@ -129,8 +129,10 @@ class InventoryMetricsExtractor implements DatasetExtractor
             'inventory_value' => round($inventoryValue, 4),
             'stock_on_hand' => (float) $stocks->sum('quantity_on_hand'),
             'stock_reserved' => (float) $stocks->sum('quantity_reserved'),
+            'total_products_tracked' => $stocks->count(),
             'low_stock_count' => $lowStock,
             'out_of_stock_count' => $outOfStock,
+            'stockout_rate_percentage' => $stocks->count() > 0 ? round(($outOfStock / $stocks->count()) * 100, 2) : null,
             'stock_movement' => $movementBreakdown,
             'part_consumption_quantity' => $issuedQty,
             'stock_adjustment' => [
@@ -138,6 +140,7 @@ class InventoryMetricsExtractor implements DatasetExtractor
                 'minus_quantity' => $adjustmentMinus,
             ],
             'stock_variance' => $adjustmentPlus - $adjustmentMinus,
+            'issued_value' => round((float) $issuedValue, 4),
             'inventory_turnover_foundation' => $inventoryValue > 0 ? round($issuedValue / $inventoryValue, 4) : null,
             'fast_moving_products' => $fastMoving,
             'slow_moving_products' => $slowMoving,

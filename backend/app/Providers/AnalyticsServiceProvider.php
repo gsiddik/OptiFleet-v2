@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Domain\Analytics\Kpi\KpiCatalog;
+use App\Domain\Analytics\Kpi\KpiRegistry;
 use App\Domain\Analytics\Services\DatasetRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -21,6 +23,13 @@ class AnalyticsServiceProvider extends ServiceProvider
             foreach ($this->extractorClasses() as $class) {
                 $registry->register($app->make($class));
             }
+
+            return $registry;
+        });
+
+        $this->app->singleton(KpiRegistry::class, function ($app) {
+            $registry = new KpiRegistry;
+            $app->make(KpiCatalog::class)->registerAll($registry);
 
             return $registry;
         });

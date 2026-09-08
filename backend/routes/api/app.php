@@ -55,6 +55,22 @@ use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
 use App\Http\Controllers\Api\Tenant\ComponentAssetController;
 use App\Http\Controllers\Api\Tenant\WarrantyController;
 use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
+use App\Http\Controllers\Api\Tenant\Analytics\BreakdownAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\ComponentAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\CostAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\DowntimeAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\ExportAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\FleetAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\InventoryAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\MaintenanceAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\MechanicAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\OverviewAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\ProcurementAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\TireAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\VendorAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\WarrantyAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\WorkOrderAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Analytics\WorkshopAnalyticsController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('app')->middleware('tenant.scope')->group(function () {
@@ -477,6 +493,31 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/{rule}', [NotificationRuleController::class, 'update'])->middleware('permission:notification_rule.manage');
             Route::post('/{rule}/activate', [NotificationRuleController::class, 'activate'])->middleware('permission:notification_rule.manage');
             Route::post('/{rule}/deactivate', [NotificationRuleController::class, 'deactivate'])->middleware('permission:notification_rule.manage');
+        });
+
+        // Phase 6: Analytics & Data Warehouse. Read-only MongoDB-projection
+        // APIs — every route still passes through tenant context, module
+        // entitlement, permission, and (per-domain) data scope exactly like
+        // the transactional APIs above (Section 6).
+        Route::middleware('module:ANALYTICS')->prefix('analytics')->group(function () {
+            Route::get('/overview', [OverviewAnalyticsController::class, 'index'])->middleware('permission:analytics.overview.view');
+            Route::get('/kpi-catalog', [OverviewAnalyticsController::class, 'kpiCatalog'])->middleware('permission:analytics.overview.view');
+            Route::get('/fleet', [FleetAnalyticsController::class, 'index'])->middleware('permission:analytics.fleet.view');
+            Route::get('/maintenance', [MaintenanceAnalyticsController::class, 'index'])->middleware('permission:analytics.maintenance.view');
+            Route::get('/work-orders', [WorkOrderAnalyticsController::class, 'index'])->middleware('permission:analytics.work_order.view');
+            Route::get('/breakdowns', [BreakdownAnalyticsController::class, 'index'])->middleware('permission:analytics.breakdown.view');
+            Route::get('/downtime', [DowntimeAnalyticsController::class, 'index'])->middleware('permission:analytics.breakdown.view');
+            Route::get('/workshops', [WorkshopAnalyticsController::class, 'index'])->middleware('permission:analytics.workshop.view');
+            Route::get('/mechanics', [MechanicAnalyticsController::class, 'index'])->middleware('permission:analytics.mechanic.view');
+            Route::get('/inventory', [InventoryAnalyticsController::class, 'index'])->middleware('permission:analytics.inventory.view');
+            Route::get('/procurement', [ProcurementAnalyticsController::class, 'index'])->middleware('permission:analytics.procurement.view');
+            Route::get('/vendors', [VendorAnalyticsController::class, 'index'])->middleware('permission:analytics.vendor.view');
+            Route::get('/cost', [CostAnalyticsController::class, 'index'])->middleware('permission:analytics.cost.view');
+            Route::get('/tires', [TireAnalyticsController::class, 'index'])->middleware('permission:analytics.tire.view');
+            Route::get('/components', [ComponentAnalyticsController::class, 'index'])->middleware('permission:analytics.component.view');
+            Route::get('/warranty', [WarrantyAnalyticsController::class, 'index'])->middleware('permission:analytics.warranty.view');
+
+            Route::get('/export/{domain}', [ExportAnalyticsController::class, 'export'])->middleware('permission:analytics.export');
         });
     });
 });

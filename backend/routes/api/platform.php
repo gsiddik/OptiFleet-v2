@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Api\Platform\Analytics\EtlAdminController;
+use App\Http\Controllers\Api\Platform\Analytics\ReconciliationController;
 use App\Http\Controllers\Api\Platform\AuditLogController;
 use App\Http\Controllers\Api\Platform\BillingController;
 use App\Http\Controllers\Api\Platform\BundleController;
@@ -121,4 +123,18 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->middleware('permission:payment.verify');
     Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->middleware('permission:payment.reject');
     Route::get('/payments/{payment}/proofs/{proof}', [PaymentController::class, 'downloadProof'])->middleware('permission:payment.view');
+
+    // Phase 6 Section 50: ETL administration is platform-scope (Section
+    // 49) — it operates across tenants (run/backfill/retry a specific
+    // tenant or all of them), not within one tenant's own context.
+    Route::prefix('analytics/etl')->group(function () {
+        Route::get('/runs', [EtlAdminController::class, 'index'])->middleware('permission:analytics.etl.view');
+        Route::get('/runs/{run}', [EtlAdminController::class, 'show'])->middleware('permission:analytics.etl.view');
+        Route::post('/run', [EtlAdminController::class, 'run'])->middleware('permission:analytics.etl.run');
+        Route::post('/backfill', [EtlAdminController::class, 'backfill'])->middleware('permission:analytics.etl.backfill');
+        Route::post('/runs/{run}/retry', [EtlAdminController::class, 'retry'])->middleware('permission:analytics.etl.retry');
+    });
+
+    // Phase 6 Section 61: PostgreSQL <-> MongoDB reconciliation.
+    Route::get('/analytics/reconciliation', [ReconciliationController::class, 'index'])->middleware('permission:analytics.etl.view');
 });

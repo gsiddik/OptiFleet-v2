@@ -81,7 +81,8 @@ class InventoryProcurementVendorAnalyticsTest extends TestCase
 
         $this->assertSame(1, $doc->late_receipt); // received 09-06, expected 09-04
         // order_date 09-01 00:00 -> received_at 09-06 09:00 = 5 days 9 hours.
-        $this->assertEqualsWithDelta(5.375, $doc->procurement_lead_time_days, 0.05);
+        $this->assertEqualsWithDelta(5.375, $doc->procurement_lead_time->avg_days, 0.05);
+        $this->assertSame(1, $doc->procurement_lead_time->sample_size);
     }
 
     public function test_vendor_fulfillment_and_price_variance(): void
@@ -118,7 +119,9 @@ class InventoryProcurementVendorAnalyticsTest extends TestCase
         $doc = DB::connection('mongodb')->getDatabase()->selectCollection('daily_vendor_metrics')
             ->findOne(['tenant_id' => $tenant->id, 'snapshot_date' => self::BUSINESS_DATE, 'vendor_id' => $partner->id]);
 
-        $this->assertEqualsWithDelta(80.0, $doc->fulfillment_rate_percentage, 0.01); // 8/10
-        $this->assertEqualsWithDelta(10.0, $doc->avg_price_variance_percentage, 0.01); // (110-100)/100
+        $this->assertEqualsWithDelta(80.0, $doc->fulfillment->rate_percentage, 0.01); // 8/10
+        $this->assertEqualsWithDelta(8.0, $doc->fulfillment->received_qty, 0.01);
+        $this->assertEqualsWithDelta(10.0, $doc->fulfillment->ordered_qty, 0.01);
+        $this->assertEqualsWithDelta(10.0, $doc->price_variance->avg_percentage, 0.01); // (110-100)/100
     }
 }

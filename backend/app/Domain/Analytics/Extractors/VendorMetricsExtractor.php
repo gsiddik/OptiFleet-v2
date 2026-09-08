@@ -136,11 +136,34 @@ class VendorMetricsExtractor implements DatasetExtractor
             'snapshot_date' => $snapshotDate,
             'vendor_id' => $vendorId,
             'total_purchases' => round($totalPurchases, 4),
-            'avg_lead_time_days' => $leadTimes->isNotEmpty() ? round($leadTimes->avg(), 1) : null,
-            'on_time_delivery_rate_percentage' => $receipts->count() > 0 ? round(($onTime / $receipts->count()) * 100, 2) : null,
-            'rejected_quantity_rate_percentage' => $itemDenominator > 0 ? round(($rejectedTotal / $itemDenominator) * 100, 2) : null,
-            'fulfillment_rate_percentage' => $fulfillment->ordered > 0 ? round(($fulfillment->received / $fulfillment->ordered) * 100, 2) : null,
-            'avg_price_variance_percentage' => $priceVariances->isNotEmpty() ? round($priceVariances->avg(), 2) : null,
+            'lead_time' => [
+                'sample_size' => $leadTimes->count(),
+                'total_days' => round($leadTimes->sum(), 2),
+                'avg_days' => $leadTimes->isNotEmpty() ? round($leadTimes->avg(), 1) : null,
+            ],
+            // Section 55: every *_percentage field keeps its numerator/
+            // denominator alongside it so a date-range query can sum the
+            // raw counts and recompute the rate, rather than (incorrectly)
+            // averaging daily percentages.
+            'on_time_delivery' => [
+                'on_time_count' => $onTime,
+                'total_receipts' => $receipts->count(),
+                'rate_percentage' => $receipts->count() > 0 ? round(($onTime / $receipts->count()) * 100, 2) : null,
+            ],
+            'rejected_quantity' => [
+                'rejected_qty' => $rejectedTotal,
+                'total_qty' => $itemDenominator,
+                'rate_percentage' => $itemDenominator > 0 ? round(($rejectedTotal / $itemDenominator) * 100, 2) : null,
+            ],
+            'fulfillment' => [
+                'received_qty' => (float) $fulfillment->received,
+                'ordered_qty' => (float) $fulfillment->ordered,
+                'rate_percentage' => $fulfillment->ordered > 0 ? round(($fulfillment->received / $fulfillment->ordered) * 100, 2) : null,
+            ],
+            'price_variance' => [
+                'sample_size' => $priceVariances->count(),
+                'avg_percentage' => $priceVariances->isNotEmpty() ? round($priceVariances->avg(), 2) : null,
+            ],
             'generated_at' => CarbonImmutable::now()->toIso8601String(),
         ];
 
