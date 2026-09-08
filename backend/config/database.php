@@ -97,6 +97,34 @@ return [
             'sslmode' => 'prefer',
         ],
 
+        /*
+        |----------------------------------------------------------------------
+        | MongoDB — Analytics / Data Warehouse (Phase 6)
+        |----------------------------------------------------------------------
+        |
+        | Analytical projection store only. PostgreSQL (the `pgsql` connection
+        | above) remains the transactional source of truth for every module;
+        | this connection is read/written exclusively by the Analytics domain
+        | (ETL jobs + read-only analytics APIs). Never used for operational
+        | mutations (Work Order approval, stock issue, PO approval, etc).
+        |
+        */
+
+        'mongodb' => [
+            'driver' => 'mongodb',
+            'dsn' => env('MONGO_URI'),
+            'host' => env('MONGO_HOST', '127.0.0.1'),
+            'port' => env('MONGO_PORT', '27017'),
+            'database' => env('MONGO_DATABASE', 'optifleet_analytics'),
+            'username' => env('MONGO_USERNAME'),
+            'password' => env('MONGO_PASSWORD'),
+            'options' => array_filter([
+                'authSource' => env('MONGO_AUTH_SOURCE'),
+                'replicaSet' => env('MONGO_REPLICA_SET'),
+                'tls' => env('MONGO_TLS', false),
+            ]),
+        ],
+
         'sqlsrv' => [
             'driver' => 'sqlsrv',
             'url' => env('DB_URL'),

@@ -30,6 +30,9 @@ class ModuleSeeder extends Seeder
             ['code' => 'MAINTENANCE_INTELLIGENCE', 'name' => 'Maintenance Intelligence', 'category' => 'Intelligence', 'is_core' => false, 'is_sellable' => true],
             ['code' => 'HISTORY', 'name' => 'History & Records', 'category' => 'Intelligence', 'is_core' => false, 'is_sellable' => true],
             ['code' => 'REPORT', 'name' => 'Reporting', 'category' => 'Reporting', 'is_core' => false, 'is_sellable' => true],
+
+            // Phase 6: Analytics & Data Warehouse (Section 48)
+            ['code' => 'ANALYTICS', 'name' => 'Analytics & Data Warehouse', 'category' => 'Intelligence', 'is_core' => false, 'is_sellable' => true],
         ];
 
         foreach ($modules as $module) {
@@ -43,6 +46,7 @@ class ModuleSeeder extends Seeder
             'WORK_ORDER' => ['VEHICLE', 'MAINTENANCE', 'WORKSHOP'],
             'PROCUREMENT' => ['INVENTORY', 'PARTNER'],
             'MAINTENANCE_INTELLIGENCE' => ['VEHICLE', 'MAINTENANCE', 'TELEMATICS', 'HISTORY'],
+            'ANALYTICS' => ['HISTORY'],
             'INSPECTION' => ['VEHICLE'],
             'MAINTENANCE' => ['VEHICLE'],
             'TIRE' => ['VEHICLE'],

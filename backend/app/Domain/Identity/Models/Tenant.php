@@ -26,6 +26,7 @@ class Tenant extends Model
         'legal_name',
         'industry',
         'status',
+        'timezone',
     ];
 
     public function users(): BelongsToMany

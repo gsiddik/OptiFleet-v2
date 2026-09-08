@@ -28,6 +28,9 @@
         <env name="DB_DATABASE" value="optifleet_test"/>
         <env name="DB_USERNAME" value="optifleet"/>
         <env name="DB_PASSWORD" value="optifleet"/>
+        <env name="MONGO_HOST" value="127.0.0.1"/>
+        <env name="MONGO_PORT" value="27017"/>
+        <env name="MONGO_DATABASE" value="optifleet_analytics_test"/>
         <env name="MAIL_MAILER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="QUEUE_CONNECTION" value="sync"/>

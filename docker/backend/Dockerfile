@@ -8,10 +8,11 @@ RUN apk add --no-cache \
     unzip \
     icu-dev \
     oniguruma-dev \
+    openssl-dev \
     $PHPIZE_DEPS \
     && docker-php-ext-install pdo pdo_pgsql pgsql bcmath intl zip opcache \
-    && pecl install redis \
-    && docker-php-ext-enable redis \
+    && pecl install redis mongodb \
+    && docker-php-ext-enable redis mongodb \
     && apk del $PHPIZE_DEPS
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

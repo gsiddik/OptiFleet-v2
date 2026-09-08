@@ -110,6 +110,46 @@ class PermissionSeeder extends Seeder
                 ['group' => 'account', 'description' => str_replace('.', ' ', $name)]
             );
         }
+
+        // Phase 6: Analytics & Data Warehouse (Section 49) — 3-level
+        // dotted names, one per dashboard section, tenant-scoped.
+        foreach ([
+            'analytics.overview.view',
+            'analytics.fleet.view',
+            'analytics.maintenance.view',
+            'analytics.work_order.view',
+            'analytics.breakdown.view',
+            'analytics.workshop.view',
+            'analytics.mechanic.view',
+            'analytics.inventory.view',
+            'analytics.procurement.view',
+            'analytics.vendor.view',
+            'analytics.cost.view',
+            'analytics.tire.view',
+            'analytics.component.view',
+            'analytics.warranty.view',
+            'analytics.export',
+        ] as $name) {
+            Permission::query()->updateOrCreate(
+                ['name' => $name, 'scope' => 'tenant'],
+                ['group' => 'analytics', 'description' => str_replace('.', ' ', $name)]
+            );
+        }
+
+        // Phase 6 Section 49: ETL operational controls are platform-scope
+        // — running/retrying/backfilling analytics is an infrastructure
+        // operation, not a tenant business action.
+        foreach ([
+            'analytics.etl.view',
+            'analytics.etl.run',
+            'analytics.etl.retry',
+            'analytics.etl.backfill',
+        ] as $name) {
+            Permission::query()->updateOrCreate(
+                ['name' => $name, 'scope' => 'platform'],
+                ['group' => 'analytics_etl', 'description' => str_replace('.', ' ', $name)]
+            );
+        }
     }
 
     private function seedGroup(string $group, array $actions, string $scope): void

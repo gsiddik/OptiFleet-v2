@@ -19,3 +19,10 @@ Schedule::command('contracts:evaluate-expiry')->dailyAt('02:30')->withoutOverlap
 // Phase 5 Section 32: escalate unresolved notifications on a short cycle —
 // escalation waits are typically measured in minutes/hours, not days.
 Schedule::command('notifications:process-escalations')->everyFiveMinutes()->withoutOverlapping();
+
+// Phase 6 Section 7: daily analytics ETL. Time is configurable (not
+// hardcoded to one server timezone) via ANALYTICS_SCHEDULE_TIME — default
+// 02:00 UTC, late enough that same-day operational data has settled for
+// the great majority of tenant timezones. Idempotent (Section 9): safe to
+// re-fire without creating duplicate analytical records.
+Schedule::command('analytics:run')->dailyAt(config('analytics.schedule_time', '02:00'))->withoutOverlapping();
