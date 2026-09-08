@@ -16,6 +16,7 @@ return [
     'schedule' => [
         'feature_time' => env('INTELLIGENCE_FEATURE_TIME', '03:00'),
         'predict_time' => env('INTELLIGENCE_PREDICT_TIME', '03:30'),
+        'health_time' => env('INTELLIGENCE_HEALTH_TIME', '03:45'),
     ],
 
     'job' => [
@@ -118,6 +119,27 @@ return [
             'predictive_risk' => 0.15,
             'tire_condition' => 0.10,
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Component health score (Section 23)
+    |--------------------------------------------------------------------------
+    |
+    | Deterministic point-deduction, same style as the vehicle health
+    | score. usage_km_per_point defines how many km of usage deduct one
+    | point (very high usage relative to a typical service life erodes
+    | the score even with no recorded failures yet).
+    |
+    */
+    'component_health' => [
+        'base_score' => 100,
+        'points_per_failure' => 15,
+        'points_per_replacement' => 20,
+        'points_per_repair' => 8,
+        'usage_km_per_point' => 5000,
+        'usage_km_cap_points' => 30,
+        'status_thresholds' => ['HEALTHY' => 90, 'GOOD' => 75, 'WATCH' => 60, 'AT_RISK' => 40, 'CRITICAL' => 0],
     ],
 
     /*
