@@ -46,6 +46,12 @@ class NotificationDefaultsSeeder extends Seeder
             'maintenance_request.submitted' => [
                 'IN_APP' => ['body' => 'Maintenance request {{request.number}} submitted for {{vehicle.registration_number}}: {{request.complaint}}'],
             ],
+            'intelligence.vehicle_critical' => [
+                'IN_APP' => ['body' => 'CRITICAL intelligence risk on {{entity_type}} {{entity_id}}: {{recommendation_type}} recommended.'],
+            ],
+            'intelligence.vehicle_high_risk' => [
+                'IN_APP' => ['body' => 'HIGH intelligence risk on {{entity_type}} {{entity_id}}: {{recommendation_type}} recommended.'],
+            ],
         ];
 
         foreach ($templates as $eventCode => $channels) {
@@ -98,6 +104,22 @@ class NotificationDefaultsSeeder extends Seeder
                 'name' => 'Maintenance request submitted -> Reviewers',
                 'condition_set' => null,
                 'recipient_rules' => [['type' => 'PERMISSION', 'identifier' => 'maintenance_request.review']],
+                'channels' => ['IN_APP'],
+                'escalation' => null,
+            ],
+            [
+                'event_code' => 'intelligence.vehicle_critical',
+                'name' => 'Intelligence critical risk -> Fleet Manager',
+                'condition_set' => null,
+                'recipient_rules' => [['type' => 'ROLE', 'identifier' => 'Fleet Manager']],
+                'channels' => ['IN_APP'],
+                'escalation' => null,
+            ],
+            [
+                'event_code' => 'intelligence.vehicle_high_risk',
+                'name' => 'Intelligence high risk -> Fleet Manager',
+                'condition_set' => null,
+                'recipient_rules' => [['type' => 'ROLE', 'identifier' => 'Fleet Manager']],
                 'channels' => ['IN_APP'],
                 'escalation' => null,
             ],

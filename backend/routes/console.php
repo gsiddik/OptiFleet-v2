@@ -36,3 +36,5 @@ Schedule::command('intelligence:generate-features')->dailyAt(config('intelligenc
 Schedule::command('intelligence:predict')->dailyAt(config('intelligence.schedule.predict_time', '03:30'))->withoutOverlapping();
 Schedule::command('intelligence:health')->dailyAt(config('intelligence.schedule.health_time', '03:45'))->withoutOverlapping();
 Schedule::command('intelligence:diagnostics')->dailyAt(config('intelligence.schedule.diagnostics_time', '04:00'))->withoutOverlapping();
+Schedule::command('intelligence:recommendations')->dailyAt(config('intelligence.schedule.recommendations_time', '04:15'))->withoutOverlapping();
+Schedule::command('intelligence:evaluate-outcomes')->dailyAt(config('intelligence.schedule.outcomes_time', '04:30'))->withoutOverlapping();

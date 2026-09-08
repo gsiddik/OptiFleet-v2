@@ -41,13 +41,13 @@ class DiagnosticsRunService
         $asOf = CarbonImmutable::createFromFormat('Y-m-d', $businessDate, 'UTC')->endOfDay();
 
         foreach ($vehicleDocs as $doc) {
-            $writes = array_merge($writes, $this->vehicleRulWrites($tenantId, $doc));
-            $writes = array_merge($writes, $this->repeatFailureWrites($tenantId, $doc, $asOf));
+            $writes = array_merge($writes, $this->vehicleRulWrites($tenantId, $doc, $businessDate));
+            $writes = array_merge($writes, $this->repeatFailureWrites($tenantId, $doc, $asOf, $businessDate));
         }
         foreach ($tireDocs as $doc) {
-            $writes = array_merge($writes, $this->tireRulWrites($tenantId, $doc));
+            $writes = array_merge($writes, $this->tireRulWrites($tenantId, $doc, $businessDate));
         }
-        $writes = array_merge($writes, $this->anomalyWrites($tenantId, $vehicleDocs));
+        $writes = array_merge($writes, $this->anomalyWrites($tenantId, $vehicleDocs, $businessDate));
 
         $result = new EtlDatasetResult;
         $this->writer->upsertMany('intelligence_predictions', $writes, $result);
@@ -55,24 +55,24 @@ class DiagnosticsRunService
         return ['written' => count($writes)];
     }
 
-    private function vehicleRulWrites(string $tenantId, array $doc): array
+    private function vehicleRulWrites(string $tenantId, array $doc, string $businessDate): array
     {
         $rul = $this->rul->forVehicle($doc);
         if ($rul === null) {
             return [];
         }
 
-        return [$this->doc($tenantId, 'vehicle', $doc['vehicle_id'], 'vehicle_rul', null, $rul['urgency'], $rul['explanation'], $doc, ['rul' => $rul])];
+        return [$this->doc($tenantId, 'vehicle', $doc['vehicle_id'], 'vehicle_rul', null, $rul['urgency'], $rul['explanation'], $doc, $businessDate, ['rul' => $rul])];
     }
 
-    private function tireRulWrites(string $tenantId, array $doc): array
+    private function tireRulWrites(string $tenantId, array $doc, string $businessDate): array
     {
         $rul = $this->rul->forTire($doc);
 
-        return [$this->doc($tenantId, 'tire', $doc['tire_id'], 'tire_rul', null, $rul['urgency'], $rul['explanation'], $doc, ['rul' => $rul, 'vehicle_id' => $doc['vehicle_id'] ?? null])];
+        return [$this->doc($tenantId, 'tire', $doc['tire_id'], 'tire_rul', null, $rul['urgency'], $rul['explanation'], $doc, $businessDate, ['rul' => $rul, 'vehicle_id' => $doc['vehicle_id'] ?? null])];
     }
 
-    private function repeatFailureWrites(string $tenantId, array $doc, CarbonImmutable $asOf): array
+    private function repeatFailureWrites(string $tenantId, array $doc, CarbonImmutable $asOf, string $businessDate): array
     {
         $groups = $this->repeatFailures->detectForVehicle($doc['vehicle_id'], $asOf);
         $minOccurrences = max(1, (int) config('intelligence.repeat_failure.min_occurrences', 3));
@@ -82,7 +82,7 @@ class DiagnosticsRunService
             $score = min(1.0, $group['occurrences'] / $minOccurrences / 2);
             $entityId = $doc['vehicle_id'].':'.$group['component_group_id'];
             $explanation = ["{$group['occurrences']} repairs on the same component group between {$group['first_at']} and {$group['last_at']}."];
-            $writes[] = $this->doc($tenantId, 'vehicle', $entityId, 'repeat_failure', $score, $this->riskLevels->forScore($score), $explanation, $doc, [
+            $writes[] = $this->doc($tenantId, 'vehicle', $entityId, 'repeat_failure', $score, $this->riskLevels->forScore($score), $explanation, $doc, $businessDate, [
                 'vehicle_id' => $doc['vehicle_id'], 'component_group_id' => $group['component_group_id'], 'occurrences' => $group['occurrences'],
             ]);
         }
@@ -90,7 +90,7 @@ class DiagnosticsRunService
         return $writes;
     }
 
-    private function anomalyWrites(string $tenantId, array $vehicleDocs): array
+    private function anomalyWrites(string $tenantId, array $vehicleDocs, string $businessDate): array
     {
         $anomalies = $this->anomalies->detectForFleet($vehicleDocs);
         $docsByVehicle = collect($vehicleDocs)->keyBy('vehicle_id');
@@ -106,7 +106,7 @@ class DiagnosticsRunService
                 array_map(fn ($a) => "{$a['metric']} is unusual relative to the fleet (value={$a['value']}, fleet mean={$a['fleet_mean']}, z={$a['z_score']}).", $result['operational_anomalies']),
             );
 
-            $writes[] = $this->doc($tenantId, 'vehicle', $vehicleId, 'anomaly', null, $riskLevel, $explanation, $doc, [
+            $writes[] = $this->doc($tenantId, 'vehicle', $vehicleId, 'anomaly', null, $riskLevel, $explanation, $doc, $businessDate, [
                 'anomaly_type' => $hasData ? 'DATA_ANOMALY' : 'OPERATIONAL_ANOMALY',
                 'data_anomalies' => $result['data_anomalies'], 'operational_anomalies' => $result['operational_anomalies'],
             ]);
@@ -115,7 +115,7 @@ class DiagnosticsRunService
         return $writes;
     }
 
-    private function doc(string $tenantId, string $entityType, string $entityId, string $predictionType, ?float $score, string $riskLevel, array $explanation, array $sourceDoc, array $extra = []): array
+    private function doc(string $tenantId, string $entityType, string $entityId, string $predictionType, ?float $score, string $riskLevel, array $explanation, array $sourceDoc, string $businessDate, array $extra = []): array
     {
         $asOf = $sourceDoc['source_data_as_of'] ?? CarbonImmutable::now()->toIso8601String();
 
@@ -125,6 +125,7 @@ class DiagnosticsRunService
                 'tenant_id' => $tenantId, 'entity_type' => $entityType, 'entity_id' => $entityId,
                 'prediction_type' => $predictionType,
                 'insight_level' => config("intelligence.insight_levels.{$predictionType}", 'DIAGNOSTIC'),
+                'business_date' => $businessDate,
                 'horizon_days' => 0, 'score' => $score, 'probability' => null, 'risk_level' => $riskLevel,
                 'confidence' => 'MEDIUM', 'explanation' => $explanation, 'contributing_factors' => [],
                 'source' => 'STATISTICAL', 'model_id' => null, 'model_version' => null,

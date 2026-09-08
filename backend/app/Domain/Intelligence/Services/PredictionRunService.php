@@ -84,7 +84,7 @@ class PredictionRunService
                     continue;
                 }
                 $asOf = CarbonImmutable::parse($doc['source_data_as_of']);
-                $this->predictor->predict($tenantId, $entityType, $entityId, $target, $doc, $asOf);
+                $this->predictor->predict($tenantId, $entityType, $entityId, $target, $doc, $asOf, $businessDate);
                 $count++;
             }
 

@@ -19,7 +19,8 @@ class MaintenanceRequest extends Model
     protected $fillable = [
         'request_number', 'numbering_configuration_version_id', 'workflow_configuration_version_id', 'tenant_id', 'branch_id', 'workshop_id', 'vehicle_id',
         'component_group_id', 'category_id', 'source_type', 'source_inspection_id',
-        'source_schedule_id', 'source_breakdown_id', 'priority', 'complaint',
+        'source_schedule_id', 'source_breakdown_id', 'source_recommendation_id', 'source_prediction_id',
+        'priority', 'complaint',
         'requested_by', 'status', 'reviewed_by', 'reviewed_at', 'review_note', 'work_order_id',
     ];
 

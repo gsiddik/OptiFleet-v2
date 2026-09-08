@@ -18,6 +18,8 @@ return [
         'predict_time' => env('INTELLIGENCE_PREDICT_TIME', '03:30'),
         'health_time' => env('INTELLIGENCE_HEALTH_TIME', '03:45'),
         'diagnostics_time' => env('INTELLIGENCE_DIAGNOSTICS_TIME', '04:00'),
+        'recommendations_time' => env('INTELLIGENCE_RECOMMENDATIONS_TIME', '04:15'),
+        'outcomes_time' => env('INTELLIGENCE_OUTCOMES_TIME', '04:30'),
     ],
 
     'job' => [
@@ -286,8 +288,50 @@ return [
         'min_risk_level_for_alert' => 'HIGH',
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Prescriptive recommendation rules (Section 29-30)
+    |--------------------------------------------------------------------------
+    |
+    | Deterministic prediction_type+risk_level -> recommendation_type+
+    | priority mapping. AI produces the suggestion only (Section 2/30) —
+    | priority here is advisory, never enforced over a human reviewer's
+    | own decision.
+    |
+    */
     'recommendation' => [
         'expiry_days' => (int) env('INTELLIGENCE_RECOMMENDATION_EXPIRY_DAYS', 30),
+        'rules' => [
+            'vehicle_failure_risk' => [
+                'CRITICAL' => ['type' => 'INSPECT_IMMEDIATELY', 'priority' => 'URGENT'],
+                'HIGH' => ['type' => 'SCHEDULE_MAINTENANCE', 'priority' => 'HIGH'],
+                'MEDIUM' => ['type' => 'MONITOR', 'priority' => 'NORMAL'],
+            ],
+            'vehicle_rul' => [
+                'CRITICAL' => ['type' => 'SCHEDULE_MAINTENANCE', 'priority' => 'URGENT'],
+                'HIGH' => ['type' => 'SCHEDULE_MAINTENANCE', 'priority' => 'HIGH'],
+            ],
+            'tire_rul' => [
+                'CRITICAL' => ['type' => 'REPLACE_TIRE', 'priority' => 'URGENT'],
+                'HIGH' => ['type' => 'REPLACE_TIRE', 'priority' => 'HIGH'],
+                'MEDIUM' => ['type' => 'ROTATE_TIRE', 'priority' => 'NORMAL'],
+            ],
+            'repeat_failure' => [
+                'LOW' => ['type' => 'REVIEW_RECURRING_ROOT_CAUSE', 'priority' => 'NORMAL'],
+                'MEDIUM' => ['type' => 'REVIEW_RECURRING_ROOT_CAUSE', 'priority' => 'HIGH'],
+                'HIGH' => ['type' => 'REVIEW_RECURRING_ROOT_CAUSE', 'priority' => 'HIGH'],
+                'CRITICAL' => ['type' => 'REVIEW_RECURRING_ROOT_CAUSE', 'priority' => 'URGENT'],
+            ],
+            'anomaly' => [
+                'MEDIUM' => ['type' => 'PERFORM_DIAGNOSTIC_TEST', 'priority' => 'NORMAL'],
+                'HIGH' => ['type' => 'PERFORM_DIAGNOSTIC_TEST', 'priority' => 'HIGH'],
+                'DATA_QUALITY' => ['type' => 'PERFORM_DIAGNOSTIC_TEST', 'priority' => 'LOW'],
+            ],
+            'component_health_score' => [
+                'CRITICAL' => ['type' => 'REPLACE_COMPONENT', 'priority' => 'URGENT'],
+                'AT_RISK' => ['type' => 'INCREASE_INSPECTION_FREQUENCY', 'priority' => 'HIGH'],
+            ],
+        ],
     ],
 
     /*

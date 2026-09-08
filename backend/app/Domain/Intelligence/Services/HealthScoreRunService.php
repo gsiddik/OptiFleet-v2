@@ -47,7 +47,7 @@ class HealthScoreRunService
 
         $latestPredictions = DB::connection('mongodb')->table('intelligence_predictions')
             ->where('tenant_id', $tenantId)->where('prediction_type', 'vehicle_failure_risk')
-            ->where('source_data_as_of', 'like', $businessDate.'%')
+            ->where('business_date', $businessDate)
             ->get()->keyBy('entity_id');
 
         $writes = [];
@@ -63,7 +63,7 @@ class HealthScoreRunService
             $missing = $this->missingnessRatio($doc, $coreFields);
 
             $writes[] = $this->buildDoc($tenantId, 'vehicle', $vehicleId, 'vehicle_health_score', $result['score'], $result['status'],
-                $this->explainSubscores($result['subscores']), $doc, $missing);
+                $this->explainSubscores($result['subscores']), $doc, $missing, $businessDate);
         }
 
         $this->write($writes);
@@ -84,7 +84,7 @@ class HealthScoreRunService
 
             $componentId = $doc['component_asset_id'] ?? $doc['vehicle_id'].':'.$doc['component_group_id'];
             $writes[] = $this->buildDoc($tenantId, 'component', $componentId, 'component_health_score', $result['score'], $result['status'],
-                $this->explainFactors($result['factors']), $doc, $missing, ['vehicle_id' => $doc['vehicle_id'], 'component_group_id' => $doc['component_group_id']]);
+                $this->explainFactors($result['factors']), $doc, $missing, $businessDate, ['vehicle_id' => $doc['vehicle_id'], 'component_group_id' => $doc['component_group_id']]);
         }
 
         $this->write($writes);
@@ -92,7 +92,7 @@ class HealthScoreRunService
         return count($writes);
     }
 
-    private function buildDoc(string $tenantId, string $entityType, string $entityId, string $predictionType, float $score, string $status, array $explanation, array $features, float $missingness, array $extra = []): array
+    private function buildDoc(string $tenantId, string $entityType, string $entityId, string $predictionType, float $score, string $status, array $explanation, array $features, float $missingness, string $businessDate, array $extra = []): array
     {
         $asOf = $features['source_data_as_of'] ?? CarbonImmutable::now()->toIso8601String();
 
@@ -102,6 +102,7 @@ class HealthScoreRunService
                 'tenant_id' => $tenantId, 'entity_type' => $entityType, 'entity_id' => $entityId,
                 'prediction_type' => $predictionType,
                 'insight_level' => config("intelligence.insight_levels.{$predictionType}", 'DESCRIPTIVE'),
+                'business_date' => $businessDate,
                 'horizon_days' => 0,
                 'score' => $score, 'probability' => null, 'risk_level' => $status,
                 'confidence' => $this->confidence->calculate('STATISTICAL', $missingness),

@@ -34,8 +34,14 @@ class PredictionService
         private readonly AnalyticsUpsertWriter $writer,
     ) {}
 
-    public function predict(string $tenantId, string $entityType, string $entityId, string $target, array $features, CarbonImmutable $sourceDataAsOf): array
+    public function predict(string $tenantId, string $entityType, string $entityId, string $target, array $features, CarbonImmutable $sourceDataAsOf, ?string $businessDate = null): array
     {
+        // source_data_as_of is the exclusive end-of-day boundary (the
+        // *next* calendar day's midnight, per BusinessDateResolver), so
+        // it must never be string-matched against a business date —
+        // business_date is stored explicitly for that (Section 43/57
+        // date-range queries, Batch G recommendation generation).
+        $businessDate ??= $sourceDataAsOf->subDay()->format('Y-m-d');
         $targetConfig = config("intelligence.model_targets.{$target}");
         $horizonDays = $targetConfig['horizon_days'] ?? 0;
 
@@ -74,6 +80,7 @@ class PredictionService
             'entity_id' => $entityId,
             'prediction_type' => $target,
             'insight_level' => config("intelligence.insight_levels.{$target}", 'PREDICTIVE'),
+            'business_date' => $businessDate,
             'horizon_days' => $horizonDays,
             'score' => $score,
             'probability' => $source === self::SOURCE_ML ? $score : null,

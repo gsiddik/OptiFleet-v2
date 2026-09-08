@@ -26,6 +26,17 @@ class NotificationEventCatalog
         'invoice.due' => ['platform_locked' => true, 'scalars' => ['invoice.number', 'invoice.due_date', 'invoice.total'], 'sections' => []],
         'subscription.suspended' => ['platform_locked' => true, 'scalars' => ['subscription.plan_name', 'subscription.suspended_at'], 'sections' => []],
         'payment.verification_required' => ['platform_locked' => true, 'scalars' => ['payment.reference', 'payment.amount'], 'sections' => []],
+
+        // Phase 7 Section 35 — reuses this same catalog/rule/template
+        // infrastructure, never a second notification system.
+        'intelligence.vehicle_high_risk' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
+        'intelligence.vehicle_critical' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
+        'intelligence.component_high_risk' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
+        'intelligence.predicted_failure' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
+        'intelligence.rul_low' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
+        'intelligence.repeat_failure' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
+        'intelligence.anomaly_detected' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
+        'intelligence.inventory_shortage_risk' => ['platform_locked' => false, 'scalars' => ['entity_type', 'entity_id', 'risk_level', 'recommendation_type'], 'sections' => []],
     ];
 
     private const COMMON_SCALARS = ['tenant.name', 'event_code', 'generated_at'];
