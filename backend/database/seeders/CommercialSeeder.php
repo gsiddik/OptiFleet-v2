@@ -70,7 +70,10 @@ class CommercialSeeder extends Seeder
             'OPTIFLEET_INTELLIGENCE' => ['name' => 'OptiFleet Intelligence', 'price' => 18000000, 'modules' => [
                 'CORE', 'ORGANIZATION', 'VEHICLE', 'MAINTENANCE', 'WORK_ORDER', 'WORKSHOP', 'HISTORY', 'REPORT',
                 'INSPECTION', 'INVENTORY', 'PARTNER', 'PROCUREMENT', 'TIRE', 'COMPONENT', 'WARRANTY', 'TELEMATICS',
-                'MAINTENANCE_INTELLIGENCE',
+                // Phase 7 Section 59: MAINTENANCE_INTELLIGENCE now depends on
+                // ANALYTICS (not TELEMATICS, which has no implementation) —
+                // a bundle must carry every dependency of the modules it grants.
+                'ANALYTICS', 'MAINTENANCE_INTELLIGENCE',
             ]],
         ];
 

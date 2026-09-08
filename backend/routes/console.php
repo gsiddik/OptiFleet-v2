@@ -26,3 +26,10 @@ Schedule::command('notifications:process-escalations')->everyFiveMinutes()->with
 // the great majority of tenant timezones. Idempotent (Section 9): safe to
 // re-fire without creating duplicate analytical records.
 Schedule::command('analytics:run')->dailyAt(config('analytics.schedule_time', '02:00'))->withoutOverlapping();
+
+// Phase 7 Section 46-47: feature generation runs after the analytics ETL
+// settles (Section 1 — features are built from the Phase 6 analytical
+// layer, not raw OLTP scans), then prediction/recommendation generation
+// runs after that. Each stage's own schedule time is configurable so the
+// dependency order survives changes to either without editing this file.
+Schedule::command('intelligence:generate-features')->dailyAt(config('intelligence.schedule.feature_time', '03:00'))->withoutOverlapping();

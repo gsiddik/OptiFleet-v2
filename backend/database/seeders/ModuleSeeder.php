@@ -45,7 +45,11 @@ class ModuleSeeder extends Seeder
         $dependencies = [
             'WORK_ORDER' => ['VEHICLE', 'MAINTENANCE', 'WORKSHOP'],
             'PROCUREMENT' => ['INVENTORY', 'PARTNER'],
-            'MAINTENANCE_INTELLIGENCE' => ['VEHICLE', 'MAINTENANCE', 'TELEMATICS', 'HISTORY'],
+            // Phase 7 Section 59: TELEMATICS has no implementation (module
+            // row only) and requiring it here would make this module
+            // permanently ungrantable to any tenant. ANALYTICS is the real
+            // upstream data source (Phase 6 daily_vehicle_health etc.).
+            'MAINTENANCE_INTELLIGENCE' => ['VEHICLE', 'MAINTENANCE', 'HISTORY', 'ANALYTICS'],
             'ANALYTICS' => ['HISTORY'],
             'INSPECTION' => ['VEHICLE'],
             'MAINTENANCE' => ['VEHICLE'],

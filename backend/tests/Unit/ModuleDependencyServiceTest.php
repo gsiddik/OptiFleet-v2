@@ -32,12 +32,15 @@ class ModuleDependencyServiceTest extends TestCase
 
     public function test_transitive_dependency_resolution(): void
     {
-        // MAINTENANCE_INTELLIGENCE -> VEHICLE, MAINTENANCE, TELEMATICS, HISTORY
-        // MAINTENANCE -> VEHICLE (transitively repeats VEHICLE, should dedupe)
+        // MAINTENANCE_INTELLIGENCE -> VEHICLE, MAINTENANCE, HISTORY, ANALYTICS
+        // MAINTENANCE -> VEHICLE, ANALYTICS -> HISTORY (transitively repeat VEHICLE/HISTORY, should dedupe)
         $mi = $this->module('MAINTENANCE_INTELLIGENCE');
         $codes = $this->service->transitiveDependencies($mi)->pluck('code')->sort()->values();
 
-        $this->assertEquals(['HISTORY', 'MAINTENANCE', 'TELEMATICS', 'VEHICLE'], $codes->all());
+        // Phase 7 Section 59: MAINTENANCE_INTELLIGENCE depends on ANALYTICS
+        // (the real upstream data source), not TELEMATICS (unimplemented,
+        // would make the module permanently ungrantable).
+        $this->assertEquals(['ANALYTICS', 'HISTORY', 'MAINTENANCE', 'VEHICLE'], $codes->all());
     }
 
     public function test_reverse_dependents(): void

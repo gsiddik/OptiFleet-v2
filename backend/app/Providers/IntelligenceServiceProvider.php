@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Providers;
+
+use App\Domain\Intelligence\Services\FeatureDatasetRegistry;
+use Illuminate\Support\ServiceProvider;
+
+/**
+ * Phase 7: registers every feature extractor once, mirroring
+ * AnalyticsServiceProvider (Section 79 — reuse infrastructure, don't
+ * duplicate the registration pattern).
+ */
+class IntelligenceServiceProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        $this->app->singleton(FeatureDatasetRegistry::class, function ($app) {
+            $registry = new FeatureDatasetRegistry;
+
+            foreach ($this->extractorClasses() as $class) {
+                $registry->register($app->make($class));
+            }
+
+            return $registry;
+        });
+    }
+
+    /** @return class-string[] */
+    private function extractorClasses(): array
+    {
+        return [
+            \App\Domain\Intelligence\Extractors\VehicleFeatureExtractor::class,
+            \App\Domain\Intelligence\Extractors\ComponentFeatureExtractor::class,
+            \App\Domain\Intelligence\Extractors\TireFeatureExtractor::class,
+        ];
+    }
+}

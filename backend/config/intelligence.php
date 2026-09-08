@@ -1,0 +1,194 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pipeline schedule (Section 46-47)
+    |--------------------------------------------------------------------------
+    |
+    | Feature generation and inference run after the Phase 6 daily ETL
+    | (config('analytics.schedule_time'), default 02:00 UTC) so the
+    | intelligence layer always reads a settled analytical snapshot for
+    | the business date, never a partially-written one.
+    |
+    */
+    'schedule' => [
+        'feature_time' => env('INTELLIGENCE_FEATURE_TIME', '03:00'),
+        'predict_time' => env('INTELLIGENCE_PREDICT_TIME', '03:30'),
+    ],
+
+    'job' => [
+        'max_retries' => (int) env('INTELLIGENCE_MAX_RETRIES', 3),
+        'retry_backoff_seconds' => [60, 300, 900],
+        'job_timeout_seconds' => (int) env('INTELLIGENCE_JOB_TIMEOUT_SECONDS', 900),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Feature store (Section 4-6)
+    |--------------------------------------------------------------------------
+    |
+    | Bumping a version here changes feature_set_version on every document
+    | written from that point on; old documents keep their original
+    | version, so historical predictions stay reproducible against the
+    | feature shape that actually produced them (Section 10).
+    |
+    */
+    'feature_set_versions' => [
+        'vehicle' => 'v1',
+        'component' => 'v1',
+        'tire' => 'v1',
+    ],
+    'feature_lookback_days' => (int) env('INTELLIGENCE_FEATURE_LOOKBACK_DAYS', 90),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Data readiness (Section 7)
+    |--------------------------------------------------------------------------
+    */
+    'data_readiness' => [
+        'min_sample_size' => (int) env('INTELLIGENCE_MIN_SAMPLE_SIZE', 30),
+        'limited_sample_size' => (int) env('INTELLIGENCE_LIMITED_SAMPLE_SIZE', 10),
+        'min_positive_count' => (int) env('INTELLIGENCE_MIN_POSITIVE_COUNT', 5),
+        'limited_positive_count' => (int) env('INTELLIGENCE_LIMITED_POSITIVE_COUNT', 2),
+        'max_missingness_ratio' => 0.4,
+        'min_observation_period_days' => (int) env('INTELLIGENCE_MIN_OBSERVATION_DAYS', 30),
+        'max_majority_class_ratio' => 0.98,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Risk / confidence bands (Section 18-19)
+    |--------------------------------------------------------------------------
+    |
+    | Shared default thresholds against a 0-1 probability/score. Kept in
+    | one place (not scattered in frontend code, per Section 18).
+    |
+    */
+    'risk_thresholds' => ['CRITICAL' => 0.75, 'HIGH' => 0.5, 'MEDIUM' => 0.25, 'LOW' => 0.0],
+    'confidence_thresholds' => ['HIGH' => 0.75, 'MEDIUM' => 0.4, 'LOW' => 0.0],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Vehicle intelligence health score (Section 21-22)
+    |--------------------------------------------------------------------------
+    |
+    | Extends the Phase 6 deterministic vehicle_health_score (0-100) with
+    | a predictive-risk subscore into a governed 0-100 intelligence score.
+    | Weights sum to 1.0; each named subscore is itself 0-100 so the blend
+    | stays interpretable and each contributes a visible amount.
+    |
+    */
+    'health_score' => [
+        'status_thresholds' => ['HEALTHY' => 90, 'GOOD' => 75, 'WATCH' => 60, 'AT_RISK' => 40, 'CRITICAL' => 0],
+        'weights' => [
+            'maintenance_compliance' => 0.20,
+            'breakdown_history' => 0.15,
+            'inspection_health' => 0.15,
+            'component_reliability' => 0.15,
+            'downtime' => 0.10,
+            'predictive_risk' => 0.15,
+            'tire_condition' => 0.10,
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | RUL (Section 24-25)
+    |--------------------------------------------------------------------------
+    |
+    | uncertainty_band_ratio widens a point estimate into a range when no
+    | statistical stddev is available, so Phase 7 never reports fake
+    | single-number precision (Section 24).
+    |
+    */
+    'rul' => [
+        'uncertainty_band_ratio' => 0.25,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Model targets (Section 12)
+    |--------------------------------------------------------------------------
+    |
+    | A small, deliberately limited set. vehicle_failure_risk is the one
+    | target with a real trainable ML path (logistic regression); the
+    | rest are deterministic/statistical by design (Section 12: "do not
+    | attempt dozens of models unnecessarily") but still flow through the
+    | same registry/readiness/prediction pipeline so upgrading one to a
+    | real model later needs no redesign.
+    |
+    | min_precision/min_recall are this target's documented acceptance
+    | criteria (Section 71) — a trained model that misses either stays
+    | EVALUATED, never auto-activated.
+    |
+    */
+    'model_targets' => [
+        'vehicle_failure_risk' => [
+            'entity_type' => 'vehicle',
+            'algorithm' => 'logistic_regression',
+            'horizon_days' => 30,
+            'min_precision' => 0.35,
+            'min_recall' => 0.30,
+        ],
+        'component_failure_risk' => ['entity_type' => 'component', 'algorithm' => 'rule_based', 'horizon_days' => 30],
+        'breakdown_risk' => ['entity_type' => 'vehicle', 'algorithm' => 'rule_based', 'horizon_days' => 30],
+        'repeat_failure_risk' => ['entity_type' => 'vehicle', 'algorithm' => 'rule_based', 'horizon_days' => 45],
+        'tire_replacement_risk' => ['entity_type' => 'tire', 'algorithm' => 'rule_based', 'horizon_days' => 30],
+        'maintenance_overdue_risk' => ['entity_type' => 'vehicle', 'algorithm' => 'rule_based', 'horizon_days' => 0],
+    ],
+
+    'repeat_failure' => [
+        'window_days' => (int) env('INTELLIGENCE_REPEAT_FAILURE_WINDOW_DAYS', 45),
+        'min_occurrences' => (int) env('INTELLIGENCE_REPEAT_FAILURE_MIN_OCCURRENCES', 3),
+    ],
+
+    'anomaly' => [
+        'zscore_threshold' => 2.5,
+        'min_history_points' => 10,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Alerts (Section 35) — reuses the Phase 5 notification engine
+    |--------------------------------------------------------------------------
+    */
+    'alerts' => [
+        'min_risk_level_for_alert' => 'HIGH',
+    ],
+
+    'recommendation' => [
+        'expiry_days' => (int) env('INTELLIGENCE_RECOMMENDATION_EXPIRY_DAYS', 30),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Model monitoring / drift foundation (Section 48-49)
+    |--------------------------------------------------------------------------
+    */
+    'monitoring' => [
+        'drift_window_days' => 14,
+        'drift_zscore_watch' => 1.5,
+        'drift_zscore_drifted' => 3.0,
+        'stale_after_hours' => (int) env('INTELLIGENCE_PREDICTION_STALE_HOURS', 48),
+        'expires_after_hours' => (int) env('INTELLIGENCE_PREDICTION_EXPIRES_HOURS', 168),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Development synthetic data generator (Section 70)
+    |--------------------------------------------------------------------------
+    |
+    | intelligence:generate-dev-data refuses to run outside these
+    | environments — it writes clearly-flagged synthetic feature/label
+    | rows directly into the (already non-authoritative) Mongo feature
+    | store, never into PostgreSQL, so it carries zero risk to
+    | operational data even if invoked by mistake.
+    |
+    */
+    'dev_data_generator' => [
+        'enabled_environments' => ['local', 'testing'],
+        'seed' => (int) env('INTELLIGENCE_DEV_DATA_SEED', 42),
+    ],
+];
