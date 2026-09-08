@@ -73,6 +73,7 @@ class PredictionService
             'entity_type' => $entityType,
             'entity_id' => $entityId,
             'prediction_type' => $target,
+            'insight_level' => config("intelligence.insight_levels.{$target}", 'PREDICTIVE'),
             'horizon_days' => $horizonDays,
             'score' => $score,
             'probability' => $source === self::SOURCE_ML ? $score : null,

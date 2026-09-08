@@ -7,7 +7,7 @@ Status:
 IN PROGRESS
 
 Current Batch:
-E — RUL + Repeat Failure + Anomaly
+F — Tire + Spare Part + Demand Intelligence
 
 Completed Batches (full detail in commit messages, not repeated here):
 A — Feature pipeline: config/intelligence.php; Mongo feature/model/
@@ -39,7 +39,20 @@ day's failure-risk prediction); ComponentHealthScoreService (same
 point-deduction family). HealthScoreRunService persists both into
 intelligence_predictions (prediction_type=vehicle/component_health_score)
 via the same idempotent upsert, giving risk history (Section 57) for
-free. intelligence:health command, scheduled after predict.
+free. intelligence:health command, scheduled after predict. [commit ca32813]
+
+E — RUL + repeat failure + anomaly: IntervalBasedRulService (vehicle RUL
+from maintenance_schedules next-due fields already in the feature row;
+tire RUL from a documented assumed expected-life-km config) — always a
+range, never a fake precise number. RepeatFailureDetectionService (same
+vehicle+component_group >= N repairs in a window -> DIAGNOSTIC insight).
+AnomalyDetectionService: cross-sectional fleet z-score per metric
+(DATA_ANOMALY for impossible values, OPERATIONAL_ANOMALY for
+statistical outliers; neutral wording, no fault/fraud language).
+Added insight_level (DESCRIPTIVE/DIAGNOSTIC/PREDICTIVE/PRESCRIPTIVE,
+config-mapped) to every prediction doc, retrofitted onto Batch C/D
+writers too. DiagnosticsRunService + intelligence:diagnostics command,
+scheduled after health. [commit pending]
 
 Partially Completed Work:
 none currently open.
@@ -47,13 +60,12 @@ none currently open.
 Key Architecture Decisions:
 - Intelligence artifacts live in MongoDB; reuse Phase 6 Analytics infra
   wholesale (upsert writer, business-date resolver, run tracking).
-- ML: interpretable pure-PHP only (logistic regression), no Python
-  microservice — data volume doesn't justify the extra deploy/security
-  surface. Model artifact is embedded in the registry doc, never a
-  filesystem path (closes path-injection risk by construction).
-- Deterministic fallback always serves when no ACTIVE model exists;
-  ACTIVE requires passing the model's own documented acceptance gate —
-  never automatic on training completion.
+- ML: interpretable pure-PHP only, no Python microservice. Artifact
+  embedded in the registry doc, never a filesystem path.
+- Deterministic fallback always serves absent an ACTIVE model; ACTIVE
+  requires the model's own acceptance gate, never automatic.
+- Every insight carries insight_level (DESCRIPTIVE/DIAGNOSTIC/
+  PREDICTIVE/PRESCRIPTIVE, Section 3), config-mapped per prediction_type.
 - Recommendation status (Batch G): planned as a simple enum + service,
   not the heavyweight Configuration WorkflowEngine.
 
@@ -63,32 +75,31 @@ vehicle=v1, component=v1, tire=v1.
 Model architecture:
 vehicle_failure_risk: logistic regression (pure PHP, gradient descent),
 horizon 30d, acceptance precision>=0.35/recall>=0.30, deterministic
-fallback = weighted-linear rule scorer. Vehicle/component health scores
-are always-deterministic (not ML targets). All other risk targets
-(component/breakdown/repeat-failure/tire-replacement/maintenance-overdue)
-are rule_based by design (Batch E-F) — not yet built.
+fallback = weighted-linear rule scorer. Health/RUL/repeat-failure/
+anomaly are always-deterministic by design (Section 12: a small number
+of real ML targets, not dozens). tire/component/breakdown/maintenance-
+overdue *_risk targets still rule_based-only (Batch F) — not yet built.
 
 Validations:
 - Phase 1-6 regression (baseline): 348/349, 1 pre-existing test-order
   flake (NotificationEngineTest) confirmed PASS in isolation — unrelated
   to Phase 7.
-- Intelligence test suite (Batches A-D): 26/26 PASS — feature pipeline
+- Intelligence test suite (Batches A-E): 30/30 PASS — feature pipeline
   (5), model registry (5), data readiness (4), training pipeline (4),
-  prediction pipeline (5), health score (3, incl. component health from
-  a real component_assets/installations fixture).
+  prediction pipeline (5), health score (3), diagnostics/RUL/repeat-
+  failure/anomaly (4).
 - Fresh migrate:fresh --seed: PASS. Commercial/Module/Entitlement
   regression after the ModuleSeeder fix: 25/25 PASS.
 - intelligence:generate-features --sync manual smoke test: PASS.
-- Everything else (RUL, repeat failure, anomaly, tire/component/
-  spare-part/demand intelligence, recommendations, dashboard, monitoring,
-  drift, security/leakage release gate): NOT RUN.
+- Everything else (tire/spare-part/demand intelligence, recommendations,
+  dashboard, monitoring, drift, security/leakage release gate): NOT RUN.
 
 Remaining Work:
-Batches E-K per the original Phase 7 specification.
+Batches F-K per the original Phase 7 specification.
 
 Blockers:
 none.
 
 Latest Safe Commit:
-f1d7556 (Batch C, pushed). Batch D not yet committed as of this writing.
+ca32813 (Batch D, pushed). Batch E not yet committed as of this writing.
 Branch based cleanly on Phase 6 checkpoint 18284bf.

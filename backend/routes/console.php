@@ -35,3 +35,4 @@ Schedule::command('analytics:run')->dailyAt(config('analytics.schedule_time', '0
 Schedule::command('intelligence:generate-features')->dailyAt(config('intelligence.schedule.feature_time', '03:00'))->withoutOverlapping();
 Schedule::command('intelligence:predict')->dailyAt(config('intelligence.schedule.predict_time', '03:30'))->withoutOverlapping();
 Schedule::command('intelligence:health')->dailyAt(config('intelligence.schedule.health_time', '03:45'))->withoutOverlapping();
+Schedule::command('intelligence:diagnostics')->dailyAt(config('intelligence.schedule.diagnostics_time', '04:00'))->withoutOverlapping();

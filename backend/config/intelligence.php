@@ -17,6 +17,7 @@ return [
         'feature_time' => env('INTELLIGENCE_FEATURE_TIME', '03:00'),
         'predict_time' => env('INTELLIGENCE_PREDICT_TIME', '03:30'),
         'health_time' => env('INTELLIGENCE_HEALTH_TIME', '03:45'),
+        'diagnostics_time' => env('INTELLIGENCE_DIAGNOSTICS_TIME', '04:00'),
     ],
 
     'job' => [
@@ -154,6 +155,45 @@ return [
     */
     'rul' => [
         'uncertainty_band_ratio' => 0.25,
+        // No per-vehicle maintenance-schedule "next due" data exists for
+        // tires/components (Phase 1-5 has no tire/component service
+        // interval table), so their interval-based RUL uses a documented
+        // assumed typical service life instead — clearly labeled
+        // INTERVAL_BASED, never presented as measured.
+        'expected_life_km' => [
+            'tire' => (int) env('INTELLIGENCE_TIRE_EXPECTED_LIFE_KM', 60000),
+        ],
+        // Remaining-days point estimate -> replacement urgency bucket.
+        'urgency_days_thresholds' => ['CRITICAL' => 7, 'HIGH' => 30, 'MEDIUM' => 90, 'LOW' => PHP_INT_MAX],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Intelligence maturity level per prediction_type (Section 3)
+    |--------------------------------------------------------------------------
+    |
+    | DESCRIPTIVE (what happened), DIAGNOSTIC (why), PREDICTIVE (what's
+    | likely next), PRESCRIPTIVE (what to do) — every stored insight
+    | carries this so APIs/UI never present one as another.
+    |
+    */
+    'insight_levels' => [
+        'vehicle_health_score' => 'DESCRIPTIVE',
+        'component_health_score' => 'DESCRIPTIVE',
+        'tire_health_score' => 'DESCRIPTIVE',
+        'repeat_failure' => 'DIAGNOSTIC',
+        'anomaly' => 'DIAGNOSTIC',
+        'vehicle_failure_risk' => 'PREDICTIVE',
+        'component_failure_risk' => 'PREDICTIVE',
+        'breakdown_risk' => 'PREDICTIVE',
+        'repeat_failure_risk' => 'PREDICTIVE',
+        'tire_replacement_risk' => 'PREDICTIVE',
+        'maintenance_overdue_risk' => 'PREDICTIVE',
+        'vehicle_rul' => 'PREDICTIVE',
+        'tire_rul' => 'PREDICTIVE',
+        'component_rul' => 'PREDICTIVE',
+        'inventory_demand_forecast' => 'PREDICTIVE',
+        'maintenance_recommendation' => 'PRESCRIPTIVE',
     ],
 
     /*

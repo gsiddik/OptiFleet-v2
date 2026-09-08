@@ -100,7 +100,9 @@ class HealthScoreRunService
             'key' => ['tenant_id' => $tenantId, 'entity_type' => $entityType, 'entity_id' => $entityId, 'prediction_type' => $predictionType, 'horizon_days' => 0, 'source_data_as_of' => $asOf],
             'doc' => array_merge([
                 'tenant_id' => $tenantId, 'entity_type' => $entityType, 'entity_id' => $entityId,
-                'prediction_type' => $predictionType, 'horizon_days' => 0,
+                'prediction_type' => $predictionType,
+                'insight_level' => config("intelligence.insight_levels.{$predictionType}", 'DESCRIPTIVE'),
+                'horizon_days' => 0,
                 'score' => $score, 'probability' => null, 'risk_level' => $status,
                 'confidence' => $this->confidence->calculate('STATISTICAL', $missingness),
                 'explanation' => $explanation, 'source' => 'STATISTICAL',
