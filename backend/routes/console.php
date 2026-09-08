@@ -33,3 +33,4 @@ Schedule::command('analytics:run')->dailyAt(config('analytics.schedule_time', '0
 // runs after that. Each stage's own schedule time is configurable so the
 // dependency order survives changes to either without editing this file.
 Schedule::command('intelligence:generate-features')->dailyAt(config('intelligence.schedule.feature_time', '03:00'))->withoutOverlapping();
+Schedule::command('intelligence:predict')->dailyAt(config('intelligence.schedule.predict_time', '03:30'))->withoutOverlapping();

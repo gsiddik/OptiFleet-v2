@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Domain\Intelligence\Labels\LabelBuilderRegistry;
+use App\Domain\Intelligence\Risk\RiskScorerRegistry;
 use App\Domain\Intelligence\Services\FeatureDatasetRegistry;
 use Illuminate\Support\ServiceProvider;
 
@@ -33,6 +34,23 @@ class IntelligenceServiceProvider extends ServiceProvider
 
             return $registry;
         });
+
+        $this->app->singleton(RiskScorerRegistry::class, function ($app) {
+            $registry = new RiskScorerRegistry;
+            foreach ($this->riskScorerClasses() as $class) {
+                $registry->register($app->make($class));
+            }
+
+            return $registry;
+        });
+    }
+
+    /** @return class-string[] */
+    private function riskScorerClasses(): array
+    {
+        return [
+            \App\Domain\Intelligence\Risk\DeterministicVehicleFailureRiskScorer::class,
+        ];
     }
 
     /** @return class-string[] */

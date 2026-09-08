@@ -33,13 +33,21 @@ trait BuildsIntelligenceHistory
             $vehicles[] = $this->makeVehicle($tenant, $branch, $category, ['current_odometer' => 10000 + $i * 500]);
         }
 
+        // Lemon vehicles' breakdowns are spread across the whole date range
+        // (not clustered mid-range) so a *temporal* train/test split
+        // (Section 66) still gives the held-out (latest-dates) test
+        // partition at least one positive label — otherwise a real,
+        // non-fabricated training test would have nothing to evaluate.
         $lemon = null;
+        $lemonCount = (int) ceil($vehicleCount / 3);
+        $lemonIndex = 0;
         foreach ($vehicles as $i => $vehicle) {
             if ($i % 3 === 0) {
                 $lemon ??= $vehicle;
+                $breakdownDay = (int) floor((++$lemonIndex) * $days / ($lemonCount + 1));
                 Breakdown::query()->create([
                     'id' => Str::uuid(), 'tenant_id' => $tenant->id, 'branch_id' => $branch->id, 'vehicle_id' => $vehicle->id,
-                    'reported_at' => $start->addDays((int) ($days / 2)), 'severity' => 'MAJOR',
+                    'reported_at' => $start->addDays($breakdownDay), 'severity' => 'MAJOR',
                     'description' => 'synthetic', 'status' => 'REPORTED',
                 ]);
             }

@@ -7,55 +7,70 @@ Status:
 IN PROGRESS
 
 Current Batch:
-C — Training / Evaluation / Inference
+D — Vehicle + Component Health / Risk
 
-Completed Batches:
-A — Intelligence Core + Feature Pipeline: config/intelligence.php;
-Mongo collections (vehicle/component/tire_daily_features,
-intelligence_models/predictions/recommendations/outcomes, migration
-2026_09_08_100001); maintenance_requests +INTELLIGENCE source_type +
-source_recommendation_id/source_prediction_id (2026_09_08_100002);
-Vehicle/Component/TireFeatureExtractor (DatasetExtractor, reuse
-AnalyticsUpsertWriter/BusinessDateResolver, temporal cutoff enforced);
-FeatureDatasetRegistry/FeatureRunService/RunFeatureDatasetJob mirror
-Phase 6's Analytics equivalents; intelligence:generate-features command,
-scheduled after analytics:run. Fixed defect: MAINTENANCE_INTELLIGENCE
-depended on unimplemented TELEMATICS (ungrantable) -> corrected to
-VEHICLE/MAINTENANCE/HISTORY/ANALYTICS (spec Section 59); CommercialSeeder
-bundle + ModuleDependencyServiceTest updated to match.
+Completed Batches (full detail in commit messages, not repeated here):
+A — Feature pipeline: config/intelligence.php; Mongo feature/model/
+prediction/recommendation/outcome collections; Vehicle/Component/
+TireFeatureExtractor (temporal cutoff enforced) + registry/run-service/
+job/command mirroring Phase 6 Analytics. Fixed defect: freed
+MAINTENANCE_INTELLIGENCE from an ungrantable TELEMATICS dependency.
+[commit dcbd1ad]
 
-B — Data Readiness + Model Registry: IntelligenceModel (DRAFT->TRAINING
-->EVALUATED->ACTIVE/RETIRED/FAILED, versioned per model_code/scope/
-tenant, artifact embedded in-doc — no path-based load, closes artifact-
-injection risk by construction); ModelRegistryService (activate() gates
-on acceptance_criteria, atomically retires prior ACTIVE — one active
-version invariant); LabelBuilder + VehicleFailureLabelBuilder (null,
-not false, when horizon unelapsed); TrainingDatasetBuilder (shared by
-readiness + training so they can't disagree); DataReadinessAssessmentService
--> READY/LIMITED/NOT_READY. tests/Concerns/BuildsIntelligenceHistory:
-shared small fixture (8 vehicles x 20 days, real extractor) for fast tests.
+B — Model registry + readiness: IntelligenceModel lifecycle (versioned,
+artifact embedded in-doc, one-ACTIVE-per-scope invariant); LabelBuilder
++ TrainingDatasetBuilder (shared readiness/training source of truth);
+DataReadinessAssessmentService -> READY/LIMITED/NOT_READY.
+tests/Concerns/BuildsIntelligenceHistory shared fixture. [commit a57c984]
+
+C — Training / Evaluation / Inference: LogisticRegression (pure PHP
+gradient descent, standardized features, deterministic/reproducible,
+contributions() for explainability) + ModelEvaluator (precision/recall/
+F1/ROC-AUC, exact Mann-Whitney). TrainingPipelineService: readiness gate
+-> TEMPORAL split (earliest 70% dates train, latest 30% test, never
+random) -> fit -> evaluate -> register EVALUATED/FAILED; activation
+stays a separate explicit step (CLI --activate or future API), always
+through ModelRegistryService's acceptance-criteria gate. TrainModelJob
+(queued, per tenant+target). PredictionService: ACTIVE TENANT model ->
+ACTIVE GLOBAL model -> deterministic RiskScorer fallback, in that order;
+RiskLevelCalculator + ConfidenceCalculator (confidence penalized for
+non-ML source, LIMITED training readiness, and feature missingness —
+kept strictly separate from risk); DeterministicVehicleFailureRiskScorer
+(weighted linear, config('intelligence.rule_based_risk')); predictions
+upserted idempotently per (tenant, entity, type, horizon,
+source_data_as_of) via the same AnalyticsUpsertWriter, so distinct
+business dates accumulate real history while re-runs don't duplicate.
+PredictionRunService/RunPredictionJob/intelligence:predict mirror the
+feature-pipeline orchestration; scheduled after generate-features.
+Manually verified real training run on synthetic history reaches
+EVALUATED with computed metrics (precision/recall/roc_auc) that do NOT
+clear the acceptance bar on this small a dataset — correct, safe
+behavior (Section 71), not a defect; deterministic fallback is what
+actually serves in that case, confirmed by test.
 
 Partially Completed Work:
 none currently open.
 
 Key Architecture Decisions:
-- Intelligence artifacts live in MongoDB; reuse Phase 6 Analytics
-  infra wholesale (upsert writer, business-date resolver, run tracking).
+- Intelligence artifacts live in MongoDB; reuse Phase 6 Analytics infra
+  wholesale (upsert writer, business-date resolver, run tracking).
 - ML: interpretable pure-PHP only (logistic regression), no Python
   microservice — data volume doesn't justify the extra deploy/security
-  surface; config/algorithm fields keep the door open later.
-- Deterministic/statistical fallback is always-available; ML_MODEL only
-  serves once data readiness + the model's own acceptance gate pass.
-- Recommendation status: simple enum + service, not the heavyweight
-  Configuration WorkflowEngine (this flow is system-driven, not
-  tenant-customizable business approval logic).
+  surface. Model artifact is embedded in the registry doc, never a
+  filesystem path (closes path-injection risk by construction).
+- Deterministic fallback always serves when no ACTIVE model exists;
+  ACTIVE requires passing the model's own documented acceptance gate —
+  never automatic on training completion.
+- Recommendation status (Batch G): planned as a simple enum + service,
+  not the heavyweight Configuration WorkflowEngine.
 
 Feature-set versions:
 vehicle=v1, component=v1, tire=v1.
 
 Model architecture:
 vehicle_failure_risk: logistic regression (pure PHP, gradient descent),
-horizon 30d, acceptance precision>=0.35/recall>=0.30. All other targets
+horizon 30d, acceptance precision>=0.35/recall>=0.30, deterministic
+fallback = weighted-linear rule scorer. All other targets
 (component/breakdown/repeat-failure/tire-replacement/maintenance-overdue
 risk) are rule_based/deterministic by design (Batch D-F) — not yet built.
 
@@ -63,23 +78,24 @@ Validations:
 - Phase 1-6 regression (baseline): 348/349, 1 pre-existing test-order
   flake (NotificationEngineTest) confirmed PASS in isolation — unrelated
   to Phase 7.
-- Batch A tests (FeaturePipelineTest): 5/5 PASS (fields+nulls,
-  idempotency, tenant isolation, temporal-cutoff/no-leakage, entitlement).
-- Batch B tests (ModelRegistryTest, DataReadinessTest): 9/9 PASS
-  (versioning, acceptance gate, one-active invariant, per-tenant
-  training isolation, unelapsed-horizon exclusion).
+- Intelligence test suite so far (Batches A-C): 23/23 PASS — feature
+  pipeline (5), model registry (5), data readiness (4), training
+  pipeline (4), prediction pipeline (5, incl. explanation traced back
+  to actual feature values and ML-vs-RULE_BASED source labeling).
 - Fresh migrate:fresh --seed: PASS. Commercial/Module/Entitlement
   regression after the ModuleSeeder fix: 25/25 PASS.
 - intelligence:generate-features --sync manual smoke test: PASS.
-- Everything else (training, inference, health/risk, RUL, recommendations,
-  dashboard, monitoring, drift, security/leakage release gate): NOT RUN.
+- Everything else (health/risk beyond vehicle_failure_risk, RUL, repeat
+  failure, anomaly, tire/component/spare-part/demand intelligence,
+  recommendations, dashboard, monitoring, drift, security/leakage
+  release gate): NOT RUN.
 
 Remaining Work:
-Batches C-K per the original Phase 7 specification.
+Batches D-K per the original Phase 7 specification.
 
 Blockers:
 none.
 
 Latest Safe Commit:
-dcbd1ad (Batch A checkpoint, pushed). Batch B not yet committed as of
-this writing. Branch based cleanly on Phase 6 checkpoint 18284bf.
+a57c984 (Batch B, pushed). Batch C not yet committed as of this writing.
+Branch based cleanly on Phase 6 checkpoint 18284bf.

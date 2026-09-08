@@ -166,6 +166,45 @@ return [
         'maintenance_overdue_risk' => ['entity_type' => 'vehicle', 'algorithm' => 'rule_based', 'horizon_days' => 0],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Deterministic/statistical fallback weights (Section 8)
+    |--------------------------------------------------------------------------
+    |
+    | Used whenever no ACTIVE ML model exists for a target/tenant/scope.
+    | A simple, fully explainable weighted linear score capped at 1.0 —
+    | never presented as an ML_MODEL prediction (Section 8: "never present
+    | rule-based output as ML prediction").
+    |
+    */
+    'rule_based_risk' => [
+        'vehicle_failure_risk' => [
+            'overdue_maintenance_count' => 0.15,
+            'breakdown_count_90d' => 0.20,
+            'repeat_repair_count_90d' => 0.15,
+            'critical_inspection_finding_count_90d' => 0.15,
+            'component_replacement_count_90d' => 0.10,
+            'tire_replacement_count_90d' => 0.05,
+            'downtime_days_90d' => 0.10, // per full 24h of downtime_minutes_90d
+        ],
+    ],
+
+    /** Human-readable rendering for explanation factors (Section 20, 56). */
+    'factor_labels' => [
+        'overdue_maintenance_count' => '{count} overdue maintenance item(s)',
+        'breakdown_count_90d' => '{count} breakdown(s) in the last 90 days',
+        'breakdown_count_30d' => '{count} breakdown(s) in the last 30 days',
+        'repeat_repair_count_90d' => '{count} repeat repair(s) on the same component group in the last 90 days',
+        'critical_inspection_finding_count_90d' => '{count} critical inspection finding(s) in the last 90 days',
+        'component_replacement_count_90d' => '{count} component replacement(s) in the last 90 days',
+        'tire_replacement_count_90d' => '{count} tire replacement(s) in the last 90 days',
+        'downtime_days_90d' => '{count} day(s) of downtime in the last 90 days',
+        'downtime_minutes_90d' => '{count} minute(s) of downtime in the last 90 days',
+        'warranty_claim_count_90d' => '{count} warranty claim(s) in the last 90 days',
+        'vehicle_age_days' => 'vehicle age: {count} day(s)',
+        'km_per_day' => 'average usage: {count} km/day',
+    ],
+
     'repeat_failure' => [
         'window_days' => (int) env('INTELLIGENCE_REPEAT_FAILURE_WINDOW_DAYS', 45),
         'min_occurrences' => (int) env('INTELLIGENCE_REPEAT_FAILURE_MIN_OCCURRENCES', 3),
