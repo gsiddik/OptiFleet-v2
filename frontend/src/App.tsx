@@ -112,6 +112,12 @@ import { CostAnalyticsPage } from './pages/tenant/analytics/CostAnalyticsPage';
 import { TireAnalyticsPage } from './pages/tenant/analytics/TireAnalyticsPage';
 import { ComponentAnalyticsPage } from './pages/tenant/analytics/ComponentAnalyticsPage';
 import { WarrantyAnalyticsPage } from './pages/tenant/analytics/WarrantyAnalyticsPage';
+import { IntelligenceOverviewPage } from './pages/tenant/intelligence/IntelligenceOverviewPage';
+import { VehicleIntelligencePage } from './pages/tenant/intelligence/VehicleIntelligencePage';
+import { VehicleIntelligenceDetailPage } from './pages/tenant/intelligence/VehicleIntelligenceDetailPage';
+import { ComponentIntelligencePage } from './pages/tenant/intelligence/ComponentIntelligencePage';
+import { TireIntelligencePage } from './pages/tenant/intelligence/TireIntelligencePage';
+import { RecommendationsPage } from './pages/tenant/intelligence/RecommendationsPage';
 
 function RootRedirect() {
   const { user, loading } = useAuth();
@@ -648,6 +654,12 @@ export default function App() {
             <Route path="analytics/tires" element={<RequirePermission permission="analytics.tire.view"><TireAnalyticsPage /></RequirePermission>} />
             <Route path="analytics/components" element={<RequirePermission permission="analytics.component.view"><ComponentAnalyticsPage /></RequirePermission>} />
             <Route path="analytics/warranty" element={<RequirePermission permission="analytics.warranty.view"><WarrantyAnalyticsPage /></RequirePermission>} />
+            <Route path="intelligence/overview" element={<RequirePermission permission="intelligence.overview.view"><IntelligenceOverviewPage /></RequirePermission>} />
+            <Route path="intelligence/vehicles" element={<RequirePermission permission="intelligence.vehicle.view"><VehicleIntelligencePage /></RequirePermission>} />
+            <Route path="intelligence/vehicles/:id" element={<RequirePermission permission="intelligence.vehicle.view"><VehicleIntelligenceDetailPage /></RequirePermission>} />
+            <Route path="intelligence/components" element={<RequirePermission permission="intelligence.component.view"><ComponentIntelligencePage /></RequirePermission>} />
+            <Route path="intelligence/tires" element={<RequirePermission permission="intelligence.tire.view"><TireIntelligencePage /></RequirePermission>} />
+            <Route path="intelligence/recommendations" element={<RequirePermission permission="intelligence.recommendation.view"><RecommendationsPage /></RequirePermission>} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

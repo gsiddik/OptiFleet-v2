@@ -150,6 +150,44 @@ class PermissionSeeder extends Seeder
                 ['group' => 'analytics_etl', 'description' => str_replace('.', ' ', $name)]
             );
         }
+
+        // Phase 7: Maintenance Intelligence (Section 58) — dashboard/
+        // detail read access plus recommendation review are tenant-scope
+        // business actions.
+        foreach ([
+            'intelligence.overview.view',
+            'intelligence.vehicle.view',
+            'intelligence.component.view',
+            'intelligence.tire.view',
+            'intelligence.inventory.view',
+            'intelligence.recommendation.view',
+            'intelligence.recommendation.review',
+            'intelligence.recommendation.accept',
+            'intelligence.recommendation.reject',
+            'intelligence.recommendation.convert',
+        ] as $name) {
+            Permission::query()->updateOrCreate(
+                ['name' => $name, 'scope' => 'tenant'],
+                ['group' => 'intelligence', 'description' => str_replace('.', ' ', $name)]
+            );
+        }
+
+        // Phase 7 Section 58: model administration/training/prediction
+        // control is platform-scope — same rationale as analytics.etl.*.
+        foreach ([
+            'intelligence.model.view',
+            'intelligence.model.train',
+            'intelligence.model.evaluate',
+            'intelligence.model.activate',
+            'intelligence.model.retire',
+            'intelligence.prediction.run',
+            'intelligence.monitoring.view',
+        ] as $name) {
+            Permission::query()->updateOrCreate(
+                ['name' => $name, 'scope' => 'platform'],
+                ['group' => 'intelligence_admin', 'description' => str_replace('.', ' ', $name)]
+            );
+        }
     }
 
     private function seedGroup(string $group, array $actions, string $scope): void

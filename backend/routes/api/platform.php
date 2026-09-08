@@ -2,6 +2,9 @@
 
 use App\Http\Controllers\Api\Platform\Analytics\EtlAdminController;
 use App\Http\Controllers\Api\Platform\Analytics\ReconciliationController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceModelController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceMonitoringController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceTrainingController;
 use App\Http\Controllers\Api\Platform\AuditLogController;
 use App\Http\Controllers\Api\Platform\BillingController;
 use App\Http\Controllers\Api\Platform\BundleController;
@@ -137,4 +140,16 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
 
     // Phase 6 Section 61: PostgreSQL <-> MongoDB reconciliation.
     Route::get('/analytics/reconciliation', [ReconciliationController::class, 'index'])->middleware('permission:analytics.etl.view');
+
+    // Phase 7 Section 50, 58: model administration is platform-scope,
+    // same rationale as analytics/etl above. Every mutating action audited.
+    Route::prefix('intelligence')->group(function () {
+        Route::get('/models', [IntelligenceModelController::class, 'index'])->middleware('permission:intelligence.model.view');
+        Route::get('/models/{model}', [IntelligenceModelController::class, 'show'])->middleware('permission:intelligence.model.view');
+        Route::post('/models/{model}/activate', [IntelligenceModelController::class, 'activate'])->middleware('permission:intelligence.model.activate');
+        Route::post('/models/{model}/retire', [IntelligenceModelController::class, 'retire'])->middleware('permission:intelligence.model.retire');
+        Route::post('/training', [IntelligenceTrainingController::class, 'train'])->middleware('permission:intelligence.model.train');
+        Route::get('/monitoring', [IntelligenceMonitoringController::class, 'models'])->middleware('permission:intelligence.monitoring.view');
+        Route::get('/monitoring/drift', [IntelligenceMonitoringController::class, 'drift'])->middleware('permission:intelligence.monitoring.view');
+    });
 });

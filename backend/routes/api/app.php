@@ -71,6 +71,13 @@ use App\Http\Controllers\Api\Tenant\Analytics\VendorAnalyticsController;
 use App\Http\Controllers\Api\Tenant\Analytics\WarrantyAnalyticsController;
 use App\Http\Controllers\Api\Tenant\Analytics\WorkOrderAnalyticsController;
 use App\Http\Controllers\Api\Tenant\Analytics\WorkshopAnalyticsController;
+use App\Http\Controllers\Api\Tenant\Intelligence\ComponentIntelligenceController;
+use App\Http\Controllers\Api\Tenant\Intelligence\IntelligenceOverviewController;
+use App\Http\Controllers\Api\Tenant\Intelligence\InventoryIntelligenceController;
+use App\Http\Controllers\Api\Tenant\Intelligence\PredictionHistoryController;
+use App\Http\Controllers\Api\Tenant\Intelligence\RecommendationController;
+use App\Http\Controllers\Api\Tenant\Intelligence\TireIntelligenceApiController;
+use App\Http\Controllers\Api\Tenant\Intelligence\VehicleIntelligenceController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('app')->middleware('tenant.scope')->group(function () {
@@ -518,6 +525,29 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/warranty', [WarrantyAnalyticsController::class, 'index'])->middleware('permission:analytics.warranty.view');
 
             Route::get('/export/{domain}', [ExportAnalyticsController::class, 'export'])->middleware('permission:analytics.export');
+        });
+
+        // Phase 7: Maintenance Intelligence. Same discipline as Analytics
+        // above (Section 6/60) — module entitlement + per-route permission
+        // + data-scope enforcement inside each controller. No route here
+        // ever mutates an operational table except recommendation review
+        // actions, and those only through the existing Maintenance
+        // Request workflow (Section 2).
+        Route::middleware('module:MAINTENANCE_INTELLIGENCE')->prefix('intelligence')->group(function () {
+            Route::get('/overview', [IntelligenceOverviewController::class, 'index'])->middleware('permission:intelligence.overview.view');
+            Route::get('/vehicles', [VehicleIntelligenceController::class, 'index'])->middleware('permission:intelligence.vehicle.view');
+            Route::get('/vehicles/{vehicle}', [VehicleIntelligenceController::class, 'show'])->middleware('permission:intelligence.vehicle.view');
+            Route::get('/components', [ComponentIntelligenceController::class, 'index'])->middleware('permission:intelligence.component.view');
+            Route::get('/tires', [TireIntelligenceApiController::class, 'index'])->middleware('permission:intelligence.tire.view');
+            Route::get('/inventory', [InventoryIntelligenceController::class, 'index'])->middleware('permission:intelligence.inventory.view');
+            Route::get('/inventory/forecast', [InventoryIntelligenceController::class, 'forecast'])->middleware('permission:intelligence.inventory.view');
+            Route::get('/predictions', [PredictionHistoryController::class, 'index'])->middleware('permission:intelligence.vehicle.view');
+
+            Route::get('/recommendations', [RecommendationController::class, 'index'])->middleware('permission:intelligence.recommendation.view');
+            Route::post('/recommendations/{id}/review', [RecommendationController::class, 'review'])->middleware('permission:intelligence.recommendation.review');
+            Route::post('/recommendations/{id}/accept', [RecommendationController::class, 'accept'])->middleware('permission:intelligence.recommendation.accept');
+            Route::post('/recommendations/{id}/reject', [RecommendationController::class, 'reject'])->middleware('permission:intelligence.recommendation.reject');
+            Route::post('/recommendations/{id}/convert', [RecommendationController::class, 'convert'])->middleware('permission:intelligence.recommendation.convert');
         });
     });
 });

@@ -142,6 +142,16 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    label: 'Maintenance Intelligence',
+    items: [
+      { to: '/app/intelligence/overview', label: 'Overview', permission: 'intelligence.overview.view', module: 'MAINTENANCE_INTELLIGENCE' },
+      { to: '/app/intelligence/vehicles', label: 'Vehicle Health & Risk', permission: 'intelligence.vehicle.view', module: 'MAINTENANCE_INTELLIGENCE' },
+      { to: '/app/intelligence/components', label: 'Component Reliability', permission: 'intelligence.component.view', module: 'MAINTENANCE_INTELLIGENCE' },
+      { to: '/app/intelligence/tires', label: 'Tire Intelligence', permission: 'intelligence.tire.view', module: 'MAINTENANCE_INTELLIGENCE' },
+      { to: '/app/intelligence/recommendations', label: 'Recommendations', permission: 'intelligence.recommendation.view', module: 'MAINTENANCE_INTELLIGENCE' },
+    ],
+  },
+  {
     label: 'Organization',
     items: [
       { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view', module: 'ORGANIZATION' },
