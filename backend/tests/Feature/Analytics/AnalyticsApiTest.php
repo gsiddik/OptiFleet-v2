@@ -106,6 +106,15 @@ class AnalyticsApiTest extends TestCase
         $this->assertDatabaseHas('audit_logs', ['resource_type' => 'AnalyticsEtlRun', 'action' => 'triggered']);
     }
 
+    public function test_malformed_date_filter_is_rejected_with_validation_error_not_a_server_error(): void
+    {
+        [$tenant] = $this->setUpTenantWithFleetData();
+        [, $token] = $this->makeTenantUser($tenant, ['analytics.fleet.view']);
+
+        $this->getJson('/api/v1/app/analytics/fleet?from=not-a-date', $this->authHeaders($token))
+            ->assertStatus(422);
+    }
+
     public function test_platform_etl_runs_listing_requires_view_permission(): void
     {
         [, $token] = $this->makePlatformUser([]);

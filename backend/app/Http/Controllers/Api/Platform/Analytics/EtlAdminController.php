@@ -46,6 +46,8 @@ class EtlAdminController extends Controller
 
     public function run(Request $request)
     {
+        $request->validate(['date' => 'nullable|date', 'tenant_id' => 'nullable|uuid', 'dataset' => 'nullable|string']);
+
         $this->audit->log(
             resourceType: 'AnalyticsEtlRun', resourceId: 'manual-'.now()->timestamp, action: 'triggered',
             oldValues: null,

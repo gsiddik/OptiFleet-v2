@@ -52,6 +52,8 @@ class ExportAnalyticsController extends Controller
         abort_unless(isset(self::DOMAINS[$domain]), 404, 'Unknown analytics domain.');
         [$collection, $field, $scopeType] = self::DOMAINS[$domain];
 
+        $request->validate(['from' => 'nullable|date', 'to' => 'nullable|date', 'dimension_value' => 'nullable|string|max:100']);
+
         $tenantId = $this->context->tenantId();
         $user = $this->context->user();
         $to = $request->string('to')->value() ? CarbonImmutable::parse($request->string('to')->value()) : CarbonImmutable::now();

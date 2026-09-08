@@ -56,6 +56,8 @@ abstract class AnalyticsDomainController extends Controller
 
     public function index(Request $request)
     {
+        $request->validate(['dimension_value' => 'nullable|string|max:100']);
+
         $tenantId = $this->context->tenantId();
         $user = $this->context->user();
         [$from, $to] = $this->resolveRange($request);
@@ -94,6 +96,8 @@ abstract class AnalyticsDomainController extends Controller
 
     protected function resolveRange(Request $request): array
     {
+        $request->validate(['from' => 'nullable|date', 'to' => 'nullable|date']);
+
         $to = $request->string('to')->value()
             ? CarbonImmutable::parse($request->string('to')->value())
             : CarbonImmutable::now();

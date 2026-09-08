@@ -31,6 +31,8 @@ class OverviewAnalyticsController extends Controller
 
     public function index(Request $request)
     {
+        $request->validate(['from' => 'nullable|date', 'to' => 'nullable|date']);
+
         $tenantId = $this->context->tenantId();
         $to = $request->string('to')->value() ? CarbonImmutable::parse($request->string('to')->value()) : CarbonImmutable::now();
         $from = $request->string('from')->value() ? CarbonImmutable::parse($request->string('from')->value()) : $to->subDays(29);
