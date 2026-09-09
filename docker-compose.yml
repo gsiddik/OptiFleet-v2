@@ -48,6 +48,7 @@ services:
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
+    image: optifleet-backend:local
     restart: unless-stopped
     depends_on:
       postgres:
@@ -93,9 +94,10 @@ services:
   # Phase 5's notification requirement is what makes it acute enough to
   # fix here. Same image as `backend`, only the container command differs.
   queue-worker:
-    build:
-      context: .
-      dockerfile: docker/backend/Dockerfile
+    # Same image as `backend`, which is the only service that builds it.
+    # Declaring `build` here as well made compose run three identical
+    # PHP-extension compiles in parallel, exhausting RAM on small dev VMs.
+    image: optifleet-backend:local
     restart: unless-stopped
     depends_on:
       postgres:
@@ -136,9 +138,10 @@ services:
     command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600"]
 
   scheduler:
-    build:
-      context: .
-      dockerfile: docker/backend/Dockerfile
+    # Same image as `backend`, which is the only service that builds it.
+    # Declaring `build` here as well made compose run three identical
+    # PHP-extension compiles in parallel, exhausting RAM on small dev VMs.
+    image: optifleet-backend:local
     restart: unless-stopped
     depends_on:
       postgres:
