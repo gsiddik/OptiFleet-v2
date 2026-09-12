@@ -231,6 +231,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/work-orders', [WorkOrderController::class, 'index'])->middleware('permission:work_order.view');
             Route::post('/work-orders', [WorkOrderController::class, 'store'])->middleware('permission:work_order.create');
             Route::post('/maintenance-requests/{maintenanceRequest}/work-order', [WorkOrderController::class, 'fromMaintenanceRequest'])->middleware('permission:maintenance_request.convert_work_order');
+            Route::post('/maintenance-schedules/{maintenanceSchedule}/work-order', [WorkOrderController::class, 'fromMaintenanceSchedule'])->middleware('permission:maintenance_schedule.convert_work_order');
             Route::get('/work-orders/{workOrder}', [WorkOrderController::class, 'show'])->middleware('permission:work_order.view');
             Route::get('/work-orders/{workOrder}/print', [WorkOrderController::class, 'print'])->middleware('permission:work_order.view');
             Route::post('/work-orders/{workOrder}/submit', [WorkOrderController::class, 'submit'])->middleware('permission:work_order.submit');
@@ -243,6 +244,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/resume', [WorkOrderController::class, 'resume'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/wait-for-part', [WorkOrderController::class, 'waitForPart'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/findings', [WorkOrderExecutionController::class, 'addFinding'])->middleware('permission:diagnosis.manage');
+            Route::post('/work-orders/{workOrder}/findings/{finding}/resolve', [WorkOrderExecutionController::class, 'resolveFinding'])->middleware('permission:diagnosis.manage');
+            Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/corrective-actions', [WorkOrderExecutionController::class, 'addCorrectiveAction'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/jobs', [WorkOrderExecutionController::class, 'addJob'])->middleware('permission:maintenance_job.manage');
@@ -260,6 +263,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/qc-inspections', [QualityControlController::class, 'index'])->middleware('permission:qc.view');
             Route::post('/work-orders/{workOrder}/qc/start', [QualityControlController::class, 'start'])->middleware('permission:qc.perform');
             Route::post('/work-orders/{workOrder}/qc/{inspection}/findings', [QualityControlController::class, 'addFinding'])->middleware('permission:qc.perform');
+            Route::post('/work-orders/{workOrder}/qc/{inspection}/findings/{finding}/resolve', [QualityControlController::class, 'resolveFinding'])->middleware('permission:qc.perform');
             Route::post('/work-orders/{workOrder}/qc/{inspection}/pass', [QualityControlController::class, 'pass'])->middleware('permission:qc.approve');
             Route::post('/work-orders/{workOrder}/qc/{inspection}/fail', [QualityControlController::class, 'fail'])->middleware('permission:qc.reject');
             Route::post('/work-orders/{workOrder}/qc/{inspection}/complete', [QualityControlController::class, 'complete'])->middleware('permission:qc.approve');

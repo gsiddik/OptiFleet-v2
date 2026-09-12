@@ -7,6 +7,7 @@ use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
 use App\Domain\Configuration\Services\DocumentTemplateRenderService;
 use App\Domain\History\Services\DowntimeService;
+use App\Domain\MaintenancePolicy\Models\MaintenanceSchedule;
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\WorkOrder\Models\WorkOrder;
@@ -73,6 +74,21 @@ class WorkOrderController extends Controller
         abort_unless($this->scope->canAccessBranch($this->context->user(), $tenantId, $maintenanceRequest->branch_id), 403);
 
         $workOrder = $this->workOrders->fromMaintenanceRequest($maintenanceRequest, $request->only(['maintenance_type', 'priority', 'complaint', 'workshop_id']), $this->context->user()->id);
+
+        return $this->ok($workOrder, 201);
+    }
+
+    /** G-01: Schedule -> Work Order conversion. */
+    public function fromMaintenanceSchedule(Request $request, MaintenanceSchedule $maintenanceSchedule)
+    {
+        $tenantId = $this->context->tenantId();
+        abort_unless($maintenanceSchedule->tenant_id === $tenantId, 404);
+        $vehicle = Vehicle::query()->findOrFail($maintenanceSchedule->vehicle_id);
+        abort_unless($this->scope->canAccessBranch($this->context->user(), $tenantId, $vehicle->branch_id), 403);
+
+        $workOrder = $this->workOrders->fromMaintenanceSchedule(
+            $maintenanceSchedule, $request->only(['maintenance_type', 'priority', 'complaint', 'workshop_id']), $this->context->user()->id,
+        );
 
         return $this->ok($workOrder, 201);
     }
@@ -166,9 +182,26 @@ class WorkOrderController extends Controller
         return $this->act($workOrder, 'submitToQc');
     }
 
-    public function complete(WorkOrder $workOrder)
+    /** G-02: cost estimation, decimal-safe (BigDecimal, never native float) — see WorkOrderService::estimate(). */
+    public function estimate(Request $request, WorkOrder $workOrder)
     {
-        return $this->act($workOrder, 'complete');
+        $this->authorizeScope($workOrder);
+        $validated = $request->validate([
+            'estimated_labor_cost' => ['nullable', 'numeric', 'min:0'],
+            'estimated_parts_cost' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        return $this->ok($this->workOrders->estimate(
+            $workOrder, $validated['estimated_labor_cost'] ?? null, $validated['estimated_parts_cost'] ?? null, $this->context->user()->id,
+        ));
+    }
+
+    public function complete(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+        $validated = $request->validate(['result_summary' => ['nullable', 'string']]);
+
+        return $this->ok($this->workOrders->complete($workOrder, $validated['result_summary'] ?? null, $this->context->user()->id));
     }
 
     public function close(WorkOrder $workOrder)

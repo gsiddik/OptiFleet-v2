@@ -6,6 +6,7 @@ use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\WorkOrder\Models\MaintenanceJob;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderAdditionalWork;
+use App\Domain\WorkOrder\Models\WorkOrderFinding;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
 use App\Domain\WorkOrder\Services\WorkOrderPartService;
@@ -39,6 +40,16 @@ class WorkOrderExecutionController extends Controller
         ]);
 
         return $this->ok($this->execution->addFinding($workOrder, $validated, $this->context->user()->id), 201);
+    }
+
+    /** G-04: resolving a finding is what lets WorkOrderClosureGuardService allow COMPLETED/CLOSED. */
+    public function resolveFinding(Request $request, WorkOrder $workOrder, WorkOrderFinding $finding)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($finding->work_order_id === $workOrder->id, 404);
+        $validated = $request->validate(['resolution_notes' => ['nullable', 'string']]);
+
+        return $this->ok($this->execution->resolveFinding($finding, $validated['resolution_notes'] ?? null, $this->context->user()->id));
     }
 
     public function addDiagnosis(Request $request, WorkOrder $workOrder)

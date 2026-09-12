@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\QualityControl\Models\QcFinding;
 use App\Domain\QualityControl\Models\QcInspection;
 use App\Domain\QualityControl\Services\QualityControlService;
 use App\Domain\QualityControl\Services\RoadTestService;
@@ -55,6 +56,16 @@ class QualityControlController extends Controller
         $validated = $request->validate(['description' => ['required', 'string'], 'severity' => ['required', 'in:INFO,LOW,MEDIUM,HIGH,CRITICAL']]);
 
         return $this->ok($this->qc->addFinding($inspection, $validated), 201);
+    }
+
+    /** G-04: resolving a QC finding is what lets WorkOrderClosureGuardService allow COMPLETED/CLOSED. */
+    public function resolveFinding(WorkOrder $workOrder, QcInspection $inspection, QcFinding $finding)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($inspection->work_order_id === $workOrder->id, 404);
+        abort_unless($finding->qc_inspection_id === $inspection->id, 404);
+
+        return $this->ok($this->qc->resolveFinding($finding, $this->context->user()->id));
     }
 
     public function pass(WorkOrder $workOrder, QcInspection $inspection)

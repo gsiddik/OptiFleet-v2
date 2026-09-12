@@ -30,8 +30,28 @@ class WorkOrderExecutionService
 
         return WorkOrderFinding::query()->create(array_merge($attributes, [
             'work_order_id' => $workOrder->id,
+            'status' => 'OPEN',
             'created_by' => $userId,
         ]));
+    }
+
+    /**
+     * G-04: intentionally NOT gated by assertExecutable() — a finding must
+     * be resolvable while the WO sits in QC_PENDING/REWORK/etc. on its way
+     * toward COMPLETED, which is exactly when WorkOrderClosureGuardService
+     * needs it to already be resolved.
+     */
+    public function resolveFinding(WorkOrderFinding $finding, ?string $notes, ?string $userId): WorkOrderFinding
+    {
+        return DB::transaction(function () use ($finding, $notes, $userId) {
+            $locked = WorkOrderFinding::query()->lockForUpdate()->findOrFail($finding->id);
+            if ($locked->status === 'RESOLVED') {
+                throw new WorkOrderException('This finding is already resolved.');
+            }
+            $locked->update(['status' => 'RESOLVED', 'resolution_notes' => $notes, 'resolved_by' => $userId, 'resolved_at' => now()]);
+
+            return $locked->fresh();
+        });
     }
 
     public function addDiagnosis(WorkOrder $workOrder, array $attributes, ?string $userId = null): WorkOrderDiagnosis

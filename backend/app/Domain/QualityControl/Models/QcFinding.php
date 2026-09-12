@@ -10,9 +10,9 @@ class QcFinding extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['qc_inspection_id', 'description', 'severity', 'resolved'];
+    protected $fillable = ['qc_inspection_id', 'description', 'severity', 'resolved', 'resolved_by', 'resolved_at'];
 
-    protected $casts = ['resolved' => 'boolean'];
+    protected $casts = ['resolved' => 'boolean', 'resolved_at' => 'datetime'];
 
     public function inspection(): BelongsTo
     {

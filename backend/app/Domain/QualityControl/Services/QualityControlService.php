@@ -50,7 +50,21 @@ class QualityControlService
 
     public function addFinding(QcInspection $inspection, array $attributes): QcFinding
     {
-        return QcFinding::query()->create(array_merge($attributes, ['qc_inspection_id' => $inspection->id]));
+        return QcFinding::query()->create(array_merge($attributes, ['qc_inspection_id' => $inspection->id, 'resolved' => false]));
+    }
+
+    /** G-04: previously `resolved` had no API to ever set it true — every QC finding stayed unresolved forever. */
+    public function resolveFinding(QcFinding $finding, ?string $userId): QcFinding
+    {
+        return DB::transaction(function () use ($finding, $userId) {
+            $locked = QcFinding::query()->lockForUpdate()->findOrFail($finding->id);
+            if ($locked->resolved) {
+                throw new QualityControlException('This finding is already resolved.');
+            }
+            $locked->update(['resolved' => true, 'resolved_by' => $userId, 'resolved_at' => now()]);
+
+            return $locked->fresh();
+        });
     }
 
     public function pass(QcInspection $inspection): QcInspection

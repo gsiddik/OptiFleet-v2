@@ -2,8 +2,10 @@
 
 namespace App\Domain\WorkOrder\Services;
 
+use App\Domain\QualityControl\Models\QcFinding;
 use App\Domain\Tire\Models\TireRemoval;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Models\WorkOrderFinding;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 
 /**
@@ -46,6 +48,31 @@ class WorkOrderClosureGuardService
             $status = $unresolvedRemoval->tire->current_status;
             throw new WorkOrderException(
                 "Cannot complete/close Work Order: tire serial '{$unresolvedRemoval->tire->serial_number}' removed on this Work Order is still {$status} — resolve its retread/inspection first."
+            );
+        }
+
+        // G-04: a recorded finding — from execution (work_order_findings) or QC
+        // (qc_findings) — must be explicitly resolved before the WO can close;
+        // previously both were silently ignored by this guard.
+        $unresolvedFinding = WorkOrderFinding::query()
+            ->where('work_order_id', $workOrder->id)
+            ->where('status', 'OPEN')
+            ->first();
+
+        if ($unresolvedFinding) {
+            throw new WorkOrderException(
+                "Cannot complete/close Work Order: finding '{$unresolvedFinding->description}' is still OPEN — resolve it first."
+            );
+        }
+
+        $unresolvedQcFinding = QcFinding::query()
+            ->whereHas('inspection', fn ($q) => $q->where('work_order_id', $workOrder->id))
+            ->where('resolved', false)
+            ->first();
+
+        if ($unresolvedQcFinding) {
+            throw new WorkOrderException(
+                "Cannot complete/close Work Order: QC finding '{$unresolvedQcFinding->description}' is still unresolved — resolve it first."
             );
         }
     }
