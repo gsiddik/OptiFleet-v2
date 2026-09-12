@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
 use App\Http\Controllers\Api\Tenant\WorkerController;
 use App\Http\Controllers\Api\Tenant\WorkOrderController;
 use App\Http\Controllers\Api\Tenant\WorkOrderExecutionController;
+use App\Http\Controllers\Api\Tenant\WorkOrderExternalServiceController;
 use App\Http\Controllers\Api\Tenant\WorkshopController;
 use App\Http\Controllers\Api\Tenant\WorkshopSchedulerController;
 use App\Http\Controllers\Api\Tenant\WorkspaceController;
@@ -253,6 +254,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/planned-parts', [WorkOrderExecutionController::class, 'addPlannedPart'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works', [WorkOrderExecutionController::class, 'requestAdditionalWork'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works/{additionalWork}/decide', [WorkOrderExecutionController::class, 'decideAdditionalWork'])->middleware('permission:work_order.approve');
+            Route::post('/work-orders/{workOrder}/external-services', [WorkOrderExternalServiceController::class, 'store'])->middleware('permission:work_order_external_service.create');
+            Route::post('/work-orders/{workOrder}/external-services/{externalService}/complete', [WorkOrderExternalServiceController::class, 'complete'])->middleware('permission:work_order_external_service.complete');
+            Route::post('/work-orders/{workOrder}/external-services/{externalService}/cancel', [WorkOrderExternalServiceController::class, 'cancel'])->middleware('permission:work_order_external_service.cancel');
             Route::post('/work-orders/{workOrder}/mechanics', [WorkOrderExecutionController::class, 'assignMechanic'])->middleware('permission:worker.assign');
             Route::post('/work-orders/{workOrder}/mechanics/{assignment}/unassign', [WorkOrderExecutionController::class, 'unassignMechanic'])->middleware('permission:worker.assign');
             Route::post('/work-orders/{workOrder}/jobs/{job}/labor/start', [WorkOrderExecutionController::class, 'startLabor'])->middleware('permission:maintenance_job.manage');

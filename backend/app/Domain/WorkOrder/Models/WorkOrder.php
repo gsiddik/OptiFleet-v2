@@ -66,6 +66,11 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderFinding::class);
     }
 
+    public function externalServices(): HasMany
+    {
+        return $this->hasMany(WorkOrderExternalService::class);
+    }
+
     public function diagnoses(): HasMany
     {
         return $this->hasMany(WorkOrderDiagnosis::class);

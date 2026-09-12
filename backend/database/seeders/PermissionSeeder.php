@@ -45,6 +45,7 @@ class PermissionSeeder extends Seeder
             'work_order' => ['view', 'create', 'update', 'submit', 'approve', 'reject', 'assign', 'schedule', 'start', 'pause', 'complete', 'cancel', 'close', 'estimate'],
             'diagnosis' => ['manage'],
             'maintenance_job' => ['manage'],
+            'work_order_external_service' => ['create', 'complete', 'cancel'],
             'worker' => ['view', 'manage', 'assign'],
             'workspace' => ['view', 'manage', 'reserve', 'block'],
             'qc' => ['view', 'perform', 'approve', 'reject'],

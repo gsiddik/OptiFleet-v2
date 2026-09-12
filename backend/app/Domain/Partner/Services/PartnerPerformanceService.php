@@ -44,6 +44,8 @@ class PartnerPerformanceService
             'quantity_rejected' => (float) $events->where('event_type', 'GOODS_REJECTED')->sum('quantity'),
             'total_purchase_value' => (float) $events->where('event_type', 'PO_ISSUED')->sum('value'),
             'returns' => $events->where('event_type', 'RETURN')->count(),
+            'external_services_completed' => $events->where('event_type', 'EXTERNAL_SERVICE_COMPLETED')->count(),
+            'total_external_service_value' => (float) $events->where('event_type', 'EXTERNAL_SERVICE_COMPLETED')->sum('value'),
         ];
     }
 }
