@@ -18,6 +18,11 @@ class StoreTenantRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
             'industry' => ['nullable', 'string', 'max:255'],
+            'tax_id' => ['nullable', 'string', 'max:100'],
+            'address' => ['nullable', 'string'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'website' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:DRAFT,ACTIVE,INACTIVE,SUSPENDED'],
         ];
     }

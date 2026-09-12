@@ -23,6 +23,7 @@ use App\Http\Controllers\Api\Tenant\Analytics\WorkshopAnalyticsController;
 use App\Http\Controllers\Api\Tenant\AuditLogController;
 use App\Http\Controllers\Api\Tenant\BranchController;
 use App\Http\Controllers\Api\Tenant\BreakdownController;
+use App\Http\Controllers\Api\Tenant\CompanyProfileController;
 use App\Http\Controllers\Api\Tenant\ComponentAssetController;
 use App\Http\Controllers\Api\Tenant\ComponentGroupController;
 use App\Http\Controllers\Api\Tenant\ConfigurationController;
@@ -97,6 +98,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
         Route::get('/contract', [AccountContractController::class, 'show'])->middleware('permission:account.contract.view');
         Route::get('/contracts', [AccountContractController::class, 'index'])->middleware('permission:account.contract.view');
+
+        Route::get('/company', [CompanyProfileController::class, 'show'])->middleware('permission:company.view');
+        Route::put('/company', [CompanyProfileController::class, 'update'])->middleware('permission:company.update');
 
         Route::get('/invoices', [AccountInvoiceController::class, 'index'])->middleware('permission:account.invoice.view');
         Route::get('/invoices/{invoice}', [AccountInvoiceController::class, 'show'])->middleware('permission:account.invoice.view');
@@ -298,6 +302,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/workers/{worker}', [WorkerController::class, 'show'])->middleware('permission:worker.view');
             Route::put('/workers/{worker}', [WorkerController::class, 'update'])->middleware('permission:worker.manage');
             Route::post('/workers/{worker}/skills', [WorkerController::class, 'addSkill'])->middleware('permission:worker.manage');
+            Route::post('/workers/{worker}/link-user', [WorkerController::class, 'linkUser'])->middleware('permission:worker.manage');
+            Route::post('/workers/{worker}/unlink-user', [WorkerController::class, 'unlinkUser'])->middleware('permission:worker.manage');
             Route::post('/workers/{worker}/assign', [WorkerController::class, 'assign'])->middleware('permission:worker.assign');
 
             Route::get('/workspaces', [WorkspaceController::class, 'index'])->middleware('permission:workspace.view');

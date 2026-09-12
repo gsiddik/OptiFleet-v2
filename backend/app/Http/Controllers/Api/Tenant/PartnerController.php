@@ -23,10 +23,13 @@ class PartnerController extends Controller
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(fn ($q) => $q->where('name', 'ilike', "%{$search}%")->orWhere('code', 'ilike', "%{$search}%"));
         }
-        foreach (['partner_type', 'status'] as $filter) {
-            if ($value = $request->string($filter)->value()) {
-                $query->where($filter, $value);
-            }
+        if (is_array($request->input('partner_type'))) {
+            $query->whereIn('partner_type', $request->input('partner_type'));
+        } elseif ($value = $request->string('partner_type')->value()) {
+            $query->where('partner_type', $value);
+        }
+        if ($status = $request->string('status')->value()) {
+            $query->where('status', $status);
         }
 
         return $this->paginated($query->orderBy('name')->paginate($request->integer('per_page', 20)));

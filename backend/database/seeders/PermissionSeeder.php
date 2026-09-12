@@ -34,6 +34,7 @@ class PermissionSeeder extends Seeder
             'warehouse' => ['view', 'create', 'update', 'activate', 'deactivate'],
             'vehicle_category' => ['view', 'create', 'update'],
             'vehicle_brand' => ['view', 'create', 'update'],
+            'company' => ['view', 'update'],
             'component_group' => ['view', 'create', 'update', 'map'],
 
             // Phase 3: Core VMS Operations (Section 47)

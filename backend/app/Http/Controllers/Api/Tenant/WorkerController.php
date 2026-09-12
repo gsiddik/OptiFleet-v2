@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Identity\Models\TenantUser;
 use App\Domain\Workshop\Models\Worker;
 use App\Domain\Workshop\Models\WorkerSkill;
 use App\Domain\Workshop\Services\WorkerAssignmentService;
@@ -103,6 +104,32 @@ class WorkerController extends Controller
         );
 
         return $this->ok($skill, 201);
+    }
+
+    /** G-14: workers.user_id existed since Phase 4 but had no endpoint to ever set it. */
+    public function linkUser(Request $request, Worker $worker)
+    {
+        $this->authorizeTenant($worker);
+        $validated = $request->validate(['user_id' => ['required', 'uuid']]);
+
+        $isTenantMember = TenantUser::query()
+            ->where('tenant_id', $worker->tenant_id)
+            ->where('user_id', $validated['user_id'])
+            ->where('status', 'active')
+            ->exists();
+        abort_unless($isTenantMember, 422, 'This user is not an active member of this tenant.');
+
+        $worker->update(['user_id' => $validated['user_id']]);
+
+        return $this->ok($worker->fresh('user'));
+    }
+
+    public function unlinkUser(Worker $worker)
+    {
+        $this->authorizeTenant($worker);
+        $worker->update(['user_id' => null]);
+
+        return $this->ok($worker->fresh());
     }
 
     public function assign(Request $request, Worker $worker)
