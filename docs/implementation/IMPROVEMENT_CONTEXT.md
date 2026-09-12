@@ -77,21 +77,21 @@
 | B — Used Sparepart Processing | G-15 | COMPLETE | see commits below | Targeted: 9 new tests passed (68 assertions), plus 54 regression on touched domains (WorkOrderStockIntegrationTest/InventoryReturnClassificationTest/WorkOrderClosureGuardTest/WorkflowEngineTest/WorkflowMigrationTest/InventoryTest), all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition is decision-only (no repair-partner receipt sub-flow — out of scope, not described in the source report beyond "Repair" as one disposition value). | none |
 | C — Sell Sparepart | G-16, G-20 | COMPLETE | see commits below | Targeted: 8 new tests (SparePartSaleTest, 64 assertions) + 9 UsedPartDispositionTest regression, all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | Settlement/payment (did money actually change hands) is explicitly out of scope, per the source report's own instruction not to invent unsupported accounting behavior — `SparePartSale` tracks price/total/approval only. | none |
 | D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28, G-34 (evidence-only) | COMPLETE | see commits below | Targeted: 18 new tests (TireAssetIntegrityTest, 50 assertions) + 7 regression on TireTest, all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | Wheel position validation is permissive (not enforced) for any vehicle category with zero configured `wheel_configurations` rows — no platform-default layout is seeded (flagged, needs fleet-engineering input). | none |
-| E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | NOT STARTED | — | — | REPAIR disposition, locked cycle numbering, partner-type constraint, maker-checker split, final-inspection gate | Depends on Phase D |
+| E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | COMPLETE | see commits below | Targeted: 18 new tests (TireRepairRetreadGovernanceTest, 91 assertions) + 3 WorkOrderClosureGuardTest regression (updated to the new TireService signatures), all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition sub-flow: eligible-partner type list (EXTERNAL_WORKSHOP/TIRE_SUPPLIER) is a documented, non-fabricated inference from existing `partner_type` values, not a report-cited enumeration — flagged for product confirmation. Phase D's permissive wheel-position fallback is untouched by this phase (documented, not fixed — see Decisions). | none |
 | F — Tire Scoring/Classification | G-31, G-11, BD-1–BD-8 | NOT STARTED | — | — | Full versioned scoring/config framework | Depends on Phases D and E |
 | G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI | Independent; not started this session |
 
 ## Current Work
-- Active phase: D (implemented and validated this session; Phases A, B,
-  and C already pushed to `origin/Improvement`).
-- Active batch: none in progress — Phase D is complete pending final
+- Active phase: E (implemented and validated this session; Phases A, B,
+  C, and D already pushed to `origin/Improvement`).
+- Active batch: none in progress — Phase E is complete pending final
   regression confirmation and the phase-boundary push.
 - Files/modules in progress: none.
 - Immediate next action for the following session: re-read this file and
-  Git history to confirm Phase D's push landed on `origin/Improvement`,
-  then begin Phase E (Tire Repair/Retread Governance, G-27/G-29/G-32/
-  G-36/G-30/G-33/G-37), which depends on Phase D's serial/position/
-  rotation/replace groundwork now being in place.
+  Git history to confirm Phase E's push landed on `origin/Improvement`,
+  then begin Phase F (Tire Scoring/Classification, G-31/G-11/BD-1–BD-8),
+  which depends on Phase E's REPAIR/RETREAD governance and final-
+  inspection gate now being in place.
 
 ## Decisions and Deviations
 - Decision: return-condition classification (G-14) is implemented as a
@@ -281,6 +281,141 @@
   an improvement, and CLAUDE.md's own guidance is not to copy VMS
   behavior that conflicts with current architecture. No code change.
 
+- Decision (Phase E): Phase D's `assertValidWheelPosition()` permissive-
+  when-unconfigured fallback is explicitly **not** changed, fixed, or
+  compensated for by Phase E's approval gate.
+  Reason: the task instruction for this phase required reviewing that
+  decision and recording its impact rather than silently treating it as
+  resolved. `approveCycle(RETURN_TO_SERVICE)` only changes
+  `tires.current_status` back to IN_STOCK — it does not perform or
+  revalidate an installation, so a tire returned to service by Phase E's
+  gate can still be installed to an unvalidated, free-form position on
+  any vehicle whose category has zero configured `wheel_configurations`
+  rows, exactly as it could before this phase. The two controls
+  (return-to-service safety approval vs. wheel-position integrity) are
+  orthogonal; approval is not a substitute for verified position
+  integrity. Proven directly by
+  `TireRepairRetreadGovernanceTest::test_return_to_service_approval_does_not_revalidate_wheel_position_on_next_install`.
+  This does not block any Phase E acceptance criterion — none of G-27/
+  G-29/G-30/G-32/G-33/G-36/G-37 concern wheel position — but is recorded
+  here so it is never mistaken for a Phase E deliverable. The
+  platform-default-layout product decision from Phase D (see Known
+  Blockers) remains open and unaffected.
+- Decision (Phase E, G-27): REPAIR is implemented as a fully distinct
+  lifecycle from RETREAD — its own `tire_repairs` table, its own
+  `TireRepair` model, its own independent cycle-number sequence — rather
+  than a `cycle_type` discriminator column added to `tire_retreads`.
+  Reason: the task instruction explicitly calls for "a distinct REPAIR
+  lifecycle," and a shared table would couple two operationally
+  different processes (a retread partner reworks the tread; a repair
+  partner fixes damage) to one schema, making future REPAIR-only fields
+  awkward to add without nullable columns that only apply to one type.
+  The two models share an identical governance shape (send/receive/
+  final-inspect/approve) by construction, and `TireService` factors that
+  shared logic into private `receiveCycle()`/`finalInspectCycle()`/
+  `approveCycle()` helpers typed over `TireRetread|TireRepair` — so the
+  duplication cost of "distinct" is paid only in the migration/model
+  layer, not in the business logic.
+- Decision (Phase E, G-29): concurrency-safety for cycle-number
+  assignment is achieved by locking the parent `tires` row (`SELECT ...
+  FOR UPDATE`) for the whole `retread()`/`repair()` transaction before
+  computing `max(cycle_number)+1`, not by locking the cycle table
+  directly.
+  Reason: PostgreSQL rejects `FOR UPDATE` combined with an aggregate
+  function (`MAX`) in the same query — there is no row to lock when the
+  query returns one aggregated value. Locking the tire row instead
+  achieves the same serialization: any concurrent send for the same tire
+  blocks on that lock until the first transaction commits, so two sends
+  can never compute the same next cycle number. An additional explicit
+  guard (no second cycle number is even attempted while one for that
+  tire is still open, i.e. not APPROVED/REJECTED) prevents a tire being
+  sent out twice while a cycle is still outstanding — a bug that would
+  otherwise exist independently of the numbering race itself. Verified
+  by `test_second_retread_send_is_rejected_while_a_cycle_is_still_open`
+  and `test_cycle_numbers_increment_across_successive_retread_cycles_for_the_same_tire`.
+- Decision (Phase E, G-30): eligible partner types for retread/repair
+  work are `EXTERNAL_WORKSHOP` and `TIRE_SUPPLIER` — the two existing
+  `partner_type` enum values that plausibly perform physical tire
+  service — checked alongside `status = ACTIVE`.
+  Reason: the consolidated report requires "eligible Partner validation"
+  but does not, in the material available to this session, enumerate a
+  specific new partner-type taxonomy for tire service work; inventing a
+  new enum value (e.g. `TIRE_RETREAD_SHOP`) without that source would be
+  fabricating business classification. The two chosen values are the
+  closest existing, already-seeded, already-validated types. **Flagged
+  for product confirmation**: if the report or a later VMS reading
+  specifies a different or additional eligible type, this allowlist
+  (`TireService::ELIGIBLE_SERVICE_PARTNER_TYPES`) is the single place to
+  update it.
+  Also tightened: `partner_id` is now **required** on both send
+  endpoints (previously nullable) — an eligibility check has no meaning
+  against an absent partner, and a retread/repair cycle by definition
+  goes to an external party.
+- Decision (Phase E, G-32): maker-checker is enforced as a single
+  explicit check inside `approveCycle()` — the approving actor must not
+  equal `received_by` — plus RBAC separation via four distinct
+  permissions per cycle type (`tire_retread.{send,receive,inspect,
+  approve}`, `tire_repair.{send,receive,inspect,approve}`), rather than
+  routing the approval step through `WorkflowApprovalService`.
+  Reason: consistent with the Phase B precedent (`WorkflowApprovalService`
+  does not itself compare actors — confirmed again by inspection, not
+  re-litigated) and with this feature's own shape: a single-approver gate
+  after a fixed four-actor sequence does not need a configurable
+  multi-step approval engine. The explicit check is the same pattern as
+  `UsedPartDispositionService::decide()`. Demo data now assigns send/
+  receive to the Warehouse Manager role and inspect/approve to the
+  Workshop Manager role, giving real separation of duties out of the box
+  (see `DemoDataSeeder.php`).
+- Decision (Phase E, G-33): `approval_reason` is a required, non-blank
+  string persisted on the cycle record at the moment of approval —
+  enforced in `approveCycle()` (`trim($reason) === ''` rejected), not
+  merely a nullable free-text column relying on frontend discipline.
+  Verified by `test_approval_reason_is_required_and_persisted`.
+- Decision (Phase E, G-36): receiving a tire back from retread/repair
+  moves `tires.current_status` to `UNDER_INSPECTION` (an existing status,
+  reused rather than a new one invented for this purpose) — never
+  directly to `IN_STOCK`. Only `approveCycle()`, after a final inspection
+  has been recorded, can move it to `IN_STOCK` (RETURN_TO_SERVICE),
+  `SCRAPPED` (SCRAP), or the new `QUARANTINED` status (QUARANTINE). An
+  `UNSAFE` final-inspection result can never be approved for
+  RETURN_TO_SERVICE regardless of who attempts it — a critical-safety
+  gate enforced in code, not left to the approver's judgment. Because
+  `TireService::install()`'s status guard (`IN_STOCK`/`RESERVED` only) is
+  the sole path to `INSTALLED`, and no other code path writes `IN_STOCK`/
+  `INSTALLED` for a tire, an UNSAFE or QUARANTINED tire cannot be
+  installed through any alternate endpoint — verified directly by
+  `test_quarantined_tire_after_repair_cannot_be_installed` and
+  `test_unsafe_final_inspection_cannot_be_approved_for_return_to_service`.
+  `WorkOrderClosureGuardService::UNRESOLVED_TIRE_STATUSES` is extended to
+  include `REPAIR` and `QUARANTINED` alongside the existing
+  `RETREAD`/`UNDER_INSPECTION`, so a Work Order cannot close while a tire
+  it removed is in any of these states either — this was a necessary,
+  in-scope consequence of introducing the two new statuses, not a
+  standalone gap.
+- Decision (Phase E, G-37): `Auditable` is added to both `TireRetread`
+  and the new `TireRepair` model (previously `TireRetread` had no audit
+  trail at all). Every governance field change — receive, final
+  inspection, approval — is therefore captured with before/after values
+  automatically, with no manual `AuditService::log()` calls needed
+  anywhere in `TireService`, matching the established codebase
+  convention. Verified by `test_retread_lifecycle_changes_are_audited`.
+
+### VMS Traceability Record — Phase E
+
+VMS's Tire lifecycle screens show a repair/retread history list (partner,
+dates, cost) but — being a read-only Super Admin observation — do not
+demonstrate the underlying approval, maker-checker, or safety-gate rules
+those screens' outcomes depend on; per the task's own instruction,
+"VMS read-only observations do not prove write behavior or approval
+rules," none of the Phase D VMS-deferred items map to a mandatory Phase E
+change beyond what the Consolidated Report's G-27/29/30/32/33/36/37
+already require independently. No new VMS-sourced field or adjustment
+was identified as safely implementable within Phase E scope this
+session; the previously deferred items (tire scoring/classification
+fields, structured tire spec fields, Rim/Vehicle master-data fields)
+remain deferred to Phases F/G exactly as recorded in the Phase D
+traceability record above — restated here rather than duplicated.
+
 ### VMS Traceability Record — Phase D
 
 | VMS source section | Current OptiFleet behavior (pre-Phase-D) | Proposed adjustment | Gap ID | Status | Test evidence |
@@ -297,10 +432,20 @@ platform-default `wheel_configurations` layouts per vehicle category (needs real
 placeholder data) — until that decision is made, G-25's validation stays permissive for any category with no configured rows.
 
 ## Known Blockers
-- None blocking Phases A–D. Phases E–G are not blocked, simply not
+- None blocking Phases A–E. Phases F–G are not blocked, simply not
   started this session (large, multi-week scope — see roadmap in the
   source report §30).
-- Product decision needed (Phase D, not resolved this session): whether
+- Product confirmation needed (Phase E, not resolved this session, does
+  not block any Phase E acceptance criterion): the eligible partner-type
+  allowlist for retread/repair work (`EXTERNAL_WORKSHOP`, `TIRE_SUPPLIER`)
+  is this session's best-evidence inference from existing `partner_type`
+  values, not a value enumerated by name in the material available this
+  session. If the report or a later VMS reading specifies a different or
+  additional type, update `TireService::ELIGIBLE_SERVICE_PARTNER_TYPES`
+  (the single source of truth for this check).
+- Product decision needed (Phase D, not resolved this session, does not
+  block Phase E — explicitly reviewed and reconfirmed still open this
+  phase, see Decisions above): whether
   and when to seed platform-default `wheel_configurations` layouts per
   vehicle category. No seeder exists; real axle/position specs need
   fleet-engineering input this session does not have, and CLAUDE.md
@@ -372,6 +517,48 @@ placeholder data) — until that decision is made, G-25's validation stays permi
   The serial-number uniqueness migration's own read-only duplicate check
   found zero pre-existing case/whitespace-variant duplicates, so it did
   not need its guard-rail exception path.
+- Targeted Phase E tests (TireRepairRetreadGovernanceTest — new file, 18
+  tests, 91 assertions — plus regression on WorkOrderClosureGuardTest,
+  updated for the new `TireService::retread()`/`receiveRetread()`
+  signatures, 3 tests, 45 assertions): 21 passed / 136 assertions / 0
+  failures.
+- Full regression post-Phase-E (baseline file set extended once more to
+  add `TireRepairRetreadGovernanceTest`): 373 passed / 1330 assertions /
+  0 failures. Two transient runs before this final one showed unrelated
+  failures traced to test-infrastructure causes, not Phase E code: (1) a
+  genuine regression in `WorkOrderClosureGuardTest::
+  test_closure_is_blocked_while_a_removed_tire_is_still_in_retread` —
+  that test called `TireService::retread()`/`receiveRetread()` with their
+  pre-Phase-E signatures and asserted the pre-G-36 behavior (receiving a
+  retread immediately returns IN_STOCK); fixed by updating the test to
+  supply an eligible partner/userId and to drive the full send → receive
+  → final-inspect → approve sequence, matching the new governance flow —
+  this is the one real, expected test-only fallout from Phase E's
+  intentional signature/behavior changes; (2) a Postgres deadlock during
+  `migrate:fresh` on the testing database, caused by running two
+  `php artisan test` processes against the same testing DB concurrently
+  in this session (a self-inflicted tooling collision, not a code issue)
+  — resolved by re-running `migrate:fresh --env=testing --force`
+  sequentially and never overlapping test runs again.
+- `WorkOrderClosureGuardService::UNRESOLVED_TIRE_STATUSES` extended to
+  add `REPAIR`/`QUARANTINED` (previously only `UNDER_INSPECTION`/
+  `RETREAD`) — a necessary consequence of Phase E's new statuses, verified
+  by the same regression run.
+- Migration verification: all three new Phase E migrations
+  (`2026_09_13_000001_extend_tire_lifecycle_for_repair_governance`,
+  `2026_09_13_000002_add_governance_fields_to_tire_retreads`,
+  `2026_09_13_000003_create_tire_repairs_table`) applied cleanly via both
+  `migrate:fresh --seed` against the dev database and
+  `migrate:fresh --env=testing --force` against the testing database
+  (Mongo migrations temporarily moved aside per the established
+  environment workaround, then restored immediately afterward).
+- Static analysis (Phase E): `git diff --check` clean; `vendor/bin/pint
+  --test` clean on all Phase E files (no auto-fixes needed on the final
+  pass; two files needed one round of `vendor/bin/pint` auto-fix for
+  import ordering, applied and re-verified clean, no logic change).
+- Frontend (Phase E): `tsc -b` clean; `npm run build` (vite production
+  build) succeeds; `npm run lint` (oxlint) shows only pre-existing
+  warnings in files this work did not touch.
 - Static analysis: `git diff --check` clean; `vendor/bin/pint --test`
   clean on all Phase A files (two migrations and three test files needed
   `vendor/bin/pint` auto-fix for import ordering/brace style — applied,
