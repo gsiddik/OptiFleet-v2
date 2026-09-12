@@ -622,6 +622,23 @@ export interface WorkOrderPlannedPartItem {
   total_cost: string | null;
 }
 
+export interface WorkOrderExternalServiceItem {
+  id: string;
+  work_order_id: string;
+  partner_id: string;
+  description: string;
+  reference_number: string | null;
+  cost: string | null;
+  status: 'REQUESTED' | 'COMPLETED' | 'CANCELLED';
+  requested_by: string | null;
+  requested_at: string | null;
+  completed_by: string | null;
+  completed_at: string | null;
+  cancelled_by: string | null;
+  cancelled_at: string | null;
+  partner?: PartnerItem;
+}
+
 export interface WorkOrderAdditionalWorkItem {
   id: string;
   description: string;
@@ -678,6 +695,7 @@ export interface WorkOrderItem {
   mechanic_assignments?: WorkOrderMechanicAssignmentItem[];
   road_tests?: RoadTestItem[];
   vehicle_release?: VehicleReleaseItem | null;
+  external_services?: WorkOrderExternalServiceItem[];
 }
 
 export interface WorkerSkillItem {

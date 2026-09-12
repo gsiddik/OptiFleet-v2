@@ -9,6 +9,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type {
   AuditLogEntry,
   HistoryEventItem,
+  PartnerItem,
   QcInspectionItem,
   WorkerItem,
   WorkOrderItem,
@@ -17,7 +18,7 @@ import type {
 
 const TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Workspace', 'QC', 'Road Test', 'Documents', 'History', 'Audit',
+  'Planned Parts', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
 ] as const;
 type Tab = (typeof TABS)[number];
 
@@ -138,6 +139,7 @@ export function WorkOrderDetailPage() {
       {tab === 'Workspace' && <WorkspaceTab wo={wo} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
       {tab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
+      {tab === 'External Services' && <ExternalServicesTab wo={wo} onChanged={load} />}
       {tab === 'Documents' && <DocumentsTab />}
       {tab === 'History' && <HistoryTab vehicleId={wo.vehicle_id} />}
       {tab === 'Audit' && <AuditTab workOrderId={wo.id} />}
@@ -1168,6 +1170,128 @@ function RoadTestTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           <EmptyState label="Vehicle can be released once the Work Order is COMPLETED." />
         )}
       </div>
+    </div>
+  );
+}
+
+/** G-07: Partner types TOWING_PROVIDER/OTHER_SERVICE_PROVIDER previously had no workflow that ever used them. */
+function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [partners, setPartners] = useState<PartnerItem[]>([]);
+  const [partnerId, setPartnerId] = useState('');
+  const [description, setDescription] = useState('');
+  const [referenceNumber, setReferenceNumber] = useState('');
+  const [cost, setCost] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient.get('/app/partners', { params: { per_page: 200 } }).then((res) => setPartners(res.data.data)).catch(() => setPartners([]));
+  }, []);
+
+  async function request() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/external-services`, {
+        partner_id: partnerId, description, reference_number: referenceNumber || undefined, cost: cost || undefined,
+      });
+      setDescription('');
+      setReferenceNumber('');
+      setCost('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function complete(serviceId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/external-services/${serviceId}/complete`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancel(serviceId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/external-services/${serviceId}/cancel`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>External Services</h3>
+      {error && <ErrorState message={error} />}
+      {(wo.external_services ?? []).length === 0 && <EmptyState label="No external service has been requested for this Work Order." />}
+      {(wo.external_services ?? []).map((s) => (
+        <div key={s.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 4 }}>
+            <StatusBadge status={s.status} />
+            <strong>{s.partner?.name ?? s.partner_id}</strong>
+            {s.partner?.partner_type && <span style={{ color: '#9ca3af' }}>({s.partner.partner_type})</span>}
+          </div>
+          <div style={{ color: '#374151' }}>{s.description}</div>
+          <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
+            {s.reference_number && <>Ref: {s.reference_number} &nbsp;</>}
+            {s.cost && <>Cost: {s.cost}</>}
+          </div>
+          {s.status === 'REQUESTED' && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              {hasPermission('work_order_external_service.complete') && (
+                <button className="btn-primary" disabled={busy} onClick={() => complete(s.id)}>
+                  Complete
+                </button>
+              )}
+              {hasPermission('work_order_external_service.cancel') && (
+                <button className="btn-secondary" disabled={busy} onClick={() => cancel(s.id)}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+      {hasPermission('work_order_external_service.create') && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <FormField label="Partner">
+            <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+              <option value="">Select partner</option>
+              {partners.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.partner_type})
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Description">
+            <input value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+          </FormField>
+          <FormField label="Reference # (optional)">
+            <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+          </FormField>
+          <FormField label="Cost (optional)">
+            <input type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          </FormField>
+          <button className="btn-secondary" disabled={busy || !partnerId || !description} onClick={request}>
+            Request
+          </button>
+        </div>
+      )}
     </div>
   );
 }
