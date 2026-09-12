@@ -176,6 +176,25 @@ class WorkflowDefaultsSeeder extends Seeder
                     $this->transition('SETTLED', 'CLOSED'), $this->transition('REJECTED', 'CLOSED'),
                 ],
             ],
+            // G-15: Used Sparepart Processing (Phase B). This resource type is not driven
+            // through WorkOrderTransitionService-style transition() calls — the graph exists
+            // so UsedPartDispositionService's approve/reject step has a real, versioned
+            // ConfigurationVersion to stamp on its WorkflowApprovalRequest (Decision-8-style
+            // "every disposition record persists the configuration version" discipline),
+            // matching the shape every other resource type here already has.
+            'used_part_disposition' => [
+                'statuses' => [
+                    $this->status('PENDING_INSPECTION', true), $this->status('INSPECTED'),
+                    $this->status('PENDING_APPROVAL'), $this->status('REJECTED'), $this->status('FINALIZED'),
+                ],
+                'transitions' => [
+                    $this->transition('PENDING_INSPECTION', 'INSPECTED'),
+                    $this->transition('INSPECTED', 'PENDING_APPROVAL'),
+                    $this->transition('PENDING_APPROVAL', 'FINALIZED'),
+                    $this->transition('PENDING_APPROVAL', 'REJECTED'),
+                    $this->transition('REJECTED', 'PENDING_APPROVAL'), // re-propose after rejection, no re-inspection required
+                ],
+            ],
         ];
     }
 }

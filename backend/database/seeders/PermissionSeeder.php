@@ -62,6 +62,7 @@ class PermissionSeeder extends Seeder
             'goods_receipt' => ['view', 'create', 'post'],
             'partner' => ['view', 'manage'],
             'tire' => ['view', 'manage', 'install', 'rotate', 'inspect', 'remove', 'scrap'],
+            'used_part' => ['view', 'inspect', 'dispose', 'approve'],
             'component_asset' => ['view', 'manage', 'install', 'remove', 'replace'],
             'warranty' => ['view', 'manage'],
             'warranty_claim' => ['create', 'review', 'approve'],
