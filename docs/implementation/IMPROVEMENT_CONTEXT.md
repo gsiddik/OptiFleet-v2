@@ -74,7 +74,7 @@
 | Phase | Gap IDs | Status | Commit(s) | Tests | Remaining work | Blocker |
 |---|---|---|---|---|---|---|
 | A — Critical Integrity & Closure Controls | G-14, G-18, G-17, G-35, G-21, G-22, G-19 | COMPLETE | see commits below | Targeted: 48 passed (273 assertions). Regression (same 40-file baseline set): 263 passed / 882 assertions vs. baseline 262 passed / 878 — net +1 test (the new G-19 test added to an existing file), 0 failures, 0 regressions. Frontend: tsc build + production build clean. | G-21's running-balance column is computed client-side over a widened (200-row) page per item/warehouse, not a true from-inception ledger balance — accurate for realistic history lengths, not mathematically guaranteed beyond that without a backend-computed opening-balance parameter (not built this session). | none |
-| B — Used Sparepart Processing | G-15 | NOT STARTED | — | — | Full receiving/inspection/disposition workflow on top of Phase A's `work_order_part_returns` (PENDING_INSPECTION rows) | Depends on Phase A (complete); awaits next session |
+| B — Used Sparepart Processing | G-15 | COMPLETE | see commits below | Targeted: 9 new tests passed (68 assertions), plus 54 regression on touched domains (WorkOrderStockIntegrationTest/InventoryReturnClassificationTest/WorkOrderClosureGuardTest/WorkflowEngineTest/WorkflowMigrationTest/InventoryTest), all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition is decision-only (no repair-partner receipt sub-flow — out of scope, not described in the source report beyond "Repair" as one disposition value). | none |
 | C — Sell Sparepart | G-16, G-20 | NOT STARTED | — | — | Sale type/approval/SALE movement/scrap route+UI | Depends on Phase B |
 | D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28 | NOT STARTED | — | — | Serial normalization, wheel-position FK validation, legacy onboarding, atomic rotation, replace() disposition flexibility | Independent of A-C; not started this session |
 | E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | NOT STARTED | — | — | REPAIR disposition, locked cycle numbering, partner-type constraint, maker-checker split, final-inspection gate | Depends on Phase D |
@@ -82,16 +82,19 @@
 | G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI | Independent; not started this session |
 
 ## Current Work
-- Active phase: A (implemented and validated this session).
-- Active batch: none in progress — Phase A batches are complete pending
-  final regression confirmation and the phase-boundary push.
+- Active phase: B (implemented and validated this session; Phase A
+  already pushed to `origin/Improvement`).
+- Active batch: none in progress — Phase B is complete pending final
+  regression confirmation and the phase-boundary push.
 - Files/modules in progress: none.
 - Immediate next action for the following session: re-read this file and
-  Git history to confirm Phase A's push landed on `origin/Improvement`,
-  then begin Phase B (Used Sparepart Processing, G-15) — it explicitly
-  depends on Phase A's `work_order_part_returns` table (condition
-  classification + PENDING_INSPECTION rows) as its receiving input, per
-  the consolidated report's Dependency Map (§29).
+  Git history to confirm Phase B's push landed on `origin/Improvement`,
+  then begin Phase C (Sell Sparepart, G-16/G-20) — it explicitly depends
+  on Phase B's disposition outcome `SELL_ELIGIBLE` (a FINALIZED
+  `work_order_part_returns` row with `disposition = 'SELL_ELIGIBLE'`) as
+  its eligibility input, per the consolidated report's Dependency Map
+  (§29: "Inventory Return Classification → Used Sparepart Processing →
+  Repair/Reuse/Scrap Eligibility → Sell Sparepart").
 
 ## Decisions and Deviations
 - Decision: return-condition classification (G-14) is implemented as a
@@ -140,11 +143,43 @@
   was intended to be narrower.
   Report reference: §7 (G-17), §17 (G-35), §29 Dependency Map, §30 Phase A
   acceptance criteria.
+- Decision (Phase B): the disposition approval step is the first real
+  production caller of `WorkflowApprovalService` (confirmed by direct
+  code search: previously exercised only by `WorkflowEngineTest` against
+  a synthetic resource type). A platform-default `used_part_disposition`
+  workflow configuration was added to `WorkflowDefaultsSeeder` purely so
+  `WorkflowApprovalRequest.workflow_configuration_version_id` (NOT NULL
+  + FK) has a real, versioned value to stamp — `UsedPartDispositionService`
+  does not use `WorkflowEngine::isTransitionAllowedForVersion()` for its
+  own status guards (those are plain, explicit checks, matching
+  `WorkOrderPartService`'s own style for its non-primary transitions).
+  Report reference: §31 ("No approval gate in Phases B... may be
+  implemented as a bespoke, feature-specific mechanism").
+- Decision (Phase B): maker-checker (a proposer cannot also approve/
+  reject their own disposition) is enforced in
+  `UsedPartDispositionService::decide()`, not inside
+  `WorkflowApprovalService`.
+  Reason: read `WorkflowApprovalService`/`ApprovalResolver` directly —
+  neither compares `requested_by` against the deciding user; this is
+  confirmed, not assumed. Every future caller of this shared engine will
+  need the same self-check until/unless the engine itself is extended.
+- Decision (Phase B): `SCRAP`/`REPAIR`/`QUARANTINE`/`SELL_ELIGIBLE`
+  dispositions call **no** `InventoryService` method at finalize time;
+  only `REUSE` does (via `returnStock`).
+  Reason: a used-condition return never enters `quantity_on_hand` at
+  Phase A return time. Calling `InventoryService::scrap()` on it would
+  either fail (insufficient on-hand) or — worse — silently decrement
+  unrelated good stock of the same product, since `scrap()` operates on
+  the shared on-hand balance, not a per-return quantity. This was caught
+  and fixed during this session (an earlier draft of `finalize()` called
+  `scrap()` here; corrected before any test or commit). The
+  `WorkOrderPartReturn` row itself (now `Auditable`) is the complete
+  record for these four outcomes.
 
 ## Known Blockers
-- None blocking Phase A. Phases B–G are not blocked, simply not started
-  this session (large, multi-week scope — see roadmap in the source
-  report §30).
+- None blocking Phases A or B. Phases C–G are not blocked, simply not
+  started this session (large, multi-week scope — see roadmap in the
+  source report §30).
 - Environment: this container has no `ext-mongodb` PHP extension and no
   `mongod` binary, so the three Mongo-backed migrations
   (`2026_09_08_000002/3`, `2026_09_08_100001` — Phase 6/7 Analytics/
@@ -165,6 +200,16 @@
   882 assertions / 0 failures — net +1 test / +4 assertions vs. baseline
   (the new G-19 cross-tenant test added to an existing file), 0
   regressions.
+- Targeted Phase B tests (UsedPartDispositionTest — new file, 9 tests —
+  plus regression on WorkOrderStockIntegrationTest/
+  InventoryReturnClassificationTest/WorkOrderClosureGuardTest/
+  WorkflowEngineTest/WorkflowMigrationTest/InventoryTest): 63 passed /
+  285 assertions / 0 failures.
+- Full regression post-Phase-B (same 40-file baseline set —
+  UsedPartDispositionTest.php is a new file outside this set, same as
+  Phase A's two new files): 263 passed / 882 assertions / 0 failures —
+  identical to the post-Phase-A regression numbers, confirming zero
+  regressions from Phase B's changes.
 - Static analysis: `git diff --check` clean; `vendor/bin/pint --test`
   clean on all Phase A files (two migrations and three test files needed
   `vendor/bin/pint` auto-fix for import ordering/brace style — applied,
