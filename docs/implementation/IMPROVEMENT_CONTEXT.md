@@ -76,25 +76,22 @@
 | A — Critical Integrity & Closure Controls | G-14, G-18, G-17, G-35, G-21, G-22, G-19 | COMPLETE | see commits below | Targeted: 48 passed (273 assertions). Regression (same 40-file baseline set): 263 passed / 882 assertions vs. baseline 262 passed / 878 — net +1 test (the new G-19 test added to an existing file), 0 failures, 0 regressions. Frontend: tsc build + production build clean. | G-21's running-balance column is computed client-side over a widened (200-row) page per item/warehouse, not a true from-inception ledger balance — accurate for realistic history lengths, not mathematically guaranteed beyond that without a backend-computed opening-balance parameter (not built this session). | none |
 | B — Used Sparepart Processing | G-15 | COMPLETE | see commits below | Targeted: 9 new tests passed (68 assertions), plus 54 regression on touched domains (WorkOrderStockIntegrationTest/InventoryReturnClassificationTest/WorkOrderClosureGuardTest/WorkflowEngineTest/WorkflowMigrationTest/InventoryTest), all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition is decision-only (no repair-partner receipt sub-flow — out of scope, not described in the source report beyond "Repair" as one disposition value). | none |
 | C — Sell Sparepart | G-16, G-20 | COMPLETE | see commits below | Targeted: 8 new tests (SparePartSaleTest, 64 assertions) + 9 UsedPartDispositionTest regression, all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | Settlement/payment (did money actually change hands) is explicitly out of scope, per the source report's own instruction not to invent unsupported accounting behavior — `SparePartSale` tracks price/total/approval only. | none |
-| D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28 | NOT STARTED | — | — | Serial normalization, wheel-position FK validation, legacy onboarding, atomic rotation, replace() disposition flexibility | Independent of A-C; not started this session |
+| D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28, G-34 (evidence-only) | COMPLETE | see commits below | Targeted: 18 new tests (TireAssetIntegrityTest, 50 assertions) + 7 regression on TireTest, all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | Wheel position validation is permissive (not enforced) for any vehicle category with zero configured `wheel_configurations` rows — no platform-default layout is seeded (flagged, needs fleet-engineering input). | none |
 | E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | NOT STARTED | — | — | REPAIR disposition, locked cycle numbering, partner-type constraint, maker-checker split, final-inspection gate | Depends on Phase D |
 | F — Tire Scoring/Classification | G-31, G-11, BD-1–BD-8 | NOT STARTED | — | — | Full versioned scoring/config framework | Depends on Phases D and E |
 | G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI | Independent; not started this session |
 
 ## Current Work
-- Active phase: C (implemented and validated this session; Phases A and B
-  already pushed to `origin/Improvement`).
-- Active batch: none in progress — Phase C is complete pending final
+- Active phase: D (implemented and validated this session; Phases A, B,
+  and C already pushed to `origin/Improvement`).
+- Active batch: none in progress — Phase D is complete pending final
   regression confirmation and the phase-boundary push.
 - Files/modules in progress: none.
 - Immediate next action for the following session: re-read this file and
-  Git history to confirm Phase C's push landed on `origin/Improvement`,
-  then begin Phase D (Tire Asset Integrity, G-26/G-25/G-23/G-24/G-28) in
-  the exact dependency order Decision 7 specifies: Serial Number
-  Integrity → Wheel Position Validation → Legacy Tire Onboarding →
-  Atomic Multi-Tire Rotation → Replacement Disposition Flexibility.
-  Phase D is independent of Phases A–C (Tire domain, not Inventory), so
-  it is safe to start without revisiting anything above.
+  Git history to confirm Phase D's push landed on `origin/Improvement`,
+  then begin Phase E (Tire Repair/Retread Governance, G-27/G-29/G-32/
+  G-36/G-30/G-33/G-37), which depends on Phase D's serial/position/
+  rotation/replace groundwork now being in place.
 
 ## Decisions and Deviations
 - Decision: return-condition classification (G-14) is implemented as a
@@ -210,10 +207,108 @@
   (one route, one permission, one controller method mirroring the
   existing `adjust()` action, one modal on the Warehouse Stock page).
 
+- Decision (Phase D): `assertValidWheelPosition()` is **permissive** (any
+  free-text position accepted) for a vehicle category with zero configured
+  `wheel_configurations` rows, and **strict** (position must exist in that
+  category's configured set) once at least one row is configured for it.
+  Reason: no `wheel_configurations` seeder exists in the repository (real
+  axle/position layouts need domain/fleet-engineering input this session
+  does not have) — a fail-closed default would immediately break every
+  existing tenant's tire installs with zero notice or migration path.
+  Flagged as needing a product decision: whether/when to seed
+  platform-default layouts per vehicle category (see Known Blockers).
+  Report reference: G-25 ("wheel position must be validated against the
+  vehicle's configured layout").
+- Decision (Phase D): G-24's atomic swap is implemented as a new
+  `swapPositions()` service method / `POST .../swap-positions` endpoint,
+  not an overload of `rotate()`.
+  Reason: `rotate()`'s existing partial-unique-index contract only allows
+  moving into an **empty** position; a genuine two-tire swap needs both
+  active installations closed before either replacement is created (see
+  code comment on `swapPositions()`), which is a materially different
+  transaction shape worth naming distinctly rather than branching inside
+  `rotate()`.
+- Decision (Phase D): `TireService::replace()`'s signature changed to
+  require a caller-supplied `string $disposition` (REUSE/RETREAD/SCRAP)
+  instead of hardcoding REUSE.
+  Reason: this is the literal G-28 gap — the old tire's outcome at
+  replacement time is a real business decision (it may be scrap, not
+  reusable), and `remove()` already supported all three dispositions;
+  `replace()` was the one caller still forcing REUSE. This is a documented
+  breaking change to `TireService::replace()` and to
+  `POST .../tires/{tire}/replace` (now requires `disposition` in the
+  request body) — no other caller of either existed in the repository.
+- Decision (Phase D): legacy-onboarding baseline data (`installed_at`,
+  `installed_at_source`, `baseline_tread_depth_mm`, `baseline_condition`)
+  are all optional, independent parameters on `install()` — a normal live
+  install passes none of them and behaves exactly as before (installed
+  now, source KNOWN, no inspection record created). A baseline
+  `TireInspection` row is created **only** when the caller actually
+  supplies a tread-depth or condition reading; nothing is fabricated when
+  neither is given (`test_legacy_onboarding_without_baseline_reading_
+  creates_no_fabricated_inspection`).
+  Report reference: G-23; task instruction "do not fabricate historical
+  installation dates, tread measurements, tire identities, odometer
+  readings... support known, estimated, and unknown historical values
+  explicitly."
+- Decision (Phase D): G-34 required only an evidence check plus a
+  frontend entry point — `TireService::replace()` and its endpoint
+  already existed pre-Phase-D; the only gap was that no page in the
+  frontend ever called it. Added a "Replace Tire" section to
+  `TireDetailPage.tsx` calling the existing endpoint (now carrying the
+  Phase D disposition field); no new backend code was needed for G-34
+  specifically beyond what G-28 already added to the same endpoint.
+- Decision (Phase D, VMS cross-reference): added a nullable
+  `tires.manufacture_date_code` string column and request/model field.
+  Source: VMS "Tire" reference screen's Production Date Code field, which
+  has no OptiFleet equivalent. Never inferred or back-filled for existing
+  rows (migration adds it `nullable` with no default population); always
+  exactly what the user types, never validated against a DOT-style format
+  since VMS does not document one specific format to require.
+  Report reference: VMS §Tire Data Fields; not a numbered gap ID (no
+  corresponding G-xx entry in the consolidated report — implemented as a
+  narrow, safe, additive VMS-sourced adjustment per the task's own
+  "implement adjustments that belong to Phase D and have a clear, safe
+  business rule and data source" instruction).
+- Decision (Phase D, VMS cross-reference): declined to copy VMS's "Wheels
+  Configuration" pattern (vehicles classified into a fixed type — Non
+  Trailer/Trailer/Semi-Trailer/Truck Head — each with a computed total
+  wheel/tire count).
+  Reason: OptiFleet's existing `wheel_configurations` table (per vehicle
+  category, per named position, tenant-or-platform scoped) is already
+  strictly more granular and flexible than VMS's four-type enum with
+  derived totals; copying VMS's coarser model would be a regression, not
+  an improvement, and CLAUDE.md's own guidance is not to copy VMS
+  behavior that conflicts with current architecture. No code change.
+
+### VMS Traceability Record — Phase D
+
+| VMS source section | Current OptiFleet behavior (pre-Phase-D) | Proposed adjustment | Gap ID | Status | Test evidence |
+|---|---|---|---|---|---|
+| Tire reference screen — "Production Date Code" field | No equivalent field on `tires` | Add nullable `manufacture_date_code` string, request-validated, never fabricated/inferred | (VMS-sourced, no G-xx) | IMPLEMENTED | `TireAssetIntegrityTest::test_manufacture_date_code_is_optional_and_stored_verbatim` |
+| "Wheels Configuration" — vehicle classified into Non Trailer/Trailer/Semi-Trailer/Truck Head with a computed total wheel count | Per-category, per-named-position `wheel_configurations` table (already more granular) | None — existing model is strictly more flexible; adopting VMS's coarser enum would be a regression | (VMS-sourced, no G-xx) | DECLINED (documented decision, no code change) | N/A |
+| Tire reference screen — structured spec fields (width/aspect ratio/rim diameter as discrete fields, load/speed index) | `tires.tire_size`/`pattern` are free-text strings | Structured tire spec fields | G-11 | DEFERRED to Phase F (Tire Scoring/Classification) — recorded here per task instruction, not silently expanding Phase D | N/A |
+| Vehicle/Product reference screens — additional Rim and Vehicle master-data fields observed in VMS | Not present / partially present in `vehicles`/`products` | Add corresponding fields once each is confirmed against the consolidated report's Phase G scope | G-09, G-38 | DEFERRED to Phase G (Carried-Forward VMS Parity) | N/A |
+| Tire lifecycle screens — condition scoring / disposition workflow observations (KA/KTS/KTN/KF-style classification, repair/retread governance) | Tire lifecycle has simple status enum + Phase D's serial/position/onboarding/rotation/replace groundwork only | Full scoring/classification framework, repair governance, maker-checker split | G-27, G-29, G-30, G-31, G-32, G-33, G-36, G-37, BD-1–BD-8 | DEFERRED to Phases E and F (already the source report's own placement; VMS observations layered under it per its §17) | N/A |
+| Wheel Configuration screen — sequence/labeling conventions for axle positions | `wheel_configurations.axle_number`/`sequence`/`label` already exist and are at least as expressive as VMS's convention | None — no gap identified | — | NOT APPLICABLE | N/A |
+
+Flagged for product decision (not resolved this session, work continued independently per task instruction): whether/when to seed
+platform-default `wheel_configurations` layouts per vehicle category (needs real fleet-engineering axle/position specs, not fabricated
+placeholder data) — until that decision is made, G-25's validation stays permissive for any category with no configured rows.
+
 ## Known Blockers
-- None blocking Phases A, B, or C. Phases D–G are not blocked, simply
-  not started this session (large, multi-week scope — see roadmap in
-  the source report §30).
+- None blocking Phases A–D. Phases E–G are not blocked, simply not
+  started this session (large, multi-week scope — see roadmap in the
+  source report §30).
+- Product decision needed (Phase D, not resolved this session): whether
+  and when to seed platform-default `wheel_configurations` layouts per
+  vehicle category. No seeder exists; real axle/position specs need
+  fleet-engineering input this session does not have, and CLAUDE.md
+  prohibits fabricating data. Until decided, G-25's wheel-position
+  validation is permissive (accepts any position) for any category with
+  zero configured rows, and strict only once a tenant or platform admin
+  configures at least one row for that category via the existing Wheel
+  Configuration UI.
 - Environment: this container has no `ext-mongodb` PHP extension and no
   `mongod` binary, so the three Mongo-backed migrations
   (`2026_09_08_000002/3`, `2026_09_08_100001` — Phase 6/7 Analytics/
@@ -251,6 +346,32 @@
   SparePartSaleTest.php is a new file outside this set): 263 passed /
   882 assertions / 0 failures — identical to Phases A and B's regression
   numbers, confirming zero regressions from Phase C's changes.
+- Targeted Phase D tests (TireAssetIntegrityTest — new file, 18 tests,
+  50 assertions — plus regression on TireTest, 7 tests, 26 assertions):
+  25 passed / 76 assertions / 0 failures.
+- Full regression post-Phase-D: the baseline file set was expanded this
+  phase to include every Feature test file added by Phases B/C/D
+  (InventoryReturnClassificationTest, SparePartSaleTest,
+  TireAssetIntegrityTest, UsedPartDispositionTest,
+  WorkOrderClosureGuardTest) plus the full `tests/Unit` suite, since the
+  previous 40-file list predated those additions — 355 passed / 1230
+  assertions / 0 failures. One transient run before this showed 6
+  failures in `ConfigurationAuditAndRegressionTest`/`ConfigurationCoreTest`
+  with `SQLSTATE[42P01]: relation "permissions" does not exist`; this was
+  a stale/partial testing-database migration state (unrelated to any
+  Phase D code — those files touch Configuration, not Tire), fixed by
+  running `php artisan migrate:fresh --env=testing --force` and confirmed
+  by re-running the full set clean afterward. No Phase D code change was
+  needed to resolve it.
+- Migration verification: both new Phase D migrations
+  (`2026_09_12_000007_normalize_tire_serial_number_uniqueness`,
+  `2026_09_12_000008_add_legacy_onboarding_fields_to_tire_tables`) applied
+  cleanly via `migrate:fresh --seed` against the dev database (Mongo
+  migrations temporarily moved aside per the established environment
+  workaround, then restored immediately afterward — see Known Blockers).
+  The serial-number uniqueness migration's own read-only duplicate check
+  found zero pre-existing case/whitespace-variant duplicates, so it did
+  not need its guard-rail exception path.
 - Static analysis: `git diff --check` clean; `vendor/bin/pint --test`
   clean on all Phase A files (two migrations and three test files needed
   `vendor/bin/pint` auto-fix for import ordering/brace style — applied,
@@ -263,6 +384,13 @@
   including the `tenant_id` backfill on `work_order_planned_parts`
   against existing seeded rows (zero orphans, NOT NULL + FK applied
   successfully).
+- Static analysis (Phase D): `git diff --check` clean; `vendor/bin/pint
+  --test` clean on all Phase D files (one migration and the new test
+  file needed `vendor/bin/pint` auto-fix for brace style/import
+  ordering — applied, re-verified clean, no logic change).
+- Frontend (Phase D): `tsc -b` clean; `npm run build` (vite production
+  build) succeeds; `npm run lint` (oxlint) shows only pre-existing
+  warnings in files this work did not touch.
 - NOT RUN (environment limitation, pre-existing, unrelated to this
   change): Phase 6/7 Analytics/Intelligence test suites and their two
   Mongo-backed migrations — this container has no `ext-mongodb` PHP
