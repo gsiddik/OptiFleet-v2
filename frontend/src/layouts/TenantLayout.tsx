@@ -88,6 +88,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/app/partners', label: 'Vendor', permission: 'partner.view', module: 'PARTNER' },
       { to: '/app/partners', label: 'Vendor Performance', permission: 'partner.view', module: 'PARTNER' },
+      { to: '/app/suppliers', label: 'Suppliers', permission: 'partner.view', module: 'PARTNER' },
     ],
   },
   {
@@ -193,6 +194,7 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const ACCOUNT_NAV = [
+  { to: '/app/account/company', label: 'Company Profile', permission: 'company.view' },
   { to: '/app/account/subscription', label: 'Subscription', permission: 'account.subscription.view' },
   { to: '/app/account/contract', label: 'Contract', permission: 'account.contract.view' },
   { to: '/app/account/invoices', label: 'Invoices', permission: 'account.invoice.view' },

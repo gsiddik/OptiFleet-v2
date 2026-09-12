@@ -144,6 +144,12 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
   );
 }
 
+interface TenantUserOption {
+  user_id: string;
+  name: string;
+  email: string;
+}
+
 function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string; onClose: () => void; onChanged: () => void }) {
   const { hasPermission } = useAuth();
   const [worker, setWorker] = useState<WorkerItem | null>(null);
@@ -154,6 +160,8 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
   const [workshops, setWorkshops] = useState<{ id: string; name: string }[]>([]);
   const [assignBranchId, setAssignBranchId] = useState('');
   const [assignWorkshopId, setAssignWorkshopId] = useState('');
+  const [tenantUsers, setTenantUsers] = useState<TenantUserOption[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [busy, setBusy] = useState(false);
 
   function load() {
@@ -165,7 +173,32 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
     apiClient.get('/app/component-groups', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
     apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data));
     apiClient.get('/app/workshops', { params: { per_page: 100 } }).then((res) => setWorkshops(res.data.data));
+    apiClient.get('/app/users', { params: { per_page: 200 } }).then((res) => setTenantUsers(res.data.data)).catch(() => setTenantUsers([]));
   }, []);
+
+  /** G-14: workers.user_id had no UI to ever set it. */
+  async function linkUser() {
+    setBusy(true);
+    try {
+      await apiClient.post(`/app/workers/${workerId}/link-user`, { user_id: selectedUserId });
+      setSelectedUserId('');
+      load();
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function unlinkUser() {
+    setBusy(true);
+    try {
+      await apiClient.post(`/app/workers/${workerId}/unlink-user`);
+      load();
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function addSkill() {
     setBusy(true);
@@ -259,6 +292,36 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
               Assign
             </button>
           </div>
+        </>
+      )}
+
+      {hasPermission('worker.manage') && (
+        <>
+          <h4 style={{ fontSize: 13, marginTop: 16, marginBottom: 6 }}>Login Account</h4>
+          {worker.user_id ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+              <span>
+                Linked to {tenantUsers.find((u) => u.user_id === worker.user_id)?.name ?? worker.user_id}
+              </span>
+              <button className="btn-secondary" disabled={busy} onClick={unlinkUser}>
+                Unlink
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
+                <option value="">Select a login account…</option>
+                {tenantUsers.map((u) => (
+                  <option key={u.user_id} value={u.user_id}>
+                    {u.name} ({u.email})
+                  </option>
+                ))}
+              </select>
+              <button className="btn-secondary" disabled={busy || !selectedUserId} onClick={linkUser}>
+                Link
+              </button>
+            </div>
+          )}
         </>
       )}
     </Modal>

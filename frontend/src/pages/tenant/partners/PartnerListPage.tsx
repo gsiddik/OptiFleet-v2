@@ -14,11 +14,44 @@ import type { PartnerItem } from '../../../types';
 const PARTNER_TYPES = ['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER', 'EXTERNAL_WORKSHOP', 'TOWING_PROVIDER', 'OTHER_SERVICE_PROVIDER'];
 
 export function PartnerListPage() {
+  return <PartnerListView title="Vendors / Partners" emptyLabel="No vendors found." newButtonLabel="+ New Vendor" />;
+}
+
+/** G-17: Supplier is a Partner sub-type, not a separate concept — this reuses the same list/create UI, filtered. */
+export function SupplierListPage() {
+  return (
+    <PartnerListView
+      title="Suppliers"
+      emptyLabel="No suppliers found."
+      newButtonLabel="+ New Supplier"
+      partnerTypes={['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER']}
+      defaultPartnerType="SPARE_PART_SUPPLIER"
+    />
+  );
+}
+
+function PartnerListView({
+  title,
+  emptyLabel,
+  newButtonLabel,
+  partnerTypes,
+  defaultPartnerType,
+}: {
+  title: string;
+  emptyLabel: string;
+  newButtonLabel: string;
+  partnerTypes?: string[];
+  defaultPartnerType?: string;
+}) {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
-  const { data, loading, error } = useApiList<PartnerItem>('/app/partners', { search: search || undefined }, reloadKey);
+  const { data, loading, error } = useApiList<PartnerItem>(
+    '/app/partners',
+    { search: search || undefined, partner_type: partnerTypes },
+    reloadKey,
+  );
 
   const columns: Column<PartnerItem>[] = [
     { key: 'code', header: 'Code', render: (p) => <Link to={`/app/partners/${p.id}`}>{p.code}</Link> },
@@ -30,32 +63,47 @@ export function PartnerListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vendors / Partners</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{title}</h1>
       <Toolbar
         search={search}
         onSearchChange={setSearch}
         actions={
           hasPermission('partner.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Vendor
+              {newButtonLabel}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No vendors found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={emptyLabel} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
-      <CreatePartnerModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
+      <CreatePartnerModal
+        open={showCreate}
+        defaultPartnerType={defaultPartnerType}
+        onClose={() => setShowCreate(false)}
+        onCreated={() => setReloadKey((k) => k + 1)}
+      />
     </div>
   );
 }
 
-function CreatePartnerModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+function CreatePartnerModal({
+  open,
+  defaultPartnerType,
+  onClose,
+  onCreated,
+}: {
+  open: boolean;
+  defaultPartnerType?: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
-  const [partnerType, setPartnerType] = useState('SPARE_PART_SUPPLIER');
+  const [partnerType, setPartnerType] = useState(defaultPartnerType ?? 'SPARE_PART_SUPPLIER');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});

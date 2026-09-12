@@ -45,6 +45,7 @@ import { NotificationRulesPage } from './pages/tenant/configuration/Notification
 import { ConfigurationHistoryPage } from './pages/tenant/configuration/ConfigurationHistoryPage';
 import { AccountSubscriptionPage } from './pages/tenant/account/AccountSubscriptionPage';
 import { AccountContractPage } from './pages/tenant/account/AccountContractPage';
+import { CompanyProfilePage } from './pages/tenant/account/CompanyProfilePage';
 import { AccountInvoiceListPage } from './pages/tenant/account/AccountInvoiceListPage';
 import { AccountInvoiceDetailPage } from './pages/tenant/account/AccountInvoiceDetailPage';
 import { AccountPaymentListPage } from './pages/tenant/account/AccountPaymentListPage';
@@ -92,7 +93,7 @@ import { PurchaseOrderListPage } from './pages/tenant/procurement/PurchaseOrderL
 import { PurchaseOrderDetailPage } from './pages/tenant/procurement/PurchaseOrderDetailPage';
 import { GoodsReceiptListPage } from './pages/tenant/procurement/GoodsReceiptListPage';
 import { VendorInvoiceReferenceListPage } from './pages/tenant/procurement/VendorInvoiceReferenceListPage';
-import { PartnerListPage } from './pages/tenant/partners/PartnerListPage';
+import { PartnerListPage, SupplierListPage } from './pages/tenant/partners/PartnerListPage';
 import { PartnerDetailPage } from './pages/tenant/partners/PartnerDetailPage';
 import { TireListPage } from './pages/tenant/tires/TireListPage';
 import { TireDetailPage } from './pages/tenant/tires/TireDetailPage';
@@ -609,6 +610,14 @@ export default function App() {
               }
             />
             <Route
+              path="account/company"
+              element={
+                <RequirePermission permission="company.view">
+                  <CompanyProfilePage />
+                </RequirePermission>
+              }
+            />
+            <Route
               path="account/invoices"
               element={
                 <RequirePermission permission="account.invoice.view">
@@ -665,6 +674,7 @@ export default function App() {
             <Route path="vendor-invoice-references" element={<RequirePermission permission="goods_receipt.view"><VendorInvoiceReferenceListPage /></RequirePermission>} />
 
             <Route path="partners" element={<RequirePermission permission="partner.view"><PartnerListPage /></RequirePermission>} />
+            <Route path="suppliers" element={<RequirePermission permission="partner.view"><SupplierListPage /></RequirePermission>} />
             <Route path="partners/:id" element={<RequirePermission permission="partner.view"><PartnerDetailPage /></RequirePermission>} />
 
             <Route path="tires" element={<RequirePermission permission="tire.view"><TireListPage /></RequirePermission>} />

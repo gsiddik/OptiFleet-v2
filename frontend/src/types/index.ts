@@ -737,6 +737,7 @@ export interface WorkerItem {
   workshop_id: string | null;
   worker_type: 'LEAD_MECHANIC' | 'MECHANIC' | 'TECHNICIAN' | 'INSPECTOR' | 'QC';
   status: 'ACTIVE' | 'INACTIVE';
+  user_id: string | null;
   branch?: Branch;
   workshop?: Workshop;
   skills?: WorkerSkillItem[];
