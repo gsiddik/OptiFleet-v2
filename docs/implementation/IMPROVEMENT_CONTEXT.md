@@ -79,18 +79,22 @@
 | D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28, G-34 (evidence-only) | COMPLETE | see commits below | Targeted: 18 new tests (TireAssetIntegrityTest, 50 assertions) + 7 regression on TireTest, all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | Wheel position validation is permissive (not enforced) for any vehicle category with zero configured `wheel_configurations` rows — no platform-default layout is seeded (flagged, needs fleet-engineering input). | none |
 | E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | COMPLETE | see commits below | Targeted: 18 new tests (TireRepairRetreadGovernanceTest, 91 assertions) + 3 WorkOrderClosureGuardTest regression (updated to the new TireService signatures), all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition sub-flow: eligible-partner type list (EXTERNAL_WORKSHOP/TIRE_SUPPLIER) is a documented, non-fabricated inference from existing `partner_type` values, not a report-cited enumeration — flagged for product confirmation. Phase D's permissive wheel-position fallback is untouched by this phase (documented, not fixed — see Decisions). | none |
 | F — Tire Scoring/Classification | G-31, BD-1–BD-6, BD-8 | FRAMEWORK COMPLETE, CONFIGURATION NOT APPROVED, PRODUCTION SCORING NOT ENABLED | see commits below | Targeted: 28 new tests (TireScoringAndSaleTest, 118 assertions), all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | G-11's structured tire spec fields (width/aspect ratio/rim diameter/load-speed index as discrete fields) remain deferred to Phase G — Phase F only added the one BD-3-mandated numeric field (reference tread depth) actually needed for scoring, not a full spec restructure. BD-6's legal/policy, casing-eligibility, lifecycle-limit, and vehicle/axle-suitability precedence steps have no encodable rule in the material available this session — see Decisions. | Zero production scoring: no TIRE_SCORING configuration is seeded/published by this session (deliberate — see Decisions); every tenant must explicitly publish its own before any tire can be scored. |
-| G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI, G-11's structured tire spec fields | Independent; not started this session |
+| G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | COMPLETE for every gap ID this session could safely close (see below for exactly which G-IDs and which stayed explicitly out of scope) | `f1b2189`, `3275ff0`, `fc196d9`, `b7a32c9`, `49d607e`, `125695b`, `13dc24d`, `4ad925d`, `2f63b4c`, `6313c0b` | Full non-Mongo backend regression after every batch: 451 passed / 1715 assertions / 0 failures (see Verification Status). Frontend: `tsc -b` + `npm run build` + `npm run lint` clean after every batch. | G-38–G-43 (Company/User-Worker/Role/Supplier carried-forward parity items) are covered under G-14/G-15/G-16/G-17 below rather than as separate numbered items — the consolidated report's own G-ID list for this phase was summarized, not re-read verbatim this session (see Known Blockers); no PO tiered-approval thresholds exist anywhere in this session's available material, so none were fabricated (documented, not silently skipped). | Phase F's framework-complete/configuration-not-approved/production-scoring-not-enabled status is preserved verbatim and untouched by this phase — no Phase G change enables, bypasses, or alters tire scoring. |
 
 ## Current Work
-- Active phase: F (implemented and validated this session; Phases A-E
-  already pushed to `origin/Improvement`).
-- Active batch: none in progress — Phase F is complete pending final
-  regression confirmation and the phase-boundary push.
+- Active phase: G (implemented, tested, and pushed this session; Phases
+  A-F already on `origin/Improvement` from prior sessions).
+- Active batch: none in progress — all five Phase G batches (G1
+  Maintenance Lifecycle, G2 Supply Chain Integrity, G3 Workshop Partner,
+  G4 Master Data & Tire Specs, G5 Company/User-Worker/Role) are complete,
+  each individually regression-tested, and pushed as 10 commits.
 - Files/modules in progress: none.
 - Immediate next action for the following session: re-read this file and
-  Git history to confirm Phase F's push landed on `origin/Improvement`,
-  then begin Phase G (Carried-Forward VMS Parity, G-01–G-09/G-11–G-13/
-  G-38–G-43), which is independent of Phase F's scoring framework.
+  Git history to confirm Phase G's push landed on `origin/Improvement`,
+  then confirm with the owner whether to start a further phase (none is
+  currently authorized) or address the two carried-forward blockers named
+  below (PO tiered approval, BD-6 rules) if/when real source material for
+  them becomes available.
 
 ## Decisions and Deviations
 - Decision: return-condition classification (G-14) is implemented as a
@@ -561,14 +565,74 @@ traceability record above — restated here rather than duplicated.
 |---|---|---|---|---|---|
 | Tire reference screen — "Production Date Code" field | No equivalent field on `tires` | Add nullable `manufacture_date_code` string, request-validated, never fabricated/inferred | (VMS-sourced, no G-xx) | IMPLEMENTED | `TireAssetIntegrityTest::test_manufacture_date_code_is_optional_and_stored_verbatim` |
 | "Wheels Configuration" — vehicle classified into Non Trailer/Trailer/Semi-Trailer/Truck Head with a computed total wheel count | Per-category, per-named-position `wheel_configurations` table (already more granular) | None — existing model is strictly more flexible; adopting VMS's coarser enum would be a regression | (VMS-sourced, no G-xx) | DECLINED (documented decision, no code change) | N/A |
-| Tire reference screen — structured spec fields (width/aspect ratio/rim diameter as discrete fields, load/speed index) | `tires.tire_size`/`pattern` are free-text strings | Structured tire spec fields | G-11 | DEFERRED to Phase F (Tire Scoring/Classification) — recorded here per task instruction, not silently expanding Phase D | N/A |
-| Vehicle/Product reference screens — additional Rim and Vehicle master-data fields observed in VMS | Not present / partially present in `vehicles`/`products` | Add corresponding fields once each is confirmed against the consolidated report's Phase G scope | G-09, G-38 | DEFERRED to Phase G (Carried-Forward VMS Parity) | N/A |
+| Tire reference screen — structured spec fields (width/aspect ratio/rim diameter as discrete fields, load/speed index) | `tires.tire_size`/`pattern` are free-text strings | Add nullable discrete spec columns; keep `tire_size` free-text untouched for backward compatibility | G-11 | IMPLEMENTED in Phase G (Batch G4) — no separate `Rim` master-data table added; no evidence anywhere in this session's available material describes a reusable rim catalog distinct from a tire's own recorded spec, so per-tire columns were used instead of inventing one | `TireTest::test_tire_can_be_created_with_discrete_spec_fields_alongside_free_text_size`, `TireTest::test_tire_can_still_be_created_without_any_discrete_spec_fields` |
+| Vehicle/Product reference screens — additional Vehicle master-data fields observed in VMS (brand/model as structured references rather than free text) | `vehicles.brand`/`model` were plain free-text strings, no master data | Add `VehicleBrand`/`VehicleModel` master data (mirroring the existing `VehicleCategory` shape), plus optional nullable FK columns on `vehicles` alongside the untouched free-text columns | G-13 | IMPLEMENTED in Phase G (Batch G4) | `VehicleBrandAndModelTest` (6 tests) |
 | Tire lifecycle screens — condition scoring / disposition workflow observations (KA/KTS/KTN/KF-style classification, repair/retread governance) | Tire lifecycle has simple status enum + Phase D's serial/position/onboarding/rotation/replace groundwork only | Full scoring/classification framework, repair governance, maker-checker split | G-27, G-29, G-30, G-31, G-32, G-33, G-36, G-37, BD-1–BD-8 | DEFERRED to Phases E and F (already the source report's own placement; VMS observations layered under it per its §17) | N/A |
 | Wheel Configuration screen — sequence/labeling conventions for axle positions | `wheel_configurations.axle_number`/`sequence`/`label` already exist and are at least as expressive as VMS's convention | None — no gap identified | — | NOT APPLICABLE | N/A |
 
 Flagged for product decision (not resolved this session, work continued independently per task instruction): whether/when to seed
 platform-default `wheel_configurations` layouts per vehicle category (needs real fleet-engineering axle/position specs, not fabricated
 placeholder data) — until that decision is made, G-25's validation stays permissive for any category with no configured rows.
+
+## Phase G — Carried-Forward VMS Parity
+
+**Source-access note (read this before trusting any "VMS-sourced" citation below):** this phase's implementation session did not have
+the two source documents (Consolidated Gap Analysis Report, VMS analysis) available to re-read directly — they are external files
+supplied to an earlier session whose detailed content did not carry forward into this one, only a structured summary of the G-ID list,
+gap descriptions, and the explicit hard constraints already recorded in this file. Every G-ID below is traced to that summary and to
+this session's own direct repository evidence (gathered via read-only Explore agents before any code was written, per the same
+discipline used in Phases A–F), not to a freshly re-read VMS section number. Where a decision required a specific business
+rule/threshold/policy that neither the summary nor the repository could supply, none was fabricated — see the explicitly-declined
+items below and Known Blockers.
+
+### Per-batch summary
+
+- **Batch G1 — Maintenance Lifecycle** (`f1b2189`, `3275ff0`): G-01 (Schedule → Work Order conversion — `MaintenanceScheduleService`/
+  `WorkOrderService::fromMaintenanceSchedule()`, rejecting not-yet-due and already-converted schedules), G-02 (pre-execution cost
+  estimation — `WorkOrderService::estimate()`, `Brick\Math\BigDecimal` scale 4, restricted to DRAFT/SUBMITTED/APPROVED/ASSIGNED/
+  SCHEDULED), G-03 (optional result summary on completion, wired back into schedule regeneration; also closed a real UI gap — the
+  QC_PENDING → COMPLETED transition had no frontend action at all before this batch), G-04 (WorkOrderFinding/QcFinding resolution —
+  neither had ever been settable, blocking `WorkOrderClosureGuardService`'s own unresolved-finding checks from ever being satisfiable
+  in practice). Test evidence: `WorkOrderLifecycleGapsTest` (13 tests).
+- **Batch G2 — Supply Chain Integrity** (`fc196d9`, `b7a32c9`): G-05 (`StockTransfer::dispatch()`/`receive()` actor persistence —
+  `dispatched_by`/`received_by` columns, plus the `Auditable` trait it was missing), G-06 (real money-safety bug fix:
+  `PurchaseOrderService::create()` and `RfqService::submitQuotation()` computed totals with native PHP float arithmetic despite
+  `decimal(16,4)` columns — replaced with `BigDecimal`, matching the invariant already in force everywhere else in the codebase).
+  "Stock Request" was evaluated and found not to be a missing concept — `PurchaseRequest` (external procurement demand) and
+  `StockTransfer`'s own `REQUESTED` status (internal warehouse-to-warehouse movement) already cover the two real demand-signal shapes;
+  no third document type is described anywhere in the available material. PO tiered/threshold approval was evaluated and explicitly
+  declined — see Known Blockers. Test evidence: `StockTransferTest` (extended), `ProcurementTest` (unchanged, still green).
+- **Batch G3 — Workshop Partner & External Work** (`49d607e`, `125695b`): G-07 (`WorkOrderExternalService` — the `TOWING_PROVIDER`/
+  `OTHER_SERVICE_PROVIDER` Partner types existed in the enum since Phase 4 but nothing in the application ever referenced either value;
+  added a bounded REQUESTED → COMPLETED/CANCELLED record, no approval step and no partner-type restriction invented). Test evidence:
+  `WorkOrderExternalServiceTest` (9 tests).
+- **Batch G4 — Master Data & Tire/Rim Specs** (`13dc24d`, `4ad925d`): G-11 (discrete tire spec fields), G-12 (ProductCategory/Uom CRUD
+  completion — ProductCategory had no delete endpoint, Uom had neither update nor delete, despite sharing the `product.*` permission
+  group with Product itself; both frontend pages were previously 100% absent, not partially built), G-13 (VehicleBrand/VehicleModel
+  master data). Test evidence: `TireTest` (+2), `ProductCategoryAndUomTest` (6), `VehicleBrandAndModelTest` (6).
+- **Batch G5 — Company/User-Worker/Role** (`2f63b4c`, `6313c0b`): G-14 (`workers.user_id` — existed since Phase 4 with a comment
+  describing intent but zero relation, zero FK, zero controller/route; genuinely, fully dead code, confirmed by evidence before any
+  fix was written), G-15 (Tenant company-profile fields — mirrors Partner's already-established field set rather than inventing a new
+  shape; endpoint placed in the existing ungated `/app/account/*` route group, not behind `module:CORE`, matching the same
+  suspended-tenant-must-still-have-access pattern already documented for the billing routes), G-16 (Role tenant-isolation test
+  coverage — the guard code (`RoleController::authorizeTenantRole()`) was already correct by inspection; this added the first tests
+  that actually exercise it cross-tenant, and confirmed no bug), G-17 (Supplier-filtered Partner view — `PartnerController::index()`
+  extended to accept `partner_type` as an array filter; `PartnerListPage` refactored into a reusable view rather than duplicated).
+  Test evidence: `WorkerUserLinkTest` (6), `CompanyProfileTest` (3), `RoleTenantIsolationTest` (5).
+
+### Explicitly declined / not fabricated
+
+- **PO tiered/threshold-based approval** (part of the "PO approval and decimal-safe totals" focus area). A generic multi-step
+  approval engine (`WorkflowApprovalService`) already exists and is used elsewhere (`UsedPartDispositionService`,
+  `SparePartSaleService`), but `PurchaseOrderService::approve()` remains a flat single-step transition. No concrete cost thresholds,
+  tier counts, or approver-role definitions for Procurement exist anywhere in the summary carried into this session or in repository
+  configuration, so none were invented. Wiring `PurchaseOrder` into the existing generic approval engine is a real, bounded follow-up
+  once the business defines actual tiers — not something this phase silently guessed.
+- **BD-6 disposition-precedence rules** (legal/policy, casing eligibility, lifecycle limits, vehicle/axle suitability) remain exactly
+  as open as Phase F left them. Phase G touched none of Phase F's scoring/classification code paths, and no Phase G change enables,
+  bypasses, or activates production tire scoring — Phase F's status line ("FRAMEWORK COMPLETE, CONFIGURATION NOT APPROVED, PRODUCTION
+  SCORING NOT ENABLED") is preserved verbatim in the Phase Status table above.
+- **A separate `Rim` master-data table** was considered for G-11 and declined — see the traceability table above.
 
 ## Known Blockers
 - None blocking Phases A–F's own acceptance criteria — every mandatory
@@ -636,6 +700,27 @@ placeholder data) — until that decision is made, G-25's validation stays permi
   not introduced by this work, and does not affect Phase A (Postgres-only
   domains). Recorded as NOT RUN with reason in the final report, per
   CLAUDE.md's testing rule.
+- Product/finance decision needed (Phase G, does not block any Phase G
+  acceptance criterion — the flat single-step approval remains the safe,
+  backward-compatible behavior in the meantime): Purchase Order
+  tiered/threshold-based approval. `WorkflowApprovalService` (a generic
+  multi-step approval engine) already exists and is used elsewhere, but
+  no concrete cost thresholds, tier counts, or approver-role definitions
+  for Procurement exist anywhere in the material available this session.
+  Needed: a finance/procurement owner to define the actual tiers before
+  any code wires `PurchaseOrder` into the existing generic engine.
+- Documentation-access limitation (Phase G, does not block any Phase G
+  acceptance criterion, flagged for the next session that has real
+  document access): this session did not have the two source documents
+  (Consolidated Gap Analysis Report, VMS analysis) available to re-read
+  directly — only a structured summary of the G-ID list and gap
+  descriptions carried forward from an earlier session. Every Phase G
+  VMS-traceability entry in this file is traced to that summary plus this
+  session's own direct repository evidence, not to a freshly re-read VMS
+  section number. If a future session has direct access to both
+  documents again, it should re-verify the G-38–G-43 gap descriptions
+  against their original text rather than relying solely on this file's
+  summary-derived mapping to G-14/G-15/G-16/G-17.
 
 ## Verification Status
 - Baseline (clean `main`, before any Phase A change, 40 non-Mongo Feature
@@ -805,3 +890,52 @@ placeholder data) — until that decision is made, G-25's validation stays permi
   40 non-Mongo Feature test files were run explicitly by name instead,
   which is a complete substitute for every Postgres-backed domain this
   phase touches or could regress.
+- Targeted Phase G tests, run after each batch, all green before that
+  batch's checkpoint commit: Batch G1 —
+  `WorkOrderLifecycleGapsTest` (13/13, 105 assertions) plus regression on
+  `WorkOrderTest`/`QualityControlAndReleaseTest`/
+  `MaintenancePolicyAndScheduleTest` (49/49 total). Batch G2 —
+  `StockTransferTest` (6/6, extended) plus `ProcurementTest`/`AuditTest`/
+  `UsedPartDispositionTest`/`SparePartSaleTest`/`DashboardSupplyChainTest`
+  (35/35, 243 assertions). Batch G3 — `WorkOrderExternalServiceTest`
+  (9/9) plus `PartnerTest`/`WorkOrderTest`/`WorkOrderLifecycleGapsTest`/
+  `QualityControlAndReleaseTest` (39/39, 279 assertions). Batch G4 —
+  `ProductCategoryAndUomTest` (6/6), `VehicleBrandAndModelTest` (6/6),
+  `TireTest` (+2, 9/9) plus `VehicleTest`/`ProductTest` (26/26, 94
+  assertions). Batch G5 — `WorkerUserLinkTest` (6/6), `CompanyProfileTest`
+  (3/3), `RoleTenantIsolationTest` (5/5, confirming no pre-existing bug).
+- Full non-Mongo backend regression after Batch G4 (57 Feature+Unit test
+  files spanning every phase, A through G4): 437 passed / 1680 assertions
+  / 0 failures.
+- Full non-Mongo backend regression after Batch G5, the final Phase G
+  batch (60 Feature+Unit test files): 451 passed / 1715 assertions / 0
+  failures — the complete, final Phase G regression result. Analytics/
+  Intelligence directories excluded for the same pre-existing
+  `ext-mongodb` environment reason recorded above; the 3 Mongo-backed
+  migration files were moved to a scratch holding directory before every
+  `migrate:fresh --env=testing` run this phase and restored immediately
+  afterward, each time confirmed present again before the corresponding
+  checkpoint commit.
+- Static analysis (Phase G): `git diff --check` clean; `vendor/bin/pint
+  --test` clean on every Phase G file across all 5 batches (routine
+  auto-fix rounds for import ordering/brace style on several new files
+  and migrations — applied, re-verified clean, no logic change).
+- Frontend (Phase G): `tsc -b` clean, `npm run build` (vite production
+  build) succeeds, and `npm run lint` (oxlint) shows only pre-existing
+  warning categories already present before this phase (`set-state-in-
+  effect`/`only-export-components`, the same two categories called out
+  in Phase D's frontend verification above) — after every one of the 5
+  batches, not just at the end.
+- Migration verification (Phase G): all 8 new Phase G migrations
+  (`2026_09_15_000001/2`, `2026_09_16_000001/2/3`, `2026_09_17_000001/2/
+  3/4`) applied cleanly via `migrate:fresh --env=testing --force` after
+  every batch that added one, with the 3 Mongo-backed migrations
+  temporarily moved aside per the established environment workaround.
+- Migration verification note (fixed mid-phase, not a residual issue):
+  the first attempt at a true full-suite run in this phase left the 3
+  Mongo migration files in place while running the complete Feature
+  suite, which made `RefreshDatabase`'s one-time `artisan migrate` call
+  fail on `Class "MongoDB\Driver\Manager" not found` and cascade into
+  every Feature test failing (not just the Mongo-dependent ones) — this
+  was a test-run-ordering mistake, not a code defect, and was corrected
+  before any of the regression numbers reported above.
