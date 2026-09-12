@@ -819,7 +819,7 @@ export interface StockMovementItem {
   id: string;
   warehouse_id: string;
   product_id: string;
-  movement_type: 'OPENING' | 'RECEIPT' | 'RESERVATION' | 'RELEASE_RESERVATION' | 'ISSUE' | 'RETURN' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT_PLUS' | 'ADJUSTMENT_MINUS' | 'STOCK_OPNAME' | 'SCRAP';
+  movement_type: 'OPENING' | 'RECEIPT' | 'RESERVATION' | 'RELEASE_RESERVATION' | 'ISSUE' | 'RETURN' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT_PLUS' | 'ADJUSTMENT_MINUS' | 'STOCK_OPNAME' | 'SCRAP' | 'CONSUME';
   quantity: string;
   unit_cost: string | null;
   reference_type: string | null;

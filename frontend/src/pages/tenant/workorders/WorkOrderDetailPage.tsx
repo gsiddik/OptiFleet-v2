@@ -645,6 +645,10 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [returningPartId, setReturningPartId] = useState<string | null>(null);
+  const [returnQty, setReturnQty] = useState('');
+  const [returnCondition, setReturnCondition] = useState<'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY'>('UNUSED_NEW');
+  const [returnReason, setReturnReason] = useState('');
   const canManage = hasPermission('maintenance_job.manage');
   const canReserve = hasPermission('inventory.reserve');
   const canIssue = hasPermission('inventory.issue');
@@ -678,6 +682,19 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
     } finally {
       setBusy(false);
     }
+  }
+
+  function startReturn(partId: string) {
+    setReturningPartId(partId);
+    setReturnQty('');
+    setReturnCondition('UNUSED_NEW');
+    setReturnReason('');
+  }
+
+  async function submitReturn(partId: string) {
+    if (!returnQty) return;
+    await partAction(partId, 'return', { quantity: returnQty, condition: returnCondition, reason: returnReason || undefined });
+    setReturningPartId(null);
   }
 
   return (
@@ -715,19 +732,50 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                     Consume
                   </button>
                 )}
-                {canReturn && Number(p.issued_quantity) - Number(p.returned_quantity) > 0 && (
-                  <button
-                    className="btn-secondary"
-                    disabled={busy}
-                    onClick={() => {
-                      const qty = window.prompt('Quantity to return:');
-                      if (qty) partAction(p.id, 'return', { quantity: qty, reason: window.prompt('Reason (optional):') ?? undefined });
-                    }}
-                  >
+                {canReturn && Number(p.issued_quantity) - Number(p.returned_quantity) > 0 && returningPartId !== p.id && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => startReturn(p.id)}>
                     Return
                   </button>
                 )}
               </div>
+              {returningPartId === p.id && (
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center', background: '#f9fafb', padding: 8, borderRadius: 6 }}>
+                  <input
+                    type="number"
+                    step="0.01"
+                    placeholder="Qty"
+                    value={returnQty}
+                    onChange={(e) => setReturnQty(e.target.value)}
+                    style={{ ...inputStyle, width: 90 }}
+                  />
+                  <select
+                    value={returnCondition}
+                    onChange={(e) => setReturnCondition(e.target.value as 'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY')}
+                    style={{ ...inputStyle, width: 160 }}
+                  >
+                    <option value="UNUSED_NEW">Unused / New</option>
+                    <option value="USED_GOOD">Used — Good</option>
+                    <option value="USED_FAULTY">Used — Faulty</option>
+                  </select>
+                  <input
+                    placeholder="Reason (optional)"
+                    value={returnReason}
+                    onChange={(e) => setReturnReason(e.target.value)}
+                    style={{ ...inputStyle, width: 180 }}
+                  />
+                  <button className="btn-secondary" disabled={busy || !returnQty} onClick={() => submitReturn(p.id)}>
+                    Confirm return
+                  </button>
+                  <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
+                    Cancel
+                  </button>
+                  {returnCondition !== 'UNUSED_NEW' && (
+                    <span style={{ fontSize: 11, color: '#6b7280', width: '100%' }}>
+                      Used-condition returns go to inspection — they do not restock available inventory until processed.
+                    </span>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
