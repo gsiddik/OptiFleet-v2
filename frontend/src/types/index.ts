@@ -792,6 +792,8 @@ export interface ProductItem {
   track_batch: boolean;
   is_system: boolean;
   status: 'ACTIVE' | 'INACTIVE';
+  /** Phase F / BD-3: "KTN" source for TIRE products — required before a tire can be scored. */
+  reference_tread_depth_mm: string | null;
   category?: ProductCategoryItem;
   uom?: UomItem;
   component_groups?: ComponentGroup[];
@@ -1199,7 +1201,7 @@ export interface TireItem {
   purchase_cost: string | null;
   warranty_months: number | null;
   warranty_km: number | null;
-  current_status: 'IN_STOCK' | 'RESERVED' | 'INSTALLED' | 'IN_USE' | 'REMOVED' | 'UNDER_INSPECTION' | 'RETREAD' | 'REPAIR' | 'QUARANTINED' | 'SCRAPPED' | 'LOST';
+  current_status: 'IN_STOCK' | 'RESERVED' | 'INSTALLED' | 'IN_USE' | 'REMOVED' | 'UNDER_INSPECTION' | 'RETREAD' | 'REPAIR' | 'QUARANTINED' | 'SCRAPPED' | 'SOLD' | 'LOST';
   current_vehicle_id: string | null;
   current_position: string | null;
   current_warehouse_id: string | null;
@@ -1212,6 +1214,44 @@ export interface TireItem {
   removals?: TireRemovalItem[];
   retreads?: TireRetreadItem[];
   repairs?: TireRepairItem[];
+  scoringResults?: TireScoringResultItem[];
+  sales?: TireSaleItem[];
+}
+
+/** Phase F (G-31): one structured scoring calculation. */
+export interface TireScoringResultItem {
+  id: string;
+  tire_id: string;
+  tire_inspection_id: string;
+  tire_retread_id: string | null;
+  tire_repair_id: string | null;
+  scoring_type: 'REPAIR' | 'RETREAD';
+  configuration_version_id: string;
+  reference_tread_depth_mm: string;
+  measured_tread_depth_mm: string;
+  spa_raw_percent: string;
+  spa_normalized_score: string;
+  classification: string;
+  ka_score: string | null;
+  kf_score: string | null;
+  critical_safety_fail: boolean;
+  critical_safety_reasons: string | null;
+  eligible_for_operational_reuse: boolean;
+  computed_by: string | null;
+  computed_at: string;
+  finalized_by: string | null;
+  finalized_at: string | null;
+}
+
+/** Phase F (BD-5): a tire's terminal sell disposition. */
+export interface TireSaleItem {
+  id: string;
+  tire_id: string;
+  sell_type: 'SELL_FOR_OPERATIONAL_REUSE' | 'SELL_AS_RETREADABLE_CASING' | 'SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL';
+  tire_scoring_result_id: string | null;
+  reason: string;
+  sold_by: string | null;
+  sold_at: string;
 }
 
 export interface ComponentInstallationItem {

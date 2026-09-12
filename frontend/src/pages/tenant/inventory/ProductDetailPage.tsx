@@ -17,6 +17,7 @@ export function ProductDetailPage() {
   const [vehicleCategoryId, setVehicleCategoryId] = useState('');
   const [vehicleBrand, setVehicleBrand] = useState('');
   const [vehicleModel, setVehicleModel] = useState('');
+  const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
 
   function load() {
     apiClient
@@ -29,6 +30,22 @@ export function ProductDetailPage() {
   useEffect(() => {
     apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data)).catch(() => setCategories([]));
   }, []);
+  useEffect(() => {
+    setReferenceTreadDepthMm(product?.reference_tread_depth_mm ?? '');
+  }, [product?.reference_tread_depth_mm]);
+
+  async function saveReferenceTreadDepth() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.put(`/app/products/${id}`, { reference_tread_depth_mm: referenceTreadDepthMm || null });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function addCompatibility() {
     setBusy(true);
@@ -85,6 +102,25 @@ export function ProductDetailPage() {
           </p>
         )}
         {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>Platform system record — read-only.</p>}
+        {product.product_type === 'TIRE' && (
+          <div style={{ marginTop: 10 }}>
+            <FormField label="Reference Tread Depth (mm) — required before this Tire product's tires can be scored">
+              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+                <input
+                  type="number" step="0.01" min="0.01" value={referenceTreadDepthMm}
+                  onChange={(e) => setReferenceTreadDepthMm(e.target.value)}
+                  disabled={product.is_system || !hasPermission('product.update')}
+                  style={{ ...inputStyle, width: 140 }}
+                />
+                {!product.is_system && hasPermission('product.update') && (
+                  <button className="btn-secondary" disabled={busy} onClick={saveReferenceTreadDepth}>
+                    Save
+                  </button>
+                )}
+              </div>
+            </FormField>
+          </div>
+        )}
       </div>
 
       <div className="card">

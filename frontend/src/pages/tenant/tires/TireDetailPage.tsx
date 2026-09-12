@@ -188,6 +188,15 @@ export function TireDetailPage() {
   const [approveDisposition, setApproveDisposition] = useState('RETURN_TO_SERVICE');
   const [approveReason, setApproveReason] = useState('');
 
+  // Phase F: structured scoring and the three-way sell split.
+  const [scoringInspectionId, setScoringInspectionId] = useState('');
+  const [scoringType, setScoringType] = useState('RETREAD');
+  const [kaScore, setKaScore] = useState('');
+  const [criticalSafetyFail, setCriticalSafetyFail] = useState(false);
+  const [criticalSafetyReasons, setCriticalSafetyReasons] = useState('');
+  const [sellType, setSellType] = useState('SELL_FOR_OPERATIONAL_REUSE');
+  const [sellReason, setSellReason] = useState('');
+
   function load() {
     apiClient.get(`/app/tires/${id}`).then((res) => setTire(res.data.data)).catch((err) => setError(extractApiError(err).message));
   }
@@ -410,6 +419,55 @@ export function TireDetailPage() {
     }
   }
 
+  async function calculateScoring() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/scoring`, {
+        tire_inspection_id: scoringInspectionId, scoring_type: scoringType,
+        ka_score: kaScore || undefined, critical_safety_fail: criticalSafetyFail,
+        critical_safety_reasons: criticalSafetyReasons || undefined,
+        tire_retread_id: activeRetread?.id, tire_repair_id: activeRepair?.id,
+      });
+      setScoringInspectionId('');
+      setKaScore('');
+      setCriticalSafetyFail(false);
+      setCriticalSafetyReasons('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finalizeScoring(scoringResultId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/scoring/${scoringResultId}/finalize`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sell() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/sell`, { sell_type: sellType, reason: sellReason });
+      setSellReason('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (error && !tire) return <ErrorState message={error} />;
   if (!tire) return <LoadingState />;
 
@@ -426,6 +484,9 @@ export function TireDetailPage() {
   const canRepairReceive = hasPermission('tire_repair.receive');
   const canRepairInspect = hasPermission('tire_repair.inspect');
   const canRepairApprove = hasPermission('tire_repair.approve');
+  const canScoringCalculate = hasPermission('tire_scoring.calculate');
+  const canScoringFinalize = hasPermission('tire_scoring.finalize');
+  const canSell = hasPermission('tire.sell');
 
   return (
     <div>
@@ -658,6 +719,98 @@ export function TireDetailPage() {
               Scrap Tire
             </button>
           </div>
+        </div>
+      )}
+
+      {canScoringCalculate && !['INSTALLED', 'IN_USE', 'SOLD'].includes(tire.current_status) && (tire.inspections ?? []).length > 0 && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Structured Scoring</h3>
+          <p style={{ fontSize: 12, color: '#6b7280' }}>
+            Calculates SPA/KA/KF from a published REPAIR or RETREAD scoring configuration. If none is published for this tenant, this will fail —
+            no scoring is invented without an approved configuration.
+          </p>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+            <FormField label="Source Inspection">
+              <select value={scoringInspectionId} onChange={(e) => setScoringInspectionId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+                <option value="">Select…</option>
+                {(tire.inspections ?? []).map((i) => (
+                  <option key={i.id} value={i.id}>
+                    {new Date(i.inspected_at).toLocaleDateString()} — tread {i.tread_depth_mm ?? '—'}mm
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Scoring Type">
+              <select value={scoringType} onChange={(e) => setScoringType(e.target.value)} style={{ ...inputStyle, width: 130 }}>
+                <option value="RETREAD">RETREAD</option>
+                <option value="REPAIR">REPAIR</option>
+              </select>
+            </FormField>
+            <FormField label="KA Score">
+              <input type="number" step="0.01" value={kaScore} onChange={(e) => setKaScore(e.target.value)} style={{ ...inputStyle, width: 110 }} />
+            </FormField>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 10 }}>
+            <input type="checkbox" checked={criticalSafetyFail} onChange={(e) => setCriticalSafetyFail(e.target.checked)} />
+            Critical safety failure observed (overrides every score — tire can never be eligible for operational reuse)
+          </label>
+          {criticalSafetyFail && (
+            <FormField label="Critical Safety Reason (required)">
+              <input value={criticalSafetyReasons} onChange={(e) => setCriticalSafetyReasons(e.target.value)} style={{ ...inputStyle, width: 320, marginBottom: 10 }} />
+            </FormField>
+          )}
+          <button className="btn-primary" disabled={busy || !scoringInspectionId} onClick={calculateScoring}>
+            Calculate Score
+          </button>
+
+          <h4 style={{ fontSize: 13, marginTop: 16, marginBottom: 6 }}>Scoring History</h4>
+          {(tire.scoringResults ?? []).length === 0 && <EmptyState label="No scoring results yet." />}
+          {(tire.scoringResults ?? []).map((s) => (
+            <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+              <span>
+                {s.scoring_type} — SPA {s.spa_raw_percent}% ({s.spa_normalized_score}) — {s.classification}
+                {s.critical_safety_fail && ' — CRITICAL SAFETY FAIL'}
+                {s.kf_score !== null && ` — KF ${s.kf_score}`}
+                {s.finalized_at ? ` — finalized ${new Date(s.finalized_at).toLocaleDateString()}` : ' — draft'}
+              </span>
+              {!s.finalized_at && canScoringFinalize && (
+                <button className="btn-link" disabled={busy} onClick={() => finalizeScoring(s.id)}>
+                  Finalize
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {canSell && !['INSTALLED', 'IN_USE', 'SOLD'].includes(tire.current_status) && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Sell</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <FormField label="Sell Type">
+              <select value={sellType} onChange={(e) => setSellType(e.target.value)} style={{ ...inputStyle, width: 260 }}>
+                <option value="SELL_FOR_OPERATIONAL_REUSE">SELL_FOR_OPERATIONAL_REUSE (requires an eligible score)</option>
+                <option value="SELL_AS_RETREADABLE_CASING">SELL_AS_RETREADABLE_CASING</option>
+                <option value="SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL">SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL</option>
+              </select>
+            </FormField>
+            <FormField label="Reason">
+              <input value={sellReason} onChange={(e) => setSellReason(e.target.value)} style={{ ...inputStyle, width: 260 }} />
+            </FormField>
+            <button className="btn-secondary" disabled={busy || !sellReason} onClick={sell} style={{ marginBottom: 14 }}>
+              Sell Tire
+            </button>
+          </div>
+          {(tire.sales ?? []).length > 0 && (
+            <>
+              <h4 style={{ fontSize: 13, marginBottom: 6 }}>Sale History</h4>
+              {(tire.sales ?? []).map((s) => (
+                <div key={s.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+                  {s.sell_type} — {new Date(s.sold_at).toLocaleDateString()} — {s.reason}
+                </div>
+              ))}
+            </>
+          )}
         </div>
       )}
 

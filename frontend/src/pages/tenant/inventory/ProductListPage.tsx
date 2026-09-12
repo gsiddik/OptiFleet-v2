@@ -70,6 +70,7 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [categoryId, setCategoryId] = useState('');
   const [uomId, setUomId] = useState('');
   const [productType, setProductType] = useState('SPARE_PART');
+  const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -85,10 +86,12 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
     try {
       await apiClient.post('/app/products', {
         code, sku, name, product_category_id: categoryId, uom_id: uomId, product_type: productType,
+        reference_tread_depth_mm: productType === 'TIRE' && referenceTreadDepthMm ? referenceTreadDepthMm : undefined,
       });
       setCode('');
       setSku('');
       setName('');
+      setReferenceTreadDepthMm('');
       onCreated();
       onClose();
     } catch (err) {
@@ -139,6 +142,11 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
+      {productType === 'TIRE' && (
+        <FormField label="Reference Tread Depth (mm)" errors={errors.reference_tread_depth_mm}>
+          <input type="number" step="0.01" min="0.01" value={referenceTreadDepthMm} onChange={(e) => setReferenceTreadDepthMm(e.target.value)} placeholder="e.g. 8.00 — required before this Tire product can be scored" style={inputStyle} />
+        </FormField>
+      )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel

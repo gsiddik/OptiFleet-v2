@@ -10,6 +10,7 @@ const COLORS: Record<string, string> = {
   ARCHIVED: '#6b7280',
   QUARANTINED: '#b91c1c',
   REPAIR: '#a16207',
+  SOLD: '#6b7280',
 };
 
 export function StatusBadge({ status }: { status: string }) {
