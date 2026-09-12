@@ -22,7 +22,13 @@ class WorkOrderTransitionService
 {
     private const RESOURCE_TYPE = 'work_order';
 
-    public function __construct(private readonly WorkflowEngine $workflow) {}
+    /** G-17/G-35: these targets are guarded against dangling parts/tire activity, never earlier transitions. */
+    private const GUARDED_TARGETS = ['COMPLETED', 'CLOSED'];
+
+    public function __construct(
+        private readonly WorkflowEngine $workflow,
+        private readonly WorkOrderClosureGuardService $closureGuard,
+    ) {}
 
     public function canTransition(WorkOrder $workOrder, string $to): bool
     {
@@ -38,6 +44,10 @@ class WorkOrderTransitionService
 
             if (! $this->canTransition($locked, $to)) {
                 throw new WorkOrderException("Cannot transition Work Order from {$locked->status} to {$to}.");
+            }
+
+            if (in_array($to, self::GUARDED_TARGETS, true)) {
+                $this->closureGuard->assertClosable($locked);
             }
 
             $timestamps = match ($to) {
