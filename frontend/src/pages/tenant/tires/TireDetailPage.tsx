@@ -26,6 +26,23 @@ export function TireDetailPage() {
   const [disposition, setDisposition] = useState('REUSE');
   const [scrapReason, setScrapReason] = useState('');
 
+  // G-23: legacy onboarding — a normal live install leaves these untouched (undefined = "install now, known").
+  const [showLegacyFields, setShowLegacyFields] = useState(false);
+  const [installedAt, setInstalledAt] = useState('');
+  const [installedAtSource, setInstalledAtSource] = useState('KNOWN');
+  const [baselineTreadDepth, setBaselineTreadDepth] = useState('');
+  const [baselineCondition, setBaselineCondition] = useState('');
+
+  // G-24: swap positions with another currently-installed tire on the same vehicle.
+  const [otherTires, setOtherTires] = useState<TireItem[]>([]);
+  const [swapTireId, setSwapTireId] = useState('');
+
+  // G-28: replace with a caller-chosen disposition for the outgoing tire.
+  const [availableTires, setAvailableTires] = useState<TireItem[]>([]);
+  const [replaceTireId, setReplaceTireId] = useState('');
+  const [replaceReason, setReplaceReason] = useState('');
+  const [replaceDisposition, setReplaceDisposition] = useState('REUSE');
+
   function load() {
     apiClient.get(`/app/tires/${id}`).then((res) => setTire(res.data.data)).catch((err) => setError(extractApiError(err).message));
   }
@@ -34,12 +51,37 @@ export function TireDetailPage() {
   useEffect(() => {
     apiClient.get('/app/vehicles', { params: { per_page: 100 } }).then((res) => setVehicles(res.data.data)).catch(() => setVehicles([]));
   }, []);
+  useEffect(() => {
+    if (!tire?.current_vehicle_id || !['INSTALLED', 'IN_USE'].includes(tire.current_status)) return;
+    apiClient
+      .get('/app/tires', { params: { current_vehicle_id: tire.current_vehicle_id, per_page: 100 } })
+      .then((res) => setOtherTires((res.data.data as TireItem[]).filter((t) => t.id !== tire.id)))
+      .catch(() => setOtherTires([]));
+  }, [tire?.current_vehicle_id, tire?.current_status, tire?.id]);
+  useEffect(() => {
+    if (!['INSTALLED', 'IN_USE', 'UNDER_INSPECTION'].includes(tire?.current_status ?? '')) return;
+    apiClient
+      .get('/app/tires', { params: { current_status: 'IN_STOCK', per_page: 100 } })
+      .then((res) => setAvailableTires(res.data.data))
+      .catch(() => setAvailableTires([]));
+  }, [tire?.current_status]);
 
   async function install() {
     setBusy(true);
     setError(null);
     try {
-      await apiClient.post(`/app/tires/${id}/install`, { vehicle_id: vehicleId, wheel_position: wheelPosition, odometer: odometer || undefined });
+      await apiClient.post(`/app/tires/${id}/install`, {
+        vehicle_id: vehicleId, wheel_position: wheelPosition, odometer: odometer || undefined,
+        installed_at: showLegacyFields && installedAt ? installedAt : undefined,
+        installed_at_source: showLegacyFields && installedAt ? installedAtSource : undefined,
+        baseline_tread_depth_mm: showLegacyFields && baselineTreadDepth ? baselineTreadDepth : undefined,
+        baseline_condition: showLegacyFields && baselineCondition ? baselineCondition : undefined,
+      });
+      setInstalledAt('');
+      setInstalledAtSource('KNOWN');
+      setBaselineTreadDepth('');
+      setBaselineCondition('');
+      setShowLegacyFields(false);
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -54,6 +96,38 @@ export function TireDetailPage() {
     try {
       await apiClient.post(`/app/tires/${id}/rotate`, { to_position: toPosition, odometer: odometer || undefined });
       setToPosition('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function swapPositions() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/swap-positions`, { other_tire_id: swapTireId, odometer: odometer || undefined });
+      setSwapTireId('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function replace() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/replace`, {
+        new_tire_id: replaceTireId, reason: replaceReason, disposition: replaceDisposition, odometer: odometer || undefined,
+      });
+      setReplaceTireId('');
+      setReplaceReason('');
+      setReplaceDisposition('REUSE');
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -155,7 +229,8 @@ export function TireDetailPage() {
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13 }}>
           <strong>Product:</strong> {tire.product?.name ?? tire.product_id} &nbsp; <strong>Size:</strong> {tire.tire_size ?? '—'} &nbsp;
-          <strong>Manufacturer:</strong> {tire.manufacturer ?? '—'}
+          <strong>Manufacturer:</strong> {tire.manufacturer ?? '—'} &nbsp;
+          <strong>Date Code:</strong> {tire.manufacture_date_code ?? '—'}
         </p>
         <p style={{ fontSize: 13 }}>
           <strong>Vehicle:</strong> {tire.current_vehicle?.registration_number ?? '—'} &nbsp; <strong>Position:</strong> {tire.current_position ?? '—'} &nbsp;
@@ -187,6 +262,32 @@ export function TireDetailPage() {
               Install
             </button>
           </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginTop: 10 }}>
+            <input type="checkbox" checked={showLegacyFields} onChange={(e) => setShowLegacyFields(e.target.checked)} />
+            This tire was already mounted before today (legacy onboarding)
+          </label>
+          {showLegacyFields && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
+              <FormField label="Actual/Estimated Install Date">
+                <input type="date" value={installedAt} onChange={(e) => setInstalledAt(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+              </FormField>
+              <FormField label="Date Confidence">
+                <select value={installedAtSource} onChange={(e) => setInstalledAtSource(e.target.value)} style={{ ...inputStyle, width: 130 }}>
+                  {['KNOWN', 'ESTIMATED', 'UNKNOWN'].map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <FormField label="Baseline Tread Depth (mm)">
+                <input type="number" step="0.1" value={baselineTreadDepth} onChange={(e) => setBaselineTreadDepth(e.target.value)} style={{ ...inputStyle, width: 150 }} />
+              </FormField>
+              <FormField label="Baseline Condition">
+                <input value={baselineCondition} onChange={(e) => setBaselineCondition(e.target.value)} style={{ ...inputStyle, width: 150 }} />
+              </FormField>
+            </div>
+          )}
         </div>
       )}
 
@@ -203,6 +304,23 @@ export function TireDetailPage() {
               </FormField>
               <button className="btn-secondary" disabled={busy || !toPosition} onClick={rotate} style={{ marginBottom: 14 }}>
                 Rotate
+              </button>
+            </div>
+          )}
+          {canRotate && otherTires.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+              <FormField label="Swap Position With">
+                <select value={swapTireId} onChange={(e) => setSwapTireId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+                  <option value="">Select another installed tire…</option>
+                  {otherTires.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.serial_number} ({t.current_position})
+                    </option>
+                  ))}
+                </select>
+              </FormField>
+              <button className="btn-secondary" disabled={busy || !swapTireId} onClick={swapPositions} style={{ marginBottom: 14 }}>
+                Swap Positions
               </button>
             </div>
           )}
@@ -241,6 +359,42 @@ export function TireDetailPage() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {['INSTALLED', 'IN_USE', 'UNDER_INSPECTION'].includes(tire.current_status) && canRemove && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Replace Tire</h3>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <FormField label="Replacement Tire (from stock)">
+              <select value={replaceTireId} onChange={(e) => setReplaceTireId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+                <option value="">Select…</option>
+                {availableTires.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.serial_number}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Reason">
+              <input value={replaceReason} onChange={(e) => setReplaceReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+            </FormField>
+            <FormField label="Outgoing Tire Disposition">
+              <select value={replaceDisposition} onChange={(e) => setReplaceDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
+                {['REUSE', 'RETREAD', 'SCRAP'].map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </FormField>
+            <FormField label="Odometer">
+              <input type="number" value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+            </FormField>
+            <button className="btn-secondary" disabled={busy || !replaceTireId || !replaceReason} onClick={replace} style={{ marginBottom: 14 }}>
+              Replace
+            </button>
+          </div>
         </div>
       )}
 
@@ -289,6 +443,7 @@ export function TireDetailPage() {
         {(tire.installations ?? []).map((i) => (
           <div key={i.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             {i.vehicle?.registration_number ?? i.vehicle_id} — {i.wheel_position} — installed {new Date(i.installed_at).toLocaleDateString()}
+            {i.installation_date_source !== 'KNOWN' && ` (${i.installation_date_source})`}
             {i.removed_at && ` — removed ${new Date(i.removed_at).toLocaleDateString()}`}
           </div>
         ))}

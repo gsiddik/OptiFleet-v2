@@ -66,6 +66,7 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
   const [productId, setProductId] = useState('');
   const [serialNumber, setSerialNumber] = useState('');
   const [manufacturer, setManufacturer] = useState('');
+  const [manufactureDateCode, setManufactureDateCode] = useState('');
   const [tireSize, setTireSize] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -79,9 +80,13 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
     setSubmitting(true);
     setErrors({});
     try {
-      await apiClient.post('/app/tires', { product_id: productId, serial_number: serialNumber, manufacturer: manufacturer || undefined, tire_size: tireSize || undefined });
+      await apiClient.post('/app/tires', {
+        product_id: productId, serial_number: serialNumber, manufacturer: manufacturer || undefined,
+        manufacture_date_code: manufactureDateCode || undefined, tire_size: tireSize || undefined,
+      });
       setSerialNumber('');
       setManufacturer('');
+      setManufactureDateCode('');
       setTireSize('');
       onCreated();
       onClose();
@@ -110,6 +115,9 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
       </FormField>
       <FormField label="Manufacturer" errors={errors.manufacturer}>
         <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Manufacture Date Code" errors={errors.manufacture_date_code}>
+        <input value={manufactureDateCode} onChange={(e) => setManufactureDateCode(e.target.value)} placeholder="e.g. DOT week/year code" style={inputStyle} />
       </FormField>
       <FormField label="Tire Size" errors={errors.tire_size}>
         <input value={tireSize} onChange={(e) => setTireSize(e.target.value)} style={inputStyle} />

@@ -1122,6 +1122,7 @@ export interface TireInstallationItem {
   vehicle_id: string;
   wheel_position: string;
   installed_at: string;
+  installation_date_source: 'KNOWN' | 'ESTIMATED' | 'UNKNOWN';
   installation_odometer: string | null;
   removed_at: string | null;
   vehicle?: VehicleItem;
@@ -1172,6 +1173,7 @@ export interface TireItem {
   product_id: string;
   serial_number: string;
   manufacturer: string | null;
+  manufacture_date_code: string | null;
   tire_size: string | null;
   pattern: string | null;
   purchase_date: string | null;
