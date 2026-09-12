@@ -6,13 +6,15 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use App\Domain\WorkOrder\Services\WorkOrderService;
+use App\Support\TenantContext;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class WorkOrderStockIntegrationTest extends TestCase
 {
     private function setUpWorkOrder(): array
     {
-        $tenant = $this->makeTenant(['code' => 'WOS-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'WOS-'.Str::random(4)]);
         $this->grantModule($tenant, 'VEHICLE');
         $this->grantModule($tenant, 'MAINTENANCE');
         $this->grantModule($tenant, 'WORKSHOP');
@@ -84,11 +86,11 @@ class WorkOrderStockIntegrationTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", [], $headers)->assertOk();
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
-            'quantity' => 5, 'reason' => 'Too many',
+            'quantity' => 5, 'condition' => 'UNUSED_NEW', 'reason' => 'Too many',
         ], $headers)->assertStatus(422);
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
-            'quantity' => 1, 'reason' => 'Wrong part ordered',
+            'quantity' => 1, 'condition' => 'UNUSED_NEW', 'reason' => 'Wrong part ordered',
         ], $headers)->assertOk()->assertJsonPath('data.returned_quantity', '1.0000');
 
         $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
@@ -129,5 +131,36 @@ class WorkOrderStockIntegrationTest extends TestCase
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $this->authHeaders($unprivilegedToken))
             ->assertStatus(403);
+    }
+
+    /**
+     * G-19: work_order_planned_parts previously had no tenant_id column at all —
+     * isolation was indirect (controller-enforced via the parent work_order only).
+     * This proves the column is populated and the model's own global tenant
+     * scope now rejects a cross-tenant lookup structurally, not just at the
+     * controller layer.
+     */
+    public function test_planned_part_is_tenant_scoped_and_rejects_cross_tenant_access(): void
+    {
+        [$tenant, , $product, $wo] = $this->setUpWorkOrder();
+        [, $token] = $this->makeTenantUser($tenant, ['maintenance_job.manage']);
+
+        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
+            'product_id' => $product->id, 'description' => 'Fuel filter', 'quantity' => 1,
+        ], $this->authHeaders($token))->assertStatus(201);
+        $partId = $addResponse->json('data.id');
+
+        $part = WorkOrderPlannedPart::query()->findOrFail($partId);
+        $this->assertSame($tenant->id, $part->tenant_id);
+        $this->assertNotNull($part->tenant_id);
+
+        $otherTenant = $this->makeTenant(['code' => 'WOSB-'.Str::random(4)]);
+        $context = app(TenantContext::class);
+        $context->setTenantId($otherTenant->id);
+        try {
+            $this->assertNull(WorkOrderPlannedPart::query()->find($partId));
+        } finally {
+            $context->setTenantId($tenant->id);
+        }
     }
 }

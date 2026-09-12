@@ -2,11 +2,13 @@
 
 namespace App\Domain\WorkOrder\Services;
 
+use App\Domain\Inventory\Models\StockMovement;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Inventory\Services\StockReservationService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use Illuminate\Support\Facades\DB;
 
@@ -19,6 +21,9 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkOrderPartService
 {
+    /** G-14: every return must declare a condition; only UNUSED_NEW ever reaches available stock. */
+    public const CONDITIONS = ['UNUSED_NEW', 'USED_GOOD', 'USED_FAULTY'];
+
     public function __construct(
         private readonly StockReservationService $reservations,
         private readonly InventoryService $inventory,
@@ -96,44 +101,103 @@ class WorkOrderPartService
         });
     }
 
-    public function returnPart(WorkOrderPlannedPart $part, float $quantity, ?string $userId, ?string $reason = null): WorkOrderPlannedPart
+    /**
+     * G-14/G-18: condition is mandatory — a return with no condition
+     * decision can never reach this method's UNUSED_NEW branch, and
+     * therefore can never reach available stock. The planned-part row is
+     * locked for update *inside* the same transaction that checks
+     * outstandingIssued() and writes the increment, so two concurrent
+     * returns for the same part serialize on that lock instead of both
+     * reading a stale outstanding-issued snapshot and double-crediting
+     * stock (the TOCTOU race this closes).
+     */
+    public function returnPart(WorkOrderPlannedPart $part, float $quantity, string $condition, ?string $userId, ?string $reason = null): WorkOrderPlannedPart
     {
         if ($quantity <= 0) {
             throw new WorkOrderException('Return quantity must be positive.');
         }
-        if ($quantity > $part->outstandingIssued()) {
-            throw new WorkOrderException('Cannot return more than the outstanding issued quantity.');
+        if (! in_array($condition, self::CONDITIONS, true)) {
+            throw new WorkOrderException('Return condition must be one of: '.implode(', ', self::CONDITIONS).'.');
         }
 
-        return DB::transaction(function () use ($part, $quantity, $userId, $reason) {
-            $workOrder = WorkOrder::query()->findOrFail($part->work_order_id);
+        return DB::transaction(function () use ($part, $quantity, $condition, $userId, $reason) {
+            $locked = WorkOrderPlannedPart::query()->lockForUpdate()->findOrFail($part->id);
+
+            if ($quantity > $locked->outstandingIssued()) {
+                throw new WorkOrderException('Cannot return more than the outstanding issued quantity.');
+            }
+
+            $workOrder = WorkOrder::query()->findOrFail($locked->work_order_id);
             $this->execution->assertExecutable($workOrder);
-            $warehouse = Warehouse::query()->findOrFail($part->warehouse_id);
-            $product = Product::query()->findOrFail($part->product_id);
+            $warehouse = Warehouse::query()->findOrFail($locked->warehouse_id);
+            $product = Product::query()->findOrFail($locked->product_id);
 
-            $this->inventory->returnStock($warehouse, $product, $quantity, WorkOrderPlannedPart::class, $part->id, $userId, $reason);
+            $stockMovementId = null;
+            $dispositionStatus = 'PENDING_INSPECTION';
 
-            $part->increment('returned_quantity', $quantity);
-            $this->recomputeStatus($part->fresh());
+            if ($condition === 'UNUSED_NEW') {
+                // Only a UNUSED_NEW return ever restores available stock.
+                $this->inventory->returnStock($warehouse, $product, $quantity, WorkOrderPlannedPart::class, $locked->id, $userId, $reason);
+                $stockMovementId = StockMovement::query()
+                    ->where('reference_type', WorkOrderPlannedPart::class)
+                    ->where('reference_id', $locked->id)
+                    ->where('movement_type', 'RETURN')
+                    ->latest('occurred_at')
+                    ->value('id');
+                $dispositionStatus = 'RESTOCKED';
+            }
+            // USED_GOOD / USED_FAULTY: deliberately never call inventory->returnStock() here —
+            // the part leaves the Work Order, but the physical stock stays out of quantity_on_hand
+            // until the (separate, not-yet-built) Used Sparepart Processing workflow inspects it.
 
-            return $part->fresh();
+            WorkOrderPartReturn::query()->create([
+                'tenant_id' => $locked->tenant_id,
+                'work_order_planned_part_id' => $locked->id,
+                'warehouse_id' => $warehouse->id,
+                'product_id' => $product->id,
+                'quantity' => $quantity,
+                'condition' => $condition,
+                'disposition_status' => $dispositionStatus,
+                'stock_movement_id' => $stockMovementId,
+                'returned_by' => $userId,
+                'reason' => $reason,
+            ]);
+
+            $locked->increment('returned_quantity', $quantity);
+            $this->recomputeStatus($locked->fresh());
+
+            return $locked->fresh();
         });
     }
 
-    public function consume(WorkOrderPlannedPart $part, ?float $quantity): WorkOrderPlannedPart
+    /**
+     * G-22: locks the planned-part row so a concurrent return/consume pair
+     * can't both pass their outstandingIssued() check against stale data,
+     * then writes an immutable CONSUME ledger entry alongside the counter
+     * update (previously the counter was the only record of consumption).
+     */
+    public function consume(WorkOrderPlannedPart $part, ?float $quantity, ?string $userId = null): WorkOrderPlannedPart
     {
-        $toConsume = $quantity ?? $part->outstandingIssued();
-        if ($toConsume <= 0) {
-            throw new WorkOrderException('Nothing left to consume for this planned part.');
-        }
-        if ($toConsume > $part->outstandingIssued()) {
-            throw new WorkOrderException('Cannot consume more than the outstanding issued quantity.');
-        }
+        return DB::transaction(function () use ($part, $quantity, $userId) {
+            $locked = WorkOrderPlannedPart::query()->lockForUpdate()->findOrFail($part->id);
 
-        $part->increment('consumed_quantity', $toConsume);
-        $this->recomputeStatus($part->fresh());
+            $toConsume = $quantity ?? $locked->outstandingIssued();
+            if ($toConsume <= 0) {
+                throw new WorkOrderException('Nothing left to consume for this planned part.');
+            }
+            if ($toConsume > $locked->outstandingIssued()) {
+                throw new WorkOrderException('Cannot consume more than the outstanding issued quantity.');
+            }
 
-        return $part->fresh();
+            $warehouse = Warehouse::query()->findOrFail($locked->warehouse_id);
+            $product = Product::query()->findOrFail($locked->product_id);
+            $this->inventory->recordConsumption($warehouse, $product, $toConsume, WorkOrderPlannedPart::class, $locked->id, $userId);
+
+            $locked->increment('consumed_quantity', $toConsume);
+            $this->recomputeStatus($locked->fresh());
+
+            return $locked->fresh();
+        });
     }
 
     private function recomputeStatus(WorkOrderPlannedPart $part): void

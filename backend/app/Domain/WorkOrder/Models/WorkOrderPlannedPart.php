@@ -4,16 +4,18 @@ namespace App\Domain\WorkOrder\Models;
 
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Shared\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkOrderPlannedPart extends Model
 {
-    use HasUuids;
+    use BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'work_order_id', 'maintenance_job_id', 'product_id', 'warehouse_id', 'product_reference', 'description',
+        'tenant_id', 'work_order_id', 'maintenance_job_id', 'product_id', 'warehouse_id', 'product_reference', 'description',
         'quantity', 'status', 'planned_quantity', 'reserved_quantity', 'issued_quantity', 'consumed_quantity',
         'returned_quantity', 'unit_cost_at_issue', 'total_cost', 'notes',
     ];
@@ -45,6 +47,11 @@ class WorkOrderPlannedPart extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
+    }
+
+    public function returns(): HasMany
+    {
+        return $this->hasMany(WorkOrderPartReturn::class, 'work_order_planned_part_id');
     }
 
     /** Quantity still issued-but-not-consumed-or-returned — the ceiling for a return. */

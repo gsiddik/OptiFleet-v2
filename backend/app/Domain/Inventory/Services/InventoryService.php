@@ -117,6 +117,26 @@ class InventoryService
         });
     }
 
+    /**
+     * G-22: writes an immutable CONSUME ledger entry for stock already
+     * decremented at ISSUE time. Carries zero on-hand/reserved balance
+     * effect by design — this is a traceability marker distinguishing
+     * "issued but idle" from "issued and actually used," never a second
+     * deduction (that would double-deduct stock already removed at issue).
+     */
+    public function recordConsumption(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): StockMovement
+    {
+        if ($quantity <= 0) {
+            throw new InventoryException('Consumption quantity must be positive.');
+        }
+
+        return DB::transaction(function () use ($warehouse, $product, $quantity, $referenceType, $referenceId, $userId, $reason) {
+            $stock = $this->lockOrCreateStock($warehouse, $product);
+
+            return $this->writeMovement($stock, 'CONSUME', $quantity, (float) $stock->average_unit_cost, $referenceType, $referenceId, $userId, $reason);
+        });
+    }
+
     public function adjust(Warehouse $warehouse, Product $product, float $quantity, string $direction, ?string $userId, string $reason, ?string $referenceType = null, ?string $referenceId = null): WarehouseStock
     {
         if ($quantity <= 0) {

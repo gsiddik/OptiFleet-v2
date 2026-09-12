@@ -93,6 +93,7 @@ class WorkOrderExecutionService
         $quantity = (float) ($attributes['quantity'] ?? 1);
 
         return WorkOrderPlannedPart::query()->create(array_merge($attributes, [
+            'tenant_id' => $workOrder->tenant_id,
             'work_order_id' => $workOrder->id,
             'quantity' => $quantity,
             'planned_quantity' => $quantity,

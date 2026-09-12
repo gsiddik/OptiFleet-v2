@@ -127,9 +127,13 @@ class WorkOrderExecutionController extends Controller
     {
         $this->authorizeScope($workOrder);
         abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
-        $validated = $request->validate(['quantity' => ['required', 'numeric', 'gt:0'], 'reason' => ['nullable', 'string']]);
+        $validated = $request->validate([
+            'quantity' => ['required', 'numeric', 'gt:0'],
+            'condition' => ['required', 'string', 'in:'.implode(',', WorkOrderPartService::CONDITIONS)],
+            'reason' => ['nullable', 'string'],
+        ]);
 
-        return $this->ok($this->parts->returnPart($plannedPart, (float) $validated['quantity'], $this->context->user()->id, $validated['reason'] ?? null));
+        return $this->ok($this->parts->returnPart($plannedPart, (float) $validated['quantity'], $validated['condition'], $this->context->user()->id, $validated['reason'] ?? null));
     }
 
     public function consumePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
@@ -138,7 +142,7 @@ class WorkOrderExecutionController extends Controller
         abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
         $validated = $request->validate(['quantity' => ['nullable', 'numeric', 'gt:0']]);
 
-        return $this->ok($this->parts->consume($plannedPart, isset($validated['quantity']) ? (float) $validated['quantity'] : null));
+        return $this->ok($this->parts->consume($plannedPart, isset($validated['quantity']) ? (float) $validated['quantity'] : null, $this->context->user()->id));
     }
 
     public function requestAdditionalWork(Request $request, WorkOrder $workOrder)
