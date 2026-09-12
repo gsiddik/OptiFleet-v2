@@ -78,4 +78,14 @@ class Tire extends Model
     {
         return $this->hasMany(TireRepair::class);
     }
+
+    public function scoringResults(): HasMany
+    {
+        return $this->hasMany(TireScoringResult::class);
+    }
+
+    public function sales(): HasMany
+    {
+        return $this->hasMany(TireSale::class);
+    }
 }

@@ -18,13 +18,16 @@ class Product extends Model
 
     protected $fillable = [
         'tenant_id', 'code', 'sku', 'name', 'product_category_id', 'product_type', 'uom_id',
-        'brand', 'manufacturer_part_number', 'description',
+        'brand', 'manufacturer_part_number', 'description', 'reference_tread_depth_mm',
         'track_serial_number', 'track_batch', 'is_system', 'status',
     ];
 
     protected function casts(): array
     {
-        return ['track_serial_number' => 'boolean', 'track_batch' => 'boolean', 'is_system' => 'boolean'];
+        return [
+            'track_serial_number' => 'boolean', 'track_batch' => 'boolean', 'is_system' => 'boolean',
+            'reference_tread_depth_mm' => 'decimal:2',
+        ];
     }
 
     public function category(): BelongsTo

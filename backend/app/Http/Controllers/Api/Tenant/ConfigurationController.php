@@ -12,6 +12,7 @@ use App\Domain\Configuration\Services\NumberingFormatValidator;
 use App\Domain\Configuration\Services\TemplateValidator;
 use App\Domain\Configuration\Services\TemplateVariableRegistry;
 use App\Domain\Notification\Services\NotificationTemplateValidator;
+use App\Domain\Tire\Services\TireScoringConfigurationValidator;
 use App\Domain\Workflow\Services\ConditionEvaluator;
 use App\Domain\Workflow\Services\WorkflowActionCatalog;
 use App\Domain\Workflow\Services\WorkflowDefinitionValidator;
@@ -33,7 +34,7 @@ use Illuminate\Http\Request;
  */
 class ConfigurationController extends Controller
 {
-    private const TYPES = ['NUMBERING', 'TEMPLATE', 'WORKFLOW', 'NOTIFICATION'];
+    private const TYPES = ['NUMBERING', 'TEMPLATE', 'WORKFLOW', 'NOTIFICATION', 'TIRE_SCORING'];
 
     public function __construct(
         private readonly ConfigurationService $configuration,
@@ -41,6 +42,7 @@ class ConfigurationController extends Controller
         private readonly TemplateValidator $templateValidator,
         private readonly WorkflowDefinitionValidator $workflowValidator,
         private readonly NotificationTemplateValidator $notificationValidator,
+        private readonly TireScoringConfigurationValidator $tireScoringValidator,
         private readonly DocumentNumberingService $numbering,
         private readonly DocumentTemplateRenderService $templates,
         private readonly WorkflowEngine $workflow,
@@ -49,9 +51,9 @@ class ConfigurationController extends Controller
         private readonly PermissionService $permissionService,
     ) {}
 
-    private const MANAGE_PERMISSIONS = ['NUMBERING' => 'numbering.manage', 'TEMPLATE' => 'document_template.manage', 'WORKFLOW' => 'workflow.manage', 'NOTIFICATION' => 'document_template.manage'];
+    private const MANAGE_PERMISSIONS = ['NUMBERING' => 'numbering.manage', 'TEMPLATE' => 'document_template.manage', 'WORKFLOW' => 'workflow.manage', 'NOTIFICATION' => 'document_template.manage', 'TIRE_SCORING' => 'tire_scoring_configuration.manage'];
 
-    private const PUBLISH_PERMISSIONS = ['NUMBERING' => 'numbering.publish', 'TEMPLATE' => 'document_template.publish', 'WORKFLOW' => 'workflow.publish', 'NOTIFICATION' => 'document_template.publish'];
+    private const PUBLISH_PERMISSIONS = ['NUMBERING' => 'numbering.publish', 'TEMPLATE' => 'document_template.publish', 'WORKFLOW' => 'workflow.publish', 'NOTIFICATION' => 'document_template.publish', 'TIRE_SCORING' => 'tire_scoring_configuration.publish'];
 
     private function requirePermission(string $permission): void
     {
@@ -137,6 +139,7 @@ class ConfigurationController extends Controller
             'TEMPLATE' => fn (array $p) => $this->templateValidator->validate($set->code, $p['html'] ?? ''),
             'WORKFLOW' => fn (array $p) => $this->workflowValidator->validate($p),
             'NOTIFICATION' => fn (array $p) => $this->notificationValidator->validate($set->code, $p),
+            'TIRE_SCORING' => fn (array $p) => $this->tireScoringValidator->validate($set, $p),
         };
 
         return $this->ok($this->configuration->publish($version, $this->context->user()->id, $validator));

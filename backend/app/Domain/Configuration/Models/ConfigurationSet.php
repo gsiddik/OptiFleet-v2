@@ -14,13 +14,21 @@ class ConfigurationSet extends Model
     use Auditable, BelongsToTenantOrPlatform, HasUuids, SoftDeletes;
 
     public const TYPE_NUMBERING = 'NUMBERING';
+
     public const TYPE_TEMPLATE = 'TEMPLATE';
+
     public const TYPE_WORKFLOW = 'WORKFLOW';
+
     public const TYPE_NOTIFICATION = 'NOTIFICATION';
 
+    public const TYPE_TIRE_SCORING = 'TIRE_SCORING';
+
     public const SCOPE_TENANT = 'TENANT';
+
     public const SCOPE_BRANCH = 'BRANCH';
+
     public const SCOPE_WORKSHOP = 'WORKSHOP';
+
     public const SCOPE_WAREHOUSE = 'WAREHOUSE';
 
     protected $fillable = [

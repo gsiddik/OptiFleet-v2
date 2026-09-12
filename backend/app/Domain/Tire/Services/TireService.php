@@ -10,6 +10,8 @@ use App\Domain\Tire\Models\TireRemoval;
 use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireRotation;
+use App\Domain\Tire\Models\TireSale;
+use App\Domain\Tire\Models\TireScoringResult;
 use App\Domain\Tire\Models\WheelConfiguration;
 use App\Domain\Vehicle\Models\Vehicle;
 use Illuminate\Database\QueryException;
@@ -554,6 +556,14 @@ class TireService
             if ($locked->final_inspection_result === 'UNSAFE' && $disposition === 'RETURN_TO_SERVICE') {
                 throw new TireException('A tire with an UNSAFE final inspection result cannot be approved for RETURN_TO_SERVICE — choose SCRAP or QUARANTINE.');
             }
+            // Phase F: a structured scoring result marking this cycle critical-safety-fail
+            // overrides RETURN_TO_SERVICE the same way an UNSAFE final inspection does —
+            // the critical-fail gate is absolute regardless of which check surfaced it.
+            $scoringLinkColumn = $cycle instanceof TireRetread ? 'tire_retread_id' : 'tire_repair_id';
+            $hasCriticalFailScore = TireScoringResult::query()->where($scoringLinkColumn, $locked->id)->where('critical_safety_fail', true)->exists();
+            if ($hasCriticalFailScore && $disposition === 'RETURN_TO_SERVICE') {
+                throw new TireException('A tire with a critical safety failure on its scoring result cannot be approved for RETURN_TO_SERVICE — choose SCRAP or QUARANTINE.');
+            }
 
             $locked->update([
                 'status' => 'APPROVED',
@@ -583,5 +593,64 @@ class TireService
         $tire->update(['current_status' => 'SCRAPPED', 'current_warehouse_id' => null]);
 
         return $tire->fresh();
+    }
+
+    /**
+     * Phase F (BD-5/BD-6): "Sell" is never one generic action — the three
+     * sell types are safety-distinct. SELL_FOR_OPERATIONAL_REUSE is the
+     * one that can put a tire back into service elsewhere, so it is the
+     * one this method gates hard: it requires a scoring result to exist
+     * at all (an unscored tire's fitness for reuse is simply unknown),
+     * and that result must be neither critical-safety-fail nor ineligible
+     * for operational reuse. SELL_AS_RETREADABLE_CASING and
+     * SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL carry no such requirement —
+     * neither claims the tire is fit to keep running as-is.
+     */
+    public function sell(Tire $tire, string $sellType, string $reason, ?string $userId): TireSale
+    {
+        if (! in_array($sellType, ['SELL_FOR_OPERATIONAL_REUSE', 'SELL_AS_RETREADABLE_CASING', 'SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL'], true)) {
+            throw new TireException('sellType must be SELL_FOR_OPERATIONAL_REUSE, SELL_AS_RETREADABLE_CASING, or SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL.');
+        }
+        if (trim($reason) === '') {
+            throw new TireException('A sale reason is required.');
+        }
+
+        return DB::transaction(function () use ($tire, $sellType, $reason, $userId) {
+            $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
+            if (in_array($locked->current_status, ['INSTALLED', 'IN_USE'], true)) {
+                throw new TireException('Remove the tire from its vehicle before selling it.');
+            }
+            if ($locked->current_status === 'SOLD') {
+                throw new TireException('This tire has already been sold.');
+            }
+
+            $scoringResult = null;
+            if ($sellType === 'SELL_FOR_OPERATIONAL_REUSE') {
+                $scoringResult = TireScoringResult::query()->where('tire_id', $locked->id)->orderByDesc('computed_at')->first();
+                if (! $scoringResult) {
+                    throw new TireException('SELL_FOR_OPERATIONAL_REUSE requires a scoring result — this tire has never been scored.');
+                }
+                if ($scoringResult->critical_safety_fail) {
+                    throw new TireException('This tire has a critical safety failure on its most recent scoring result and cannot be sold for operational reuse.');
+                }
+                if (! $scoringResult->eligible_for_operational_reuse) {
+                    throw new TireException("This tire's most recent scoring result ({$scoringResult->classification}) is not eligible for operational reuse.");
+                }
+            }
+
+            $sale = TireSale::query()->create([
+                'tenant_id' => $locked->tenant_id,
+                'tire_id' => $locked->id,
+                'sell_type' => $sellType,
+                'tire_scoring_result_id' => $scoringResult?->id,
+                'reason' => $reason,
+                'sold_by' => $userId,
+                'sold_at' => now(),
+            ]);
+
+            $locked->update(['current_status' => 'SOLD', 'current_vehicle_id' => null, 'current_position' => null, 'current_warehouse_id' => null]);
+
+            return $sale->load('tire');
+        });
     }
 }

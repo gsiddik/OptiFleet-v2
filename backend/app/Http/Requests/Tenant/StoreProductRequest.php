@@ -29,6 +29,8 @@ class StoreProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'track_serial_number' => ['nullable', 'boolean'],
             'track_batch' => ['nullable', 'boolean'],
+            // Phase F / BD-3: reference tread depth for TIRE products — the "KTN" source for scoring.
+            'reference_tread_depth_mm' => ['nullable', 'numeric', 'min:0.01'],
         ];
     }
 }

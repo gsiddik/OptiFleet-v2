@@ -4,8 +4,11 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
+use App\Domain\Tire\Models\TireScoringResult;
+use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Tire\Services\TireService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
@@ -17,6 +20,7 @@ class TireController extends Controller
 {
     public function __construct(
         private readonly TireService $tires,
+        private readonly TireScoringService $scoring,
         private readonly DataScopeService $scope,
         private readonly TenantContext $context,
     ) {}
@@ -68,6 +72,8 @@ class TireController extends Controller
             'removals' => fn ($q) => $q->orderByDesc('removed_at'),
             'retreads' => fn ($q) => $q->orderByDesc('sent_at'),
             'repairs' => fn ($q) => $q->orderByDesc('sent_at'),
+            'scoringResults' => fn ($q) => $q->orderByDesc('computed_at'),
+            'sales' => fn ($q) => $q->orderByDesc('sold_at'),
         ]));
     }
 
@@ -276,6 +282,54 @@ class TireController extends Controller
         $validated = $request->validate(['reason' => ['nullable', 'string']]);
 
         return $this->ok($this->tires->scrap($tire, $validated['reason'] ?? null));
+    }
+
+    /** Phase F (G-31): structured scoring — calculates from an existing inspection, never fabricates a measurement of its own. */
+    public function calculateScoring(Request $request, Tire $tire)
+    {
+        $this->authorizeScope($tire);
+        $validated = $request->validate([
+            'tire_inspection_id' => ['required', 'uuid', 'exists:tire_inspections,id'],
+            'scoring_type' => ['required', 'in:REPAIR,RETREAD'],
+            'ka_score' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'critical_safety_fail' => ['required', 'boolean'],
+            'critical_safety_reasons' => ['nullable', 'string'],
+            'tire_retread_id' => ['nullable', 'uuid', 'exists:tire_retreads,id'],
+            'tire_repair_id' => ['nullable', 'uuid', 'exists:tire_repairs,id'],
+        ]);
+
+        $inspection = TireInspection::query()->findOrFail($validated['tire_inspection_id']);
+        abort_unless($inspection->tire_id === $tire->id, 404);
+        $retread = isset($validated['tire_retread_id']) ? TireRetread::query()->findOrFail($validated['tire_retread_id']) : null;
+        $repair = isset($validated['tire_repair_id']) ? TireRepair::query()->findOrFail($validated['tire_repair_id']) : null;
+
+        $result = $this->scoring->calculate(
+            $tire, $inspection, $validated['scoring_type'], $validated['ka_score'] ?? null,
+            $validated['critical_safety_fail'], $validated['critical_safety_reasons'] ?? null,
+            $this->context->user()->id, $retread, $repair,
+        );
+
+        return $this->ok($result, 201);
+    }
+
+    public function finalizeScoring(Tire $tire, TireScoringResult $scoringResult)
+    {
+        $this->authorizeScope($tire);
+        abort_unless($scoringResult->tire_id === $tire->id, 404);
+
+        return $this->ok($this->scoring->finalize($scoringResult, $this->context->user()->id));
+    }
+
+    /** BD-5: the three-way sell split, with SELL_FOR_OPERATIONAL_REUSE gated on a safe scoring result. */
+    public function sell(Request $request, Tire $tire)
+    {
+        $this->authorizeScope($tire);
+        $validated = $request->validate([
+            'sell_type' => ['required', 'in:SELL_FOR_OPERATIONAL_REUSE,SELL_AS_RETREADABLE_CASING,SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL'],
+            'reason' => ['required', 'string'],
+        ]);
+
+        return $this->ok($this->tires->sell($tire, $validated['sell_type'], $validated['reason'], $this->context->user()->id), 201);
     }
 
     private function authorizeScope(Tire $tire): void

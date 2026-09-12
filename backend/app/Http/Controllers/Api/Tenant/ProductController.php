@@ -63,6 +63,7 @@ class ProductController extends Controller
             'track_serial_number' => ['sometimes', 'boolean'],
             'track_batch' => ['sometimes', 'boolean'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
+            'reference_tread_depth_mm' => ['sometimes', 'nullable', 'numeric', 'min:0.01'],
         ]);
         $product->update($validated);
 
