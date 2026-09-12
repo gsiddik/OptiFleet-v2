@@ -20,7 +20,7 @@ class WorkOrderClosureGuardService
 {
     private const RESOLVED_PART_STATUSES = ['CONSUMED', 'RETURNED', 'CANCELLED'];
 
-    private const UNRESOLVED_TIRE_STATUSES = ['UNDER_INSPECTION', 'RETREAD'];
+    private const UNRESOLVED_TIRE_STATUSES = ['UNDER_INSPECTION', 'RETREAD', 'REPAIR', 'QUARANTINED'];
 
     /** @throws WorkOrderException when the WO has a dependency that must resolve before COMPLETED/CLOSED. */
     public function assertClosable(WorkOrder $workOrder): void

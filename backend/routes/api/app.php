@@ -434,8 +434,16 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/tires/{tire}/inspect', [TireController::class, 'inspect'])->middleware('permission:tire.inspect');
             Route::post('/tires/{tire}/remove', [TireController::class, 'remove'])->middleware('permission:tire.remove');
             Route::post('/tires/{tire}/replace', [TireController::class, 'replace'])->middleware('permission:tire.remove');
-            Route::post('/tires/{tire}/retread', [TireController::class, 'sendForRetread'])->middleware('permission:tire.manage');
-            Route::post('/tires/{tire}/retreads/{retread}/receive', [TireController::class, 'receiveRetread'])->middleware('permission:tire.manage');
+            // Phase E: send/receive/inspect/approve are four distinct permissions per cycle
+            // type — no single actor is expected to hold all four (G-32 maker-checker).
+            Route::post('/tires/{tire}/retread', [TireController::class, 'sendForRetread'])->middleware('permission:tire_retread.send');
+            Route::post('/tires/{tire}/retreads/{retread}/receive', [TireController::class, 'receiveRetread'])->middleware('permission:tire_retread.receive');
+            Route::post('/tires/{tire}/retreads/{retread}/final-inspect', [TireController::class, 'finalInspectRetread'])->middleware('permission:tire_retread.inspect');
+            Route::post('/tires/{tire}/retreads/{retread}/approve', [TireController::class, 'approveRetread'])->middleware('permission:tire_retread.approve');
+            Route::post('/tires/{tire}/repair', [TireController::class, 'sendForRepair'])->middleware('permission:tire_repair.send');
+            Route::post('/tires/{tire}/repairs/{repair}/receive', [TireController::class, 'receiveRepair'])->middleware('permission:tire_repair.receive');
+            Route::post('/tires/{tire}/repairs/{repair}/final-inspect', [TireController::class, 'finalInspectRepair'])->middleware('permission:tire_repair.inspect');
+            Route::post('/tires/{tire}/repairs/{repair}/approve', [TireController::class, 'approveRepair'])->middleware('permission:tire_repair.approve');
             Route::post('/tires/{tire}/scrap', [TireController::class, 'scrap'])->middleware('permission:tire.scrap');
         });
 

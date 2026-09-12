@@ -9,14 +9,14 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-/** Phase E (G-37): auditable — every governance field change (receive/inspect/approve) is recorded. */
-class TireRetread extends Model
+/** Phase E (G-27/G-37): distinct REPAIR lifecycle, mirroring TireRetread's governance trail; auditable. */
+class TireRepair extends Model
 {
     use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'tire_id', 'cycle_number', 'sent_at', 'sent_by', 'received_at', 'received_by',
-        'partner_id', 'cost', 'notes', 'status',
+        'tenant_id', 'tire_id', 'cycle_number', 'sent_at', 'sent_by', 'partner_id', 'cost', 'notes',
+        'received_at', 'received_by', 'status',
         'final_inspected_by', 'final_inspected_at', 'final_inspection_result', 'final_inspection_notes',
         'approved_by', 'approved_at', 'approval_disposition', 'approval_reason',
     ];

@@ -2,10 +2,12 @@
 
 namespace App\Domain\Tire\Services;
 
+use App\Domain\Partner\Models\Partner;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireInstallation;
 use App\Domain\Tire\Models\TireRemoval;
+use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireRotation;
 use App\Domain\Tire\Models\WheelConfiguration;
@@ -296,6 +298,7 @@ class TireService
 
             $newStatus = match ($disposition) {
                 'RETREAD' => 'RETREAD',
+                'REPAIR' => 'REPAIR',
                 'SCRAP' => 'SCRAPPED',
                 default => 'REMOVED',
             };
@@ -319,8 +322,8 @@ class TireService
      */
     public function replace(Tire $oldTire, Tire $newTire, string $reason, string $disposition, ?float $odometer, ?string $workOrderId, ?string $userId): array
     {
-        if (! in_array($disposition, ['REUSE', 'RETREAD', 'SCRAP'], true)) {
-            throw new TireException('Disposition must be one of: REUSE, RETREAD, SCRAP.');
+        if (! in_array($disposition, ['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'], true)) {
+            throw new TireException('Disposition must be one of: REUSE, RETREAD, REPAIR, SCRAP.');
         }
 
         return DB::transaction(function () use ($oldTire, $newTire, $reason, $disposition, $odometer, $workOrderId, $userId) {
@@ -342,33 +345,230 @@ class TireService
         });
     }
 
-    public function retread(Tire $tire, ?string $partnerId, ?float $cost, ?string $notes): TireRetread
+    /**
+     * Phase E (G-30): the receiving partner must be an ACTIVE partner of a
+     * type actually capable of tire service work — not any arbitrary
+     * partner record. EXTERNAL_WORKSHOP/TIRE_SUPPLIER are the two existing
+     * partner_type values that plausibly perform this work; no new type is
+     * invented without a documented business-classification source.
+     */
+    private const ELIGIBLE_SERVICE_PARTNER_TYPES = ['EXTERNAL_WORKSHOP', 'TIRE_SUPPLIER'];
+
+    private function assertEligiblePartner(string $tenantId, string $partnerId): Partner
     {
-        if ($tire->current_status !== 'RETREAD') {
-            throw new TireException('Tire must be in RETREAD status (removed with a retread disposition) before sending it for retreading.');
+        $partner = Partner::query()->where('tenant_id', $tenantId)->find($partnerId);
+        if (! $partner) {
+            throw new TireException('Partner not found for this tenant.');
+        }
+        if ($partner->status !== 'ACTIVE') {
+            throw new TireException('This partner is not ACTIVE and cannot receive tires for service.');
+        }
+        if (! in_array($partner->partner_type, self::ELIGIBLE_SERVICE_PARTNER_TYPES, true)) {
+            throw new TireException('This partner type is not eligible for tire retread/repair work (must be EXTERNAL_WORKSHOP or TIRE_SUPPLIER).');
         }
 
-        $cycle = (int) TireRetread::query()->where('tire_id', $tire->id)->max('cycle_number') + 1;
-
-        return TireRetread::query()->create([
-            'tenant_id' => $tire->tenant_id,
-            'tire_id' => $tire->id,
-            'cycle_number' => $cycle,
-            'sent_at' => now()->toDateString(),
-            'partner_id' => $partnerId,
-            'cost' => $cost,
-            'notes' => $notes,
-        ]);
+        return $partner;
     }
 
-    public function receiveRetread(TireRetread $retread): TireRetread
+    /**
+     * G-29: cycle-number assignment is race-free because the tire row is
+     * locked for the whole transaction before the max(cycle_number)+1
+     * read — a concurrent send for the same tire blocks on that lock
+     * rather than racing to compute the same next number. (A FOR UPDATE
+     * lock cannot be placed directly on an aggregate MAX query in
+     * Postgres, so the tire row is the lock target, not the cycle table.)
+     */
+    public function retread(Tire $tire, string $partnerId, ?float $cost, ?string $notes, ?string $userId): TireRetread
     {
-        return DB::transaction(function () use ($retread) {
-            $locked = TireRetread::query()->lockForUpdate()->findOrFail($retread->id);
-            $locked->update(['received_at' => now()->toDateString()]);
+        return DB::transaction(function () use ($tire, $partnerId, $cost, $notes, $userId) {
+            $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
+            if ($locked->current_status !== 'RETREAD') {
+                throw new TireException('Tire must be in RETREAD status (removed with a retread disposition) before sending it for retreading.');
+            }
+            $this->assertEligiblePartner($locked->tenant_id, $partnerId);
+            if (TireRetread::query()->where('tire_id', $locked->id)->whereNotIn('status', ['APPROVED', 'REJECTED'])->exists()) {
+                throw new TireException('An open retread cycle already exists for this tire — receive and approve it before sending again.');
+            }
+
+            $cycle = (int) TireRetread::query()->where('tire_id', $locked->id)->max('cycle_number') + 1;
+
+            return TireRetread::query()->create([
+                'tenant_id' => $locked->tenant_id,
+                'tire_id' => $locked->id,
+                'cycle_number' => $cycle,
+                'sent_at' => now()->toDateString(),
+                'sent_by' => $userId,
+                'partner_id' => $partnerId,
+                'cost' => $cost,
+                'notes' => $notes,
+                'status' => 'SENT',
+            ]);
+        });
+    }
+
+    public function repair(Tire $tire, string $partnerId, ?float $cost, ?string $notes, ?string $userId): TireRepair
+    {
+        return DB::transaction(function () use ($tire, $partnerId, $cost, $notes, $userId) {
+            $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
+            if ($locked->current_status !== 'REPAIR') {
+                throw new TireException('Tire must be in REPAIR status (removed with a repair disposition) before sending it for repair.');
+            }
+            $this->assertEligiblePartner($locked->tenant_id, $partnerId);
+            if (TireRepair::query()->where('tire_id', $locked->id)->whereNotIn('status', ['APPROVED', 'REJECTED'])->exists()) {
+                throw new TireException('An open repair cycle already exists for this tire — receive and approve it before sending again.');
+            }
+
+            $cycle = (int) TireRepair::query()->where('tire_id', $locked->id)->max('cycle_number') + 1;
+
+            return TireRepair::query()->create([
+                'tenant_id' => $locked->tenant_id,
+                'tire_id' => $locked->id,
+                'cycle_number' => $cycle,
+                'sent_at' => now()->toDateString(),
+                'sent_by' => $userId,
+                'partner_id' => $partnerId,
+                'cost' => $cost,
+                'notes' => $notes,
+                'status' => 'SENT',
+            ]);
+        });
+    }
+
+    /**
+     * G-36: recording receipt never, by itself, returns a tire to
+     * available stock. The tire moves to UNDER_INSPECTION — the same
+     * status already used elsewhere for "not currently sellable/
+     * installable, pending a human decision" — and only a subsequent
+     * final inspection + approval (see approveCycle()) can move it to
+     * IN_STOCK, SCRAPPED, or QUARANTINED.
+     */
+    public function receiveRetread(TireRetread $retread, ?string $userId): TireRetread
+    {
+        return $this->receiveCycle($retread, $userId);
+    }
+
+    public function receiveRepair(TireRepair $repair, ?string $userId): TireRepair
+    {
+        return $this->receiveCycle($repair, $userId);
+    }
+
+    private function receiveCycle(TireRetread|TireRepair $cycle, ?string $userId): TireRetread|TireRepair
+    {
+        return DB::transaction(function () use ($cycle, $userId) {
+            $locked = $cycle::query()->lockForUpdate()->findOrFail($cycle->id);
+            if ($locked->status !== 'SENT') {
+                throw new TireException("Cannot receive a cycle that is {$locked->status} (must be SENT).");
+            }
+
+            $locked->update(['received_at' => now()->toDateString(), 'received_by' => $userId, 'status' => 'RECEIVED']);
 
             $tire = Tire::query()->lockForUpdate()->findOrFail($locked->tire_id);
-            $tire->update(['current_status' => 'IN_STOCK']);
+            $tire->update(['current_status' => 'UNDER_INSPECTION']);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * G-36: the critical safety evaluation. Also writes a normal
+     * TireInspection row so the tire's unified inspection history stays
+     * complete — a real reading tied to this cycle, never fabricated.
+     */
+    public function finalInspectRetread(TireRetread $retread, string $result, ?string $notes, ?string $userId): TireRetread
+    {
+        return $this->finalInspectCycle($retread, $result, $notes, $userId);
+    }
+
+    public function finalInspectRepair(TireRepair $repair, string $result, ?string $notes, ?string $userId): TireRepair
+    {
+        return $this->finalInspectCycle($repair, $result, $notes, $userId);
+    }
+
+    private function finalInspectCycle(TireRetread|TireRepair $cycle, string $result, ?string $notes, ?string $userId): TireRetread|TireRepair
+    {
+        if (! in_array($result, ['SAFE', 'UNSAFE'], true)) {
+            throw new TireException('Final inspection result must be SAFE or UNSAFE.');
+        }
+
+        return DB::transaction(function () use ($cycle, $result, $notes, $userId) {
+            $locked = $cycle::query()->lockForUpdate()->findOrFail($cycle->id);
+            if ($locked->status !== 'RECEIVED') {
+                throw new TireException("Cannot record a final inspection for a cycle that is {$locked->status} (must be RECEIVED).");
+            }
+
+            $locked->update([
+                'status' => 'FINAL_INSPECTED',
+                'final_inspected_by' => $userId,
+                'final_inspected_at' => now(),
+                'final_inspection_result' => $result,
+                'final_inspection_notes' => $notes,
+            ]);
+
+            TireInspection::query()->create([
+                'tenant_id' => $locked->tenant_id,
+                'tire_id' => $locked->tire_id,
+                'condition' => $result,
+                'recommendation' => $notes,
+                'inspected_by' => $userId,
+                'inspected_at' => now(),
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * G-32/G-33/G-36: final approval. The approving actor must not be the
+     * same actor who received the tire back (maker-checker); an UNSAFE
+     * final inspection can never be approved back into service (critical
+     * safety gate, overrides everything else); and a reason is mandatory
+     * and persisted with the decision (never optional, never blank).
+     */
+    public function approveRetread(TireRetread $retread, string $disposition, string $reason, ?string $userId): TireRetread
+    {
+        return $this->approveCycle($retread, $disposition, $reason, $userId);
+    }
+
+    public function approveRepair(TireRepair $repair, string $disposition, string $reason, ?string $userId): TireRepair
+    {
+        return $this->approveCycle($repair, $disposition, $reason, $userId);
+    }
+
+    private function approveCycle(TireRetread|TireRepair $cycle, string $disposition, string $reason, ?string $userId): TireRetread|TireRepair
+    {
+        if (! in_array($disposition, ['RETURN_TO_SERVICE', 'SCRAP', 'QUARANTINE'], true)) {
+            throw new TireException('Approval disposition must be RETURN_TO_SERVICE, SCRAP, or QUARANTINE.');
+        }
+        if (trim($reason) === '') {
+            throw new TireException('An approval reason is required and is persisted with the decision.');
+        }
+
+        return DB::transaction(function () use ($cycle, $disposition, $reason, $userId) {
+            $locked = $cycle::query()->lockForUpdate()->findOrFail($cycle->id);
+            if ($locked->status !== 'FINAL_INSPECTED') {
+                throw new TireException("Cannot approve a cycle that is {$locked->status} (must be FINAL_INSPECTED).");
+            }
+            if ($userId !== null && $userId === $locked->received_by) {
+                throw new TireException('The actor who received this tire back cannot also approve its final disposition.');
+            }
+            if ($locked->final_inspection_result === 'UNSAFE' && $disposition === 'RETURN_TO_SERVICE') {
+                throw new TireException('A tire with an UNSAFE final inspection result cannot be approved for RETURN_TO_SERVICE — choose SCRAP or QUARANTINE.');
+            }
+
+            $locked->update([
+                'status' => 'APPROVED',
+                'approved_by' => $userId,
+                'approved_at' => now(),
+                'approval_disposition' => $disposition,
+                'approval_reason' => $reason,
+            ]);
+
+            $tire = Tire::query()->lockForUpdate()->findOrFail($locked->tire_id);
+            $tire->update(['current_status' => match ($disposition) {
+                'RETURN_TO_SERVICE' => 'IN_STOCK',
+                'SCRAP' => 'SCRAPPED',
+                'QUARANTINE' => 'QUARANTINED',
+            }]);
 
             return $locked->fresh();
         });

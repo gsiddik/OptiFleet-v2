@@ -123,13 +123,23 @@ class WorkOrderClosureGuardTest extends TestCase
         $tire->refresh();
         $this->assertSame('RETREAD', $tire->current_status);
 
-        $retread = app(TireService::class)->retread($tire, null, 500000, 'sent for retread');
+        $partner = $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
+        $retread = app(TireService::class)->retread($tire, $partner->id, 500000, 'sent for retread', null);
 
         $this->driveToQcPending($woId, $headers);
         $this->postJson("/api/v1/app/work-orders/{$woId}/complete", [], $headers)->assertStatus(422);
 
-        // Resolve: receive the retread, tire returns to IN_STOCK, closure now succeeds.
-        app(TireService::class)->receiveRetread($retread);
+        // Receiving alone still does not resolve it (Phase E, G-36) — the tire moves to
+        // UNDER_INSPECTION, which is itself an unresolved status, so closure stays blocked.
+        $tireService = app(TireService::class);
+        $retread = $tireService->receiveRetread($retread, null);
+        $tire->refresh();
+        $this->assertSame('UNDER_INSPECTION', $tire->current_status);
+        $this->postJson("/api/v1/app/work-orders/{$woId}/complete", [], $headers)->assertStatus(422);
+
+        // Only a completed final inspection + approval actually resolves it.
+        $retread = $tireService->finalInspectRetread($retread, 'SAFE', 'Passed final inspection', null);
+        $tireService->approveRetread($retread, 'RETURN_TO_SERVICE', 'Meets return-to-service criteria', (string) Str::uuid());
         $tire->refresh();
         $this->assertSame('IN_STOCK', $tire->current_status);
 

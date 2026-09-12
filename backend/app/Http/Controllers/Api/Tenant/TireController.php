@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Services\TireService;
 use App\Domain\Vehicle\Models\Vehicle;
@@ -66,6 +67,7 @@ class TireController extends Controller
             'inspections' => fn ($q) => $q->orderByDesc('inspected_at'),
             'removals' => fn ($q) => $q->orderByDesc('removed_at'),
             'retreads' => fn ($q) => $q->orderByDesc('sent_at'),
+            'repairs' => fn ($q) => $q->orderByDesc('sent_at'),
         ]));
     }
 
@@ -150,7 +152,7 @@ class TireController extends Controller
         $this->authorizeScope($tire);
         $validated = $request->validate([
             'removal_reason' => ['required', 'string', 'max:255'],
-            'disposition' => ['required', 'in:REUSE,RETREAD,SCRAP'],
+            'disposition' => ['required', 'in:REUSE,RETREAD,REPAIR,SCRAP'],
             'odometer' => ['nullable', 'numeric', 'min:0'],
             'condition' => ['nullable', 'string', 'max:100'],
             'work_order_id' => ['nullable', 'uuid', 'exists:work_orders,id'],
@@ -168,7 +170,7 @@ class TireController extends Controller
             'new_tire_id' => ['required', 'uuid', 'exists:tires,id'],
             'reason' => ['required', 'string', 'max:255'],
             // G-28: the old tire's disposition is a decision made at replacement time, not an implicit REUSE.
-            'disposition' => ['required', 'in:REUSE,RETREAD,SCRAP'],
+            'disposition' => ['required', 'in:REUSE,RETREAD,REPAIR,SCRAP'],
             'odometer' => ['nullable', 'numeric', 'min:0'],
             'work_order_id' => ['nullable', 'uuid', 'exists:work_orders,id'],
         ]);
@@ -183,12 +185,13 @@ class TireController extends Controller
     {
         $this->authorizeScope($tire);
         $validated = $request->validate([
-            'partner_id' => ['nullable', 'uuid', 'exists:partners,id'],
+            // G-30: a retread cycle always names a receiving partner — eligibility is checked in the service.
+            'partner_id' => ['required', 'uuid', 'exists:partners,id'],
             'cost' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
         ]);
 
-        return $this->ok($this->tires->retread($tire, $validated['partner_id'] ?? null, $validated['cost'] ?? null, $validated['notes'] ?? null), 201);
+        return $this->ok($this->tires->retread($tire, $validated['partner_id'], $validated['cost'] ?? null, $validated['notes'] ?? null, $this->context->user()->id), 201);
     }
 
     public function receiveRetread(Tire $tire, TireRetread $retread)
@@ -196,7 +199,75 @@ class TireController extends Controller
         $this->authorizeScope($tire);
         abort_unless($retread->tire_id === $tire->id, 404);
 
-        return $this->ok($this->tires->receiveRetread($retread));
+        return $this->ok($this->tires->receiveRetread($retread, $this->context->user()->id));
+    }
+
+    public function finalInspectRetread(Request $request, Tire $tire, TireRetread $retread)
+    {
+        $this->authorizeScope($tire);
+        abort_unless($retread->tire_id === $tire->id, 404);
+        $validated = $request->validate([
+            'result' => ['required', 'in:SAFE,UNSAFE'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        return $this->ok($this->tires->finalInspectRetread($retread, $validated['result'], $validated['notes'] ?? null, $this->context->user()->id));
+    }
+
+    public function approveRetread(Request $request, Tire $tire, TireRetread $retread)
+    {
+        $this->authorizeScope($tire);
+        abort_unless($retread->tire_id === $tire->id, 404);
+        $validated = $request->validate([
+            'disposition' => ['required', 'in:RETURN_TO_SERVICE,SCRAP,QUARANTINE'],
+            'reason' => ['required', 'string'],
+        ]);
+
+        return $this->ok($this->tires->approveRetread($retread, $validated['disposition'], $validated['reason'], $this->context->user()->id));
+    }
+
+    public function sendForRepair(Request $request, Tire $tire)
+    {
+        $this->authorizeScope($tire);
+        $validated = $request->validate([
+            'partner_id' => ['required', 'uuid', 'exists:partners,id'],
+            'cost' => ['nullable', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        return $this->ok($this->tires->repair($tire, $validated['partner_id'], $validated['cost'] ?? null, $validated['notes'] ?? null, $this->context->user()->id), 201);
+    }
+
+    public function receiveRepair(Tire $tire, TireRepair $repair)
+    {
+        $this->authorizeScope($tire);
+        abort_unless($repair->tire_id === $tire->id, 404);
+
+        return $this->ok($this->tires->receiveRepair($repair, $this->context->user()->id));
+    }
+
+    public function finalInspectRepair(Request $request, Tire $tire, TireRepair $repair)
+    {
+        $this->authorizeScope($tire);
+        abort_unless($repair->tire_id === $tire->id, 404);
+        $validated = $request->validate([
+            'result' => ['required', 'in:SAFE,UNSAFE'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        return $this->ok($this->tires->finalInspectRepair($repair, $validated['result'], $validated['notes'] ?? null, $this->context->user()->id));
+    }
+
+    public function approveRepair(Request $request, Tire $tire, TireRepair $repair)
+    {
+        $this->authorizeScope($tire);
+        abort_unless($repair->tire_id === $tire->id, 404);
+        $validated = $request->validate([
+            'disposition' => ['required', 'in:RETURN_TO_SERVICE,SCRAP,QUARANTINE'],
+            'reason' => ['required', 'string'],
+        ]);
+
+        return $this->ok($this->tires->approveRepair($repair, $validated['disposition'], $validated['reason'], $this->context->user()->id));
     }
 
     public function scrap(Request $request, Tire $tire)

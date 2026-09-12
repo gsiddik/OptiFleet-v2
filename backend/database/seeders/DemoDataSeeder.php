@@ -83,6 +83,10 @@ class DemoDataSeeder extends Seeder
                 'breakdown.view', 'breakdown.review', 'breakdown.resolve',
                 'work_order.view', 'work_order.submit', 'work_order.approve', 'work_order.reject', 'work_order.assign', 'work_order.schedule', 'work_order.start', 'work_order.pause', 'work_order.complete', 'work_order.cancel', 'work_order.close',
                 'diagnosis.manage', 'maintenance_job.manage',
+                // Phase E: the Workshop Manager is the final-inspection/approval authority
+                // for tire retread/repair cycles — a distinct actor from whoever sent or
+                // received the tire (Warehouse Manager, below), by design (G-32).
+                'tire_retread.inspect', 'tire_retread.approve', 'tire_repair.inspect', 'tire_repair.approve',
                 'worker.view', 'worker.manage', 'worker.assign',
                 'workspace.view', 'workspace.manage', 'workspace.reserve', 'workspace.block',
                 'qc.view', 'qc.perform', 'qc.approve', 'qc.reject',
@@ -101,6 +105,9 @@ class DemoDataSeeder extends Seeder
                 'goods_receipt.view', 'goods_receipt.create', 'goods_receipt.post',
                 'partner.view',
                 'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap',
+                // Phase E: send/receive are logistics actions (Warehouse Manager); final
+                // inspection/approval sit with the Workshop Manager instead (G-32).
+                'tire_retread.send', 'tire_retread.receive', 'tire_repair.send', 'tire_repair.receive',
                 'component_asset.view', 'component_asset.manage', 'component_asset.install', 'component_asset.remove', 'component_asset.replace',
                 'warranty.view', 'warranty.manage', 'warranty_claim.create',
             ])

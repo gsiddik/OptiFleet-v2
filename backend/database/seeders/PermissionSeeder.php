@@ -63,6 +63,10 @@ class PermissionSeeder extends Seeder
             'goods_receipt' => ['view', 'create', 'post'],
             'partner' => ['view', 'manage'],
             'tire' => ['view', 'manage', 'install', 'rotate', 'inspect', 'remove', 'scrap'],
+            // Phase E (G-32): send/receive/inspect/approve are separate permissions per
+            // cycle type, so a maker-checker separation can actually be enforced by RBAC.
+            'tire_retread' => ['send', 'receive', 'inspect', 'approve'],
+            'tire_repair' => ['send', 'receive', 'inspect', 'approve'],
             'used_part' => ['view', 'inspect', 'dispose', 'approve'],
             'component_asset' => ['view', 'manage', 'install', 'remove', 'replace'],
             'warranty' => ['view', 'manage'],
