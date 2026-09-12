@@ -130,10 +130,32 @@ class InventoryService
             throw new InventoryException('Consumption quantity must be positive.');
         }
 
-        return DB::transaction(function () use ($warehouse, $product, $quantity, $referenceType, $referenceId, $userId, $reason) {
+        return $this->writeZeroEffectMovement($warehouse, $product, 'CONSUME', $quantity, $referenceType, $referenceId, $userId, $reason);
+    }
+
+    /**
+     * G-16: writes an immutable SALE ledger entry for a Used Sparepart
+     * Processing disposition sold under Phase B/C — that quantity was
+     * never added to quantity_on_hand (it left the ledger, if at all, at
+     * ISSUE time and was never restocked), so this is a zero-balance-
+     * effect audit/history marker, exactly like CONSUME above, not a
+     * second deduction.
+     */
+    public function recordSale(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): StockMovement
+    {
+        if ($quantity <= 0) {
+            throw new InventoryException('Sale quantity must be positive.');
+        }
+
+        return $this->writeZeroEffectMovement($warehouse, $product, 'SALE', $quantity, $referenceType, $referenceId, $userId, $reason);
+    }
+
+    private function writeZeroEffectMovement(Warehouse $warehouse, Product $product, string $movementType, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason): StockMovement
+    {
+        return DB::transaction(function () use ($warehouse, $product, $movementType, $quantity, $referenceType, $referenceId, $userId, $reason) {
             $stock = $this->lockOrCreateStock($warehouse, $product);
 
-            return $this->writeMovement($stock, 'CONSUME', $quantity, (float) $stock->average_unit_cost, $referenceType, $referenceId, $userId, $reason);
+            return $this->writeMovement($stock, $movementType, $quantity, (float) $stock->average_unit_cost, $referenceType, $referenceId, $userId, $reason);
         });
     }
 

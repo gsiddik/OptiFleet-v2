@@ -100,6 +100,33 @@ class WarehouseStockController extends Controller
         return $this->ok($stock, 201);
     }
 
+    /**
+     * G-20: InventoryService::scrap() has existed since Phase 4 (guarded,
+     * ledger-writing) with no route, permission, or UI ever calling it —
+     * this is that missing entry point for scrapping available on-hand
+     * stock directly (distinct from Phase B's used-part disposition SCRAP,
+     * which disposes of quantity that was never on-hand).
+     */
+    public function scrap(Request $request)
+    {
+        $tenantId = $this->context->tenantId();
+        $validated = $request->validate([
+            'warehouse_id' => ['required', 'uuid', 'exists:warehouses,id'],
+            'product_id' => ['required', 'uuid', 'exists:products,id'],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $warehouse = Warehouse::query()->findOrFail($validated['warehouse_id']);
+        abort_unless($warehouse->tenant_id === $tenantId, 404);
+        abort_unless($this->scope->canAccessWarehouse($this->context->user(), $tenantId, $warehouse->id), 403, 'This warehouse is outside your assigned data scope.');
+        $product = Product::query()->findOrFail($validated['product_id']);
+
+        $stock = $this->inventory->scrap($warehouse, $product, (float) $validated['quantity'], $this->context->user()->id, $validated['reason']);
+
+        return $this->ok($stock, 201);
+    }
+
     private function authorizeScope(WarehouseStock $stock): void
     {
         abort_unless($stock->tenant_id === $this->context->tenantId(), 404);

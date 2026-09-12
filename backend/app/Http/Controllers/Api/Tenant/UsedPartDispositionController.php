@@ -28,15 +28,34 @@ class UsedPartDispositionController extends Controller
         if ($status = $request->string('disposition_status')->value()) {
             $query->where('disposition_status', $status);
         }
+        if ($disposition = $request->string('disposition')->value()) {
+            $query->where('disposition', $disposition);
+        }
 
-        return $this->paginated($query->latest('created_at')->paginate($request->integer('per_page', 20)));
+        return $this->paginated(
+            $query->latest('created_at')->paginate($request->integer('per_page', 20)),
+            fn (WorkOrderPartReturn $r) => array_merge($r->toArray(), $this->eligibilityFields($r)),
+        );
     }
 
     public function show(WorkOrderPartReturn $usedPartReturn)
     {
         $this->authorizeScope($usedPartReturn);
 
-        return $this->ok($usedPartReturn->load(['product', 'warehouse', 'plannedPart.workOrder']));
+        return $this->ok(array_merge(
+            $usedPartReturn->load(['product', 'warehouse', 'plannedPart.workOrder'])->toArray(),
+            $this->eligibilityFields($usedPartReturn),
+        ));
+    }
+
+    /** G-16: surfaces how much of a SELL_ELIGIBLE return is still unsold, for the Sell Sparepart UI. */
+    private function eligibilityFields(WorkOrderPartReturn $return): array
+    {
+        if ($return->disposition_status !== 'FINALIZED' || $return->disposition !== 'SELL_ELIGIBLE') {
+            return [];
+        }
+
+        return ['remaining_eligible_quantity' => $return->remainingEligibleQuantity()];
     }
 
     public function inspect(Request $request, WorkOrderPartReturn $usedPartReturn)

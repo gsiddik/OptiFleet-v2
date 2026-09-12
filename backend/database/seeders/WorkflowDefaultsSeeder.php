@@ -195,6 +195,20 @@ class WorkflowDefaultsSeeder extends Seeder
                     $this->transition('REJECTED', 'PENDING_APPROVAL'), // re-propose after rejection, no re-inspection required
                 ],
             ],
+            // G-16: Sell Sparepart. Same "stamp a real ConfigurationVersion for the
+            // WorkflowApprovalRequest" role as used_part_disposition above.
+            'sparepart_sale' => [
+                'statuses' => [
+                    $this->status('DRAFT', true), $this->status('PENDING_APPROVAL'),
+                    $this->status('APPROVED'), $this->status('REJECTED'), $this->status('CANCELLED'),
+                ],
+                'transitions' => [
+                    $this->transition('DRAFT', 'PENDING_APPROVAL'),
+                    $this->transition('DRAFT', 'CANCELLED'),
+                    $this->transition('PENDING_APPROVAL', 'APPROVED'),
+                    $this->transition('PENDING_APPROVAL', 'REJECTED'),
+                ],
+            ],
         ];
     }
 }

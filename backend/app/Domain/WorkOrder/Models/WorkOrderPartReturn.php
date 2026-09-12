@@ -10,6 +10,7 @@ use App\Domain\Shared\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class WorkOrderPartReturn extends Model
 {
@@ -54,5 +55,18 @@ class WorkOrderPartReturn extends Model
     public function stockMovement(): BelongsTo
     {
         return $this->belongsTo(StockMovement::class, 'stock_movement_id');
+    }
+
+    public function sales(): HasMany
+    {
+        return $this->hasMany(SparePartSale::class, 'work_order_part_return_id');
+    }
+
+    /** G-16: SELL_ELIGIBLE quantity not yet consumed by an active (non-rejected/cancelled) sale. */
+    public function remainingEligibleQuantity(): float
+    {
+        $sold = (float) $this->sales()->whereIn('status', SparePartSale::ACTIVE_STATUSES)->sum('quantity');
+
+        return (float) $this->accepted_quantity - $sold;
     }
 }
