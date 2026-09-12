@@ -78,20 +78,19 @@
 | C — Sell Sparepart | G-16, G-20 | COMPLETE | see commits below | Targeted: 8 new tests (SparePartSaleTest, 64 assertions) + 9 UsedPartDispositionTest regression, all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | Settlement/payment (did money actually change hands) is explicitly out of scope, per the source report's own instruction not to invent unsupported accounting behavior — `SparePartSale` tracks price/total/approval only. | none |
 | D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28, G-34 (evidence-only) | COMPLETE | see commits below | Targeted: 18 new tests (TireAssetIntegrityTest, 50 assertions) + 7 regression on TireTest, all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | Wheel position validation is permissive (not enforced) for any vehicle category with zero configured `wheel_configurations` rows — no platform-default layout is seeded (flagged, needs fleet-engineering input). | none |
 | E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | COMPLETE | see commits below | Targeted: 18 new tests (TireRepairRetreadGovernanceTest, 91 assertions) + 3 WorkOrderClosureGuardTest regression (updated to the new TireService signatures), all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition sub-flow: eligible-partner type list (EXTERNAL_WORKSHOP/TIRE_SUPPLIER) is a documented, non-fabricated inference from existing `partner_type` values, not a report-cited enumeration — flagged for product confirmation. Phase D's permissive wheel-position fallback is untouched by this phase (documented, not fixed — see Decisions). | none |
-| F — Tire Scoring/Classification | G-31, G-11, BD-1–BD-8 | NOT STARTED | — | — | Full versioned scoring/config framework | Depends on Phases D and E |
-| G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI | Independent; not started this session |
+| F — Tire Scoring/Classification | G-31, BD-1–BD-6, BD-8 | FRAMEWORK COMPLETE, CONFIGURATION NOT APPROVED, PRODUCTION SCORING NOT ENABLED | see commits below | Targeted: 28 new tests (TireScoringAndSaleTest, 118 assertions), all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | G-11's structured tire spec fields (width/aspect ratio/rim diameter/load-speed index as discrete fields) remain deferred to Phase G — Phase F only added the one BD-3-mandated numeric field (reference tread depth) actually needed for scoring, not a full spec restructure. BD-6's legal/policy, casing-eligibility, lifecycle-limit, and vehicle/axle-suitability precedence steps have no encodable rule in the material available this session — see Decisions. | Zero production scoring: no TIRE_SCORING configuration is seeded/published by this session (deliberate — see Decisions); every tenant must explicitly publish its own before any tire can be scored. |
+| G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI, G-11's structured tire spec fields | Independent; not started this session |
 
 ## Current Work
-- Active phase: E (implemented and validated this session; Phases A, B,
-  C, and D already pushed to `origin/Improvement`).
-- Active batch: none in progress — Phase E is complete pending final
+- Active phase: F (implemented and validated this session; Phases A-E
+  already pushed to `origin/Improvement`).
+- Active batch: none in progress — Phase F is complete pending final
   regression confirmation and the phase-boundary push.
 - Files/modules in progress: none.
 - Immediate next action for the following session: re-read this file and
-  Git history to confirm Phase E's push landed on `origin/Improvement`,
-  then begin Phase F (Tire Scoring/Classification, G-31/G-11/BD-1–BD-8),
-  which depends on Phase E's REPAIR/RETREAD governance and final-
-  inspection gate now being in place.
+  Git history to confirm Phase F's push landed on `origin/Improvement`,
+  then begin Phase G (Carried-Forward VMS Parity, G-01–G-09/G-11–G-13/
+  G-38–G-43), which is independent of Phase F's scoring framework.
 
 ## Decisions and Deviations
 - Decision: return-condition classification (G-14) is implemented as a
@@ -400,6 +399,146 @@
   anywhere in `TireService`, matching the established codebase
   convention. Verified by `test_retread_lifecycle_changes_are_audited`.
 
+- Decision (Phase F, framework vs. production — read this first): this
+  phase delivers the **calculation and safety-gate framework** for
+  structured tire scoring, not an operational scoring formula. No
+  TIRE_SCORING configuration is seeded, published, or otherwise shipped
+  active by this session — `resolveEffective()` returns null for every
+  tenant until that tenant's own admin (or, once one exists, a platform
+  specialist) explicitly authors and publishes real bands/weights.
+  `TireScoringService::calculate()` refuses to run at all without one.
+  This is a deliberate, literal reading of the task's own instruction
+  not to invent production scoring weights, legal thresholds, or
+  tire-engineering rules the source documents leave unresolved, and to
+  keep any unapproved formula inactive. **Framework implemented:
+  yes. Configuration approved: no — none exists to approve. Production
+  scoring enabled: no, for every tenant, until they publish their own.**
+  The 28 Phase F tests validate the calculation engine, the safety
+  gates, and the configuration validator using test-authored fixture
+  configurations clearly scoped to those tests — none of those numbers
+  are shipped as defaults or suggested as real thresholds anywhere in
+  application code, seeders, or the frontend.
+- Decision (Phase F, G-31/BD-1/BD-3): the KA/SPA/KTS/KTN/KF terms are
+  implemented exactly as this project's own BD-1/BD-3 condensation
+  already named them (recorded in this file since an earlier session):
+  KTS = measured remaining tread depth (mm, from a `TireInspection`);
+  KTN = reference/original tread depth (mm, from the linked Product,
+  BD-3); SPA raw = KTS/KTN as a system-calculated percentage (BD-3's own
+  words); SPA normalized = that percentage mapped through the published
+  configuration's ordered bands into a 0-100 score plus a classification
+  label; KA = a supplementary condition score **captured from the
+  inspector, never computed by an OptiFleet-invented formula** — this
+  project does not have a source for what should produce a KA number,
+  so it accepts one as an input, the same way `TireInspection.condition`
+  already does for other subjective readings; KF = a composite score
+  computed **only** from whatever weights (if any) the published
+  configuration defines over {spa_normalized, ka} — supporting
+  information only, per BD-1, and structurally incapable of overriding
+  the critical-safety-fail gate because that gate is computed and
+  checked entirely independently of KF.
+- Decision (Phase F, BD-1/BD-6): critical-safety-fail is the union of
+  two independent signals — the inspector's own explicit flag (with a
+  mandatory reason) and the matched SPA band's own `is_critical_fail`
+  flag (if the published configuration marks that band as such). Either
+  one sets `critical_safety_fail = true`, which then unconditionally
+  forces `eligible_for_operational_reuse = false` regardless of the
+  band's own eligibility flag, and unconditionally blocks
+  `approveCycle(RETURN_TO_SERVICE)` the same way an UNSAFE final
+  inspection already did (Phase E). This is the literal, hard-coded
+  "critical-fail gate overrides KF always" and "must never override a
+  failed safety gate" requirement — it is not configuration data and
+  cannot be weakened by any tenant override.
+- Decision (Phase F, BD-6 precedence chain — partial, documented gap):
+  the report's full disposition precedence (critical safety → legal/
+  policy → casing eligibility → lifecycle limits → vehicle/axle/
+  operational suitability → inspection result → KF → economic
+  feasibility → approval → final disposition) is only partially
+  encodable with real rules today. This session implements, as actual
+  enforced code: critical safety gate (absolute, above), inspection
+  result / classification (drives `eligible_for_operational_reuse` and
+  the sell/approve gates), KF (computed, supporting-only, never
+  gating), and approval (the existing Phase E maker-checker approve
+  step, plus the new scoring-linked block). Legal/policy restrictions,
+  casing eligibility criteria, lifecycle limits, and vehicle/axle/
+  operational suitability have **no rule this session can encode
+  without inventing one** — no legal threshold, casing-age limit, or
+  axle-position restriction is named in the material available this
+  session. These four steps are not stubbed as fake "always pass"
+  checks scattered through the codebase; they are simply not yet
+  implemented, and are named here explicitly as the exact specialist/
+  product input needed: a legal/compliance owner for the legal/policy
+  step, a tire engineering source for casing-eligibility and lifecycle-
+  limit thresholds, and a fleet-engineering source (same open item as
+  Phase D's wheel-position defaults) for vehicle/axle suitability rules.
+  Economic feasibility is explicitly a human approver's judgment call
+  in this design, not an automated check (consistent with how
+  `UsedPartDispositionService`'s approval step already works) — the
+  maker-checker approval action IS that step.
+- Decision (Phase F, BD-2): REPAIR and RETREAD scoring configurations
+  are two separate `ConfigurationSet` codes under the same TIRE_SCORING
+  type — structurally identical band/weight shape, but published,
+  versioned, and resolved completely independently per BD-2's explicit
+  requirement. "Repair must not require an irrelevant tread-depth
+  improvement" is satisfied by never computing or requiring any
+  before/after delta anywhere in `TireScoringService` — both scoring
+  types always score the tire's current condition only; a REPAIR
+  configuration simply need not define `kf_weights` or `requires_ka` at
+  all (verified by `test_repair_config_does_not_require_ka_or_kf_by_default`).
+- Decision (Phase F, BD-8): the non-overridable-invariant check compares
+  a tenant-scoped draft against the **currently published platform
+  default** (not the tenant's own prior version) for the same code,
+  matched by `classification` label, and refuses to publish if the
+  tenant version would set `is_critical_fail` from true to false or
+  `eligible_for_operational_reuse` from false to true on a matching
+  label. A tenant introducing a classification label the platform
+  default doesn't have is unrestricted for that label (there is nothing
+  to weaken). This is a structural/shape check only — it cannot and
+  does not judge whether the underlying percentages are
+  tire-engineering-correct; that judgment remains the publishing
+  tenant admin's own responsibility and authority.
+- Decision (Phase F, BD-4): finalizing a scoring result requires a
+  different actor than whoever computed it (`finalize()` rejects when
+  `userId === computed_by`), mirroring Phase E's receiver/approver
+  separation exactly. A finalized result is immutable — there is no
+  update path in `TireScoringService` after `finalized_at` is set; a
+  changed assessment must be a new `calculate()` call producing a new
+  row, preserving full history rather than mutating a past result.
+- Decision (Phase F, BD-5): "Sell" is implemented as a new
+  `TireService::sell()` action (mirroring the existing `scrap()`
+  method's shape) rather than folded into Phase E's
+  `approval_disposition` enum, because a sell decision is not
+  necessarily preceded by a retread/repair cycle — a tire can be sold
+  straight from IN_STOCK, REMOVED, or QUARANTINED. Only
+  SELL_FOR_OPERATIONAL_REUSE is safety-gated (requires an existing,
+  non-critical-fail, eligible scoring result); SELL_AS_RETREADABLE_CASING
+  and SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL carry no such requirement, since
+  neither claims the tire is fit to keep running as-is. The new terminal
+  `SOLD` status is excluded from `install()`'s accepted statuses the same
+  way every other non-IN_STOCK/RESERVED status already is, so a sold tire
+  cannot be installed through any endpoint — verified directly, not
+  assumed, by `test_sold_tire_cannot_be_installed`.
+
+### VMS Traceability Record — Phase F
+
+Per the task's own instruction, "the VMS audit was read-only and does
+not establish write behavior or other-role permissions" — the VMS
+document's Tire lifecycle screens show scored/classified results as
+*displayed information* (a condition label, a history list) but cannot
+by themselves prove what formula, threshold, or approval rule produced
+them. The relevant VMS observation for Phase F
+("Tire lifecycle screens — condition scoring / disposition workflow
+observations (KA/KTS/KTN/KF-style classification, repair/retread
+governance)") was already logged in the Phase D traceability record and
+split across Phases E (repair/retread governance — complete) and F
+(scoring/classification framework — complete, unactivated). No further
+VMS-sourced field, label, or form adjustment was identified as safely
+implementable within Phase F's scope this session: VMS's own displayed
+classification labels and thresholds are exactly the kind of
+unresolved, unsourced production values this task instructed not to
+copy or invent. G-11's remaining structured tire spec fields (width/
+aspect ratio/rim diameter/load-speed index) and every other prior
+Phase D deferral to Phase G remain deferred to Phase G unchanged.
+
 ### VMS Traceability Record — Phase E
 
 VMS's Tire lifecycle screens show a repair/retread history list (partner,
@@ -432,9 +571,44 @@ platform-default `wheel_configurations` layouts per vehicle category (needs real
 placeholder data) — until that decision is made, G-25's validation stays permissive for any category with no configured rows.
 
 ## Known Blockers
-- None blocking Phases A–E. Phases F–G are not blocked, simply not
-  started this session (large, multi-week scope — see roadmap in the
-  source report §30).
+- None blocking Phases A–F's own acceptance criteria — every mandatory
+  Phase F criterion this session could evaluate against real material
+  is met, including the explicit "framework, not production formula"
+  one. Phase G is not blocked, simply not started this session (large,
+  multi-week scope — see roadmap in the source report §30).
+- Production activation blocker (Phase F, permanent until resolved by a
+  human with the relevant authority, not by further engineering): no
+  TIRE_SCORING configuration exists anywhere in this system — not
+  platform, not any tenant. Structured tire scoring is entirely
+  unusable in production until someone with real tire-engineering/
+  business authority authors and publishes actual band thresholds,
+  normalized scores, classification labels, KA requirements, and (if
+  wanted) KF weights, for both REPAIR and RETREAD, via the
+  `POST /app/configuration/versions` + `/publish` endpoints this phase
+  built. This is not an oversight — it is the deliberate consequence of
+  the task's own instruction not to invent unresolved production
+  scoring weights.
+- Specialist/product input needed (Phase F, BD-6, does not block any
+  Phase F acceptance criterion — the gap is named, not silently
+  papered over): legal/policy restrictions, casing-eligibility
+  criteria, and lifecycle-limit thresholds in BD-6's disposition
+  precedence chain have no rule this session could encode without
+  inventing one. Needed: a legal/compliance owner (legal/policy step),
+  a tire-engineering source (casing eligibility, lifecycle limits).
+  Vehicle/axle/operational-suitability rules need a fleet-engineering
+  source — the same open item already named under Phase D's blocker
+  below (wheel-position/layout expertise plausibly covers both).
+- Product confirmation needed (Phase E, not resolved this session, does
+  not block any Phase E acceptance criterion): the eligible partner-type
+  allowlist for retread/repair work (`EXTERNAL_WORKSHOP`, `TIRE_SUPPLIER`)
+  is this session's best-evidence inference from existing `partner_type`
+  values, not a value enumerated by name in the material available this
+  session. If the report or a later VMS reading specifies a different or
+  additional type, update `TireService::ELIGIBLE_SERVICE_PARTNER_TYPES`
+  (the single source of truth for this check).
+- Product decision needed (Phase D, not resolved this session, does not
+  block Phase E or F — explicitly reviewed and reconfirmed still open
+  each phase since, see Decisions above): whether
 - Product confirmation needed (Phase E, not resolved this session, does
   not block any Phase E acceptance criterion): the eligible partner-type
   allowlist for retread/repair work (`EXTERNAL_WORKSHOP`, `TIRE_SUPPLIER`)
@@ -559,6 +733,50 @@ placeholder data) — until that decision is made, G-25's validation stays permi
 - Frontend (Phase E): `tsc -b` clean; `npm run build` (vite production
   build) succeeds; `npm run lint` (oxlint) shows only pre-existing
   warnings in files this work did not touch.
+- Targeted Phase F tests (TireScoringAndSaleTest — new file, 28 tests,
+  118 assertions, passing on the first full run): cover BD-3 rejection
+  (missing/zero/invalid/incompatible reference, missing measurement, no
+  published config, requires_ka unmet), core calculation (SPA raw/
+  normalized/classification for a known band, 2-decimal rounding of a
+  repeating decimal, top-band matching at/above 100%), BD-1/BD-6
+  critical-fail (inspector-flagged forces ineligibility regardless of
+  band, requires a reason, band-flagged forces critical even when the
+  inspector says safe), BD-4 finalize maker-checker + immutability
+  (self-finalize rejected, cross-actor finalize succeeds, re-finalize
+  rejected), the configuration validator (gap rejected, kf_weights-on-
+  unrequired-ka rejected, REPAIR config with no ka/kf requirement
+  computes cleanly), BD-8 non-weakening (tenant override cannot loosen
+  a platform default's matched-label safety flags), the Phase E
+  integration (a critical-fail scoring result linked to a retread cycle
+  blocks its RETURN_TO_SERVICE approval), BD-5 sell (rejected with no
+  score / critical-fail / ineligible classification, succeeds when
+  eligible, the two non-reuse sell types need no score at all, a sold
+  tire can't be sold or installed again, an installed tire can't be
+  sold), and permission gating on both the scoring and sell endpoints.
+- Full regression post-Phase-F (baseline file set extended once more to
+  add `TireScoringAndSaleTest`): 401 passed / 1448 assertions / 0
+  failures — zero regressions, including the full Phase A-E suite.
+- Migration verification: all four new Phase F migrations
+  (`2026_09_14_000001_add_reference_tread_depth_to_products`,
+  `2026_09_14_000002_add_sold_status_to_tires`,
+  `2026_09_14_000003_create_tire_scoring_results_table`,
+  `2026_09_14_000004_create_tire_sales_table`) applied cleanly via both
+  `migrate:fresh --seed` against the dev database and
+  `migrate:fresh --env=testing --force` against the testing database
+  (Mongo migrations temporarily moved aside per the established
+  environment workaround, then restored immediately afterward).
+- Static analysis (Phase F): `git diff --check` clean; `vendor/bin/pint
+  --test` clean on all Phase F files (one auto-fix round needed for a
+  pre-existing file's const-declaration formatting when `TYPE_TIRE_SCORING`
+  was added — applied, re-verified clean, no logic change; the new test
+  file needed one auto-fix round for import ordering).
+- Frontend (Phase F): `tsc -b` clean; `npm run build` (vite production
+  build) succeeds; `npm run lint` (oxlint) — one new warning
+  (`react(set-state-in-effect)` in `ProductDetailPage.tsx`, from
+  syncing an editable field's local state from loaded product data) —
+  this matches an existing, already-accepted pattern used identically
+  elsewhere in this codebase (`WorkshopSchedulerPage.tsx`,
+  `AnalyticsDomainPage.tsx`), not a new category of issue.
 - Static analysis: `git diff --check` clean; `vendor/bin/pint --test`
   clean on all Phase A files (two migrations and three test files needed
   `vendor/bin/pint` auto-fix for import ordering/brace style — applied,
