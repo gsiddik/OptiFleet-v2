@@ -116,6 +116,26 @@ export interface VehicleCategory {
   component_group_ids?: string[];
 }
 
+export interface VehicleBrandItem {
+  id: string;
+  tenant_id: string | null;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface VehicleModelItem {
+  id: string;
+  tenant_id: string | null;
+  vehicle_brand_id: string;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  brand?: VehicleBrandItem;
+}
+
 export interface ComponentGroup {
   id: string;
   tenant_id: string | null;
@@ -355,7 +375,9 @@ export interface VehicleItem {
   default_workshop_id: string | null;
   vehicle_category_id: string;
   brand: string;
+  vehicle_brand_id: string | null;
   model: string;
+  vehicle_model_id: string | null;
   vehicle_type: string | null;
   registration_number: string;
   vin: string | null;
@@ -371,6 +393,8 @@ export interface VehicleItem {
   branch?: Branch;
   default_workshop?: Workshop;
   vehicle_category?: VehicleCategory;
+  vehicle_brand?: VehicleBrandItem;
+  vehicle_model?: VehicleModelItem;
 }
 
 export interface VehicleAssignmentItem {
@@ -785,6 +809,7 @@ export interface ProductCategoryItem {
   id: string;
   code: string;
   name: string;
+  description: string | null;
   is_system: boolean;
   status: string;
 }
@@ -1229,6 +1254,12 @@ export interface TireItem {
   manufacture_date_code: string | null;
   tire_size: string | null;
   pattern: string | null;
+  section_width_mm: number | null;
+  aspect_ratio: number | null;
+  rim_diameter_inch: string | null;
+  load_index: number | null;
+  speed_rating: string | null;
+  ply_rating: number | null;
   purchase_date: string | null;
   purchase_cost: string | null;
   warranty_months: number | null;

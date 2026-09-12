@@ -31,6 +31,10 @@ import { WorkshopsPage } from './pages/tenant/organization/WorkshopsPage';
 import { WarehousesPage } from './pages/tenant/organization/WarehousesPage';
 import { VehicleCategoriesPage } from './pages/tenant/masterdata/VehicleCategoriesPage';
 import { ComponentGroupsPage } from './pages/tenant/masterdata/ComponentGroupsPage';
+import { ProductCategoriesPage } from './pages/tenant/masterdata/ProductCategoriesPage';
+import { UomsPage } from './pages/tenant/masterdata/UomsPage';
+import { VehicleBrandsPage } from './pages/tenant/masterdata/VehicleBrandsPage';
+import { VehicleModelsPage } from './pages/tenant/masterdata/VehicleModelsPage';
 import { TenantUsersPage } from './pages/tenant/access/TenantUsersPage';
 import { TenantRolesPage } from './pages/tenant/access/TenantRolesPage';
 import { TenantAuditLogPage } from './pages/tenant/audit/TenantAuditLogPage';
@@ -489,6 +493,38 @@ export default function App() {
               element={
                 <RequirePermission permission="component_group.view">
                   <ComponentGroupsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="master-data/product-categories"
+              element={
+                <RequirePermission permission="product.view">
+                  <ProductCategoriesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="master-data/uoms"
+              element={
+                <RequirePermission permission="product.view">
+                  <UomsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="master-data/vehicle-brands"
+              element={
+                <RequirePermission permission="vehicle_brand.view">
+                  <VehicleBrandsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="master-data/vehicle-models"
+              element={
+                <RequirePermission permission="vehicle_brand.view">
+                  <VehicleModelsPage />
                 </RequirePermission>
               }
             />

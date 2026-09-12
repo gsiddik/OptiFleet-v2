@@ -68,6 +68,12 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
   const [manufacturer, setManufacturer] = useState('');
   const [manufactureDateCode, setManufactureDateCode] = useState('');
   const [tireSize, setTireSize] = useState('');
+  const [sectionWidthMm, setSectionWidthMm] = useState('');
+  const [aspectRatio, setAspectRatio] = useState('');
+  const [rimDiameterInch, setRimDiameterInch] = useState('');
+  const [loadIndex, setLoadIndex] = useState('');
+  const [speedRating, setSpeedRating] = useState('');
+  const [plyRating, setPlyRating] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -83,11 +89,20 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
       await apiClient.post('/app/tires', {
         product_id: productId, serial_number: serialNumber, manufacturer: manufacturer || undefined,
         manufacture_date_code: manufactureDateCode || undefined, tire_size: tireSize || undefined,
+        section_width_mm: sectionWidthMm || undefined, aspect_ratio: aspectRatio || undefined,
+        rim_diameter_inch: rimDiameterInch || undefined, load_index: loadIndex || undefined,
+        speed_rating: speedRating || undefined, ply_rating: plyRating || undefined,
       });
       setSerialNumber('');
       setManufacturer('');
       setManufactureDateCode('');
       setTireSize('');
+      setSectionWidthMm('');
+      setAspectRatio('');
+      setRimDiameterInch('');
+      setLoadIndex('');
+      setSpeedRating('');
+      setPlyRating('');
       onCreated();
       onClose();
     } catch (err) {
@@ -120,8 +135,28 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
         <input value={manufactureDateCode} onChange={(e) => setManufactureDateCode(e.target.value)} placeholder="e.g. DOT week/year code" style={inputStyle} />
       </FormField>
       <FormField label="Tire Size" errors={errors.tire_size}>
-        <input value={tireSize} onChange={(e) => setTireSize(e.target.value)} style={inputStyle} />
+        <input value={tireSize} onChange={(e) => setTireSize(e.target.value)} placeholder="e.g. 295/80R22.5" style={inputStyle} />
       </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+        <FormField label="Section Width (mm)" errors={errors.section_width_mm}>
+          <input type="number" min="1" value={sectionWidthMm} onChange={(e) => setSectionWidthMm(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Aspect Ratio (%)" errors={errors.aspect_ratio}>
+          <input type="number" min="1" max="100" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Rim Diameter (in)" errors={errors.rim_diameter_inch}>
+          <input type="number" min="1" step="0.1" value={rimDiameterInch} onChange={(e) => setRimDiameterInch(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Load Index" errors={errors.load_index}>
+          <input type="number" min="1" value={loadIndex} onChange={(e) => setLoadIndex(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Speed Rating" errors={errors.speed_rating}>
+          <input maxLength={2} value={speedRating} onChange={(e) => setSpeedRating(e.target.value.toUpperCase())} style={inputStyle} />
+        </FormField>
+        <FormField label="Ply Rating" errors={errors.ply_rating}>
+          <input type="number" min="1" value={plyRating} onChange={(e) => setPlyRating(e.target.value)} style={inputStyle} />
+        </FormField>
+      </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel

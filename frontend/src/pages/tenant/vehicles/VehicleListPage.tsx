@@ -9,7 +9,7 @@ import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { VehicleItem } from '../../../types';
+import type { VehicleBrandItem, VehicleItem, VehicleModelItem } from '../../../types';
 
 const STATUSES = ['', 'ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'];
 
@@ -65,10 +65,14 @@ export function VehicleListPage() {
 function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [vehicleBrands, setVehicleBrands] = useState<VehicleBrandItem[]>([]);
+  const [vehicleModels, setVehicleModels] = useState<VehicleModelItem[]>([]);
   const [branchId, setBranchId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [brand, setBrand] = useState('');
   const [model, setModel] = useState('');
+  const [vehicleBrandId, setVehicleBrandId] = useState('');
+  const [vehicleModelId, setVehicleModelId] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [vin, setVin] = useState('');
   const [currentOdometer, setCurrentOdometer] = useState('0');
@@ -79,7 +83,20 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
     if (!open) return;
     apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data));
     apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
+    apiClient.get('/app/vehicle-brands', { params: { per_page: 100 } }).then((res) => setVehicleBrands(res.data.data)).catch(() => setVehicleBrands([]));
   }, [open]);
+
+  useEffect(() => {
+    if (!vehicleBrandId) {
+      setVehicleModels([]);
+      setVehicleModelId('');
+      return;
+    }
+    apiClient
+      .get('/app/vehicle-models', { params: { vehicle_brand_id: vehicleBrandId, per_page: 100 } })
+      .then((res) => setVehicleModels(res.data.data))
+      .catch(() => setVehicleModels([]));
+  }, [vehicleBrandId]);
 
   async function submit() {
     setSubmitting(true);
@@ -90,12 +107,16 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         vehicle_category_id: categoryId,
         brand,
         model,
+        vehicle_brand_id: vehicleBrandId || undefined,
+        vehicle_model_id: vehicleModelId || undefined,
         registration_number: registrationNumber,
         vin: vin || null,
         current_odometer: currentOdometer,
       });
       setBrand('');
       setModel('');
+      setVehicleBrandId('');
+      setVehicleModelId('');
       setRegistrationNumber('');
       setVin('');
       onCreated();
@@ -136,6 +157,26 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         </FormField>
         <FormField label="Model" errors={errors.model}>
           <input value={model} onChange={(e) => setModel(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Brand (master data, optional)" errors={errors.vehicle_brand_id}>
+          <select value={vehicleBrandId} onChange={(e) => setVehicleBrandId(e.target.value)} style={inputStyle}>
+            <option value="">None</option>
+            {vehicleBrands.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label="Model (master data, optional)" errors={errors.vehicle_model_id}>
+          <select value={vehicleModelId} onChange={(e) => setVehicleModelId(e.target.value)} style={inputStyle} disabled={!vehicleBrandId}>
+            <option value="">None</option>
+            {vehicleModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
         </FormField>
         <FormField label="Registration Number" errors={errors.registration_number}>
           <input value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} style={inputStyle} />
