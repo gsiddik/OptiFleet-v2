@@ -10,6 +10,8 @@ use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Procurement\Models\RfqItem;
 use App\Domain\Procurement\Models\VendorQuotation;
 use App\Domain\Procurement\Models\VendorQuotationItem;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -84,7 +86,7 @@ class RfqService
     }
 
     /**
-     * @param array<array{rfq_item_id?:string,product_id:string,quantity:float,unit_price:float,discount_percent?:float,tax_percent?:float}> $items
+     * @param  array<array{rfq_item_id?:string,product_id:string,quantity:float,unit_price:float,discount_percent?:float,tax_percent?:float}>  $items
      */
     public function submitQuotation(Rfq $rfq, Partner $partner, array $attributes, array $items): VendorQuotation
     {
@@ -104,39 +106,40 @@ class RfqService
 
             $quotation->items()->delete();
 
-            $subtotal = 0.0;
-            $taxTotal = 0.0;
+            $subtotal = BigDecimal::of('0');
+            $taxTotal = BigDecimal::of('0');
             foreach ($items as $line) {
-                $qty = (float) $line['quantity'];
-                $unitPrice = (float) $line['unit_price'];
-                $discountPercent = (float) ($line['discount_percent'] ?? 0);
-                $taxPercent = (float) ($line['tax_percent'] ?? 0);
+                $qty = BigDecimal::of((string) $line['quantity']);
+                $unitPrice = BigDecimal::of((string) $line['unit_price']);
+                $discountPercent = BigDecimal::of((string) ($line['discount_percent'] ?? 0));
+                $taxPercent = BigDecimal::of((string) ($line['tax_percent'] ?? 0));
 
-                $base = $qty * $unitPrice;
-                $afterDiscount = $base * (1 - $discountPercent / 100);
-                $tax = $afterDiscount * ($taxPercent / 100);
-                $lineTotal = round($afterDiscount + $tax, 4);
+                $base = $qty->multipliedBy($unitPrice);
+                $discountFactor = BigDecimal::of('1')->minus($discountPercent->dividedBy(100, 4, RoundingMode::HALF_UP));
+                $afterDiscount = $base->multipliedBy($discountFactor)->toScale(4, RoundingMode::HALF_UP);
+                $tax = $afterDiscount->multipliedBy($taxPercent->dividedBy(100, 4, RoundingMode::HALF_UP))->toScale(4, RoundingMode::HALF_UP);
+                $lineTotal = $afterDiscount->plus($tax);
 
                 VendorQuotationItem::query()->create([
                     'vendor_quotation_id' => $quotation->id,
                     'rfq_item_id' => $line['rfq_item_id'] ?? null,
                     'product_id' => $line['product_id'],
-                    'quantity' => $qty,
-                    'unit_price' => $unitPrice,
-                    'discount_percent' => $discountPercent,
-                    'tax_percent' => $taxPercent,
-                    'line_total' => $lineTotal,
+                    'quantity' => (string) $qty,
+                    'unit_price' => (string) $unitPrice,
+                    'discount_percent' => (string) $discountPercent,
+                    'tax_percent' => (string) $taxPercent,
+                    'line_total' => (string) $lineTotal,
                 ]);
 
-                $subtotal += $afterDiscount;
-                $taxTotal += $tax;
+                $subtotal = $subtotal->plus($afterDiscount);
+                $taxTotal = $taxTotal->plus($tax);
             }
 
-            $freight = (float) ($attributes['freight_cost'] ?? 0);
+            $freight = BigDecimal::of((string) ($attributes['freight_cost'] ?? 0))->toScale(4, RoundingMode::HALF_UP);
             $quotation->update([
-                'subtotal' => round($subtotal, 4),
-                'tax_total' => round($taxTotal, 4),
-                'total' => round($subtotal + $taxTotal + $freight, 4),
+                'subtotal' => (string) $subtotal,
+                'tax_total' => (string) $taxTotal,
+                'total' => (string) $subtotal->plus($taxTotal)->plus($freight),
             ]);
 
             return $quotation->fresh('items');

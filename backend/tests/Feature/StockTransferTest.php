@@ -5,13 +5,14 @@ namespace Tests\Feature;
 use App\Domain\Inventory\Models\StockTransfer;
 use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Services\InventoryService;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class StockTransferTest extends TestCase
 {
     private function setUpTransferScenario(): array
     {
-        $tenant = $this->makeTenant(['code' => 'TRF-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'TRF-'.Str::random(4)]);
         $this->grantModule($tenant, 'INVENTORY');
         $branch = $this->makeBranch($tenant);
         $from = $this->makeWarehouse($tenant, $branch, null, ['code' => 'WH-FROM']);
@@ -38,7 +39,7 @@ class StockTransferTest extends TestCase
     public function test_full_transfer_lifecycle_moves_stock_from_source_to_destination(): void
     {
         [$tenant, $from, $to, $product] = $this->setUpTransferScenario();
-        [, $token] = $this->makeTenantUser($tenant, [
+        [$user, $token] = $this->makeTenantUser($tenant, [
             'stock_transfer.view', 'stock_transfer.create', 'stock_transfer.approve', 'stock_transfer.dispatch', 'stock_transfer.receive',
         ]);
         $headers = $this->authHeaders($token);
@@ -54,6 +55,9 @@ class StockTransferTest extends TestCase
         $fromStock = WarehouseStock::query()->where('warehouse_id', $from->id)->where('product_id', $product->id)->first();
         $this->assertSame(10.0, (float) $fromStock->quantity_on_hand);
 
+        // G-05: dispatch()/receive() previously recorded only a timestamp — the actor was never persisted.
+        $this->assertSame($user->id, $transfer->fresh()->dispatched_by);
+
         $item = $transfer->items()->first();
         $this->postJson("/api/v1/app/stock-transfers/{$transfer->id}/receive", [
             'receipts' => [['item_id' => $item->id, 'quantity_received' => 10]],
@@ -61,6 +65,7 @@ class StockTransferTest extends TestCase
 
         $toStock = WarehouseStock::query()->where('warehouse_id', $to->id)->where('product_id', $product->id)->first();
         $this->assertSame(10.0, (float) $toStock->quantity_on_hand);
+        $this->assertSame($user->id, $transfer->fresh()->received_by);
 
         $this->postJson("/api/v1/app/stock-transfers/{$transfer->id}/complete", [], $headers)->assertOk();
         $this->assertSame('COMPLETED', $transfer->fresh()->status);
@@ -175,7 +180,7 @@ class StockTransferTest extends TestCase
         ], $this->authHeaders($token))->assertStatus(201);
         $transfer = StockTransfer::query()->findOrFail($create->json('data.id'));
 
-        $otherTenant = $this->makeTenant(['code' => 'TRFB-'.\Illuminate\Support\Str::random(4)]);
+        $otherTenant = $this->makeTenant(['code' => 'TRFB-'.Str::random(4)]);
         $this->grantModule($otherTenant, 'INVENTORY');
         [, $otherToken] = $this->makeTenantUser($otherTenant, ['stock_transfer.view']);
 

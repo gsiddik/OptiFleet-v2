@@ -2,6 +2,7 @@
 
 namespace App\Domain\Inventory\Models;
 
+use App\Domain\Audit\Concerns\Auditable;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Shared\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -11,11 +12,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class StockTransfer extends Model
 {
-    use BelongsToTenant, HasUuids;
+    use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
         'tenant_id', 'transfer_number', 'numbering_configuration_version_id', 'workflow_configuration_version_id', 'from_warehouse_id', 'to_warehouse_id', 'status',
-        'requested_by', 'approved_by', 'dispatched_at', 'received_at', 'notes',
+        'requested_by', 'approved_by', 'dispatched_at', 'dispatched_by', 'received_at', 'received_by', 'notes',
     ];
 
     protected function casts(): array

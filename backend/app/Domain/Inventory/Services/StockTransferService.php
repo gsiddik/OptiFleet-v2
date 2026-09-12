@@ -2,10 +2,10 @@
 
 namespace App\Domain\Inventory\Services;
 
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Inventory\Models\StockTransfer;
 use App\Domain\Inventory\Models\StockTransferItem;
 use App\Domain\Inventory\Models\WarehouseStock;
-use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\Workflow\Services\WorkflowEngine;
@@ -103,14 +103,14 @@ class StockTransferService
                 $item->update(['unit_cost' => $stockBefore?->average_unit_cost ?? 0]);
             }
 
-            $locked->update(['status' => 'DISPATCHED', 'dispatched_at' => now()]);
+            $locked->update(['status' => 'DISPATCHED', 'dispatched_at' => now(), 'dispatched_by' => $userId]);
 
             return $locked->fresh('items');
         });
     }
 
     /**
-     * @param array<array{item_id:string, quantity_received:float, quantity_damaged?:float, quantity_lost?:float, discrepancy_reason?:string}> $receipts
+     * @param  array<array{item_id:string, quantity_received:float, quantity_damaged?:float, quantity_lost?:float, discrepancy_reason?:string}>  $receipts
      */
     public function receive(StockTransfer $transfer, array $receipts, ?string $userId): StockTransfer
     {
@@ -154,7 +154,7 @@ class StockTransferService
                 ]);
             }
 
-            $locked->update(['status' => 'RECEIVED', 'received_at' => now()]);
+            $locked->update(['status' => 'RECEIVED', 'received_at' => now(), 'received_by' => $userId]);
 
             return $locked->fresh('items');
         });
