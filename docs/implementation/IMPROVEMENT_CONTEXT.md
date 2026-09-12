@@ -1,0 +1,188 @@
+# OptiFleet Improvement Context
+
+## Authoritative Source
+- "OptiFleet — Consolidated Read-Only Gap Analysis Report (Baseline for
+  Future Improvement Project)" (.docx) — supplied externally by the owner
+  this session, not tracked in the repository. Defines gaps G-01–G-43,
+  Business Decisions BD-1–BD-8, dependency order, and Phase A–G roadmap.
+- "Analisis Menyeluruh VMS untuk Improvement OptiFleet" (.docx) — supplied
+  externally this session, not tracked in the repository. Read-only
+  Super Admin observation of a reference VMS product (Indonesian);
+  supplies VMS-R recommendations and UI/workflow observations layered
+  under the consolidated report's authority per its own §17.
+- Base branch/commit: `main` @ `8648228c222fd464139bf9443050a50d99b33845`.
+- Active branch: `Improvement` (created from the commit above).
+- Remote branch: not yet pushed (push occurs only at a completed phase
+  boundary per the task's Section 12 policy).
+
+## Mandatory Business Decisions (BD-1–BD-8, condensed)
+- BD-1: Full SPA/KA/KTS/KTN/KF apparatus is mandatory; critical-fail gate
+  overrides KF always.
+- BD-2: Repair and Retread use separate, versioned scoring configurations;
+  Repair does not require ΔKT/tread improvement.
+- BD-3: Tread depth stored in mm; reference sourced from Tire Product
+  spec; system-calculated %; reject calculation on missing/zero/invalid
+  reference (never silently approximate).
+- BD-4: Maker-checker named ownership across removal/inspection/send-
+  receive/final-inspection/return-to-service/sell/dispose; receiver
+  cannot self-approve final acceptance.
+- BD-5: "Sell" splits into SELL_FOR_OPERATIONAL_REUSE /
+  SELL_AS_RETREADABLE_CASING / SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL;
+  Very Bad tires never sold for operational reuse.
+- BD-6: Disposition hierarchy: Critical Safety Failure → Legal/Policy →
+  Casing Eligibility → Lifecycle Limits → Vehicle/Axle/Operational
+  Suitability → Inspection Result → KF → Economic Feasibility → Approval
+  → Final Disposition.
+- BD-7: Legacy onboarding, atomic multi-tire rotation, and REPAIR
+  disposition are in scope, in dependency order: Serial Integrity →
+  Wheel Position Validation → Legacy Onboarding → Atomic Rotation →
+  REPAIR Lifecycle → Inspection/Approval → Scoring Configuration.
+- BD-8: Platform Default + Optional Versioned Tenant Override; named
+  non-overridable platform safety invariants (critical-fail gate,
+  unsafe-install/resale prohibitions, serial/position integrity,
+  maker-checker, audit, non-overridable legal restrictions,
+  finalized-result immutability); every scored record persists its
+  configuration version.
+
+## Architecture Invariants
+- Tenant isolation: every tenant-scoped table/query must carry
+  `tenant_id`; global `TenantScope` via `BelongsToTenant`, never
+  client-trusted.
+- Permission enforcement: server-side, permission-string based (never
+  hardcoded role names), via `CheckPermission` middleware.
+- Workflow/state integrity: `WorkOrderTransitionService` is the single
+  transition entry point; row-locks the WO before re-checking status.
+- Inventory ledger integrity: `stock_movements` is append-only; every
+  balance mutation in `InventoryService` row-locks `WarehouseStock`
+  first; balances must reconstruct from the ledger.
+- Concurrency: critical read-then-write sequences (`returnPart`,
+  `consume`, retread cycle numbering) must lock the row they check
+  before checking it, inside one transaction.
+- Tire safety: one serial = one physical asset; one active position per
+  tire; one active tire per position (DB partial unique indexes);
+  critical-fail overrides all scores; unsafe tires never installed or
+  resold for operational reuse.
+- Auditability: `Auditable` trait on models where field-level history
+  matters; every disposition/scoring record must carry actor, reason,
+  before/after, and (once built) configuration version.
+- Money/quantity precision: `decimal` columns throughout, never native
+  float; existing `brick/math`-based `Money` helper is the project's
+  established pattern for monetary arithmetic.
+
+## Phase Status
+
+| Phase | Gap IDs | Status | Commit(s) | Tests | Remaining work | Blocker |
+|---|---|---|---|---|---|---|
+| A — Critical Integrity & Closure Controls | G-14, G-18, G-17, G-35, G-21, G-22, G-19 | COMPLETE | see commits below | Targeted: 48 passed (273 assertions). Regression (same 40-file baseline set): 263 passed / 882 assertions vs. baseline 262 passed / 878 — net +1 test (the new G-19 test added to an existing file), 0 failures, 0 regressions. Frontend: tsc build + production build clean. | G-21's running-balance column is computed client-side over a widened (200-row) page per item/warehouse, not a true from-inception ledger balance — accurate for realistic history lengths, not mathematically guaranteed beyond that without a backend-computed opening-balance parameter (not built this session). | none |
+| B — Used Sparepart Processing | G-15 | NOT STARTED | — | — | Full receiving/inspection/disposition workflow on top of Phase A's `work_order_part_returns` (PENDING_INSPECTION rows) | Depends on Phase A (complete); awaits next session |
+| C — Sell Sparepart | G-16, G-20 | NOT STARTED | — | — | Sale type/approval/SALE movement/scrap route+UI | Depends on Phase B |
+| D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28 | NOT STARTED | — | — | Serial normalization, wheel-position FK validation, legacy onboarding, atomic rotation, replace() disposition flexibility | Independent of A-C; not started this session |
+| E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | NOT STARTED | — | — | REPAIR disposition, locked cycle numbering, partner-type constraint, maker-checker split, final-inspection gate | Depends on Phase D |
+| F — Tire Scoring/Classification | G-31, G-11, BD-1–BD-8 | NOT STARTED | — | — | Full versioned scoring/config framework | Depends on Phases D and E |
+| G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI | Independent; not started this session |
+
+## Current Work
+- Active phase: A (implemented and validated this session).
+- Active batch: none in progress — Phase A batches are complete pending
+  final regression confirmation and the phase-boundary push.
+- Files/modules in progress: none.
+- Immediate next action for the following session: re-read this file and
+  Git history to confirm Phase A's push landed on `origin/Improvement`,
+  then begin Phase B (Used Sparepart Processing, G-15) — it explicitly
+  depends on Phase A's `work_order_part_returns` table (condition
+  classification + PENDING_INSPECTION rows) as its receiving input, per
+  the consolidated report's Dependency Map (§29).
+
+## Decisions and Deviations
+- Decision: return-condition classification (G-14) is implemented as a
+  new `work_order_part_returns` table (append-only "Received Sparepart
+  Return" record) rather than a new `stock_movements` movement type for
+  the USED_GOOD/USED_FAULTY branches.
+  Reason: `stock_movements` balance-reconstruction logic elsewhere in the
+  codebase (and its own tests) infers on-hand balance effect purely from
+  `movement_type`; a used-condition return must never affect on-hand
+  balance, so keeping it in a dedicated table avoids any risk of a future
+  reconciliation reading a new movement type's sign incorrectly. Only the
+  UNUSED_NEW branch writes a normal `RETURN` stock_movement (existing,
+  unchanged ledger behavior).
+  Report reference: §9, §26 (G-14), §29 Dependency Map.
+  Repository evidence: `stock_movements_movement_type_check` constraint;
+  `InventoryTest::test_stock_movement_ledger_reconstructs_balance`.
+- Decision: G-22's consumption ledger entry uses a new `CONSUME`
+  `stock_movements` type with zero on-hand effect (a traceability marker
+  only), not a second deduction.
+  Reason: on-hand quantity is already decremented at ISSUE time;
+  decrementing again at CONSUME would double-deduct stock, violating the
+  "prevent double deduction" invariant (CLAUDE.md, Inventory section).
+- Decision: `returnPart()`/`consume()` return endpoint validation now
+  requires `condition` (return only) and both now lock the
+  `WorkOrderPlannedPart` row for update inside their transaction before
+  reading `outstandingIssued()`.
+  Reason: this is the literal G-18 TOCTOU race fix — the previous
+  check-then-act ran on an unlocked, possibly-stale row.
+  This is a documented, intentional breaking API change to
+  `POST .../planned-parts/{id}/return` (now requires `condition` in the
+  request body) — authorized explicitly by the task's Phase A scope
+  ("return-condition classification" is a named G-14 deliverable) and
+  the CLAUDE.md clause permitting migration of tenant-facing behavior
+  "with a documented plan." No other endpoint contracts changed.
+- Decision: WO closure guard (G-17/G-35) blocks `COMPLETED`/`CLOSED`
+  transitions on **any** planned-part status outside
+  {CONSUMED, RETURNED, CANCELLED} (not only ISSUED/PARTIALLY_ISSUED), and
+  on any Tire removed under that WO whose current tire status is still
+  UNDER_INSPECTION or RETREAD.
+  Reason: the report's own summary phrase is "no Work Order closes with
+  mandatory unresolved part" (unqualified), and the narrower
+  ISSUED/PARTIALLY_ISSUED-only reading appears only in one restated
+  passage (§29) — the broader, stricter reading is the safer one and is
+  consistent with CLAUDE.md's "err toward stricter integrity guard"
+  posture. Recorded here in case a future session finds evidence this
+  was intended to be narrower.
+  Report reference: §7 (G-17), §17 (G-35), §29 Dependency Map, §30 Phase A
+  acceptance criteria.
+
+## Known Blockers
+- None blocking Phase A. Phases B–G are not blocked, simply not started
+  this session (large, multi-week scope — see roadmap in the source
+  report §30).
+- Environment: this container has no `ext-mongodb` PHP extension and no
+  `mongod` binary, so the three Mongo-backed migrations
+  (`2026_09_08_000002/3`, `2026_09_08_100001` — Phase 6/7 Analytics/
+  Intelligence collections) and any Phase 6/7 test suites that depend on
+  them cannot run here. This is a pre-existing environment limitation,
+  not introduced by this work, and does not affect Phase A (Postgres-only
+  domains). Recorded as NOT RUN with reason in the final report, per
+  CLAUDE.md's testing rule.
+
+## Verification Status
+- Baseline (clean `main`, before any Phase A change, 40 non-Mongo Feature
+  test files): 262 passed / 878 assertions / 0 failures.
+- Targeted Phase A tests (InventoryReturnClassificationTest,
+  WorkOrderClosureGuardTest, WorkOrderStockIntegrationTest, plus
+  regression on touched domains InventoryTest/TireTest/WorkOrderTest/
+  WorkOrderExecutionTest): 48 passed / 273 assertions / 0 failures.
+- Full regression post-Phase-A (same 40-file baseline set): 263 passed /
+  882 assertions / 0 failures — net +1 test / +4 assertions vs. baseline
+  (the new G-19 cross-tenant test added to an existing file), 0
+  regressions.
+- Static analysis: `git diff --check` clean; `vendor/bin/pint --test`
+  clean on all Phase A files (two migrations and three test files needed
+  `vendor/bin/pint` auto-fix for import ordering/brace style — applied,
+  re-verified clean, no logic change).
+- Frontend: `tsc -b` clean; `npm run build` (vite production build)
+  succeeds; `npm run lint` (oxlint) shows only pre-existing warnings in
+  files this work did not touch.
+- Migration verification: `migrate:fresh --seed` run clean on real seeded
+  demo data both before and after adding Phase A's three migrations,
+  including the `tenant_id` backfill on `work_order_planned_parts`
+  against existing seeded rows (zero orphans, NOT NULL + FK applied
+  successfully).
+- NOT RUN (environment limitation, pre-existing, unrelated to this
+  change): Phase 6/7 Analytics/Intelligence test suites and their two
+  Mongo-backed migrations — this container has no `ext-mongodb` PHP
+  extension and no `mongod` binary. Full-suite `php artisan test
+  --testsuite=Feature` (which includes those Mongo-dependent
+  directories) could not be exercised directly for this reason; the
+  40 non-Mongo Feature test files were run explicitly by name instead,
+  which is a complete substitute for every Postgres-backed domain this
+  phase touches or could regress.
