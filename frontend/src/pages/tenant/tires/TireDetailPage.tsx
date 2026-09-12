@@ -5,7 +5,139 @@ import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
-import type { TireItem, VehicleItem } from '../../../types';
+import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem } from '../../../types';
+
+type CycleItem = TireRetreadItem | TireRepairItem;
+
+/**
+ * Phase E: one send -> receive -> final-inspect -> approve governance panel,
+ * shared by the Retread and Repair sections below — they are two distinct
+ * lifecycles (separate tables/endpoints, G-27) but an identical UI shape.
+ */
+function CycleGovernancePanel({
+  label, tireStatus, sendReadyStatus, activeCycle, history, partners,
+  canSend, canReceive, canInspect, canApprove, busy,
+  sendState, onReceive, inspectState, approveState,
+}: {
+  label: string;
+  tireStatus: string;
+  sendReadyStatus: string;
+  activeCycle: CycleItem | undefined;
+  history: CycleItem[];
+  partners: PartnerItem[];
+  canSend: boolean;
+  canReceive: boolean;
+  canInspect: boolean;
+  canApprove: boolean;
+  busy: boolean;
+  sendState: { partnerId: string; setPartnerId: (v: string) => void; cost: string; setCost: (v: string) => void; notes: string; setNotes: (v: string) => void; onSend: () => void };
+  onReceive: (cycleId: string) => void;
+  inspectState: { result: string; setResult: (v: string) => void; notes: string; setNotes: (v: string) => void; onInspect: (cycleId: string) => void };
+  approveState: { disposition: string; setDisposition: (v: string) => void; reason: string; setReason: (v: string) => void; onApprove: (cycleId: string) => void };
+}) {
+  const showSendForm = tireStatus === sendReadyStatus && ! activeCycle && canSend;
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{label}</h3>
+
+      {showSendForm && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+          <FormField label="Partner (EXTERNAL_WORKSHOP or TIRE_SUPPLIER, ACTIVE)">
+            <select value={sendState.partnerId} onChange={(e) => sendState.setPartnerId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+              <option value="">Select…</option>
+              {partners.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.partner_type})
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Cost">
+            <input type="number" value={sendState.cost} onChange={(e) => sendState.setCost(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+          </FormField>
+          <FormField label="Notes">
+            <input value={sendState.notes} onChange={(e) => sendState.setNotes(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+          </FormField>
+          <button className="btn-primary" disabled={busy || !sendState.partnerId} onClick={sendState.onSend} style={{ marginBottom: 14 }}>
+            Send For {label}
+          </button>
+        </div>
+      )}
+
+      {activeCycle && activeCycle.status === 'SENT' && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+          <span style={{ fontSize: 13 }}>Cycle {activeCycle.cycle_number} is out for {label.toLowerCase()} — sent {activeCycle.sent_at}.</span>
+          {canReceive && (
+            <button className="btn-secondary" disabled={busy} onClick={() => onReceive(activeCycle.id)}>
+              Receive
+            </button>
+          )}
+        </div>
+      )}
+
+      {activeCycle && activeCycle.status === 'RECEIVED' && (
+        <div>
+          <p style={{ fontSize: 13 }}>Cycle {activeCycle.cycle_number} was received {activeCycle.received_at} — pending final inspection. It will not return to stock until inspected and approved.</p>
+          {canInspect && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+              <FormField label="Final Inspection Result (critical safety evaluation)">
+                <select value={inspectState.result} onChange={(e) => inspectState.setResult(e.target.value)} style={{ ...inputStyle, width: 130 }}>
+                  <option value="SAFE">SAFE</option>
+                  <option value="UNSAFE">UNSAFE</option>
+                </select>
+              </FormField>
+              <FormField label="Notes">
+                <input value={inspectState.notes} onChange={(e) => inspectState.setNotes(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+              </FormField>
+              <button className="btn-secondary" disabled={busy} onClick={() => inspectState.onInspect(activeCycle.id)} style={{ marginBottom: 14 }}>
+                Record Final Inspection
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeCycle && activeCycle.status === 'FINAL_INSPECTED' && (
+        <div>
+          <p style={{ fontSize: 13 }}>
+            Cycle {activeCycle.cycle_number} final inspection: <strong>{activeCycle.final_inspection_result}</strong>
+            {activeCycle.final_inspection_notes && ` — ${activeCycle.final_inspection_notes}`}. Approval must come from an actor other than whoever received it.
+          </p>
+          {canApprove && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+              <FormField label="Disposition">
+                <select value={approveState.disposition} onChange={(e) => approveState.setDisposition(e.target.value)} style={{ ...inputStyle, width: 170 }}>
+                  <option value="RETURN_TO_SERVICE" disabled={activeCycle.final_inspection_result === 'UNSAFE'}>RETURN_TO_SERVICE</option>
+                  <option value="SCRAP">SCRAP</option>
+                  <option value="QUARANTINE">QUARANTINE</option>
+                </select>
+              </FormField>
+              <FormField label="Reason (required, persisted)">
+                <input value={approveState.reason} onChange={(e) => approveState.setReason(e.target.value)} style={{ ...inputStyle, width: 260 }} />
+              </FormField>
+              <button className="btn-secondary" disabled={busy || !approveState.reason} onClick={() => approveState.onApprove(activeCycle.id)} style={{ marginBottom: 14 }}>
+                Approve
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <h4 style={{ fontSize: 13, marginBottom: 6 }}>{label} History</h4>
+      {history.length === 0 && <EmptyState label={`No ${label.toLowerCase()} cycles.`} />}
+      {history.map((c) => (
+        <div key={c.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          Cycle {c.cycle_number} — {c.status} — sent {c.sent_at}
+          {c.received_at && ` — received ${c.received_at}`}
+          {c.final_inspection_result && ` — final inspection: ${c.final_inspection_result}`}
+          {c.approval_disposition && ` — approved: ${c.approval_disposition}`}
+          {c.approval_reason && ` (${c.approval_reason})`}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function TireDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -43,6 +175,19 @@ export function TireDetailPage() {
   const [replaceReason, setReplaceReason] = useState('');
   const [replaceDisposition, setReplaceDisposition] = useState('REUSE');
 
+  // Phase E: retread/repair governance — send/receive/inspect/approve.
+  const [partners, setPartners] = useState<PartnerItem[]>([]);
+  const [retreadPartnerId, setRetreadPartnerId] = useState('');
+  const [retreadCost, setRetreadCost] = useState('');
+  const [retreadNotes, setRetreadNotes] = useState('');
+  const [repairPartnerId, setRepairPartnerId] = useState('');
+  const [repairCost, setRepairCost] = useState('');
+  const [repairNotes, setRepairNotes] = useState('');
+  const [inspectResult, setInspectResult] = useState('SAFE');
+  const [inspectNotes, setInspectNotes] = useState('');
+  const [approveDisposition, setApproveDisposition] = useState('RETURN_TO_SERVICE');
+  const [approveReason, setApproveReason] = useState('');
+
   function load() {
     apiClient.get(`/app/tires/${id}`).then((res) => setTire(res.data.data)).catch((err) => setError(extractApiError(err).message));
   }
@@ -65,6 +210,14 @@ export function TireDetailPage() {
       .then((res) => setAvailableTires(res.data.data))
       .catch(() => setAvailableTires([]));
   }, [tire?.current_status]);
+  useEffect(() => {
+    if (!['RETREAD', 'REPAIR'].includes(tire?.current_status ?? '')) return;
+    apiClient.get('/app/partners', { params: { status: 'ACTIVE', per_page: 100 } }).then((res) => setPartners(res.data.data)).catch(() => setPartners([]));
+  }, [tire?.current_status]);
+
+  // A tire has at most one non-terminal cycle open at a time (G-29) — this is the one the UI acts on.
+  const activeRetread = (tire?.retreads ?? []).find((r) => !['APPROVED', 'REJECTED'].includes(r.status));
+  const activeRepair = (tire?.repairs ?? []).find((r) => !['APPROVED', 'REJECTED'].includes(r.status));
 
   async function install() {
     setBusy(true);
@@ -186,7 +339,10 @@ export function TireDetailPage() {
     setBusy(true);
     setError(null);
     try {
-      await apiClient.post(`/app/tires/${id}/retread`, {});
+      await apiClient.post(`/app/tires/${id}/retread`, { partner_id: retreadPartnerId, cost: retreadCost || undefined, notes: retreadNotes || undefined });
+      setRetreadPartnerId('');
+      setRetreadCost('');
+      setRetreadNotes('');
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -195,11 +351,57 @@ export function TireDetailPage() {
     }
   }
 
-  async function receiveRetread(retreadId: string) {
+  async function sendForRepair() {
     setBusy(true);
     setError(null);
     try {
-      await apiClient.post(`/app/tires/${id}/retreads/${retreadId}/receive`);
+      await apiClient.post(`/app/tires/${id}/repair`, { partner_id: repairPartnerId, cost: repairCost || undefined, notes: repairNotes || undefined });
+      setRepairPartnerId('');
+      setRepairCost('');
+      setRepairNotes('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function receiveCycle(kind: 'retreads' | 'repairs', cycleId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/${kind}/${cycleId}/receive`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finalInspectCycle(kind: 'retreads' | 'repairs', cycleId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/${kind}/${cycleId}/final-inspect`, { result: inspectResult, notes: inspectNotes || undefined });
+      setInspectResult('SAFE');
+      setInspectNotes('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function approveCycle(kind: 'retreads' | 'repairs', cycleId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/tires/${id}/${kind}/${cycleId}/approve`, { disposition: approveDisposition, reason: approveReason });
+      setApproveDisposition('RETURN_TO_SERVICE');
+      setApproveReason('');
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -211,12 +413,19 @@ export function TireDetailPage() {
   if (error && !tire) return <ErrorState message={error} />;
   if (!tire) return <LoadingState />;
 
-  const canManage = hasPermission('tire.manage');
   const canInstall = hasPermission('tire.install');
   const canRotate = hasPermission('tire.rotate');
   const canInspect = hasPermission('tire.inspect');
   const canRemove = hasPermission('tire.remove');
   const canScrap = hasPermission('tire.scrap');
+  const canRetreadSend = hasPermission('tire_retread.send');
+  const canRetreadReceive = hasPermission('tire_retread.receive');
+  const canRetreadInspect = hasPermission('tire_retread.inspect');
+  const canRetreadApprove = hasPermission('tire_retread.approve');
+  const canRepairSend = hasPermission('tire_repair.send');
+  const canRepairReceive = hasPermission('tire_repair.receive');
+  const canRepairInspect = hasPermission('tire_repair.inspect');
+  const canRepairApprove = hasPermission('tire_repair.approve');
 
   return (
     <div>
@@ -347,7 +556,7 @@ export function TireDetailPage() {
               </FormField>
               <FormField label="Disposition">
                 <select value={disposition} onChange={(e) => setDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
-                  {['REUSE', 'RETREAD', 'SCRAP'].map((d) => (
+                  {['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'].map((d) => (
                     <option key={d} value={d}>
                       {d}
                     </option>
@@ -381,7 +590,7 @@ export function TireDetailPage() {
             </FormField>
             <FormField label="Outgoing Tire Disposition">
               <select value={replaceDisposition} onChange={(e) => setReplaceDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
-                {['REUSE', 'RETREAD', 'SCRAP'].map((d) => (
+                {['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'].map((d) => (
                   <option key={d} value={d}>
                     {d}
                   </option>
@@ -398,15 +607,47 @@ export function TireDetailPage() {
         </div>
       )}
 
-      {tire.current_status === 'RETREAD' && canManage && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <button className="btn-secondary" disabled={busy} onClick={sendForRetread}>
-            Send For Retread
-          </button>
-        </div>
+      {(tire.current_status === 'RETREAD' || (tire.retreads ?? []).length > 0) && (
+        <CycleGovernancePanel
+          label="Retread"
+          tireStatus={tire.current_status}
+          sendReadyStatus="RETREAD"
+          activeCycle={activeRetread}
+          history={tire.retreads ?? []}
+          partners={partners}
+          canSend={canRetreadSend}
+          canReceive={canRetreadReceive}
+          canInspect={canRetreadInspect}
+          canApprove={canRetreadApprove}
+          busy={busy}
+          sendState={{ partnerId: retreadPartnerId, setPartnerId: setRetreadPartnerId, cost: retreadCost, setCost: setRetreadCost, notes: retreadNotes, setNotes: setRetreadNotes, onSend: sendForRetread }}
+          onReceive={(cycleId) => receiveCycle('retreads', cycleId)}
+          inspectState={{ result: inspectResult, setResult: setInspectResult, notes: inspectNotes, setNotes: setInspectNotes, onInspect: (cycleId) => finalInspectCycle('retreads', cycleId) }}
+          approveState={{ disposition: approveDisposition, setDisposition: setApproveDisposition, reason: approveReason, setReason: setApproveReason, onApprove: (cycleId) => approveCycle('retreads', cycleId) }}
+        />
       )}
 
-      {['IN_STOCK', 'REMOVED', 'UNDER_INSPECTION'].includes(tire.current_status) && canScrap && (
+      {(tire.current_status === 'REPAIR' || (tire.repairs ?? []).length > 0) && (
+        <CycleGovernancePanel
+          label="Repair"
+          tireStatus={tire.current_status}
+          sendReadyStatus="REPAIR"
+          activeCycle={activeRepair}
+          history={tire.repairs ?? []}
+          partners={partners}
+          canSend={canRepairSend}
+          canReceive={canRepairReceive}
+          canInspect={canRepairInspect}
+          canApprove={canRepairApprove}
+          busy={busy}
+          sendState={{ partnerId: repairPartnerId, setPartnerId: setRepairPartnerId, cost: repairCost, setCost: setRepairCost, notes: repairNotes, setNotes: setRepairNotes, onSend: sendForRepair }}
+          onReceive={(cycleId) => receiveCycle('repairs', cycleId)}
+          inspectState={{ result: inspectResult, setResult: setInspectResult, notes: inspectNotes, setNotes: setInspectNotes, onInspect: (cycleId) => finalInspectCycle('repairs', cycleId) }}
+          approveState={{ disposition: approveDisposition, setDisposition: setApproveDisposition, reason: approveReason, setReason: setApproveReason, onApprove: (cycleId) => approveCycle('repairs', cycleId) }}
+        />
+      )}
+
+      {['IN_STOCK', 'REMOVED', 'UNDER_INSPECTION', 'QUARANTINED'].includes(tire.current_status) && canScrap && (
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Scrap</h3>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
@@ -419,23 +660,6 @@ export function TireDetailPage() {
           </div>
         </div>
       )}
-
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Retread History</h3>
-        {(tire.retreads ?? []).length === 0 && <EmptyState label="No retread cycles." />}
-        {(tire.retreads ?? []).map((r) => (
-          <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            <span>
-              Cycle {r.cycle_number} — sent {r.sent_at} {r.received_at ? `— received ${r.received_at}` : '— pending'}
-            </span>
-            {!r.received_at && canManage && (
-              <button className="btn-link" disabled={busy} onClick={() => receiveRetread(r.id)}>
-                Receive
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Installation History</h3>

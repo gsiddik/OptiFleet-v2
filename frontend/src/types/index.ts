@@ -1153,20 +1153,39 @@ export interface TireRemovalItem {
   tire_id: string;
   removal_odometer: string | null;
   removal_reason: string;
-  disposition: 'REUSE' | 'RETREAD' | 'SCRAP';
+  disposition: 'REUSE' | 'RETREAD' | 'REPAIR' | 'SCRAP';
   removed_at: string;
   replaced_by_tire_id: string | null;
 }
+
+/** Phase E: shared send -> receive -> final-inspect -> approve governance shape for both cycle types. */
+export type TireServiceCycleStatus = 'SENT' | 'RECEIVED' | 'FINAL_INSPECTED' | 'APPROVED' | 'REJECTED';
+export type TireServiceCycleApprovalDisposition = 'RETURN_TO_SERVICE' | 'SCRAP' | 'QUARANTINE';
 
 export interface TireRetreadItem {
   id: string;
   tire_id: string;
   cycle_number: number;
   sent_at: string;
+  sent_by: string | null;
   received_at: string | null;
+  received_by: string | null;
   partner_id: string | null;
   cost: string | null;
+  notes: string | null;
+  status: TireServiceCycleStatus;
+  final_inspected_by: string | null;
+  final_inspected_at: string | null;
+  final_inspection_result: 'SAFE' | 'UNSAFE' | null;
+  final_inspection_notes: string | null;
+  approved_by: string | null;
+  approved_at: string | null;
+  approval_disposition: TireServiceCycleApprovalDisposition | null;
+  approval_reason: string | null;
 }
+
+/** Phase E (G-27): distinct REPAIR lifecycle — same governance shape as retread, separate table. */
+export type TireRepairItem = TireRetreadItem;
 
 export interface TireItem {
   id: string;
@@ -1180,7 +1199,7 @@ export interface TireItem {
   purchase_cost: string | null;
   warranty_months: number | null;
   warranty_km: number | null;
-  current_status: 'IN_STOCK' | 'RESERVED' | 'INSTALLED' | 'IN_USE' | 'REMOVED' | 'UNDER_INSPECTION' | 'RETREAD' | 'SCRAPPED' | 'LOST';
+  current_status: 'IN_STOCK' | 'RESERVED' | 'INSTALLED' | 'IN_USE' | 'REMOVED' | 'UNDER_INSPECTION' | 'RETREAD' | 'REPAIR' | 'QUARANTINED' | 'SCRAPPED' | 'LOST';
   current_vehicle_id: string | null;
   current_position: string | null;
   current_warehouse_id: string | null;
@@ -1192,6 +1211,7 @@ export interface TireItem {
   inspections?: TireInspectionItem[];
   removals?: TireRemovalItem[];
   retreads?: TireRetreadItem[];
+  repairs?: TireRepairItem[];
 }
 
 export interface ComponentInstallationItem {

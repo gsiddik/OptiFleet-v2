@@ -8,6 +8,8 @@ const COLORS: Record<string, string> = {
   SUSPENDED: '#b91c1c',
   PUBLISHED: '#15803d',
   ARCHIVED: '#6b7280',
+  QUARANTINED: '#b91c1c',
+  REPAIR: '#a16207',
 };
 
 export function StatusBadge({ status }: { status: string }) {
