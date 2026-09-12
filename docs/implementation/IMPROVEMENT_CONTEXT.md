@@ -75,26 +75,26 @@
 |---|---|---|---|---|---|---|
 | A — Critical Integrity & Closure Controls | G-14, G-18, G-17, G-35, G-21, G-22, G-19 | COMPLETE | see commits below | Targeted: 48 passed (273 assertions). Regression (same 40-file baseline set): 263 passed / 882 assertions vs. baseline 262 passed / 878 — net +1 test (the new G-19 test added to an existing file), 0 failures, 0 regressions. Frontend: tsc build + production build clean. | G-21's running-balance column is computed client-side over a widened (200-row) page per item/warehouse, not a true from-inception ledger balance — accurate for realistic history lengths, not mathematically guaranteed beyond that without a backend-computed opening-balance parameter (not built this session). | none |
 | B — Used Sparepart Processing | G-15 | COMPLETE | see commits below | Targeted: 9 new tests passed (68 assertions), plus 54 regression on touched domains (WorkOrderStockIntegrationTest/InventoryReturnClassificationTest/WorkOrderClosureGuardTest/WorkflowEngineTest/WorkflowMigrationTest/InventoryTest), all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition is decision-only (no repair-partner receipt sub-flow — out of scope, not described in the source report beyond "Repair" as one disposition value). | none |
-| C — Sell Sparepart | G-16, G-20 | NOT STARTED | — | — | Sale type/approval/SALE movement/scrap route+UI | Depends on Phase B |
+| C — Sell Sparepart | G-16, G-20 | COMPLETE | see commits below | Targeted: 8 new tests (SparePartSaleTest, 64 assertions) + 9 UsedPartDispositionTest regression, all passing. Full regression (40-file baseline set): see verification status. Frontend: tsc + build clean. | Settlement/payment (did money actually change hands) is explicitly out of scope, per the source report's own instruction not to invent unsupported accounting behavior — `SparePartSale` tracks price/total/approval only. | none |
 | D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28 | NOT STARTED | — | — | Serial normalization, wheel-position FK validation, legacy onboarding, atomic rotation, replace() disposition flexibility | Independent of A-C; not started this session |
 | E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | NOT STARTED | — | — | REPAIR disposition, locked cycle numbering, partner-type constraint, maker-checker split, final-inspection gate | Depends on Phase D |
 | F — Tire Scoring/Classification | G-31, G-11, BD-1–BD-8 | NOT STARTED | — | — | Full versioned scoring/config framework | Depends on Phases D and E |
 | G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | NOT STARTED | — | — | Schedule→WO, Cost Estimation, Maintenance Result, tiered PO approval, Workshop Partner cycle, remaining master-data UI | Independent; not started this session |
 
 ## Current Work
-- Active phase: B (implemented and validated this session; Phase A
+- Active phase: C (implemented and validated this session; Phases A and B
   already pushed to `origin/Improvement`).
-- Active batch: none in progress — Phase B is complete pending final
+- Active batch: none in progress — Phase C is complete pending final
   regression confirmation and the phase-boundary push.
 - Files/modules in progress: none.
 - Immediate next action for the following session: re-read this file and
-  Git history to confirm Phase B's push landed on `origin/Improvement`,
-  then begin Phase C (Sell Sparepart, G-16/G-20) — it explicitly depends
-  on Phase B's disposition outcome `SELL_ELIGIBLE` (a FINALIZED
-  `work_order_part_returns` row with `disposition = 'SELL_ELIGIBLE'`) as
-  its eligibility input, per the consolidated report's Dependency Map
-  (§29: "Inventory Return Classification → Used Sparepart Processing →
-  Repair/Reuse/Scrap Eligibility → Sell Sparepart").
+  Git history to confirm Phase C's push landed on `origin/Improvement`,
+  then begin Phase D (Tire Asset Integrity, G-26/G-25/G-23/G-24/G-28) in
+  the exact dependency order Decision 7 specifies: Serial Number
+  Integrity → Wheel Position Validation → Legacy Tire Onboarding →
+  Atomic Multi-Tire Rotation → Replacement Disposition Flexibility.
+  Phase D is independent of Phases A–C (Tire domain, not Inventory), so
+  it is safe to start without revisiting anything above.
 
 ## Decisions and Deviations
 - Decision: return-condition classification (G-14) is implemented as a
@@ -175,11 +175,45 @@
   `scrap()` here; corrected before any test or commit). The
   `WorkOrderPartReturn` row itself (now `Auditable`) is the complete
   record for these four outcomes.
+- Decision (Phase C): `SparePartSale` records `sale_type` (OPERATIONAL_REUSE
+  or SCRAP_MATERIAL) but only implements the operational sale boundary —
+  price/quantity/approval/immutable SALE ledger entry. No payment/
+  settlement/invoice entity was built.
+  Reason: the source report explicitly separates "sale approval,
+  inventory movement, payment/settlement state" and says not to invent
+  unsupported accounting behavior or reuse tenant-subscription billing
+  for this. Recording this boundary explicitly rather than silently
+  stopping partway.
+- Decision (Phase C): a sale's approved SALE stock_movement carries zero
+  on-hand balance effect (`InventoryService::recordSale()`, refactored
+  alongside `recordConsumption()` into a shared `writeZeroEffectMovement()`
+  helper), mirroring G-22's CONSUME pattern exactly.
+  Reason: a `SparePartSale` can only reference a `SELL_ELIGIBLE`-
+  disposition return, and that quantity was never added to
+  `quantity_on_hand` (Phase A/B design) — there is no balance to deduct
+  from without wrongly touching unrelated good stock of the same
+  product. Same reasoning as Phase B's SCRAP/REPAIR/QUARANTINE decision.
+- Decision (Phase C): `SparePartSale.sale_type = OPERATIONAL_REUSE` is
+  blocked at creation time when the source return's `condition` is
+  `USED_FAULTY`, even though Phase B's own gate already prevents a
+  USED_FAULTY return from ever reaching `SELL_ELIGIBLE` in the first
+  place.
+  Reason: defense in depth — a direct database write or a future bug in
+  Phase B's gate must not be the only thing standing between an unsafe
+  part and a sale labelled fit for reuse. Verified with a test that
+  crafts the row directly (bypassing the Phase B API) to prove this
+  service-level check, not just the upstream gate, actually fires.
+- Decision (Phase C): G-20 (`InventoryService::scrap()` route/permission/
+  UI) was folded into this same phase rather than given its own —
+  it operates on ordinary on-hand stock (unrelated to the Used Sparepart
+  Processing quantity bucket) and was a small, self-contained addition
+  (one route, one permission, one controller method mirroring the
+  existing `adjust()` action, one modal on the Warehouse Stock page).
 
 ## Known Blockers
-- None blocking Phases A or B. Phases C–G are not blocked, simply not
-  started this session (large, multi-week scope — see roadmap in the
-  source report §30).
+- None blocking Phases A, B, or C. Phases D–G are not blocked, simply
+  not started this session (large, multi-week scope — see roadmap in
+  the source report §30).
 - Environment: this container has no `ext-mongodb` PHP extension and no
   `mongod` binary, so the three Mongo-backed migrations
   (`2026_09_08_000002/3`, `2026_09_08_100001` — Phase 6/7 Analytics/
@@ -210,6 +244,13 @@
   Phase A's two new files): 263 passed / 882 assertions / 0 failures —
   identical to the post-Phase-A regression numbers, confirming zero
   regressions from Phase B's changes.
+- Targeted Phase C tests (SparePartSaleTest — new file, 8 tests — plus
+  regression on UsedPartDispositionTest): 17 passed / 132 assertions /
+  0 failures.
+- Full regression post-Phase-C (same 40-file baseline set —
+  SparePartSaleTest.php is a new file outside this set): 263 passed /
+  882 assertions / 0 failures — identical to Phases A and B's regression
+  numbers, confirming zero regressions from Phase C's changes.
 - Static analysis: `git diff --check` clean; `vendor/bin/pint --test`
   clean on all Phase A files (two migrations and three test files needed
   `vendor/bin/pint` auto-fix for import ordering/brace style — applied,
