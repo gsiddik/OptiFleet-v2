@@ -77,12 +77,24 @@ class TireController extends Controller
             'wheel_position' => ['required', 'string', 'max:20'],
             'odometer' => ['nullable', 'numeric', 'min:0'],
             'work_order_id' => ['nullable', 'uuid', 'exists:work_orders,id'],
+            // G-23: legacy onboarding — a normal live install omits all of these.
+            'installed_at' => ['nullable', 'date'],
+            'installed_at_source' => ['nullable', 'string', 'in:KNOWN,ESTIMATED,UNKNOWN'],
+            'baseline_tread_depth_mm' => ['nullable', 'numeric', 'min:0'],
+            'baseline_condition' => ['nullable', 'string', 'max:100'],
         ]);
 
         $vehicle = Vehicle::query()->findOrFail($validated['vehicle_id']);
         abort_unless($vehicle->tenant_id === $this->context->tenantId(), 404);
 
-        $installation = $this->tires->install($tire, $vehicle, $validated['wheel_position'], $validated['odometer'] ?? null, $validated['work_order_id'] ?? null, $this->context->user()->id);
+        $installation = $this->tires->install(
+            $tire, $vehicle, $validated['wheel_position'], $validated['odometer'] ?? null,
+            $validated['work_order_id'] ?? null, $this->context->user()->id,
+            isset($validated['installed_at']) ? new \DateTimeImmutable($validated['installed_at']) : null,
+            $validated['installed_at_source'] ?? 'KNOWN',
+            $validated['baseline_tread_depth_mm'] ?? null,
+            $validated['baseline_condition'] ?? null,
+        );
 
         return $this->ok($installation, 201);
     }
@@ -97,6 +109,24 @@ class TireController extends Controller
         ]);
 
         return $this->ok($this->tires->rotate($tire, $validated['to_position'], $validated['odometer'] ?? null, $validated['work_order_id'] ?? null, $this->context->user()->id), 201);
+    }
+
+    /** G-24: atomic two-tire position swap — {tire} is tire A, the request names tire B. */
+    public function swapPositions(Request $request, Tire $tire)
+    {
+        $this->authorizeScope($tire);
+        $validated = $request->validate([
+            'other_tire_id' => ['required', 'uuid', 'exists:tires,id'],
+            'odometer' => ['nullable', 'numeric', 'min:0'],
+            'work_order_id' => ['nullable', 'uuid', 'exists:work_orders,id'],
+        ]);
+
+        $otherTire = Tire::query()->findOrFail($validated['other_tire_id']);
+        abort_unless($otherTire->tenant_id === $this->context->tenantId(), 404);
+
+        return $this->ok($this->tires->swapPositions(
+            $tire, $otherTire, $validated['odometer'] ?? null, $validated['work_order_id'] ?? null, $this->context->user()->id,
+        ), 201);
     }
 
     public function inspect(Request $request, Tire $tire)
@@ -137,6 +167,8 @@ class TireController extends Controller
         $validated = $request->validate([
             'new_tire_id' => ['required', 'uuid', 'exists:tires,id'],
             'reason' => ['required', 'string', 'max:255'],
+            // G-28: the old tire's disposition is a decision made at replacement time, not an implicit REUSE.
+            'disposition' => ['required', 'in:REUSE,RETREAD,SCRAP'],
             'odometer' => ['nullable', 'numeric', 'min:0'],
             'work_order_id' => ['nullable', 'uuid', 'exists:work_orders,id'],
         ]);
@@ -144,7 +176,7 @@ class TireController extends Controller
         $newTire = Tire::query()->findOrFail($validated['new_tire_id']);
         abort_unless($newTire->tenant_id === $this->context->tenantId(), 404);
 
-        return $this->ok($this->tires->replace($tire, $newTire, $validated['reason'], $validated['odometer'] ?? null, $validated['work_order_id'] ?? null, $this->context->user()->id), 201);
+        return $this->ok($this->tires->replace($tire, $newTire, $validated['reason'], $validated['disposition'], $validated['odometer'] ?? null, $validated['work_order_id'] ?? null, $this->context->user()->id), 201);
     }
 
     public function sendForRetread(Request $request, Tire $tire)

@@ -13,7 +13,7 @@ class TireInstallation extends Model
 {
     use BelongsToTenant, HasUuids;
 
-    protected $fillable = ['tenant_id', 'tire_id', 'vehicle_id', 'wheel_position', 'installed_at', 'installation_odometer', 'work_order_id', 'performed_by', 'removed_at'];
+    protected $fillable = ['tenant_id', 'tire_id', 'vehicle_id', 'wheel_position', 'installed_at', 'installation_date_source', 'installation_odometer', 'work_order_id', 'performed_by', 'removed_at'];
 
     protected function casts(): array
     {

@@ -430,6 +430,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/tires/{tire}', [TireController::class, 'show'])->middleware('permission:tire.view');
             Route::post('/tires/{tire}/install', [TireController::class, 'install'])->middleware('permission:tire.install');
             Route::post('/tires/{tire}/rotate', [TireController::class, 'rotate'])->middleware('permission:tire.rotate');
+            Route::post('/tires/{tire}/swap-positions', [TireController::class, 'swapPositions'])->middleware('permission:tire.rotate');
             Route::post('/tires/{tire}/inspect', [TireController::class, 'inspect'])->middleware('permission:tire.inspect');
             Route::post('/tires/{tire}/remove', [TireController::class, 'remove'])->middleware('permission:tire.remove');
             Route::post('/tires/{tire}/replace', [TireController::class, 'replace'])->middleware('permission:tire.remove');

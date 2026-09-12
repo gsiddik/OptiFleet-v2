@@ -18,7 +18,7 @@ class Tire extends Model
     use Auditable, BelongsToTenant, HasUuids, SoftDeletes;
 
     protected $fillable = [
-        'tenant_id', 'serial_number', 'product_id', 'manufacturer', 'tire_size', 'pattern',
+        'tenant_id', 'serial_number', 'product_id', 'manufacturer', 'manufacture_date_code', 'tire_size', 'pattern',
         'purchase_date', 'purchase_cost', 'warranty_months', 'warranty_km',
         'current_status', 'current_vehicle_id', 'current_position', 'current_warehouse_id',
     ];
@@ -26,6 +26,12 @@ class Tire extends Model
     protected function casts(): array
     {
         return ['purchase_date' => 'date', 'purchase_cost' => 'decimal:4'];
+    }
+
+    /** G-26: trims every write path (not just the request layer) so the raw column never carries leading/trailing whitespace. */
+    protected function setSerialNumberAttribute(string $value): void
+    {
+        $this->attributes['serial_number'] = trim($value);
     }
 
     public function product(): BelongsTo
