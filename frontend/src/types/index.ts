@@ -946,7 +946,9 @@ export interface StockTransferItem {
   to_warehouse_id: string;
   status: 'DRAFT' | 'REQUESTED' | 'APPROVED' | 'PREPARED' | 'DISPATCHED' | 'IN_TRANSIT' | 'RECEIVED' | 'COMPLETED' | 'REJECTED' | 'CANCELLED';
   dispatched_at: string | null;
+  dispatched_by: string | null;
   received_at: string | null;
+  received_by: string | null;
   from_warehouse?: Warehouse;
   to_warehouse?: Warehouse;
   items?: StockTransferItemLine[];

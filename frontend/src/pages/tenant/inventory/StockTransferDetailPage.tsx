@@ -97,6 +97,16 @@ export function StockTransferDetailPage() {
           <strong>From:</strong> {transfer.from_warehouse?.name ?? transfer.from_warehouse_id} &nbsp; <strong>To:</strong>{' '}
           {transfer.to_warehouse?.name ?? transfer.to_warehouse_id}
         </p>
+        {transfer.dispatched_at && (
+          <p style={{ fontSize: 13, color: '#6b7280' }}>
+            <strong>Dispatched:</strong> {new Date(transfer.dispatched_at).toLocaleString()} by {transfer.dispatched_by ?? '—'}
+          </p>
+        )}
+        {transfer.received_at && (
+          <p style={{ fontSize: 13, color: '#6b7280' }}>
+            <strong>Received:</strong> {new Date(transfer.received_at).toLocaleString()} by {transfer.received_by ?? '—'}
+          </p>
+        )}
       </div>
 
       <div className="card">
