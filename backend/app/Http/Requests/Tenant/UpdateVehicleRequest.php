@@ -23,7 +23,13 @@ class UpdateVehicleRequest extends FormRequest
                 fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
             )],
             'brand' => ['sometimes', 'string', 'max:100'],
+            'vehicle_brand_id' => ['nullable', 'uuid', Rule::exists('vehicle_brands', 'id')->where(
+                fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
+            )],
             'model' => ['sometimes', 'string', 'max:100'],
+            'vehicle_model_id' => ['nullable', 'uuid', Rule::exists('vehicle_models', 'id')->where(
+                fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
+            )],
             'vehicle_type' => ['nullable', 'string', 'max:100'],
             'registration_number' => ['sometimes', 'string', 'max:50', Rule::unique('vehicles', 'registration_number')->where('tenant_id', $tenantId)->ignore($vehicleId)],
             'vin' => ['nullable', 'string', 'max:50', Rule::unique('vehicles', 'vin')->where('tenant_id', $tenantId)->ignore($vehicleId)],

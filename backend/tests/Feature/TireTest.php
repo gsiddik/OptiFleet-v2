@@ -2,14 +2,17 @@
 
 namespace Tests\Feature;
 
+use App\Domain\MasterData\Models\VehicleCategory;
+use App\Domain\Organization\Models\Branch;
 use App\Domain\Tire\Models\Tire;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class TireTest extends TestCase
 {
     private function setUpScenario(): array
     {
-        $tenant = $this->makeTenant(['code' => 'TIRE-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'TIRE-'.Str::random(4)]);
         $this->grantModule($tenant, 'VEHICLE');
         $this->grantModule($tenant, 'INVENTORY');
         $this->grantModule($tenant, 'TIRE');
@@ -47,6 +50,38 @@ class TireTest extends TestCase
         $this->assertSame('FRONT_LEFT', $tire->current_position);
     }
 
+    /** Phase G — G-11: tire_size was always a single free-text field; discrete spec fields are additive and optional. */
+    public function test_tire_can_be_created_with_discrete_spec_fields_alongside_free_text_size(): void
+    {
+        [$tenant, , $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+
+        $create = $this->postJson('/api/v1/app/tires', [
+            'serial_number' => 'TIRE-SN-SPEC-001', 'product_id' => $product->id, 'tire_size' => '295/80R22.5',
+            'section_width_mm' => 295, 'aspect_ratio' => 80, 'rim_diameter_inch' => 22.5, 'load_index' => 152, 'speed_rating' => 'L', 'ply_rating' => 18,
+        ], $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertSame('295/80R22.5', $create->json('data.tire_size'));
+        $this->assertSame(295, $create->json('data.section_width_mm'));
+        $this->assertSame(80, $create->json('data.aspect_ratio'));
+        $this->assertSame('22.5', $create->json('data.rim_diameter_inch'));
+        $this->assertSame(152, $create->json('data.load_index'));
+        $this->assertSame('L', $create->json('data.speed_rating'));
+        $this->assertSame(18, $create->json('data.ply_rating'));
+    }
+
+    public function test_tire_can_still_be_created_without_any_discrete_spec_fields(): void
+    {
+        [$tenant, , $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+
+        $create = $this->postJson('/api/v1/app/tires', [
+            'serial_number' => 'TIRE-SN-SPEC-002', 'product_id' => $product->id, 'tire_size' => '295/80R22.5',
+        ], $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertNull($create->json('data.section_width_mm'));
+    }
+
     public function test_duplicate_active_position_installation_is_rejected(): void
     {
         [$tenant, $vehicle, $product] = $this->setUpScenario();
@@ -68,8 +103,8 @@ class TireTest extends TestCase
     public function test_same_tire_cannot_be_installed_on_two_vehicles(): void
     {
         [$tenant, $vehicle, $product] = $this->setUpScenario();
-        $branch = \App\Domain\Organization\Models\Branch::query()->where('tenant_id', $tenant->id)->first();
-        $category = \App\Domain\MasterData\Models\VehicleCategory::query()->first();
+        $branch = Branch::query()->where('tenant_id', $tenant->id)->first();
+        $category = VehicleCategory::query()->first();
         $vehicle2 = $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'REG-OTHER']);
         [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
         $headers = $this->authHeaders($token);
@@ -146,7 +181,7 @@ class TireTest extends TestCase
 
     public function test_branch_scoped_user_cannot_see_or_access_tire_installed_in_another_branch(): void
     {
-        $tenant = $this->makeTenant(['code' => 'TIREB-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'TIREB-'.Str::random(4)]);
         $this->grantModule($tenant, 'VEHICLE');
         $this->grantModule($tenant, 'INVENTORY');
         $this->grantModule($tenant, 'TIRE');

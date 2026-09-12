@@ -33,6 +33,7 @@ class PermissionSeeder extends Seeder
             'workshop' => ['view', 'create', 'update', 'activate', 'deactivate'],
             'warehouse' => ['view', 'create', 'update', 'activate', 'deactivate'],
             'vehicle_category' => ['view', 'create', 'update'],
+            'vehicle_brand' => ['view', 'create', 'update'],
             'component_group' => ['view', 'create', 'update', 'map'],
 
             // Phase 3: Core VMS Operations (Section 47)
@@ -53,7 +54,7 @@ class PermissionSeeder extends Seeder
             'maintenance_history' => ['view'],
 
             // Phase 4: Supply Chain & Asset Lifecycle (Section 46)
-            'product' => ['view', 'create', 'update'],
+            'product' => ['view', 'create', 'update', 'delete'],
             'inventory' => ['view', 'reserve', 'issue', 'return', 'adjust', 'stock_opname', 'scrap'],
             'sparepart_sale' => ['view', 'create', 'approve'],
             'stock_transfer' => ['view', 'create', 'approve', 'dispatch', 'receive'],

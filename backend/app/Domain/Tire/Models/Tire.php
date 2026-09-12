@@ -19,13 +19,14 @@ class Tire extends Model
 
     protected $fillable = [
         'tenant_id', 'serial_number', 'product_id', 'manufacturer', 'manufacture_date_code', 'tire_size', 'pattern',
+        'section_width_mm', 'aspect_ratio', 'rim_diameter_inch', 'load_index', 'speed_rating', 'ply_rating',
         'purchase_date', 'purchase_cost', 'warranty_months', 'warranty_km',
         'current_status', 'current_vehicle_id', 'current_position', 'current_warehouse_id',
     ];
 
     protected function casts(): array
     {
-        return ['purchase_date' => 'date', 'purchase_cost' => 'decimal:4'];
+        return ['purchase_date' => 'date', 'purchase_cost' => 'decimal:4', 'rim_diameter_inch' => 'decimal:1'];
     }
 
     /** G-26: trims every write path (not just the request layer) so the raw column never carries leading/trailing whitespace. */

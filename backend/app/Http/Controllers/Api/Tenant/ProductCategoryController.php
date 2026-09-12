@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreProductCategoryRequest;
@@ -48,6 +49,17 @@ class ProductCategoryController extends Controller
         $productCategory->update($validated);
 
         return $this->ok($productCategory->fresh());
+    }
+
+    public function destroy(ProductCategory $productCategory)
+    {
+        $this->authorizeVisible($productCategory);
+        abort_if($productCategory->is_system, 403, 'System master data cannot be modified by a tenant.');
+        abort_if(Product::query()->where('product_category_id', $productCategory->id)->exists(), 422, 'This product category is used by one or more products and cannot be deleted.');
+
+        $productCategory->delete();
+
+        return $this->ok(['deleted' => true]);
     }
 
     private function authorizeVisible(ProductCategory $category): void

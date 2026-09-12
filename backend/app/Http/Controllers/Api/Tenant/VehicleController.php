@@ -28,7 +28,7 @@ class VehicleController extends Controller
         $user = $this->context->user();
         $tenantId = $this->context->tenantId();
 
-        $query = Vehicle::query()->with(['branch', 'defaultWorkshop', 'vehicleCategory']);
+        $query = Vehicle::query()->with(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']);
         $this->scope->applyBranchScope($query, $user, $tenantId, 'branch_id');
 
         if ($search = $request->string('search')->trim()->value()) {
@@ -65,14 +65,14 @@ class VehicleController extends Controller
             'operational_status' => $request->input('operational_status', 'AVAILABLE'),
         ]);
 
-        return $this->ok($vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory']), 201);
+        return $this->ok($vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']), 201);
     }
 
     public function show(Vehicle $vehicle)
     {
         $this->authorizeScope($vehicle);
 
-        return $this->ok($vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory']));
+        return $this->ok($vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']));
     }
 
     public function update(UpdateVehicleRequest $request, Vehicle $vehicle)
@@ -81,7 +81,7 @@ class VehicleController extends Controller
 
         $vehicle->update($request->validated());
 
-        return $this->ok($vehicle->fresh(['branch', 'defaultWorkshop', 'vehicleCategory']));
+        return $this->ok($vehicle->fresh(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']));
     }
 
     public function updateStatus(Request $request, Vehicle $vehicle)

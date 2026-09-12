@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\Uom;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
@@ -33,5 +34,35 @@ class UomController extends Controller
         $uom = Uom::query()->create($validated + ['tenant_id' => $tenantId, 'is_system' => false, 'status' => 'ACTIVE']);
 
         return $this->ok($uom, 201);
+    }
+
+    public function update(Request $request, Uom $uom)
+    {
+        $this->authorizeVisible($uom);
+        abort_if($uom->is_system, 403, 'System master data cannot be modified by a tenant.');
+
+        $validated = $request->validate([
+            'name' => ['sometimes', 'string', 'max:100'],
+            'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
+        ]);
+        $uom->update($validated);
+
+        return $this->ok($uom->fresh());
+    }
+
+    public function destroy(Uom $uom)
+    {
+        $this->authorizeVisible($uom);
+        abort_if($uom->is_system, 403, 'System master data cannot be modified by a tenant.');
+        abort_if(Product::query()->where('uom_id', $uom->id)->exists(), 422, 'This unit of measure is used by one or more products and cannot be deleted.');
+
+        $uom->delete();
+
+        return $this->ok(['deleted' => true]);
+    }
+
+    private function authorizeVisible(Uom $uom): void
+    {
+        abort_unless($uom->tenant_id === null || $uom->tenant_id === $this->context->tenantId(), 404);
     }
 }

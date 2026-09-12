@@ -3,7 +3,9 @@
 namespace App\Domain\Vehicle\Models;
 
 use App\Domain\Audit\Concerns\Auditable;
+use App\Domain\MasterData\Models\VehicleBrand;
 use App\Domain\MasterData\Models\VehicleCategory;
+use App\Domain\MasterData\Models\VehicleModel as VehicleModelMaster;
 use App\Domain\Organization\Models\Branch;
 use App\Domain\Organization\Models\Workshop;
 use App\Domain\Shared\Concerns\BelongsToTenant;
@@ -19,7 +21,7 @@ class Vehicle extends Model
 
     protected $fillable = [
         'tenant_id', 'branch_id', 'default_workshop_id', 'vehicle_category_id',
-        'brand', 'model', 'vehicle_type', 'registration_number', 'vin', 'chassis_number',
+        'brand', 'vehicle_brand_id', 'model', 'vehicle_model_id', 'vehicle_type', 'registration_number', 'vin', 'chassis_number',
         'engine_number', 'year', 'fuel_type', 'transmission_type',
         'current_odometer', 'engine_hour', 'status', 'operational_status',
     ];
@@ -42,6 +44,16 @@ class Vehicle extends Model
     public function vehicleCategory(): BelongsTo
     {
         return $this->belongsTo(VehicleCategory::class);
+    }
+
+    public function vehicleBrand(): BelongsTo
+    {
+        return $this->belongsTo(VehicleBrand::class);
+    }
+
+    public function vehicleModel(): BelongsTo
+    {
+        return $this->belongsTo(VehicleModelMaster::class, 'vehicle_model_id');
     }
 
     public function assignments(): HasMany

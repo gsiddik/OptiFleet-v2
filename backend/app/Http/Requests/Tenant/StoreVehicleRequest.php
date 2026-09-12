@@ -24,7 +24,13 @@ class StoreVehicleRequest extends FormRequest
                 fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
             )],
             'brand' => ['required', 'string', 'max:100'],
+            'vehicle_brand_id' => ['nullable', 'uuid', Rule::exists('vehicle_brands', 'id')->where(
+                fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
+            )],
             'model' => ['required', 'string', 'max:100'],
+            'vehicle_model_id' => ['nullable', 'uuid', Rule::exists('vehicle_models', 'id')->where(
+                fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
+            )],
             'vehicle_type' => ['nullable', 'string', 'max:100'],
             'registration_number' => ['required', 'string', 'max:50', Rule::unique('vehicles', 'registration_number')->where('tenant_id', $tenantId)],
             'vin' => ['nullable', 'string', 'max:50', Rule::unique('vehicles', 'vin')->where('tenant_id', $tenantId)],

@@ -61,9 +61,11 @@ use App\Http\Controllers\Api\Tenant\TireController;
 use App\Http\Controllers\Api\Tenant\UomController;
 use App\Http\Controllers\Api\Tenant\UsedPartDispositionController;
 use App\Http\Controllers\Api\Tenant\UserController;
+use App\Http\Controllers\Api\Tenant\VehicleBrandController;
 use App\Http\Controllers\Api\Tenant\VehicleCategoryController;
 use App\Http\Controllers\Api\Tenant\VehicleController;
 use App\Http\Controllers\Api\Tenant\VehicleDocumentController;
+use App\Http\Controllers\Api\Tenant\VehicleModelController;
 use App\Http\Controllers\Api\Tenant\VehicleReleaseController;
 use App\Http\Controllers\Api\Tenant\VehicleTransferController;
 use App\Http\Controllers\Api\Tenant\VendorInvoiceReferenceController;
@@ -141,6 +143,14 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/vehicle-categories/{vehicleCategory}', [VehicleCategoryController::class, 'update'])->middleware('permission:vehicle_category.update');
             Route::delete('/vehicle-categories/{vehicleCategory}', [VehicleCategoryController::class, 'destroy'])->middleware('permission:vehicle_category.update');
             Route::post('/vehicle-categories/{vehicleCategory}/component-groups', [MasterDataMappingController::class, 'syncComponentGroups'])->middleware('permission:component_group.map');
+            Route::get('/vehicle-brands', [VehicleBrandController::class, 'index'])->middleware('permission:vehicle_brand.view');
+            Route::post('/vehicle-brands', [VehicleBrandController::class, 'store'])->middleware('permission:vehicle_brand.create');
+            Route::put('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'update'])->middleware('permission:vehicle_brand.update');
+            Route::delete('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'destroy'])->middleware('permission:vehicle_brand.update');
+            Route::get('/vehicle-models', [VehicleModelController::class, 'index'])->middleware('permission:vehicle_brand.view');
+            Route::post('/vehicle-models', [VehicleModelController::class, 'store'])->middleware('permission:vehicle_brand.create');
+            Route::put('/vehicle-models/{vehicleModel}', [VehicleModelController::class, 'update'])->middleware('permission:vehicle_brand.update');
+            Route::delete('/vehicle-models/{vehicleModel}', [VehicleModelController::class, 'destroy'])->middleware('permission:vehicle_brand.update');
 
             Route::get('/component-groups', [ComponentGroupController::class, 'index'])->middleware('permission:component_group.view');
             Route::post('/component-groups', [ComponentGroupController::class, 'store'])->middleware('permission:component_group.create');
@@ -311,9 +321,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/product-categories', [ProductCategoryController::class, 'index'])->middleware('permission:product.view');
             Route::post('/product-categories', [ProductCategoryController::class, 'store'])->middleware('permission:product.create');
             Route::put('/product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->middleware('permission:product.delete');
 
             Route::get('/uoms', [UomController::class, 'index'])->middleware('permission:product.view');
             Route::post('/uoms', [UomController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/uoms/{uom}', [UomController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/uoms/{uom}', [UomController::class, 'destroy'])->middleware('permission:product.delete');
 
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
             Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');
