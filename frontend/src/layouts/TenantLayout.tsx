@@ -69,6 +69,7 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/app/stock-opnames', label: 'Stock Opname', permission: 'inventory.stock_opname', module: 'INVENTORY' },
       { to: '/app/stock-movements', label: 'Stock Movement', permission: 'inventory.view', module: 'INVENTORY' },
       { to: '/app/used-part-returns', label: 'Used Sparepart Processing', permission: 'used_part.view', module: 'INVENTORY' },
+      { to: '/app/sparepart-sales', label: 'Sell Sparepart', permission: 'sparepart_sale.view', module: 'INVENTORY' },
     ],
   },
   {

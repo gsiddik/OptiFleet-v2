@@ -77,6 +77,7 @@ import { StockOpnameListPage } from './pages/tenant/inventory/StockOpnameListPag
 import { StockOpnameDetailPage } from './pages/tenant/inventory/StockOpnameDetailPage';
 import { StockMovementListPage } from './pages/tenant/inventory/StockMovementListPage';
 import { UsedPartDispositionPage } from './pages/tenant/inventory/UsedPartDispositionPage';
+import { SparePartSalePage } from './pages/tenant/inventory/SparePartSalePage';
 import { PurchaseRequestListPage } from './pages/tenant/procurement/PurchaseRequestListPage';
 import { PurchaseRequestDetailPage } from './pages/tenant/procurement/PurchaseRequestDetailPage';
 import { RfqListPage } from './pages/tenant/procurement/RfqListPage';
@@ -614,6 +615,7 @@ export default function App() {
             <Route path="stock-opnames/:id" element={<RequirePermission permission="inventory.stock_opname"><StockOpnameDetailPage /></RequirePermission>} />
             <Route path="stock-movements" element={<RequirePermission permission="inventory.view"><StockMovementListPage /></RequirePermission>} />
             <Route path="used-part-returns" element={<RequirePermission permission="used_part.view"><UsedPartDispositionPage /></RequirePermission>} />
+            <Route path="sparepart-sales" element={<RequirePermission permission="sparepart_sale.view"><SparePartSalePage /></RequirePermission>} />
 
             <Route path="purchase-requests" element={<RequirePermission permission="purchase_request.view"><PurchaseRequestListPage /></RequirePermission>} />
             <Route path="purchase-requests/:id" element={<RequirePermission permission="purchase_request.view"><PurchaseRequestDetailPage /></RequirePermission>} />

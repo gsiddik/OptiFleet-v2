@@ -819,7 +819,7 @@ export interface StockMovementItem {
   id: string;
   warehouse_id: string;
   product_id: string;
-  movement_type: 'OPENING' | 'RECEIPT' | 'RESERVATION' | 'RELEASE_RESERVATION' | 'ISSUE' | 'RETURN' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT_PLUS' | 'ADJUSTMENT_MINUS' | 'STOCK_OPNAME' | 'SCRAP' | 'CONSUME';
+  movement_type: 'OPENING' | 'RECEIPT' | 'RESERVATION' | 'RELEASE_RESERVATION' | 'ISSUE' | 'RETURN' | 'TRANSFER_OUT' | 'TRANSFER_IN' | 'ADJUSTMENT_PLUS' | 'ADJUSTMENT_MINUS' | 'STOCK_OPNAME' | 'SCRAP' | 'CONSUME' | 'SALE';
   quantity: string;
   unit_cost: string | null;
   reference_type: string | null;
@@ -850,6 +850,29 @@ export interface WorkOrderPartReturnItem {
   product?: ProductItem;
   warehouse?: Warehouse;
   planned_part?: { id: string; description: string; work_order?: { id: string; wo_number: string } };
+  remaining_eligible_quantity?: number;
+}
+
+export interface SparePartSaleItem {
+  id: string;
+  work_order_part_return_id: string;
+  product_id: string;
+  warehouse_id: string;
+  quantity: string;
+  sale_type: 'OPERATIONAL_REUSE' | 'SCRAP_MATERIAL';
+  buyer_type: 'PARTNER' | 'EXTERNAL';
+  partner_id: string | null;
+  buyer_name: string | null;
+  unit_price: string;
+  total_amount: string;
+  status: 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  requested_by: string | null;
+  rejection_reason: string | null;
+  notes: string | null;
+  created_at: string;
+  product?: ProductItem;
+  warehouse?: Warehouse;
+  partner?: { id: string; name: string };
 }
 
 export interface StockReservationItemLine {

@@ -18,6 +18,7 @@ export function WarehouseStockListPage() {
   const [reorderStatus, setReorderStatus] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [adjustTarget, setAdjustTarget] = useState<WarehouseStockItem | null>(null);
+  const [scrapTarget, setScrapTarget] = useState<WarehouseStockItem | null>(null);
   const { data, loading, error } = useApiList<WarehouseStockItem>('/app/inventory', { search: search || undefined, reorder_status: reorderStatus || undefined }, reloadKey);
 
   const columns: Column<WarehouseStockItem>[] = [
@@ -29,10 +30,19 @@ export function WarehouseStockListPage() {
     { key: 'avg_cost', header: 'Avg Cost', render: (s) => s.average_unit_cost },
     { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.reorder_status} /> },
     {
-      key: 'actions', header: '', render: (s) => hasPermission('inventory.adjust') && (
-        <button className="btn-link" onClick={() => setAdjustTarget(s)}>
-          Adjust
-        </button>
+      key: 'actions', header: '', render: (s) => (
+        <>
+          {hasPermission('inventory.adjust') && (
+            <button className="btn-link" onClick={() => setAdjustTarget(s)}>
+              Adjust
+            </button>
+          )}
+          {hasPermission('inventory.scrap') && (
+            <button className="btn-link" style={{ marginLeft: 8, color: '#b91c1c' }} onClick={() => setScrapTarget(s)}>
+              Scrap
+            </button>
+          )}
+        </>
       ),
     },
   ];
@@ -54,6 +64,7 @@ export function WarehouseStockListPage() {
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <AdjustModal target={adjustTarget} onClose={() => setAdjustTarget(null)} onAdjusted={() => setReloadKey((k) => k + 1)} />
+      <ScrapModal target={scrapTarget} onClose={() => setScrapTarget(null)} onScrapped={() => setReloadKey((k) => k + 1)} />
     </div>
   );
 }
@@ -105,6 +116,56 @@ function AdjustModal({ target, onClose, onAdjusted }: { target: WarehouseStockIt
         </button>
         <button className="btn-primary" disabled={submitting || !quantity || !reason} onClick={submit}>
           Submit Adjustment
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+/** G-20: InventoryService::scrap() existed since Phase 4 with no route/permission/UI ever calling it. */
+function ScrapModal({ target, onClose, onScrapped }: { target: WarehouseStockItem | null; onClose: () => void; onScrapped: () => void }) {
+  const [quantity, setQuantity] = useState('');
+  const [reason, setReason] = useState('');
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit() {
+    if (!target) return;
+    setSubmitting(true);
+    setErrors({});
+    try {
+      await apiClient.post('/app/inventory/scrap', {
+        warehouse_id: target.warehouse_id, product_id: target.product_id, quantity, reason,
+      });
+      setQuantity('');
+      setReason('');
+      onScrapped();
+      onClose();
+    } catch (err) {
+      const apiError: ApiErrorShape = extractApiError(err);
+      setErrors(apiError.errors ?? {});
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open={!!target} title={`Scrap Stock — ${target?.product?.name ?? ''}`} onClose={onClose}>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
+        Permanently removes available on-hand stock (max {target?.quantity_available ?? 0}). This cannot be undone.
+      </p>
+      <FormField label="Quantity" errors={errors.quantity}>
+        <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Reason (required, audited)" errors={errors.reason}>
+        <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+      </FormField>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <button className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn-primary" disabled={submitting || !quantity || !reason} onClick={submit}>
+          Confirm Scrap
         </button>
       </div>
     </Modal>
