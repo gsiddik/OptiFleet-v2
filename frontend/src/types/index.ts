@@ -558,6 +558,10 @@ export interface WorkOrderFindingItem {
   component_group_id: string | null;
   severity: 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   description: string;
+  status: 'OPEN' | 'RESOLVED';
+  resolution_notes: string | null;
+  resolved_by: string | null;
+  resolved_at: string | null;
 }
 
 export interface WorkOrderDiagnosisItem {
@@ -648,6 +652,14 @@ export interface WorkOrderItem {
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   complaint: string | null;
   current_odometer: string | null;
+  estimated_labor_cost: string | null;
+  estimated_parts_cost: string | null;
+  estimated_total_cost: string | null;
+  estimated_by: string | null;
+  estimated_at: string | null;
+  result_summary: string | null;
+  result_recorded_by: string | null;
+  result_recorded_at: string | null;
   target_start_at: string | null;
   target_completion_at: string | null;
   started_at: string | null;
@@ -717,7 +729,7 @@ export interface QcInspectionItem {
   inspector_worker_id: string | null;
   status: 'QC_PENDING' | 'QC_STARTED' | 'PASS' | 'FAIL' | 'COMPLETED';
   notes: string | null;
-  findings?: { id: string; description: string; severity: string; resolved: boolean }[];
+  findings?: { id: string; description: string; severity: string; resolved: boolean; resolved_by?: string | null; resolved_at?: string | null }[];
 }
 
 export interface RoadTestItem {

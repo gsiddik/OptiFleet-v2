@@ -40,6 +40,8 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   ON_HOLD: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   WAITING_PART: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   REWORK: [{ action: 'resume', label: 'Resume to In Progress', permission: 'work_order.pause', primary: true }],
+  /** G-03: previously nothing in the UI could ever invoke this transition — a WO reaching QC_PENDING had no path to COMPLETED at all. */
+  QC_PENDING: [{ action: 'complete', label: 'Complete', permission: 'work_order.complete', primary: true }],
   COMPLETED: [{ action: 'close', label: 'Close', permission: 'work_order.close', primary: true }],
 };
 
@@ -51,6 +53,7 @@ export function WorkOrderDetailPage() {
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>('Overview');
   const [showSchedule, setShowSchedule] = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
 
   function load() {
     apiClient
@@ -64,6 +67,10 @@ export function WorkOrderDetailPage() {
   async function act(action: string) {
     if (action === 'schedule') {
       setShowSchedule(true);
+      return;
+    }
+    if (action === 'complete') {
+      setShowComplete(true);
       return;
     }
     setBusy(true);
@@ -122,7 +129,7 @@ export function WorkOrderDetailPage() {
         ))}
       </div>
 
-      {tab === 'Overview' && <OverviewTab wo={wo} />}
+      {tab === 'Overview' && <OverviewTab wo={wo} onChanged={load} />}
       {tab === 'Complaint' && <ComplaintTab wo={wo} onChanged={load} />}
       {tab === 'Diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
       {tab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
@@ -136,7 +143,48 @@ export function WorkOrderDetailPage() {
       {tab === 'Audit' && <AuditTab workOrderId={wo.id} />}
 
       <ScheduleModal open={showSchedule} wo={wo} onClose={() => setShowSchedule(false)} onScheduled={load} />
+      <CompleteModal open={showComplete} wo={wo} onClose={() => setShowComplete(false)} onCompleted={load} />
     </div>
+  );
+}
+
+/** G-03: previously completing a Work Order had no way to record what was actually done. */
+function CompleteModal({ open, wo, onClose, onCompleted }: { open: boolean; wo: WorkOrderItem; onClose: () => void; onCompleted: () => void }) {
+  const [resultSummary, setResultSummary] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function submit() {
+    setSubmitting(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/complete`, {
+        result_summary: resultSummary || undefined,
+      });
+      onCompleted();
+      onClose();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open={open} title="Complete Work Order" onClose={onClose}>
+      {error && <ErrorState message={error} />}
+      <FormField label="Result Summary (optional)">
+        <textarea value={resultSummary} onChange={(e) => setResultSummary(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
+      </FormField>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <button className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn-primary" disabled={submitting} onClick={submit}>
+          Complete
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -202,7 +250,16 @@ function ScheduleModal({ open, wo, onClose, onScheduled }: { open: boolean; wo: 
   );
 }
 
-function OverviewTab({ wo }: { wo: WorkOrderItem }) {
+/** G-02: previously a Work Order had no way to record a pre-work cost estimate. */
+const ESTIMABLE_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED'];
+
+function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [laborCost, setLaborCost] = useState('');
+  const [partsCost, setPartsCost] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
   const rows: [string, string][] = [
     ['Vehicle', wo.vehicle?.registration_number ?? wo.vehicle_id],
     ['Branch', wo.branch?.name ?? '—'],
@@ -210,23 +267,64 @@ function OverviewTab({ wo }: { wo: WorkOrderItem }) {
     ['Maintenance Type', wo.maintenance_type],
     ['Priority', wo.priority],
     ['Current Odometer', wo.current_odometer ?? '—'],
+    ['Estimated Labor Cost', wo.estimated_labor_cost ?? '—'],
+    ['Estimated Parts Cost', wo.estimated_parts_cost ?? '—'],
+    ['Estimated Total Cost', wo.estimated_total_cost ?? '—'],
     ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
     ['Target Completion', wo.target_completion_at ? new Date(wo.target_completion_at).toLocaleString() : '—'],
     ['Started At', wo.started_at ? new Date(wo.started_at).toLocaleString() : '—'],
     ['Completed At', wo.completed_at ? new Date(wo.completed_at).toLocaleString() : '—'],
     ['Closed At', wo.closed_at ? new Date(wo.closed_at).toLocaleString() : '—'],
+    ['Result Summary', wo.result_summary ?? '—'],
   ];
 
+  async function submitEstimate() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/estimate`, {
+        estimated_labor_cost: laborCost || undefined,
+        estimated_parts_cost: partsCost || undefined,
+      });
+      setLaborCost('');
+      setPartsCost('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="card">
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {rows.map(([label, value]) => (
-          <div key={label}>
-            <div style={{ fontSize: 12, color: '#9ca3af' }}>{label}</div>
-            <div style={{ fontSize: 14 }}>{value}</div>
-          </div>
-        ))}
+    <div>
+      <div className="card">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <div style={{ fontSize: 12, color: '#9ca3af' }}>{label}</div>
+              <div style={{ fontSize: 14 }}>{value}</div>
+            </div>
+          ))}
+        </div>
       </div>
+      {ESTIMABLE_STATUSES.includes(wo.status) && hasPermission('work_order.estimate') && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Cost Estimate</h3>
+          {error && <ErrorState message={error} />}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+            <FormField label="Estimated Labor Cost">
+              <input type="number" min="0" step="0.01" value={laborCost} onChange={(e) => setLaborCost(e.target.value)} style={inputStyle} />
+            </FormField>
+            <FormField label="Estimated Parts Cost">
+              <input type="number" min="0" step="0.01" value={partsCost} onChange={(e) => setPartsCost(e.target.value)} style={inputStyle} />
+            </FormField>
+            <button className="btn-secondary" disabled={busy || (!laborCost && !partsCost)} onClick={submitEstimate}>
+              Save Estimate
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -248,6 +346,17 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
     }
   }
 
+  /** G-04: previously a Work Order Finding had no API to ever mark it resolved. */
+  async function resolveFinding(findingId: string) {
+    setBusy(true);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/findings/${findingId}/resolve`);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <div className="card" style={{ marginBottom: 16 }}>
@@ -260,7 +369,13 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
         {(wo.findings ?? []).map((f) => (
           <div key={f.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 10, alignItems: 'center', fontSize: 13 }}>
             <StatusBadge status={f.severity} />
-            <span>{f.description}</span>
+            <StatusBadge status={f.status} />
+            <span style={{ flex: 1 }}>{f.description}</span>
+            {f.status === 'OPEN' && hasPermission('diagnosis.manage') && (
+              <button className="btn-secondary" disabled={busy} onClick={() => resolveFinding(f.id)}>
+                Resolve
+              </button>
+            )}
           </div>
         ))}
         {hasPermission('diagnosis.manage') && (
@@ -854,6 +969,17 @@ function QcTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) 
     }
   }
 
+  /** G-04: previously a QC finding's `resolved` flag had no API to ever set it true. */
+  async function resolveFinding(inspectionId: string, findingId: string) {
+    setBusy(true);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/qc/${inspectionId}/findings/${findingId}/resolve`);
+      loadQc();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function pass(inspectionId: string) {
     setBusy(true);
     setError(null);
@@ -914,8 +1040,15 @@ function QcTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) 
             {i.notes && <span style={{ color: '#6b7280' }}>{i.notes}</span>}
           </div>
           {(i.findings ?? []).map((f) => (
-            <div key={f.id} style={{ paddingLeft: 8, color: '#6b7280' }}>
-              [{f.severity}] {f.description}
+            <div key={f.id} style={{ paddingLeft: 8, color: '#6b7280', display: 'flex', gap: 8, alignItems: 'center' }}>
+              <span>
+                [{f.severity}] {f.description} {f.resolved ? '(Resolved)' : '(Open)'}
+              </span>
+              {!f.resolved && hasPermission('qc.perform') && (
+                <button className="btn-secondary" disabled={busy} onClick={() => resolveFinding(i.id, f.id)}>
+                  Resolve
+                </button>
+              )}
             </div>
           ))}
           {i.status === 'QC_STARTED' && hasPermission('qc.perform') && (

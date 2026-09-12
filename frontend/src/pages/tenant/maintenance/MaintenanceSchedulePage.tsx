@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
@@ -12,6 +12,7 @@ const STATUSES = ['', 'UPCOMING', 'DUE_SOON', 'DUE', 'OVERDUE', 'SCHEDULED', 'CO
 
 export function MaintenanceSchedulePage() {
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [status, setStatus] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -31,6 +32,20 @@ export function MaintenanceSchedulePage() {
     }
   }
 
+  /** G-01: previously a due schedule had no path to a Work Order at all. */
+  async function convertToWorkOrder(schedule: MaintenanceScheduleItem) {
+    setBusyId(schedule.id);
+    setError(null);
+    try {
+      const res = await apiClient.post(`/app/maintenance-schedules/${schedule.id}/work-order`);
+      navigate(`/app/work-orders/${res.data.data.id}`);
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const columns: Column<MaintenanceScheduleItem>[] = [
     { key: 'vehicle', header: 'Vehicle', render: (s) => <Link to={`/app/vehicles/${s.vehicle_id}`}>{s.vehicle?.registration_number ?? s.vehicle_id}</Link> },
     { key: 'package', header: 'Package', render: (s) => s.package?.name ?? '—' },
@@ -40,12 +55,20 @@ export function MaintenanceSchedulePage() {
     {
       key: 'actions',
       header: '',
-      render: (s) =>
-        hasPermission('maintenance_schedule.manage') ? (
-          <button className="btn-secondary" disabled={busyId === s.id} onClick={() => refresh(s)}>
-            Recalculate
-          </button>
-        ) : null,
+      render: (s) => (
+        <div style={{ display: 'flex', gap: 6 }}>
+          {hasPermission('maintenance_schedule.manage') && (
+            <button className="btn-secondary" disabled={busyId === s.id} onClick={() => refresh(s)}>
+              Recalculate
+            </button>
+          )}
+          {['DUE_SOON', 'DUE', 'OVERDUE'].includes(s.status) && hasPermission('maintenance_schedule.convert_work_order') && (
+            <button className="btn-primary" disabled={busyId === s.id} onClick={() => convertToWorkOrder(s)}>
+              Convert to WO
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
 
