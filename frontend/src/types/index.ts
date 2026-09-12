@@ -830,6 +830,28 @@ export interface StockMovementItem {
   product?: ProductItem;
 }
 
+export interface WorkOrderPartReturnItem {
+  id: string;
+  work_order_planned_part_id: string;
+  warehouse_id: string;
+  product_id: string;
+  quantity: string;
+  condition: 'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY';
+  disposition_status: 'RESTOCKED' | 'PENDING_INSPECTION' | 'INSPECTED' | 'PENDING_APPROVAL' | 'REJECTED' | 'FINALIZED';
+  accepted_quantity: string | null;
+  inspected_at: string | null;
+  inspection_notes: string | null;
+  disposition: 'REPAIR' | 'REUSE' | 'QUARANTINE' | 'SCRAP' | 'SELL_ELIGIBLE' | null;
+  disposition_reason: string | null;
+  proposed_by: string | null;
+  finalized_at: string | null;
+  reason: string | null;
+  created_at: string;
+  product?: ProductItem;
+  warehouse?: Warehouse;
+  planned_part?: { id: string; description: string; work_order?: { id: string; wo_number: string } };
+}
+
 export interface StockReservationItemLine {
   id: string;
   product_id: string;
