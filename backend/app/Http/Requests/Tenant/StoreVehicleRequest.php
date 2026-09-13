@@ -43,6 +43,20 @@ class StoreVehicleRequest extends FormRequest
             'engine_hour' => ['nullable', 'numeric', 'min:0'],
             'status' => ['nullable', 'in:ACTIVE,IN_MAINTENANCE,BREAKDOWN,OUT_OF_SERVICE,INACTIVE,DISPOSED'],
             'operational_status' => ['nullable', 'in:AVAILABLE,IN_USE,ON_HOLD'],
+            'color' => ['nullable', 'string', 'max:50'],
+            'doors' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'seats' => ['nullable', 'integer', 'min:0', 'max:200'],
+            'length_mm' => ['nullable', 'numeric', 'min:0'],
+            'width_mm' => ['nullable', 'numeric', 'min:0'],
+            'height_mm' => ['nullable', 'numeric', 'min:0'],
+            'fuel_tank_capacity_liters' => ['nullable', 'numeric', 'min:0'],
+            'engine_capacity_cc' => ['nullable', 'numeric', 'min:0'],
+            'suspension_type' => ['nullable', 'string', 'max:100'],
+            'axle_count' => ['nullable', 'integer', 'min:0', 'max:20'],
+            'empty_weight_kg' => ['nullable', 'numeric', 'min:0'],
+            'load_weight_kg' => ['nullable', 'numeric', 'min:0'],
+            'wheel_count' => ['nullable', 'integer', 'min:0', 'max:40'],
+            'photo_url' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

@@ -17,7 +17,15 @@ class Worker extends Model
 {
     use Auditable, BelongsToTenant, HasUuids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'employee_code', 'name', 'branch_id', 'workshop_id', 'worker_type', 'status', 'user_id'];
+    protected $fillable = [
+        'tenant_id', 'employee_code', 'name', 'branch_id', 'workshop_id', 'worker_type', 'status', 'user_id',
+        'phone', 'email', 'address', 'monthly_rate', 'hourly_rate', 'photo_url',
+    ];
+
+    protected function casts(): array
+    {
+        return ['monthly_rate' => 'decimal:2', 'hourly_rate' => 'decimal:2'];
+    }
 
     public function branch(): BelongsTo
     {

@@ -33,6 +33,7 @@ class Tenant extends Model
         'fax',
         'email',
         'website',
+        'logo_url',
         'status',
         'timezone',
     ];

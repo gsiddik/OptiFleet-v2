@@ -18,6 +18,7 @@ interface CompanyProfile {
   fax: string | null;
   email: string | null;
   website: string | null;
+  logo_url: string | null;
 }
 
 /** G-15: previously a tenant had no self-service way to view or maintain its own company profile. */
@@ -34,6 +35,7 @@ export function CompanyProfilePage() {
   const [fax, setFax] = useState('');
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
@@ -55,6 +57,7 @@ export function CompanyProfilePage() {
         setFax(p.fax ?? '');
         setEmail(p.email ?? '');
         setWebsite(p.website ?? '');
+        setLogoUrl(p.logo_url ?? '');
       })
       .catch((err) => setError(extractApiError(err).message));
   }
@@ -77,6 +80,7 @@ export function CompanyProfilePage() {
         fax: fax || null,
         email: email || null,
         website: website || null,
+        logo_url: logoUrl || null,
       });
       setSaved(true);
       load();
@@ -141,6 +145,10 @@ export function CompanyProfilePage() {
         <FormField label="Website" errors={errors.website}>
           <input value={website} onChange={(e) => setWebsite(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>
+        <FormField label="Logo URL" errors={errors.logo_url}>
+          <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} style={inputStyle} disabled={!canEdit} />
+        </FormField>
+        {profile.logo_url && <img src={profile.logo_url} alt={profile.name} style={{ maxWidth: 160, marginBottom: 12, borderRadius: 6 }} />}
         {canEdit && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
             <button className="btn-primary" disabled={saving} onClick={save}>

@@ -83,6 +83,12 @@ class WorkerController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'worker_type' => ['sometimes', 'in:LEAD_MECHANIC,MECHANIC,TECHNICIAN,INSPECTOR,QC'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'address' => ['nullable', 'string'],
+            'monthly_rate' => ['nullable', 'numeric', 'min:0'],
+            'hourly_rate' => ['nullable', 'numeric', 'min:0'],
+            'photo_url' => ['nullable', 'string', 'max:255'],
         ]);
         $worker->update($validated);
 

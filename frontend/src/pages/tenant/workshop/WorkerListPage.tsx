@@ -137,6 +137,11 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
   const [branchId, setBranchId] = useState('');
   const [workshopId, setWorkshopId] = useState('');
   const [workerType, setWorkerType] = useState('MECHANIC');
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [monthlyRate, setMonthlyRate] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -152,9 +157,16 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
     try {
       await apiClient.post('/app/workers', {
         employee_code: employeeCode, name, branch_id: branchId, workshop_id: workshopId || null, worker_type: workerType,
+        phone: phone || undefined, email: email || undefined, address: address || undefined,
+        monthly_rate: monthlyRate || undefined, hourly_rate: hourlyRate || undefined,
       });
       setEmployeeCode('');
       setName('');
+      setPhone('');
+      setEmail('');
+      setAddress('');
+      setMonthlyRate('');
+      setHourlyRate('');
       onCreated();
       onClose();
     } catch (err) {
@@ -203,7 +215,22 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
             ))}
           </select>
         </FormField>
+        <FormField label="Phone (optional)" errors={errors.phone}>
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Email (optional)" errors={errors.email}>
+          <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Monthly Rate (optional)" errors={errors.monthly_rate}>
+          <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Hourly Rate (optional)" errors={errors.hourly_rate}>
+          <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} style={inputStyle} />
+        </FormField>
       </div>
+      <FormField label="Address (optional)" errors={errors.address}>
+        <textarea value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
+      </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel
@@ -235,9 +262,38 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
   const [tenantUsers, setTenantUsers] = useState<TenantUserOption[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [busy, setBusy] = useState(false);
+  const [editingContact, setEditingContact] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
+  const [address, setAddress] = useState('');
+  const [monthlyRate, setMonthlyRate] = useState('');
+  const [hourlyRate, setHourlyRate] = useState('');
 
   function load() {
-    apiClient.get(`/app/workers/${workerId}`).then((res) => setWorker(res.data.data));
+    apiClient.get(`/app/workers/${workerId}`).then((res) => {
+      const w: WorkerItem = res.data.data;
+      setWorker(w);
+      setPhone(w.phone ?? '');
+      setEmail(w.email ?? '');
+      setAddress(w.address ?? '');
+      setMonthlyRate(w.monthly_rate ?? '');
+      setHourlyRate(w.hourly_rate ?? '');
+    });
+  }
+
+  async function saveContact() {
+    setBusy(true);
+    try {
+      await apiClient.put(`/app/workers/${workerId}`, {
+        phone: phone || null, email: email || null, address: address || null,
+        monthly_rate: monthlyRate || null, hourly_rate: hourlyRate || null,
+      });
+      setEditingContact(false);
+      load();
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
   }
 
   useEffect(load, [workerId]);
@@ -304,6 +360,44 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
         <span style={{ fontSize: 13, color: '#6b7280' }}>
           {worker.worker_type} — {worker.branch?.name ?? '—'} / {worker.workshop?.name ?? 'No workshop'}
         </span>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h4 style={{ fontSize: 13, margin: 0 }}>Contact &amp; Compensation</h4>
+          {hasPermission('worker.manage') && !editingContact && (
+            <button className="btn-link" onClick={() => setEditingContact(true)}>
+              Edit
+            </button>
+          )}
+        </div>
+        {!editingContact ? (
+          <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>
+            Phone: {worker.phone ?? '—'} &nbsp; Email: {worker.email ?? '—'} &nbsp; Monthly Rate: {worker.monthly_rate ?? '—'} &nbsp; Hourly
+            Rate: {worker.hourly_rate ?? '—'}
+            {worker.address && <div>Address: {worker.address}</div>}
+          </div>
+        ) : (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
+            <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ ...inputStyle, width: 130 }} />
+            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+            <input
+              type="number" placeholder="Monthly Rate" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)}
+              style={{ ...inputStyle, width: 130 }}
+            />
+            <input
+              type="number" placeholder="Hourly Rate" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)}
+              style={{ ...inputStyle, width: 130 }}
+            />
+            <input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+            <button className="btn-primary" disabled={busy} onClick={saveContact}>
+              Save
+            </button>
+            <button className="btn-secondary" disabled={busy} onClick={() => setEditingContact(false)}>
+              Cancel
+            </button>
+          </div>
+        )}
       </div>
 
       <h4 style={{ fontSize: 13, marginBottom: 6 }}>Skills</h4>

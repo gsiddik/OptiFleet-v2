@@ -34,6 +34,7 @@ class CompanyProfileController extends Controller
             'fax' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
+            'logo_url' => ['nullable', 'string', 'max:255'],
         ]);
 
         $tenant = Tenant::query()->findOrFail($this->context->tenantId());

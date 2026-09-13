@@ -24,11 +24,21 @@ class Vehicle extends Model
         'brand', 'vehicle_brand_id', 'model', 'vehicle_model_id', 'vehicle_type', 'registration_number', 'vin', 'chassis_number',
         'engine_number', 'year', 'fuel_type', 'transmission_type',
         'current_odometer', 'engine_hour', 'status', 'operational_status',
+        'color', 'doors', 'seats', 'length_mm', 'width_mm', 'height_mm',
+        'fuel_tank_capacity_liters', 'engine_capacity_cc', 'suspension_type', 'axle_count',
+        'empty_weight_kg', 'load_weight_kg', 'wheel_count', 'photo_url',
     ];
 
     protected $casts = [
         'current_odometer' => 'decimal:2',
         'engine_hour' => 'decimal:2',
+        'length_mm' => 'decimal:1',
+        'width_mm' => 'decimal:1',
+        'height_mm' => 'decimal:1',
+        'fuel_tank_capacity_liters' => 'decimal:2',
+        'engine_capacity_cc' => 'decimal:1',
+        'empty_weight_kg' => 'decimal:2',
+        'load_weight_kg' => 'decimal:2',
     ];
 
     public function branch(): BelongsTo

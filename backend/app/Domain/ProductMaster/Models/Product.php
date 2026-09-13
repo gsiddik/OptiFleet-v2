@@ -18,7 +18,8 @@ class Product extends Model
 
     protected $fillable = [
         'tenant_id', 'code', 'sku', 'name', 'product_category_id', 'product_type', 'uom_id',
-        'brand', 'manufacturer_part_number', 'description', 'reference_tread_depth_mm',
+        'brand', 'manufacturer', 'material', 'production_year', 'weight_kg', 'length_mm', 'width_mm', 'height_mm', 'image_url',
+        'manufacturer_part_number', 'description', 'reference_tread_depth_mm',
         'track_serial_number', 'track_batch', 'is_system', 'status',
     ];
 
@@ -27,6 +28,7 @@ class Product extends Model
         return [
             'track_serial_number' => 'boolean', 'track_batch' => 'boolean', 'is_system' => 'boolean',
             'reference_tread_depth_mm' => 'decimal:2',
+            'weight_kg' => 'decimal:3', 'length_mm' => 'decimal:1', 'width_mm' => 'decimal:1', 'height_mm' => 'decimal:1',
         ];
     }
 

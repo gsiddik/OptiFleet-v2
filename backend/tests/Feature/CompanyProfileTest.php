@@ -29,6 +29,7 @@ class CompanyProfileTest extends TestCase
             'fax' => '+62-21-5551235',
             'email' => 'ops@testfleet.example',
             'website' => 'https://testfleet.example',
+            'logo_url' => 'https://files.example/logo.png',
         ], $headers)->assertOk();
 
         $this->assertSame('PT Test Fleet Indonesia', $update->json('data.legal_name'));
@@ -36,6 +37,7 @@ class CompanyProfileTest extends TestCase
         $this->assertSame('DKI Jakarta', $update->json('data.province'));
         $this->assertSame('Jakarta Selatan', $update->json('data.city'));
         $this->assertSame('+62-21-5551235', $update->json('data.fax'));
+        $this->assertSame('https://files.example/logo.png', $update->json('data.logo_url'));
         $this->assertSame($tenant->id, $update->json('data.id'));
     }
 

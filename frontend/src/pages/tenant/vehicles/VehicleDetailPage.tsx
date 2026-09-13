@@ -65,7 +65,7 @@ export function VehicleDetailPage() {
         ))}
       </div>
 
-      {tab === 'Overview' && <OverviewTab vehicle={vehicle} />}
+      {tab === 'Overview' && <OverviewTab vehicle={vehicle} onChanged={load} />}
       {tab === 'Assignment' && <AssignmentTab vehicle={vehicle} onChanged={load} />}
       {tab === 'Transfer' && <TransferTab vehicle={vehicle} onChanged={load} />}
       {tab === 'Documents' && <DocumentsTab vehicle={vehicle} />}
@@ -74,7 +74,9 @@ export function VehicleDetailPage() {
   );
 }
 
-function OverviewTab({ vehicle }: { vehicle: VehicleItem }) {
+function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [editing, setEditing] = useState(false);
   const rows: [string, string][] = [
     ['Branch', vehicle.branch?.name ?? '—'],
     ['Default Workshop', vehicle.default_workshop?.name ?? '—'],
@@ -88,10 +90,30 @@ function OverviewTab({ vehicle }: { vehicle: VehicleItem }) {
     ['Current Odometer', Number(vehicle.current_odometer).toLocaleString()],
     ['Engine Hour', vehicle.engine_hour ?? '—'],
     ['Operational Status', vehicle.operational_status],
+    ['Color', vehicle.color ?? '—'],
+    ['Doors', vehicle.doors != null ? String(vehicle.doors) : '—'],
+    ['Seats', vehicle.seats != null ? String(vehicle.seats) : '—'],
+    ['Dimensions (L×W×H mm)', vehicle.length_mm ? `${vehicle.length_mm} × ${vehicle.width_mm ?? '—'} × ${vehicle.height_mm ?? '—'}` : '—'],
+    ['Fuel Tank Capacity (L)', vehicle.fuel_tank_capacity_liters ?? '—'],
+    ['Engine Capacity (cc)', vehicle.engine_capacity_cc ?? '—'],
+    ['Suspension', vehicle.suspension_type ?? '—'],
+    ['Axles', vehicle.axle_count != null ? String(vehicle.axle_count) : '—'],
+    ['Empty / Load Weight (kg)', vehicle.empty_weight_kg ? `${vehicle.empty_weight_kg} / ${vehicle.load_weight_kg ?? '—'}` : '—'],
+    ['Wheels', vehicle.wheel_count != null ? String(vehicle.wheel_count) : '—'],
   ];
 
   return (
     <div className="card">
+      {vehicle.photo_url && (
+        <img src={vehicle.photo_url} alt={vehicle.registration_number} style={{ maxWidth: 240, marginBottom: 16, borderRadius: 6 }} />
+      )}
+      {hasPermission('vehicle.update') && (
+        <div style={{ textAlign: 'right', marginBottom: 12 }}>
+          <button className="btn-secondary" onClick={() => setEditing(true)}>
+            Edit Specifications
+          </button>
+        </div>
+      )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         {rows.map(([label, value]) => (
           <div key={label}>
@@ -100,7 +122,138 @@ function OverviewTab({ vehicle }: { vehicle: VehicleItem }) {
           </div>
         ))}
       </div>
+      {editing && <EditVehicleModal vehicle={vehicle} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); onChanged(); }} />}
     </div>
+  );
+}
+
+function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem; onClose: () => void; onSaved: () => void }) {
+  const [vehicleType, setVehicleType] = useState(vehicle.vehicle_type ?? '');
+  const [year, setYear] = useState(vehicle.year != null ? String(vehicle.year) : '');
+  const [fuelType, setFuelType] = useState(vehicle.fuel_type ?? '');
+  const [transmissionType, setTransmissionType] = useState(vehicle.transmission_type ?? '');
+  const [engineHour, setEngineHour] = useState(vehicle.engine_hour ?? '');
+  const [color, setColor] = useState(vehicle.color ?? '');
+  const [doors, setDoors] = useState(vehicle.doors != null ? String(vehicle.doors) : '');
+  const [seats, setSeats] = useState(vehicle.seats != null ? String(vehicle.seats) : '');
+  const [lengthMm, setLengthMm] = useState(vehicle.length_mm ?? '');
+  const [widthMm, setWidthMm] = useState(vehicle.width_mm ?? '');
+  const [heightMm, setHeightMm] = useState(vehicle.height_mm ?? '');
+  const [fuelTank, setFuelTank] = useState(vehicle.fuel_tank_capacity_liters ?? '');
+  const [engineCapacity, setEngineCapacity] = useState(vehicle.engine_capacity_cc ?? '');
+  const [suspensionType, setSuspensionType] = useState(vehicle.suspension_type ?? '');
+  const [axleCount, setAxleCount] = useState(vehicle.axle_count != null ? String(vehicle.axle_count) : '');
+  const [emptyWeight, setEmptyWeight] = useState(vehicle.empty_weight_kg ?? '');
+  const [loadWeight, setLoadWeight] = useState(vehicle.load_weight_kg ?? '');
+  const [wheelCount, setWheelCount] = useState(vehicle.wheel_count != null ? String(vehicle.wheel_count) : '');
+  const [photoUrl, setPhotoUrl] = useState(vehicle.photo_url ?? '');
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit() {
+    setSubmitting(true);
+    setErrors({});
+    try {
+      await apiClient.put(`/app/vehicles/${vehicle.id}`, {
+        vehicle_type: vehicleType || null,
+        year: year || null,
+        fuel_type: fuelType || null,
+        transmission_type: transmissionType || null,
+        engine_hour: engineHour || null,
+        color: color || null,
+        doors: doors || null,
+        seats: seats || null,
+        length_mm: lengthMm || null,
+        width_mm: widthMm || null,
+        height_mm: heightMm || null,
+        fuel_tank_capacity_liters: fuelTank || null,
+        engine_capacity_cc: engineCapacity || null,
+        suspension_type: suspensionType || null,
+        axle_count: axleCount || null,
+        empty_weight_kg: emptyWeight || null,
+        load_weight_kg: loadWeight || null,
+        wheel_count: wheelCount || null,
+        photo_url: photoUrl || null,
+      });
+      onSaved();
+    } catch (err) {
+      const apiError = extractApiError(err);
+      setErrors(apiError.errors ?? {});
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open title="Edit Vehicle Specifications" onClose={onClose} width={640}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormField label="Vehicle Type" errors={errors.vehicle_type}>
+          <input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Year" errors={errors.year}>
+          <input type="number" value={year} onChange={(e) => setYear(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Fuel Type" errors={errors.fuel_type}>
+          <input value={fuelType} onChange={(e) => setFuelType(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Transmission" errors={errors.transmission_type}>
+          <input value={transmissionType} onChange={(e) => setTransmissionType(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Engine Hour" errors={errors.engine_hour}>
+          <input type="number" step="0.01" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Color" errors={errors.color}>
+          <input value={color} onChange={(e) => setColor(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Doors" errors={errors.doors}>
+          <input type="number" value={doors} onChange={(e) => setDoors(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Seats" errors={errors.seats}>
+          <input type="number" value={seats} onChange={(e) => setSeats(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Length (mm)" errors={errors.length_mm}>
+          <input type="number" value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Width (mm)" errors={errors.width_mm}>
+          <input type="number" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Height (mm)" errors={errors.height_mm}>
+          <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Fuel Tank (L)" errors={errors.fuel_tank_capacity_liters}>
+          <input type="number" value={fuelTank} onChange={(e) => setFuelTank(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Engine Capacity (cc)" errors={errors.engine_capacity_cc}>
+          <input type="number" value={engineCapacity} onChange={(e) => setEngineCapacity(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Suspension" errors={errors.suspension_type}>
+          <input value={suspensionType} onChange={(e) => setSuspensionType(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Axles" errors={errors.axle_count}>
+          <input type="number" value={axleCount} onChange={(e) => setAxleCount(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Empty Weight (kg)" errors={errors.empty_weight_kg}>
+          <input type="number" value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Load Weight (kg)" errors={errors.load_weight_kg}>
+          <input type="number" value={loadWeight} onChange={(e) => setLoadWeight(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Wheels" errors={errors.wheel_count}>
+          <input type="number" value={wheelCount} onChange={(e) => setWheelCount(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Photo URL" errors={errors.photo_url}>
+          <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} style={inputStyle} />
+        </FormField>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <button className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn-primary" disabled={submitting} onClick={submit}>
+          {submitting ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

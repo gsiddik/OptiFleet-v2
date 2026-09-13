@@ -3,13 +3,14 @@
 namespace Tests\Feature;
 
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class VehicleTest extends TestCase
 {
     private function setUpTenant(): array
     {
-        $tenant = $this->makeTenant(['code' => 'VEH-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'VEH-'.Str::random(4)]);
         $this->grantModule($tenant, 'ORGANIZATION');
         $this->grantModule($tenant, 'VEHICLE');
         $branch = $this->makeBranch($tenant);
@@ -43,6 +44,32 @@ class VehicleTest extends TestCase
         $this->getJson('/api/v1/app/vehicles', $this->authHeaders($token))
             ->assertOk()
             ->assertJsonCount(1, 'data');
+    }
+
+    public function test_vehicle_physical_spec_fields_are_optional_and_stored(): void
+    {
+        [$tenant, $branch, $category] = $this->setUpTenant();
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.view', 'vehicle.create', 'vehicle.update']);
+
+        $create = $this->postJson('/api/v1/app/vehicles', [
+            'branch_id' => $branch->id, 'vehicle_category_id' => $category->id,
+            'brand' => 'Toyota', 'model' => 'Hilux', 'registration_number' => 'B 5678 ABC',
+            'color' => 'White', 'doors' => 4, 'seats' => 5, 'wheel_count' => 6,
+        ], $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertSame('White', $create->json('data.color'));
+        $this->assertSame(4, $create->json('data.doors'));
+        $this->assertSame(6, $create->json('data.wheel_count'));
+
+        $id = $create->json('data.id');
+        $this->putJson("/api/v1/app/vehicles/{$id}", [
+            'length_mm' => 5000, 'width_mm' => 1800, 'height_mm' => 1900,
+            'fuel_tank_capacity_liters' => 80, 'engine_capacity_cc' => 2400,
+            'suspension_type' => 'Leaf Spring', 'axle_count' => 2,
+            'empty_weight_kg' => 1800, 'load_weight_kg' => 1000,
+        ], $this->authHeaders($token))->assertOk()
+            ->assertJsonPath('data.suspension_type', 'Leaf Spring')
+            ->assertJsonPath('data.axle_count', 2);
     }
 
     public function test_registration_number_must_be_unique_per_tenant(): void

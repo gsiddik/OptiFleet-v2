@@ -37,6 +37,25 @@ class WorkerUserLinkTest extends TestCase
         $this->assertSame($loginUser->id, $worker->fresh()->user_id);
     }
 
+    public function test_worker_contact_and_rate_fields_are_optional_and_stored(): void
+    {
+        [$tenant, $token] = $this->setUpTenant();
+        $branch = $this->makeBranch($tenant);
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/workers', [
+            'employee_code' => 'EMP-1', 'name' => 'Budi', 'branch_id' => $branch->id, 'worker_type' => 'MECHANIC',
+            'phone' => '081234567890', 'email' => 'budi@example.test', 'monthly_rate' => 5000000, 'hourly_rate' => 50000,
+        ], $headers)->assertStatus(201);
+
+        $this->assertSame('081234567890', $create->json('data.phone'));
+        $this->assertSame('budi@example.test', $create->json('data.email'));
+
+        $id = $create->json('data.id');
+        $this->putJson("/api/v1/app/workers/{$id}", ['address' => 'Jl. Contoh No. 5'], $headers)
+            ->assertOk()->assertJsonPath('data.address', 'Jl. Contoh No. 5');
+    }
+
     public function test_worker_cannot_be_linked_to_a_user_outside_the_tenant(): void
     {
         [, $token, $worker] = $this->setUpTenant();
