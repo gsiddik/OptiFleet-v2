@@ -11,7 +11,9 @@ class PurchaseRequestItem extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['purchase_request_id', 'product_id', 'requested_quantity', 'estimated_unit_price', 'notes'];
+    public const LINE_STATUSES = ['PENDING', 'APPROVED', 'ON_HOLD', 'REJECTED'];
+
+    protected $fillable = ['purchase_request_id', 'product_id', 'requested_quantity', 'estimated_unit_price', 'notes', 'line_status', 'line_reason'];
 
     protected function casts(): array
     {

@@ -1038,6 +1038,8 @@ export interface PurchaseRequestItemLine {
   requested_quantity: string;
   estimated_unit_price: string | null;
   notes: string | null;
+  line_status: 'PENDING' | 'APPROVED' | 'ON_HOLD' | 'REJECTED';
+  line_reason: string | null;
   product?: ProductItem;
 }
 
@@ -1046,11 +1048,13 @@ export interface PurchaseRequestItem {
   pr_number: string;
   warehouse_id: string;
   source_type: 'MANUAL' | 'WORK_ORDER' | 'REORDER_POINT' | 'STOCK_PLANNING';
+  work_order_id: string | null;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'PROCUREMENT' | 'REJECTED' | 'CANCELLED';
   required_date: string | null;
   notes: string | null;
   warehouse?: Warehouse;
+  work_order?: WorkOrderItem;
   items?: PurchaseRequestItemLine[];
 }
 

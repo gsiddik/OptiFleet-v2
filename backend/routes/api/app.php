@@ -405,6 +405,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/purchase-requests/{purchaseRequest}/approve', [PurchaseRequestController::class, 'approve'])->middleware('permission:purchase_request.approve');
             Route::post('/purchase-requests/{purchaseRequest}/reject', [PurchaseRequestController::class, 'reject'])->middleware('permission:purchase_request.approve');
             Route::post('/purchase-requests/{purchaseRequest}/cancel', [PurchaseRequestController::class, 'cancel'])->middleware('permission:purchase_request.create');
+            Route::put('/purchase-requests/{purchaseRequest}/items/{item}/line-status', [PurchaseRequestController::class, 'setItemLineStatus'])->middleware('permission:purchase_request.approve');
 
             Route::get('/rfqs', [RfqController::class, 'index'])->middleware('permission:rfq.view');
             Route::post('/rfqs', [RfqController::class, 'store'])->middleware('permission:rfq.manage');

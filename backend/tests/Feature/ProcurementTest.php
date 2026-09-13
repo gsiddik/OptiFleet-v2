@@ -5,15 +5,18 @@ namespace Tests\Feature;
 use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseRequest;
+use App\Domain\Procurement\Models\PurchaseRequestItem;
 use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Procurement\Models\VendorQuotation;
+use App\Domain\WorkOrder\Models\WorkOrder;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ProcurementTest extends TestCase
 {
     private function setUpScenario(): array
     {
-        $tenant = $this->makeTenant(['code' => 'PROC-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'PROC-'.Str::random(4)]);
         $this->grantModule($tenant, 'INVENTORY');
         $this->grantModule($tenant, 'PROCUREMENT');
         $this->grantModule($tenant, 'PARTNER');
@@ -53,6 +56,59 @@ class ProcurementTest extends TestCase
         $this->postJson("/api/v1/app/purchase-requests/{$pr->id}/review", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/purchase-requests/{$pr->id}/approve", [], $headers)->assertOk()
             ->assertJsonPath('data.status', 'APPROVED');
+    }
+
+    public function test_purchase_request_can_be_linked_to_a_work_order(): void
+    {
+        [$tenant, $warehouse, $product] = $this->setUpScenario();
+        $branch = $this->makeBranch($tenant);
+        $workshop = $this->makeWorkshop($tenant, $branch);
+        $category = $this->makeVehicleCategory();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category);
+        $workOrder = WorkOrder::query()->create([
+            'tenant_id' => $tenant->id, 'wo_number' => 'WO-'.Str::upper(Str::random(6)),
+            'branch_id' => $branch->id, 'workshop_id' => $workshop->id, 'vehicle_id' => $vehicle->id,
+            'maintenance_type' => 'CORRECTIVE',
+        ]);
+        [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/purchase-requests', [
+            'warehouse_id' => $warehouse->id,
+            'source_type' => 'WORK_ORDER',
+            'work_order_id' => $workOrder->id,
+            'items' => [['product_id' => $product->id, 'requested_quantity' => 5]],
+        ], $headers)->assertStatus(201);
+
+        $this->assertSame($workOrder->id, $create->json('data.work_order_id'));
+        $this->getJson("/api/v1/app/purchase-requests/{$create->json('data.id')}", $headers)->assertOk()
+            ->assertJsonPath('data.work_order.id', $workOrder->id);
+    }
+
+    public function test_purchase_request_line_can_be_held_or_rejected_independently(): void
+    {
+        [$tenant, $warehouse, $product] = $this->setUpScenario();
+        $otherProduct = $this->makeProduct($tenant);
+        [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/purchase-requests', [
+            'warehouse_id' => $warehouse->id,
+            'items' => [
+                ['product_id' => $product->id, 'requested_quantity' => 5],
+                ['product_id' => $otherProduct->id, 'requested_quantity' => 3],
+            ],
+        ], $headers)->assertStatus(201);
+        $items = PurchaseRequestItem::query()->where('purchase_request_id', $create->json('data.id'))->get();
+        $this->assertTrue($items->every(fn ($i) => $i->line_status === 'PENDING'));
+
+        $held = $items->first();
+        $this->putJson("/api/v1/app/purchase-requests/{$create->json('data.id')}/items/{$held->id}/line-status", [
+            'line_status' => 'ON_HOLD', 'line_reason' => 'Awaiting budget confirmation',
+        ], $headers)->assertOk()->assertJsonPath('data.line_status', 'ON_HOLD')->assertJsonPath('data.line_reason', 'Awaiting budget confirmation');
+
+        $other = $items->last();
+        $this->assertSame('PENDING', $other->fresh()->line_status);
     }
 
     public function test_purchase_request_invalid_transition_is_rejected(): void
@@ -214,13 +270,13 @@ class ProcurementTest extends TestCase
             'delivery_warehouse_id' => $warehouse->id,
         ], $headers)->assertStatus(422);
 
-        $this->assertSame(1, \App\Domain\Procurement\Models\PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count());
+        $this->assertSame(1, PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count());
     }
 
     public function test_partner_records_are_tenant_isolated(): void
     {
         [$tenant, , , $vendor] = $this->setUpScenario();
-        $otherTenant = $this->makeTenant(['code' => 'PROCB-'.\Illuminate\Support\Str::random(4)]);
+        $otherTenant = $this->makeTenant(['code' => 'PROCB-'.Str::random(4)]);
         $this->grantModule($otherTenant, 'PARTNER');
         [, $otherToken] = $this->makeTenantUser($otherTenant, ['partner.view']);
 

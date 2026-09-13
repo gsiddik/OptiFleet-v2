@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api\Tenant;
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Procurement\Models\PurchaseRequest;
+use App\Domain\Procurement\Models\PurchaseRequestItem;
 use App\Domain\Procurement\Services\PurchaseRequestService;
+use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -21,7 +23,7 @@ class PurchaseRequestController extends Controller
     public function index(Request $request)
     {
         $tenantId = $this->context->tenantId();
-        $query = PurchaseRequest::query()->where('tenant_id', $tenantId)->with(['warehouse', 'items.product']);
+        $query = PurchaseRequest::query()->where('tenant_id', $tenantId)->with(['warehouse', 'items.product', 'workOrder']);
         $this->scope->applyWarehouseScope($query, $this->context->user(), $tenantId, 'warehouse_id');
 
         if ($status = $request->string('status')->value()) {
@@ -29,6 +31,9 @@ class PurchaseRequestController extends Controller
         }
         if ($warehouseId = $request->string('warehouse_id')->value()) {
             $query->where('warehouse_id', $warehouseId);
+        }
+        if ($workOrderId = $request->string('work_order_id')->value()) {
+            $query->where('work_order_id', $workOrderId);
         }
 
         return $this->paginated($query->latest('created_at')->paginate($request->integer('per_page', 20)));
@@ -43,6 +48,7 @@ class PurchaseRequestController extends Controller
             'workshop_id' => ['nullable', 'uuid', 'exists:workshops,id'],
             'source_type' => ['nullable', 'in:MANUAL,WORK_ORDER,REORDER_POINT,STOCK_PLANNING'],
             'source_reference' => ['nullable', 'string', 'max:255'],
+            'work_order_id' => ['nullable', 'uuid', 'exists:work_orders,id'],
             'required_date' => ['nullable', 'date'],
             'priority' => ['nullable', 'in:LOW,MEDIUM,HIGH,URGENT'],
             'notes' => ['nullable', 'string'],
@@ -57,11 +63,17 @@ class PurchaseRequestController extends Controller
         abort_unless($warehouse->tenant_id === $tenantId, 404);
         abort_unless($this->scope->canAccessWarehouse($this->context->user(), $tenantId, $warehouse->id), 403);
 
+        if (! empty($validated['work_order_id'])) {
+            $workOrder = WorkOrder::query()->findOrFail($validated['work_order_id']);
+            abort_unless($workOrder->tenant_id === $tenantId, 404);
+        }
+
         $pr = $this->requests->create($warehouse, [
             'branch_id' => $validated['branch_id'] ?? null,
             'workshop_id' => $validated['workshop_id'] ?? null,
             'source_type' => $validated['source_type'] ?? 'MANUAL',
             'source_reference' => $validated['source_reference'] ?? null,
+            'work_order_id' => $validated['work_order_id'] ?? null,
             'required_date' => $validated['required_date'] ?? null,
             'priority' => $validated['priority'] ?? 'MEDIUM',
             'notes' => $validated['notes'] ?? null,
@@ -74,7 +86,7 @@ class PurchaseRequestController extends Controller
     {
         $this->authorizeScope($purchaseRequest);
 
-        return $this->ok($purchaseRequest->load(['warehouse', 'items.product']));
+        return $this->ok($purchaseRequest->load(['warehouse', 'items.product', 'workOrder']));
     }
 
     public function submit(PurchaseRequest $purchaseRequest)
@@ -100,6 +112,21 @@ class PurchaseRequestController extends Controller
     public function cancel(PurchaseRequest $purchaseRequest)
     {
         return $this->transition($purchaseRequest, 'CANCELLED');
+    }
+
+    /** G-08 (second clause): a line can be held or rejected independently of the request as a whole. */
+    public function setItemLineStatus(Request $request, PurchaseRequest $purchaseRequest, PurchaseRequestItem $item)
+    {
+        $this->authorizeScope($purchaseRequest);
+        abort_unless($item->purchase_request_id === $purchaseRequest->id, 404);
+
+        $validated = $request->validate([
+            'line_status' => ['required', 'in:'.implode(',', PurchaseRequestItem::LINE_STATUSES)],
+            'line_reason' => ['nullable', 'string', 'max:1000'],
+        ]);
+        $item->update($validated);
+
+        return $this->ok($item->fresh());
     }
 
     private function transition(PurchaseRequest $purchaseRequest, string $to)
