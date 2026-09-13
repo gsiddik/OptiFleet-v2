@@ -60,13 +60,32 @@ class ProductCategoryAndUomTest extends TestCase
         [, $token] = $this->setUpTenant();
         $headers = $this->authHeaders($token);
 
-        $create = $this->postJson('/api/v1/app/uoms', ['code' => 'BOX', 'name' => 'Box'], $headers)->assertStatus(201);
+        $create = $this->postJson('/api/v1/app/uoms', ['code' => 'BOX', 'name' => 'Box', 'description' => 'Cardboard box'], $headers)->assertStatus(201);
         $id = $create->json('data.id');
+        $this->assertSame('Cardboard box', $create->json('data.description'));
 
-        $this->putJson("/api/v1/app/uoms/{$id}", ['name' => 'Boxes'], $headers)->assertOk()->assertJsonPath('data.name', 'Boxes');
+        $this->putJson("/api/v1/app/uoms/{$id}", ['name' => 'Boxes', 'description' => 'Updated'], $headers)
+            ->assertOk()->assertJsonPath('data.name', 'Boxes')->assertJsonPath('data.description', 'Updated');
 
         $this->deleteJson("/api/v1/app/uoms/{$id}", [], $headers)->assertOk();
         $this->assertSoftDeleted('uoms', ['id' => $id]);
+    }
+
+    public function test_uom_description_is_optional_and_search_filters_by_code_or_name(): void
+    {
+        [$tenant, $token] = $this->setUpTenant();
+        $headers = $this->authHeaders($token);
+
+        $this->postJson('/api/v1/app/uoms', ['code' => 'NODESC', 'name' => 'No Description'], $headers)
+            ->assertStatus(201)->assertJsonPath('data.description', null);
+
+        $this->makeUom(['tenant_id' => $tenant->id, 'code' => 'KG', 'name' => 'Kilogram', 'is_system' => false]);
+        $this->makeUom(['tenant_id' => $tenant->id, 'code' => 'LT', 'name' => 'Liter', 'is_system' => false]);
+
+        $response = $this->getJson('/api/v1/app/uoms?search=Kilogram', $headers)->assertOk();
+        $codes = collect($response->json('data'))->pluck('code');
+        $this->assertTrue($codes->contains('KG'));
+        $this->assertFalse($codes->contains('LT'));
     }
 
     public function test_uom_in_use_by_a_product_cannot_be_deleted(): void

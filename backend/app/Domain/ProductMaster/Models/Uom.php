@@ -12,7 +12,7 @@ class Uom extends Model
 {
     use Auditable, BelongsToTenantOrPlatform, HasUuids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'code', 'name', 'is_system', 'status'];
+    protected $fillable = ['tenant_id', 'code', 'name', 'description', 'is_system', 'status'];
 
     protected function casts(): array
     {

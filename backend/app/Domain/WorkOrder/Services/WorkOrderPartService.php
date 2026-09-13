@@ -111,7 +111,7 @@ class WorkOrderPartService
      * reading a stale outstanding-issued snapshot and double-crediting
      * stock (the TOCTOU race this closes).
      */
-    public function returnPart(WorkOrderPlannedPart $part, float $quantity, string $condition, ?string $userId, ?string $reason = null): WorkOrderPlannedPart
+    public function returnPart(WorkOrderPlannedPart $part, float $quantity, string $condition, ?string $userId, ?string $reason = null, ?string $evidence = null): WorkOrderPlannedPart
     {
         if ($quantity <= 0) {
             throw new WorkOrderException('Return quantity must be positive.');
@@ -120,7 +120,7 @@ class WorkOrderPartService
             throw new WorkOrderException('Return condition must be one of: '.implode(', ', self::CONDITIONS).'.');
         }
 
-        return DB::transaction(function () use ($part, $quantity, $condition, $userId, $reason) {
+        return DB::transaction(function () use ($part, $quantity, $condition, $userId, $reason, $evidence) {
             $locked = WorkOrderPlannedPart::query()->lockForUpdate()->findOrFail($part->id);
 
             if ($quantity > $locked->outstandingIssued()) {
@@ -161,6 +161,7 @@ class WorkOrderPartService
                 'stock_movement_id' => $stockMovementId,
                 'returned_by' => $userId,
                 'reason' => $reason,
+                'evidence' => $evidence,
             ]);
 
             $locked->increment('returned_quantity', $quantity);

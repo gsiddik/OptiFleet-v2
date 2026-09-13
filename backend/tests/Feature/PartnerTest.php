@@ -2,15 +2,15 @@
 
 namespace Tests\Feature;
 
-use App\Domain\Partner\Models\Partner;
 use App\Domain\Partner\Services\PartnerPerformanceService;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PartnerTest extends TestCase
 {
     public function test_partner_crud_works(): void
     {
-        $tenant = $this->makeTenant(['code' => 'PTR-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'PTR-'.Str::random(4)]);
         $this->grantModule($tenant, 'PARTNER');
         [, $token] = $this->makeTenantUser($tenant, ['partner.view', 'partner.manage']);
         $headers = $this->authHeaders($token);
@@ -32,8 +32,8 @@ class PartnerTest extends TestCase
 
     public function test_partner_tenant_isolation(): void
     {
-        $tenantA = $this->makeTenant(['code' => 'PTRA-'.\Illuminate\Support\Str::random(4)]);
-        $tenantB = $this->makeTenant(['code' => 'PTRB-'.\Illuminate\Support\Str::random(4)]);
+        $tenantA = $this->makeTenant(['code' => 'PTRA-'.Str::random(4)]);
+        $tenantB = $this->makeTenant(['code' => 'PTRB-'.Str::random(4)]);
         $this->grantModule($tenantA, 'PARTNER');
         $this->grantModule($tenantB, 'PARTNER');
         $partner = $this->makePartner($tenantA);
@@ -45,7 +45,7 @@ class PartnerTest extends TestCase
 
     public function test_partner_performance_summary_aggregates_events(): void
     {
-        $tenant = $this->makeTenant(['code' => 'PTRC-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'PTRC-'.Str::random(4)]);
         $this->grantModule($tenant, 'PARTNER');
         $partner = $this->makePartner($tenant);
         $performance = app(PartnerPerformanceService::class);
@@ -68,9 +68,32 @@ class PartnerTest extends TestCase
         $this->assertSame(1000.0, (float) $response->json('data.performance.total_purchase_value'));
     }
 
+    public function test_partner_profile_fields_are_stored_and_returned(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'PTRE-'.Str::random(4)]);
+        $this->grantModule($tenant, 'PARTNER');
+        [, $token] = $this->makeTenantUser($tenant, ['partner.view', 'partner.manage']);
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/partners', [
+            'code' => 'VND-02', 'name' => 'Bank-Linked Supplier', 'partner_type' => 'SUPPLIER',
+            'province' => 'DKI Jakarta', 'city' => 'Jakarta Selatan',
+            'bank' => 'BCA', 'account_holder' => 'PT Bank-Linked Supplier', 'account_number' => '1234567890',
+            'description' => 'Preferred oil supplier',
+        ], $headers)->assertStatus(201);
+        $id = $create->json('data.id');
+
+        $this->assertSame('DKI Jakarta', $create->json('data.province'));
+        $this->assertSame('BCA', $create->json('data.bank'));
+        $this->assertSame('1234567890', $create->json('data.account_number'));
+
+        $this->putJson("/api/v1/app/partners/{$id}", ['city' => 'Jakarta Pusat', 'description' => 'Updated'], $headers)
+            ->assertOk()->assertJsonPath('data.city', 'Jakarta Pusat')->assertJsonPath('data.description', 'Updated');
+    }
+
     public function test_duplicate_partner_code_within_tenant_is_rejected(): void
     {
-        $tenant = $this->makeTenant(['code' => 'PTRD-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'PTRD-'.Str::random(4)]);
         $this->grantModule($tenant, 'PARTNER');
         $this->makePartner($tenant, ['code' => 'VND-DUP']);
         [, $token] = $this->makeTenantUser($tenant, ['partner.manage']);

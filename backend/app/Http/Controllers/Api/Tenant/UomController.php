@@ -19,6 +19,9 @@ class UomController extends Controller
         if ($status = $request->string('status')->value()) {
             $query->where('status', $status);
         }
+        if ($search = $request->string('search')->trim()->value()) {
+            $query->where(fn ($q) => $q->where('code', 'ilike', "%{$search}%")->orWhere('name', 'ilike', "%{$search}%"));
+        }
 
         return $this->paginated($query->orderBy('code')->paginate($request->integer('per_page', 50)));
     }
@@ -29,6 +32,7 @@ class UomController extends Controller
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:20', Rule::unique('uoms', 'code')->where('tenant_id', $tenantId)],
             'name' => ['required', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:255'],
         ]);
 
         $uom = Uom::query()->create($validated + ['tenant_id' => $tenantId, 'is_system' => false, 'status' => 'ACTIVE']);
@@ -43,6 +47,7 @@ class UomController extends Controller
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:100'],
+            'description' => ['sometimes', 'nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
         ]);
         $uom->update($validated);

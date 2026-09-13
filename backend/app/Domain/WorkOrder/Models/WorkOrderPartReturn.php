@@ -21,7 +21,7 @@ class WorkOrderPartReturn extends Model
 
     protected $fillable = [
         'tenant_id', 'work_order_planned_part_id', 'warehouse_id', 'product_id', 'quantity',
-        'condition', 'disposition_status', 'stock_movement_id', 'returned_by', 'reason',
+        'condition', 'disposition_status', 'stock_movement_id', 'returned_by', 'reason', 'evidence',
         'workflow_configuration_version_id', 'accepted_quantity', 'inspected_by', 'inspected_at',
         'inspection_notes', 'disposition', 'disposition_reason', 'proposed_by',
         'workflow_approval_request_id', 'finalized_at',

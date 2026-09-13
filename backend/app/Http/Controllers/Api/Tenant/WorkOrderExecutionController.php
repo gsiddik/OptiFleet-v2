@@ -142,9 +142,10 @@ class WorkOrderExecutionController extends Controller
             'quantity' => ['required', 'numeric', 'gt:0'],
             'condition' => ['required', 'string', 'in:'.implode(',', WorkOrderPartService::CONDITIONS)],
             'reason' => ['nullable', 'string'],
+            'evidence' => ['nullable', 'string', 'max:255'],
         ]);
 
-        return $this->ok($this->parts->returnPart($plannedPart, (float) $validated['quantity'], $validated['condition'], $this->context->user()->id, $validated['reason'] ?? null));
+        return $this->ok($this->parts->returnPart($plannedPart, (float) $validated['quantity'], $validated['condition'], $this->context->user()->id, $validated['reason'] ?? null, $validated['evidence'] ?? null));
     }
 
     public function consumePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)

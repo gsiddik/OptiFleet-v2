@@ -15,7 +15,8 @@ class Partner extends Model
 
     protected $fillable = [
         'tenant_id', 'code', 'name', 'partner_type', 'contact_name', 'contact_phone',
-        'contact_email', 'address', 'tax_id', 'payment_terms', 'status',
+        'contact_email', 'address', 'province', 'city', 'tax_id', 'payment_terms',
+        'bank', 'account_holder', 'account_number', 'description', 'status',
     ];
 
     public function performanceEvents(): HasMany

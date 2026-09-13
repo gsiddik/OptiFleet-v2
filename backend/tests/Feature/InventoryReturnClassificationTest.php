@@ -75,6 +75,18 @@ class InventoryReturnClassificationTest extends TestCase
         $this->assertNotNull($return->stock_movement_id);
     }
 
+    public function test_return_evidence_is_optional_and_stored_when_provided(): void
+    {
+        [, , , $wo, $part, $headers] = $this->setUpWorkOrderWithIssuedPart();
+
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
+            'quantity' => 2, 'condition' => 'USED_FAULTY', 'evidence' => 'https://files.example/evidence/photo-1.jpg',
+        ], $headers)->assertOk();
+
+        $return = WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->firstOrFail();
+        $this->assertSame('https://files.example/evidence/photo-1.jpg', $return->evidence);
+    }
+
     public function test_used_good_return_does_not_reach_available_stock(): void
     {
         [, $warehouse, $product, $wo, $part, $headers] = $this->setUpWorkOrderWithIssuedPart();

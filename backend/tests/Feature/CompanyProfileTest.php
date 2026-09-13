@@ -23,13 +23,19 @@ class CompanyProfileTest extends TestCase
             'legal_name' => 'PT Test Fleet Indonesia',
             'tax_id' => '01.234.567.8-901.000',
             'address' => 'Jl. Contoh No. 1, Jakarta',
+            'province' => 'DKI Jakarta',
+            'city' => 'Jakarta Selatan',
             'phone' => '+62-21-5551234',
+            'fax' => '+62-21-5551235',
             'email' => 'ops@testfleet.example',
             'website' => 'https://testfleet.example',
         ], $headers)->assertOk();
 
         $this->assertSame('PT Test Fleet Indonesia', $update->json('data.legal_name'));
         $this->assertSame('01.234.567.8-901.000', $update->json('data.tax_id'));
+        $this->assertSame('DKI Jakarta', $update->json('data.province'));
+        $this->assertSame('Jakarta Selatan', $update->json('data.city'));
+        $this->assertSame('+62-21-5551235', $update->json('data.fax'));
         $this->assertSame($tenant->id, $update->json('data.id'));
     }
 

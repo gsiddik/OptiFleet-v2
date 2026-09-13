@@ -458,6 +458,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
             Route::get('/wheel-configurations', [WheelConfigurationController::class, 'index'])->middleware('permission:tire.view');
             Route::post('/wheel-configurations', [WheelConfigurationController::class, 'store'])->middleware('permission:tire.manage');
+            Route::put('/wheel-configurations/{wheelConfiguration}', [WheelConfigurationController::class, 'update'])->middleware('permission:tire.manage');
+            Route::delete('/wheel-configurations/{wheelConfiguration}', [WheelConfigurationController::class, 'destroy'])->middleware('permission:tire.manage');
 
             Route::get('/tires', [TireController::class, 'index'])->middleware('permission:tire.view');
             Route::post('/tires', [TireController::class, 'store'])->middleware('permission:tire.manage');

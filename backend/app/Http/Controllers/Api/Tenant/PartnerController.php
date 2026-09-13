@@ -59,8 +59,14 @@ class PartnerController extends Controller
             'contact_phone' => ['nullable', 'string', 'max:50'],
             'contact_email' => ['nullable', 'email', 'max:255'],
             'address' => ['nullable', 'string'],
+            'province' => ['nullable', 'string', 'max:100'],
+            'city' => ['nullable', 'string', 'max:100'],
             'tax_id' => ['nullable', 'string', 'max:100'],
             'payment_terms' => ['nullable', 'string', 'max:100'],
+            'bank' => ['nullable', 'string', 'max:100'],
+            'account_holder' => ['nullable', 'string', 'max:255'],
+            'account_number' => ['nullable', 'string', 'max:100'],
+            'description' => ['nullable', 'string', 'max:1000'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
         ]);
         $partner->update($validated);
