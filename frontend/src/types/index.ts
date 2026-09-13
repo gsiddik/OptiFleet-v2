@@ -1118,12 +1118,30 @@ export interface PurchaseOrderItemLine {
   product?: ProductItem;
 }
 
+export interface WorkflowApprovalStepItem {
+  id: string;
+  step_number: number;
+  approver_type: string;
+  approver_identifier: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
+  decided_by: string | null;
+  decided_at: string | null;
+  note: string | null;
+}
+
+export interface WorkflowApprovalRequestItem {
+  id: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requested_by: string | null;
+  steps?: WorkflowApprovalStepItem[];
+}
+
 export interface PurchaseOrderItem {
   id: string;
   po_number: string;
   partner_id: string;
   delivery_warehouse_id: string;
-  status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'ISSUED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CLOSED' | 'REJECTED' | 'CANCELLED';
+  status: 'DRAFT' | 'SUBMITTED' | 'PENDING_APPROVAL' | 'APPROVED' | 'ISSUED' | 'PARTIALLY_RECEIVED' | 'RECEIVED' | 'CLOSED' | 'REJECTED' | 'CANCELLED';
   order_date: string | null;
   expected_delivery_date: string | null;
   subtotal: string;
@@ -1134,6 +1152,7 @@ export interface PurchaseOrderItem {
   delivery_warehouse?: Warehouse;
   items?: PurchaseOrderItemLine[];
   goods_receipts?: GoodsReceiptItem[];
+  workflow_approval_request?: WorkflowApprovalRequestItem;
 }
 
 export interface GoodsReceiptItemLine {

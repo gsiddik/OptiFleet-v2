@@ -93,7 +93,7 @@ class PurchaseOrderController extends Controller
     {
         $this->authorizeScope($purchaseOrder);
 
-        return $this->ok($purchaseOrder->load(['partner', 'deliveryWarehouse', 'items.product', 'goodsReceipts']));
+        return $this->ok($purchaseOrder->load(['partner', 'deliveryWarehouse', 'items.product', 'goodsReceipts', 'workflowApprovalRequest.steps']));
     }
 
     /**
@@ -129,6 +129,20 @@ class PurchaseOrderController extends Controller
     public function reject(PurchaseOrder $purchaseOrder)
     {
         return $this->transition($purchaseOrder, 'REJECTED');
+    }
+
+    /** G-06: decides the next pending step of a PO's in-flight tiered approval (only reachable when one exists). */
+    public function decideApproval(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        $this->authorizeScope($purchaseOrder);
+        $validated = $request->validate([
+            'decision' => ['required', 'string', 'in:APPROVED,REJECTED'],
+            'note' => ['nullable', 'string'],
+        ]);
+
+        return $this->ok($this->orders->decideApproval(
+            $purchaseOrder, $validated['decision'], $this->context->user()->id, $validated['note'] ?? null,
+        ));
     }
 
     public function issue(PurchaseOrder $purchaseOrder)

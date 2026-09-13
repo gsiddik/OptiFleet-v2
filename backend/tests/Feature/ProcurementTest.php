@@ -8,6 +8,7 @@ use App\Domain\Procurement\Models\PurchaseRequest;
 use App\Domain\Procurement\Models\PurchaseRequestItem;
 use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Procurement\Models\VendorQuotation;
+use App\Domain\Workflow\Services\WorkflowDefinitionService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -204,6 +205,114 @@ class ProcurementTest extends TestCase
         $this->postJson("/api/v1/app/quotations/{$quotation->id}/select", [], $headers)->assertOk();
 
         return $quotation->fresh();
+    }
+
+    public function test_purchase_order_tiered_approval_when_tenant_publishes_an_approval_rule(): void
+    {
+        $scenario = $this->setUpScenario();
+        [$tenant, $warehouse, , $vendor] = $scenario;
+        [, $requesterToken] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        [$approverUser, $approverToken] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $requesterHeaders = $this->authHeaders($requesterToken);
+        $approverHeaders = $this->authHeaders($approverToken);
+
+        $definitions = app(WorkflowDefinitionService::class);
+        $set = $definitions->findOrCreateSet($tenant->id, 'purchase_order', 'TENANT', null, 'PO Approval');
+        $payload = [
+            'statuses' => [
+                ['code' => 'DRAFT', 'display_name' => 'Draft', 'is_start' => true],
+                ['code' => 'SUBMITTED', 'display_name' => 'Submitted'],
+                ['code' => 'APPROVED', 'display_name' => 'Approved'],
+                ['code' => 'REJECTED', 'display_name' => 'Rejected'],
+                ['code' => 'CANCELLED', 'display_name' => 'Cancelled'],
+            ],
+            'transitions' => [
+                ['from_status' => 'DRAFT', 'to_status' => 'SUBMITTED', 'action_code' => 'submitted'],
+                ['from_status' => 'DRAFT', 'to_status' => 'CANCELLED', 'action_code' => 'cancelled'],
+                [
+                    'from_status' => 'SUBMITTED', 'to_status' => 'APPROVED', 'action_code' => 'approved',
+                    'approval_rule' => [
+                        'type' => 'SEQUENTIAL',
+                        'steps' => [
+                            ['step_number' => 1, 'approver_type' => 'PERMISSION', 'approver_identifier' => 'purchase_order.approve'],
+                            ['step_number' => 2, 'approver_type' => 'PERMISSION', 'approver_identifier' => 'purchase_order.approve'],
+                        ],
+                    ],
+                ],
+                ['from_status' => 'SUBMITTED', 'to_status' => 'REJECTED', 'action_code' => 'rejected'],
+            ],
+        ];
+        $definitions->publish($definitions->createDraft($set, $payload, null), null);
+
+        $quotation = $this->createSelectedQuotation($scenario, $requesterToken);
+        $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
+            'delivery_warehouse_id' => $warehouse->id,
+        ], $requesterHeaders)->assertStatus(201);
+        $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
+
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/submit", [], $requesterHeaders)->assertOk();
+
+        // approve() now opens a 2-step approval request instead of going straight to APPROVED.
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/approve", [], $requesterHeaders)
+            ->assertOk()->assertJsonPath('data.status', 'PENDING_APPROVAL');
+
+        // The requester cannot decide their own request's steps.
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/decide-approval", ['decision' => 'APPROVED'], $requesterHeaders)
+            ->assertStatus(422);
+
+        // Step 1 decided -> still PENDING_APPROVAL (one more step outstanding).
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/decide-approval", ['decision' => 'APPROVED'], $approverHeaders)
+            ->assertOk()->assertJsonPath('data.status', 'PENDING_APPROVAL');
+
+        // Step 2 decided -> fully approved.
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/decide-approval", ['decision' => 'APPROVED'], $approverHeaders)
+            ->assertOk()->assertJsonPath('data.status', 'APPROVED');
+
+        $this->assertSame($approverUser->id, PurchaseOrder::query()->findOrFail($po->id)->approved_by);
+    }
+
+    public function test_purchase_order_tiered_approval_can_be_rejected_mid_chain(): void
+    {
+        $scenario = $this->setUpScenario();
+        [$tenant, $warehouse] = $scenario;
+        [, $requesterToken] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        [, $approverToken] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $requesterHeaders = $this->authHeaders($requesterToken);
+        $approverHeaders = $this->authHeaders($approverToken);
+
+        $definitions = app(WorkflowDefinitionService::class);
+        $set = $definitions->findOrCreateSet($tenant->id, 'purchase_order', 'TENANT', null, 'PO Approval');
+        $payload = [
+            'statuses' => [
+                ['code' => 'DRAFT', 'display_name' => 'Draft', 'is_start' => true],
+                ['code' => 'SUBMITTED', 'display_name' => 'Submitted'],
+                ['code' => 'APPROVED', 'display_name' => 'Approved'],
+                ['code' => 'REJECTED', 'display_name' => 'Rejected'],
+            ],
+            'transitions' => [
+                ['from_status' => 'DRAFT', 'to_status' => 'SUBMITTED', 'action_code' => 'submitted'],
+                [
+                    'from_status' => 'SUBMITTED', 'to_status' => 'APPROVED', 'action_code' => 'approved',
+                    'approval_rule' => [
+                        'type' => 'SINGLE',
+                        'steps' => [['step_number' => 1, 'approver_type' => 'PERMISSION', 'approver_identifier' => 'purchase_order.approve']],
+                    ],
+                ],
+                ['from_status' => 'SUBMITTED', 'to_status' => 'REJECTED', 'action_code' => 'rejected'],
+            ],
+        ];
+        $definitions->publish($definitions->createDraft($set, $payload, null), null);
+
+        $quotation = $this->createSelectedQuotation($scenario, $requesterToken);
+        $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
+            'delivery_warehouse_id' => $warehouse->id,
+        ], $requesterHeaders)->assertStatus(201);
+        $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/submit", [], $requesterHeaders)->assertOk();
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/approve", [], $requesterHeaders)->assertOk();
+
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/decide-approval", ['decision' => 'REJECTED', 'note' => 'Over budget'], $approverHeaders)
+            ->assertOk()->assertJsonPath('data.status', 'REJECTED');
     }
 
     public function test_purchase_order_lifecycle_with_partial_receipt_and_over_receipt_rejection(): void

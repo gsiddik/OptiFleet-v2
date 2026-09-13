@@ -428,6 +428,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit'])->middleware('permission:purchase_order.create');
             Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:purchase_order.approve');
             Route::post('/purchase-orders/{purchaseOrder}/reject', [PurchaseOrderController::class, 'reject'])->middleware('permission:purchase_order.approve');
+            Route::post('/purchase-orders/{purchaseOrder}/decide-approval', [PurchaseOrderController::class, 'decideApproval'])->middleware('permission:purchase_order.approve');
             Route::post('/purchase-orders/{purchaseOrder}/issue', [PurchaseOrderController::class, 'issue'])->middleware('permission:purchase_order.issue');
             Route::post('/purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->middleware('permission:purchase_order.approve');
             Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:purchase_order.create');

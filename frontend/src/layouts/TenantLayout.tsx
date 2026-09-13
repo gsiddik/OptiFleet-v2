@@ -34,6 +34,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Maintenance',
     items: [
+      { to: '/app/maintenance-policies', label: 'Maintenance Packages', permission: 'maintenance_policy.view', module: 'MAINTENANCE' },
       { to: '/app/maintenance-schedules', label: 'Planning & Schedule', permission: 'maintenance_schedule.view', module: 'MAINTENANCE' },
       { to: '/app/maintenance-requests', label: 'Maintenance Request', permission: 'maintenance_request.view', module: 'MAINTENANCE' },
       { to: '/app/work-orders', label: 'Work Order', permission: 'work_order.view', module: 'WORK_ORDER' },

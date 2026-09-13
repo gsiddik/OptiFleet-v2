@@ -68,6 +68,20 @@ export function PurchaseOrderDetailPage() {
     }
   }
 
+  /** G-06: decides the next pending step of a tiered approval, when a tenant has configured one. */
+  async function decideApproval(decision: 'APPROVED' | 'REJECTED') {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/purchase-orders/${id}/decide-approval`, { decision });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function postReceipt() {
     if (!po) return;
     setBusy(true);
@@ -121,6 +135,33 @@ export function PurchaseOrderDetailPage() {
           <strong>Total:</strong> {po.total}
         </p>
       </div>
+
+      {po.status === 'PENDING_APPROVAL' && po.workflow_approval_request && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Tiered Approval</h3>
+          {(po.workflow_approval_request.steps ?? [])
+            .sort((a, b) => a.step_number - b.step_number)
+            .map((step) => (
+              <div key={step.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
+                <span>
+                  Step {step.step_number} — {step.approver_identifier}
+                  {step.note && <span style={{ color: '#6b7280' }}> ({step.note})</span>}
+                </span>
+                <StatusBadge status={step.status} />
+              </div>
+            ))}
+          {hasPermission('purchase_order.approve') && (
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button className="btn-primary" disabled={busy} onClick={() => decideApproval('APPROVED')}>
+                Approve Step
+              </button>
+              <button className="btn-secondary" disabled={busy} onClick={() => decideApproval('REJECTED')}>
+                Reject
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>

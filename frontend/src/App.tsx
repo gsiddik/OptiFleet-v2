@@ -60,6 +60,7 @@ import { InspectionListPage } from './pages/tenant/inspections/InspectionListPag
 import { InspectionDetailPage } from './pages/tenant/inspections/InspectionDetailPage';
 import { InspectionTemplateListPage } from './pages/tenant/inspections/InspectionTemplateListPage';
 import { MaintenanceSchedulePage } from './pages/tenant/maintenance/MaintenanceSchedulePage';
+import { MaintenancePackagesPage, MaintenancePackageDetailPage } from './pages/tenant/maintenance/MaintenancePackagesPage';
 import { MaintenanceRequestListPage } from './pages/tenant/maintenance/MaintenanceRequestListPage';
 import { MaintenanceRequestDetailPage } from './pages/tenant/maintenance/MaintenanceRequestDetailPage';
 import { BreakdownListPage } from './pages/tenant/maintenance/BreakdownListPage';
@@ -367,6 +368,22 @@ export default function App() {
               element={
                 <RequirePermission permission="maintenance_schedule.view">
                   <MaintenanceSchedulePage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="maintenance-policies"
+              element={
+                <RequirePermission permission="maintenance_policy.view">
+                  <MaintenancePackagesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="maintenance-policies/:id"
+              element={
+                <RequirePermission permission="maintenance_policy.view">
+                  <MaintenancePackageDetailPage />
                 </RequirePermission>
               }
             />

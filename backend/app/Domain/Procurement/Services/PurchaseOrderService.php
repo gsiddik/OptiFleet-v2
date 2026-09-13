@@ -9,6 +9,8 @@ use App\Domain\Partner\Services\PartnerPerformanceService;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\Procurement\Models\VendorQuotation;
+use App\Domain\Workflow\Models\WorkflowApprovalRequest;
+use App\Domain\Workflow\Services\WorkflowApprovalService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
@@ -30,6 +32,7 @@ class PurchaseOrderService
         private readonly DocumentNumberingService $numbers,
         private readonly PartnerPerformanceService $performance,
         private readonly WorkflowEngine $workflow,
+        private readonly WorkflowApprovalService $approvals,
     ) {}
 
     /**
@@ -153,11 +156,84 @@ class PurchaseOrderService
         });
     }
 
+    /**
+     * G-06: single-tier by default (matches the pre-existing behavior
+     * exactly whenever no tenant has published a purchase_order workflow
+     * configuration with an approval_rule on its 'approved' transition).
+     * A tenant that publishes one — via the existing Configuration
+     * versioning/publish endpoints, condition_set-gated on this PO's own
+     * `total` — gets real multi-step tiered approval through the same
+     * generic engine every other maker-checker flow in this codebase uses.
+     * No thresholds, tier counts, or approver roles are defined here.
+     */
     public function approve(PurchaseOrder $po, ?string $userId): PurchaseOrder
     {
-        $updated = $this->transition($po, 'APPROVED');
-        $updated->update(['approved_by' => $userId]);
+        $version = $this->workflow->resolvePinnedOrEffective($po->workflow_configuration_version_id, self::RESOURCE_TYPE, $po->tenant_id);
+        $transition = $version ? $this->workflow->findTransition($version, $po->status, 'approved') : null;
+        $approvalRule = $transition['approval_rule'] ?? null;
 
-        return $updated->fresh();
+        if (! $approvalRule) {
+            $updated = $this->transition($po, 'APPROVED');
+            $updated->update(['approved_by' => $userId]);
+
+            return $updated->fresh();
+        }
+
+        return DB::transaction(function () use ($po, $userId, $version, $approvalRule) {
+            $locked = PurchaseOrder::query()->lockForUpdate()->findOrFail($po->id);
+            if (! $this->workflow->isTransitionAllowedForVersion($version, $locked->status, 'APPROVED')) {
+                throw new ProcurementException("Cannot transition Purchase Order from {$locked->status} to APPROVED.");
+            }
+
+            $request = $this->approvals->createRequest(
+                $locked->tenant_id, self::RESOURCE_TYPE, $locked->id, $version->id,
+                'approved', $locked->status, 'APPROVED', $approvalRule,
+                ['total' => (float) $locked->total], $userId,
+            );
+
+            $locked->update(['status' => 'PENDING_APPROVAL', 'workflow_approval_request_id' => $request->id]);
+
+            if ($this->approvals->isFullyApproved($request)) {
+                $locked->update(['status' => 'APPROVED', 'approved_by' => $userId]);
+            }
+
+            return $locked->fresh();
+        });
+    }
+
+    /** G-06: decides the next pending step of a PO's in-flight tiered approval. */
+    public function decideApproval(PurchaseOrder $po, string $decision, string $userId, ?string $note = null): PurchaseOrder
+    {
+        if (! in_array($decision, ['APPROVED', 'REJECTED'], true)) {
+            throw new ProcurementException("Invalid decision '{$decision}' — must be APPROVED or REJECTED.");
+        }
+
+        return DB::transaction(function () use ($po, $decision, $userId, $note) {
+            $locked = PurchaseOrder::query()->lockForUpdate()->findOrFail($po->id);
+            if ($locked->status !== 'PENDING_APPROVAL') {
+                throw new ProcurementException("Cannot decide an approval for a Purchase Order that is {$locked->status} (must be PENDING_APPROVAL).");
+            }
+
+            $request = WorkflowApprovalRequest::query()->findOrFail($locked->workflow_approval_request_id);
+            // Maker-checker: the actor who triggered approve() cannot also decide the resulting steps
+            // (WorkflowApprovalService itself only checks per-step eligibility, not requester identity).
+            if ($userId === $request->requested_by) {
+                throw new ProcurementException('The user who submitted this Purchase Order for approval cannot also decide its approval steps.');
+            }
+            $step = $request->steps()->where('status', 'PENDING')->orderBy('step_number')->firstOrFail();
+            $this->approvals->decide($step, $decision, $userId, $note);
+
+            if ($decision === 'REJECTED') {
+                $locked->update(['status' => 'REJECTED']);
+
+                return $locked->fresh();
+            }
+
+            if ($this->approvals->isFullyApproved($request)) {
+                $locked->update(['status' => 'APPROVED', 'approved_by' => $userId]);
+            }
+
+            return $locked->fresh();
+        });
     }
 }
