@@ -106,6 +106,20 @@ function RowCard({
         </span>
         <StatusBadge status={item.disposition_status} />
       </div>
+      {(item.reason || item.evidence) && (
+        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
+          {item.reason && <span>Reason: {item.reason}</span>}
+          {item.evidence && (
+            <>
+              {item.reason && ' · '}
+              Evidence:{' '}
+              <a href={item.evidence} target="_blank" rel="noreferrer">
+                {item.evidence}
+              </a>
+            </>
+          )}
+        </div>
+      )}
 
       {item.disposition_status === 'PENDING_INSPECTION' && canInspect && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>

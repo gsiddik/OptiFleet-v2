@@ -111,11 +111,22 @@ function RoleFormModal({
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  const allPermissionIds = Object.values(grouped).flat().map((p) => p.id);
+  const allSelected = allPermissionIds.length > 0 && allPermissionIds.every((id) => selected.has(id));
+
   function toggle(id: string) {
     const next = new Set(selected);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelected(next);
+  }
+
+  function selectAll() {
+    setSelected(new Set(allPermissionIds));
+  }
+
+  function clearAll() {
+    setSelected(new Set());
   }
 
   async function submit() {
@@ -149,7 +160,12 @@ function RoleFormModal({
         </>
       )}
 
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Permissions</label>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+        <label style={{ fontSize: 13, fontWeight: 600 }}>Permissions</label>
+        <button type="button" className="btn-link" onClick={allSelected ? clearAll : selectAll}>
+          {allSelected ? 'Clear All' : 'Select All Permissions'}
+        </button>
+      </div>
       <div style={{ maxHeight: 320, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 10 }}>
         {Object.entries(grouped).map(([group, perms]) => (
           <div key={group} style={{ marginBottom: 10 }}>

@@ -5,6 +5,7 @@ import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
+import { Pagination } from '../../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
@@ -15,10 +16,30 @@ const WORKER_TYPES = ['LEAD_MECHANIC', 'MECHANIC', 'TECHNICIAN', 'INSPECTOR', 'Q
 export function WorkerListPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [workerTypeFilter, setWorkerTypeFilter] = useState('');
+  const [branchFilter, setBranchFilter] = useState('');
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<WorkerItem | null>(null);
-  const { data, loading, error } = useApiList<WorkerItem>('/app/workers', { search }, reloadKey);
+  const { data, meta, loading, error } = useApiList<WorkerItem>(
+    '/app/workers',
+    {
+      search: search || undefined,
+      status: statusFilter || undefined,
+      worker_type: workerTypeFilter || undefined,
+      branch_id: branchFilter || undefined,
+      page,
+      per_page: 15,
+    },
+    reloadKey,
+  );
+
+  useEffect(() => {
+    apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data)).catch(() => setBranches([]));
+  }, []);
 
   const columns: Column<WorkerItem>[] = [
     { key: 'employee_code', header: 'Code', render: (w) => <button className="btn-link" onClick={() => setEditing(w)}>{w.employee_code}</button> },
@@ -35,7 +56,10 @@ export function WorkerListPage() {
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>Workers / Mechanics</h1>
       <Toolbar
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(v) => {
+          setSearch(v);
+          setPage(1);
+        }}
         actions={
           hasPermission('worker.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
@@ -43,11 +67,59 @@ export function WorkerListPage() {
             </button>
           ) : null
         }
-      />
+      >
+        <select
+          value={workerTypeFilter}
+          onChange={(e) => {
+            setWorkerTypeFilter(e.target.value);
+            setPage(1);
+          }}
+          style={{ ...inputStyle, maxWidth: 180 }}
+        >
+          <option value="">All types</option>
+          {WORKER_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <select
+          value={branchFilter}
+          onChange={(e) => {
+            setBranchFilter(e.target.value);
+            setPage(1);
+          }}
+          style={{ ...inputStyle, maxWidth: 180 }}
+        >
+          <option value="">All branches</option>
+          {branches.map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={statusFilter}
+          onChange={(e) => {
+            setStatusFilter(e.target.value);
+            setPage(1);
+          }}
+          style={{ ...inputStyle, maxWidth: 140 }}
+        >
+          <option value="">All statuses</option>
+          <option value="ACTIVE">Active</option>
+          <option value="INACTIVE">Inactive</option>
+        </select>
+      </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && <EmptyState label="No workers found." />}
-      {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
+      {!error && !loading && data.length > 0 && (
+        <>
+          <Table columns={columns} rows={data} />
+          {meta && <Pagination meta={meta} onPageChange={setPage} />}
+        </>
+      )}
 
       <CreateWorkerModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
       {editing && (

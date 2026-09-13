@@ -12,7 +12,10 @@ interface CompanyProfile {
   industry: string | null;
   tax_id: string | null;
   address: string | null;
+  province: string | null;
+  city: string | null;
   phone: string | null;
+  fax: string | null;
   email: string | null;
   website: string | null;
 }
@@ -25,7 +28,10 @@ export function CompanyProfilePage() {
   const [industry, setIndustry] = useState('');
   const [taxId, setTaxId] = useState('');
   const [address, setAddress] = useState('');
+  const [province, setProvince] = useState('');
+  const [city, setCity] = useState('');
   const [phone, setPhone] = useState('');
+  const [fax, setFax] = useState('');
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -43,7 +49,10 @@ export function CompanyProfilePage() {
         setIndustry(p.industry ?? '');
         setTaxId(p.tax_id ?? '');
         setAddress(p.address ?? '');
+        setProvince(p.province ?? '');
+        setCity(p.city ?? '');
         setPhone(p.phone ?? '');
+        setFax(p.fax ?? '');
         setEmail(p.email ?? '');
         setWebsite(p.website ?? '');
       })
@@ -62,7 +71,10 @@ export function CompanyProfilePage() {
         industry: industry || null,
         tax_id: taxId || null,
         address: address || null,
+        province: province || null,
+        city: city || null,
         phone: phone || null,
+        fax: fax || null,
         email: email || null,
         website: website || null,
       });
@@ -107,9 +119,22 @@ export function CompanyProfilePage() {
         <FormField label="Address" errors={errors.address}>
           <textarea value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} disabled={!canEdit} />
         </FormField>
-        <FormField label="Phone" errors={errors.phone}>
-          <input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} disabled={!canEdit} />
-        </FormField>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormField label="Province" errors={errors.province}>
+            <input value={province} onChange={(e) => setProvince(e.target.value)} style={inputStyle} disabled={!canEdit} />
+          </FormField>
+          <FormField label="City" errors={errors.city}>
+            <input value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle} disabled={!canEdit} />
+          </FormField>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <FormField label="Phone" errors={errors.phone}>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} disabled={!canEdit} />
+          </FormField>
+          <FormField label="Fax" errors={errors.fax}>
+            <input value={fax} onChange={(e) => setFax(e.target.value)} style={inputStyle} disabled={!canEdit} />
+          </FormField>
+        </div>
         <FormField label="Email" errors={errors.email}>
           <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>

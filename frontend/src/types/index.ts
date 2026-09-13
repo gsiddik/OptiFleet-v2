@@ -819,6 +819,7 @@ export interface UomItem {
   id: string;
   code: string;
   name: string;
+  description: string | null;
   is_system: boolean;
   status: string;
 }
@@ -904,6 +905,7 @@ export interface WorkOrderPartReturnItem {
   proposed_by: string | null;
   finalized_at: string | null;
   reason: string | null;
+  evidence: string | null;
   created_at: string;
   product?: ProductItem;
   warehouse?: Warehouse;
@@ -1018,8 +1020,14 @@ export interface PartnerItem {
   contact_phone: string | null;
   contact_email: string | null;
   address: string | null;
+  province: string | null;
+  city: string | null;
   tax_id: string | null;
   payment_terms: string | null;
+  bank: string | null;
+  account_holder: string | null;
+  account_number: string | null;
+  description: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   performance?: PartnerPerformanceSummary;
 }
@@ -1184,6 +1192,7 @@ export interface RimItem {
 
 export interface WheelConfigurationItem {
   id: string;
+  tenant_id: string | null;
   vehicle_category_id: string;
   position_code: string;
   label: string;

@@ -5,7 +5,7 @@ import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
-import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem } from '../../../types';
+import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem, WheelConfigurationItem } from '../../../types';
 
 type CycleItem = TireRetreadItem | TireRepairItem;
 
@@ -149,6 +149,8 @@ export function TireDetailPage() {
 
   const [vehicleId, setVehicleId] = useState('');
   const [wheelPosition, setWheelPosition] = useState('');
+  const [availablePositions, setAvailablePositions] = useState<WheelConfigurationItem[]>([]);
+  const [rotatePositions, setRotatePositions] = useState<WheelConfigurationItem[]>([]);
   const [odometer, setOdometer] = useState('');
   const [toPosition, setToPosition] = useState('');
   const [treadDepth, setTreadDepth] = useState('');
@@ -205,6 +207,31 @@ export function TireDetailPage() {
   useEffect(() => {
     apiClient.get('/app/vehicles', { params: { per_page: 100 } }).then((res) => setVehicles(res.data.data)).catch(() => setVehicles([]));
   }, []);
+  // Wheel position dropdown, sourced from the selected vehicle's own Wheel Configuration —
+  // falls back to free text when the category has no configured positions (backend stays permissive there too).
+  useEffect(() => {
+    setWheelPosition('');
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    if (!vehicle) {
+      setAvailablePositions([]);
+      return;
+    }
+    apiClient
+      .get('/app/wheel-configurations', { params: { vehicle_category_id: vehicle.vehicle_category_id } })
+      .then((res) => setAvailablePositions(res.data.data))
+      .catch(() => setAvailablePositions([]));
+  }, [vehicleId, vehicles]);
+  useEffect(() => {
+    const categoryId = tire?.current_vehicle?.vehicle_category_id;
+    if (!categoryId) {
+      setRotatePositions([]);
+      return;
+    }
+    apiClient
+      .get('/app/wheel-configurations', { params: { vehicle_category_id: categoryId } })
+      .then((res) => setRotatePositions(res.data.data))
+      .catch(() => setRotatePositions([]));
+  }, [tire?.current_vehicle?.vehicle_category_id]);
   useEffect(() => {
     if (!tire?.current_vehicle_id || !['INSTALLED', 'IN_USE'].includes(tire.current_status)) return;
     apiClient
@@ -533,7 +560,18 @@ export function TireDetailPage() {
               </select>
             </FormField>
             <FormField label="Wheel Position">
-              <input value={wheelPosition} onChange={(e) => setWheelPosition(e.target.value)} placeholder="FRONT_LEFT" style={{ ...inputStyle, width: 150 }} />
+              {availablePositions.length > 0 ? (
+                <select value={wheelPosition} onChange={(e) => setWheelPosition(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+                  <option value="">Select…</option>
+                  {availablePositions.map((p) => (
+                    <option key={p.id} value={p.position_code}>
+                      {p.label} ({p.position_code})
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input value={wheelPosition} onChange={(e) => setWheelPosition(e.target.value)} placeholder="FRONT_LEFT" style={{ ...inputStyle, width: 150 }} />
+              )}
             </FormField>
             <FormField label="Odometer">
               <input type="number" value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
@@ -577,7 +615,18 @@ export function TireDetailPage() {
           {canRotate && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
               <FormField label="Rotate To Position">
-                <input value={toPosition} onChange={(e) => setToPosition(e.target.value)} placeholder="REAR_RIGHT" style={{ ...inputStyle, width: 150 }} />
+                {rotatePositions.length > 0 ? (
+                  <select value={toPosition} onChange={(e) => setToPosition(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+                    <option value="">Select…</option>
+                    {rotatePositions.map((p) => (
+                      <option key={p.id} value={p.position_code}>
+                        {p.label} ({p.position_code})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input value={toPosition} onChange={(e) => setToPosition(e.target.value)} placeholder="REAR_RIGHT" style={{ ...inputStyle, width: 150 }} />
+                )}
               </FormField>
               <FormField label="Odometer">
                 <input type="number" value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />

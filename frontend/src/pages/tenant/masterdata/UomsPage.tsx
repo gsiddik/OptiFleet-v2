@@ -14,6 +14,7 @@ import type { UomItem } from '../../../types';
 
 export function UomsPage() {
   const { hasPermission } = useAuth();
+  const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
@@ -21,7 +22,7 @@ export function UomsPage() {
   const [deleting, setDeleting] = useState<UomItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  const { data, meta, loading, error } = useApiList<UomItem>('/app/uoms', { page, per_page: 15 }, reloadKey);
+  const { data, meta, loading, error } = useApiList<UomItem>('/app/uoms', { search: search || undefined, page, per_page: 15 }, reloadKey);
 
   async function confirmDelete() {
     if (!deleting) return;
@@ -38,6 +39,7 @@ export function UomsPage() {
   const columns: Column<UomItem>[] = [
     { key: 'code', header: 'Code', render: (u) => u.code },
     { key: 'name', header: 'Name', render: (u) => u.name },
+    { key: 'description', header: 'Description', render: (u) => u.description ?? '—' },
     { key: 'is_system', header: 'Source', render: (u) => (u.is_system ? 'System' : 'Tenant') },
     { key: 'status', header: 'Status', render: (u) => <StatusBadge status={u.status} /> },
     {
@@ -65,6 +67,11 @@ export function UomsPage() {
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>Units of Measure</h1>
       <Toolbar
+        search={search}
+        onSearchChange={(v) => {
+          setSearch(v);
+          setPage(1);
+        }}
         actions={
           hasPermission('product.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
@@ -114,6 +121,7 @@ export function UomsPage() {
 function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: UomItem; onClose: () => void; onSaved: () => void }) {
   const [code, setCode] = useState(uom?.code ?? '');
   const [name, setName] = useState(uom?.name ?? '');
+  const [description, setDescription] = useState(uom?.description ?? '');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -122,9 +130,9 @@ function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: Uo
     setErrors({});
     try {
       if (uom) {
-        await apiClient.put(`/app/uoms/${uom.id}`, { name });
+        await apiClient.put(`/app/uoms/${uom.id}`, { name, description: description || null });
       } else {
-        await apiClient.post('/app/uoms', { code, name });
+        await apiClient.post('/app/uoms', { code, name, description: description || undefined });
       }
       onSaved();
     } catch (err) {
@@ -142,6 +150,9 @@ function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: Uo
       </FormField>
       <FormField label="Name" errors={errors.name}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Description" errors={errors.description}>
+        <input value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>

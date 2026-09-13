@@ -106,6 +106,12 @@ function CreatePartnerModal({
   const [partnerType, setPartnerType] = useState(defaultPartnerType ?? 'SPARE_PART_SUPPLIER');
   const [contactName, setContactName] = useState('');
   const [contactPhone, setContactPhone] = useState('');
+  const [province, setProvince] = useState('');
+  const [city, setCity] = useState('');
+  const [bank, setBank] = useState('');
+  const [accountHolder, setAccountHolder] = useState('');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [description, setDescription] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -113,11 +119,29 @@ function CreatePartnerModal({
     setSubmitting(true);
     setErrors({});
     try {
-      await apiClient.post('/app/partners', { code, name, partner_type: partnerType, contact_name: contactName || undefined, contact_phone: contactPhone || undefined });
+      await apiClient.post('/app/partners', {
+        code,
+        name,
+        partner_type: partnerType,
+        contact_name: contactName || undefined,
+        contact_phone: contactPhone || undefined,
+        province: province || undefined,
+        city: city || undefined,
+        bank: bank || undefined,
+        account_holder: accountHolder || undefined,
+        account_number: accountNumber || undefined,
+        description: description || undefined,
+      });
       setCode('');
       setName('');
       setContactName('');
       setContactPhone('');
+      setProvince('');
+      setCity('');
+      setBank('');
+      setAccountHolder('');
+      setAccountNumber('');
+      setDescription('');
       onCreated();
       onClose();
     } catch (err) {
@@ -150,6 +174,28 @@ function CreatePartnerModal({
       </FormField>
       <FormField label="Contact Phone" errors={errors.contact_phone}>
         <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} style={inputStyle} />
+      </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormField label="Province" errors={errors.province}>
+          <input value={province} onChange={(e) => setProvince(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="City" errors={errors.city}>
+          <input value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle} />
+        </FormField>
+      </div>
+      <FormField label="Bank" errors={errors.bank}>
+        <input value={bank} onChange={(e) => setBank(e.target.value)} style={inputStyle} />
+      </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormField label="Account Holder" errors={errors.account_holder}>
+          <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Account Number" errors={errors.account_number}>
+          <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={inputStyle} />
+        </FormField>
+      </div>
+      <FormField label="Description" errors={errors.description}>
+        <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>

@@ -787,6 +787,7 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   const [returnQty, setReturnQty] = useState('');
   const [returnCondition, setReturnCondition] = useState<'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY'>('UNUSED_NEW');
   const [returnReason, setReturnReason] = useState('');
+  const [returnEvidence, setReturnEvidence] = useState('');
   const canManage = hasPermission('maintenance_job.manage');
   const canReserve = hasPermission('inventory.reserve');
   const canIssue = hasPermission('inventory.issue');
@@ -827,11 +828,17 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
     setReturnQty('');
     setReturnCondition('UNUSED_NEW');
     setReturnReason('');
+    setReturnEvidence('');
   }
 
   async function submitReturn(partId: string) {
     if (!returnQty) return;
-    await partAction(partId, 'return', { quantity: returnQty, condition: returnCondition, reason: returnReason || undefined });
+    await partAction(partId, 'return', {
+      quantity: returnQty,
+      condition: returnCondition,
+      reason: returnReason || undefined,
+      evidence: returnEvidence || undefined,
+    });
     setReturningPartId(null);
   }
 
@@ -900,6 +907,12 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                     value={returnReason}
                     onChange={(e) => setReturnReason(e.target.value)}
                     style={{ ...inputStyle, width: 180 }}
+                  />
+                  <input
+                    placeholder="Evidence / photo URL (optional)"
+                    value={returnEvidence}
+                    onChange={(e) => setReturnEvidence(e.target.value)}
+                    style={{ ...inputStyle, width: 200 }}
                   />
                   <button className="btn-secondary" disabled={busy || !returnQty} onClick={() => submitReturn(p.id)}>
                     Confirm return
