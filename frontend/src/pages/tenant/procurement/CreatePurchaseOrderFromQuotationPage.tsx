@@ -17,7 +17,7 @@ export function CreatePurchaseOrderFromQuotationPage() {
 
   useEffect(() => {
     apiClient.get(`/app/quotations/${quotationId}`).then((res) => setQuotation(res.data.data)).catch((err) => setError(extractApiError(err).message));
-    apiClient.get('/app/organization/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
+    apiClient.get('/app/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
   }, [quotationId]);
 
   async function submit() {

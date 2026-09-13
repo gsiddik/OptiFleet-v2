@@ -77,7 +77,7 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
 
   useEffect(() => {
     if (!open) return;
-    apiClient.get('/app/organization/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
+    apiClient.get('/app/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
     apiClient.get('/app/product-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data)).catch(() => setCategories([]));
   }, [open]);
 

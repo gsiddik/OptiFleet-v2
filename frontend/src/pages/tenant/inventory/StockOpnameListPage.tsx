@@ -53,7 +53,7 @@ function CreateOpnameModal({ open, onClose, onCreated }: { open: boolean; onClos
 
   useEffect(() => {
     if (!open) return;
-    apiClient.get('/app/organization/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
+    apiClient.get('/app/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
   }, [open]);
 
   async function submit() {

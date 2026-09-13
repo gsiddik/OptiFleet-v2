@@ -1304,3 +1304,145 @@ Implemented (see `TireScoringConfigurationValidator::validateLegalRestrictions()
   warnings on any R2 file), `npm run build` PASS.
 - Browser E2E for the new Tire Scoring configuration UI is covered under
   R3, not here.
+
+### R3 — Interactive Browser E2E Verification
+
+**Environment**: local dev servers (`php artisan serve` on :8000, `vite`
+dev server on :5173) against the local Postgres `optifleet` database
+(distinct from the `optifleet_test` PHPUnit database). Production data was
+never touched — this database held zero tenants before this session.
+Chromium via Playwright 1.56.1 (pre-installed in this container) drove
+every interaction below; nothing here is inferred from unit/API/TS/build
+results alone.
+
+**Isolated test tenant**: a dedicated tenant (`E2ETEST`, "R3 E2E Test
+Tenant") was created specifically for this verification — entirely
+separate from any other tenant — with every module this phase's
+workflows touch (VEHICLE, MAINTENANCE, WORK_ORDER, WORKSHOP, INVENTORY,
+PARTNER, PROCUREMENT, TIRE, etc.) granted directly, three users
+(`e2e-admin` — full tenant permissions, `e2e-verifier` — full permissions
+but a distinct user identity, used for every maker-checker "different
+user" step, `e2e-viewer` — `*.view`-only permissions, used for permission-
+denial checks), and minimal disposable master data (one branch/workshop/
+warehouse, one vehicle, one spare-part product, one TIRE product with a
+reference tread depth, one EXTERNAL_WORKSHOP partner). All of it is
+disposable and confined to this tenant; nothing outside `E2ETEST` was
+read or written.
+
+**Coverage summary** (35 recorded checks; 34 PASS, 1 informational,
+0 unresolved FAIL — see the two defects below, both found and fixed
+during this pass and re-verified):
+
+| Area | What was exercised through the real browser |
+|---|---|
+| Broad page coverage | Dashboard, Vehicle List, Maintenance Requests, Work Orders, Products, Warehouse Stock, Tire List, Tire Scoring Configuration (R2), Workshop Invoices (R1), Purchase Requests, Purchase Orders, Partners — each loaded and rendered without console/page errors. |
+| Workshop Partner + Workshop Invoice (R1), full cycle | Work Order → request external service (Maintenance Memo) via form → Complete → Print Memo (PDF opens) → **Record Workshop Invoice** (full form submit) → reconciliation panel (expected/invoiced/variance/MATCHED) → **Request Cancellation** as the recording user → same-tenant, **different** user (`e2e-verifier`) opens the invoice and **Approve**s the cancellation → invoice becomes CANCELLED, Memo correctly reverts to COMPLETED, original invoice values and a Cancellation History entry (reason preserved, `APPROVED`) remain visible — nothing was deleted. |
+| Tire Scoring Configuration (R2), full cycle | Create a RETREAD draft (bands + legal_restrictions + casing_eligibility + lifecycle_limits) as `e2e-admin` → attempt to publish the same draft as the same user → **rejected** (stays DRAFT) → `e2e-verifier` (different user) publishes it → PUBLISHED/ACTIVE → **Dry Run** modal run against it (6mm/10mm inputs) → correctly shows SPA/classification/eligibility for both "this version" and "currently active version" with a "no change" comparison; confirmed via direct DB query that **zero** `tire_scoring_results` rows were created by the dry run. |
+| Tire lifecycle | Create Tire → Install onto the seeded vehicle → Record Inspection (5mm tread) → Remove with RETREAD disposition → Send-for-Retread section renders (this is exactly where R2's opt-in `TireDispositionEligibilityService` gate is evaluated server-side). |
+| Inventory / Procurement | Warehouse Stock page loads; New Purchase Request form opens with a populated Warehouse picker (after the fix below); RFQ / Stock Transfer / Stock Opname creation forms likewise. |
+| Permissions | `e2e-viewer` (view-only) does not see the "Record Workshop Invoice" action in the UI; a **direct API call** (bypassing the UI entirely) to record an invoice as `e2e-viewer` against a real, COMPLETED memo returns **403 "Missing required permission: workshop_invoice.record"** — server-side enforcement confirmed independently of UI hiding. |
+| Responsive | Desktop (1440px) and mobile (390px, iPhone-class) viewports both checked on representative pages. |
+| Cross-tenant isolation | Not re-driven through the browser in this pass — already exhaustively covered server-side by the existing PHPUnit suite (e.g. `WorkshopInvoiceTest::test_cross_tenant_access_is_denied` and the tenant-scoping behavior exercised across all Phase A-G and R1/R2 feature tests, 500+ tests total); re-verifying the same server-side guarantee through a browser adds no new signal. |
+
+**Defects found and fixed during this pass** (both pre-existing, neither
+introduced by R1/R2 — found only because this was driven through a real
+browser, not by unit/API/TS/build checks):
+
+1. **Global mobile layout overflow.** `TenantLayout.tsx`'s sidebar was a
+   fixed 230px flex child with no responsive behavior at all — at a
+   390px viewport every single page in the app overflowed horizontally
+   (confirmed via `document.body.scrollWidth` ≈ 925px against a 390px
+   viewport). Fixed with a standard off-canvas pattern: the sidebar
+   becomes `position: fixed` and translates off-screen under a new
+   `@media (max-width: 768px)` rule in `index.css`, a hamburger toggle
+   button was added to the header, and `minWidth: 0` was added to the
+   two flex containers between the sidebar and page content so the
+   existing `Table` component's own `overflow-x: auto` (it already had
+   this) can actually take effect instead of the whole page growing.
+   Re-verified: `document.body.scrollWidth` now stays within the 390px
+   viewport (PASS, screenshot confirms hamburger + no overflow + the
+   Vehicle table's own horizontal scroll working correctly).
+2. **Broken Warehouse picker in 5 forms.** `RfqListPage.tsx`,
+   `PurchaseRequestListPage.tsx`, `CreatePurchaseOrderFromQuotationPage.tsx`,
+   `StockTransferListPage.tsx`, and `StockOpnameListPage.tsx` all called
+   `apiClient.get('/app/organization/warehouses', ...)` to populate their
+   Warehouse dropdown — this endpoint does not exist on the backend (the
+   real route is `/app/warehouses`; `/app/organization/warehouses` is
+   only ever a *frontend* route path for the Warehouses admin page, never
+   an API path). The call's `.catch(() => setWarehouses([]))` silently
+   swallowed the resulting error, so every one of these five
+   Warehouse-scoped creation forms rendered with an empty, unusable
+   Warehouse picker — this would have blocked creating a Purchase
+   Request, RFQ, PO-from-Quotation, Stock Transfer, or Stock Opname in
+   production for any warehouse-scoped tenant. Fixed by correcting all
+   five call sites to `/app/warehouses`. Re-verified all five forms
+   through the browser after the fix — each now lists the real seeded
+   warehouse. `tsc --noEmit`, `npm run lint`, and `npm run build` all
+   pass after the fix with no new warnings.
+
+There is no frontend unit/component test framework in this repository
+(`package.json` has no `vitest`/`jest`/testing-library dependency —
+`npm run lint`/`tsc -b`/`vite build` are the only automated frontend
+checks that exist). Regression coverage for both fixes above is
+therefore captured as repeatable browser E2E evidence (the Playwright
+scripts and their JSON result logs, created this session) rather than as
+a unit test, since that is the level of testing this codebase actually
+has for the frontend. The backend was not touched by either fix, so the
+full backend PHPUnit suite is unaffected and was not re-run for R3.
+
+**Evidence location**: 40 full-page screenshots plus per-check JSON
+result logs (route/actor/action/expected/actual/result) were generated
+and reviewed inline during this session at
+`/tmp/claude-0/.../scratchpad/r3_evidence/` inside the sandboxed
+container. Per this repository's own checkpoint-commit rule
+("no ... screenshot ... included"), these binary artifacts are
+intentionally **not** committed to the repository; this document is the
+durable structured record of what was checked, expected, and observed.
+The evidence is session-local and will not survive container teardown —
+if a persistent audit trail of the actual screenshots is required for a
+compliance record, that is a follow-up action for the release owner
+(re-run the same scripts against a longer-lived environment and archive
+the output outside version control).
+
+**Formal role-based UAT: NOT RUN — EXPLICITLY DEFERRED** (per this
+phase's explicit instruction — a separate exercise from the
+engineering-level browser/permission verification above, which *is*
+mandatory and *was* performed). A reusable checklist and test-data
+prerequisites for whoever runs that separate UAT pass:
+
+- *Test-data prerequisites*: a tenant with every module enabled
+  (VEHICLE/MAINTENANCE/WORK_ORDER/WORKSHOP/INVENTORY/PARTNER/PROCUREMENT/
+  TIRE at minimum); at least one user per role the business actually
+  uses (not just "full admin") — specifically a maker-only and a
+  checker-only user for every maker-checker workflow (Workshop Invoice
+  correction/cancellation, Tire Scoring configuration publish, PO tiered
+  approval, used-part disposition, tire scoring finalize); one Vehicle,
+  one Branch/Workshop/Warehouse, one TIRE-type Product with a reference
+  tread depth set, one EXTERNAL_WORKSHOP Partner; a published TIRE_SCORING
+  configuration (REPAIR and RETREAD) with real business values for
+  weights/bands/legal_restrictions/casing_eligibility/lifecycle_limits —
+  none were invented this session, so UAT must supply its own.
+- *Checklist* (business-acceptance level, distinct from the engineering
+  checks already done above):
+  1. A real Workshop Partner interaction end-to-end, told from the
+     business's own paperwork forward: does the printed Maintenance Memo
+     match what the business hands a partner today? Does "Record
+     Workshop Invoice" capture every field the business's own AP process
+     needs?
+  2. Reconciliation: does the expected-vs-invoiced comparison match how
+     the business actually reconciles a partner invoice against a WO
+     today? Is the "missing source records" wording (e.g.
+     `work_order_estimated_total_cost_not_recorded`) clear to a
+     non-technical AP user, or does it need business-friendly copy?
+  3. Correction/cancellation: does the maker-checker split match who in
+     the business actually holds "request" vs "verify" authority today?
+  4. Tire Scoring: do the actual weights/bands/legal restrictions a fleet
+     safety team would configure produce classifications that match
+     their own paper-based scoring today, for a sample of real historical
+     tires?
+  5. Payment evidence upload: is a single mandatory attachment + exact-
+     amount match sufficient, or does the business have a real partial-
+     payment or multi-currency scenario this framework does not yet
+     support?
+  6. Sign-off from an actual Workshop/Fleet/Finance business owner, not
+     engineering, on every item above.

@@ -209,6 +209,7 @@ export function TenantLayout() {
   const { user, logout, hasPermission, activeTenantId, switchTenant } = useAuth();
   const [activeModules, setActiveModules] = useState<string[] | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     apiClient
@@ -226,7 +227,14 @@ export function TenantLayout() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <aside style={{ width: 230, background: '#111827', color: '#fff', padding: '20px 0', flexShrink: 0 }}>
+      <div className={`tenant-sidebar-overlay${sidebarOpen ? ' open' : ''}`} onClick={() => setSidebarOpen(false)} />
+      <aside
+        className={`tenant-sidebar${sidebarOpen ? ' open' : ''}`}
+        style={{ width: 230, background: '#111827', color: '#fff', padding: '20px 0', flexShrink: 0 }}
+        onClick={(e) => {
+          if ((e.target as HTMLElement).tagName === 'A') setSidebarOpen(false);
+        }}
+      >
         <div style={{ padding: '0 20px 20px', fontSize: 18, fontWeight: 700 }}>OptiFleet</div>
         <div style={{ padding: '0 20px 16px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>
           Tenant Portal
@@ -285,7 +293,7 @@ export function TenantLayout() {
           ))}
         </nav>
       </aside>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <header
           style={{
             display: 'flex',
@@ -297,6 +305,14 @@ export function TenantLayout() {
             borderBottom: '1px solid #e5e7eb',
           }}
         >
+          <button
+            className="tenant-mobile-toggle btn-secondary"
+            aria-label="Toggle menu"
+            onClick={() => setSidebarOpen((v) => !v)}
+            style={{ marginRight: 'auto' }}
+          >
+            ☰ Menu
+          </button>
           {user && user.memberships.length > 1 && (
             <select
               value={activeTenantId ?? ''}
@@ -327,7 +343,7 @@ export function TenantLayout() {
             Your account has an outstanding balance. Please settle it soon to avoid suspension — see Account → Payments.
           </div>
         )}
-        <main style={{ flex: 1, padding: 24 }}>
+        <main style={{ flex: 1, padding: 24, minWidth: 0 }}>
           <Outlet />
         </main>
       </div>
