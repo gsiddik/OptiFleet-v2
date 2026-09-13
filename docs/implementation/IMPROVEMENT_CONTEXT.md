@@ -1446,3 +1446,38 @@ prerequisites for whoever runs that separate UAT pass:
      support?
   6. Sign-off from an actual Workshop/Fleet/Finance business owner, not
      engineering, on every item above.
+
+### R4 — Deployment Readiness and Final Release Gate
+
+Full detail (backup/restore — actually tested with a real `pg_dump` +
+restore into an isolated database; migration rollback — actually tested
+by rolling back and re-applying the R1 migration batch; the legacy-data
+preflight scan script and what it checks; the classified environment-
+variable inventory; seeder idempotency and non-destructiveness —
+actually tested by hand-assigning a permission then re-seeding; the
+14-step deployment order; the post-deployment smoke-test script and its
+actual run result; monitoring/error-logging state and gaps; and the
+final release decision) is in
+`docs/deployment/RELEASE_READINESS_R4.md`. Supporting artifacts:
+`backend/database/preflight/legacy_data_preflight.sql` (12 read-only
+risk-category queries, executed successfully against the real schema
+this session) and `backend/scripts/smoke_test.sh` (12/12 passed against
+the local environment this session).
+
+One incidental process note from this work, recorded for transparency:
+an early `php artisan migrate:fresh --env=testing` invocation silently
+fell back to the regular `.env` (this repo has no `.env.testing` file,
+so Laravel's `--env` CLI flag had nothing to switch to) and wiped the
+disposable `E2ETEST` tenant's data in the local dev database instead of
+the intended `optifleet_test` database. That tenant's data had already
+been fully captured in R3's evidence/documentation and was not needed
+again, so there was no actual loss — but every subsequent database
+operation in R4 used an explicit `DB_DATABASE=optifleet_test` override
+instead of the `--env` flag to guarantee correct targeting. This is
+exactly the class of risk the R4 rehearsal discipline itself exists to
+catch, and is noted here rather than silently corrected.
+
+Release decision: **READY FOR CONTROLLED RELEASE, WITH NAMED
+OPERATIONAL FOLLOW-UPS** — see the full document for the complete
+reasoning and the five tracked follow-up items (none of them code
+blockers).
