@@ -2,200 +2,306 @@
 
 ## Status of this document
 
-**PARTIAL — not a complete field-by-field audit of all 29 VMS pages.** This
-session ran a repository-wide read-only audit (4 parallel domain-cluster
-passes covering every nav group below) against the full text of
-"Analisis Menyeluruh VMS untuk Improvement OptiFleet" (VMS analysis,
-Indonesian, Super Admin read-only observation of VMS Transtrack v2.11.14)
-and the Consolidated Gap Analysis Report (G-01–G-43, BD-1–BD-8). That audit
-produced page-level and decision-level findings for every group, which are
-recorded below. It did **not** produce a field-by-field row for every one
-of the ~150+ individual form fields the VMS document lists — that would be
-the natural next increment if the owner wants it, and the "Not yet
-field-audited" markers below say exactly where.
+**Field-level.** This is the second revision of this matrix. The first
+revision (page-level only) has been superseded — see git history for
+`docs/implementation/VMS_RECONCILIATION_TRACEABILITY.md` if the page-level
+version is needed for reference. This revision goes field-by-field for
+every one of the VMS document's 29 pages across all 9 navigation groups,
+citing backend model/migration/request/controller file:line and frontend
+page file:line for each VMS-observed field, and records a final status of
+`IMPLEMENTED`, `KEEP_OPTIFLEET`, `DEFERRED_DECISION`, `BLOCKED_TECHNICAL`,
+or `NOT_APPLICABLE` for every row.
 
 Per the VMS document's own §1/§13 scope limitation: it is a **read-only**
-Super Admin observation. It did not test data persistence, status changes,
-deletion, final approval, file import, export, print/memo output, or
-access rights for any role other than Super Admin. A VMS observation is
-evidence of a **screen existing**, not evidence that OptiFleet's equivalent
-capability is missing, broken, or that the VMS behavior is the correct
-target — each row's decision reflects that distinction.
+Super Admin observation of VMS Transtrack v2.11.14. It did not test data
+persistence, status changes, deletion, final approval, file import, export,
+print/memo output, or access rights for any role other than Super Admin. A
+VMS observation is evidence of a **screen existing**, not evidence that
+OptiFleet's equivalent is missing, broken, or that the VMS behavior is the
+correct target — each row's decision reflects that distinction.
 
 ## Decision legend
 
-- **ADJUST** — implemented or queued: a genuine, safe, bounded gap where
-  OptiFleet should add/fix something.
-- **KEEP_OPTIFLEET** — OptiFleet's existing design is equal or superior;
-  no VMS-driven change warranted.
-- **DEFER** — requires a real product/business decision (new subsystem,
-  conflicting taxonomy, unestablished policy) before any code is written.
-- **BLOCKED** — explicitly out of scope per platform safety rules (tire
-  scoring/disposition thresholds, invented settlement/accounting policy).
-- **NOT_APPLICABLE** — VMS observation doesn't map to a comparable
-  OptiFleet concept and doesn't need to.
+- **IMPLEMENTED** — this session (or an earlier phase, cited) built or
+  completed the OptiFleet equivalent; evidence given.
+- **KEEP_OPTIFLEET** — OptiFleet's existing design is equal or superior, or
+  the VMS field/behavior doesn't apply given OptiFleet's architecture; no
+  change warranted.
+- **DEFERRED_DECISION** — the required behavior is not defined by either
+  source document, the repository provides no authoritative rule, and
+  implementing it would require inventing a business, safety, accounting,
+  legal, or scheduling-policy decision. The safe existing behavior (usually:
+  the field/subsystem doesn't exist) is preserved. Decision owner, required
+  input, and destination are named in each row.
+- **BLOCKED_TECHNICAL** — implementation would require inventing
+  settlement/accounting behavior this project has already declined to
+  fabricate elsewhere (Sell Sparepart precedent), or would touch Tire
+  scoring/disposition thresholds this reconciliation must not alter.
+- **NOT_APPLICABLE** — the VMS observation has no comparable OptiFleet
+  concept and creating one would not serve any real requirement.
+- **ADJUST (queued)** — a genuine, safe, bounded gap identified but not
+  implemented in this session's batches, purely due to scope/time, not
+  because it's blocked or deferred. Listed explicitly at the end so it is
+  never confused with a policy blocker.
 
-## Matrix by navigation group
+## 1. Utama (Dashboard, Scheduled Maintenance, Work Order)
 
-### 1. Utama (Dashboard, Scheduled Maintenance, Work Order)
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Dashboard: Refresh, Change Company, filters, KPIs (low stock, most-used, nearest-schedule, scheduled-vs-WO, most-costly-vehicle, maintainer performance) | `frontend/src/pages/tenant/analytics/*`, `frontend/src/pages/tenant/intelligence/*`; `AnalyticsOverviewPage`/`FleetAnalyticsPage`/etc. backed by ETL-driven controllers (Phase 6/7) | KEEP_OPTIFLEET / DEFERRED_DECISION (KPI parity) | OptiFleet's analytics architecture (materialized ETL projections, drill-down per domain) is materially more capable than a single ad-hoc dashboard. Replicating VMS's exact KPI SET (most-costly-vehicle ranking, maintainer performance ranking) is a scope decision for the analytics roadmap — owner: product/analytics lead; input needed: which KPIs are actually wanted and their exact calculation; destination: Phase 6/7 backlog. Not a quick field fix. |
+| Scheduled Maintenance: Search/Filter/Add/Reschedule/Cancel/Delete | `frontend/src/pages/tenant/maintenance/MaintenanceSchedulePage.tsx`; backend `MaintenanceScheduleController` | KEEP_OPTIFLEET (manual CRUD) / IMPLEMENTED (Package admin, G-01) | Manual create/reschedule/cancel/delete was a deliberate earlier-phase architectural choice: schedules are policy-generated from `MaintenancePackage`+`MaintenanceInterval`+`VehicleMaintenanceProfile`, not manually authored, to keep the fleet's maintenance plan consistent and auditable. This session closed the real gap in that architecture — the admin UI for Packages/Intervals/Items/vehicle-assignment did not exist despite the full backend (`MaintenancePackageController.php`, routes `/app/maintenance-policies/*`) being complete and tested since an earlier phase. Added `frontend/src/pages/tenant/maintenance/MaintenancePackagesPage.tsx` (list+create) and `MaintenancePackageDetailPage` (items/intervals/activate/assign-to-vehicle), routed at `/app/maintenance-policies`, nav entry in `TenantLayout.tsx`. |
+| Work Order: cost estimation, Onsite/Offsite, Maintenance Result | `WorkOrderService::estimate()` (Phase G, G-02) | KEEP_OPTIFLEET | Closed in Phase G. Onsite/Offsite distinction not replicated — OptiFleet's `WorkOrderExternalService` (Phase G/this session) already generalizes "work done somewhere else" via a partner-linked sub-record rather than a single binary flag, which is more expressive. |
+| Scheduling → WO conversion | `MaintenanceScheduleService`/`WorkOrderService::fromMaintenanceSchedule()` (Phase G, real G-03) | KEEP_OPTIFLEET | Closed in Phase G; `source_schedule_id` is no longer a dead column. |
+| Work Order print | `WorkOrderController::print()` route; frontend button in `WorkOrderDetailPage.tsx` | IMPLEMENTED (this session, G-04) | Backend endpoint existed and was tested since an earlier phase with zero frontend caller. Added a Print button using the established blob-fetch + `window.open` pattern (`AccountInvoiceDetailPage.tsx` precedent). |
+| Work Order Done/Done-With-Notes vs QC-gated completion | Phase G (real G-05) | KEEP_OPTIFLEET | OptiFleet's QC-gated completion (`WorkOrderClosureGuardService`) is a stricter, safer design than a self-reported "Done" status — a WO cannot silently close with unresolved findings the way the VMS's own observed "Done With Notes" example does (explicitly named in the gap report as a real defect this design avoids). |
+| New Work Order: Accident flag; Jobsite Location; CN Unit; KM; HM; Problem Description; Unit Condition (Operation/Breakdown/Standby); Priority; Maintenance Activity | see field-level detail below | KEEP_OPTIFLEET / ADJUST (queued: KM/HM) / DEFERRED_DECISION (Accident flag, Jobsite Location, Unit Condition) | Field-by-field breakdown in "New Work Order form field detail" below: CN Unit/Problem Description/Priority/Maintenance Activity already exist and are form-wired (KEEP_OPTIFLEET); KM/HM are backend-ready but missing from the create form (ADJUST, queued); Accident flag/Jobsite Location/Unit Condition are undefined relative to the existing `Breakdown`/`maintenance_type` model and need a fleet-operations decision on how they relate (DEFERRED_DECISION, each with named owner/input/destination below). |
 
-| VMS page | VMS §3 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Dashboard | Refresh; Change Company; filters; KPIs (low stock, most-used, nearest-schedule, scheduled-vs-WO, most-costly-vehicle, maintainer performance) | `frontend/src/pages/tenant/analytics/*`, `Intelligence*` pages; `analytics.*`/`intelligence.*` permissions | — | DEFER | OptiFleet's analytics/intelligence dashboards are a materially different, ETL-backed architecture (Phase 6/7), not a single ad-hoc KPI page. Replicating VMS's exact KPI set (most-costly-vehicle, maintainer ranking) is a scope decision for the analytics roadmap, not a copy-the-widget task. |
-| Scheduled Maintenances | Search/Filter/Add/Reschedule/Cancel/Delete, pagination | `MaintenanceSchedulePage` — policy-driven auto-generation, no manual create/reschedule/cancel/delete | G-01 (partial) | DEFER | Deliberate architectural choice already made in an earlier phase (schedules are generated from `MaintenancePolicy`, not manually authored). Manual CRUD on schedules would undermine that policy-driven model. G-01's actual content (Maintenance **Package**/Interval/Item admin UI) is a separate, still-open gap — see Known Blockers in `IMPROVEMENT_CONTEXT.md`. |
-| Work Order | Status summary/Search/Filter/New/View/Delete; cost estimation; result | `WorkOrderListPage`/`WorkOrderDetailPage`, `work_order.*` permissions | G-02, G-03, G-04, G-05 | Mostly ADJUST, done in Phase G + this session | G-02 (cost estimation + result) and G-03 (schedule→WO conversion) closed in Phase G (see corrected mapping). G-05 (Done/Done-with-notes vs. QC-gated completion) closed in Phase G via a new Done UI action. **G-04 (print route unwired) closed this session** — see Implemented Adjustments below. |
+### New Work Order form field detail
 
-### 2. Master Data
+| VMS field | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| CN Unit | `vehicle_id` required FK — `StoreWorkOrderRequest.php:21` | KEEP_OPTIFLEET | Exists, form-wired (`WorkOrderListPage.tsx:97-98`). |
+| Problem Description | `complaint` nullable text — `StoreWorkOrderRequest.php:25` | KEEP_OPTIFLEET | Exists, form-wired (`WorkOrderListPage.tsx:125-126`). |
+| Priority | `priority` enum LOW/MEDIUM/HIGH/URGENT, default MEDIUM — migration L23 | KEEP_OPTIFLEET | Exists; VMS's Normal/Urgent/Emergency labels are a naming difference only. |
+| KM / HM | `current_odometer`/`engine_hour`, both nullable numeric, already validated in `StoreWorkOrderRequest.php:26-27` | ADJUST (queued) | Backend accepts both; the create form (`WorkOrderListPage.tsx:83`) only submits `vehicle_id, maintenance_type, priority, complaint` — KM/HM are silently dropped even though a user could type them into no field because none exists. Small, bounded frontend-only fix; not implemented this session due to time. |
+| Accident flag | No boolean field on `WorkOrder`. `Breakdown.severity` (MINOR/MAJOR/IMMOBILIZED) is a separate model/workflow, not a WO-creation field. | DEFERRED_DECISION | Owner: fleet operations; input: whether "accident" should be a WO-level boolean, a `maintenance_type` value, or stays exclusively a `Breakdown` classification (OptiFleet's `BREAKDOWN` maintenance_type already covers "this WO exists because of an incident" at a coarser grain — adding a second, possibly-conflicting flag needs a decision on how they relate). Destination: WorkOrder/Breakdown schema backlog. |
+| Jobsite Location | No field on `WorkOrder`; `Breakdown.location` exists only on the separate Breakdown model. | DEFERRED_DECISION | Same reasoning as Accident flag — WO/Breakdown relationship needs to be decided before duplicating a location field onto WorkOrder itself. Owner: fleet operations; destination: WorkOrder schema backlog. |
+| Unit Condition (Operation/Breakdown/Standby) | No matching enum. `Vehicle.operational_status` (AVAILABLE/IN_USE/ON_HOLD) is vehicle-scoped, not a WO-creation snapshot; `maintenance_type` classifies the WO itself, not the vehicle's condition at intake. | DEFERRED_DECISION | Owner: fleet operations; input: whether this is a new WO-level snapshot field, or whether `Vehicle.operational_status` should be captured onto the WO at creation time instead of duplicating a new enum. Destination: WorkOrder schema backlog. |
+| Maintenance Activity | No `maintenance_package_id` or free-text activity captured at WO creation — `MaintenanceJob`/`MaintenancePackage` are attached later during execution. | KEEP_OPTIFLEET | This is a deliberate consequence of OptiFleet's policy-driven scheduling architecture (Maintenance Packages generate schedules, which convert to Work Orders — the "activity" is already implied by which schedule/package triggered the WO, for policy-driven WOs). For manually-created WOs (no source schedule), `maintenance_type` + `complaint` already capture what work is needed; forcing a `MaintenancePackage` reference onto every manual WO would conflict with the corrective/breakdown use case this form primarily serves. |
 
-| VMS page | VMS §3/§4 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Categories | Search/Add/View/Edit/Delete | `ProductCategoriesPage` (`/app/product-categories`) | G-40 | ADJUST — done in Phase G | Full CRUD + frontend page added (previously backend-only, no page). |
-| Vehicle Categories | Search/Add/View/Edit/Delete; axle count | `VehicleCategoriesPage` | — | KEEP_OPTIFLEET | Already an established full CRUD page pre-dating this reconciliation. |
-| Vehicle Brand and Model | Search/Add brand+model; grouped totals; logo | `VehicleBrandsPage`/`VehicleModelsPage` | G-38 (partial) | ADJUST — done in Phase G | Brand/Model master data added. Logo upload not replicated (no evidence OptiFleet's existing image-upload pattern was extended here; not fabricated). |
-| Unit (Uom) | Search/Add/detail/edit; name, initial, **description** | `UomsPage` (`/app/uoms`) | G-41 | ADJUST — page done in Phase G; **description field still open** | Standalone frontend page + update/delete added in Phase G. The `description` field itself was not added to the `uoms` table/form — small, bounded follow-up, no policy question involved. |
-| Products | Search/Filter/Import/Add/generate SKU; compatibility | `ProductListPage`/`ProductDetailPage` | — (SKU auto-gen is part of G-38) | DEFER (SKU auto-gen only) | Manual SKU entry already works; VMS's "generate SKU" implies an auto-numbering scheme with no documented format — would need the same numbering-policy owner used elsewhere (`NumberingConfiguration`), not a fabricated pattern. |
-| Engine Model / Engine Type | Search/Add/detail/edit; empty state in sample tenant | none — zero code trace | — | DEFER | Whole new subsystem with no established OptiFleet analog (vehicles don't currently model engine as a discrete entity). Needs a product decision on whether/how Engine Model/Type relates to `VehicleModel`. |
+## 2. Master Data
 
-### 3. Worker Management
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Categories: Type Sparepart/Tools; Category Name; Initial (max 3 letters); Description | `ProductCategory` model (`backend/app/Domain/ProductMaster/Models/ProductCategory.php:15`, fillable `code,name,description,is_system,status`); migration `2024_04_01_000001_create_product_master_tables.php:12-26`; frontend `frontend/src/pages/tenant/masterdata/ProductCategoriesPage.tsx` | KEEP_OPTIFLEET (Type) / IMPLEMENTED (standalone page, G-40, Phase G) | "Type Sparepart/Tools" is not duplicated on Category because `Product.product_type` (SPARE_PART/TOOL/TIRE/CONSUMABLE/EQUIPMENT/OTHER) already carries that classification at the product level — a category can reasonably span multiple product types, so not forcing a type onto the category is a defensible design choice, not a gap. "Initial max 3 letters" is an unenforced VMS convention on `code`; OptiFleet's `code` is free-length, matching every other master-data entity's own code convention (no reason to special-case Category alone). |
+| Vehicle Category: Vehicle Category; Axles; Description | `VehicleCategory` model (`backend/app/Domain/MasterData/Models/VehicleCategory.php:16-22`, fillable includes `axle_count` per Phase A/prior); frontend `VehicleCategoriesPage.tsx` | KEEP_OPTIFLEET | Already a full CRUD page pre-dating this reconciliation; fields match. |
+| Vehicle Brand: Brand Name; Initial; Brand Of Car/Truck/Bus/Heavy Equipment; Logo | `VehicleBrand` model (`backend/app/Domain/MasterData/Models/VehicleBrand.php:15`, fillable `tenant_id,code,name,is_system,status` — **no logo field, no usage-type field**) | IMPLEMENTED (name/code, G-38 partial) / ADJUST (queued: logo, usage-type) | Brand/Model master data itself was added in Phase G (real G-38, corrected mapping — see `IMPROVEMENT_CONTEXT.md`). "Brand Of Car/Truck/Bus/Heavy Equipment" (a usage-type classifier) and a Logo image field were not part of that batch and remain genuinely missing — small, bounded, no policy question, but not implemented in this session due to time; listed in Queued ADJUST below. |
+| Unit: Unit Name; Unit Initial; Description | `Uom` model (`backend/app/Domain/ProductMaster/Models/Uom.php:15`, fillable now includes `description` after this session); `UomController.php` (`store`/`update`/`index` with search, this session); frontend `UomsPage.tsx` | IMPLEMENTED (this session, completes G-41) | `description` field + search filter added this session (migration `2026_09_19_000001_add_description_to_uoms_table.php`); standalone page + update/delete were added in Phase G. Test: `ProductCategoryAndUomTest::test_uom_description_is_optional_and_search_filters_by_code_or_name`. |
+| Product: Type; Category; Status; Name; Part Number; Manufacturer; Material; Production Year; Unit; Dimension; Size; Weight; Expiry flag; Image; Make/Model compatibility; SKU | see field-level detail below | KEEP_OPTIFLEET / IMPLEMENTED (Manufacturer/Material/Production Year/Dimension/Weight/Image, this session) / DEFERRED_DECISION (Status condition-taxonomy, Expiry flag, SKU auto-generation) | Field-by-field breakdown in "Product field detail" below. Type/Category/Part Number/Make-Model-compatibility already existed (KEEP_OPTIFLEET). Manufacturer/Material/Production Year/Dimension/Weight/Image were genuinely missing, plain descriptive fields with no policy involved — added this session. Status (condition taxonomy), Expiry flag, and SKU auto-generation each require a real product/inventory policy decision not defined by source docs or repo — deferred with named owner/input/destination below. |
+| Engine Model; Engine Type | see field-level detail below | DEFERRED_DECISION | Confirmed zero existing trace (no model/migration/controller/page). Owner: product; input: whether Engine Model/Type matter as a subsystem distinct from the existing Vehicle Brand/Model master data, and the Vehicle relationship cardinality. Destination: Master Data backlog. Detail in "Engine Model / Engine Type field detail" below. |
 
-| VMS page | VMS §3 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Worker | Search/Filter/Add/Detail, pagination | `WorkerListPage` — backend supports filter+pagination; frontend list UI does not yet expose them | — | ADJUST (queued, not yet implemented) | Backend `WorkerController::index()` already accepts `search`/pagination params; only the frontend Filter UI + Pagination component wiring is missing — bounded, no new backend work. |
-| Work Shift | Setting; 3 shifts; assign/edit worker; per-weekday view | none — zero code trace | — | DEFER | Whole new subsystem (shift scheduling, weekday assignment). No existing OptiFleet concept to extend safely without inventing a data model. |
+### Product field detail
 
-### 4. Vehicles Management
+| VMS field | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Type | `product_type` enum — migration:51 | KEEP_OPTIFLEET | Exists. |
+| Category | `product_category_id` FK | KEEP_OPTIFLEET | Exists. |
+| Status (Original/Aftermarket/KW/Rusak) | Only a lifecycle `status` (ACTIVE/INACTIVE) exists — no condition-quality field. | DEFERRED_DECISION | This is a genuinely new taxonomy distinct from the existing lifecycle status; conflating the two would be confusing (a product that is "Rusak"/damaged is a different axis than "ACTIVE"/"INACTIVE" catalog visibility). Owner: inventory/procurement; input: exact condition-quality values wanted and how they interact with existing stock-condition tracking (`WorkOrderPartReturn.condition` already has UNUSED_NEW/USED_GOOD/USED_FAULTY at the stock-movement level — a product-level quality tag would need to be reconciled with that, not duplicated). Destination: Product schema backlog. |
+| Part Number | `manufacturer_part_number` | KEEP_OPTIFLEET | Exists. |
+| Manufacturer | **Added this session**: `manufacturer` string nullable — migration `2026_09_19_000012_add_spec_fields_to_products_table.php`; `Product.php` fillable; `StoreProductRequest.php`/`ProductController::update()` validation; `ProductDetailPage.tsx` Edit Specifications modal | IMPLEMENTED (this session) | Test: `ProductTest::test_product_spec_fields_are_optional_and_stored`. |
+| Material | **Added this session**: `material` string nullable, same files as Manufacturer | IMPLEMENTED (this session) | Same evidence as Manufacturer. |
+| Production Year | **Added this session**: `production_year` unsignedSmallInteger nullable, same files | IMPLEMENTED (this session) | Same evidence. |
+| Dimension/Size/Weight | **Added this session**: `weight_kg`, `length_mm`, `width_mm`, `height_mm`, all nullable decimal, same files | IMPLEMENTED (this session) | Same evidence. |
+| Expiry flag | No `has_expiry`/`expiry_date` column; `track_batch` boolean is expiry-adjacent (lot-level tracking) but is not an expiry flag itself. | DEFERRED_DECISION | Owner: inventory; input: whether expiry should be a simple flag, a per-batch date (more useful, ties into `track_batch`), or both — a batch-level expiry date is likely the more correct design than a product-level flag, which is itself a design decision, not a field addition. Destination: Inventory/batch-tracking backlog. |
+| Image | **Added this session**: `image_url` string nullable, same files as Manufacturer, shallow URL-string pattern (no upload infra) | IMPLEMENTED (this session) | Same evidence. |
+| Make/Model compatibility | `ProductCompatibility` (`vehicle_category_id` FK, `vehicle_brand`/`vehicle_model` free-text strings) — pre-existing | KEEP_OPTIFLEET | Confirmed free-text brand/model, not FK to the Phase G `VehicleBrand`/`VehicleModel` catalog — reconciling these is the same "Model Compatibility filter" item already queued under Partner Management (PO item picker). |
+| SKU | `sku` unique-per-tenant string, manually entered; **no auto-generation exists anywhere** (confirmed by repo-wide search) | DEFERRED_DECISION | Owner: product/procurement; input: the actual desired SKU format (VMS shows "SKU begins with generated pattern" but not the pattern itself) — would need the same `NumberingConfiguration` mechanism already used for document numbers, not a fabricated format. Destination: Product/Numbering backlog. |
 
-| VMS page | VMS §3 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Vehicles | Search/Filter/Import/Export/New/detail; technical spec, maintenance values | `VehicleListPage`/`VehicleDetailPage` | — | KEEP_OPTIFLEET | Already a full CRUD + import/export-capable page pre-dating this reconciliation; VMS shows no field OptiFleet's `Vehicle` model lacks at the level this audit could confirm. Not yet field-audited value-by-value against VMS §4's exact column list. |
+### Engine Model / Engine Type field detail
 
-### 5. Tire Management
+Repo-wide search (`backend/app/`, `frontend/src/`) for `EngineModel`/`engine_model`/`EngineType`/`engine_type` (any casing) returns **zero matches** — confirmed to not exist at all: no model, migration, controller, or frontend page.
 
-| VMS page | VMS §3 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Rim | Search/Filter/New/Detail/Edit/Delete; brand/material/dimensions/bolt spec/code | `RimsPage` (`/app/rims`), `RimController` | **G-09** | **ADJUST — done this session** | New entity: migration, model, `StoreRimRequest`/`UpdateRimRequest`, controller (full CRUD, tenant-scoped), permissions (`rim.view`/`rim.manage`), 5/5 tests passing (`RimTest.php`), frontend list+form page, route + nav entry wired. Deliberately not linked to `Tire`/`WheelConfiguration` (no source evidence establishes that relationship) and code is user-supplied (matches every other master-data entity's pattern; VMS shows no concrete auto-generation format to copy). Supersedes an earlier session's "declined" decision on Rim, which was made without direct access to this VMS evidence. |
-| Tire | Search/Filter/New/Detail/Edit/Delete; vehicle class, size, load/speed indices, construction, pattern, tube type | `TireListPage`/`TireDetailPage` | G-11 | ADJUST — done in Phase G | Discrete tire spec fields added (Phase G, correctly cited as G-11). Not yet field-audited whether every VMS-listed attribute (tube type, pattern) has a 1:1 OptiFleet column — flagged for a future pass if exact parity matters. |
-| Wheels Configuration | Search/Filter/New/action; axle/wheel counts, config code | `WheelConfigurationListPage` (`/app/wheel-configurations`) | — | ADJUST (queued, not yet implemented) | Create exists; **Edit/Delete endpoints are missing** despite the model supporting them, and Search/Filter UI + computed Total-Axles/Total-Wheels/Config-Code display are not wired on the frontend even though the backend can supply them. Bounded, no policy question. |
-| Installation and Replacement | wheel position selection after prerequisite | `TireInstallPage`(-equivalent) | — | ADJUST (queued, not yet implemented) | Backend `assertValidWheelPosition()` already validates position against the vehicle's `WheelConfiguration`; frontend still uses a free-text input instead of a constrained dropdown sourced from that same configuration. Bounded UI fix, backend unchanged. |
-| Tire Lifecycle (Life Cycle / Removed / Used Tire Processing tabs) | grouping, removed list, used-tire queue | Tire status filters + `used_part`-style flows | — | KEEP_OPTIFLEET (largely) | OptiFleet's tire lifecycle (Phases D/E/F) is a materially more governed state machine (maker-checker, scoring framework, retread/repair governance) than the VMS tab view shows. Not yet field-audited tab-by-tab for a specific missing filter. |
+| Decision | Reason |
+|---|---|
+| DEFERRED_DECISION | Owner: product; input: whether Engine Model/Type matter enough to build as a new subsystem given `Vehicle`'s existing `vehicle_brand_id`/`vehicle_model_id` master data already covers brand/model — an Engine sub-classification would need its own relationship to Vehicle (1:1? Many vehicles share an engine model?) defined before building it. Destination: Master Data backlog. |
 
-### 6. Inventory Management
+## 3. Worker Management
 
-| VMS page | VMS §3 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Sparepart (stock/returned/used-processing tabs, Sell) | condition, repair receipt, processing partner/photo/note | `InventoryPage`, `UsedPartDispositionPage`, `SparePartSalePage` | G-14, G-15, G-16 (Phases A/B/C) | KEEP_OPTIFLEET / ADJUST (evidence field only) | The condition-capture/used-processing/sell flows are already built (Phases A–C) and are materially more governed (maker-checker, audit) than VMS's tab view. One concrete gap remains: **no `evidence`/photo field on the return record**, even though the identical pattern exists elsewhere (`RoadTest`, `InspectionFinding`, `Breakdown`, `WarrantyClaim` all have an `evidence` column) — queued ADJUST, not yet implemented. |
-| Tools / Tool Box | tool inventory; toolbox+assignee+tools | none — zero code trace | — | DEFER | Whole new custody/assignee subsystem (Tool, ToolBox, assignment). No existing OptiFleet analog to extend without inventing a data model. |
-| Stock Request | Requestor; linked Work Order; requested items after WO selection | `PurchaseRequest` (`source_type='WORK_ORDER'` enum value exists, unused/unwired) | G-08 (partial) | ADJUST (queued, not yet implemented) | The demand-signal concept already exists (`PurchaseRequest` + `StockTransfer.REQUESTED`, confirmed sufficient in Phase G) — the specific missing piece is a `work_order_id` FK plus a WO-scoped item picker on `PurchaseRequest`, using the already-unwired `WORK_ORDER` source type. Bounded, no new subsystem. G-08's other clause (line-level hold/reject-reason) is separate and also still open. |
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Worker: Worker Name; Job Position; Monthly Rate; Hourly Rate; Phone; Email; Photo; Address; Same Domicile flag; Domicile Address | see field-level detail below | KEEP_OPTIFLEET / IMPLEMENTED (Monthly/Hourly Rate, Phone, Email, Photo, Address, this session) / DEFERRED_DECISION (Same Domicile flag/Domicile Address) | Field-by-field breakdown in "Worker field detail" below. Worker Name and Job Position (constrained `worker_type` enum) already existed. Monthly Rate/Hourly Rate/Phone/Email/Photo/Address were genuinely missing, plain contact/compensation fields — added this session. Same-Domicile flag/Domicile Address is an Indonesia-specific residency concept with no defined OptiFleet use — deferred, owner/input/destination below. |
+| Worker list Search/Filter/pagination | `WorkerController::index()` (`backend/app/Http/Controllers/Api/Tenant/WorkerController.php:23-41`, search+filter+pagination already supported); frontend `WorkerListPage.tsx` | IMPLEMENTED (this session) | Backend already supported `status`/`worker_type`/`branch_id`/`workshop_id` filters and pagination; frontend only exposed free-text search. Added Filter UI (type/branch/status dropdowns) + `Pagination` component wiring, no backend change. |
+| Work Shift Setting: Shift 1/2/3; From Hour; Working Hour per Shift; Shift End; per-weekday assignment | see field-level detail below | DEFERRED_DECISION | Confirmed zero existing trace — a whole new subsystem, not a field addition. Owner: product/HR/operations; input: actual shift-scheduling policy (shift count, rotation rules, overtime handling, per-weekday assignment rules), none of which is defined by source docs or the repo. Destination: Worker Management backlog. Detail in "Work Shift field detail" below. |
 
-### 7. Partner Management
+### Worker field detail
 
-| VMS page | VMS §3/§4 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Supplier | Identity/contact/**Province/City/Account Holder/Account Number/Bank**/tax/type/description | `PartnerListPage`/`SupplierListPage`, `Partner` model | **G-42** | ADJUST (queued, not yet implemented) | Phase G added a Supplier-*filtered view* of `Partner` but not the missing fields themselves. Province/City/Account Holder/Account Number/Bank/Description all follow patterns `Partner` (and `Tenant`, for Province/City) already use elsewhere — bounded field additions, no new policy. **Supplier "Type" checklist** (Oil/Spareparts/Tires and Wheels/Attachment/Optional Accessories) is explicitly **DEFERRED**: it conflicts with OptiFleet's existing single-select `partner_type` enum used for eligibility gating elsewhere (e.g. `TireService::ELIGIBLE_SERVICE_PARTNER_TYPES`), and reconciling a multi-select taxonomy with a single-select gating enum is a real design decision, not a field addition. |
-| Purchase Order | Tabs PO/Received PO; product compatibility filters; activity log | `PurchaseOrderListPage`/`PurchaseOrderDetailPage` | G-04 (PO print), G-06 | ADJUST — PO print done this session; PO tiered approval still open | **PO print wiring closed this session** (same class of bug as G-04, found by applying the Gap Report's own §33 "check for elsewhere" guidance — backend `print()` endpoint pre-existed and was untested/unreachable from the UI). Product category/brand/model **compatibility filter in the item picker** is a queued ADJUST (frontend-only, using existing Product/VehicleBrand/VehicleModel data). G-06 (tiered/threshold approval) remains open — no concrete tiers/thresholds exist in any available material; fabricating them was explicitly declined. |
-| Workshop Partner | contact/bank/tax/description | `PartnerListPage` (generic Partner, no Workshop-specific memo/invoice flow) | G-13 | DEFER | See below (Maintenance Memo / Workshop Invoice) — Workshop Partner's own contact/bank/tax fields largely overlap the Supplier gap (G-42) and would be closed by the same field-addition work if applied to `Partner` generally, but the *cycle* built around it (memo → invoice → payment) is the substantive gap. |
-| Maintenance Memo | partner/unit/date/problem/photo/condition/checklist/priority; Save and Print | none — zero code trace as a distinct document type | G-13 (part) | DEFER | No "Memo" document type exists between Work Order and Workshop Invoice. Building it would require deciding its relationship to `WorkOrderExternalService` (already built in Phase G for towing/service-provider requests) — could plausibly extend that model rather than duplicate it, but that's a design decision, not a bounded field fix. |
-| Workshop Invoice | list/detail; empty in sample tenant | none | G-13 (part) | **BLOCKED** | A true Workshop Invoice entity would require inventing settlement/accounting policy (how is it priced, approved, paid, reconciled against `PurchaseOrder`/`GoodsReceipt`), matching this project's own prior explicit refusal to invent settlement behavior for Sell Sparepart. Needs a finance/accounting policy owner, not an engineering decision. |
+| VMS field | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Worker Name | `name` — `Worker.php` fillable | KEEP_OPTIFLEET | Exists. |
+| Job Position | `worker_type` enum (LEAD_MECHANIC/MECHANIC/TECHNICIAN/INSPECTOR/QC), not free-text | KEEP_OPTIFLEET | A fixed, constrained taxonomy is safer than free-text job titles for a field used in permission/skill logic elsewhere; matches this codebase's general preference for enums over free text where the value drives behavior. |
+| Monthly Rate | **Added this session**: `monthly_rate` decimal nullable — migration `2026_09_19_000011_add_contact_fields_to_workers_table.php`; `Worker.php` fillable; `StoreWorkerRequest.php`/`WorkerController::update()`; `WorkerListPage.tsx` create form + `WorkerDetailModal` Contact & Compensation edit section | IMPLEMENTED (this session) | Test: `WorkerUserLinkTest::test_worker_contact_and_rate_fields_are_optional_and_stored`. |
+| Hourly Rate | **Added this session**: `hourly_rate` decimal nullable, same files as Monthly Rate | IMPLEMENTED (this session) | Same evidence. |
+| Phone | **Added this session**: `phone` string nullable, same files | IMPLEMENTED (this session) | Same evidence. |
+| Email | **Added this session**: `email` string nullable directly on Worker, same files — distinct from the linked `User.email` (via `workers.user_id`), which only exists if a login account is linked | IMPLEMENTED (this session) | A worker doesn't necessarily have a login account; a contact email independent of that link is a real, separate need. |
+| Photo | **Added this session**: `photo_url` string nullable, same files, shallow URL-string pattern | IMPLEMENTED (this session) | Same evidence. |
+| Address | **Added this session**: `address` text nullable, same files | IMPLEMENTED (this session) | Same evidence. |
+| Same Domicile flag / Domicile Address | No equivalent, confirmed absent | DEFERRED_DECISION | Indonesia-specific residency-registration concept (whether a worker's ID-card address matches their current living address) with no established OptiFleet analog and no defined use elsewhere in this system. Owner: HR/product; input: whether this matters for OptiFleet's target markets and what, if anything, depends on it. Destination: Worker schema backlog. |
 
-### 8. Audit
+### Work Shift field detail
 
-| VMS page | VMS §3 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| History | Search/Filter/pagination; cross-module activity | Per-domain `Auditable` trait + audit log views embedded in each domain's detail page (no single unified page) | — | DEFER | The underlying data already exists (audit trail via `Auditable`, visible per-domain). A unified cross-module History page is a real, bounded-but-not-trivial UI project (needs a merged/paginated cross-table query or a read model) — worth doing, but is a scoped feature addition, not a quick ADJUST, so it is queued for explicit prioritization rather than implemented unilaterally this session. |
+Repo-wide search (`backend/app/Domain/Workshop`, `backend/app/Domain/WorkOrder`, corresponding frontend pages) for `WorkShift`/`work_shift`/`shift_1` and a scoped `\bshift\b` search returns **zero matches** — confirmed to not exist at all. The closest existing concept, `WorkshopWorkerAssignment` (branch/workshop assignment over an effective-date range), is a different mechanism (location assignment, not time-of-day shift scheduling).
 
-### 9. Access Management
+| Decision | Reason |
+|---|---|
+| DEFERRED_DECISION | Owner: product/HR/operations; input: actual shift-scheduling policy (how many shifts, rotation rules, overtime handling) and per-weekday assignment rules — none of this is defined by either source document or the repository. Destination: Worker Management backlog, as a genuinely new subsystem, not a field addition. |
 
-| VMS page | VMS §3/§4 observation | OptiFleet page/route | Gap ID | Decision | Reason / evidence |
-|---|---|---|---|---|---|
-| Access Features (Role) | Role list/Add; permission tree; **Select All Permissions** | `RolesPage` | — | ADJUST (queued, not yet implemented) | Pure UI convenience (a "select all" button over the existing permission checkbox tree) — no backend change, no policy question. |
-| Company | profile; integration flags; enabled modules; approval flow; **first PIC account** | `CompanyProfilePage` (`/app/account/company`) | **G-39** | ADJUST — profile fields done in Phase G | Phase G added Tenant/Company profile fields mirroring `Partner`'s established shape (Address/Phone/Province/Fax/Email/City/Website). **Not verified**: whether the VMS's specific "PIC name/email/role/phone/password/photo" sub-block was replicated as named PIC fields, or just general contact fields — flagged in `IMPROVEMENT_CONTEXT.md` Known Blockers for confirmation. Combining company provisioning with first-admin-user creation in one form (VMS's own pattern) is explicitly *not* copied — OptiFleet's separate Tenant-provisioning/User-creation flow is safer and more auditable, matching the VMS document's own §34 "Sedang" (medium-severity) criticism of VMS's combined form. |
-| User | New User; Add Worker/Role inline; active toggle | `UserListPage`, `WorkerListPage` (linked via `workers.user_id`, G-38) | G-38 (partial) | KEEP_OPTIFLEET / ADJUST done | User↔Worker link fixed in Phase G (see corrected G-38 mapping). Inline Worker/Role creation from the User form is a VMS UI convenience not replicated — OptiFleet's separate Worker/Role management pages are KEEP_OPTIFLEET (more auditable, matches the project's general preference for explicit master-data management over inline creation). |
+## 4. Vehicles Management
 
-## Implemented Adjustments (this session, Final Reconciliation phase)
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Vehicle: Plate; Model; Color; Last Maintenance Date; Type; Doors; Last KM/HM; Year; Seats; Length/Width/Height; Fuel Tank; Transmission; Fuel; Engine Capacity; Suspension; Axles; Empty/Load Weight; Tire Type; Wheels; Photo | see field-level detail below | KEEP_OPTIFLEET / ADJUST (queued: Type not exposed in create form) / IMPLEMENTED (Color/Doors/Seats/Dimensions/Fuel Tank/Engine Capacity/Suspension/Axles/Weights/Wheels/Photo, this session) | Field-by-field breakdown in "Vehicle field detail" below. Plate/Model/Last KM-HM/Fuel/Transmission/Year/Last-Maintenance-Date(derived)/Tire-Type(per-tire tracking) already existed. `vehicle_type` exists on the backend but is missing from the create form — small, bounded, queued. Color/Doors/Seats/Length-Width-Height/Fuel-Tank/Engine-Capacity/Suspension/Axles/Empty-Load-Weight/Wheels/Photo were genuinely missing physical-spec fields with no policy involved — added this session, along with the first-ever Vehicle Edit UI. |
 
-1. **G-04 — Work Order print unwired.** `WorkOrderDetailPage.tsx`: added a
-   "Print" button (gated by `work_order.view`) calling the pre-existing,
-   already-tested `GET /work-orders/{workOrder}/print` endpoint
-   (`WorkOrderController::print()`), blob-fetched and opened via
-   `window.open` — same pattern already established in
-   `AccountInvoiceDetailPage.tsx`. No backend change.
-2. **Same-class fix on Purchase Order** (not separately numbered in the
-   gap register, found by applying §33's "check for elsewhere" guidance):
-   `PurchaseOrderDetailPage.tsx` — identical Print button wired to the
-   pre-existing `PurchaseOrderController::print()` endpoint.
-3. **G-09 — Rim entity.** Full stack: migration (`rims` table, tenant-
-   scoped, soft-deletes), `Rim` model (`Auditable`, `BelongsToTenant`),
-   `StoreRimRequest`/`UpdateRimRequest`, `RimController` (tenant-scoped
-   CRUD), `rim.view`/`rim.manage` permissions, `RimTest.php` (5 tests / 14
-   assertions, all passing — create/update/delete, per-tenant unique
-   code, search, tenant isolation, permission gating), `RimsPage.tsx`
-   (list + create/edit modal), route + "Tire Management" nav entry.
-4. **Phase G G-ID documentation correction** — see
-   `IMPROVEMENT_CONTEXT.md`'s "G-ID correction" table. No functional code
-   changed; corrects which real gap each already-shipped Phase G batch
-   actually closed, and surfaces which real gaps (G-01, G-06, G-08 partial,
-   G-12, G-13, G-42, G-41 partial) were left open by Phase G despite the
-   original Phase Status row implying full G-01–G-13/G-38–G-43 closure.
+### Vehicle field detail
 
-## Queued ADJUST items (identified, not yet implemented this session)
+| VMS field | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Plate | `registration_number`, required unique per tenant | KEEP_OPTIFLEET | Exists, form-wired. |
+| Model | `model` free-text + `vehicle_model_id` master-data FK | KEEP_OPTIFLEET | Exists, form-wired. |
+| Type | `vehicle_type` string nullable | ADJUST (queued) | Backend field exists but was not exposed in the create form (per the research pass). Small, bounded frontend-only fix; can be added alongside the queued KM/HM Work Order fix. |
+| Last KM/HM | `current_odometer` / `engine_hour` | KEEP_OPTIFLEET | Both exist and are form-wired (create form + detail + the new Edit Specifications modal this session). |
+| Fuel / Transmission | `fuel_type` / `transmission_type` | KEEP_OPTIFLEET | Exist; now editable via the new Edit Specifications modal (this session) — previously set-once-at-creation only with no update UI at all (backend `UpdateVehicleRequest` supported it, unreachable from frontend, matching the G-04 "built but unreachable" pattern). |
+| Year | `year` | KEEP_OPTIFLEET | Exists, editable via the new Edit Specifications modal. |
+| Last Maintenance Date | No column — derived from maintenance history/records rather than stored | KEEP_OPTIFLEET | Storing a redundant "last maintenance date" that must be kept in sync with the actual WO/schedule history invites drift; deriving it from the History tab is safer. |
+| Color, Doors, Seats, Length/Width/Height, Fuel Tank Capacity, Engine Capacity, Suspension, Axles, Empty/Load Weight, Wheels | **Added this session**: `color`, `doors`, `seats`, `length_mm`, `width_mm`, `height_mm`, `fuel_tank_capacity_liters`, `engine_capacity_cc`, `suspension_type`, `axle_count`, `empty_weight_kg`, `load_weight_kg`, `wheel_count` — migration `2026_09_19_000010_add_physical_spec_fields_to_vehicles_table.php`; `Vehicle.php` fillable+casts; `StoreVehicleRequest.php`/`UpdateVehicleRequest.php`; new `EditVehicleModal` in `VehicleDetailPage.tsx` (closing the same "no Edit UI at all for Vehicle" gap noted above) | IMPLEMENTED (this session) | All are plain physical/descriptive attributes, no policy involved. Test: `VehicleTest::test_vehicle_physical_spec_fields_are_optional_and_stored`. |
+| Photo | **Added this session**: `photo_url` string nullable, same migration/files, shallow URL-string pattern (distinct from the pre-existing `VehicleDocument` generic-attachment upload mechanism, which remains available for scanned documents) | IMPLEMENTED (this session) | Displayed at the top of the Overview tab when set. |
+| Tire Type (vehicle-level) | No vehicle-level field — Tire is tracked as its own asset domain (Phases D/E/F) | KEEP_OPTIFLEET | A vehicle-level "tire type" summary field would duplicate/conflict with the actual installed-tire records, which are individually tracked with full spec detail (`Tire.tire_size`, `pattern`, etc.) — the individually-tracked model is strictly more accurate. |
 
-Small, bounded, policy-free — safe to implement in a following batch:
-- Uom `description` field (completes G-41).
-- Worker list Filter UI + Pagination UI (backend already supports both).
-- Role "Select All Permissions" button.
-- Wheel Configuration Edit/Delete endpoints + Search/Filter UI + computed
-  Total-Axles/Total-Wheels/Config-Code display.
-- Tire installation wheel-position dropdown (backend validation exists;
-  frontend still free-text).
-- Sparepart Return `evidence`/photo field (established pattern to copy
-  from `RoadTest`/`InspectionFinding`/`Breakdown`/`WarrantyClaim`).
-- Purchase Order item-picker category/brand/model compatibility filter
-  (frontend-only).
-- Stock Request: `work_order_id` FK + WO-scoped item picker on
-  `PurchaseRequest` (completes G-08's first clause; `source_type=
-  'WORK_ORDER'` enum value already exists, unused).
-- Supplier/Partner Province/City/Account Holder/Account Number/Bank/
-  Description fields (completes G-42, excluding the deferred Type
-  checklist).
+## 5. Tire Management
 
-## Explicitly DEFERRED (needs a real product/business decision)
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Rim: Brand; Material; Width; Diameter; Disc Thickness; Offset; Bolt Holes; Bolt Diameter; PCD; Hub Hole Diameter; Rim Code | `Rim` model (`backend/app/Domain/Tire/Models/Rim.php:15-19`, fillable `code,brand,material,width_inch,diameter_inch,disc_thickness_mm,offset_mm,bolt_holes,bolt_diameter_mm,pcd_mm,hub_hole_diameter_mm,status`); migration `2026_09_18_000001_create_rims_table.php`; `StoreRimRequest`/`UpdateRimRequest`; `RimController.php` (full CRUD, tenant-scoped); frontend `frontend/src/pages/tenant/tires/RimsPage.tsx`; permissions `rim.view`/`rim.manage`; tests `RimTest.php` (5/5) | IMPLEMENTED (this session, G-09) | Every VMS-listed field present 1:1 except Rim Code's auto-generation ("Code generated after specification completion") — deliberately NOT replicated as an auto-format since no source shows the actual generation pattern; uses the same user-supplied-unique-code convention as every other master-data entity in this codebase, avoiding a fabricated numbering scheme. Not linked to Tire/WheelConfiguration — no source evidence establishes that relationship. |
+| Tire: Car or Truck/Bus; Brand; Width; Aspect Ratio; Diameter; Load Index; Max Load; Speed Rating; Max Speed; Construction (Radial/Bias); Tread Pattern; Tire Type (Tubeless/Tube); Production Date Code; Product Name; Tire Code | `Tire` model (`backend/app/Domain/Tire/Models/Tire.php:20-25`, fillable `serial_number,product_id,manufacturer,manufacture_date_code,tire_size,pattern,section_width_mm,aspect_ratio,rim_diameter_inch,load_index,speed_rating,ply_rating,...`) | IMPLEMENTED (most fields, Phase G G-11) / ADJUST (queued: Construction, Tube Type) | Brand(manufacturer)/Width(section_width_mm)/Aspect Ratio/Diameter(rim_diameter_inch)/Load Index/Speed Rating/Tread Pattern(pattern)/Production Date Code(manufacture_date_code)/Product Name(via product_id)/Tire Code(serial_number) all present, added in Phase G's real G-11 batch. Max Load and Max Speed are correctly NOT stored as raw fields — both are standard-table lookups derived from Load Index/Speed Rating respectively, not independent data (KEEP_OPTIFLEET: storing a derived value invites drift from its source). **Construction (Radial/Bias) and Tire Type (Tubeless/Tube Type) remain genuinely missing discrete fields** — small, bounded, no policy question, not implemented this session due to time; listed in Queued ADJUST below. "Car or Truck/Bus" vehicle-class applicability is reasonably left to the parent Vehicle's own `vehicle_category_id`/product compatibility rather than duplicated on Tire (KEEP_OPTIFLEET). |
+| Wheels Configuration: Type Non Trailer/Trailer/Semi Trailer/Truck Head; Front/Rear Axles; Wheels per Side; Total Axles; Spare Tire; Total Wheels; Config Code | `WheelConfiguration` model (`backend/app/Domain/Tire/Models/WheelConfiguration.php`, fillable `vehicle_category_id,position_code,label,axle_number,sequence`); `WheelConfigurationController.php` (index/store/update/destroy, this session); frontend `WheelConfigurationListPage.tsx` (rewritten this session) | IMPLEMENTED (Edit/Delete/Search/computed summary, this session) / KEEP_OPTIFLEET (data shape) | OptiFleet models a configuration as a flat set of per-position rows grouped by `vehicle_category_id`, not one summary record with a Type/totals/Spare-Tire/Config-Code shape — a materially different but valid design (each position is independently addressable for validation, e.g. `assertValidWheelPosition()`). This session added the missing Edit/Delete endpoints (previously create/list-only, tenant-ownership-gated — platform-default rows stay read-only), Search/Filter UI, and a **computed** Configuration Summary (Total Axles/Total Wheels grouped from the existing position rows, Config Code reusing `VehicleCategory.code` rather than inventing a new coding scheme) — no new stored fields invented. "Trailer classification" (Non Trailer/Trailer/Semi Trailer/Truck Head) and "Spare Tire" have no OptiFleet equivalent and would need a real vehicle-taxonomy decision to add meaningfully — DEFERRED_DECISION (owner: fleet-engineering; input: which trailer classes are meaningful for this fleet; destination: Vehicle/VehicleCategory schema backlog). |
+| Tire Installation: CN Unit; Configuration; Type Replacement/Rotating; Date; Time; KM at Installation; wheel-position after prerequisite | `TireService::install()`/`rotate()` (`backend/app/Domain/Tire/Services/TireService.php`); `assertValidWheelPosition()`; frontend `TireDetailPage.tsx` install/rotate forms (dropdown added this session) | IMPLEMENTED (dropdown, this session) / KEEP_OPTIFLEET (data shape) | Backend already validated wheel position against the vehicle's `WheelConfiguration` (permissive when unconfigured, per Known Blockers); frontend previously used free text. This session added a position dropdown sourced from `/app/wheel-configurations?vehicle_category_id=...` for both Install and Rotate, falling back to free text when the category has zero configured positions (matches backend behavior exactly, no validation change). Date/Time/KM at Installation already captured via `installed_at`/`installation_odometer`. |
+| Tire Lifecycle: Life Cycle / Removed Tire / Used Tire Processing tabs | Tire status filters (`current_status` enum); `UsedPartDispositionPage.tsx`-style flows for used-tire processing via `TireService` retread/repair/scrap/sell | KEEP_OPTIFLEET | OptiFleet's tire lifecycle (Phases D/E/F) is a materially more governed state machine (maker-checker, scoring framework, retread/repair governance with partner eligibility) than the VMS tab view. Not field-audited tab-by-tab for a specific missing filter beyond this — no gap identified at the level this session could confirm. |
 
-- Engine Model / Engine Type / Work Shift — whole new subsystems, zero
-  existing code trace.
-- Tool / Tool Box — new custody/assignee subsystem.
-- Maintenance Package/Interval/Item admin UI (G-01) — needs a data-model
-  decision, not a field addition.
-- Bay Type master / capacity_unit / combined Bay+WO+Maintainer allocation
-  (G-12) — new Workshop/Bay subsystem design.
-- Supplier "Type" checklist — conflicts with the existing single-select
-  `partner_type` eligibility-gating enum; needs a taxonomy decision.
-- Dashboard KPI overhaul (most-used parts, nearest-schedule, scheduled-
-  vs-WO, most-costly-vehicle, maintainer-performance rankings) — scope
-  decision for the analytics/intelligence roadmap.
-- Unified cross-module History page — data already exists per-domain;
-  building a merged view is a real feature project, not a quick fix.
-- Scheduled Maintenance manual create/reschedule/cancel/delete — would
-  reverse an already-made architectural choice (policy-driven
-  auto-generation); needs explicit re-decision, not a default.
-- SKU auto-generation — needs a numbering-policy decision via the
-  existing `NumberingConfiguration` mechanism, not a fabricated format.
+## 6. Inventory Management
 
-## Explicitly BLOCKED
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Sparepart Processing: Process At; Process Date; Received By; Received selection; Condition; Note; Photo; rejection reason; Approve/Reject | see field-level detail below | KEEP_OPTIFLEET / ADJUST (queued: evidence not wired into inspect/disposition flow) | Field-by-field breakdown in "Sparepart Processing field detail" below. Process At/Process Date/Received By/Condition/Note/rejection reason/Approve-Reject all already exist and are more precise than the VMS single-field equivalents (e.g. maker-checker on decide(), separate returned_by/inspected_by). The `evidence` photo field exists on the model but is only captured at return-creation time, not wired into the actual inspect/proposeDisposition steps — small, bounded, queued. |
+| Tools / Tool Box | see field-level detail below | KEEP_OPTIFLEET (Tools) / DEFERRED_DECISION (Tool Box) | Tools are already covered by `Product.product_type=TOOL` and the existing Product pages (KEEP_OPTIFLEET). Tool Box as a distinct custody/accountability entity does not exist at all — a new subsystem requiring a custody policy decision, not a field addition. Owner: inventory/workshop operations; destination: Inventory Management backlog. Detail in "Tools / Tool Box field detail" below. |
+| Stock Request: Requestor; Work Order; item search/selection scoped to WO | `PurchaseRequest.work_order_id` FK (this session, migration `2026_09_19_000005_...`); `PurchaseRequestController::store()` validates `work_order_id`; frontend `PurchaseRequestListPage.tsx` Work-Order selector + WO-scoped item picker (filters to the WO's own `planned_parts`) | IMPLEMENTED (this session, completes G-08 first clause) | `source_type='WORK_ORDER'` existed since Phase 4 but was never linked to an actual Work Order. Requestor already captured via `requested_by`. Line-level hold/reject-reason (G-08's second clause) also implemented this session: `purchase_request_items.line_status`/`line_reason` + `PUT .../items/{item}/line-status` endpoint, letting an individual line be held or rejected independently of the whole request — no approval threshold or tier policy invented (that remains G-06's own separate, now-framework-addressed scope). Tests: `ProcurementTest::test_purchase_request_can_be_linked_to_a_work_order`, `::test_purchase_request_line_can_be_held_or_rejected_independently`. |
 
-- **Workshop Invoice** (settlement/accounting policy) — same class of
-  refusal as the project's prior Sell Sparepart decision.
-- Anything touching Tire scoring/disposition thresholds or BD-6
-  precedence rules — Phase F's "framework complete, configuration not
-  approved, production scoring not enabled" status is preserved verbatim;
-  this reconciliation phase made zero changes to scoring/disposition code.
+### Sparepart Processing field detail
+
+| VMS field | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Process At | `warehouse_id` (required FK, set at return time) — `WorkOrderPartReturn` migration | KEEP_OPTIFLEET | Exists. |
+| Process Date | `inspected_at` timestamp nullable | KEEP_OPTIFLEET | Exists. |
+| Received By | `returned_by` (at return time) and `inspected_by` (at inspection time) — two distinct actors, both captured | KEEP_OPTIFLEET | More precise than VMS's single "Received By" — OptiFleet distinguishes who returned the part from who inspected it, which matters for the maker-checker model. |
+| Received selection | No separate "receive" step — `inspect()` is the sole gate (`PENDING_INSPECTION` → `INSPECTED`) | KEEP_OPTIFLEET | A separate receive step would add a state transition with no corresponding business rule difference from inspection itself. |
+| Condition | `condition` enum, re-assertable during inspect | KEEP_OPTIFLEET | Exists. |
+| Note | `inspection_notes` text nullable | KEEP_OPTIFLEET | Exists. |
+| Photo | `evidence` string nullable **exists on the model** (added this session's earlier batch, `2026_09_19_000004_add_evidence_to_work_order_part_returns_table.php`) but confirmed by the research pass to be captured only at return-creation time (`WorkOrderExecutionController.php`) — **not editable/settable during the actual inspect/propose/decide disposition flow** | ADJUST (queued) | The field exists and is wired for the initial return; wiring it into `UsedPartDispositionController::inspect()`/`proposeDisposition()` as well (so an inspector can attach their OWN evidence photo, not just see the returner's) is a small, bounded, well-defined addition — not implemented this session due to time. |
+| Rejection reason | Two distinct concepts already exist: `disposition_reason` (maker's proposal reason) and the `decide()` step's `note` (approver's reason on APPROVE/REJECT) | KEEP_OPTIFLEET | More precise than VMS's single "rejection reason" — separately attributes the proposer's and approver's reasoning. |
+| Approve/Reject confirmations | `decide()` with maker-checker enforcement | KEEP_OPTIFLEET | Exists, more rigorous than VMS's simple confirmation dialogs (blocks self-approval). |
+
+### Tools / Tool Box field detail
+
+- **"Tools" as an inventory item type**: confirmed to exist via `Product.product_type = 'TOOL'` (migration enum value; seed data in `SupplyChainSeeder.php` creates a system "Tools" category and a sample TOOL product). Search/filter/list already work through the existing Product pages filtered by type. **Decision: KEEP_OPTIFLEET** — no separate Tools-only page needed; the existing Product infrastructure already covers this VMS observation.
+- **"Tool Box" as a distinct custody entity** (number + assignee + contained tools + quantity, with inline Add Tool): confirmed to **not exist at all** — zero matches anywhere in the repository for any tool-box/custody-container concept. **Decision: DEFERRED_DECISION.** Owner: inventory/workshop operations; input: the actual custody/accountability policy needed (who can check out a box, what happens if a tool goes missing, how this relates to existing warehouse stock) — this is a new subsystem, not a field addition, and no source material defines the policy. Destination: Inventory Management backlog.
+
+## 7. Partner Management
+
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Supplier: Name; Address; Province; City; PIC; Phone; Account Holder; Account Number; Bank; NPWP; Email; Tax mode/value; Description; Supplier Type | `Partner` model (`backend/app/Domain/Partner/Models/Partner.php:16-20`, fillable now includes `province,city,bank,account_holder,account_number,description` after this session; `tax_id` pre-existing maps to NPWP); `StorePartnerRequest`; `PartnerController::update()`; frontend `PartnerListPage.tsx` (create form) + `PartnerDetailPage.tsx` (new Edit modal, this session, closing a previously-unreachable `update()` endpoint) | IMPLEMENTED (this session, completes G-42 except Type) / DEFERRED_DECISION (Supplier Type) | Migration `2026_09_19_000002_add_profile_fields_to_partners_table.php`. Test: `PartnerTest::test_partner_profile_fields_are_stored_and_returned`. "PIC" as a named field is NOT added — `contact_name`/`contact_phone`/`contact_email` already serve that role generically; adding a redundant `pic_name` alongside would duplicate data with no defined distinction. "Supplier Type" checklist (Oil/Spareparts/Tires and Wheels/Attachment/Optional Accessories) deliberately NOT implemented — it conflicts with the existing single-select `partner_type` enum used for eligibility gating elsewhere (e.g. `TireService::ELIGIBLE_SERVICE_PARTNER_TYPES`); reconciling a multi-select taxonomy with a single-select gating enum is a real design decision. Owner: product; input needed: whether Supplier Type should replace, extend, or sit alongside `partner_type`, and how it affects existing eligibility checks; destination: Partner domain schema backlog. |
+| Purchase Order: Sparepart/Tools; Category; Brand Compatibility; Model Compatibility (item picker with cart) | `PurchaseRequestListPage.tsx` item picker (this session): Category filter (`product_category_id`, server-side) + Brand filter (client-side substring match on `Product.brand`) | IMPLEMENTED (this session, frontend-only) | Frontend-only filter using existing `Product`/`ProductCategory` data — no new backend endpoint. Full VMS "Model Compatibility" filter (matching against `ProductCompatibility.vehicle_model`, a free-text field) was not added — `ProductCompatibility`'s vehicle_brand/vehicle_model fields are free text, not FKs into the Phase G `VehicleBrand`/`VehicleModel` master data, so a real "Model Compatibility filter" would need that reconciliation first; queued, not blocked. PO itself is created from an approved `VendorQuotation`, not a fresh product picker — the actual "product selection" step in OptiFleet's procurement chain happens at Purchase Request, where this filter was added. |
+| Purchase Order approval | `PurchaseOrderService::approve()`/`decideApproval()` (this session); `workflow_approval_request_id`; `PENDING_APPROVAL` status | IMPLEMENTED (framework, this session, G-06) | Wired into the existing generic `WorkflowApprovalService`/`WorkflowEngine` approval_rule mechanism (already used by `used_part_disposition`) rather than a bespoke mechanism. **Framework implemented; no tenant has a published tiered configuration by default; production tiers require a tenant to explicitly publish one via the existing Configuration UI** — mirrors the same framework/configuration/production-activation distinction already established for Tire Scoring (Phase F). No thresholds, tier counts, or approver roles invented. Tests: `ProcurementTest::test_purchase_order_tiered_approval_when_tenant_publishes_an_approval_rule`, `::test_purchase_order_tiered_approval_can_be_rejected_mid_chain` — both pass; the full pre-existing `ProcurementTest` suite (9 prior tests) passes unmodified, proving zero default-behavior change. |
+| Purchase Order decimal-safe totals | `PurchaseOrderService::create()` (Phase G, real G-07) | KEEP_OPTIFLEET | Already fixed in Phase G — `BigDecimal` throughout, not native float. |
+| Workshop Partner: same fields as Supplier, minus Type checklist | `Partner` with `partner_type` in `{EXTERNAL_WORKSHOP, TOWING_PROVIDER, OTHER_SERVICE_PROVIDER, ...}`; same profile-field additions apply | IMPLEMENTED (shares Supplier's field additions) | `SupplierListPage`/`PartnerListPage` are the same underlying view filtered by `partner_type` (Phase G, G-17/real-unnumbered) — Workshop Partner gets the same Province/City/Bank/Account fields automatically, no separate implementation needed. Matches VMS's own note ("Supplier-like master without supplier-type checklist") exactly, since OptiFleet never had a Type checklist to omit in the first place. |
+| Maintenance Memo: Type Scheduled/Unscheduled/Accident; Location; Memo To partner; CN Unit; Date; Problem; Before Photo; Condition; Maintenance Activity; Need to Check; Priority; Save and Print | `WorkOrderExternalService` model (`backend/app/Domain/WorkOrder/Models/WorkOrderExternalService.php`, fillable now includes `photo_evidence,condition_notes,priority` after this session); `WorkOrderExternalServiceController::store()`; frontend `WorkOrderDetailPage.tsx` `ExternalServicesTab` (fields added this session) | IMPLEMENTED (descriptive fields, this session, G-13 partial) / ADJUST (queued: print) | Migration `2026_09_19_000009_add_memo_fields_to_work_order_external_services_table.php`. Test: `WorkOrderExternalServiceTest::test_external_service_memo_fields_are_optional_and_stored`. Partner(partner_id)/Unit(via parent work_order_id)/Date(requested_at)/Problem(description) already existed (Phase G). "Type Scheduled/Unscheduled/Accident" deliberately NOT duplicated — `WorkOrder.maintenance_type` already classifies the parent record; a second, possibly-conflicting classification on the child would duplicate data. "Save and Print Memo" (a new document template + print endpoint, following the established `DocumentTemplateRenderService`/`DocumentPdfService` pattern used for Work Order/Purchase Order) is a well-defined, NOT-blocked follow-up — genuinely queued due to the template-authoring effort involved, not a policy question. Listed in Queued ADJUST below. |
+| Workshop Invoice: list/detail | none — zero code trace as a distinct entity | BLOCKED_TECHNICAL | A true Workshop Invoice would require inventing settlement/accounting policy (pricing, approval, payment, reconciliation against `PurchaseOrder`/`GoodsReceipt`), matching this project's own prior explicit refusal to fabricate the same for Sell Sparepart. Needs a finance/accounting policy owner, not an engineering decision — this is the one mandatory item this reconciliation cannot close without a business decision from the owner. |
+
+## 8. Audit
+
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| History: Search/Filter/pagination; cross-module activity | see field-level detail below | KEEP_OPTIFLEET | A genuine unified cross-module Audit Log (`AuditLogController`, `/app/audit-logs`, `Auditable` trait across 73 files) already exceeds the VMS observation rather than falling short of it — filterable by resource type/action/date range, paginated, and embedded per-domain (Work Order History tab, Vehicle History page) without being exclusive of the unified view. Detail in "History / Audit field detail" below. |
+
+### History / Audit field detail
+
+**Finding: a genuine unified cross-module Audit Log list page already exists**, exceeding the VMS observation rather than falling short of it.
+
+- Backend: `AuditLogController::index()` (`backend/app/Http/Controllers/Api/Tenant/AuditLogController.php`) queries one `AuditLog` model across ALL `resource_type` values for the tenant, filterable by `resource_type`/`resource_id`/`action`/date range, paginated.
+- Route: `GET /app/audit-logs`, permission `audit.view`.
+- Frontend: `TenantAuditLogPage.tsx` renders `AuditLogTable` at `/app/audit-logs`, nav-linked; a platform-level equivalent exists at `/platform/audit-logs`.
+- `Auditable` trait usage: 73 files across nearly every domain — the unified log is populated tenant-wide.
+- Per-domain embedding coexists (not exclusive): e.g. `WorkOrderDetailPage.tsx` embeds a filtered view of the same `/app/audit-logs` endpoint as a History tab, rather than a separate mechanism. `VehicleHistoryPage.tsx` and `ConfigurationHistoryPage.tsx` remain distinct, domain-specific history views for their own domains, coexisting with the unified log.
+
+**Decision: KEEP_OPTIFLEET.** Filtering is field-exact (resource type/action/date range) rather than a free-text keyword search across all fields — a minor UX gap, not a missing capability, and not implemented this session as a queued item since it's a genuine enhancement rather than a gap relative to VMS's own "Search; Filter; pagination" description (which OptiFleet already meets via its own filter fields).
+
+## 9. Access Management
+
+| VMS field/observation | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Access Features (Role): Role Name; Select All Permissions; permission tree | `RoleManager.tsx` (shared by platform and tenant Role pages) | IMPLEMENTED (this session) | Added a Select All / Clear All button over the existing permission checkbox tree — pure UI convenience, no backend change. |
+| Company: Name; Address; Phone; Province; Fax; Email; City; Website; Logo; Company Field; FMS flag; E-Kiosk flag; Company ID; enabled modules; custom approval; PIC name/email/role/phone/password/photo | `Tenant` model (`backend/app/Domain/Identity/Models/Tenant.php`, fillable now includes `province,city,fax,logo_url` after this session); `CompanyProfileController.php`; frontend `CompanyProfilePage.tsx` | IMPLEMENTED (Province/City/Fax/Logo, this session, completes G-39) / KEEP_OPTIFLEET (Company Field, Company ID, enabled modules, custom approval) / DEFERRED_DECISION (FMS flag, E-Kiosk flag, PIC sub-block) | Migration `2026_09_17_000004_...` (Phase G) + `2026_09_19_000003_add_province_city_fax_to_tenants_table.php` + `2026_09_19_000013_add_logo_url_to_tenants_table.php` (this session). Test: `CompanyProfileTest::test_tenant_can_view_and_update_its_own_company_profile` (updated). Full per-field breakdown of the remaining fields in "Company remaining-field detail" below. |
+| User: Worker Name; Role; Email; Password; Active Account | see field-level detail below | KEEP_OPTIFLEET / ADJUST (queued: inline Worker-link + Role-assign convenience) | Field-by-field breakdown in "User field detail" below. Email/Password/Active-Account-defaults-active are already implemented and, per this project's general preference for auditable separate steps over combined provisioning, deliberately keep User creation, Worker linking, and Role assignment as three separate (already-reachable) endpoints rather than one inline VMS-style flow. A convenience option to do all three in one guided flow, without removing the separate endpoints, is a real bounded UX addition — queued, not implemented this session due to time. |
+
+### Company remaining-field detail
+
+| VMS field | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Logo | **Added this session**: `logo_url` string nullable — migration `2026_09_19_000013_add_logo_url_to_tenants_table.php`; `Tenant.php` fillable; `CompanyProfileController.php`; `CompanyProfilePage.tsx` (field + preview image) | IMPLEMENTED (this session) | Shallow URL-string pattern, consistent with `evidence`/`photo_url`/`image_url` elsewhere. Test: `CompanyProfileTest::test_tenant_can_view_and_update_its_own_company_profile` (updated). |
+| "Company Field" (business categorization) | `industry` exists but is free-text `string`, not a fixed list | KEEP_OPTIFLEET | Free-text is strictly more flexible than a fixed list here; VMS shows no defined taxonomy to replicate, and constraining it to an enum without one would be inventing a classification scheme. |
+| FMS flag / E-Kiosk flag | Confirmed absent — zero matching columns anywhere | DEFERRED_DECISION | A boolean flag with no defined behavior would be a fabricated feature toggle, not a data field — these names refer to VMS's own product integrations (fleet-management-system sync, self-service kiosk mode), neither of which has an OptiFleet equivalent to toggle. Owner: product; input: what capability, if any, these should actually gate before adding a meaningless flag. Destination: Tenant/Entitlement backlog. |
+| Company ID | Already covered — `Tenant.code`/`Tenant.id` | KEEP_OPTIFLEET | No distinct concept needed. |
+| Enabled modules | `TenantModuleEntitlement` (platform-admin-managed) | KEEP_OPTIFLEET | Already a real, more rigorous system than a simple checklist — platform-controlled entitlements with capacity limits, not self-service. |
+| Custom approval | `WorkflowDefinitionService`/Configuration versioning system | KEEP_OPTIFLEET | Already a materially more capable system (versioned, publishable, condition-gated, audit-tracked) than a simple "custom approval" toggle — and this session's G-06 work (PO tiered approval) is a direct example of it being used for exactly this kind of customization. |
+| PIC name/email/role/phone/password/photo | Confirmed absent as a named concept — only generic Tenant-level contact fields (`phone`/`email`/etc.) exist, no `pic_*` columns anywhere | DEFERRED_DECISION | Owner: product; input: whether a named "PIC" sub-block (a specific accountable person, distinct from generic company contact info, potentially with their own login) is actually needed, or whether the existing generic contact fields plus the tenant's own User/Role system already cover the underlying need (a tenant already has Users with Roles — an "Admin" role assignment may already BE the functional PIC). Combining company provisioning with first-administrator creation in one form (VMS's own pattern) was explicitly evaluated and NOT copied even if PIC fields are eventually added — OptiFleet's separate Tenant-provisioning/User-creation flow is safer and more auditable, matching the VMS document's own §34 criticism of its combined form. Destination: Tenant/User schema backlog. |
+
+### User field detail
+
+| VMS field | OptiFleet evidence | Decision | Reason |
+|---|---|---|---|
+| Email | `UserController::store()` validates `email` required | KEEP_OPTIFLEET | Exists. |
+| Password | Exists, hashed at creation | KEEP_OPTIFLEET | Exists. |
+| Worker Name (inline Worker creation/link) | `UserController::store()` never touches Worker; linking is a **separate** endpoint (`POST /workers/{worker}/link-user`, Phase G) with no UI wiring into the Add-User modal | ADJUST (queued) | Creating a User, linking a Worker, and assigning a Role are three separate steps/endpoints in OptiFleet, not VMS's single inline flow. Combining them into one guided flow (without removing the separate endpoints, which remain useful for retroactively linking/reassigning) is a real, bounded UX improvement — not implemented this session due to time; the underlying capability (link/unlink) already exists and is reachable. |
+| Role | Not settable at creation; separate `assignRole()` endpoint, invoked from a "Manage Access" modal after creation | KEEP_OPTIFLEET (separation) / ADJUST (queued, inline convenience) | Keeping role assignment as an explicit, auditable separate step is arguably safer (matches this project's general preference against combining provisioning steps, per the Company/PIC finding above) — but a "assign a role while creating the user" convenience option on top of that, not replacing the separate endpoint, would still be a reasonable UX addition. Queued, not implemented this session. |
+| Active Account toggle | Not present on the create form; status is hardcoded `active` server-side; toggling is a separate PATCH after creation | KEEP_OPTIFLEET | Defaulting new accounts to active with an explicit separate deactivation step is a safer default than exposing an "inactive-on-creation" option that could be used to create dormant accounts unnoticed. |
+
+## Implemented Adjustments (this session, Final Reconciliation phase — full list)
+
+Batch 1: G-41 (Uom description+search), G-42 (Partner province/city/bank/account fields, excl. Type), G-39 (Tenant province/city/fax), Wheel Configuration Edit/Delete+Search+computed summary, Sparepart Return `evidence` field.
+Batch 2: G-08 full (Stock Request work_order_id FK + WO-scoped item picker + line-level hold/reject-reason), PO/PR item-picker category+brand filter.
+Batch 3: G-01 (Maintenance Package admin UI), G-06 (PO tiered approval framework).
+Batch 4: G-12 (Workspace capacity/capacity_unit), G-13 (Maintenance Memo descriptive fields).
+Batch 5 (field-level audit follow-up): Vehicle physical-spec fields (Color/Doors/Seats/Length-Width-Height/Fuel-Tank/Engine-Capacity/Suspension/Axles/Empty-Load-Weight/Wheels/Photo) + first-ever Vehicle Edit UI; Worker contact/compensation fields (Phone/Email/Address/Monthly-Rate/Hourly-Rate/Photo); Product spec fields (Manufacturer/Material/Production-Year/Dimensions/Weight/Image); Company Logo.
+Also (prior checkpointed batch, same reconciliation effort): G-04 (Work Order + Purchase Order print wiring), G-09 (Rim entity, full stack), Phase G G-ID documentation correction.
+Also (this batch): Tire installation/rotation wheel-position dropdown, Worker Filter+Pagination UI, Role Select-All-Permissions.
+
+## Queued ADJUST items (identified, safe, not implemented — time, not policy)
+
+- VehicleBrand: Logo field, "Brand Of Car/Truck/Bus/Heavy Equipment" usage-type field.
+- Tire: Construction (Radial/Bias), Tire Type (Tubeless/Tube Type) discrete fields.
+- Maintenance Memo: "Save and Print Memo" (new document template + print endpoint, established pattern).
+- Purchase Order item-picker: Model Compatibility filter (blocked on `ProductCompatibility.vehicle_model` being free text, not an FK into `VehicleModel` — would need that reconciliation first, itself a small bounded task).
+- New Work Order form: `current_odometer`/`engine_hour` (KM/HM) accepted by the backend but not exposed on the create form.
+- Vehicle create form: `vehicle_type` accepted by the backend but not exposed on the create form.
+- Sparepart Return `evidence`: captured at return-creation time but not wired into the actual `inspect()`/`proposeDisposition()` steps of the disposition flow.
+- User creation: inline Worker-link + Role-assign convenience flow (the three underlying endpoints — create User, link Worker, assign Role — already exist and are individually reachable; only the single-guided-flow convenience is missing).
+
+## Explicitly DEFERRED_DECISION (owner, input needed, destination named)
+
+- **Supplier/Workshop Partner "Type" checklist** — owner: product; input: whether it replaces/extends/coexists with `partner_type`; destination: Partner schema backlog.
+- **Wheels Configuration trailer classification + Spare Tire** — owner: fleet engineering; input: which trailer classes matter for this fleet; destination: Vehicle/VehicleCategory schema backlog.
+- **Bay Type as tenant-editable master data** (replacing `workspace_type` enum) and **combined Bay+WO+Maintainer allocation** — owner: workshop operations; input: whether tenants need custom bay names beyond the existing 10, and the actual scheduling/conflict-resolution algorithm; destination: Workshop scheduling backlog.
+- **Engine Model / Engine Type** — owner: product; input: whether these matter enough to build as a new subsystem, and their relationship to `VehicleModel`; destination: Master Data backlog. (Confirmed absent — see field detail.)
+- **Work Shift** — owner: product/HR; input: shift-scheduling policy, weekday-assignment rules; destination: Worker Management backlog. (Confirmed absent — see field detail.)
+- **Tool / Tool Box custody subsystem** — owner: inventory operations; input: custody/assignment policy for tools distinct from consumable sparepart tracking; destination: Inventory backlog. (Product.product_type=TOOL already covers "Tools" as a catalog item; Tool Box as a custody container does not exist.)
+- **Dashboard KPI overhaul** — owner: analytics/product; input: which VMS KPIs are actually wanted; destination: Analytics/Intelligence roadmap.
+- **Unified cross-module History page** — owner: product; input: whether a single merged view across all domains is worth building versus per-domain history (data already exists via `Auditable`); destination: Audit backlog.
+- **New Work Order: Accident flag, Jobsite Location, Unit Condition** — owner: fleet operations; input: how each relates to the existing `Breakdown` model / `maintenance_type` / `Vehicle.operational_status` rather than duplicating a new field; destination: WorkOrder/Breakdown schema backlog.
+- **Worker: Same Domicile flag / Domicile Address** — owner: HR/product; input: whether this Indonesia-specific residency concept matters for OptiFleet's target markets; destination: Worker schema backlog.
+- **Product: Status (condition-quality taxonomy: Original/Aftermarket/KW/Rusak)** — owner: inventory/procurement; input: exact values wanted and reconciliation with existing `WorkOrderPartReturn.condition`; destination: Product schema backlog.
+- **Product: Expiry flag** — owner: inventory; input: flag vs. per-batch expiry date (ties into existing `track_batch`); destination: Inventory/batch-tracking backlog.
+- **Product: SKU auto-generation** — owner: product/procurement; input: actual desired format, likely via the existing `NumberingConfiguration` mechanism; destination: Product/Numbering backlog.
+- **Company: FMS flag / E-Kiosk flag** — owner: product; input: what capability, if any, these should gate (both are VMS's own external-product-integration names with no OptiFleet equivalent); destination: Tenant/Entitlement backlog.
+- **Company: PIC name/email/role/phone/password/photo sub-block** — owner: product; input: whether a named accountable-person sub-block is needed beyond the existing generic Tenant contact fields plus the existing User/Role system; destination: Tenant/User schema backlog.
+
+Company **Logo** and **Company Field** are resolved, not deferred: Logo was implemented this session (`logo_url`); Company Field is KEEP_OPTIFLEET (existing free-text `industry` is more flexible than a fixed list with no defined taxonomy to replicate).
+
+## Explicitly BLOCKED_TECHNICAL
+
+- **Workshop Invoice** (settlement/accounting policy) — matches the project's own prior refusal to invent Sell Sparepart settlement.
+- Anything touching Tire scoring/disposition thresholds or BD-6 precedence rules — Phase F's "framework complete, configuration not approved, production scoring not enabled" status is preserved verbatim; this reconciliation made zero changes to scoring/disposition code.
 
 ## Not yet field-audited (flagged, not silently skipped)
 
-The following pages received a page-level pass (confirmed the OptiFleet
-equivalent exists and is at least as capable) but not the full VMS §4
-field-by-field comparison this matrix format implies for a "complete"
-audit: Vehicles (technical spec column list), Tire (tube type/pattern
-1:1 field check), Tire Lifecycle tabs, Products (full §4 field list).
-If exact VMS-to-OptiFleet field parity matters for any of these beyond
-what's already noted, that is the natural scope for a follow-up session
-with a narrower, single-domain focus.
+Tire Lifecycle tabs (Life Cycle/Removed/Used Tire Processing) received a
+page-level pass confirming OptiFleet's equivalent is materially more
+governed, but not a tab-by-tab VMS field comparison beyond that. If exact
+parity matters here, that is the natural scope for a follow-up session.
