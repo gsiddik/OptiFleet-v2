@@ -20,6 +20,8 @@ class StoreVehicleBrandRequest extends FormRequest
         return [
             'code' => ['required', 'string', 'max:50', Rule::unique('vehicle_brands', 'code')->where('tenant_id', $tenantId)],
             'name' => ['required', 'string', 'max:255'],
+            'logo_url' => ['nullable', 'string', 'max:255'],
+            'usage_type' => ['nullable', 'in:CAR,TRUCK,BUS,HEAVY_EQUIPMENT'],
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
         ];
     }

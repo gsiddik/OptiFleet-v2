@@ -32,13 +32,13 @@ class UsedPartDispositionService
         private readonly InventoryService $inventory,
     ) {}
 
-    public function inspect(WorkOrderPartReturn $return, float $acceptedQuantity, string $condition, ?string $notes, string $userId): WorkOrderPartReturn
+    public function inspect(WorkOrderPartReturn $return, float $acceptedQuantity, string $condition, ?string $notes, string $userId, ?string $evidence = null): WorkOrderPartReturn
     {
         if (! in_array($condition, ['USED_GOOD', 'USED_FAULTY'], true)) {
             throw new WorkOrderException('Inspection condition must be USED_GOOD or USED_FAULTY.');
         }
 
-        return DB::transaction(function () use ($return, $acceptedQuantity, $condition, $notes, $userId) {
+        return DB::transaction(function () use ($return, $acceptedQuantity, $condition, $notes, $userId, $evidence) {
             $locked = WorkOrderPartReturn::query()->lockForUpdate()->findOrFail($return->id);
 
             if ($locked->disposition_status !== 'PENDING_INSPECTION') {
@@ -55,6 +55,8 @@ class UsedPartDispositionService
                 'inspected_by' => $userId,
                 'inspected_at' => now(),
                 'inspection_notes' => $notes,
+                // Distinct from the returner's own `evidence` — the inspector's own photo, if attached.
+                'inspection_evidence' => $evidence,
                 'disposition_status' => 'INSPECTED',
             ]);
 

@@ -68,6 +68,8 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
   const [maintenanceType, setMaintenanceType] = useState('CORRECTIVE');
   const [priority, setPriority] = useState('MEDIUM');
   const [complaint, setComplaint] = useState('');
+  const [currentOdometer, setCurrentOdometer] = useState('');
+  const [engineHour, setEngineHour] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -80,8 +82,17 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
     setSubmitting(true);
     setErrors({});
     try {
-      await apiClient.post('/app/work-orders', { vehicle_id: vehicleId, maintenance_type: maintenanceType, priority, complaint: complaint || null });
+      await apiClient.post('/app/work-orders', {
+        vehicle_id: vehicleId,
+        maintenance_type: maintenanceType,
+        priority,
+        complaint: complaint || null,
+        current_odometer: currentOdometer === '' ? null : Number(currentOdometer),
+        engine_hour: engineHour === '' ? null : Number(engineHour),
+      });
       setComplaint('');
+      setCurrentOdometer('');
+      setEngineHour('');
       onCreated();
       onClose();
     } catch (err) {
@@ -125,6 +136,14 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
       <FormField label="Complaint (optional)" errors={errors.complaint}>
         <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormField label="Current KM (optional)" errors={errors.current_odometer}>
+          <input type="number" min="0" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Current HM (optional)" errors={errors.engine_hour}>
+          <input type="number" min="0" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
+        </FormField>
+      </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel

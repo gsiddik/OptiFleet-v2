@@ -68,7 +68,7 @@ export function UsedPartDispositionPage() {
           canInspect={canInspect}
           canDispose={canDispose}
           canApprove={canApprove}
-          onInspect={(qty, cond, notes) => submit(r.id, 'inspect', { accepted_quantity: qty, condition: cond, notes: notes || undefined })}
+          onInspect={(qty, cond, notes, evidence) => submit(r.id, 'inspect', { accepted_quantity: qty, condition: cond, notes: notes || undefined, evidence: evidence || undefined })}
           onPropose={(disposition, reason) => submit(r.id, 'propose-disposition', { disposition, reason: reason || undefined })}
           onDecide={(decision, note) => submit(r.id, 'decide', { decision, note: note || undefined })}
         />
@@ -86,13 +86,14 @@ function RowCard({
   canInspect: boolean;
   canDispose: boolean;
   canApprove: boolean;
-  onInspect: (qty: string, condition: string, notes: string) => void;
+  onInspect: (qty: string, condition: string, notes: string, evidence: string) => void;
   onPropose: (disposition: string, reason: string) => void;
   onDecide: (decision: 'APPROVE' | 'REJECT', note: string) => void;
 }) {
   const [acceptedQty, setAcceptedQty] = useState(item.quantity);
   const [inspectCondition, setInspectCondition] = useState<'USED_GOOD' | 'USED_FAULTY'>(item.condition === 'USED_FAULTY' ? 'USED_FAULTY' : 'USED_GOOD');
   const [notes, setNotes] = useState('');
+  const [inspectionEvidence, setInspectionEvidence] = useState('');
   const [disposition, setDisposition] = useState<string>(DISPOSITIONS[0]);
   const [reason, setReason] = useState('');
   const [decideNote, setDecideNote] = useState('');
@@ -112,12 +113,20 @@ function RowCard({
           {item.evidence && (
             <>
               {item.reason && ' · '}
-              Evidence:{' '}
+              Return evidence:{' '}
               <a href={item.evidence} target="_blank" rel="noreferrer">
                 {item.evidence}
               </a>
             </>
           )}
+        </div>
+      )}
+      {item.inspection_evidence && (
+        <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
+          Inspection evidence:{' '}
+          <a href={item.inspection_evidence} target="_blank" rel="noreferrer">
+            {item.inspection_evidence}
+          </a>
         </div>
       )}
 
@@ -129,7 +138,8 @@ function RowCard({
             <option value="USED_FAULTY">Used — Faulty</option>
           </select>
           <input placeholder="Inspection notes" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
-          <button className="btn-primary" disabled={busy || !acceptedQty} onClick={() => onInspect(acceptedQty, inspectCondition, notes)}>
+          <input placeholder="Evidence photo URL (optional)" value={inspectionEvidence} onChange={(e) => setInspectionEvidence(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+          <button className="btn-primary" disabled={busy || !acceptedQty} onClick={() => onInspect(acceptedQty, inspectCondition, notes, inspectionEvidence)}>
             Record Inspection
           </button>
         </div>

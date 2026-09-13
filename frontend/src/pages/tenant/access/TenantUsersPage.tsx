@@ -8,7 +8,7 @@ import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { Branch, RoleItem, Warehouse, Workshop } from '../../../types';
+import type { Branch, RoleItem, Warehouse, Workshop, WorkerItem } from '../../../types';
 
 interface TenantUserRow {
   id: string;
@@ -76,7 +76,13 @@ export function TenantUsersPage() {
       {!error && !loading && data.length === 0 && <EmptyState label="No users found." />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
-      <InviteModal open={showInvite} onClose={() => setShowInvite(false)} onSaved={() => setReloadKey((k) => k + 1)} />
+      <InviteModal
+        open={showInvite}
+        onClose={() => setShowInvite(false)}
+        onSaved={() => setReloadKey((k) => k + 1)}
+        canLinkWorker={hasPermission('worker.manage')}
+        canAssignRole={hasPermission('user.assign')}
+      />
       {managing && (
         <ManageAccessModal
           row={managing}
@@ -91,23 +97,74 @@ export function TenantUsersPage() {
   );
 }
 
-function InviteModal({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: () => void }) {
+function InviteModal({
+  open,
+  onClose,
+  onSaved,
+  canLinkWorker,
+  canAssignRole,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+  canLinkWorker: boolean;
+  canAssignRole: boolean;
+}) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [workers, setWorkers] = useState<WorkerItem[]>([]);
+  const [workerId, setWorkerId] = useState('');
+  const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [roleId, setRoleId] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  useEffect(() => {
+    if (!open) return;
+    if (canLinkWorker) {
+      apiClient.get('/app/workers', { params: { per_page: 200 } }).then((res) => setWorkers(res.data.data.filter((w: WorkerItem) => !w.user_id))).catch(() => setWorkers([]));
+    }
+    if (canAssignRole) {
+      apiClient.get('/app/roles', { params: { per_page: 100 } }).then((res) => setRoles(res.data.data)).catch(() => setRoles([]));
+    }
+  }, [open, canLinkWorker, canAssignRole]);
+
+  // Convenience only: chains the three already-independently-reachable endpoints
+  // (create user, link worker, assign role) in one guided flow. Each remains
+  // separately usable afterward (e.g. to relink/reassign) — nothing is removed.
   async function submit() {
     setSubmitting(true);
     setErrors({});
+    setFollowUpError(null);
     try {
-      await apiClient.post('/app/users', { name, email, password });
+      const created = await apiClient.post('/app/users', { name, email, password });
+      const userId = created.data.data.user.id;
+      const membershipId = created.data.data.membership.id;
+
+      if (workerId) {
+        try {
+          await apiClient.post(`/app/workers/${workerId}/link-user`, { user_id: userId });
+        } catch (err) {
+          setFollowUpError(`User created, but linking the worker failed: ${extractApiError(err).message}`);
+        }
+      }
+      if (roleId) {
+        try {
+          await apiClient.post(`/app/users/${membershipId}/roles`, { role_id: roleId });
+        } catch (err) {
+          setFollowUpError((prev) => prev ?? `User created, but assigning the role failed: ${extractApiError(err).message}`);
+        }
+      }
+
       setName('');
       setEmail('');
       setPassword('');
+      setWorkerId('');
+      setRoleId('');
       onSaved();
-      onClose();
+      if (!workerId && !roleId) onClose();
     } catch (err) {
       const apiError: ApiErrorShape = extractApiError(err);
       setErrors(apiError.errors ?? {});
@@ -127,9 +184,34 @@ function InviteModal({ open, onClose, onSaved }: { open: boolean; onClose: () =>
       <FormField label="Password" errors={errors.password}>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
       </FormField>
+      {canLinkWorker && (
+        <FormField label="Link to Worker (optional)">
+          <select value={workerId} onChange={(e) => setWorkerId(e.target.value)} style={inputStyle}>
+            <option value="">Don't link</option>
+            {workers.map((w) => (
+              <option key={w.id} value={w.id}>
+                {w.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      )}
+      {canAssignRole && (
+        <FormField label="Assign Role (optional)">
+          <select value={roleId} onChange={(e) => setRoleId(e.target.value)} style={inputStyle}>
+            <option value="">Don't assign</option>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      )}
+      {followUpError && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 8 }}>{followUpError}</div>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {followUpError ? 'Close' : 'Cancel'}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
           {submitting ? 'Adding…' : 'Add User'}

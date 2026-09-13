@@ -68,6 +68,8 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
   const [manufacturer, setManufacturer] = useState('');
   const [manufactureDateCode, setManufactureDateCode] = useState('');
   const [tireSize, setTireSize] = useState('');
+  const [constructionType, setConstructionType] = useState('');
+  const [tubeType, setTubeType] = useState('');
   const [sectionWidthMm, setSectionWidthMm] = useState('');
   const [aspectRatio, setAspectRatio] = useState('');
   const [rimDiameterInch, setRimDiameterInch] = useState('');
@@ -89,6 +91,7 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
       await apiClient.post('/app/tires', {
         product_id: productId, serial_number: serialNumber, manufacturer: manufacturer || undefined,
         manufacture_date_code: manufactureDateCode || undefined, tire_size: tireSize || undefined,
+        construction_type: constructionType || undefined, tube_type: tubeType || undefined,
         section_width_mm: sectionWidthMm || undefined, aspect_ratio: aspectRatio || undefined,
         rim_diameter_inch: rimDiameterInch || undefined, load_index: loadIndex || undefined,
         speed_rating: speedRating || undefined, ply_rating: plyRating || undefined,
@@ -97,6 +100,8 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
       setManufacturer('');
       setManufactureDateCode('');
       setTireSize('');
+      setConstructionType('');
+      setTubeType('');
       setSectionWidthMm('');
       setAspectRatio('');
       setRimDiameterInch('');
@@ -137,6 +142,22 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
       <FormField label="Tire Size" errors={errors.tire_size}>
         <input value={tireSize} onChange={(e) => setTireSize(e.target.value)} placeholder="e.g. 295/80R22.5" style={inputStyle} />
       </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+        <FormField label="Construction" errors={errors.construction_type}>
+          <select value={constructionType} onChange={(e) => setConstructionType(e.target.value)} style={inputStyle}>
+            <option value="">Unspecified</option>
+            <option value="RADIAL">Radial</option>
+            <option value="BIAS">Bias</option>
+          </select>
+        </FormField>
+        <FormField label="Tire Type" errors={errors.tube_type}>
+          <select value={tubeType} onChange={(e) => setTubeType(e.target.value)} style={inputStyle}>
+            <option value="">Unspecified</option>
+            <option value="TUBELESS">Tubeless</option>
+            <option value="TUBE">Tube</option>
+          </select>
+        </FormField>
+      </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
         <FormField label="Section Width (mm)" errors={errors.section_width_mm}>
           <input type="number" min="1" value={sectionWidthMm} onChange={(e) => setSectionWidthMm(e.target.value)} style={inputStyle} />

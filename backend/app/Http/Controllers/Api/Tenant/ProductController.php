@@ -20,7 +20,7 @@ class ProductController extends Controller
 
     public function index(Request $request)
     {
-        $query = Product::query()->with(['category', 'uom']);
+        $query = Product::query()->with(['category', 'uom', 'compatibilities']);
 
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(fn ($q) => $q->where('name', 'ilike', "%{$search}%")->orWhere('sku', 'ilike', "%{$search}%")->orWhere('code', 'ilike', "%{$search}%"));

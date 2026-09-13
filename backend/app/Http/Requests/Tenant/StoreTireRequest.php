@@ -45,6 +45,8 @@ class StoreTireRequest extends FormRequest
             'manufacture_date_code' => ['nullable', 'string', 'max:20'],
             'tire_size' => ['nullable', 'string', 'max:50'],
             'pattern' => ['nullable', 'string', 'max:100'],
+            'construction_type' => ['nullable', 'in:RADIAL,BIAS'],
+            'tube_type' => ['nullable', 'in:TUBELESS,TUBE'],
             'section_width_mm' => ['nullable', 'integer', 'min:1'],
             'aspect_ratio' => ['nullable', 'integer', 'min:1', 'max:100'],
             'rim_diameter_inch' => ['nullable', 'numeric', 'min:1'],

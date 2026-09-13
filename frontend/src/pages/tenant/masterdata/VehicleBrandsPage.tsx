@@ -44,6 +44,7 @@ export function VehicleBrandsPage() {
   const columns: Column<VehicleBrandItem>[] = [
     { key: 'code', header: 'Code', render: (b) => b.code },
     { key: 'name', header: 'Name', render: (b) => b.name },
+    { key: 'usage_type', header: 'Brand Of', render: (b) => b.usage_type ?? '—' },
     { key: 'is_system', header: 'Source', render: (b) => (b.is_system ? 'System' : 'Tenant') },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
     {
@@ -141,6 +142,8 @@ function BrandFormModal({
 }) {
   const [code, setCode] = useState(brand?.code ?? '');
   const [name, setName] = useState(brand?.name ?? '');
+  const [logoUrl, setLogoUrl] = useState(brand?.logo_url ?? '');
+  const [usageType, setUsageType] = useState(brand?.usage_type ?? '');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -148,10 +151,11 @@ function BrandFormModal({
     setSubmitting(true);
     setErrors({});
     try {
+      const payload = { name, logo_url: logoUrl || null, usage_type: usageType || null };
       if (brand) {
-        await apiClient.put(`/app/vehicle-brands/${brand.id}`, { name });
+        await apiClient.put(`/app/vehicle-brands/${brand.id}`, payload);
       } else {
-        await apiClient.post('/app/vehicle-brands', { code, name });
+        await apiClient.post('/app/vehicle-brands', { code, ...payload });
       }
       onSaved();
     } catch (err) {
@@ -170,6 +174,19 @@ function BrandFormModal({
       <FormField label="Name" errors={errors.name}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
+      <FormField label="Brand Of (optional)" errors={errors.usage_type}>
+        <select value={usageType} onChange={(e) => setUsageType(e.target.value)} style={inputStyle}>
+          <option value="">Unspecified</option>
+          <option value="CAR">Car</option>
+          <option value="TRUCK">Truck</option>
+          <option value="BUS">Bus</option>
+          <option value="HEAVY_EQUIPMENT">Heavy Equipment</option>
+        </select>
+      </FormField>
+      <FormField label="Logo URL (optional)" errors={errors.logo_url}>
+        <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} style={inputStyle} />
+      </FormField>
+      {logoUrl && <img src={logoUrl} alt={name} style={{ maxWidth: 100, marginBottom: 12, borderRadius: 4 }} />}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel

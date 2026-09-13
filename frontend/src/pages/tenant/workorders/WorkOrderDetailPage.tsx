@@ -1277,6 +1277,21 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
     }
   }
 
+  /** Final reconciliation (queued ADJUST): VMS's Maintenance Memo "Save and Print". */
+  async function printMemo(serviceId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await apiClient.get(`/app/work-orders/${wo.id}/external-services/${serviceId}/print`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="card">
       <h3 style={{ marginTop: 0, fontSize: 15 }}>External Services</h3>
@@ -1304,20 +1319,23 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
               </a>
             </div>
           )}
-          {s.status === 'REQUESTED' && (
-            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              {hasPermission('work_order_external_service.complete') && (
-                <button className="btn-primary" disabled={busy} onClick={() => complete(s.id)}>
-                  Complete
-                </button>
-              )}
-              {hasPermission('work_order_external_service.cancel') && (
-                <button className="btn-secondary" disabled={busy} onClick={() => cancel(s.id)}>
-                  Cancel
-                </button>
-              )}
-            </div>
-          )}
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            {s.status === 'REQUESTED' && hasPermission('work_order_external_service.complete') && (
+              <button className="btn-primary" disabled={busy} onClick={() => complete(s.id)}>
+                Complete
+              </button>
+            )}
+            {s.status === 'REQUESTED' && hasPermission('work_order_external_service.cancel') && (
+              <button className="btn-secondary" disabled={busy} onClick={() => cancel(s.id)}>
+                Cancel
+              </button>
+            )}
+            {hasPermission('work_order.view') && (
+              <button className="btn-secondary" disabled={busy} onClick={() => printMemo(s.id)}>
+                Print Memo
+              </button>
+            )}
+          </div>
         </div>
       ))}
       {hasPermission('work_order_external_service.create') && (

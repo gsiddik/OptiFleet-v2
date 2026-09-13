@@ -533,14 +533,16 @@ export function TireDetailPage() {
           <strong>Vehicle:</strong> {tire.current_vehicle?.registration_number ?? '—'} &nbsp; <strong>Position:</strong> {tire.current_position ?? '—'} &nbsp;
           <strong>Warehouse:</strong> {tire.current_warehouse?.name ?? '—'}
         </p>
-        {(tire.section_width_mm || tire.aspect_ratio || tire.rim_diameter_inch || tire.load_index || tire.speed_rating || tire.ply_rating) && (
+        {(tire.section_width_mm || tire.aspect_ratio || tire.rim_diameter_inch || tire.load_index || tire.speed_rating || tire.ply_rating || tire.construction_type || tire.tube_type) && (
           <p style={{ fontSize: 13, color: '#6b7280' }}>
             <strong>Section Width:</strong> {tire.section_width_mm ? `${tire.section_width_mm}mm` : '—'} &nbsp;
             <strong>Aspect Ratio:</strong> {tire.aspect_ratio ? `${tire.aspect_ratio}%` : '—'} &nbsp;
             <strong>Rim Diameter:</strong> {tire.rim_diameter_inch ? `${tire.rim_diameter_inch}"` : '—'} &nbsp;
             <strong>Load Index:</strong> {tire.load_index ?? '—'} &nbsp;
             <strong>Speed Rating:</strong> {tire.speed_rating ?? '—'} &nbsp;
-            <strong>Ply Rating:</strong> {tire.ply_rating ?? '—'}
+            <strong>Ply Rating:</strong> {tire.ply_rating ?? '—'} &nbsp;
+            <strong>Construction:</strong> {tire.construction_type ?? '—'} &nbsp;
+            <strong>Type:</strong> {tire.tube_type ?? '—'}
           </p>
         )}
       </div>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\AccessControl\Models\Role;
 use App\Domain\Identity\Models\TenantUser;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -54,6 +55,40 @@ class WorkerUserLinkTest extends TestCase
         $id = $create->json('data.id');
         $this->putJson("/api/v1/app/workers/{$id}", ['address' => 'Jl. Contoh No. 5'], $headers)
             ->assertOk()->assertJsonPath('data.address', 'Jl. Contoh No. 5');
+    }
+
+    /**
+     * Final reconciliation (queued ADJUST): the frontend "Add User" flow now
+     * chains create-user -> link-worker -> assign-role as a convenience —
+     * this proves the three already-independent endpoints compose correctly
+     * end-to-end in that exact sequence, using the exact response shapes
+     * (`data.user.id`, `data.membership.id`) the frontend reads.
+     */
+    public function test_user_creation_can_be_chained_with_worker_link_and_role_assignment(): void
+    {
+        [$tenant, $token, $worker] = $this->setUpTenant();
+        $this->grantModule($tenant, 'ACCESS_MANAGEMENT');
+        $role = Role::query()->create(['tenant_id' => $tenant->id, 'name' => 'Mechanic', 'scope' => 'tenant', 'is_system' => false]);
+        [, $adminToken] = $this->makeTenantUser($tenant, ['user.create', 'worker.manage', 'user.assign']);
+        $headers = $this->authHeaders($adminToken);
+
+        $create = $this->postJson('/api/v1/app/users', [
+            'name' => 'Budi Santoso', 'email' => 'budi.santoso@example.test', 'password' => 'password123',
+        ], $headers)->assertStatus(201);
+
+        $userId = $create->json('data.user.id');
+        $membershipId = $create->json('data.membership.id');
+        $this->assertNotEmpty($userId);
+        $this->assertNotEmpty($membershipId);
+
+        $this->postJson("/api/v1/app/workers/{$worker->id}/link-user", ['user_id' => $userId], $headers)
+            ->assertOk()->assertJsonPath('data.user_id', $userId);
+
+        $this->postJson("/api/v1/app/users/{$membershipId}/roles", ['role_id' => $role->id], $headers)->assertOk();
+
+        $list = $this->getJson('/api/v1/app/users', $headers)->assertOk();
+        $row = collect($list->json('data'))->firstWhere('id', $membershipId);
+        $this->assertContains('Mechanic', $row['roles']);
     }
 
     public function test_worker_cannot_be_linked_to_a_user_outside_the_tenant(): void

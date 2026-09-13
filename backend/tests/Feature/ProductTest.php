@@ -101,4 +101,27 @@ class ProductTest extends TestCase
         $this->assertSame($specificProduct->id, $ids[0]);
         $this->assertContains($genericProduct->id, $ids);
     }
+
+    /** Final reconciliation (queued ADJUST): the PO/PR item-picker's Model Compatibility filter needs `compatibilities` on the list endpoint, not just show(). */
+    public function test_product_list_eager_loads_compatibilities_for_the_item_picker_model_filter(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'PRDL-'.Str::random(4)]);
+        $this->grantModule($tenant, 'VEHICLE');
+        $this->grantModule($tenant, 'INVENTORY');
+        $category = $this->makeVehicleCategory();
+        $componentGroup = $this->makeComponentGroup();
+        $product = $this->makeProduct($tenant, null, null, ['name' => 'Hino Ranger Brake Pad']);
+
+        ProductCompatibility::query()->create([
+            'tenant_id' => $tenant->id, 'product_id' => $product->id, 'component_group_id' => $componentGroup->id,
+            'vehicle_category_id' => $category->id, 'vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger',
+        ]);
+
+        [, $token] = $this->makeTenantUser($tenant, ['product.view']);
+
+        $list = $this->getJson('/api/v1/app/products', $this->authHeaders($token))->assertOk();
+        $entry = collect($list->json('data'))->firstWhere('id', $product->id);
+
+        $this->assertSame('Ranger', $entry['compatibilities'][0]['vehicle_model']);
+    }
 }

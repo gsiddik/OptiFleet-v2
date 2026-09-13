@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Configuration\Services\DocumentTemplateService;
 use App\Domain\Partner\Models\PartnerPerformanceEvent;
 use App\Domain\WorkOrder\Models\WorkOrderExternalService;
 use Illuminate\Support\Str;
@@ -185,6 +186,50 @@ class WorkOrderExternalServiceTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$woId}/external-services", [
             'partner_id' => $partner->id, 'description' => 'No permission for this',
         ], $this->authHeaders($token))->assertStatus(403);
+    }
+
+    /** Final reconciliation (queued ADJUST): VMS's Maintenance Memo "Save and Print". */
+    public function test_maintenance_memo_can_be_printed_once_a_template_is_published(): void
+    {
+        $scenario = $this->setUpTenant();
+        [$tenant] = $scenario;
+        [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $partner = $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
+        $woId = $this->createInProgressWorkOrder($scenario, $token);
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson("/api/v1/app/work-orders/{$woId}/external-services", [
+            'partner_id' => $partner->id, 'description' => 'Engine overhaul at partner workshop',
+        ], $headers)->assertStatus(201);
+        $serviceId = $create->json('data.id');
+
+        $templates = app(DocumentTemplateService::class);
+        $set = $templates->findOrCreateSet($tenant->id, 'maintenance_memo', 'TENANT', null, 'Maintenance Memo');
+        $templates->publish($templates->createDraft($set, [
+            'html' => 'Memo for {{work_order.number}} — {{maintenance_memo.description}} at {{partner.name}}',
+        ], null), 'maintenance_memo', null);
+
+        $response = $this->getJson("/api/v1/app/work-orders/{$woId}/external-services/{$serviceId}/print", $headers);
+        $response->assertStatus(200);
+        $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
+    }
+
+    public function test_maintenance_memo_print_belongs_to_correct_work_order(): void
+    {
+        $scenario = $this->setUpTenant();
+        [$tenant] = $scenario;
+        [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $partner = $this->makePartner($tenant, ['partner_type' => 'TOWING_PROVIDER']);
+        $woAId = $this->createInProgressWorkOrder($scenario, $token);
+        $woBId = $this->createInProgressWorkOrder($scenario, $token);
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson("/api/v1/app/work-orders/{$woAId}/external-services", [
+            'partner_id' => $partner->id, 'description' => 'Belongs to WO A',
+        ], $headers)->assertStatus(201);
+        $serviceId = $create->json('data.id');
+
+        $this->getJson("/api/v1/app/work-orders/{$woBId}/external-services/{$serviceId}/print", $headers)->assertStatus(404);
     }
 
     public function test_cross_tenant_work_order_cannot_receive_external_service(): void

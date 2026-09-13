@@ -80,6 +80,20 @@ class UsedPartDispositionTest extends TestCase
         $this->assertSame('PENDING_INSPECTION', $return->fresh()->disposition_status);
     }
 
+    /** Final reconciliation (queued ADJUST): inspector's own evidence photo, distinct from the returner's `evidence`. */
+    public function test_inspection_evidence_is_optional_and_stored_separately_from_return_evidence(): void
+    {
+        [, , , $return, $headers] = $this->setUpUsedReturn();
+
+        $response = $this->postJson("/api/v1/app/used-part-returns/{$return->id}/inspect", [
+            'accepted_quantity' => 5, 'condition' => 'USED_GOOD',
+            'evidence' => 'https://files.example/inspection-photo.jpg',
+        ], $headers)->assertOk();
+
+        $this->assertSame('https://files.example/inspection-photo.jpg', $response->json('data.inspection_evidence'));
+        $this->assertNull($response->json('data.evidence'));
+    }
+
     public function test_decide_before_proposal_is_rejected(): void
     {
         [, , , $return, $headers] = $this->setUpUsedReturn();

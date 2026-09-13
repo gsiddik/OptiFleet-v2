@@ -272,6 +272,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/external-services', [WorkOrderExternalServiceController::class, 'store'])->middleware('permission:work_order_external_service.create');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/complete', [WorkOrderExternalServiceController::class, 'complete'])->middleware('permission:work_order_external_service.complete');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/cancel', [WorkOrderExternalServiceController::class, 'cancel'])->middleware('permission:work_order_external_service.cancel');
+            Route::get('/work-orders/{workOrder}/external-services/{externalService}/print', [WorkOrderExternalServiceController::class, 'print'])->middleware('permission:work_order.view');
             Route::post('/work-orders/{workOrder}/mechanics', [WorkOrderExecutionController::class, 'assignMechanic'])->middleware('permission:worker.assign');
             Route::post('/work-orders/{workOrder}/mechanics/{assignment}/unassign', [WorkOrderExecutionController::class, 'unassignMechanic'])->middleware('permission:worker.assign');
             Route::post('/work-orders/{workOrder}/jobs/{job}/labor/start', [WorkOrderExecutionController::class, 'startLabor'])->middleware('permission:maintenance_job.manage');

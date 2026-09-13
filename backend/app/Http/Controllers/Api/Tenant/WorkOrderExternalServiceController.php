@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Configuration\Services\DocumentPdfService;
+use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
+use App\Domain\Configuration\Services\DocumentTemplateRenderService;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalService;
@@ -54,6 +57,26 @@ class WorkOrderExternalServiceController extends Controller
         abort_unless($externalService->work_order_id === $workOrder->id, 404);
 
         return $this->ok($this->externalServices->cancel($externalService, $this->context->user()->id));
+    }
+
+    /**
+     * Final reconciliation (queued ADJUST): VMS's Maintenance Memo "Save
+     * and Print" — mirrors WorkOrderController::print()'s effective-
+     * template render + PDF pattern exactly, for the 'maintenance_memo'
+     * document type.
+     */
+    public function print(WorkOrder $workOrder, WorkOrderExternalService $externalService, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($externalService->work_order_id === $workOrder->id, 404);
+
+        $context = DocumentTemplateContextBuilder::forMaintenanceMemo($externalService);
+        $rendered = $templates->render('maintenance_memo', $context, $workOrder->tenant_id, $workOrder->branch_id, $workOrder->workshop_id);
+
+        return response($pdf->fromHtml($rendered['html']), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="memo-'.$externalService->id.'.pdf"',
+        ]);
     }
 
     private function authorizeScope(WorkOrder $workOrder): void

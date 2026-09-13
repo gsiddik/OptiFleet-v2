@@ -65,11 +65,12 @@ class UsedPartDispositionController extends Controller
             'accepted_quantity' => ['required', 'numeric', 'gt:0'],
             'condition' => ['required', 'string', 'in:USED_GOOD,USED_FAULTY'],
             'notes' => ['nullable', 'string'],
+            'evidence' => ['nullable', 'string', 'max:255'],
         ]);
 
         return $this->ok($this->dispositions->inspect(
             $usedPartReturn, (float) $validated['accepted_quantity'], $validated['condition'],
-            $validated['notes'] ?? null, $this->context->user()->id,
+            $validated['notes'] ?? null, $this->context->user()->id, $validated['evidence'] ?? null,
         ));
     }
 

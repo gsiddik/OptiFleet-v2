@@ -78,6 +78,17 @@ class TemplateVariableRegistry
                 'items' => ['product_name', 'requested_quantity', 'estimated_unit_price'],
             ],
         ],
+        'maintenance_memo' => [
+            'scalars' => [
+                'maintenance_memo.reference_number', 'maintenance_memo.description', 'maintenance_memo.condition_notes',
+                'maintenance_memo.priority', 'maintenance_memo.status', 'maintenance_memo.cost',
+                'maintenance_memo.requested_at', 'maintenance_memo.completed_at',
+                'partner.name', 'partner.address', 'partner.contact_name', 'partner.contact_phone',
+                'work_order.number', 'work_order.maintenance_type',
+                'vehicle.registration_number', 'vehicle.brand', 'vehicle.model',
+            ],
+            'sections' => [],
+        ],
         'purchase_order' => [
             'scalars' => [
                 'purchase_order.number', 'purchase_order.status', 'purchase_order.order_date',

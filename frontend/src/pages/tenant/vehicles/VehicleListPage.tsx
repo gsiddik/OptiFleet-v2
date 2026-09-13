@@ -75,6 +75,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [vehicleModelId, setVehicleModelId] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [vin, setVin] = useState('');
+  const [vehicleType, setVehicleType] = useState('');
   const [currentOdometer, setCurrentOdometer] = useState('0');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -111,6 +112,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         vehicle_model_id: vehicleModelId || undefined,
         registration_number: registrationNumber,
         vin: vin || null,
+        vehicle_type: vehicleType || null,
         current_odometer: currentOdometer,
       });
       setBrand('');
@@ -119,6 +121,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
       setVehicleModelId('');
       setRegistrationNumber('');
       setVin('');
+      setVehicleType('');
       onCreated();
       onClose();
     } catch (err) {
@@ -183,6 +186,9 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         </FormField>
         <FormField label="VIN (optional)" errors={errors.vin}>
           <input value={vin} onChange={(e) => setVin(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Vehicle Type (optional)" errors={errors.vehicle_type}>
+          <input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle} placeholder="e.g. Truck, Pickup, Bus" />
         </FormField>
         <FormField label="Current Odometer" errors={errors.current_odometer}>
           <input type="number" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />

@@ -5,6 +5,7 @@ namespace App\Domain\Configuration\Services;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Models\WorkOrderExternalService;
 
 /**
  * Section 13/51: the only place a live Eloquent document is turned into a
@@ -88,6 +89,52 @@ class DocumentTemplateContextBuilder
                 'tax_percent' => (string) $item->tax_percent,
                 'line_total' => (string) $item->line_total,
             ])->all(),
+        ];
+    }
+
+    /**
+     * Final reconciliation (queued ADJUST): VMS's Maintenance Memo "Save
+     * and Print" — maps to WorkOrderExternalService (the outsourced-work
+     * record sent to a Workshop Partner), not the unrelated `MaintenanceRequest`
+     * domain that already owns the pre-existing (and separately unused)
+     * 'maintenance_report' template type.
+     */
+    public static function forMaintenanceMemo(WorkOrderExternalService $service): array
+    {
+        $service->loadMissing(['partner', 'workOrder.vehicle']);
+        $tenant = Tenant::query()->find($service->tenant_id);
+        $workOrder = $service->workOrder;
+
+        return [
+            'company' => self::company(),
+            'tenant' => ['name' => $tenant?->name, 'code' => $tenant?->code],
+            'document_number' => $service->reference_number ?? $service->id,
+            'configuration_version' => null,
+            'maintenance_memo' => [
+                'reference_number' => $service->reference_number,
+                'description' => $service->description,
+                'condition_notes' => $service->condition_notes,
+                'priority' => $service->priority,
+                'status' => $service->status,
+                'cost' => (string) $service->cost,
+                'requested_at' => optional($service->requested_at)->toDateTimeString(),
+                'completed_at' => optional($service->completed_at)->toDateTimeString(),
+            ],
+            'partner' => [
+                'name' => $service->partner?->name,
+                'address' => $service->partner?->address,
+                'contact_name' => $service->partner?->contact_name,
+                'contact_phone' => $service->partner?->contact_phone,
+            ],
+            'work_order' => [
+                'number' => $workOrder?->wo_number,
+                'maintenance_type' => $workOrder?->maintenance_type,
+            ],
+            'vehicle' => [
+                'registration_number' => $workOrder?->vehicle?->registration_number,
+                'brand' => $workOrder?->vehicle?->brand,
+                'model' => $workOrder?->vehicle?->model,
+            ],
         ];
     }
 

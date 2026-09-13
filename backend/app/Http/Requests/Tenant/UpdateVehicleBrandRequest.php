@@ -15,6 +15,8 @@ class UpdateVehicleBrandRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
+            'logo_url' => ['nullable', 'string', 'max:255'],
+            'usage_type' => ['nullable', 'in:CAR,TRUCK,BUS,HEAVY_EQUIPMENT'],
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
         ];
     }

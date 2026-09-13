@@ -121,6 +121,8 @@ export interface VehicleBrandItem {
   tenant_id: string | null;
   code: string;
   name: string;
+  logo_url: string | null;
+  usage_type: 'CAR' | 'TRUCK' | 'BUS' | 'HEAVY_EQUIPMENT' | null;
   is_system: boolean;
   status: 'ACTIVE' | 'INACTIVE';
 }
@@ -933,6 +935,7 @@ export interface WorkOrderPartReturnItem {
   accepted_quantity: string | null;
   inspected_at: string | null;
   inspection_notes: string | null;
+  inspection_evidence: string | null;
   disposition: 'REPAIR' | 'REUSE' | 'QUARANTINE' | 'SCRAP' | 'SELL_ELIGIBLE' | null;
   disposition_reason: string | null;
   proposed_by: string | null;
@@ -1336,6 +1339,8 @@ export interface TireItem {
   manufacture_date_code: string | null;
   tire_size: string | null;
   pattern: string | null;
+  construction_type: 'RADIAL' | 'BIAS' | null;
+  tube_type: 'TUBELESS' | 'TUBE' | null;
   section_width_mm: number | null;
   aspect_ratio: number | null;
   rim_diameter_inch: string | null;

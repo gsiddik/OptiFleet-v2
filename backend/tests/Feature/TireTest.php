@@ -70,6 +70,32 @@ class TireTest extends TestCase
         $this->assertSame(18, $create->json('data.ply_rating'));
     }
 
+    /** Final reconciliation (queued ADJUST): Construction/Tube Type were the only two VMS-listed spec fields still missing after G-11. */
+    public function test_tire_construction_and_tube_type_are_optional_and_stored(): void
+    {
+        [$tenant, , $product] = $this->setUpScenario();
+        [, $token] = $this->makeTenantUser($tenant, $this->makeTirePermissions());
+
+        $create = $this->postJson('/api/v1/app/tires', [
+            'serial_number' => 'TIRE-SN-CONSTR-001', 'product_id' => $product->id,
+            'construction_type' => 'RADIAL', 'tube_type' => 'TUBELESS',
+        ], $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertSame('RADIAL', $create->json('data.construction_type'));
+        $this->assertSame('TUBELESS', $create->json('data.tube_type'));
+
+        $this->postJson('/api/v1/app/tires', [
+            'serial_number' => 'TIRE-SN-CONSTR-002', 'product_id' => $product->id,
+        ], $this->authHeaders($token))
+            ->assertStatus(201)
+            ->assertJsonPath('data.construction_type', null)
+            ->assertJsonPath('data.tube_type', null);
+
+        $this->postJson('/api/v1/app/tires', [
+            'serial_number' => 'TIRE-SN-CONSTR-003', 'product_id' => $product->id, 'construction_type' => 'INVALID',
+        ], $this->authHeaders($token))->assertStatus(422);
+    }
+
     public function test_tire_can_still_be_created_without_any_discrete_spec_fields(): void
     {
         [$tenant, , $product] = $this->setUpScenario();

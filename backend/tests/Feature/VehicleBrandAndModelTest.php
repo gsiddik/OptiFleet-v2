@@ -106,6 +106,29 @@ class VehicleBrandAndModelTest extends TestCase
         $this->deleteJson("/api/v1/app/vehicle-brands/{$brandId}", [], $headers)->assertStatus(422);
     }
 
+    public function test_brand_logo_and_usage_type_are_optional_and_stored(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $headers = $this->authHeaders($token);
+
+        $response = $this->postJson('/api/v1/app/vehicle-brands', [
+            'code' => 'HINO', 'name' => 'Hino', 'logo_url' => 'https://files.example/hino.png', 'usage_type' => 'TRUCK',
+        ], $headers)->assertStatus(201);
+
+        $this->assertSame('https://files.example/hino.png', $response->json('data.logo_url'));
+        $this->assertSame('TRUCK', $response->json('data.usage_type'));
+
+        $brandId = $response->json('data.id');
+        $this->postJson('/api/v1/app/vehicle-brands', ['code' => 'ISUZU', 'name' => 'Isuzu'], $headers)
+            ->assertStatus(201)
+            ->assertJsonPath('data.logo_url', null)
+            ->assertJsonPath('data.usage_type', null);
+
+        $this->putJson("/api/v1/app/vehicle-brands/{$brandId}", ['name' => 'Hino', 'usage_type' => 'BUS'], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.usage_type', 'BUS');
+    }
+
     public function test_brand_and_model_are_isolated_from_another_tenants_records(): void
     {
         [, $token] = $this->setUpTenant();

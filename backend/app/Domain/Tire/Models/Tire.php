@@ -19,6 +19,7 @@ class Tire extends Model
 
     protected $fillable = [
         'tenant_id', 'serial_number', 'product_id', 'manufacturer', 'manufacture_date_code', 'tire_size', 'pattern',
+        'construction_type', 'tube_type',
         'section_width_mm', 'aspect_ratio', 'rim_diameter_inch', 'load_index', 'speed_rating', 'ply_rating',
         'purchase_date', 'purchase_cost', 'warranty_months', 'warranty_km',
         'current_status', 'current_vehicle_id', 'current_position', 'current_warehouse_id',

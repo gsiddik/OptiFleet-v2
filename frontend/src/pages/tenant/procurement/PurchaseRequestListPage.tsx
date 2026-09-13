@@ -63,6 +63,7 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
   const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [brandFilter, setBrandFilter] = useState('');
+  const [modelFilter, setModelFilter] = useState('');
   const [warehouseId, setWarehouseId] = useState('');
   const [sourceType, setSourceType] = useState<'MANUAL' | 'WORK_ORDER'>('MANUAL');
   const [workOrders, setWorkOrders] = useState<WorkOrderItem[]>([]);
@@ -107,9 +108,13 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
     }).catch(() => setWorkOrderProducts([]));
   }, [workOrderId, products]);
 
-  const filteredProducts = ((sourceType === 'WORK_ORDER' ? workOrderProducts : products)).filter((p) =>
-    brandFilter ? (p.brand ?? '').toLowerCase().includes(brandFilter.toLowerCase()) : true,
-  );
+  const filteredProducts = ((sourceType === 'WORK_ORDER' ? workOrderProducts : products))
+    .filter((p) => (brandFilter ? (p.brand ?? '').toLowerCase().includes(brandFilter.toLowerCase()) : true))
+    .filter((p) =>
+      modelFilter
+        ? (p.compatibilities ?? []).some((c) => (c.vehicle_model ?? '').toLowerCase().includes(modelFilter.toLowerCase()))
+        : true,
+    );
 
   useEffect(() => {
     if (productId && !filteredProducts.some((p) => p.id === productId)) setProductId('');
@@ -190,6 +195,9 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
         </FormField>
         <FormField label="Brand (filter)">
           <input value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} placeholder="e.g. Bosch" style={inputStyle} />
+        </FormField>
+        <FormField label="Model Compatibility (filter)">
+          <input value={modelFilter} onChange={(e) => setModelFilter(e.target.value)} placeholder="e.g. Dutro" style={inputStyle} />
         </FormField>
       </div>
       <FormField label="Product" errors={errors['items.0.product_id']}>

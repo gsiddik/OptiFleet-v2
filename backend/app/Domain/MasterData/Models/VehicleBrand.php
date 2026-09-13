@@ -13,7 +13,7 @@ class VehicleBrand extends Model
 {
     use Auditable, BelongsToTenantOrPlatform, HasUuids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'code', 'name', 'is_system', 'status'];
+    protected $fillable = ['tenant_id', 'code', 'name', 'logo_url', 'usage_type', 'is_system', 'status'];
 
     protected function casts(): array
     {
