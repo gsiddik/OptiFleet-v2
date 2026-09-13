@@ -79,22 +79,34 @@
 | D — Tire Asset Integrity | G-26, G-25, G-23, G-24, G-28, G-34 (evidence-only) | COMPLETE | see commits below | Targeted: 18 new tests (TireAssetIntegrityTest, 50 assertions) + 7 regression on TireTest, all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | Wheel position validation is permissive (not enforced) for any vehicle category with zero configured `wheel_configurations` rows — no platform-default layout is seeded (flagged, needs fleet-engineering input). | none |
 | E — Tire Repair/Retread Governance | G-27, G-29, G-32, G-36, G-30, G-33, G-37 | COMPLETE | see commits below | Targeted: 18 new tests (TireRepairRetreadGovernanceTest, 91 assertions) + 3 WorkOrderClosureGuardTest regression (updated to the new TireService signatures), all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | REPAIR disposition sub-flow: eligible-partner type list (EXTERNAL_WORKSHOP/TIRE_SUPPLIER) is a documented, non-fabricated inference from existing `partner_type` values, not a report-cited enumeration — flagged for product confirmation. Phase D's permissive wheel-position fallback is untouched by this phase (documented, not fixed — see Decisions). | none |
 | F — Tire Scoring/Classification | G-31, BD-1–BD-6, BD-8 | FRAMEWORK COMPLETE, CONFIGURATION NOT APPROVED, PRODUCTION SCORING NOT ENABLED | see commits below | Targeted: 28 new tests (TireScoringAndSaleTest, 118 assertions), all passing. Full regression (updated baseline set): see verification status. Frontend: tsc + build clean. | G-11's structured tire spec fields (width/aspect ratio/rim diameter/load-speed index as discrete fields) remain deferred to Phase G — Phase F only added the one BD-3-mandated numeric field (reference tread depth) actually needed for scoring, not a full spec restructure. BD-6's legal/policy, casing-eligibility, lifecycle-limit, and vehicle/axle-suitability precedence steps have no encodable rule in the material available this session — see Decisions. | Zero production scoring: no TIRE_SCORING configuration is seeded/published by this session (deliberate — see Decisions); every tenant must explicitly publish its own before any tire can be scored. |
-| G — Carried-Forward VMS Parity | G-01–G-09, G-11–G-13, G-38–G-43 | COMPLETE for every gap ID this session could safely close (see below for exactly which G-IDs and which stayed explicitly out of scope) | `f1b2189`, `3275ff0`, `fc196d9`, `b7a32c9`, `49d607e`, `125695b`, `13dc24d`, `4ad925d`, `2f63b4c`, `6313c0b` | Full non-Mongo backend regression after every batch: 451 passed / 1715 assertions / 0 failures (see Verification Status). Frontend: `tsc -b` + `npm run build` + `npm run lint` clean after every batch. | G-38–G-43 (Company/User-Worker/Role/Supplier carried-forward parity items) are covered under G-14/G-15/G-16/G-17 below rather than as separate numbered items — the consolidated report's own G-ID list for this phase was summarized, not re-read verbatim this session (see Known Blockers); no PO tiered-approval thresholds exist anywhere in this session's available material, so none were fabricated (documented, not silently skipped). | Phase F's framework-complete/configuration-not-approved/production-scoring-not-enabled status is preserved verbatim and untouched by this phase — no Phase G change enables, bypasses, or alters tire scoring. |
+| G — Carried-Forward VMS Parity | G-02, G-03, G-05, G-07, G-11, G-38 (partial), G-39, G-40, G-41, G-43 (verified, not restructured) — **corrected mapping, see "G-ID correction" below**; G-04, G-06, G-08 (partial), G-09, G-12, G-13, G-42 remained open after this phase | COMPLETE for the actual work done; the G-ID labels originally recorded for this phase were wrong and have been corrected in the Final Reconciliation phase below (source documents were not available to re-read verbatim during Phase G itself — see Known Blockers) | `f1b2189`, `3275ff0`, `fc196d9`, `b7a32c9`, `49d607e`, `125695b`, `13dc24d`, `4ad925d`, `2f63b4c`, `6313c0b` | Full non-Mongo backend regression after every batch: 451 passed / 1715 assertions / 0 failures (see Verification Status). Frontend: `tsc -b` + `npm run build` + `npm run lint` clean after every batch. | G-04 (WO print unwired), G-06 (PO tiered approval), G-09 (Rim entity), and G-12/G-13 (Bay Type master, Workshop Partner memo/invoice/payment cycle) were genuinely NOT done in Phase G despite earlier mislabeling suggesting otherwise — G-04 and G-09 were completed in the Final Reconciliation phase below; G-06/G-12/G-13 remain open, see Known Blockers. | Phase F's framework-complete/configuration-not-approved/production-scoring-not-enabled status is preserved verbatim and untouched by this phase — no Phase G change enables, bypasses, or alters tire scoring. |
+| Final Reconciliation — VMS/Repo Traceability Audit | G-04, G-09 (new), plus G-ID correction for Phase G | IN PROGRESS this session — see "Final Reconciliation" section below for scope, status, and what remains | see "Final Reconciliation" section below | Rim: `RimTest.php` 5/5 passing (14 assertions). Print wiring: manual code-path verification (pre-existing, tested `WorkOrderController::print()`/`PurchaseOrderController::print()` backend, newly wired frontend buttons) + `tsc -b`/`npm run build`/`npm run lint` clean. Full non-Mongo backend regression: see Verification Status (run in progress/most recent result). | See "Final Reconciliation" section for the full list of remaining ADJUST items, DEFER items, and the traceability matrix status. | Reconciliation is NOT complete — do not treat this phase as finished until the Final Reconciliation section below says so explicitly. |
 
 ## Current Work
-- Active phase: G (implemented, tested, and pushed this session; Phases
-  A-F already on `origin/Improvement` from prior sessions).
-- Active batch: none in progress — all five Phase G batches (G1
-  Maintenance Lifecycle, G2 Supply Chain Integrity, G3 Workshop Partner,
-  G4 Master Data & Tire Specs, G5 Company/User-Worker/Role) are complete,
-  each individually regression-tested, and pushed as 10 commits.
-- Files/modules in progress: none.
-- Immediate next action for the following session: re-read this file and
-  Git history to confirm Phase G's push landed on `origin/Improvement`,
-  then confirm with the owner whether to start a further phase (none is
-  currently authorized) or address the two carried-forward blockers named
-  below (PO tiered approval, BD-6 rules) if/when real source material for
-  them becomes available.
+- Active phase: **Final Reconciliation — VMS/Repo Traceability Audit**
+  (this session). Phases A-G are on `origin/Improvement` (pushed in prior
+  sessions); this phase's work is checkpointed locally, **NOT pushed yet**
+  — see Final Reconciliation Verification Status above for why (partial
+  completeness, not a blocker on what was actually implemented).
+- This session obtained direct, full-text access to both source documents
+  (previously unavailable, only a carried-forward summary) and used them
+  to: (1) correct Phase G's G-ID mislabeling (see "G-ID correction" table
+  in the Phase G section), (2) close G-04 (Work Order + Purchase Order
+  print wiring) and G-09 (Rim entity, full stack), (3) produce a
+  page-level (not fully field-level) traceability matrix across all 9 VMS
+  navigation groups — see `docs/implementation/VMS_RECONCILIATION_TRACEABILITY.md`.
+- Files/modules in progress: none — the work described above is complete
+  and verified (see Verification Status). What remains is explicitly
+  queued (small ADJUST items) or explicitly DEFERRED/BLOCKED (see the
+  traceability matrix's own lists), not silently dropped.
+- Immediate next action for the following session: read
+  `VMS_RECONCILIATION_TRACEABILITY.md`'s "Queued ADJUST items" list and,
+  with owner authorization, implement the next batch (each is small,
+  bounded, and policy-free) — or address the DEFER items if the owner
+  supplies the missing product decisions (Supplier Type taxonomy vs.
+  `partner_type`, Engine Model/Type and Work Shift subsystem scope, Bay
+  Type/Workshop subsystem scope, Maintenance Package admin UI data model,
+  Workshop Invoice settlement policy). Do not re-open Phases A-F.
 
 ## Decisions and Deviations
 - Decision: return-condition classification (G-14) is implemented as a
@@ -576,14 +588,45 @@ placeholder data) — until that decision is made, G-25's validation stays permi
 
 ## Phase G — Carried-Forward VMS Parity
 
-**Source-access note (read this before trusting any "VMS-sourced" citation below):** this phase's implementation session did not have
+**G-ID correction (Final Reconciliation phase, this session — supersedes the source-access note below):** Phase G's own
+implementation session did not have direct access to the two source documents and worked from a carried-forward summary; its G-ID
+labels turned out to collide with G-IDs already used correctly by Phases A–F (e.g. its "G-14", "G-15", "G-16", "G-17" are Phase A/B/C's
+real G-14/G-15/G-16/G-17, not Phase G's actual work). The Final Reconciliation phase re-read both source documents directly (full text,
+not summary) and re-derived the correct mapping below. The underlying implemented functionality from Phase G is valid and was **not**
+re-implemented — only the G-ID cross-references are corrected here:
+
+| Phase G batch, as originally labeled | What was actually built | Correct G-ID | Real G-ID definition |
+|---|---|---|---|
+| Batch G1: "G-01" Schedule→WO conversion | `MaintenanceScheduleService`/`WorkOrderService::fromMaintenanceSchedule()` | **G-03** | "source_schedule_id dead column, no conversion" |
+| Batch G1: "G-02" pre-execution cost estimation | `WorkOrderService::estimate()` | **G-02** (correct by coincidence) | "No Onsite/Offsite, Cost Estimation, or Maintenance Result" |
+| Batch G1: "G-03" result summary on completion | Bundled into the same field group as cost estimation | **G-02** (bundled — "Maintenance Result" is part of the same gap as Cost Estimation) | see above |
+| Batch G1: "G-03" QC_PENDING→COMPLETED frontend action | New Done UI action for a previously action-less transition | **G-05** | "No Done/Done-With-Notes; QC-gated completion instead" |
+| Batch G1: "G-04" WorkOrderFinding/QcFinding resolution | Made findings settable so the closure guard's own checks are satisfiable | **no numbered match** — self-discovered via repository evidence, adjacent to G-17/G-35 (closure guard), not a distinct register entry | — |
+| Batch G2: "G-05" StockTransfer actor persistence | `dispatched_by`/`received_by` columns + `Auditable` trait | **no numbered match** — self-discovered audit-trail gap, adjacent to G-37's Auditable theme | — |
+| Batch G2: "G-06" PO float→decimal fix | `PurchaseOrderService::create()`/`RfqService::submitQuotation()` now use `BigDecimal` | **G-07** | "PO totals use float, not decimal-safe math" |
+| Batch G2: "Stock Request" evaluated, found not missing | Documented that `PurchaseRequest`+`StockTransfer.REQUESTED` already cover the demand-signal shapes | Relates to **G-08**'s "no standalone Stock Request/Hand-Over document" clause only — G-08's other clause ("no line-level hold/reject-reason") was **not** addressed and remains open | "No standalone Stock Request/Hand-Over document; no line-level hold/reject-reason" |
+| Batch G2: PO tiered approval, declined | Evaluated, no thresholds available, correctly not fabricated | **G-06** — remains OPEN, not done | "PO approval single-tier, no reject-reason, no signature" |
+| Batch G3: "G-07" WorkOrderExternalService | Towing/other-service-provider partner types wired to a bounded REQUESTED→COMPLETED/CANCELLED record | Partial, adjacent contribution toward **G-13**'s theme — G-13 itself (Workshop Partner memo/invoice/payment cycle) remains substantially OPEN | "Entire Workshop Partner memo/invoice/payment cycle unimplemented" |
+| Batch G4: "G-11" discrete tire spec fields | New tire spec columns | **G-11** (correct) | "No structured tire spec fields (load index, speed rating, construction type)" |
+| Batch G4: "G-12" ProductCategory/Uom CRUD completion | Delete endpoint + full frontend pages for both | **G-40** (ProductCategory) + **G-41** (Uom) | "Product Category has no standalone frontend page" / "Unit (UoM) has no standalone frontend page, no description field" — note G-41's "no description field" clause was **not** addressed (see Final Reconciliation ADJUST list) |
+| Batch G4: "G-13" VehicleBrand/VehicleModel master data | New master-data entities | **G-38** (partial — the Vehicle Brand & Model piece of a 3-part bundled gap) | "No Vehicle Brand & Model master (free text only); no SKU auto-generation; no User↔Worker link" |
+| Batch G5: "G-14" workers.user_id link | FK + controller/route wiring | **G-38** (partial — the User↔Worker link piece of the same bundled gap) | see above |
+| Batch G5: "G-15" Tenant company-profile fields | Mirrors Partner's field set | **G-39** | "No PIC fields; create form exposes only 2 of the model's supported fields" — note: added general profile fields, not specifically named PIC (person-in-charge) fields; verify PIC-specific naming if the report's exact field labels matter downstream |
+| Batch G5: "G-16" Role tenant-isolation tests | Cross-tenant test coverage confirming no bug | **G-43** — verified safe, but the structural concern itself (manual `where()` vs. trait-based global scope) was **not** refactored, only tested | "Role model uses manual where() isolation instead of the trait-based global scope used elsewhere" (Medium, structural, no proven breach) |
+| Batch G5: "G-17" Supplier-filtered Partner view | `partner_type` array filter + reusable list view | **no numbered match** — UI convenience only; **G-42**'s actual content (Province/City, banking, tax-description, item-category fields) remains OPEN | "Supplier master missing Province/City, banking, tax-description, item-category relation" |
+
+Net effect: Phase G actually closed G-02, G-03, G-05, G-07, G-11, G-38 (partial), G-39, G-40, G-41(partial), G-43(verified only), plus
+three unnumbered self-discovered fixes. It did **not** close G-01, G-04, G-06, G-08 (partial), G-09, G-12, G-13, G-42 despite the
+original Phase Status row implying G-01–G-09/G-11–G-13/G-38–G-43 were all done. G-04 and G-09 are now closed by the Final
+Reconciliation phase below; G-01, G-06, G-08's second clause, G-12, G-13, and G-42 remain open — see Known Blockers.
+
+**Source-access note (historical — describes why Phase G's original labels were wrong):** Phase G's implementation session did not have
 the two source documents (Consolidated Gap Analysis Report, VMS analysis) available to re-read directly — they are external files
 supplied to an earlier session whose detailed content did not carry forward into this one, only a structured summary of the G-ID list,
-gap descriptions, and the explicit hard constraints already recorded in this file. Every G-ID below is traced to that summary and to
-this session's own direct repository evidence (gathered via read-only Explore agents before any code was written, per the same
-discipline used in Phases A–F), not to a freshly re-read VMS section number. Where a decision required a specific business
-rule/threshold/policy that neither the summary nor the repository could supply, none was fabricated — see the explicitly-declined
-items below and Known Blockers.
+gap descriptions, and the explicit hard constraints already recorded in this file. Every G-ID below (in the original per-batch summary)
+was traced to that summary and to that session's own direct repository evidence, not to a freshly re-read VMS section number — which is
+exactly why the mapping above was necessary. Where a decision required a specific business rule/threshold/policy that neither the
+summary nor the repository could supply, none was fabricated — see the explicitly-declined items below and Known Blockers.
 
 ### Per-batch summary
 
@@ -709,18 +752,33 @@ items below and Known Blockers.
   for Procurement exist anywhere in the material available this session.
   Needed: a finance/procurement owner to define the actual tiers before
   any code wires `PurchaseOrder` into the existing generic engine.
-- Documentation-access limitation (Phase G, does not block any Phase G
-  acceptance criterion, flagged for the next session that has real
-  document access): this session did not have the two source documents
-  (Consolidated Gap Analysis Report, VMS analysis) available to re-read
-  directly — only a structured summary of the G-ID list and gap
-  descriptions carried forward from an earlier session. Every Phase G
-  VMS-traceability entry in this file is traced to that summary plus this
-  session's own direct repository evidence, not to a freshly re-read VMS
-  section number. If a future session has direct access to both
-  documents again, it should re-verify the G-38–G-43 gap descriptions
-  against their original text rather than relying solely on this file's
-  summary-derived mapping to G-14/G-15/G-16/G-17.
+- Documentation-access limitation (Phase G) — **RESOLVED this session (Final Reconciliation phase)**: both source documents were
+  obtained and read in full (direct XML extraction, not a summary). The corrected G-ID mapping is recorded in the Phase G section
+  above ("G-ID correction"). Genuinely still-open gaps discovered by this correction, not previously flagged as open:
+  - **G-01** (No admin UI for Maintenance Packages/Intervals/Items/vehicle-assignment) — not addressed by any phase; requires a real
+    subsystem (Maintenance Package as a first-class entity), not a small field addition. DEFERRED — needs a product decision on
+    Package/Interval/Item data model before implementation.
+  - **G-06** (PO approval single-tier, no reject-reason, no signature) — evaluated and explicitly declined in Phase G for lack of
+    concrete tiers/thresholds; still open, see the pre-existing "PO tiered/threshold-based approval" blocker below (same gap, now
+    correctly numbered).
+  - **G-08**, second clause only ("no line-level hold/reject-reason" on Purchase Request) — the "no standalone Stock Request
+    document" clause was resolved by evaluation (existing `PurchaseRequest`/`StockTransfer.REQUESTED` already cover it); the
+    line-level hold/reject-reason clause was never addressed. Small, bounded — candidate for a future ADJUST.
+  - **G-12** (No Bay Type master, no capacity_unit, no combined Bay+WO+Maintainer allocation — Workshop/Bay) — not addressed by any
+    phase; requires new Workshop/Bay subsystem design. DEFERRED.
+  - **G-13** (Entire Workshop Partner memo/invoice/payment cycle unimplemented) — Phase G's `WorkOrderExternalService` made a
+    partial, adjacent contribution (towing/service-provider partner types wired to a bounded request/complete flow) but did not
+    build the memo/invoice/payment cycle itself. Building the full cycle would require inventing settlement/accounting policy,
+    matching this project's own prior explicit refusal to do the same for Sell Sparepart. DEFERRED — needs a finance/accounting
+    policy owner.
+  - **G-41**, second clause only ("no description field" on Unit/Uom) — the "no standalone frontend page" clause was resolved in
+    Phase G; the description field was not added. Small, bounded — candidate for a future ADJUST.
+  - **G-42** (Supplier master missing Province/City, banking, tax-description, item-category relation) — Phase G's Batch G5 added a
+    Supplier-filtered *view* of existing Partner data (a UI convenience) but did not add any of the missing fields themselves.
+    Candidate for a future ADJUST (matches existing Partner field patterns, no new policy needed).
+  - **G-09** (No Rim entity anywhere) — closed this session, see Final Reconciliation below.
+  - **G-04** (Work Order print route exists, frontend unwired) — closed this session, see Final Reconciliation below; the identical
+    unwired-print-route bug was also found and fixed on Purchase Order (same class of bug, not separately numbered in the register).
 
 ## Verification Status
 - Baseline (clean `main`, before any Phase A change, 40 non-Mongo Feature
@@ -939,3 +997,55 @@ items below and Known Blockers.
   every Feature test failing (not just the Mongo-dependent ones) — this
   was a test-run-ordering mistake, not a code defect, and was corrected
   before any of the regression numbers reported above.
+
+## Final Reconciliation — Verification Status (this session)
+
+- Targeted: `RimTest.php` — 5 passed / 14 assertions / 0 failures
+  (create/update/delete, per-tenant unique code, search, tenant
+  isolation, permission gating).
+- Full non-Mongo backend regression (61 Feature+Unit test files —
+  the 60-file Phase G set plus `RimTest.php`; explicit file list used,
+  Analytics/Intelligence directories excluded for the pre-existing
+  `ext-mongodb` environment reason): **456 passed / 1729 assertions / 0
+  failures** — net +5 tests / +14 assertions vs. the Phase G baseline
+  (451 / 1715), exactly matching `RimTest.php`'s addition, 0 regressions.
+- Tooling note: an earlier attempt in this session ran unfiltered
+  `php artisan test` (no file list), which silently hung — it was
+  discovering and attempting the Mongo-dependent Analytics/Intelligence
+  suites against a container with no `ext-mongodb`/`mongod`, and a
+  leftover process from that attempt was not fully terminated by the
+  first interrupt, which left a Postgres transaction open and blocked
+  the real (explicit-file-list) regression run's own `migrate:fresh` on
+  a lock for several minutes. Force-killing the leftover process
+  resolved it; the regression numbers above are from the run that
+  completed cleanly afterward. Not a code defect — a test-runner/
+  environment interaction, consistent with the same class of issue
+  already recorded under Phase E's verification notes above.
+- Static analysis: `git diff --check` clean; `vendor/bin/pint --test`
+  (via `--dirty`) clean on all files this session touched or added.
+- Frontend: `tsc -b` clean; `npm run build` (vite production build)
+  succeeds; `npm run lint` (oxlint) shows only the same pre-existing
+  warning categories called out in every prior phase's frontend
+  verification (`set-state-in-effect`/`only-export-components`), none in
+  files this session touched.
+- Migration verification: `2026_09_18_000001_create_rims_table` applied
+  cleanly via `migrate:fresh --env=testing --force`, with the 3
+  Mongo-backed migrations moved to a scratch holding directory beforehand
+  and restored immediately afterward (confirmed present again before this
+  checkpoint commit).
+- NOT RUN (same pre-existing environment limitation as every prior
+  phase): Analytics/Intelligence Feature test suites — this container has
+  no `ext-mongodb` PHP extension and no `mongod` binary.
+- **Reconciliation completeness: PARTIAL, not FULL.** Per the task's own
+  explicit instruction, this is stated plainly rather than presented as a
+  completed phase: the full field-by-field traceability matrix for all 29
+  VMS pages was not built (see `VMS_RECONCILIATION_TRACEABILITY.md` for
+  exactly what was and wasn't covered); several identified ADJUST items
+  remain queued, not implemented (Uom description field, Worker
+  filter/pagination UI, Role Select-All, Wheel Configuration Edit/Delete +
+  UI, tire installation wheel-position dropdown, Sparepart Return evidence
+  field, PO item-picker compatibility filter, Stock Request WO linkage,
+  Supplier/Partner missing fields). What this session did complete (G-04
+  Work Order + Purchase Order print wiring, G-09 Rim entity, and the
+  Phase G G-ID documentation correction) is fully implemented and verified
+  per the numbers above.
