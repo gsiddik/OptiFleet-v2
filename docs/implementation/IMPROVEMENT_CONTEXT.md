@@ -780,6 +780,40 @@ summary nor the repository could supply, none was fabricated — see the explici
   - **G-04** (Work Order print route exists, frontend unwired) — closed this session, see Final Reconciliation below; the identical
     unwired-print-route bug was also found and fixed on Purchase Order (same class of bug, not separately numbered in the register).
 
+  **Final Reconciliation update (this session, field-level pass — see `VMS_RECONCILIATION_TRACEABILITY.md` for full detail):**
+  every G-ID above was re-reviewed and closed to its safely-implementable extent, with any genuinely unresolved portion converted
+  to an explicit DEFERRED_DECISION/BLOCKED_TECHNICAL row (never silently dropped):
+  - **G-01** — CLOSED. The full Maintenance Package/Interval/Item/VehicleMaintenanceProfile backend already existed
+    (`MaintenancePackageController.php`, tested) with zero frontend caller — another "built but unreachable" bug, not a missing
+    subsystem. Added `MaintenancePackagesPage.tsx` + `MaintenancePackageDetailPage.tsx`. No backend change needed.
+  - **G-06** — CLOSED as a framework. `PurchaseOrderService::approve()` now wires into the existing generic
+    `WorkflowApprovalService`/`WorkflowEngine` `approval_rule` mechanism (already used by `used_part_disposition`), exactly like BD-6
+    Tire scoring's own framework/configuration/production-activation split: framework implemented, no tenant has a published tiered
+    configuration by default, zero default-behavior change (proven by the full pre-existing `ProcurementTest` suite passing
+    unmodified). No thresholds, tier counts, or approver roles invented.
+  - **G-08** — CLOSED (both clauses). `work_order_id` FK on `PurchaseRequest` + WO-scoped item picker (first clause), plus
+    `purchase_request_items.line_status`/`line_reason` + a `PUT .../items/{item}/line-status` endpoint for independent per-line
+    hold/reject (second clause, previously still open after Phase G).
+  - **G-12** — CLOSED for the safely-definable clause (Workspace `capacity`/`capacity_unit`). Converting `workspace_type` into a
+    tenant-editable Bay Type master, and combined Bay+WO+Maintainer allocation scheduling, remain DEFERRED_DECISION — owner:
+    workshop operations; needs a real scheduling/taxonomy policy this session cannot invent.
+  - **G-13** — CLOSED except one item. `WorkOrderExternalService` gained the missing Maintenance Memo descriptive fields
+    (`photo_evidence`/`condition_notes`/`priority`) and now has a real "Save and Print" endpoint (new `maintenance_memo` document
+    type, same effective-template + PDF pattern as Work Order/Purchase Order print — framework implemented, a tenant must publish
+    its own `maintenance_memo` template before printing succeeds). The full Workshop Invoice settlement/payment cycle remains
+    BLOCKED_TECHNICAL — matches this project's own prior refusal to invent Sell Sparepart settlement; needs a finance/accounting
+    policy owner, not an engineering decision.
+  - **G-41** — CLOSED (both clauses; the description-field clause was closed in an earlier Final Reconciliation batch this session).
+  - **G-42** — CLOSED except one item. Partner gained Province/City/Bank/Account Holder/Account Number/Description fields. The
+    "Supplier Type" checklist (Oil/Spareparts/Tires and Wheels/Attachment/Optional Accessories) remains DEFERRED_DECISION — it
+    conflicts with the existing single-select `partner_type` enum used for eligibility gating (e.g.
+    `TireService::ELIGIBLE_SERVICE_PARTNER_TYPES`); owner: product; needs a decision on whether Supplier Type replaces, extends, or
+    coexists with `partner_type`.
+
+  The "PO tiered/threshold-based approval" blocker below is accordingly resolved as a framework (see G-06 above) — the remaining
+  open item is only that no tenant has published a concrete tier configuration, which is a configuration action for a
+  finance/procurement owner to take via the existing Configuration UI, not an engineering blocker.
+
 ## Verification Status
 - Baseline (clean `main`, before any Phase A change, 40 non-Mongo Feature
   test files): 262 passed / 878 assertions / 0 failures.
