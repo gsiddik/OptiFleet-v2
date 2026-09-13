@@ -12,7 +12,9 @@ use App\Domain\Configuration\Services\NumberingFormatValidator;
 use App\Domain\Configuration\Services\TemplateValidator;
 use App\Domain\Configuration\Services\TemplateVariableRegistry;
 use App\Domain\Notification\Services\NotificationTemplateValidator;
+use App\Domain\Tire\Services\TireException;
 use App\Domain\Tire\Services\TireScoringConfigurationValidator;
+use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Workflow\Services\ConditionEvaluator;
 use App\Domain\Workflow\Services\WorkflowActionCatalog;
 use App\Domain\Workflow\Services\WorkflowDefinitionValidator;
@@ -43,6 +45,7 @@ class ConfigurationController extends Controller
         private readonly WorkflowDefinitionValidator $workflowValidator,
         private readonly NotificationTemplateValidator $notificationValidator,
         private readonly TireScoringConfigurationValidator $tireScoringValidator,
+        private readonly TireScoringService $tireScoring,
         private readonly DocumentNumberingService $numbering,
         private readonly DocumentTemplateRenderService $templates,
         private readonly WorkflowEngine $workflow,
@@ -139,7 +142,20 @@ class ConfigurationController extends Controller
             'TEMPLATE' => fn (array $p) => $this->templateValidator->validate($set->code, $p['html'] ?? ''),
             'WORKFLOW' => fn (array $p) => $this->workflowValidator->validate($p),
             'NOTIFICATION' => fn (array $p) => $this->notificationValidator->validate($set->code, $p),
-            'TIRE_SCORING' => fn (array $p) => $this->tireScoringValidator->validate($set, $p),
+            // R2: shape validation (incl. the required legal_restrictions/casing_eligibility/
+            // lifecycle_limits keys) runs first, so an invalid payload is still rejected for
+            // its own specific reason even when maker and checker happen to be the same user;
+            // only once the payload is genuinely valid does the maker-checker self-check apply
+            // — publish is this framework's "activate" action, so it is the one that must be
+            // gated, mirroring UsedPartDispositionService's/TireScoringService::finalize()'s
+            // established explicit-self-check pattern (WorkflowApprovalService itself does not
+            // enforce this generically).
+            'TIRE_SCORING' => function (array $p) use ($set, $version) {
+                $this->tireScoringValidator->validate($set, $p);
+                if ($version->created_by !== null && $version->created_by === $this->context->user()->id) {
+                    throw new TireException('The maker who drafted this Tire Scoring configuration cannot also publish (activate) it — a different authorized user must verify and publish.');
+                }
+            },
         };
 
         return $this->ok($this->configuration->publish($version, $this->context->user()->id, $validator));
@@ -218,8 +234,54 @@ class ConfigurationController extends Controller
                 $tenantId,
                 (array) $request->input('context', []),
             )),
+            'TIRE_SCORING' => $this->ok($this->previewTireScoring($request, $tenantId)),
             default => abort(422, 'Preview is not supported for this configuration type.'),
         };
+    }
+
+    /**
+     * R2 §18: dry-run against a DRAFT (or arbitrary) payload — validates its
+     * shape first (the same validator publish() would run), then computes
+     * what calculate() would produce for the supplied representative/test
+     * measurements. NEVER persists a TireScoringResult and never touches
+     * any Tire/inspection/retread/repair row. If the scoring type already
+     * has a currently PUBLISHED (active) version, also computes the same
+     * inputs against it so the two can be compared side by side.
+     */
+    private function previewTireScoring(Request $request, string $tenantId): array
+    {
+        $code = strtoupper((string) $request->input('code'));
+        abort_unless(in_array($code, ['REPAIR', 'RETREAD'], true), 422, 'code must be REPAIR or RETREAD.');
+        $payload = (array) $request->input('payload', []);
+
+        $dummySet = new ConfigurationSet(['tenant_id' => $tenantId, 'type' => 'TIRE_SCORING', 'code' => $code, 'scope_type' => 'TENANT']);
+        $this->tireScoringValidator->validate($dummySet, $payload);
+
+        $referenceTreadDepth = $request->input('reference_tread_depth_mm') !== null ? (float) $request->input('reference_tread_depth_mm') : null;
+        $measuredTreadDepth = $request->input('measured_tread_depth_mm') !== null ? (float) $request->input('measured_tread_depth_mm') : null;
+        $kaScore = $request->input('ka_score') !== null ? (float) $request->input('ka_score') : null;
+        $criticalSafetyFail = (bool) $request->boolean('critical_safety_fail');
+
+        $draftResult = $this->tireScoring->dryRun($payload, $referenceTreadDepth, $measuredTreadDepth, $kaScore, $criticalSafetyFail);
+
+        $activeVersion = null;
+        $activeResult = null;
+        $active = ConfigurationSet::query()
+            ->where('tenant_id', $tenantId)->where('type', 'TIRE_SCORING')->where('code', $code)
+            ->with(['versions' => fn ($q) => $q->where('status', 'PUBLISHED')])->first();
+        $activePublished = $active?->versions->first();
+        if ($activePublished) {
+            $activeVersion = $activePublished->id;
+            $activeResult = $this->tireScoring->dryRun($activePublished->payload, $referenceTreadDepth, $measuredTreadDepth, $kaScore, $criticalSafetyFail);
+        }
+
+        return [
+            'draft_result' => $draftResult,
+            'active_configuration_version_id' => $activeVersion,
+            'active_result' => $activeResult,
+            'changed_from_active' => $activeResult !== null && $activeResult !== $draftResult,
+            'note' => 'Dry-run only — no Tire, inspection, or scoring result was created or changed.',
+        ];
     }
 
     private function resolveWorkflowVersionForPreview(Request $request, string $tenantId): ConfigurationVersion

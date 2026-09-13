@@ -83,18 +83,7 @@ class TireScoringService
             throw new TireException('This configuration requires a KA score to be supplied.');
         }
 
-        $spaRaw = round(($measuredTreadDepth / $referenceTreadDepth) * 100, self::PRECISION);
-        $band = $this->matchBand($payload['bands'] ?? [], $spaRaw);
-        if (! $band) {
-            throw new TireException('No configured SPA band matches the calculated percentage — no applicable SPA score.');
-        }
-
-        $bandCriticalFail = (bool) ($band['is_critical_fail'] ?? false);
-        $finalCriticalFail = $criticalSafetyFail || $bandCriticalFail;
-        // The critical-fail gate is absolute (BD-1/BD-6): it forces ineligibility regardless of the band's own flag.
-        $eligibleForOperationalReuse = $finalCriticalFail ? false : (bool) $band['eligible_for_operational_reuse'];
-
-        $kfScore = $this->computeKfScore($payload['kf_weights'] ?? null, (float) $band['normalized_score'], $kaScore);
+        $computed = $this->computeFromPayload($payload, $referenceTreadDepth, $measuredTreadDepth, $kaScore, $criticalSafetyFail);
 
         return DB::transaction(fn () => TireScoringResult::query()->create([
             'tenant_id' => $tire->tenant_id,
@@ -106,17 +95,82 @@ class TireScoringService
             'configuration_version_id' => $version->id,
             'reference_tread_depth_mm' => $referenceTreadDepth,
             'measured_tread_depth_mm' => $measuredTreadDepth,
-            'spa_raw_percent' => $spaRaw,
-            'spa_normalized_score' => round((float) $band['normalized_score'], self::PRECISION),
-            'classification' => $band['classification'],
+            'spa_raw_percent' => $computed['spa_raw_percent'],
+            'spa_normalized_score' => $computed['spa_normalized_score'],
+            'classification' => $computed['classification'],
             'ka_score' => $kaScore !== null ? round($kaScore, self::PRECISION) : null,
-            'kf_score' => $kfScore,
-            'critical_safety_fail' => $finalCriticalFail,
+            'kf_score' => $computed['kf_score'],
+            'critical_safety_fail' => $computed['critical_safety_fail'],
             'critical_safety_reasons' => $criticalSafetyReasons,
-            'eligible_for_operational_reuse' => $eligibleForOperationalReuse,
+            'eligible_for_operational_reuse' => $computed['eligible_for_operational_reuse'],
             'computed_by' => $userId,
             'computed_at' => now(),
         ]));
+    }
+
+    /**
+     * R2 §18: a non-persisting preview of what `calculate()` would produce
+     * against an arbitrary (typically still-DRAFT) payload — never creates
+     * a TireScoringResult row, never touches Tire/inspection/retread/repair
+     * state. Used by ConfigurationController's TIRE_SCORING dry-run branch.
+     *
+     * @return array{spa_raw_percent:float, spa_normalized_score:float, classification:string, ka_score:?float, kf_score:?float, critical_safety_fail:bool, eligible_for_operational_reuse:bool, missing_inputs:string[]}
+     */
+    public function dryRun(
+        array $payload,
+        ?float $referenceTreadDepth,
+        ?float $measuredTreadDepth,
+        ?float $kaScore,
+        bool $criticalSafetyFail,
+    ): array {
+        $missing = [];
+        if ($referenceTreadDepth === null || $referenceTreadDepth <= 0) {
+            $missing[] = 'reference_tread_depth_mm';
+        }
+        if ($measuredTreadDepth === null || $measuredTreadDepth < 0) {
+            $missing[] = 'measured_tread_depth_mm';
+        }
+        if (($payload['requires_ka'] ?? false) && $kaScore === null) {
+            $missing[] = 'ka_score';
+        }
+        if (! empty($missing)) {
+            return [
+                'spa_raw_percent' => null, 'spa_normalized_score' => null, 'classification' => null,
+                'ka_score' => null, 'kf_score' => null, 'critical_safety_fail' => null,
+                'eligible_for_operational_reuse' => null, 'missing_inputs' => $missing,
+            ];
+        }
+
+        $computed = $this->computeFromPayload($payload, $referenceTreadDepth, $measuredTreadDepth, $kaScore, $criticalSafetyFail);
+        $computed['ka_score'] = $kaScore !== null ? round($kaScore, self::PRECISION) : null;
+        $computed['missing_inputs'] = [];
+
+        return $computed;
+    }
+
+    /** @return array{spa_raw_percent:float, spa_normalized_score:float, classification:string, kf_score:?float, critical_safety_fail:bool, eligible_for_operational_reuse:bool} */
+    private function computeFromPayload(array $payload, float $referenceTreadDepth, float $measuredTreadDepth, ?float $kaScore, bool $criticalSafetyFail): array
+    {
+        $spaRaw = round(($measuredTreadDepth / $referenceTreadDepth) * 100, self::PRECISION);
+        $band = $this->matchBand($payload['bands'] ?? [], $spaRaw);
+        if (! $band) {
+            throw new TireException('No configured SPA band matches the calculated percentage — no applicable SPA score.');
+        }
+
+        $bandCriticalFail = (bool) ($band['is_critical_fail'] ?? false);
+        $finalCriticalFail = $criticalSafetyFail || $bandCriticalFail;
+        // The critical-fail gate is absolute (BD-1/BD-6): it forces ineligibility regardless of the band's own flag.
+        $eligibleForOperationalReuse = $finalCriticalFail ? false : (bool) $band['eligible_for_operational_reuse'];
+        $kfScore = $this->computeKfScore($payload['kf_weights'] ?? null, (float) $band['normalized_score'], $kaScore);
+
+        return [
+            'spa_raw_percent' => $spaRaw,
+            'spa_normalized_score' => round((float) $band['normalized_score'], self::PRECISION),
+            'classification' => $band['classification'],
+            'kf_score' => $kfScore,
+            'critical_safety_fail' => $finalCriticalFail,
+            'eligible_for_operational_reuse' => $eligibleForOperationalReuse,
+        ];
     }
 
     /** @param  array<int, array<string, mixed>>  $bands */

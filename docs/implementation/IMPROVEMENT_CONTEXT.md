@@ -1222,3 +1222,85 @@ production-activation discipline is preserved exactly: framework
 implemented, no values invented, and production scoring/disposition
 gating remains disabled for a tenant until it publishes its own complete,
 valid, maker-checker-approved configuration.
+
+Implemented (see `TireScoringConfigurationValidator::validateLegalRestrictions()`/
+`validateCasingEligibility()`/`validateLifecycleLimits()`,
+`TireDispositionEligibilityService`, `TireScoringService::dryRun()`,
+`ConfigurationController::publish()`/`previewTireScoring()`,
+`TireService::retread()`/`repair()`):
+- The existing per-scoring-type (REPAIR/RETREAD) `ConfigurationSet`/
+  `ConfigurationVersion` TIRE_SCORING payload is extended (no new
+  configuration type/migration invented) with three now-REQUIRED keys:
+  `legal_restrictions` (array, each entry validated for
+  code/name/restriction_type/effective_date/behavior BLOCK|WARN/
+  applicable_process REPAIR|RETREAD|BOTH), `casing_eligibility` (object,
+  every key must be present; numeric limits may be `null` = "no limit"
+  but the key itself is mandatory; missing tire-history data is ALWAYS
+  fail-closed/BLOCK here — no configurable override, since this gates
+  whether a casing may be reused at all), and `lifecycle_limits` (object,
+  same null-means-no-limit shape, but exposes an explicit configurable
+  `missing_data_behavior`: BLOCK or WARN — a deliberate asymmetry from
+  casing eligibility). Publish (activation) is rejected (422) if any of
+  the three keys is missing or malformed.
+- Maker-checker on publish/activation: the same user who created a
+  TIRE_SCORING draft cannot also publish it (`ConfigurationController::publish()`
+  checks `version->created_by !== current user` before the shape
+  validator's own checks run first, so a genuinely-invalid payload still
+  fails for its own reason rather than being masked by the self-check).
+  No Tire-specialist or safety-department approval step exists or is
+  required — permanently out of scope for this phase, per the decision
+  above.
+- `TireDispositionEligibilityService::evaluate()` computes eligibility for
+  a given tire + scoring type (REPAIR/RETREAD) against its tenant's
+  currently ACTIVE (published) configuration's three new categories, with
+  zero default behavior change: no published config for that scoring type
+  at all -> `applicable: false, eligible: true` (identical to pre-R2
+  behavior). Wired as an opt-in gate into `TireService::retread()`/
+  `repair()` immediately after the existing open-cycle check — it only
+  takes effect once a tenant actually publishes a config with these rules
+  populated.
+- `TireScoringService::dryRun()` (new, alongside the existing `calculate()`,
+  both delegating to a shared private `computeFromPayload()`) evaluates an
+  arbitrary payload (typically a still-DRAFT version) against
+  representative tread-depth/KA inputs, reports `missing_inputs` when
+  required data is absent, and NEVER persists a `TireScoringResult` or
+  touches any tire/inspection/retread/repair state.
+  `ConfigurationController::previewTireScoring()` exposes this via the
+  existing generic `/app/configuration/preview` endpoint (TIRE_SCORING
+  branch), also resolving and dry-running the currently active published
+  version (if any) for side-by-side comparison and a `changed_from_active`
+  flag.
+- No initial/seed values were invented for any of the three new
+  categories or for the existing bands — the platform-default TIRE_SCORING
+  configuration set (if any) remains whatever it already was; a tenant's
+  production Tire scoring/disposition-gating activation still requires
+  that tenant to publish its own complete, valid, maker-checker-approved
+  configuration first (fail-closed).
+- Frontend: `TireScoringConfigPage.tsx` (new) reuses the existing generic
+  `ConfigurationSetManager` component (same DRAFT/PUBLISHED/ARCHIVED shell
+  as Numbering/Template/Workflow/Notification) with a "Dry Run" action
+  replacing "Simulate", wired to the same `/app/configuration/preview`
+  endpoint. `ConfigurationType` (frontend) extended with `'TIRE_SCORING'`.
+  Route `configuration/tire-scoring` and a "Tire Scoring" nav entry
+  (module-gated on `TIRE`, permission `configuration.view`) added
+  alongside the other Configuration nav items.
+
+**R2 verification status (this session):**
+- Backend targeted tests: `TireScoringConfigurationTest.php` (10 new
+  tests — missing-key rejections, self-publish rejection, dry-run
+  preview incl. missing-input reporting and active-version comparison)
+  and `TireDispositionEligibilityTest.php` (7 new tests — zero-default
+  behavior with no config, lifecycle-count block, casing critical-fail
+  exclusion, legal BLOCK vs WARN, lifecycle missing-data BLOCK vs WARN)
+  — **17/17 PASS**.
+- Full affected regression: `TireScoringAndSaleTest.php` (28, pre-existing,
+  fixtures updated only for the new required payload keys and
+  maker-checker publish — no test intent changed), `TireRepairRetreadGovernanceTest.php` (18),
+  `TireScoringConfigurationTest.php` (10), `TireDispositionEligibilityTest.php` (7),
+  `ConfigurationApiTest.php` (12), `ConfigurationAuditAndRegressionTest.php` (5),
+  `ConfigurationCoreTest.php` (6) — **86/86 PASS**, zero regressions.
+- Pint (`vendor/bin/pint --dirty`): PASS, no changes required.
+- Frontend: `tsc --noEmit` PASS, `npm run lint` (oxlint) PASS (no new
+  warnings on any R2 file), `npm run build` PASS.
+- Browser E2E for the new Tire Scoring configuration UI is covered under
+  R3, not here.

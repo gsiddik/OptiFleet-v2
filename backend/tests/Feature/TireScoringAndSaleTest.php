@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\Configuration\Models\ConfigurationSet;
+use App\Domain\Identity\Models\Tenant;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireScoringResult;
@@ -45,10 +46,31 @@ class TireScoringAndSaleTest extends TestCase
         ];
     }
 
-    /** Standard 4-band RETREAD config: [0,20)=CRITICAL(fail,not eligible) [20,50)=BAD(not eligible) [50,80)=FAIR(eligible) [80,100]=GOOD(eligible), KF = 0.7*spa + 0.3*ka, requires_ka. */
-    private function publishStandardConfig(array $headers, string $code = 'RETREAD', array $overrides = []): string
+    /** R2: casing_eligibility/lifecycle_limits/legal_restrictions are now required keys (see TireScoringConfigurationValidator) — all-null/empty here since this fixture's tests are about scoring, not disposition-eligibility (that's TireDispositionEligibilityTest's job). */
+    private function emptyDispositionPolicy(): array
     {
-        $payload = array_replace([
+        return [
+            'legal_restrictions' => [],
+            'casing_eligibility' => [
+                'require_inspection' => false, 'prohibited_damage_categories' => [], 'max_previous_repairs' => null,
+                'max_previous_retreads' => null, 'max_age_months' => null, 'max_mileage_km' => null,
+                'exclude_if_critical_fail' => true, 'required_measurements' => [],
+            ],
+            'lifecycle_limits' => [
+                'max_age_months' => null, 'max_mileage_km' => null, 'max_repair_count' => null, 'max_retread_count' => null,
+                'missing_data_behavior' => 'WARN', 'boundary_inclusive' => true,
+            ],
+        ];
+    }
+
+    /**
+     * Standard 4-band RETREAD config: [0,20)=CRITICAL(fail,not eligible) [20,50)=BAD(not eligible) [50,80)=FAIR(eligible) [80,100]=GOOD(eligible), KF = 0.7*spa + 0.3*ka, requires_ka.
+     * R2: publish is now maker-checker (see TIRE_SCORING branch note in ConfigurationController::publish()) —
+     * this helper owns both actors internally so every existing call site is unaffected.
+     */
+    private function publishStandardConfig(Tenant $tenant, string $code = 'RETREAD', array $overrides = []): string
+    {
+        $payload = array_replace(array_merge([
             'requires_ka' => true,
             'kf_weights' => ['spa_normalized' => 0.7, 'ka' => 0.3],
             'bands' => [
@@ -57,13 +79,18 @@ class TireScoringAndSaleTest extends TestCase
                 ['min_percent' => 50, 'max_percent' => 80, 'classification' => 'FAIR', 'normalized_score' => 70, 'eligible_for_operational_reuse' => true],
                 ['min_percent' => 80, 'max_percent' => 100, 'classification' => 'GOOD', 'normalized_score' => 100, 'eligible_for_operational_reuse' => true],
             ],
-        ], $overrides);
+        ], $this->emptyDispositionPolicy()), $overrides);
+
+        [, $makerToken] = $this->makeTenantUser($tenant, ['configuration.view', 'tire_scoring_configuration.manage']);
+        [, $checkerToken] = $this->makeTenantUser($tenant, ['configuration.view', 'tire_scoring_configuration.publish']);
+        $makerHeaders = $this->authHeaders($makerToken);
+        $checkerHeaders = $this->authHeaders($checkerToken);
 
         $draft = $this->postJson('/api/v1/app/configuration/versions', [
             'type' => 'TIRE_SCORING', 'code' => $code, 'name' => ucfirst(strtolower($code)).' Scoring (test fixture)', 'payload' => $payload,
-        ], $headers)->assertStatus(201);
+        ], $makerHeaders)->assertStatus(201);
         $versionId = $draft->json('data.id');
-        $this->postJson("/api/v1/app/configuration/versions/{$versionId}/publish", [], $headers)->assertOk();
+        $this->postJson("/api/v1/app/configuration/versions/{$versionId}/publish", [], $checkerHeaders)->assertOk();
 
         return $versionId;
     }
@@ -82,7 +109,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: null);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-NOREF', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $headers);
@@ -98,7 +125,7 @@ class TireScoringAndSaleTest extends TestCase
         $product->forceFill(['reference_tread_depth_mm' => 0])->save();
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-ZEROREF', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $headers);
@@ -114,7 +141,7 @@ class TireScoringAndSaleTest extends TestCase
         $nonTireProduct = $this->makeProduct($tenant, null, null, ['product_type' => 'SPARE_PART', 'reference_tread_depth_mm' => 8]);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $nonTireProduct->id, 'serial_number' => 'SN-BADPROD', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $headers);
@@ -144,7 +171,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario();
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-NOKA', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $headers);
@@ -161,7 +188,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-FAIR', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $headers); // 6/8 = 75% -> FAIR band
@@ -184,7 +211,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 3.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-ROUND', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 1.0, $headers); // 1/3 = 33.333...%
@@ -201,7 +228,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-TOPBAND', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 8.0, $headers); // 100%
@@ -220,7 +247,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-INSPFAIL', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 8.0, $headers); // would be GOOD/eligible band
@@ -240,7 +267,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-NOREASON', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 8.0, $headers);
@@ -255,7 +282,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-BANDFAIL', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 1.0, $headers); // 1/8=12.5% -> CRITICAL band, is_critical_fail=true
@@ -275,7 +302,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-SELFFIN', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $headers);
@@ -295,7 +322,7 @@ class TireScoringAndSaleTest extends TestCase
         $finalizerHeaders = $this->authHeaders($finalizerToken);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-FINAL', 'current_status' => 'IN_STOCK']);
-        $this->publishStandardConfig($computerHeaders);
+        $this->publishStandardConfig($tenant);
         $inspection = $this->makeInspection($tire, 6.0, $computerHeaders);
         $result = $this->postJson("/api/v1/app/tires/{$tire->id}/scoring", [
             'tire_inspection_id' => $inspection->id, 'scoring_type' => 'RETREAD', 'critical_safety_fail' => false, 'ka_score' => 80,
@@ -350,7 +377,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers, 'REPAIR', ['requires_ka' => false, 'kf_weights' => null]);
+        $this->publishStandardConfig($tenant, 'REPAIR', ['requires_ka' => false, 'kf_weights' => null]);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-REPAIRNOKF', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $headers);
@@ -385,13 +412,13 @@ class TireScoringAndSaleTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $draft = $this->postJson('/api/v1/app/configuration/versions', [
-            'type' => 'TIRE_SCORING', 'code' => 'RETREAD', 'name' => 'Weakened Tenant Override', 'payload' => [
+            'type' => 'TIRE_SCORING', 'code' => 'RETREAD', 'name' => 'Weakened Tenant Override', 'payload' => array_merge([
                 'bands' => [
                     // Same classification label as the platform's critical band, but tries to mark it non-critical.
                     ['min_percent' => 0, 'max_percent' => 20, 'classification' => 'CRITICAL', 'normalized_score' => 10, 'eligible_for_operational_reuse' => false, 'is_critical_fail' => false],
                     ['min_percent' => 20, 'max_percent' => 100, 'classification' => 'OK', 'normalized_score' => 80, 'eligible_for_operational_reuse' => true],
                 ],
-            ],
+            ], $this->emptyDispositionPolicy()),
         ], $headers)->assertStatus(201);
 
         $this->postJson("/api/v1/app/configuration/versions/{$draft->json('data.id')}/publish", [], $headers)->assertStatus(422);
@@ -405,7 +432,7 @@ class TireScoringAndSaleTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
         $partner = $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-CYCLEFAIL', 'current_status' => 'IN_STOCK']);
         $this->postJson("/api/v1/app/tires/{$tire->id}/install", ['vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_LEFT'], $headers)->assertStatus(201);
@@ -446,7 +473,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-SELLFAIL', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 8.0, $headers);
@@ -463,7 +490,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-SELLBAD', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 3.0, $headers); // 3/8=37.5% -> BAD, not eligible
@@ -479,7 +506,7 @@ class TireScoringAndSaleTest extends TestCase
         [$tenant, , $product] = $this->setUpScenario(referenceTreadDepth: 8.0);
         [, $token] = $this->makeTenantUser($tenant, $this->allPermissions());
         $headers = $this->authHeaders($token);
-        $this->publishStandardConfig($headers);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-SELLGOOD', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 7.0, $headers); // 87.5% -> GOOD, eligible
@@ -550,7 +577,7 @@ class TireScoringAndSaleTest extends TestCase
         [, $noPermToken] = $this->makeTenantUser($tenant, ['tire.view', 'tire.manage', 'tire.inspect']);
         $fullHeaders = $this->authHeaders($fullToken);
         $noPermHeaders = $this->authHeaders($noPermToken);
-        $this->publishStandardConfig($fullHeaders);
+        $this->publishStandardConfig($tenant);
 
         $tire = Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-NOPERM', 'current_status' => 'IN_STOCK']);
         $inspection = $this->makeInspection($tire, 6.0, $fullHeaders);

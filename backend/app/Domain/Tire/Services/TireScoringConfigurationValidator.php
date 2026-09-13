@@ -84,6 +84,87 @@ class TireScoringConfigurationValidator
         }
 
         $this->assertDoesNotWeakenPlatformSafetyInvariants($set, $bands);
+
+        // R2 (Production Readiness): these three categories are now required,
+        // explicit configuration — activation (= publish, since PUBLISHED is
+        // this framework's "active" state) is refused without them. Values
+        // are never invented here; every numeric limit may be null ("no
+        // limit configured"), but the KEY must be present, forcing an
+        // explicit decision rather than a silently-missing rule. Vehicle/
+        // axle-suitability and Tire-specialist/safety-department approval
+        // are deliberately NOT required — see IMPROVEMENT_CONTEXT.md's R2
+        // decision record.
+        $this->validateLegalRestrictions($payload);
+        $this->validateCasingEligibility($payload);
+        $this->validateLifecycleLimits($payload);
+    }
+
+    private function validateLegalRestrictions(array $payload): void
+    {
+        if (! array_key_exists('legal_restrictions', $payload) || ! is_array($payload['legal_restrictions'])) {
+            throw new TireException('Tire scoring configuration must define "legal_restrictions" as an array (an empty array is valid — it explicitly declares that no restriction currently applies).');
+        }
+        foreach ($payload['legal_restrictions'] as $i => $restriction) {
+            foreach (['code', 'name', 'restriction_type', 'effective_date', 'behavior', 'applicable_process'] as $field) {
+                if (! array_key_exists($field, $restriction) || $restriction[$field] === null || $restriction[$field] === '') {
+                    throw new TireException("legal_restrictions[{$i}] is missing required field '{$field}'.");
+                }
+            }
+            if (! in_array($restriction['behavior'], ['BLOCK', 'WARN'], true)) {
+                throw new TireException("legal_restrictions[{$i}].behavior must be BLOCK or WARN.");
+            }
+            if (! in_array($restriction['applicable_process'], ['REPAIR', 'RETREAD', 'BOTH'], true)) {
+                throw new TireException("legal_restrictions[{$i}].applicable_process must be REPAIR, RETREAD, or BOTH.");
+            }
+        }
+    }
+
+    private function validateCasingEligibility(array $payload): void
+    {
+        if (! array_key_exists('casing_eligibility', $payload) || ! is_array($payload['casing_eligibility'])) {
+            throw new TireException('Tire scoring configuration must define a "casing_eligibility" object (numeric limits may be null — meaning no limit — but the object itself must be present).');
+        }
+        $ce = $payload['casing_eligibility'];
+        foreach (['require_inspection', 'prohibited_damage_categories', 'max_previous_repairs', 'max_previous_retreads', 'max_age_months', 'max_mileage_km', 'exclude_if_critical_fail', 'required_measurements'] as $field) {
+            if (! array_key_exists($field, $ce)) {
+                throw new TireException("casing_eligibility is missing required key '{$field}' (use null for \"no limit\", not an absent key).");
+            }
+        }
+        if (! is_bool($ce['require_inspection']) || ! is_bool($ce['exclude_if_critical_fail'])) {
+            throw new TireException('casing_eligibility.require_inspection and exclude_if_critical_fail must be booleans.');
+        }
+        if (! is_array($ce['prohibited_damage_categories']) || ! is_array($ce['required_measurements'])) {
+            throw new TireException('casing_eligibility.prohibited_damage_categories and required_measurements must be arrays.');
+        }
+        foreach (['max_previous_repairs', 'max_previous_retreads', 'max_age_months', 'max_mileage_km'] as $field) {
+            if ($ce[$field] !== null && (! is_numeric($ce[$field]) || (float) $ce[$field] < 0)) {
+                throw new TireException("casing_eligibility.{$field} must be null or a non-negative number.");
+            }
+        }
+    }
+
+    private function validateLifecycleLimits(array $payload): void
+    {
+        if (! array_key_exists('lifecycle_limits', $payload) || ! is_array($payload['lifecycle_limits'])) {
+            throw new TireException('Tire scoring configuration must define a "lifecycle_limits" object (numeric limits may be null — meaning no limit — but the object itself must be present).');
+        }
+        $ll = $payload['lifecycle_limits'];
+        foreach (['max_age_months', 'max_mileage_km', 'max_repair_count', 'max_retread_count', 'missing_data_behavior', 'boundary_inclusive'] as $field) {
+            if (! array_key_exists($field, $ll)) {
+                throw new TireException("lifecycle_limits is missing required key '{$field}' (use null for \"no limit\", not an absent key).");
+            }
+        }
+        foreach (['max_age_months', 'max_mileage_km', 'max_repair_count', 'max_retread_count'] as $field) {
+            if ($ll[$field] !== null && (! is_numeric($ll[$field]) || (float) $ll[$field] < 0)) {
+                throw new TireException("lifecycle_limits.{$field} must be null or a non-negative number.");
+            }
+        }
+        if (! in_array($ll['missing_data_behavior'], ['BLOCK', 'WARN'], true)) {
+            throw new TireException('lifecycle_limits.missing_data_behavior must be BLOCK or WARN. BLOCK is the fail-closed default this codebase recommends — missing tire history must never silently pass a safety rule.');
+        }
+        if (! is_bool($ll['boundary_inclusive'])) {
+            throw new TireException('lifecycle_limits.boundary_inclusive must be a boolean.');
+        }
     }
 
     /** BD-8: a TENANT-scoped version may only tighten, never loosen, a platform-default band's safety flags (matched by classification label). */

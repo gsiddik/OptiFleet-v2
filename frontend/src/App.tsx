@@ -41,6 +41,7 @@ import { TenantAuditLogPage } from './pages/tenant/audit/TenantAuditLogPage';
 import { NumberingConfigPage } from './pages/tenant/configuration/NumberingConfigPage';
 import { DocumentTemplateConfigPage } from './pages/tenant/configuration/DocumentTemplateConfigPage';
 import { WorkflowConfigPage } from './pages/tenant/configuration/WorkflowConfigPage';
+import { TireScoringConfigPage } from './pages/tenant/configuration/TireScoringConfigPage';
 import { NotificationRulesPage } from './pages/tenant/configuration/NotificationRulesPage';
 import { ConfigurationHistoryPage } from './pages/tenant/configuration/ConfigurationHistoryPage';
 import { AccountSubscriptionPage } from './pages/tenant/account/AccountSubscriptionPage';
@@ -618,6 +619,14 @@ export default function App() {
               element={
                 <RequirePermission permission="configuration.view">
                   <NotificationRulesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="configuration/tire-scoring"
+              element={
+                <RequirePermission permission="configuration.view">
+                  <TireScoringConfigPage />
                 </RequirePermission>
               }
             />

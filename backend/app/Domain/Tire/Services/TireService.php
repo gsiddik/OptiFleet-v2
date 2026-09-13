@@ -27,6 +27,8 @@ use Illuminate\Support\Facades\DB;
  */
 class TireService
 {
+    public function __construct(private readonly TireDispositionEligibilityService $eligibility) {}
+
     /**
      * G-23: installedAt/installedAtSource/baseline* parameters exist so a tire
      * already mounted before OptiFleet was adopted can be onboarded with its
@@ -391,6 +393,10 @@ class TireService
             if (TireRetread::query()->where('tire_id', $locked->id)->whereNotIn('status', ['APPROVED', 'REJECTED'])->exists()) {
                 throw new TireException('An open retread cycle already exists for this tire — receive and approve it before sending again.');
             }
+            // R2: opt-in — only gates when the tenant has published an active RETREAD
+            // scoring configuration with casing_eligibility/lifecycle_limits/legal_restrictions
+            // rules; otherwise identical to pre-R2 behavior (see TireDispositionEligibilityService).
+            $this->eligibility->assertEligible($locked, 'RETREAD');
 
             $cycle = (int) TireRetread::query()->where('tire_id', $locked->id)->max('cycle_number') + 1;
 
@@ -419,6 +425,8 @@ class TireService
             if (TireRepair::query()->where('tire_id', $locked->id)->whereNotIn('status', ['APPROVED', 'REJECTED'])->exists()) {
                 throw new TireException('An open repair cycle already exists for this tire — receive and approve it before sending again.');
             }
+            // R2: opt-in — see the identical note in retread() above.
+            $this->eligibility->assertEligible($locked, 'REPAIR');
 
             $cycle = (int) TireRepair::query()->where('tire_id', $locked->id)->max('cycle_number') + 1;
 

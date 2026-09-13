@@ -1578,7 +1578,7 @@ export interface WarrantyClaimItem {
 
 // --- Phase 5: Tenant Configuration & Business Rules ---
 
-export type ConfigurationType = 'NUMBERING' | 'TEMPLATE' | 'WORKFLOW' | 'NOTIFICATION';
+export type ConfigurationType = 'NUMBERING' | 'TEMPLATE' | 'WORKFLOW' | 'NOTIFICATION' | 'TIRE_SCORING';
 export type ConfigurationVersionStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface ConfigurationVersionItem {
