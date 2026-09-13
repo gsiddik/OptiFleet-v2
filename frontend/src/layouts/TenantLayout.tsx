@@ -94,6 +94,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Tire Management',
     items: [
+      { to: '/app/rims', label: 'Rim', permission: 'rim.view', module: 'TIRE' },
       { to: '/app/tires', label: 'Tire List', permission: 'tire.view', module: 'TIRE' },
       { to: '/app/tires', label: 'Inventory', permission: 'tire.view', module: 'TIRE' },
       { to: '/app/wheel-configurations', label: 'Wheel Configuration', permission: 'tire.view', module: 'TIRE' },

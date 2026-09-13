@@ -98,6 +98,7 @@ import { PartnerDetailPage } from './pages/tenant/partners/PartnerDetailPage';
 import { TireListPage } from './pages/tenant/tires/TireListPage';
 import { TireDetailPage } from './pages/tenant/tires/TireDetailPage';
 import { WheelConfigurationListPage } from './pages/tenant/tires/WheelConfigurationListPage';
+import { RimsPage } from './pages/tenant/tires/RimsPage';
 import { ComponentAssetListPage } from './pages/tenant/components/ComponentAssetListPage';
 import { ComponentAssetDetailPage } from './pages/tenant/components/ComponentAssetDetailPage';
 import { WarrantyListPage } from './pages/tenant/warranty/WarrantyListPage';
@@ -680,6 +681,7 @@ export default function App() {
             <Route path="tires" element={<RequirePermission permission="tire.view"><TireListPage /></RequirePermission>} />
             <Route path="tires/:id" element={<RequirePermission permission="tire.view"><TireDetailPage /></RequirePermission>} />
             <Route path="wheel-configurations" element={<RequirePermission permission="tire.view"><WheelConfigurationListPage /></RequirePermission>} />
+            <Route path="rims" element={<RequirePermission permission="rim.view"><RimsPage /></RequirePermission>} />
 
             <Route path="component-assets" element={<RequirePermission permission="component_asset.view"><ComponentAssetListPage /></RequirePermission>} />
             <Route path="component-assets/:id" element={<RequirePermission permission="component_asset.view"><ComponentAssetDetailPage /></RequirePermission>} />

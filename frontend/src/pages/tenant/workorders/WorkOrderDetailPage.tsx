@@ -55,6 +55,7 @@ export function WorkOrderDetailPage() {
   const [tab, setTab] = useState<Tab>('Overview');
   const [showSchedule, setShowSchedule] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
+  const [printing, setPrinting] = useState(false);
 
   function load() {
     apiClient
@@ -64,6 +65,21 @@ export function WorkOrderDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  /** G-04: a print PDF endpoint has existed on the backend since Phase 1, with no frontend caller anywhere. */
+  async function printWorkOrder() {
+    setPrinting(true);
+    setError(null);
+    try {
+      const res = await apiClient.get(`/app/work-orders/${id}/print`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setPrinting(false);
+    }
+  }
 
   async function act(action: string) {
     if (action === 'schedule') {
@@ -99,6 +115,11 @@ export function WorkOrderDetailPage() {
         </h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusBadge status={wo.status} />
+          {hasPermission('work_order.view') && (
+            <button className="btn-secondary" disabled={printing} onClick={printWorkOrder}>
+              {printing ? 'Loading…' : 'Print'}
+            </button>
+          )}
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
               {a.label}

@@ -1166,6 +1166,22 @@ export interface VendorInvoiceReferenceItem {
   purchase_order?: PurchaseOrderItem;
 }
 
+export interface RimItem {
+  id: string;
+  code: string;
+  brand: string;
+  material: string | null;
+  width_inch: string | null;
+  diameter_inch: string | null;
+  disc_thickness_mm: string | null;
+  offset_mm: string | null;
+  bolt_holes: number | null;
+  bolt_diameter_mm: string | null;
+  pcd_mm: string | null;
+  hub_hole_diameter_mm: string | null;
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
 export interface WheelConfigurationItem {
   id: string;
   vehicle_category_id: string;

@@ -24,6 +24,7 @@ export function PurchaseOrderDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [accepted, setAccepted] = useState<Record<string, string>>({});
+  const [printing, setPrinting] = useState(false);
 
   function load() {
     apiClient.get(`/app/purchase-orders/${id}`).then((res) => {
@@ -38,6 +39,21 @@ export function PurchaseOrderDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  /** Same pattern as G-04 (Work Order): a print PDF endpoint existed with no frontend caller anywhere. */
+  async function printPurchaseOrder() {
+    setPrinting(true);
+    setError(null);
+    try {
+      const res = await apiClient.get(`/app/purchase-orders/${id}/print`, { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
+      window.open(url, '_blank');
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setPrinting(false);
+    }
+  }
 
   async function act(action: string) {
     setBusy(true);
@@ -81,6 +97,11 @@ export function PurchaseOrderDetailPage() {
         <h1 style={{ fontSize: 22, margin: 0 }}>{po.po_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <StatusBadge status={po.status} />
+          {hasPermission('purchase_order.view') && (
+            <button className="btn-secondary" disabled={printing} onClick={printPurchaseOrder}>
+              {printing ? 'Loading…' : 'Print'}
+            </button>
+          )}
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
               {a.label}
