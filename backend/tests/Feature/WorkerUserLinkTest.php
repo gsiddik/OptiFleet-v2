@@ -69,7 +69,7 @@ class WorkerUserLinkTest extends TestCase
         [$tenant, $token, $worker] = $this->setUpTenant();
         $this->grantModule($tenant, 'ACCESS_MANAGEMENT');
         $role = Role::query()->create(['tenant_id' => $tenant->id, 'name' => 'Mechanic', 'scope' => 'tenant', 'is_system' => false]);
-        [, $adminToken] = $this->makeTenantUser($tenant, ['user.create', 'worker.manage', 'user.assign']);
+        [, $adminToken] = $this->makeTenantUser($tenant, ['user.create', 'user.view', 'worker.manage', 'user.assign']);
         $headers = $this->authHeaders($adminToken);
 
         $create = $this->postJson('/api/v1/app/users', [
