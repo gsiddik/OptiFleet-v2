@@ -84,7 +84,7 @@ class WorkerUserLinkTest extends TestCase
         $this->postJson("/api/v1/app/workers/{$worker->id}/link-user", ['user_id' => $userId], $headers)
             ->assertOk()->assertJsonPath('data.user_id', $userId);
 
-        $this->postJson("/api/v1/app/users/{$membershipId}/roles", ['role_id' => $role->id], $headers)->assertOk();
+        $this->postJson("/api/v1/app/users/{$membershipId}/roles", ['role_id' => $role->id], $headers)->assertStatus(201);
 
         $list = $this->getJson('/api/v1/app/users', $headers)->assertOk();
         $row = collect($list->json('data'))->firstWhere('id', $membershipId);
