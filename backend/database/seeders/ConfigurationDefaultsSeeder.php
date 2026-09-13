@@ -35,6 +35,10 @@ class ConfigurationDefaultsSeeder extends Seeder
             'purchase_order' => ['format' => 'PO/{YYYY}/{SEQ:6}', 'doc_code' => 'PO', 'reset_rule' => 'YEARLY'],
             'goods_receipt' => ['format' => 'GR/{YYYY}/{SEQ:6}', 'doc_code' => 'GR', 'reset_rule' => 'YEARLY'],
             'warranty_claim' => ['format' => 'WC/{YYYY}/{SEQ:6}', 'doc_code' => 'WC', 'reset_rule' => 'YEARLY'],
+            // R1: Maintenance Memo previously had no document number at all;
+            // Workshop Invoice is new in this batch. Both follow the exact
+            // same platform-default-numbering pattern as every other document.
+            'maintenance_memo' => ['format' => 'MEMO/OPTIFLEET/{YYYY}/{SEQ:6}', 'doc_code' => 'MEMO', 'reset_rule' => 'YEARLY'],
         ];
 
         foreach ($numbering as $code => $payload) {
@@ -160,6 +164,28 @@ class ConfigurationDefaultsSeeder extends Seeder
                 </table>
                 <p style="text-align:right;">Subtotal: {{invoice.subtotal}} | Tax: {{invoice.tax_total}}<br>
                 <strong>Total: {{invoice.total}}</strong></p>
+                HTML),
+            'maintenance_memo' => $wrap('Maintenance Memo', <<<'HTML'
+                <p>To (Workshop Partner): {{partner.name}}, {{partner.address}}<br>Contact: {{partner.contact_name}} ({{partner.contact_phone}})<br>
+                Unit: {{vehicle.registration_number}} ({{vehicle.brand}} {{vehicle.model}}) | Work Order: {{work_order.number}} ({{work_order.maintenance_type}})<br>
+                Priority: {{maintenance_memo.priority}} | Status: {{maintenance_memo.status}}</p>
+                <p>Requested work: {{maintenance_memo.description}}</p>
+                <p>Condition notes: {{maintenance_memo.condition_notes}}</p>
+                <p>Estimated cost: {{maintenance_memo.cost}}</p>
+                <p>Requested: {{maintenance_memo.requested_at}} | Completed: {{maintenance_memo.completed_at}}</p>
+                HTML),
+            // R1: this is OptiFleet's own record of a Workshop Invoice the partner issued
+            // externally — the printed document is a settlement RECORD, not an
+            // OptiFleet-issued invoice; wording is deliberately "Recorded Workshop
+            // Invoice", never "Invoice #{{...}}" alone, to avoid implying OptiFleet issued it.
+            'workshop_invoice' => $wrap('Recorded Workshop Invoice', <<<'HTML'
+                <p>Workshop Partner: {{partner.name}}, {{partner.address}}<br>
+                External Invoice No: {{workshop_invoice.external_invoice_number}} | Invoice Date: {{workshop_invoice.invoice_date}} | Due: {{workshop_invoice.due_date}}<br>
+                Related Work Order: {{work_order.number}} | Related Memo: {{maintenance_memo.reference_number}}<br>
+                Status: {{workshop_invoice.status}}</p>
+                <p style="text-align:right;">Subtotal: {{workshop_invoice.subtotal}} | Tax: {{workshop_invoice.tax_total}} | Discount: {{workshop_invoice.discount_total}}<br>
+                <strong>Total: {{workshop_invoice.total_amount}} {{workshop_invoice.currency}}</strong></p>
+                <p>Notes: {{workshop_invoice.notes}}</p>
                 HTML),
         ];
     }

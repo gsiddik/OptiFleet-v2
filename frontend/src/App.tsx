@@ -67,6 +67,8 @@ import { BreakdownListPage } from './pages/tenant/maintenance/BreakdownListPage'
 import { BreakdownDetailPage } from './pages/tenant/maintenance/BreakdownDetailPage';
 import { WorkOrderListPage } from './pages/tenant/workorders/WorkOrderListPage';
 import { WorkOrderDetailPage } from './pages/tenant/workorders/WorkOrderDetailPage';
+import { WorkshopInvoiceListPage } from './pages/tenant/workshop-invoices/WorkshopInvoiceListPage';
+import { WorkshopInvoiceDetailPage } from './pages/tenant/workshop-invoices/WorkshopInvoiceDetailPage';
 import { WorkspaceListPage } from './pages/tenant/workshop/WorkspaceListPage';
 import { WorkerListPage } from './pages/tenant/workshop/WorkerListPage';
 import { WorkshopSchedulerPage } from './pages/tenant/workshop/WorkshopSchedulerPage';
@@ -432,6 +434,22 @@ export default function App() {
               element={
                 <RequirePermission permission="work_order.view">
                   <WorkOrderDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="workshop-invoices"
+              element={
+                <RequirePermission permission="workshop_invoice.view">
+                  <WorkshopInvoiceListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="workshop-invoices/:id"
+              element={
+                <RequirePermission permission="workshop_invoice.view">
+                  <WorkshopInvoiceDetailPage />
                 </RequirePermission>
               }
             />

@@ -89,6 +89,22 @@ class TemplateVariableRegistry
             ],
             'sections' => [],
         ],
+        // R1: OptiFleet's own record of an externally-issued Workshop Invoice —
+        // deliberately named/worded so a template can never be built that implies
+        // OptiFleet issued the invoice (see ConfigurationDefaultsSeeder's default template).
+        'workshop_invoice' => [
+            'scalars' => [
+                'workshop_invoice.external_invoice_number', 'workshop_invoice.invoice_date', 'workshop_invoice.due_date',
+                'workshop_invoice.currency', 'workshop_invoice.subtotal', 'workshop_invoice.tax_total',
+                'workshop_invoice.discount_total', 'workshop_invoice.total_amount', 'workshop_invoice.status',
+                'workshop_invoice.notes', 'workshop_invoice.reconciliation_note',
+                'partner.name', 'partner.address', 'partner.contact_name', 'partner.contact_phone',
+                'work_order.number', 'maintenance_memo.reference_number', 'maintenance_memo.description',
+            ],
+            'sections' => [
+                'items' => ['description', 'quantity', 'unit_price', 'line_total'],
+            ],
+        ],
         'purchase_order' => [
             'scalars' => [
                 'purchase_order.number', 'purchase_order.status', 'purchase_order.order_date',

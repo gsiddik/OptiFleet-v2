@@ -1124,3 +1124,101 @@ completed phase.
   `1d56042` — pushed to `origin/Improvement` as a single final push once
   all of the above was verified (see the push confirmation recorded at
   the end of this session, if applicable).
+
+## Production Readiness Phase (R1-R4) — Superseding Business Decisions
+
+This section records authoritative business decisions supplied explicitly
+for this phase, which supersede the corresponding BLOCKED_TECHNICAL /
+"needs specialist input" rows recorded above and in
+`VMS_RECONCILIATION_TRACEABILITY.md`. Per this repository's own rule
+(completed phases are not reopened, but a later, more authoritative
+decision does supersede an earlier documented blocker), these decisions
+are implemented as real, tested code — not left as a further deferral.
+
+### R1 — Workshop Invoice and Settlement (supersedes the prior BLOCKED_TECHNICAL)
+
+**Decision (supersedes IMPROVEMENT_CONTEXT.md's prior "needs a finance/
+accounting policy owner" framing and VMS_RECONCILIATION_TRACEABILITY.md's
+"Explicitly BLOCKED_TECHNICAL" Workshop Invoice row):** a Workshop Invoice
+is issued EXTERNALLY by the Workshop Partner and RECEIVED/RECORDED by an
+OptiFleet user — OptiFleet never issues, numbers, or approves an invoice
+on its own behalf for this feature. This resolves the previously-missing
+policy input (settlement/accounting behavior) by defining the actual
+authoritative flow: Work Order -> Maintenance Memo -> sent to partner ->
+partner performs work -> partner returns the completed memo -> partner
+sends its own external invoice -> OptiFleet records the external invoice
+number and supporting documents -> Memo status becomes BILLED -> payment
+is processed outside/through a future accounting integration -> payment
+evidence uploaded -> Memo status becomes PAID.
+
+Implemented (see `WorkshopInvoiceService`, `WorkshopInvoiceController`,
+`WorkshopInvoiceReconciliationService`, migrations
+`2026_09_20_000001`-`2026_09_20_000007`, `WorkshopInvoiceTest.php`):
+- `WorkOrderExternalService` (Maintenance Memo) gained `memo_number`
+  (real document numbering, same mechanism as every other OptiFleet
+  document), `diagnosis`, `requested_parts_services`, and two new
+  lifecycle statuses: BILLED, PAID.
+- `WorkshopInvoice` — the RECORD of an externally-issued invoice —
+  supports decimal-safe (BigDecimal) totals, an explicit, documented
+  normalization rule for duplicate external-invoice-number detection
+  (trim, collapse whitespace, upper-case), scoped per tenant+partner,
+  excluding cancelled rows.
+- `WorkshopInvoiceReconciliationService` computes (live, never cached)
+  expected-vs-invoiced variance against the Memo's own recorded `cost`,
+  surfaces missing source records, and never auto-rejects a variance — an
+  authorized user reviews it and may record a `reconciliation_note`. No
+  approval threshold is invented; none exists, so none is enforced.
+- Payment: exactly one payment per invoice (no partial-payment workflow —
+  none was described in the business decision), payment evidence
+  mandatory, `paid_amount` must exactly equal `total_amount`.
+- Correction and cancellation: full maker-checker (the requester cannot
+  verify their own request — enforced in `WorkshopInvoiceService`, the
+  same explicit-self-check pattern already established by
+  `UsedPartDispositionService::decide()` and `TireScoringService::finalize()`),
+  original values preserved via a `previous_values`/`requested_values`
+  snapshot on every correction request (never overwritten in place),
+  cancellation-after-PAID explicitly supported (preserves the payment row
+  untouched, reverts the Memo to COMPLETED) — never a silent reversal.
+- Accounting integration boundary: `IntegrationOutboxEvent` /
+  `IntegrationOutboxService` — a real, tenant-scoped, idempotent
+  (unique on tenant+event_type+aggregate_id), retry-safe (status/attempts/
+  last_error) outbox table, written transactionally alongside every
+  domain state change (`workshop_invoice.recorded/corrected/cancelled`,
+  `workshop_invoice.payment_recorded`, `maintenance_memo.billed/paid`).
+  No connector consumes these rows — delivery stays PENDING until an
+  approved accounting integration contract exists; this codebase never
+  claims a posting succeeded.
+- New permissions (tenant scope, group `workshop_invoice`): `record`,
+  `view`, `upload_payment`, `request_correction`, `request_cancellation`,
+  `verify_correction`, `verify_cancellation`, `view_settlement_history`.
+- New platform-default NUMBERING config for `maintenance_memo` (it had
+  none before this phase) and platform-default TEMPLATEs for both
+  `maintenance_memo` and `workshop_invoice`, seeded idempotently via the
+  existing `ConfigurationDefaultsSeeder` pattern.
+
+### R2 — Tire Scoring Configuration and Activation (supersedes part of BD-6's "needs specialist input")
+
+**Decision (supersedes IMPROVEMENT_CONTEXT.md's BD-6 note that "legal/
+policy restrictions, casing eligibility criteria, and lifecycle limits
+have no rule this session can encode without inventing one"):** these
+three categories are now required, tenant/platform-configurable
+categories — this phase builds the configuration framework and wires it
+into real disposition gates. Vehicle/axle-suitability rules and a
+dedicated Tire-specialist/safety-department approval step are explicitly
+and permanently EXCLUDED from the current scope (a distinct decision from
+"not yet implemented") — BD-6's own precedence chain is accordingly
+narrowed for this codebase's current scope to: Critical Safety Failure ->
+Legal/Policy -> Casing Eligibility -> Lifecycle Limits -> Inspection
+Result -> KF -> Economic Feasibility (the existing maker-checker approval
+step) -> Final Disposition. Vehicle/axle-suitability remains a genuinely
+open item (still no source material defines it) but is no longer part of
+what Tire Scoring activation requires.
+
+See the R2 implementation detail recorded alongside `TireScoringConfigurationValidator`,
+`TireDispositionEligibilityService`, and `ConfigurationController`'s
+TIRE_SCORING branch for exactly what was built, and `TireScoringConfigurationTest.php`
+/ `TireDispositionEligibilityTest.php` for verification. Phase F's
+production-activation discipline is preserved exactly: framework
+implemented, no values invented, and production scoring/disposition
+gating remains disabled for a tenant until it publishes its own complete,
+valid, maker-checker-approved configuration.

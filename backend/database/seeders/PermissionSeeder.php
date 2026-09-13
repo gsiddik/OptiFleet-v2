@@ -48,6 +48,16 @@ class PermissionSeeder extends Seeder
             'diagnosis' => ['manage'],
             'maintenance_job' => ['manage'],
             'work_order_external_service' => ['create', 'complete', 'cancel'],
+            // R1 (Workshop Invoice and Settlement): "record" — never "create" or "issue" —
+            // OptiFleet only records an externally-issued document. Correction/cancellation
+            // request+verify are deliberately separate permissions so maker-checker can be
+            // enforced by RBAC (same pattern as tire_retread/tire_repair above).
+            'workshop_invoice' => [
+                'record', 'view', 'upload_payment',
+                'request_correction', 'request_cancellation',
+                'verify_correction', 'verify_cancellation',
+                'view_settlement_history',
+            ],
             'worker' => ['view', 'manage', 'assign'],
             'workspace' => ['view', 'manage', 'reserve', 'block'],
             'qc' => ['view', 'perform', 'approve', 'reject'],

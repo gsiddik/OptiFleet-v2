@@ -82,6 +82,7 @@ use App\Http\Controllers\Api\Tenant\WorkOrderController;
 use App\Http\Controllers\Api\Tenant\WorkOrderExecutionController;
 use App\Http\Controllers\Api\Tenant\WorkOrderExternalServiceController;
 use App\Http\Controllers\Api\Tenant\WorkshopController;
+use App\Http\Controllers\Api\Tenant\WorkshopInvoiceController;
 use App\Http\Controllers\Api\Tenant\WorkshopSchedulerController;
 use App\Http\Controllers\Api\Tenant\WorkspaceController;
 use App\Http\Controllers\Api\Tenant\WorkspaceReservationController;
@@ -273,6 +274,19 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/complete', [WorkOrderExternalServiceController::class, 'complete'])->middleware('permission:work_order_external_service.complete');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/cancel', [WorkOrderExternalServiceController::class, 'cancel'])->middleware('permission:work_order_external_service.cancel');
             Route::get('/work-orders/{workOrder}/external-services/{externalService}/print', [WorkOrderExternalServiceController::class, 'print'])->middleware('permission:work_order.view');
+
+            // R1 (Workshop Invoice and Settlement) — externally-issued document, OptiFleet records it.
+            Route::get('/workshop-invoices', [WorkshopInvoiceController::class, 'index'])->middleware('permission:workshop_invoice.view');
+            Route::get('/workshop-invoices/{workshopInvoice}', [WorkshopInvoiceController::class, 'show'])->middleware('permission:workshop_invoice.view');
+            Route::get('/workshop-invoices/{workshopInvoice}/print', [WorkshopInvoiceController::class, 'print'])->middleware('permission:workshop_invoice.view');
+            Route::get('/workshop-invoices/{workshopInvoice}/reconciliation', [WorkshopInvoiceController::class, 'reconciliation'])->middleware('permission:workshop_invoice.view');
+            Route::put('/workshop-invoices/{workshopInvoice}/reconciliation-note', [WorkshopInvoiceController::class, 'updateReconciliationNote'])->middleware('permission:workshop_invoice.view_settlement_history');
+            Route::post('/work-orders/{workOrder}/external-services/{externalService}/workshop-invoice', [WorkshopInvoiceController::class, 'record'])->middleware('permission:workshop_invoice.record');
+            Route::post('/workshop-invoices/{workshopInvoice}/payments', [WorkshopInvoiceController::class, 'recordPayment'])->middleware('permission:workshop_invoice.upload_payment');
+            Route::post('/workshop-invoices/{workshopInvoice}/request-correction', [WorkshopInvoiceController::class, 'requestCorrection'])->middleware('permission:workshop_invoice.request_correction');
+            Route::post('/workshop-invoices/{workshopInvoice}/corrections/{correction}/decide', [WorkshopInvoiceController::class, 'decideCorrection'])->middleware('permission:workshop_invoice.verify_correction');
+            Route::post('/workshop-invoices/{workshopInvoice}/request-cancellation', [WorkshopInvoiceController::class, 'requestCancellation'])->middleware('permission:workshop_invoice.request_cancellation');
+            Route::post('/workshop-invoices/{workshopInvoice}/cancellations/{cancellation}/decide', [WorkshopInvoiceController::class, 'decideCancellation'])->middleware('permission:workshop_invoice.verify_cancellation');
             Route::post('/work-orders/{workOrder}/mechanics', [WorkOrderExecutionController::class, 'assignMechanic'])->middleware('permission:worker.assign');
             Route::post('/work-orders/{workOrder}/mechanics/{assignment}/unassign', [WorkOrderExecutionController::class, 'unassignMechanic'])->middleware('permission:worker.assign');
             Route::post('/work-orders/{workOrder}/jobs/{job}/labor/start', [WorkOrderExecutionController::class, 'startLabor'])->middleware('permission:maintenance_job.manage');

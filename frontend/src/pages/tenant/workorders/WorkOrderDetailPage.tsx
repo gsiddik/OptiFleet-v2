@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
@@ -1221,6 +1221,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
   const [cost, setCost] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [recordingInvoiceFor, setRecordingInvoiceFor] = useState<string | null>(null);
 
   useEffect(() => {
     apiClient.get('/app/partners', { params: { per_page: 200 } }).then((res) => setPartners(res.data.data)).catch(() => setPartners([]));
@@ -1335,9 +1336,31 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
                 Print Memo
               </button>
             )}
+            {s.status === 'COMPLETED' && hasPermission('workshop_invoice.record') && (
+              <button className="btn-primary" disabled={busy} onClick={() => setRecordingInvoiceFor(s.id)}>
+                Record Workshop Invoice
+              </button>
+            )}
+            {(s.status === 'BILLED' || s.status === 'PAID') && s.workshop_invoice_id && hasPermission('workshop_invoice.view') && (
+              <Link className="btn-secondary" to={`/app/workshop-invoices/${s.workshop_invoice_id}`}>
+                View Workshop Invoice
+              </Link>
+            )}
           </div>
         </div>
       ))}
+      {recordingInvoiceFor && (
+        <RecordWorkshopInvoiceModal
+          workOrderId={wo.id}
+          externalServiceId={recordingInvoiceFor}
+          onClose={() => setRecordingInvoiceFor(null)}
+          onRecorded={(invoiceId) => {
+            setRecordingInvoiceFor(null);
+            onChanged();
+            window.location.assign(`/app/workshop-invoices/${invoiceId}`);
+          }}
+        />
+      )}
       {hasPermission('work_order_external_service.create') && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           <FormField label="Partner">
@@ -1418,6 +1441,115 @@ function HistoryTab({ vehicleId }: { vehicleId: string }) {
         </div>
       ))}
     </div>
+  );
+}
+
+/** R1: records an externally-issued Workshop Invoice against a COMPLETED Maintenance Memo — OptiFleet never issues one. */
+function RecordWorkshopInvoiceModal({
+  workOrderId,
+  externalServiceId,
+  onClose,
+  onRecorded,
+}: {
+  workOrderId: string;
+  externalServiceId: string;
+  onClose: () => void;
+  onRecorded: (invoiceId: string) => void;
+}) {
+  const [externalInvoiceNumber, setExternalInvoiceNumber] = useState('');
+  const [invoiceDate, setInvoiceDate] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [currency, setCurrency] = useState('IDR');
+  const [totalAmount, setTotalAmount] = useState('');
+  const [subtotal, setSubtotal] = useState('');
+  const [taxTotal, setTaxTotal] = useState('');
+  const [discountTotal, setDiscountTotal] = useState('');
+  const [partnerReference, setPartnerReference] = useState('');
+  const [returnedMemoAttachmentUrl, setReturnedMemoAttachmentUrl] = useState('');
+  const [invoiceAttachmentUrl, setInvoiceAttachmentUrl] = useState('');
+  const [notes, setNotes] = useState('');
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  async function submit() {
+    setSubmitting(true);
+    setErrors({});
+    try {
+      const res = await apiClient.post(`/app/work-orders/${workOrderId}/external-services/${externalServiceId}/workshop-invoice`, {
+        external_invoice_number: externalInvoiceNumber,
+        invoice_date: invoiceDate,
+        due_date: dueDate || undefined,
+        currency,
+        total_amount: totalAmount,
+        subtotal: subtotal || undefined,
+        tax_total: taxTotal || undefined,
+        discount_total: discountTotal || undefined,
+        partner_reference: partnerReference || undefined,
+        returned_memo_attachment_url: returnedMemoAttachmentUrl || undefined,
+        invoice_attachment_url: invoiceAttachmentUrl || undefined,
+        notes: notes || undefined,
+      });
+      onRecorded(res.data.data.id);
+    } catch (err) {
+      const apiError = extractApiError(err);
+      setErrors(apiError.errors ?? {});
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open title="Record Workshop Invoice" onClose={onClose} width={560}>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
+        This records an invoice the Workshop Partner already issued externally — OptiFleet does not issue this invoice.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormField label="External Invoice Number" errors={errors.external_invoice_number}>
+          <input value={externalInvoiceNumber} onChange={(e) => setExternalInvoiceNumber(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Partner Reference (optional)" errors={errors.partner_reference}>
+          <input value={partnerReference} onChange={(e) => setPartnerReference(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Invoice Date" errors={errors.invoice_date}>
+          <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Due Date (optional)" errors={errors.due_date}>
+          <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Currency" errors={errors.currency}>
+          <input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Total Amount" errors={errors.total_amount}>
+          <input type="number" step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Subtotal (optional)" errors={errors.subtotal}>
+          <input type="number" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Tax (optional)" errors={errors.tax_total}>
+          <input type="number" step="0.01" value={taxTotal} onChange={(e) => setTaxTotal(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Discount (optional)" errors={errors.discount_total}>
+          <input type="number" step="0.01" value={discountTotal} onChange={(e) => setDiscountTotal(e.target.value)} style={inputStyle} />
+        </FormField>
+      </div>
+      <FormField label="Returned Maintenance Memo attachment URL (optional)" errors={errors.returned_memo_attachment_url}>
+        <input value={returnedMemoAttachmentUrl} onChange={(e) => setReturnedMemoAttachmentUrl(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Invoice attachment URL (optional)" errors={errors.invoice_attachment_url}>
+        <input value={invoiceAttachmentUrl} onChange={(e) => setInvoiceAttachmentUrl(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Notes (optional)" errors={errors.notes}>
+        <textarea value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
+      </FormField>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <button className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn-primary" disabled={submitting || !externalInvoiceNumber || !invoiceDate || !totalAmount} onClick={submit}>
+          {submitting ? 'Recording…' : 'Record Workshop Invoice'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

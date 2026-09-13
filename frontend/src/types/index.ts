@@ -664,15 +664,19 @@ export interface WorkOrderPlannedPartItem {
 
 export interface WorkOrderExternalServiceItem {
   id: string;
+  memo_number: string | null;
   work_order_id: string;
   partner_id: string;
   description: string;
+  diagnosis: string | null;
+  requested_parts_services: string | null;
   photo_evidence: string | null;
   condition_notes: string | null;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' | null;
   reference_number: string | null;
   cost: string | null;
-  status: 'REQUESTED' | 'COMPLETED' | 'CANCELLED';
+  status: 'REQUESTED' | 'COMPLETED' | 'CANCELLED' | 'BILLED' | 'PAID';
+  workshop_invoice_id: string | null;
   requested_by: string | null;
   requested_at: string | null;
   completed_by: string | null;
@@ -680,6 +684,88 @@ export interface WorkOrderExternalServiceItem {
   cancelled_by: string | null;
   cancelled_at: string | null;
   partner?: PartnerItem;
+}
+
+/** R1: Workshop Invoice is issued EXTERNALLY by the Workshop Partner — OptiFleet records it, never issues it. */
+export interface WorkshopInvoiceItem {
+  id: string;
+  work_order_external_service_id: string;
+  work_order_id: string;
+  partner_id: string;
+  external_invoice_number: string;
+  invoice_date: string;
+  due_date: string | null;
+  currency: string;
+  subtotal: string | null;
+  tax_total: string | null;
+  discount_total: string | null;
+  total_amount: string;
+  line_items: { description: string; quantity?: string; unit_price?: string; line_total?: string }[] | null;
+  partner_reference: string | null;
+  returned_memo_attachment_url: string | null;
+  invoice_attachment_url: string | null;
+  notes: string | null;
+  reconciliation_note: string | null;
+  status: 'RECORDED' | 'CORRECTION_REQUESTED' | 'CANCELLATION_REQUESTED' | 'CANCELLED';
+  received_by: string | null;
+  received_at: string | null;
+  partner?: PartnerItem;
+  work_order?: WorkOrderItem;
+  memo?: WorkOrderExternalServiceItem;
+  payment?: WorkshopInvoicePaymentItem | null;
+  corrections?: WorkshopInvoiceCorrectionItem[];
+  cancellations?: WorkshopInvoiceCancellationItem[];
+}
+
+export interface WorkshopInvoicePaymentItem {
+  id: string;
+  workshop_invoice_id: string;
+  payment_date: string;
+  paid_amount: string;
+  payment_method: string | null;
+  reference_number: string | null;
+  evidence_url: string;
+  notes: string | null;
+  uploaded_by: string;
+  uploaded_at: string;
+}
+
+export interface WorkshopInvoiceCorrectionItem {
+  id: string;
+  workshop_invoice_id: string;
+  previous_values: Record<string, unknown>;
+  requested_values: Record<string, unknown>;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requested_by: string;
+  requested_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+}
+
+export interface WorkshopInvoiceCancellationItem {
+  id: string;
+  workshop_invoice_id: string;
+  reason: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requested_by: string;
+  requested_at: string;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+}
+
+export interface WorkshopInvoiceReconciliation {
+  expected_amount: string | null;
+  invoiced_amount: string;
+  variance_amount: string | null;
+  variance_percent: string | null;
+  reconciliation_status: 'MATCHED' | 'VARIANCE' | 'NO_EXPECTED_AMOUNT';
+  missing_source_records: string[];
+  unmatched_line_items: string[];
+  work_order_estimated_total_cost: string | null;
+  reconciliation_note: string | null;
 }
 
 export interface WorkOrderAdditionalWorkItem {

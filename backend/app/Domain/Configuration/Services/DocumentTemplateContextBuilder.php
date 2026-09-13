@@ -6,6 +6,7 @@ use App\Domain\Identity\Models\Tenant;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalService;
+use App\Domain\WorkOrder\Models\WorkshopInvoice;
 
 /**
  * Section 13/51: the only place a live Eloquent document is turned into a
@@ -135,6 +136,51 @@ class DocumentTemplateContextBuilder
                 'brand' => $workOrder?->vehicle?->brand,
                 'model' => $workOrder?->vehicle?->model,
             ],
+        ];
+    }
+
+    /**
+     * R1: renders OptiFleet's own RECORD of an externally-issued Workshop
+     * Invoice — never a document that claims OptiFleet issued the invoice.
+     */
+    public static function forWorkshopInvoice(WorkshopInvoice $invoice): array
+    {
+        $invoice->loadMissing(['partner', 'workOrder', 'memo']);
+        $tenant = Tenant::query()->find($invoice->tenant_id);
+        $memo = $invoice->memo;
+
+        return [
+            'company' => self::company(),
+            'tenant' => ['name' => $tenant?->name, 'code' => $tenant?->code],
+            'document_number' => $invoice->external_invoice_number,
+            'configuration_version' => null,
+            'workshop_invoice' => [
+                'external_invoice_number' => $invoice->external_invoice_number,
+                'invoice_date' => optional($invoice->invoice_date)->toDateString(),
+                'due_date' => optional($invoice->due_date)->toDateString(),
+                'currency' => $invoice->currency,
+                'subtotal' => (string) $invoice->subtotal,
+                'tax_total' => (string) $invoice->tax_total,
+                'discount_total' => (string) $invoice->discount_total,
+                'total_amount' => (string) $invoice->total_amount,
+                'status' => $invoice->status,
+                'notes' => $invoice->notes,
+                'reconciliation_note' => $invoice->reconciliation_note,
+            ],
+            'partner' => [
+                'name' => $invoice->partner?->name,
+                'address' => $invoice->partner?->address,
+                'contact_name' => $invoice->partner?->contact_name,
+                'contact_phone' => $invoice->partner?->contact_phone,
+            ],
+            'work_order' => ['number' => $invoice->workOrder?->wo_number],
+            'maintenance_memo' => ['reference_number' => $memo?->reference_number, 'description' => $memo?->description],
+            'items' => collect($invoice->line_items ?? [])->map(fn ($item) => [
+                'description' => $item['description'] ?? '',
+                'quantity' => (string) ($item['quantity'] ?? ''),
+                'unit_price' => (string) ($item['unit_price'] ?? ''),
+                'line_total' => (string) ($item['line_total'] ?? ''),
+            ])->all(),
         ];
     }
 
