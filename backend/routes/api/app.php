@@ -52,6 +52,7 @@ use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
 use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
 use App\Http\Controllers\Api\Tenant\QualityControlController;
 use App\Http\Controllers\Api\Tenant\RfqController;
+use App\Http\Controllers\Api\Tenant\RimController;
 use App\Http\Controllers\Api\Tenant\RoleController;
 use App\Http\Controllers\Api\Tenant\SparePartSaleController;
 use App\Http\Controllers\Api\Tenant\StockMovementController;
@@ -449,6 +450,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
         });
 
         Route::middleware('module:TIRE')->group(function () {
+            Route::get('/rims', [RimController::class, 'index'])->middleware('permission:rim.view');
+            Route::post('/rims', [RimController::class, 'store'])->middleware('permission:rim.manage');
+            Route::get('/rims/{rim}', [RimController::class, 'show'])->middleware('permission:rim.view');
+            Route::put('/rims/{rim}', [RimController::class, 'update'])->middleware('permission:rim.manage');
+            Route::delete('/rims/{rim}', [RimController::class, 'destroy'])->middleware('permission:rim.manage');
+
             Route::get('/wheel-configurations', [WheelConfigurationController::class, 'index'])->middleware('permission:tire.view');
             Route::post('/wheel-configurations', [WheelConfigurationController::class, 'store'])->middleware('permission:tire.manage');
 
