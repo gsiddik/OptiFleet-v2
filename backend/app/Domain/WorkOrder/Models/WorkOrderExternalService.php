@@ -14,7 +14,8 @@ class WorkOrderExternalService extends Model
     use Auditable, BelongsToTenant, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'work_order_id', 'partner_id', 'description', 'reference_number', 'cost', 'status',
+        'tenant_id', 'work_order_id', 'partner_id', 'description', 'photo_evidence', 'condition_notes', 'priority',
+        'reference_number', 'cost', 'status',
         'requested_by', 'requested_at', 'completed_by', 'completed_at', 'cancelled_by', 'cancelled_at',
     ];
 

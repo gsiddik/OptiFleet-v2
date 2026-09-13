@@ -73,6 +73,27 @@ class WorkOrderExternalServiceTest extends TestCase
         $this->assertSame($partner->id, $response->json('data.partner_id'));
     }
 
+    public function test_external_service_memo_fields_are_optional_and_stored(): void
+    {
+        $scenario = $this->setUpTenant();
+        [$tenant] = $scenario;
+        [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $partner = $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
+
+        $woId = $this->createInProgressWorkOrder($scenario, $token);
+
+        $response = $this->postJson("/api/v1/app/work-orders/{$woId}/external-services", [
+            'partner_id' => $partner->id, 'description' => 'Engine overhaul at partner workshop',
+            'photo_evidence' => 'https://files.example/memo/before-1.jpg',
+            'condition_notes' => 'Visible oil leak at cylinder head',
+            'priority' => 'HIGH',
+        ], $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertSame('https://files.example/memo/before-1.jpg', $response->json('data.photo_evidence'));
+        $this->assertSame('Visible oil leak at cylinder head', $response->json('data.condition_notes'));
+        $this->assertSame('HIGH', $response->json('data.priority'));
+    }
+
     public function test_external_service_cannot_be_requested_before_work_order_is_executable(): void
     {
         $scenario = $this->setUpTenant();

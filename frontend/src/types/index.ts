@@ -651,6 +651,9 @@ export interface WorkOrderExternalServiceItem {
   work_order_id: string;
   partner_id: string;
   description: string;
+  photo_evidence: string | null;
+  condition_notes: string | null;
+  priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' | null;
   reference_number: string | null;
   cost: string | null;
   status: 'REQUESTED' | 'COMPLETED' | 'CANCELLED';
@@ -750,6 +753,8 @@ export interface WorkspaceItem {
   code: string;
   name: string;
   workspace_type: 'GENERAL_SERVICE_BAY' | 'HEAVY_VEHICLE_BAY' | 'INSPECTION_BAY' | 'ELECTRICAL_BAY' | 'TIRE_BAY' | 'QC_BAY' | 'WASHING_BAY' | 'PARKING_LOT' | 'HOLDING_AREA' | 'OTHER';
+  capacity: number | null;
+  capacity_unit: string | null;
   status: 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'BLOCKED' | 'UNDER_MAINTENANCE' | 'INACTIVE';
   workshop?: Workshop;
   vehicle_categories?: VehicleCategory[];

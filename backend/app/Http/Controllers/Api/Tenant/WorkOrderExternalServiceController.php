@@ -25,6 +25,9 @@ class WorkOrderExternalServiceController extends Controller
         $validated = $request->validate([
             'partner_id' => ['required', 'uuid', 'exists:partners,id'],
             'description' => ['required', 'string'],
+            'photo_evidence' => ['nullable', 'string', 'max:255'],
+            'condition_notes' => ['nullable', 'string'],
+            'priority' => ['nullable', 'in:LOW,MEDIUM,HIGH,URGENT'],
             'reference_number' => ['nullable', 'string'],
             'cost' => ['nullable', 'numeric', 'min:0'],
         ]);

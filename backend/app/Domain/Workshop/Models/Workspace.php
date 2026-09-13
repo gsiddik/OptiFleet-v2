@@ -17,7 +17,7 @@ class Workspace extends Model
 {
     use Auditable, BelongsToTenant, HasUuids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'workshop_id', 'code', 'name', 'workspace_type', 'status'];
+    protected $fillable = ['tenant_id', 'workshop_id', 'code', 'name', 'workspace_type', 'capacity', 'capacity_unit', 'status'];
 
     public function workshop(): BelongsTo
     {

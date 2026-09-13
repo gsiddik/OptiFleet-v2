@@ -1214,6 +1214,9 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
   const [partners, setPartners] = useState<PartnerItem[]>([]);
   const [partnerId, setPartnerId] = useState('');
   const [description, setDescription] = useState('');
+  const [photoEvidence, setPhotoEvidence] = useState('');
+  const [conditionNotes, setConditionNotes] = useState('');
+  const [priority, setPriority] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [cost, setCost] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1228,9 +1231,16 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
     setError(null);
     try {
       await apiClient.post(`/app/work-orders/${wo.id}/external-services`, {
-        partner_id: partnerId, description, reference_number: referenceNumber || undefined, cost: cost || undefined,
+        partner_id: partnerId, description,
+        photo_evidence: photoEvidence || undefined,
+        condition_notes: conditionNotes || undefined,
+        priority: priority || undefined,
+        reference_number: referenceNumber || undefined, cost: cost || undefined,
       });
       setDescription('');
+      setPhotoEvidence('');
+      setConditionNotes('');
+      setPriority('');
       setReferenceNumber('');
       setCost('');
       onChanged();
@@ -1282,8 +1292,18 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
           <div style={{ color: '#374151' }}>{s.description}</div>
           <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
             {s.reference_number && <>Ref: {s.reference_number} &nbsp;</>}
-            {s.cost && <>Cost: {s.cost}</>}
+            {s.cost && <>Cost: {s.cost} &nbsp;</>}
+            {s.priority && <>Priority: {s.priority}</>}
           </div>
+          {s.condition_notes && <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>Condition: {s.condition_notes}</div>}
+          {s.photo_evidence && (
+            <div style={{ fontSize: 12, marginTop: 2 }}>
+              Evidence:{' '}
+              <a href={s.photo_evidence} target="_blank" rel="noreferrer">
+                {s.photo_evidence}
+              </a>
+            </div>
+          )}
           {s.status === 'REQUESTED' && (
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               {hasPermission('work_order_external_service.complete') && (
@@ -1314,6 +1334,22 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
           </FormField>
           <FormField label="Description">
             <input value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+          </FormField>
+          <FormField label="Priority (optional)">
+            <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ ...inputStyle, width: 120 }}>
+              <option value="">—</option>
+              {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Condition (optional)">
+            <input value={conditionNotes} onChange={(e) => setConditionNotes(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+          </FormField>
+          <FormField label="Evidence / photo URL (optional)">
+            <input value={photoEvidence} onChange={(e) => setPhotoEvidence(e.target.value)} style={{ ...inputStyle, width: 180 }} />
           </FormField>
           <FormField label="Reference # (optional)">
             <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} style={{ ...inputStyle, width: 120 }} />

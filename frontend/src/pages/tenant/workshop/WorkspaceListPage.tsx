@@ -36,6 +36,7 @@ export function WorkspaceListPage() {
     { key: 'name', header: 'Name', render: (w) => w.name },
     { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
     { key: 'type', header: 'Type', render: (w) => w.workspace_type },
+    { key: 'capacity', header: 'Capacity', render: (w) => (w.capacity ? `${w.capacity} ${w.capacity_unit ?? ''}`.trim() : '—') },
     { key: 'categories', header: 'Vehicle Categories', render: (w) => (w.vehicle_categories ?? []).map((c) => c.name).join(', ') || 'Any' },
     { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
     {
@@ -85,6 +86,8 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [type, setType] = useState('GENERAL_SERVICE_BAY');
+  const [capacity, setCapacity] = useState('');
+  const [capacityUnit, setCapacityUnit] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -97,9 +100,14 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
     setSubmitting(true);
     setErrors({});
     try {
-      await apiClient.post('/app/workspaces', { workshop_id: workshopId, code, name, workspace_type: type });
+      await apiClient.post('/app/workspaces', {
+        workshop_id: workshopId, code, name, workspace_type: type,
+        capacity: capacity || undefined, capacity_unit: capacityUnit || undefined,
+      });
       setCode('');
       setName('');
+      setCapacity('');
+      setCapacityUnit('');
       onCreated();
       onClose();
     } catch (err) {
@@ -137,6 +145,14 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormField label="Capacity" errors={errors.capacity}>
+          <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Capacity Unit" errors={errors.capacity_unit}>
+          <input value={capacityUnit} onChange={(e) => setCapacityUnit(e.target.value)} placeholder="e.g. vehicles" style={inputStyle} />
+        </FormField>
+      </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel

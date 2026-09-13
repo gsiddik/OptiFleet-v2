@@ -2,13 +2,15 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Workshop\Models\Workspace;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class WorkspaceReservationTest extends TestCase
 {
     private function setUpWorkshop(): array
     {
-        $tenant = $this->makeTenant(['code' => 'WSR-'.\Illuminate\Support\Str::random(4)]);
+        $tenant = $this->makeTenant(['code' => 'WSR-'.Str::random(4)]);
         $this->grantModule($tenant, 'VEHICLE');
         $this->grantModule($tenant, 'WORKSHOP');
         $branch = $this->makeBranch($tenant);
@@ -33,10 +35,27 @@ class WorkspaceReservationTest extends TestCase
         $this->postJson("/api/v1/app/workspaces/{$id}/unblock", [], $headers)->assertOk()->assertJsonPath('data.status', 'AVAILABLE');
     }
 
+    public function test_workspace_capacity_is_optional_and_stored(): void
+    {
+        [$tenant, , $workshop] = $this->setUpWorkshop();
+        [, $token] = $this->makeTenantUser($tenant, ['workspace.view', 'workspace.manage']);
+        $headers = $this->authHeaders($token);
+
+        $create = $this->postJson('/api/v1/app/workspaces', [
+            'workshop_id' => $workshop->id, 'code' => 'BAY-2', 'name' => 'Heavy Bay', 'workspace_type' => 'HEAVY_VEHICLE_BAY',
+            'capacity' => 2, 'capacity_unit' => 'vehicles',
+        ], $headers)->assertStatus(201);
+        $this->assertSame(2, $create->json('data.capacity'));
+        $this->assertSame('vehicles', $create->json('data.capacity_unit'));
+
+        $id = $create->json('data.id');
+        $this->putJson("/api/v1/app/workspaces/{$id}", ['capacity' => 3], $headers)->assertOk()->assertJsonPath('data.capacity', 3);
+    }
+
     public function test_reservation_lifecycle(): void
     {
         [$tenant, , $workshop] = $this->setUpWorkshop();
-        $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
+        $workspace = Workspace::query()->create([
             'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
             'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
         ]);
@@ -63,7 +82,7 @@ class WorkspaceReservationTest extends TestCase
     public function test_overlapping_reservation_is_rejected(): void
     {
         [$tenant, , $workshop] = $this->setUpWorkshop();
-        $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
+        $workspace = Workspace::query()->create([
             'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
             'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
         ]);
@@ -95,7 +114,7 @@ class WorkspaceReservationTest extends TestCase
     public function test_cancelled_reservation_frees_the_slot(): void
     {
         [$tenant, , $workshop] = $this->setUpWorkshop();
-        $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
+        $workspace = Workspace::query()->create([
             'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
             'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
         ]);
