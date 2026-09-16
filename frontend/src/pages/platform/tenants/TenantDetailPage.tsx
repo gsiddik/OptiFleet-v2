@@ -9,9 +9,10 @@ import type { Tenant } from '../../../types';
 import { TenantUsersTab } from './tabs/TenantUsersTab';
 import { TenantEntitlementsTab } from './tabs/TenantEntitlementsTab';
 import { TenantCapacityTab } from './tabs/TenantCapacityTab';
+import { TenantContractTab } from './tabs/TenantContractTab';
 import { useAuth } from '../../../auth/AuthContext';
 
-const TABS = ['Overview', 'Users', 'Module Entitlements', 'Capacity Limits'] as const;
+const TABS = ['Overview', 'Users', 'Module Entitlements', 'Capacity Limits', 'Contract'] as const;
 
 export function TenantDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -103,6 +104,7 @@ export function TenantDetailPage() {
       {tab === 'Users' && <TenantUsersTab tenantId={tenant.id} />}
       {tab === 'Module Entitlements' && <TenantEntitlementsTab tenantId={tenant.id} />}
       {tab === 'Capacity Limits' && <TenantCapacityTab tenantId={tenant.id} />}
+      {tab === 'Contract' && <TenantContractTab tenantId={tenant.id} tenantName={tenant.name} tenantCode={tenant.code} />}
     </div>
   );
 }
