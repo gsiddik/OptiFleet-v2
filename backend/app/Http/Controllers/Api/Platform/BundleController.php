@@ -26,6 +26,13 @@ class BundleController extends Controller
         if ($status = $request->string('status')->value()) {
             $query->where('status', $status);
         }
+        if ($request->boolean('active_only')) {
+            // Used by the Contract Form's BUNDLE Product Reference dropdown
+            // (Section 10.2/7.1): only a published, active bundle can be
+            // selected for a new line item. Soft-deleted rows are already
+            // excluded by Bundle's default query scope.
+            $query->where('is_active', true)->where('status', 'PUBLISHED');
+        }
 
         return $this->ok($query->orderBy('name')->get());
     }
@@ -55,9 +62,15 @@ class BundleController extends Controller
 
     public function syncModules(SyncBundleModulesRequest $request, Bundle $bundle)
     {
-        $this->bundles->syncModules($bundle, $request->input('module_ids'));
+        $autoAdded = $this->bundles->syncModules($bundle, $request->input('module_ids'));
 
-        return $this->ok($bundle->fresh('modules'));
+        return $this->ok([
+            'bundle' => $bundle->fresh('modules'),
+            'auto_added' => $autoAdded->map(fn ($entry) => [
+                'module' => $entry['module'],
+                'required_by' => $entry['required_by'],
+            ])->values(),
+        ]);
     }
 
     public function missingDependencies(Bundle $bundle)
@@ -70,5 +83,22 @@ class BundleController extends Controller
         $version = $this->bundles->publish($bundle, $request->user()->id);
 
         return $this->ok($version->load('modules'), 201);
+    }
+
+    public function deactivate(Bundle $bundle)
+    {
+        return $this->ok($this->bundles->deactivate($bundle)->fresh());
+    }
+
+    public function reactivate(Bundle $bundle)
+    {
+        return $this->ok($this->bundles->reactivate($bundle)->fresh());
+    }
+
+    public function destroy(Bundle $bundle)
+    {
+        $this->bundles->delete($bundle);
+
+        return $this->ok(['deleted' => true]);
     }
 }

@@ -43,31 +43,81 @@ class ContractService
         });
     }
 
+    private const PRICED_TYPES = ['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY'];
+    private const MANUAL_PRICE_TYPES = ['SETUP_FEE', 'OTHER'];
+
     public function addItem(Contract $contract, array $item): ContractItem
     {
         if (! $contract->isEditable()) {
             throw new ContractException('Only a DRAFT contract can have items added.');
         }
 
-        $unitPrice = $item['unit_price'] ?? null;
+        $productType = $item['product_type'];
         $pricingVersionId = null;
-        $bundleVersionId = $item['bundle_version_id'] ?? null;
+        $bundleVersionId = null;
 
-        if ($unitPrice === null && in_array($item['product_type'], ['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY'], true)) {
+        if (in_array($productType, self::PRICED_TYPES, true)) {
+            if (empty($item['product_reference'])) {
+                throw new ContractException("A product reference (pricing code) is required for {$productType} line items.");
+            }
+
+            if ($productType === 'BUNDLE') {
+                // Bundle::query() already excludes soft-deleted rows by
+                // default, so "not found" here also covers a deleted
+                // bundle — neither an inactive nor a deleted bundle can be
+                // selected for a new contract (Section 7.1/7.2), though
+                // existing contract items keep referencing their frozen
+                // bundle_version_id regardless.
+                $bundle = Bundle::query()->where('code', $item['product_reference'])->first();
+                if (! $bundle || ! $bundle->is_active) {
+                    throw new ContractException("Bundle '{$item['product_reference']}' is not available for new contracts.");
+                }
+
+                $bundleVersionId = $bundle->latestVersion()?->id;
+                if (! $bundleVersionId) {
+                    throw new ContractException("Bundle '{$item['product_reference']}' has not been published yet.");
+                }
+            }
+
+            // Always resolve the current Active Price server-side — never
+            // trust a client-supplied unit_price on its own (Section
+            // 10.5.7). A caller-supplied unit_price is only ever allowed to
+            // be at or above this, checked below.
             $resolved = $this->pricing->resolveForTenant(
                 $contract->tenant_id,
-                $item['product_type'],
+                $productType,
                 $item['product_reference'],
                 $item['billing_frequency'],
                 $item['valid_from'] ?? $contract->start_date?->toDateString(),
             );
-            $unitPrice = $resolved['amount'];
+            $activePrice = $resolved['amount'];
             $pricingVersionId = $resolved['pricing_version_id'];
-        }
 
-        if ($item['product_type'] === 'BUNDLE' && ! $bundleVersionId) {
-            $bundle = Bundle::query()->where('code', $item['product_reference'])->firstOrFail();
-            $bundleVersionId = $bundle->latestVersion()?->id;
+            $unitPrice = array_key_exists('unit_price', $item) && $item['unit_price'] !== null && $item['unit_price'] !== ''
+                ? (string) $item['unit_price']
+                : $activePrice;
+
+            if (Money::compare($unitPrice, $activePrice) < 0) {
+                throw new ContractException(
+                    "Unit price ({$unitPrice}) for {$productType} '{$item['product_reference']}' cannot be lower than the active price ({$activePrice})."
+                );
+            }
+        } elseif (in_array($productType, self::MANUAL_PRICE_TYPES, true)) {
+            // SETUP_FEE / OTHER: manual price only, no pricing/bundle
+            // reference is looked up or trusted even if the client sent one
+            // (Section 10.5 "for SETUP_FEE and OTHER" + 10.2 backend rule).
+            if (! array_key_exists('unit_price', $item) || $item['unit_price'] === null || $item['unit_price'] === '') {
+                throw new ContractException("Unit price is required for {$productType} line items.");
+            }
+            $unitPrice = (string) $item['unit_price'];
+            if (Money::compare($unitPrice, '0') < 0) {
+                throw new ContractException('Unit price must not be negative.');
+            }
+            // Discard any pricing reference the client sent for a
+            // SETUP_FEE/OTHER item — it is never looked up or trusted.
+            $item['product_reference'] = null;
+        } else {
+            throw new ContractException("Unsupported product type: {$productType}.");
         }
 
         $quantity = (string) ($item['quantity'] ?? 1);

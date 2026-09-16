@@ -36,6 +36,7 @@ class Contract extends Model
         'renewed_from_contract_id',
         'notes',
         'created_by',
+        'source_context',
         'approved_at',
         'activated_at',
     ];

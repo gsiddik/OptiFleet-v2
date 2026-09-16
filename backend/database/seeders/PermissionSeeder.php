@@ -19,8 +19,10 @@ class PermissionSeeder extends Seeder
             'entitlement' => ['view', 'manage'],
 
             // Phase 2: commercial SaaS (Section 42)
-            'bundle' => ['view', 'create', 'update', 'publish'],
-            'pricing' => ['view', 'create', 'update', 'publish'],
+            // 'activate'/'deactivate'/'delete' added for Perbaikan OptiFleet
+            // Section 7/8 (bundle & pricing lifecycle + soft delete).
+            'bundle' => ['view', 'create', 'update', 'publish', 'activate', 'deactivate', 'delete'],
+            'pricing' => ['view', 'create', 'update', 'publish', 'activate', 'deactivate', 'delete'],
             'contract' => ['view', 'create', 'update', 'submit', 'approve', 'amend', 'renew', 'terminate'],
             'subscription' => ['view', 'activate', 'suspend', 'reactivate'],
             'billing' => ['view', 'generate', 'adjust'],

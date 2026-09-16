@@ -6,6 +6,8 @@ use App\Domain\ProductCatalog\Models\Bundle;
 use App\Domain\ProductCatalog\Models\Module;
 use App\Domain\ProductCatalog\Services\BundleException;
 use App\Domain\ProductCatalog\Services\BundleService;
+use App\Domain\ProductCatalog\Services\ModuleDependencyException;
+use App\Domain\ProductCatalog\Services\ModuleDependencyService;
 use Tests\TestCase;
 
 class BundleServiceTest extends TestCase
@@ -18,19 +20,83 @@ class BundleServiceTest extends TestCase
         $this->service = app(BundleService::class);
     }
 
-    public function test_publish_fails_when_dependencies_missing(): void
+    public function test_sync_modules_auto_adds_transitive_dependencies(): void
     {
         $bundle = Bundle::query()->create(['code' => 'B1', 'name' => 'B1', 'status' => 'DRAFT']);
         $workOrder = Module::query()->where('code', 'WORK_ORDER')->first();
-        $this->service->syncModules($bundle, [$workOrder->id]); // missing VEHICLE, MAINTENANCE, WORKSHOP
+
+        $autoAdded = $this->service->syncModules($bundle, [$workOrder->id]);
+
+        // WORK_ORDER directly depends on VEHICLE, MAINTENANCE, WORKSHOP
+        // (MAINTENANCE also transitively depends on VEHICLE) — all three
+        // must be auto-added and checked without the user selecting them.
+        $addedCodes = $autoAdded->pluck('module.code')->all();
+        $this->assertEqualsCanonicalizing(['MAINTENANCE', 'VEHICLE', 'WORKSHOP'], $addedCodes);
+
+        $entry = $autoAdded->firstWhere('module.code', 'VEHICLE');
+        $this->assertContains('WORK_ORDER', $entry['required_by']);
+
+        $composedCodes = $bundle->fresh()->modules()->pluck('code')->all();
+        $this->assertEqualsCanonicalizing(['MAINTENANCE', 'VEHICLE', 'WORK_ORDER', 'WORKSHOP'], $composedCodes);
+
+        // Composition is now dependency-complete by construction, so it
+        // publishes without any manual gap-filling.
+        $this->assertTrue($this->service->missingDependencies($bundle)->isEmpty());
+        $version = $this->service->publish($bundle);
+        $this->assertCount(4, $version->modules);
+    }
+
+    public function test_removing_a_module_still_needed_by_another_selection_keeps_it(): void
+    {
+        $bundle = Bundle::query()->create(['code' => 'B1B', 'name' => 'B1B', 'status' => 'DRAFT']);
+        $workOrder = Module::query()->where('code', 'WORK_ORDER')->first();
+        $vehicle = Module::query()->where('code', 'VEHICLE')->first();
+        $this->service->syncModules($bundle, [$workOrder->id]);
+
+        // User "removes" VEHICLE by re-submitting without it, but WORK_ORDER
+        // (still selected) transitively needs it, so it must be kept.
+        $autoAdded = $this->service->syncModules($bundle, [$workOrder->id]);
+        $this->assertTrue($autoAdded->pluck('module.code')->contains('VEHICLE'));
+        $this->assertTrue($bundle->fresh()->modules()->where('code', 'VEHICLE')->exists());
+        $this->assertNotNull($vehicle);
+    }
+
+    public function test_missing_dependencies_guard_still_catches_a_graph_change_after_composition(): void
+    {
+        $bundle = Bundle::query()->create(['code' => 'B1C', 'name' => 'B1C', 'status' => 'DRAFT']);
+        $partner = Module::query()->where('code', 'PARTNER')->first();
+        $this->service->syncModules($bundle, [$partner->id]);
+        $this->assertTrue($this->service->missingDependencies($bundle)->isEmpty());
+
+        // Simulate the module catalog evolving after this bundle was
+        // composed: PARTNER now also requires WARRANTY.
+        $warranty = Module::query()->where('code', 'WARRANTY')->first();
+        app(ModuleDependencyService::class)->addDependency($partner->id, $warranty->id);
 
         $missing = $this->service->missingDependencies($bundle);
-        $this->assertTrue($missing->contains('VEHICLE'));
-        $this->assertTrue($missing->contains('MAINTENANCE'));
-        $this->assertTrue($missing->contains('WORKSHOP'));
+        $this->assertTrue($missing->contains('WARRANTY'));
 
         $this->expectException(BundleException::class);
         $this->service->publish($bundle);
+    }
+
+    public function test_sync_modules_rejects_when_module_graph_has_a_cycle(): void
+    {
+        $bundle = Bundle::query()->create(['code' => 'B1D', 'name' => 'B1D', 'status' => 'DRAFT']);
+        $vehicle = Module::query()->where('code', 'VEHICLE')->first();
+        $maintenance = Module::query()->where('code', 'MAINTENANCE')->first();
+
+        // Force a cycle directly at the pivot-table level, bypassing
+        // ModuleDependencyService::addDependency's own guard, to prove
+        // BundleService::syncModules independently rejects it too.
+        $edge = new \App\Domain\ProductCatalog\Models\ModuleDependency([
+            'module_id' => $vehicle->id,
+            'depends_on_module_id' => $maintenance->id,
+        ]);
+        $edge->save();
+
+        $this->expectException(ModuleDependencyException::class);
+        $this->service->syncModules($bundle, [$vehicle->id]);
     }
 
     public function test_publish_succeeds_with_complete_composition(): void

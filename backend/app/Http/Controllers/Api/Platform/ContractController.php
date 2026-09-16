@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Platform;
 
 use App\Domain\Contract\Models\Contract;
 use App\Domain\Contract\Services\ContractService;
+use App\Domain\Identity\Models\Tenant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Platform\ContractApprovalRequest;
 use App\Http\Requests\Platform\StoreContractRequest;
@@ -31,7 +32,32 @@ class ContractController extends Controller
     {
         $contract = $this->contracts->createDraft(
             $request->input('tenant_id'),
-            array_merge($request->safe()->except(['tenant_id', 'items']), ['created_by' => $request->user()->id]),
+            array_merge($request->safe()->except(['tenant_id', 'items']), [
+                'created_by' => $request->user()->id,
+                'source_context' => 'CONTRACT_MANAGEMENT',
+            ]),
+            $request->input('items')
+        );
+
+        return $this->ok($contract->load('items'), 201);
+    }
+
+    /**
+     * Section 6.3/9.1: contract creation from a Tenant Detail page. The
+     * tenant comes from the route (authorized via the normal
+     * permission:contract.create + platform.scope middleware chain), never
+     * from the request body — StoreContractRequest doesn't even require
+     * tenant_id on this route, and any tenant_id the client sends here is
+     * simply ignored, so a manipulated payload can't target another tenant.
+     */
+    public function storeForTenant(StoreContractRequest $request, Tenant $tenant)
+    {
+        $contract = $this->contracts->createDraft(
+            $tenant->id,
+            array_merge($request->safe()->except(['tenant_id', 'items']), [
+                'created_by' => $request->user()->id,
+                'source_context' => 'TENANT_MANAGEMENT',
+            ]),
             $request->input('items')
         );
 

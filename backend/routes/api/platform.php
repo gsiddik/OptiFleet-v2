@@ -80,11 +80,18 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::put('/bundles/{bundle}/modules', [BundleController::class, 'syncModules'])->middleware('permission:bundle.update');
     Route::get('/bundles/{bundle}/missing-dependencies', [BundleController::class, 'missingDependencies'])->middleware('permission:bundle.view');
     Route::post('/bundles/{bundle}/publish', [BundleController::class, 'publish'])->middleware('permission:bundle.publish');
+    Route::post('/bundles/{bundle}/deactivate', [BundleController::class, 'deactivate'])->middleware('permission:bundle.deactivate');
+    Route::post('/bundles/{bundle}/reactivate', [BundleController::class, 'reactivate'])->middleware('permission:bundle.activate');
+    Route::delete('/bundles/{bundle}', [BundleController::class, 'destroy'])->middleware('permission:bundle.delete');
 
     Route::get('/pricing', [PricingController::class, 'index'])->middleware('permission:pricing.view');
+    Route::get('/pricing/resolve', [PricingController::class, 'resolve'])->middleware('permission:contract.create');
     Route::post('/pricing', [PricingController::class, 'store'])->middleware('permission:pricing.create');
     Route::get('/pricing/{pricing}', [PricingController::class, 'show'])->middleware('permission:pricing.view');
     Route::post('/pricing/{pricing}/versions', [PricingController::class, 'publishVersion'])->middleware('permission:pricing.publish');
+    Route::post('/pricing/{pricing}/deactivate', [PricingController::class, 'deactivate'])->middleware('permission:pricing.deactivate');
+    Route::post('/pricing/{pricing}/reactivate', [PricingController::class, 'reactivate'])->middleware('permission:pricing.activate');
+    Route::delete('/pricing/{pricing}', [PricingController::class, 'destroy'])->middleware('permission:pricing.delete');
 
     Route::get('/tenants/{tenant}/custom-pricing', [TenantCustomPricingController::class, 'index'])->middleware('permission:pricing.view');
     Route::post('/tenants/{tenant}/custom-pricing', [TenantCustomPricingController::class, 'store'])->middleware('permission:pricing.update');
@@ -92,6 +99,7 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
 
     Route::get('/contracts', [ContractController::class, 'index'])->middleware('permission:contract.view');
     Route::post('/contracts', [ContractController::class, 'store'])->middleware('permission:contract.create');
+    Route::post('/tenants/{tenant}/contracts', [ContractController::class, 'storeForTenant'])->middleware('permission:contract.create');
     Route::get('/contracts/{contract}', [ContractController::class, 'show'])->middleware('permission:contract.view');
     Route::post('/contracts/{contract}/submit', [ContractController::class, 'submitForApproval'])->middleware('permission:contract.submit');
     Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->middleware('permission:contract.approve');

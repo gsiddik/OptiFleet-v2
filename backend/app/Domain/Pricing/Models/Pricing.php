@@ -6,10 +6,11 @@ use App\Domain\Audit\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Pricing extends Model
 {
-    use Auditable, HasUuids;
+    use Auditable, HasUuids, SoftDeletes;
 
     protected $fillable = [
         'priceable_type',

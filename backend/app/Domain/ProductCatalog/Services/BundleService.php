@@ -4,6 +4,7 @@ namespace App\Domain\ProductCatalog\Services;
 
 use App\Domain\ProductCatalog\Models\Bundle;
 use App\Domain\ProductCatalog\Models\BundleVersion;
+use App\Domain\ProductCatalog\Models\Module;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -19,13 +20,66 @@ class BundleService
 {
     public function __construct(private readonly ModuleDependencyService $dependencies) {}
 
-    public function syncModules(Bundle $bundle, array $moduleIds): void
+    /**
+     * Syncs the bundle's module composition, auto-adding every direct and
+     * transitive dependency of the requested modules (Section 7.3) — a
+     * module the caller tried to leave out is silently kept if another
+     * still-selected module still needs it, since the closure below is
+     * recomputed from the final requested set every time, not diffed
+     * against the previous composition.
+     *
+     * Returns the modules that were added automatically beyond what was
+     * requested, each with the codes of the requested module(s) that
+     * pulled it in, so the frontend can explain why it's checked.
+     */
+    public function syncModules(Bundle $bundle, array $moduleIds): Collection
     {
         if ($bundle->status !== 'DRAFT') {
             throw new BundleException('Only a DRAFT bundle can have its module composition edited. Amend by creating a new bundle version instead.');
         }
 
-        $bundle->modules()->sync($moduleIds);
+        $this->dependencies->assertAcyclic();
+
+        $requested = Module::query()->whereIn('id', $moduleIds)->get();
+        $requestedIds = $requested->pluck('id')->all();
+
+        $requiredByMap = []; // dependency module id => [requiring module codes]
+        foreach ($requested as $module) {
+            foreach ($this->dependencies->transitiveDependencies($module) as $dep) {
+                $requiredByMap[$dep->id][] = $module->code;
+            }
+        }
+
+        $autoAddedIds = array_diff(array_keys($requiredByMap), $requestedIds);
+        $finalIds = array_values(array_unique([...$requestedIds, ...array_keys($requiredByMap)]));
+
+        $bundle->modules()->sync($finalIds);
+
+        $autoAddedModules = Module::query()->whereIn('id', $autoAddedIds)->get();
+
+        return $autoAddedModules->map(fn ($module) => [
+            'module' => $module,
+            'required_by' => array_values(array_unique($requiredByMap[$module->id] ?? [])),
+        ]);
+    }
+
+    public function deactivate(Bundle $bundle): Bundle
+    {
+        $bundle->update(['is_active' => false]);
+
+        return $bundle;
+    }
+
+    public function reactivate(Bundle $bundle): Bundle
+    {
+        $bundle->update(['is_active' => true]);
+
+        return $bundle;
+    }
+
+    public function delete(Bundle $bundle): void
+    {
+        $bundle->delete();
     }
 
     /**
