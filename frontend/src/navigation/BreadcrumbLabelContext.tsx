@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 
 interface BreadcrumbLabelContextValue {
@@ -42,18 +42,21 @@ export function BreadcrumbLabelProvider({ children }: { children: ReactNode }) {
  * label — this never throws and never blocks rendering.
  */
 export function useBreadcrumbLabel(segmentValue: string | undefined | null, label: string | undefined | null): void {
-  const ctx = useContext(BreadcrumbLabelContext);
-  const registeredRef = useRef<string | null>(null);
+  // Depend on the stable setLabel function itself, not the context value
+  // object — that object is recreated every time any label changes (it
+  // wraps the labels map), so depending on it directly would make this
+  // effect's own cleanup-then-rerun cycle re-register on every update,
+  // looping forever (register -> new ctx -> cleanup unregisters -> effect
+  // re-runs and re-registers -> new ctx -> ...).
+  const setLabel = useContext(BreadcrumbLabelContext)?.setLabel;
 
   useEffect(() => {
-    if (!ctx || !segmentValue || !label) return;
-    ctx.setLabel(segmentValue, label);
-    registeredRef.current = segmentValue;
+    if (!setLabel || !segmentValue || !label) return;
+    setLabel(segmentValue, label);
     return () => {
-      ctx.setLabel(segmentValue, null);
-      registeredRef.current = null;
+      setLabel(segmentValue, null);
     };
-  }, [ctx, segmentValue, label]);
+  }, [setLabel, segmentValue, label]);
 }
 
 export function useBreadcrumbLabels(): Record<string, string> {

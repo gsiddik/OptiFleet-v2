@@ -4,6 +4,7 @@ import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { BackButton } from '../../../components/BackButton';
+import { useBackNavigation } from '../../../navigation/useBackNavigation';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { useAuth } from '../../../auth/AuthContext';
 import type { BundleItem, ModuleCatalogItem } from '../../../types';
@@ -11,13 +12,16 @@ import type { BundleItem, ModuleCatalogItem } from '../../../types';
 export function BundleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
+  const goBackToList = useBackNavigation('/platform/bundles');
   const [bundle, setBundle] = useState<BundleItem | null>(null);
   const [allModules, setAllModules] = useState<ModuleCatalogItem[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [missing, setMissing] = useState<string[]>([]);
+  const [autoAdded, setAutoAdded] = useState<{ module: ModuleCatalogItem; required_by: string[] }[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
 
   function load() {
     Promise.all([apiClient.get(`/platform/bundles/${id}`), apiClient.get('/platform/modules')])
@@ -44,9 +48,10 @@ export function BundleDetailPage() {
     setSaving(true);
     setError(null);
     try {
-      await apiClient.put(`/platform/bundles/${id}/modules`, { module_ids: Array.from(selected) });
-      const res = await apiClient.get(`/platform/bundles/${id}/missing-dependencies`);
-      setMissing(res.data.data);
+      const res = await apiClient.put(`/platform/bundles/${id}/modules`, { module_ids: Array.from(selected) });
+      setAutoAdded(res.data.data.auto_added ?? []);
+      const missingRes = await apiClient.get(`/platform/bundles/${id}/missing-dependencies`);
+      setMissing(missingRes.data.data);
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -68,21 +73,69 @@ export function BundleDetailPage() {
     }
   }
 
+  async function toggleActive() {
+    if (!bundle) return;
+    const action = bundle.is_active ? 'deactivate' : 'reactivate';
+    const confirmed = window.confirm(
+      bundle.is_active
+        ? 'Deactivate this bundle? It will no longer be selectable for new contracts, but existing contracts referencing it are unaffected.'
+        : 'Reactivate this bundle so it can be selected for new contracts again?',
+    );
+    if (!confirmed) return;
+    setStatusBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/platform/bundles/${id}/${action}`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setStatusBusy(false);
+    }
+  }
+
+  async function deleteBundle() {
+    const confirmed = window.confirm(
+      'Delete this bundle? It will be hidden from Bundle Management and new contracts, but existing contracts that already reference it keep working — this cannot be undone from here.',
+    );
+    if (!confirmed) return;
+    setStatusBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/platform/bundles/${id}`);
+      goBackToList();
+    } catch (err) {
+      setError(extractApiError(err).message);
+      setStatusBusy(false);
+    }
+  }
+
   if (error && !bundle) return <ErrorState message={error} />;
   if (!bundle) return <LoadingState />;
 
   return (
     <div>
       <BackButton fallbackTo="/platform/bundles" label="← Back to Bundle Management" />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {bundle.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({bundle.code})</span>
         </h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusBadge status={bundle.status} />
+          <StatusBadge status={bundle.is_active ? 'ACTIVE' : 'INACTIVE'} />
           {hasPermission('bundle.publish') && (
             <button className="btn-primary" disabled={publishing} onClick={publish}>
               {publishing ? 'Publishing…' : 'Publish New Version'}
+            </button>
+          )}
+          {hasPermission(bundle.is_active ? 'bundle.deactivate' : 'bundle.activate') && (
+            <button className="btn-secondary" disabled={statusBusy} onClick={toggleActive}>
+              {bundle.is_active ? 'Deactivate' : 'Reactivate'}
+            </button>
+          )}
+          {hasPermission('bundle.delete') && (
+            <button className="btn-danger" disabled={statusBusy} onClick={deleteBundle}>
+              Delete
             </button>
           )}
         </div>
@@ -92,6 +145,12 @@ export function BundleDetailPage() {
       {missing.length > 0 && (
         <div style={{ background: '#fef2f2', color: '#b91c1c', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
           Missing required dependencies: {missing.join(', ')}
+        </div>
+      )}
+      {autoAdded.length > 0 && (
+        <div style={{ background: '#eff6ff', color: '#1d4ed8', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
+          Automatically added by dependency:{' '}
+          {autoAdded.map((a) => `${a.module.name} (${a.module.code}) — required by ${a.required_by.join(', ')}`).join('; ')}
         </div>
       )}
 

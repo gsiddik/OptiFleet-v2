@@ -23,6 +23,7 @@ export function BundleListPage() {
     { key: 'name', header: 'Name', render: (b) => b.name },
     { key: 'modules', header: 'Modules', render: (b) => b.modules?.length ?? 0 },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
+    { key: 'is_active', header: 'Active', render: (b) => <StatusBadge status={b.is_active ? 'ACTIVE' : 'INACTIVE'} /> },
   ];
 
   return (

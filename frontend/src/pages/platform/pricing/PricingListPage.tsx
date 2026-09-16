@@ -38,14 +38,53 @@ export function PricingListPage() {
     {
       key: 'actions',
       header: '',
-      render: (p) =>
-        hasPermission('pricing.publish') ? (
-          <button className="btn-link" onClick={() => setVersioning(p)}>
-            New Version
-          </button>
-        ) : null,
+      render: (p) => (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {hasPermission('pricing.publish') && (
+            <button className="btn-link" onClick={() => setVersioning(p)}>
+              New Version
+            </button>
+          )}
+          {p.status === 'ACTIVE' && hasPermission('pricing.deactivate') && (
+            <button className="btn-link" onClick={() => toggleActive(p)}>
+              Deactivate
+            </button>
+          )}
+          {p.status === 'ARCHIVED' && hasPermission('pricing.activate') && (
+            <button className="btn-link" onClick={() => toggleActive(p)}>
+              Reactivate
+            </button>
+          )}
+          {hasPermission('pricing.delete') && (
+            <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => deletePricing(p)}>
+              Delete
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
+
+  async function toggleActive(p: PricingItem) {
+    const action = p.status === 'ACTIVE' ? 'deactivate' : 'reactivate';
+    const confirmed = window.confirm(
+      action === 'deactivate'
+        ? `Deactivate pricing ${p.priceable_type} ${p.priceable_code}? It will no longer be selectable for new contracts; existing contracts are unaffected.`
+        : `Reactivate pricing ${p.priceable_type} ${p.priceable_code} so it can be selected for new contracts again?`,
+    );
+    if (!confirmed) return;
+    await apiClient.post(`/platform/pricing/${p.id}/${action}`);
+    setReloadKey((k) => k + 1);
+  }
+
+  async function deletePricing(p: PricingItem) {
+    const confirmed = window.confirm(
+      `Delete pricing ${p.priceable_type} ${p.priceable_code}? It will be hidden from selection but existing contracts referencing it keep working — this cannot be undone from here.`,
+    );
+    if (!confirmed) return;
+    await apiClient.delete(`/platform/pricing/${p.id}`);
+    setReloadKey((k) => k + 1);
+  }
 
   return (
     <div>

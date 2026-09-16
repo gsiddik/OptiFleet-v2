@@ -79,6 +79,7 @@ export function ContractForm({
   const [bundleOptions, setBundleOptions] = useState<BundleItem[]>([]);
   const [pricingOptions, setPricingOptions] = useState<PricingItem[]>([]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [formError, setFormError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const effectiveTenantId = lockedTenant?.id ?? tenantId;
@@ -167,11 +168,13 @@ export function ContractForm({
     setNotes('');
     setItems([blankItem()]);
     setErrors({});
+    setFormError(null);
   }
 
   async function submit() {
     setSubmitting(true);
     setErrors({});
+    setFormError(null);
     const payload = {
       tenant_id: lockedTenant ? undefined : tenantId,
       start_date: startDate,
@@ -200,7 +203,9 @@ export function ContractForm({
       onCreated();
       onClose();
     } catch (err) {
-      setErrors(extractApiError(err as ApiErrorShape).errors ?? {});
+      const apiError = extractApiError(err as ApiErrorShape);
+      setErrors(apiError.errors ?? {});
+      setFormError(apiError.message);
     } finally {
       setSubmitting(false);
     }
@@ -333,8 +338,20 @@ export function ContractForm({
         + Add Item
       </button>
 
+      {formError && (
+        <div style={{ background: '#fef2f2', color: '#b91c1c', padding: 10, borderRadius: 6, fontSize: 13, marginTop: 12 }} role="alert">
+          {formError}
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
+        <button
+          className="btn-secondary"
+          onClick={() => {
+            setFormError(null);
+            onClose();
+          }}
+        >
           Cancel
         </button>
         <button className="btn-primary" disabled={!canSubmit} onClick={submit}>
