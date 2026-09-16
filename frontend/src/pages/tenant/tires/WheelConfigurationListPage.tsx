@@ -208,7 +208,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
 
   return (
     <Modal open={open} title="Add Wheel Position" onClose={onClose}>
-      <FormField label="Vehicle Category" errors={errors.vehicle_category_id}>
+      <FormField label="Vehicle Category" errors={errors.vehicle_category_id} required>
         <select value={vehicleCategoryId} onChange={(e) => setVehicleCategoryId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {categories.map((c) => (
@@ -218,10 +218,10 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
           ))}
         </select>
       </FormField>
-      <FormField label="Position Code" errors={errors.position_code}>
+      <FormField label="Position Code" errors={errors.position_code} required>
         <input value={positionCode} onChange={(e) => setPositionCode(e.target.value)} placeholder="e.g. FRONT_LEFT" style={inputStyle} />
       </FormField>
-      <FormField label="Label" errors={errors.label}>
+      <FormField label="Label" errors={errors.label} required>
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Front Left" style={inputStyle} />
       </FormField>
       <FormField label="Axle Number" errors={errors.axle_number}>

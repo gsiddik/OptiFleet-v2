@@ -105,7 +105,7 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
 
   return (
     <Modal open={open} title="New Work Order" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id}>
+      <FormField label="Vehicle" errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {vehicles.map((v) => (
@@ -115,7 +115,7 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Maintenance Type" errors={errors.maintenance_type}>
+      <FormField label="Maintenance Type" errors={errors.maintenance_type} required>
         <select value={maintenanceType} onChange={(e) => setMaintenanceType(e.target.value)} style={inputStyle}>
           {['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECTION', 'CAMPAIGN'].map((t) => (
             <option key={t} value={t}>

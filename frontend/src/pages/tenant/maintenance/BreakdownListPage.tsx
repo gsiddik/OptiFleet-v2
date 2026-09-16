@@ -90,7 +90,7 @@ function ReportBreakdownModal({ open, onClose, onCreated }: { open: boolean; onC
 
   return (
     <Modal open={open} title="Report Breakdown" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id}>
+      <FormField label="Vehicle" errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {vehicles.map((v) => (
@@ -100,7 +100,7 @@ function ReportBreakdownModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Severity" errors={errors.severity}>
+      <FormField label="Severity" errors={errors.severity} required>
         <select value={severity} onChange={(e) => setSeverity(e.target.value)} style={inputStyle}>
           {['MINOR', 'MAJOR', 'IMMOBILIZED'].map((s) => (
             <option key={s} value={s}>
@@ -112,7 +112,7 @@ function ReportBreakdownModal({ open, onClose, onCreated }: { open: boolean; onC
       <FormField label="Location (optional)" errors={errors.location}>
         <input value={location} onChange={(e) => setLocation(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label="Description" errors={errors.description} required>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

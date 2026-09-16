@@ -93,7 +93,7 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
 
   return (
     <Modal open={open} title="New Stock Transfer" onClose={onClose}>
-      <FormField label="From Warehouse" errors={errors.from_warehouse_id}>
+      <FormField label="From Warehouse" errors={errors.from_warehouse_id} required>
         <select value={fromWarehouseId} onChange={(e) => setFromWarehouseId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {warehouses.map((w) => (
@@ -103,7 +103,7 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="To Warehouse" errors={errors.to_warehouse_id}>
+      <FormField label="To Warehouse" errors={errors.to_warehouse_id} required>
         <select value={toWarehouseId} onChange={(e) => setToWarehouseId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {warehouses.map((w) => (
@@ -113,7 +113,7 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="Product" errors={errors['items.0.product_id']}>
+      <FormField label="Product" errors={errors['items.0.product_id']} required>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {products.map((p) => (
@@ -123,7 +123,7 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="Quantity" errors={errors['items.0.quantity']}>
+      <FormField label="Quantity" errors={errors['items.0.quantity']} required>
         <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

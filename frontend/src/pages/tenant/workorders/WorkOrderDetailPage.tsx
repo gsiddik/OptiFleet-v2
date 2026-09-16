@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type {
   AuditLogEntry,
   HistoryEventItem,
@@ -66,6 +68,8 @@ export function WorkOrderDetailPage() {
 
   useEffect(load, [id]);
 
+  useBreadcrumbLabel(wo?.id, wo?.wo_number);
+
   /** G-04: a print PDF endpoint has existed on the backend since Phase 1, with no frontend caller anywhere. */
   async function printWorkOrder() {
     setPrinting(true);
@@ -109,6 +113,7 @@ export function WorkOrderDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/work-orders" label="← Back to Work Order" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {wo.wo_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({wo.vehicle?.registration_number})</span>
@@ -1363,7 +1368,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
       )}
       {hasPermission('work_order_external_service.create') && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <FormField label="Partner">
+          <FormField label="Partner" required>
             <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
               <option value="">Select partner</option>
               {partners.map((p) => (
@@ -1373,7 +1378,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
               ))}
             </select>
           </FormField>
-          <FormField label="Description">
+          <FormField label="Description" required>
             <input value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, width: 220 }} />
           </FormField>
           <FormField label="Priority (optional)">
@@ -1504,13 +1509,13 @@ function RecordWorkshopInvoiceModal({
         This records an invoice the Workshop Partner already issued externally — OptiFleet does not issue this invoice.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="External Invoice Number" errors={errors.external_invoice_number}>
+        <FormField label="External Invoice Number" errors={errors.external_invoice_number} required>
           <input value={externalInvoiceNumber} onChange={(e) => setExternalInvoiceNumber(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Partner Reference (optional)" errors={errors.partner_reference}>
           <input value={partnerReference} onChange={(e) => setPartnerReference(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Invoice Date" errors={errors.invoice_date}>
+        <FormField label="Invoice Date" errors={errors.invoice_date} required>
           <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Due Date (optional)" errors={errors.due_date}>
@@ -1519,7 +1524,7 @@ function RecordWorkshopInvoiceModal({
         <FormField label="Currency" errors={errors.currency}>
           <input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Total Amount" errors={errors.total_amount}>
+        <FormField label="Total Amount" errors={errors.total_amount} required>
           <input type="number" step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Subtotal (optional)" errors={errors.subtotal}>

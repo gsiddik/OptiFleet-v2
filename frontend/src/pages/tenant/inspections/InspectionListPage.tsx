@@ -100,7 +100,7 @@ function CreateInspectionModal({ open, onClose, onCreated }: { open: boolean; on
 
   return (
     <Modal open={open} title="New Inspection" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id}>
+      <FormField label="Vehicle" errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {vehicles.map((v) => (
@@ -110,7 +110,7 @@ function CreateInspectionModal({ open, onClose, onCreated }: { open: boolean; on
           ))}
         </select>
       </FormField>
-      <FormField label="Template" errors={errors.inspection_template_id}>
+      <FormField label="Template" errors={errors.inspection_template_id} required>
         <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {templates.map((t) => (

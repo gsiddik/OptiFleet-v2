@@ -154,13 +154,13 @@ function CreatePartnerModal({
 
   return (
     <Modal open={open} title="New Vendor" onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Type" errors={errors.partner_type}>
+      <FormField label="Type" errors={errors.partner_type} required>
         <select value={partnerType} onChange={(e) => setPartnerType(e.target.value)} style={inputStyle}>
           {PARTNER_TYPES.map((t) => (
             <option key={t} value={t}>

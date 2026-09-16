@@ -194,10 +194,10 @@ function GroupFormModal({
 
   return (
     <Modal open={open} title={group ? 'Edit Component Group' : 'New Component Group'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required={!group}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!group} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required={!group}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Parent Group" errors={errors.parent_id}>

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InvoiceItem } from '../../../types';
 
 export function InvoiceDetailPage() {
@@ -24,6 +26,8 @@ export function InvoiceDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(invoice?.id, invoice?.invoice_number);
 
   async function downloadPdf() {
     setDownloading(true);
@@ -45,6 +49,7 @@ export function InvoiceDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/platform/invoices" label="← Back to Invoices" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {invoice.invoice_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({invoice.tenant?.name})</span>

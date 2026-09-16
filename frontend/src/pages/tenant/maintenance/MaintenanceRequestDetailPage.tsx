@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { MaintenanceRequestItem } from '../../../types';
 
 const ACTIONS: Record<string, { action: string; label: string; permission: string; needsNote?: boolean }[]> = {
@@ -34,6 +36,8 @@ export function MaintenanceRequestDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(request?.id, request?.request_number);
 
   async function act(action: string, needsNote?: boolean) {
     if (needsNote && !note.trim()) {
@@ -73,6 +77,7 @@ export function MaintenanceRequestDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/maintenance-requests" label="← Back to Maintenance Request" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {request.request_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({request.vehicle?.registration_number})</span>

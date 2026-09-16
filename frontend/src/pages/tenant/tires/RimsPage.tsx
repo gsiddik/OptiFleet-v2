@@ -167,10 +167,10 @@ function RimFormModal({ open, rim, onClose, onSaved }: { open: boolean; rim?: Ri
   return (
     <Modal open={open} title={rim ? 'Edit Rim' : 'New Rim'} onClose={onClose} width={520}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Code" errors={errors.code}>
+        <FormField label="Code" errors={errors.code} required={!rim}>
           <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!rim} />
         </FormField>
-        <FormField label="Brand" errors={errors.brand}>
+        <FormField label="Brand" errors={errors.brand} required={!rim}>
           <input value={brand} onChange={(e) => setBrand(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Material" errors={errors.material}>

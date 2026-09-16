@@ -156,10 +156,10 @@ function WarehouseFormModal({
 
   return (
     <Modal open={open} title={warehouse ? 'Edit Warehouse' : 'New Warehouse'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required={!warehouse}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!warehouse} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required={!warehouse}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Branch" errors={errors.branch_id}>

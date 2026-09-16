@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { StockOpnameItem } from '../../../types';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
@@ -30,6 +32,8 @@ export function StockOpnameDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(opname?.id, opname?.opname_number);
 
   async function act(action: string) {
     setBusy(true);
@@ -63,6 +67,7 @@ export function StockOpnameDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/stock-opnames" label="← Back to Stock Opname" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{opname.opname_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem, RfqItem } from '../../../types';
 
 interface ComparisonRow {
@@ -39,6 +41,8 @@ export function RfqDetailPage() {
   useEffect(() => {
     apiClient.get('/app/partners', { params: { per_page: 100 } }).then((res) => setPartners(res.data.data)).catch(() => setPartners([]));
   }, []);
+
+  useBreadcrumbLabel(rfq?.id, rfq?.rfq_number);
 
   async function inviteVendor() {
     setBusy(true);
@@ -98,6 +102,7 @@ export function RfqDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/rfqs" label="← Back to RFQ" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{rfq.rfq_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -169,7 +174,7 @@ export function RfqDetailPage() {
         ))}
         {!selected && hasPermission('quotation.manage') && rfq.status === 'ISSUED' && (rfq.vendors ?? []).length > 0 && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Vendor">
+            <FormField label="Vendor" required>
               <select value={quotePartnerId} onChange={(e) => setQuotePartnerId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
                 <option value="">Select…</option>
                 {(rfq.vendors ?? []).map((v) => (
@@ -179,7 +184,7 @@ export function RfqDetailPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Unit Price (applies to all lines)">
+            <FormField label="Unit Price (applies to all lines)" required>
               <input type="number" step="0.01" value={quoteUnitPrice} onChange={(e) => setQuoteUnitPrice(e.target.value)} style={{ ...inputStyle, width: 130 }} />
             </FormField>
             <FormField label="Lead Time (days)">

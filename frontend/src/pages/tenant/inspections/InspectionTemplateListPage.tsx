@@ -90,10 +90,10 @@ function CreateTemplateModal({ open, onClose, onCreated }: { open: boolean; onCl
 
   return (
     <Modal open={open} title="New Inspection Template" onClose={onClose}>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Inspection Type" errors={errors.inspection_type}>
+      <FormField label="Inspection Type" errors={errors.inspection_type} required>
         <select value={inspectionType} onChange={(e) => setInspectionType(e.target.value)} style={inputStyle}>
           {TYPES.map((t) => (
             <option key={t} value={t}>

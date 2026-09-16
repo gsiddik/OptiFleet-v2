@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { WorkshopInvoiceItem, WorkshopInvoiceReconciliation } from '../../../types';
 
 /**
@@ -43,6 +45,8 @@ export function WorkshopInvoiceDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(invoice?.id, invoice?.external_invoice_number);
 
   async function printInvoice() {
     setPrinting(true);
@@ -96,6 +100,7 @@ export function WorkshopInvoiceDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/workshop-invoices" label="← Back to Workshop Invoices" />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Workshop Invoice — {invoice.external_invoice_number}</h1>
       <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 0 }}>
         Recorded from an externally-issued document — OptiFleet did not issue this invoice.
@@ -288,10 +293,10 @@ function PaymentModal({ invoiceId, payableAmount, onClose, onSaved }: { invoiceI
   return (
     <Modal open title="Upload Payment Evidence" onClose={onClose}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Payable amount: {payableAmount}. Partial payment is not supported — the paid amount must match exactly.</p>
-      <FormField label="Payment Date" errors={errors.payment_date}>
+      <FormField label="Payment Date" errors={errors.payment_date} required>
         <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Paid Amount" errors={errors.paid_amount}>
+      <FormField label="Paid Amount" errors={errors.paid_amount} required>
         <input type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Payment Method (optional)" errors={errors.payment_method}>
@@ -300,7 +305,7 @@ function PaymentModal({ invoiceId, payableAmount, onClose, onSaved }: { invoiceI
       <FormField label="Bank / Transaction Reference (optional)" errors={errors.reference_number}>
         <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Payment Evidence URL (required)" errors={errors.evidence_url}>
+      <FormField label="Payment Evidence URL (required)" errors={errors.evidence_url} required>
         <input value={evidenceUrl} onChange={(e) => setEvidenceUrl(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Notes (optional)" errors={errors.notes}>
@@ -348,7 +353,7 @@ function CorrectionModal({ invoice, onClose, onSaved }: { invoice: WorkshopInvoi
       <FormField label="Corrected Invoice Date">
         <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reason" errors={errors.reason}>
+      <FormField label="Reason" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
@@ -382,7 +387,7 @@ function CancellationModal({ invoiceId, onClose, onSaved }: { invoiceId: string;
   return (
     <Modal open title="Request Invoice Cancellation" onClose={onClose}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Requires approval from a different user. Preserves payment history if any exists.</p>
-      <FormField label="Reason" errors={errors.reason}>
+      <FormField label="Reason" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

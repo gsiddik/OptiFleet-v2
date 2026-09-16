@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PurchaseRequestItem, PurchaseRequestItemLine } from '../../../types';
 
 const LINE_STATUSES: PurchaseRequestItemLine['line_status'][] = ['PENDING', 'APPROVED', 'ON_HOLD', 'REJECTED'];
@@ -35,6 +37,8 @@ export function PurchaseRequestDetailPage() {
 
   useEffect(load, [id]);
 
+  useBreadcrumbLabel(pr?.id, pr?.pr_number);
+
   async function act(action: string) {
     setBusy(true);
     setError(null);
@@ -59,6 +63,7 @@ export function PurchaseRequestDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/purchase-requests" label="← Back to Purchase Request" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{pr.pr_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

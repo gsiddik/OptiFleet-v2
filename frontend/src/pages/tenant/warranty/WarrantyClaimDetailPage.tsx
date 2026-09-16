@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { WarrantyClaimItem } from '../../../types';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
@@ -37,6 +39,8 @@ export function WarrantyClaimDetailPage() {
 
   useEffect(load, [id]);
 
+  useBreadcrumbLabel(claim?.id, claim?.claim_number);
+
   async function act(action: string) {
     setBusy(true);
     setError(null);
@@ -58,6 +62,7 @@ export function WarrantyClaimDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/warranty-claims" label="← Back to Claims" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{claim.claim_number}</h1>
         <StatusBadge status={claim.status} />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState } from '../../../components/States';
 import type { VendorQuotationItem, Warehouse } from '../../../types';
@@ -39,6 +40,7 @@ export function CreatePurchaseOrderFromQuotationPage() {
 
   return (
     <div style={{ maxWidth: 480 }}>
+      <BackButton fallbackTo="/app/quotations" label="← Back to Quotation" />
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>Create Purchase Order</h1>
       {error && <ErrorState message={error} />}
       {quotation && (
@@ -48,7 +50,7 @@ export function CreatePurchaseOrderFromQuotationPage() {
           </p>
         </div>
       )}
-      <FormField label="Delivery Warehouse" errors={errors.delivery_warehouse_id}>
+      <FormField label="Delivery Warehouse" errors={errors.delivery_warehouse_id} required>
         <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {warehouses.map((w) => (

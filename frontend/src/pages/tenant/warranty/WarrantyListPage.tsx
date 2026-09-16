@@ -86,7 +86,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
 
   return (
     <Modal open={open} title="New Warranty" onClose={onClose}>
-      <FormField label="Coverage Basis" errors={errors.coverage_basis}>
+      <FormField label="Coverage Basis" errors={errors.coverage_basis} required>
         <select value={coverageBasis} onChange={(e) => setCoverageBasis(e.target.value)} style={inputStyle}>
           {['DATE', 'MILEAGE', 'ENGINE_HOUR', 'COMBINATION'].map((c) => (
             <option key={c} value={c}>
@@ -101,7 +101,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
       <FormField label="Duration (km)" errors={errors.duration_km}>
         <input type="number" value={durationKm} onChange={(e) => setDurationKm(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Starts At" errors={errors.starts_at}>
+      <FormField label="Starts At" errors={errors.starts_at} required>
         <input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Product" errors={errors.product_id}>

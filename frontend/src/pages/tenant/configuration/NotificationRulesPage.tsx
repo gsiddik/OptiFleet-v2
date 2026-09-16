@@ -158,7 +158,7 @@ function CreateRuleModal({ open, events, onClose, onCreated }: { open: boolean; 
 
   return (
     <Modal open={open} title="New Notification Rule" onClose={onClose} width={560}>
-      <FormField label="Event" errors={errors.event_code}>
+      <FormField label="Event" errors={errors.event_code} required>
         <select value={eventCode} onChange={(e) => setEventCode(e.target.value)} style={inputStyle}>
           {configurableEvents.map((e) => (
             <option key={e.code} value={e.code}>
@@ -167,10 +167,10 @@ function CreateRuleModal({ open, events, onClose, onCreated }: { open: boolean; 
           ))}
         </select>
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Channels">
+      <FormField label="Channels" required>
         <div style={{ display: 'flex', gap: 12 }}>
           {CHANNELS.map((c) => (
             <label key={c} style={{ fontSize: 13 }}>
@@ -184,7 +184,7 @@ function CreateRuleModal({ open, events, onClose, onCreated }: { open: boolean; 
           ))}
         </div>
       </FormField>
-      <FormField label={`Recipient rules (JSON array of {type, identifier}) — types: ${RECIPIENT_TYPES.join(', ')}`} errors={errors.recipient_rules}>
+      <FormField label={`Recipient rules (JSON array of {type, identifier}) — types: ${RECIPIENT_TYPES.join(', ')}`} errors={errors.recipient_rules} required>
         <textarea value={recipientRules} onChange={(e) => setRecipientRules(e.target.value)} style={jsonAreaStyle} spellCheck={false} />
       </FormField>
       <FormField label="Condition set (JSON, optional)">

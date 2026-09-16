@@ -73,7 +73,7 @@ function CreateOpnameModal({ open, onClose, onCreated }: { open: boolean; onClos
 
   return (
     <Modal open={open} title="New Stock Opname" onClose={onClose}>
-      <FormField label="Warehouse" errors={errors.warehouse_id}>
+      <FormField label="Warehouse" errors={errors.warehouse_id} required>
         <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {warehouses.map((w) => (

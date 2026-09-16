@@ -87,7 +87,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
 
   return (
     <Modal open={open} title="New Warranty Claim" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id}>
+      <FormField label="Vehicle" errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {vehicles.map((v) => (
@@ -97,10 +97,10 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
           ))}
         </select>
       </FormField>
-      <FormField label="Failure Date" errors={errors.failure_date}>
+      <FormField label="Failure Date" errors={errors.failure_date} required>
         <input type="date" value={failureDate} onChange={(e) => setFailureDate(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reason" errors={errors.reason}>
+      <FormField label="Reason" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

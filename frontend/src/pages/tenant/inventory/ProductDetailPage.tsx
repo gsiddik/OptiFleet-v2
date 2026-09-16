@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ProductItem, VehicleCategory } from '../../../types';
 
 export function ProductDetailPage() {
@@ -79,11 +81,14 @@ export function ProductDetailPage() {
     }
   }
 
+  useBreadcrumbLabel(product?.id, product?.name);
+
   if (error && !product) return <ErrorState message={error} />;
   if (!product) return <LoadingState />;
 
   return (
     <div>
+      <BackButton fallbackTo="/app/products" label="← Back to Product" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {product.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({product.code})</span>

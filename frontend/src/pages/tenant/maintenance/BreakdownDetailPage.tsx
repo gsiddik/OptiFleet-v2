@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { BreakdownItem } from '../../../types';
 
 const ACTIONS: Record<string, { action: string; label: string; permission: string }[]> = {
@@ -30,6 +32,8 @@ export function BreakdownDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(breakdown?.id, breakdown ? `Breakdown (${breakdown.vehicle?.registration_number ?? ''})` : undefined);
 
   async function act(action: string) {
     setBusy(true);
@@ -69,6 +73,7 @@ export function BreakdownDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/breakdowns" label="← Back to Breakdown" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           Breakdown <span style={{ color: '#9ca3af', fontWeight: 400 }}>({breakdown.vehicle?.registration_number})</span>

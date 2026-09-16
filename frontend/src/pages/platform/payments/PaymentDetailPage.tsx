@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
@@ -46,6 +47,7 @@ export function PaymentDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/platform/payments" label="← Back to Payments" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           Payment <span style={{ color: '#9ca3af', fontWeight: 400 }}>({payment.tenant?.name})</span>
@@ -160,7 +162,7 @@ function DecisionModal({
   return (
     <Modal open title={kind === 'verify' ? 'Verify Payment' : 'Reject Payment'} onClose={onClose}>
       {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-      <FormField label={kind === 'verify' ? 'Note (optional)' : 'Reason'}>
+      <FormField label={kind === 'verify' ? 'Note (optional)' : 'Reason'} required={kind === 'reject'}>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

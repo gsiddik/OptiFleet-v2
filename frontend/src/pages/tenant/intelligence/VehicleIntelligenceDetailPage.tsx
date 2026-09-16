@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { FreshnessBanner, type Freshness } from '../../../components/analytics/FreshnessBanner';
 import { RiskBadge } from '../../../components/intelligence/RiskBadge';
@@ -67,6 +68,7 @@ export function VehicleIntelligenceDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/intelligence/vehicles" label="← Back to Vehicle Health & Risk" />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Vehicle {response.vehicle_id}</h1>
       <FreshnessBanner freshness={response.freshness} />
 

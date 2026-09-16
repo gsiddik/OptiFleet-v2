@@ -107,13 +107,13 @@ function InviteUserModal({
 
   return (
     <Modal open={open} title="Add Tenant User" onClose={onClose}>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Email" errors={errors.email}>
+      <FormField label="Email" errors={errors.email} required>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Password" errors={errors.password}>
+      <FormField label="Password" errors={errors.password} required>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

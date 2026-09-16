@@ -98,16 +98,16 @@ function AdjustModal({ target, onClose, onAdjusted }: { target: WarehouseStockIt
 
   return (
     <Modal open={!!target} title={`Adjust Stock — ${target?.product?.name ?? ''}`} onClose={onClose}>
-      <FormField label="Direction" errors={errors.direction}>
+      <FormField label="Direction" errors={errors.direction} required>
         <select value={direction} onChange={(e) => setDirection(e.target.value as 'PLUS' | 'MINUS')} style={inputStyle}>
           <option value="PLUS">Increase (+)</option>
           <option value="MINUS">Decrease (-)</option>
         </select>
       </FormField>
-      <FormField label="Quantity" errors={errors.quantity}>
+      <FormField label="Quantity" errors={errors.quantity} required>
         <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reason (required, audited)" errors={errors.reason}>
+      <FormField label="Reason (required, audited)" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
@@ -154,10 +154,10 @@ function ScrapModal({ target, onClose, onScrapped }: { target: WarehouseStockIte
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
         Permanently removes available on-hand stock (max {target?.quantity_available ?? 0}). This cannot be undone.
       </p>
-      <FormField label="Quantity" errors={errors.quantity}>
+      <FormField label="Quantity" errors={errors.quantity} required>
         <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reason (required, audited)" errors={errors.reason}>
+      <FormField label="Reason (required, audited)" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

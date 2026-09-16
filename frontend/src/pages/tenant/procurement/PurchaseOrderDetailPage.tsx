@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PurchaseOrderItem } from '../../../types';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
@@ -39,6 +41,8 @@ export function PurchaseOrderDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(po?.id, po?.po_number);
 
   /** Same pattern as G-04 (Work Order): a print PDF endpoint existed with no frontend caller anywhere. */
   async function printPurchaseOrder() {
@@ -107,6 +111,7 @@ export function PurchaseOrderDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/purchase-orders" label="← Back to Purchase Order" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{po.po_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

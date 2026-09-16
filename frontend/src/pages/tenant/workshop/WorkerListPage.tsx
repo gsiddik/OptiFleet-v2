@@ -180,13 +180,13 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
   return (
     <Modal open={open} title="New Worker" onClose={onClose} width={520}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Employee Code" errors={errors.employee_code}>
+        <FormField label="Employee Code" errors={errors.employee_code} required>
           <input value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Name" errors={errors.name}>
+        <FormField label="Name" errors={errors.name} required>
           <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Branch" errors={errors.branch_id}>
+        <FormField label="Branch" errors={errors.branch_id} required>
           <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={inputStyle}>
             <option value="">Select…</option>
             {branches.map((b) => (
@@ -206,7 +206,7 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
             ))}
           </select>
         </FormField>
-        <FormField label="Worker Type" errors={errors.worker_type}>
+        <FormField label="Worker Type" errors={errors.worker_type} required>
           <select value={workerType} onChange={(e) => setWorkerType(e.target.value)} style={inputStyle}>
             {WORKER_TYPES.map((t) => (
               <option key={t} value={t}>

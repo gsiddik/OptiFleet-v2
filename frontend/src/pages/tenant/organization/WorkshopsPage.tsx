@@ -159,10 +159,10 @@ function WorkshopFormModal({
 
   return (
     <Modal open={open} title={workshop ? 'Edit Workshop' : 'New Workshop'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required={!workshop}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!workshop} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required={!workshop}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Branch" errors={errors.branch_id}>

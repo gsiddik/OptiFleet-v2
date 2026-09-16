@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InvoiceItem } from '../../../types';
 
 export function AccountInvoiceDetailPage() {
@@ -19,6 +21,8 @@ export function AccountInvoiceDetailPage() {
       .then((res) => setInvoice(res.data.data))
       .catch((err) => setError(extractApiError(err).message));
   }, [id]);
+
+  useBreadcrumbLabel(invoice?.id, invoice?.invoice_number);
 
   async function downloadPdf() {
     setDownloading(true);
@@ -41,6 +45,7 @@ export function AccountInvoiceDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/account/invoices" label="← Back to Invoices" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{invoice.invoice_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

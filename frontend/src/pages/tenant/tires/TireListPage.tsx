@@ -120,7 +120,7 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
 
   return (
     <Modal open={open} title="New Tire" onClose={onClose}>
-      <FormField label="Tire Product" errors={errors.product_id}>
+      <FormField label="Tire Product" errors={errors.product_id} required>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {products.map((p) => (
@@ -130,7 +130,7 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
           ))}
         </select>
       </FormField>
-      <FormField label="Serial Number" errors={errors.serial_number}>
+      <FormField label="Serial Number" errors={errors.serial_number} required>
         <input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Manufacturer" errors={errors.manufacturer}>

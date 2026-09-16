@@ -89,7 +89,7 @@ function CreateRfqModal({ open, onClose, onCreated }: { open: boolean; onClose: 
 
   return (
     <Modal open={open} title="New RFQ" onClose={onClose}>
-      <FormField label="Warehouse" errors={errors.warehouse_id}>
+      <FormField label="Warehouse" errors={errors.warehouse_id} required>
         <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {warehouses.map((w) => (
@@ -99,7 +99,7 @@ function CreateRfqModal({ open, onClose, onCreated }: { open: boolean; onClose: 
           ))}
         </select>
       </FormField>
-      <FormField label="Product" errors={errors['items.0.product_id']}>
+      <FormField label="Product" errors={errors['items.0.product_id']} required>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {products.map((p) => (
@@ -109,7 +109,7 @@ function CreateRfqModal({ open, onClose, onCreated }: { open: boolean; onClose: 
           ))}
         </select>
       </FormField>
-      <FormField label="Quantity" errors={errors['items.0.quantity']}>
+      <FormField label="Quantity" errors={errors['items.0.quantity']} required>
         <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

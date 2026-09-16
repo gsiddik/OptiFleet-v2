@@ -120,7 +120,7 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
 
   return (
     <Modal open title="Submit Payment" onClose={onClose} width={560}>
-      <FormField label="Invoice" errors={errors.invoice_id}>
+      <FormField label="Invoice" errors={errors.invoice_id} required>
         <select value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} style={inputStyle}>
           <option value="">Select an outstanding invoice…</option>
           {invoices.map((inv) => (
@@ -131,13 +131,13 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
         </select>
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Payment Date" errors={errors.payment_date}>
+        <FormField label="Payment Date" errors={errors.payment_date} required>
           <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Amount" errors={errors.amount}>
+        <FormField label="Amount" errors={errors.amount} required>
           <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Payment Method" errors={errors.payment_method}>
+        <FormField label="Payment Method" errors={errors.payment_method} required>
           <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={inputStyle}>
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>

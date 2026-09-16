@@ -145,10 +145,10 @@ function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: Uo
 
   return (
     <Modal open={open} title={uom ? 'Edit Unit of Measure' : 'New Unit of Measure'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required={!uom}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!uom} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required={!uom}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Description" errors={errors.description}>

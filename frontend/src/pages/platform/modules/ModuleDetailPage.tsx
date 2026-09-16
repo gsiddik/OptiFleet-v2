@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { inputStyle } from '../../../components/FormField';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ModuleCatalogItem } from '../../../types';
 
 interface DependencyData {
@@ -38,6 +40,8 @@ export function ModuleDetailPage() {
 
   useEffect(load, [id]);
 
+  useBreadcrumbLabel(module?.id, module?.name);
+
   async function addDependency() {
     if (!selected) return;
     setError(null);
@@ -64,6 +68,7 @@ export function ModuleDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/platform/modules" label="← Back to Module Catalog" />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>
         {module.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({module.code})</span>
       </h1>

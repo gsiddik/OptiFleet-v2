@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
 
 const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'History'] as const;
@@ -27,11 +29,14 @@ export function VehicleDetailPage() {
 
   useEffect(load, [id]);
 
+  useBreadcrumbLabel(vehicle?.id, vehicle?.registration_number);
+
   if (error && !vehicle) return <ErrorState message={error} />;
   if (!vehicle) return <LoadingState />;
 
   return (
     <div>
+      <BackButton fallbackTo="/app/vehicles" label="← Back to List" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {vehicle.registration_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({vehicle.brand} {vehicle.model})</span>

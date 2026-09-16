@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem } from '../../../types';
 
 export function PartnerDetailPage() {
@@ -24,6 +26,8 @@ export function PartnerDetailPage() {
 
   useEffect(load, [id]);
 
+  useBreadcrumbLabel(partner?.id, partner?.name);
+
   if (error && !partner) return <ErrorState message={error} />;
   if (!partner) return <LoadingState />;
 
@@ -31,6 +35,7 @@ export function PartnerDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/partners" label="← Back to Vendor" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {partner.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({partner.code})</span>

@@ -135,7 +135,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
   return (
     <Modal open={open} title="New Vehicle" onClose={onClose} width={520}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Branch" errors={errors.branch_id}>
+        <FormField label="Branch" errors={errors.branch_id} required>
           <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={inputStyle}>
             <option value="">Select…</option>
             {branches.map((b) => (
@@ -145,7 +145,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
             ))}
           </select>
         </FormField>
-        <FormField label="Category" errors={errors.vehicle_category_id}>
+        <FormField label="Category" errors={errors.vehicle_category_id} required>
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
             <option value="">Select…</option>
             {categories.map((c) => (
@@ -155,10 +155,10 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
             ))}
           </select>
         </FormField>
-        <FormField label="Brand" errors={errors.brand}>
+        <FormField label="Brand" errors={errors.brand} required>
           <input value={brand} onChange={(e) => setBrand(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Model" errors={errors.model}>
+        <FormField label="Model" errors={errors.model} required>
           <input value={model} onChange={(e) => setModel(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Brand (master data, optional)" errors={errors.vehicle_brand_id}>
@@ -181,7 +181,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
             ))}
           </select>
         </FormField>
-        <FormField label="Registration Number" errors={errors.registration_number}>
+        <FormField label="Registration Number" errors={errors.registration_number} required>
           <input value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="VIN (optional)" errors={errors.vin}>

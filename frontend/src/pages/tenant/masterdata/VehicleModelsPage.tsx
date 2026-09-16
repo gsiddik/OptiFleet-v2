@@ -183,7 +183,7 @@ function ModelFormModal({
   return (
     <Modal open={open} title={model ? 'Edit Vehicle Model' : 'New Vehicle Model'} onClose={onClose}>
       {!model && (
-        <FormField label="Brand" errors={errors.vehicle_brand_id}>
+        <FormField label="Brand" errors={errors.vehicle_brand_id} required>
           <select value={vehicleBrandId} onChange={(e) => setVehicleBrandId(e.target.value)} style={inputStyle}>
             <option value="">Select…</option>
             {brands.map((b) => (
@@ -194,10 +194,10 @@ function ModelFormModal({
           </select>
         </FormField>
       )}
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required={!model}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!model} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required={!model}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

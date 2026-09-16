@@ -149,10 +149,10 @@ function BranchFormModal({
 
   return (
     <Modal open={open} title={branch ? 'Edit Branch' : 'New Branch'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required={!branch}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!branch} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required={!branch}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="City" errors={errors.city}>

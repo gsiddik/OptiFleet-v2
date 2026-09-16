@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -9,6 +10,7 @@ import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ComponentGroup, MaintenancePackageItemType, VehicleItem } from '../../../types';
 
 const MAINTENANCE_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECTION', 'CAMPAIGN'];
@@ -106,13 +108,13 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
 
   return (
     <Modal open={open} title="New Maintenance Package" onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Maintenance Type" errors={errors.maintenance_type}>
+      <FormField label="Maintenance Type" errors={errors.maintenance_type} required>
         <select value={maintenanceType} onChange={(e) => setMaintenanceType(e.target.value)} style={inputStyle}>
           {MAINTENANCE_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -161,6 +163,8 @@ export function MaintenancePackageDetailPage() {
     apiClient.get('/app/vehicles', { params: { per_page: 100 } }).then((res) => setVehicles(res.data.data)).catch(() => setVehicles([]));
   }, []);
 
+  useBreadcrumbLabel(pkg?.id, pkg?.name);
+
   const canManage = hasPermission('maintenance_policy.manage');
 
   async function activate() {
@@ -181,6 +185,7 @@ export function MaintenancePackageDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/maintenance-policies" label="← Back to Maintenance Packages" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {pkg.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({pkg.code})</span>
@@ -306,7 +311,7 @@ function AddItemModal({
 
   return (
     <Modal open title="Add Package Item" onClose={onClose}>
-      <FormField label="Service Item" errors={errors.service_item}>
+      <FormField label="Service Item" errors={errors.service_item} required>
         <input value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} placeholder="e.g. Oil filter replacement" style={inputStyle} />
       </FormField>
       <FormField label="Component Group (optional)" errors={errors.component_group_id}>
@@ -372,7 +377,7 @@ function AddIntervalModal({ packageId, onClose, onSaved }: { packageId: string; 
 
   return (
     <Modal open title="Add Interval" onClose={onClose}>
-      <FormField label="Trigger Type" errors={errors.trigger_type}>
+      <FormField label="Trigger Type" errors={errors.trigger_type} required>
         <select value={triggerType} onChange={(e) => setTriggerType(e.target.value)} style={inputStyle}>
           {TRIGGER_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -444,7 +449,7 @@ function AssignVehicleModal({
 
   return (
     <Modal open title="Assign Package to Vehicle" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id}>
+      <FormField label="Vehicle" errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {vehicles.map((v) => (

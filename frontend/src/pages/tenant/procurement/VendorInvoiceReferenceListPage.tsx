@@ -108,7 +108,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
 
   return (
     <Modal open={open} title="Record Vendor Invoice Reference" onClose={onClose}>
-      <FormField label="Vendor" errors={errors.partner_id}>
+      <FormField label="Vendor" errors={errors.partner_id} required>
         <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {partners.map((p) => (
@@ -118,13 +118,13 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
           ))}
         </select>
       </FormField>
-      <FormField label="Invoice Number" errors={errors.vendor_invoice_number}>
+      <FormField label="Invoice Number" errors={errors.vendor_invoice_number} required>
         <input value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Invoice Date" errors={errors.vendor_invoice_date}>
+      <FormField label="Invoice Date" errors={errors.vendor_invoice_date} required>
         <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Amount" errors={errors.amount}>
+      <FormField label="Amount" errors={errors.amount} required>
         <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

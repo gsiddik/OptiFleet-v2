@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ComponentAssetItem, VehicleItem } from '../../../types';
 
 export function ComponentAssetDetailPage() {
@@ -85,6 +87,8 @@ export function ComponentAssetDetailPage() {
     }
   }
 
+  useBreadcrumbLabel(asset?.id, asset?.serial_number ?? asset?.asset_number);
+
   if (error && !asset) return <ErrorState message={error} />;
   if (!asset) return <LoadingState />;
 
@@ -95,6 +99,7 @@ export function ComponentAssetDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/component-assets" label="← Back to Component Assets" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{asset.serial_number ?? asset.asset_number ?? 'Component Asset'}</h1>
         <StatusBadge status={asset.current_status} />
@@ -114,7 +119,7 @@ export function ComponentAssetDetailPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Install</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Vehicle">
+            <FormField label="Vehicle" required>
               <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
                 <option value="">Select…</option>
                 {vehicles.map((v) => (
@@ -138,10 +143,10 @@ export function ComponentAssetDetailPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Remove / Replace</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Removal Reason">
+            <FormField label="Removal Reason" required>
               <input value={removalReason} onChange={(e) => setRemovalReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
             </FormField>
-            <FormField label="Disposition">
+            <FormField label="Disposition" required>
               <select value={disposition} onChange={(e) => setDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
                 {['REUSE', 'REPAIR', 'SCRAP'].map((d) => (
                   <option key={d} value={d}>
@@ -162,7 +167,7 @@ export function ComponentAssetDetailPage() {
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Repair</h3>
           {!openRepair ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <FormField label="Description">
+              <FormField label="Description" required>
                 <input value={repairDescription} onChange={(e) => setRepairDescription(e.target.value)} style={{ ...inputStyle, width: 260 }} />
               </FormField>
               <button className="btn-secondary" disabled={busy || !repairDescription} onClick={startRepair} style={{ marginBottom: 14 }}>
@@ -171,7 +176,7 @@ export function ComponentAssetDetailPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <FormField label="Outcome">
+              <FormField label="Outcome" required>
                 <select value={repairOutcome} onChange={(e) => setRepairOutcome(e.target.value)} style={{ ...inputStyle, width: 200 }}>
                   {['RECONDITIONED', 'SCRAPPED', 'RETURNED_TO_SERVICE'].map((o) => (
                     <option key={o} value={o}>

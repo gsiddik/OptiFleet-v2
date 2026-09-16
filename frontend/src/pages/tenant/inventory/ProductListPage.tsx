@@ -104,16 +104,16 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
 
   return (
     <Modal open={open} title="New Product" onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="SKU" errors={errors.sku}>
+      <FormField label="SKU" errors={errors.sku} required>
         <input value={sku} onChange={(e) => setSku(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Category" errors={errors.product_category_id}>
+      <FormField label="Category" errors={errors.product_category_id} required>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {categories.map((c) => (
@@ -123,7 +123,7 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="UOM" errors={errors.uom_id}>
+      <FormField label="UOM" errors={errors.uom_id} required>
         <select value={uomId} onChange={(e) => setUomId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {uoms.map((u) => (
@@ -133,7 +133,7 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Product Type" errors={errors.product_type}>
+      <FormField label="Product Type" errors={errors.product_type} required>
         <select value={productType} onChange={(e) => setProductType(e.target.value)} style={inputStyle}>
           {PRODUCT_TYPES.map((t) => (
             <option key={t} value={t}>

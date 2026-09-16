@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InspectionItem } from '../../../types';
 
 export function InspectionDetailPage() {
@@ -25,6 +27,8 @@ export function InspectionDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(inspection?.id, inspection ? `${inspection.inspection_type} Inspection` : undefined);
 
   async function start() {
     setBusy(true);
@@ -78,6 +82,7 @@ export function InspectionDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/inspections" label="← Back to Inspections" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {inspection.inspection_type} Inspection <span style={{ color: '#9ca3af', fontWeight: 400 }}>({inspection.vehicle?.registration_number})</span>

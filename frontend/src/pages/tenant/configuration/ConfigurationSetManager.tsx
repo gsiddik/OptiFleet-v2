@@ -251,19 +251,19 @@ function DraftEditorModal({
   return (
     <Modal open={open} title={title} onClose={onClose} width={620}>
       {!fixedCode && (
-        <FormField label={codeLabel} errors={errors.code}>
+        <FormField label={codeLabel} errors={errors.code} required>
           <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={codePlaceholder} style={inputStyle} />
         </FormField>
       )}
       {!fixedName && (
-        <FormField label="Name" errors={errors.name}>
+        <FormField label="Name" errors={errors.name} required>
           <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
         </FormField>
       )}
       <FormField label="Change Summary" errors={errors.change_summary}>
         <input value={changeSummary} onChange={(e) => setChangeSummary(e.target.value)} placeholder="What changed and why" style={inputStyle} />
       </FormField>
-      <FormField label="Payload (JSON)" errors={jsonError ? [jsonError] : errors.payload}>
+      <FormField label="Payload (JSON)" errors={jsonError ? [jsonError] : errors.payload} required>
         {payloadHelp}
         <textarea value={payload} onChange={(e) => setPayload(e.target.value)} style={textareaStyle} spellCheck={false} />
       </FormField>

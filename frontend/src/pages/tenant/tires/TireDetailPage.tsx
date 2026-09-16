@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
+import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem, WheelConfigurationItem } from '../../../types';
 
 type CycleItem = TireRetreadItem | TireRepairItem;
@@ -43,7 +45,7 @@ function CycleGovernancePanel({
 
       {showSendForm && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-          <FormField label="Partner (EXTERNAL_WORKSHOP or TIRE_SUPPLIER, ACTIVE)">
+          <FormField label="Partner (EXTERNAL_WORKSHOP or TIRE_SUPPLIER, ACTIVE)" required>
             <select value={sendState.partnerId} onChange={(e) => sendState.setPartnerId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
               <option value="">Select…</option>
               {partners.map((p) => (
@@ -81,7 +83,7 @@ function CycleGovernancePanel({
           <p style={{ fontSize: 13 }}>Cycle {activeCycle.cycle_number} was received {activeCycle.received_at} — pending final inspection. It will not return to stock until inspected and approved.</p>
           {canInspect && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              <FormField label="Final Inspection Result (critical safety evaluation)">
+              <FormField label="Final Inspection Result (critical safety evaluation)" required>
                 <select value={inspectState.result} onChange={(e) => inspectState.setResult(e.target.value)} style={{ ...inputStyle, width: 130 }}>
                   <option value="SAFE">SAFE</option>
                   <option value="UNSAFE">UNSAFE</option>
@@ -106,14 +108,14 @@ function CycleGovernancePanel({
           </p>
           {canApprove && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              <FormField label="Disposition">
+              <FormField label="Disposition" required>
                 <select value={approveState.disposition} onChange={(e) => approveState.setDisposition(e.target.value)} style={{ ...inputStyle, width: 170 }}>
                   <option value="RETURN_TO_SERVICE" disabled={activeCycle.final_inspection_result === 'UNSAFE'}>RETURN_TO_SERVICE</option>
                   <option value="SCRAP">SCRAP</option>
                   <option value="QUARANTINE">QUARANTINE</option>
                 </select>
               </FormField>
-              <FormField label="Reason (required, persisted)">
+              <FormField label="Reason (required, persisted)" required>
                 <input value={approveState.reason} onChange={(e) => approveState.setReason(e.target.value)} style={{ ...inputStyle, width: 260 }} />
               </FormField>
               <button className="btn-secondary" disabled={busy || !approveState.reason} onClick={() => approveState.onApprove(activeCycle.id)} style={{ marginBottom: 14 }}>
@@ -207,6 +209,8 @@ export function TireDetailPage() {
   useEffect(() => {
     apiClient.get('/app/vehicles', { params: { per_page: 100 } }).then((res) => setVehicles(res.data.data)).catch(() => setVehicles([]));
   }, []);
+
+  useBreadcrumbLabel(tire?.id, tire?.serial_number);
   // Wheel position dropdown, sourced from the selected vehicle's own Wheel Configuration —
   // falls back to free text when the category has no configured positions (backend stays permissive there too).
   useEffect(() => {
@@ -517,6 +521,7 @@ export function TireDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/app/tires" label="← Back to Tire List" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{tire.serial_number}</h1>
         <StatusBadge status={tire.current_status} />
@@ -551,7 +556,7 @@ export function TireDetailPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Install</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Vehicle">
+            <FormField label="Vehicle" required>
               <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
                 <option value="">Select…</option>
                 {vehicles.map((v) => (
@@ -561,7 +566,7 @@ export function TireDetailPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Wheel Position">
+            <FormField label="Wheel Position" required>
               {availablePositions.length > 0 ? (
                 <select value={wheelPosition} onChange={(e) => setWheelPosition(e.target.value)} style={{ ...inputStyle, width: 180 }}>
                   <option value="">Select…</option>
@@ -616,7 +621,7 @@ export function TireDetailPage() {
           <h3 style={{ marginTop: 0, fontSize: 15 }}>In-Service Actions</h3>
           {canRotate && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              <FormField label="Rotate To Position">
+              <FormField label="Rotate To Position" required>
                 {rotatePositions.length > 0 ? (
                   <select value={toPosition} onChange={(e) => setToPosition(e.target.value)} style={{ ...inputStyle, width: 180 }}>
                     <option value="">Select…</option>
@@ -640,7 +645,7 @@ export function TireDetailPage() {
           )}
           {canRotate && otherTires.length > 0 && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              <FormField label="Swap Position With">
+              <FormField label="Swap Position With" required>
                 <select value={swapTireId} onChange={(e) => setSwapTireId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
                   <option value="">Select another installed tire…</option>
                   {otherTires.map((t) => (
@@ -673,10 +678,10 @@ export function TireDetailPage() {
           )}
           {canRemove && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <FormField label="Removal Reason">
+              <FormField label="Removal Reason" required>
                 <input value={removalReason} onChange={(e) => setRemovalReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
               </FormField>
-              <FormField label="Disposition">
+              <FormField label="Disposition" required>
                 <select value={disposition} onChange={(e) => setDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
                   {['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'].map((d) => (
                     <option key={d} value={d}>
@@ -697,7 +702,7 @@ export function TireDetailPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Replace Tire</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Replacement Tire (from stock)">
+            <FormField label="Replacement Tire (from stock)" required>
               <select value={replaceTireId} onChange={(e) => setReplaceTireId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
                 <option value="">Select…</option>
                 {availableTires.map((t) => (
@@ -707,10 +712,10 @@ export function TireDetailPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Reason">
+            <FormField label="Reason" required>
               <input value={replaceReason} onChange={(e) => setReplaceReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
             </FormField>
-            <FormField label="Outgoing Tire Disposition">
+            <FormField label="Outgoing Tire Disposition" required>
               <select value={replaceDisposition} onChange={(e) => setReplaceDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
                 {['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'].map((d) => (
                   <option key={d} value={d}>
@@ -791,7 +796,7 @@ export function TireDetailPage() {
             no scoring is invented without an approved configuration.
           </p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-            <FormField label="Source Inspection">
+            <FormField label="Source Inspection" required>
               <select value={scoringInspectionId} onChange={(e) => setScoringInspectionId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
                 <option value="">Select…</option>
                 {(tire.inspections ?? []).map((i) => (
@@ -801,7 +806,7 @@ export function TireDetailPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Scoring Type">
+            <FormField label="Scoring Type" required>
               <select value={scoringType} onChange={(e) => setScoringType(e.target.value)} style={{ ...inputStyle, width: 130 }}>
                 <option value="RETREAD">RETREAD</option>
                 <option value="REPAIR">REPAIR</option>
@@ -848,14 +853,14 @@ export function TireDetailPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Sell</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Sell Type">
+            <FormField label="Sell Type" required>
               <select value={sellType} onChange={(e) => setSellType(e.target.value)} style={{ ...inputStyle, width: 260 }}>
                 <option value="SELL_FOR_OPERATIONAL_REUSE">SELL_FOR_OPERATIONAL_REUSE (requires an eligible score)</option>
                 <option value="SELL_AS_RETREADABLE_CASING">SELL_AS_RETREADABLE_CASING</option>
                 <option value="SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL">SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL</option>
               </select>
             </FormField>
-            <FormField label="Reason">
+            <FormField label="Reason" required>
               <input value={sellReason} onChange={(e) => setSellReason(e.target.value)} style={{ ...inputStyle, width: 260 }} />
             </FormField>
             <button className="btn-secondary" disabled={busy || !sellReason} onClick={sell} style={{ marginBottom: 14 }}>

@@ -120,7 +120,7 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
 
   return (
     <Modal open={open} title="New Workspace" onClose={onClose}>
-      <FormField label="Workshop" errors={errors.workshop_id}>
+      <FormField label="Workshop" errors={errors.workshop_id} required>
         <select value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {workshops.map((w) => (
@@ -130,13 +130,13 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Type" errors={errors.workspace_type}>
+      <FormField label="Type" errors={errors.workspace_type} required>
         <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle}>
           {TYPES.map((t) => (
             <option key={t} value={t}>

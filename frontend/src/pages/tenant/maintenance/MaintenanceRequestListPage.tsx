@@ -88,7 +88,7 @@ function CreateRequestModal({ open, onClose, onCreated }: { open: boolean; onClo
 
   return (
     <Modal open={open} title="New Maintenance Request" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id}>
+      <FormField label="Vehicle" errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {vehicles.map((v) => (
@@ -107,7 +107,7 @@ function CreateRequestModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Complaint" errors={errors.complaint}>
+      <FormField label="Complaint" errors={errors.complaint} required>
         <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

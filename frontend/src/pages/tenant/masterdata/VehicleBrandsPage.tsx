@@ -168,10 +168,10 @@ function BrandFormModal({
 
   return (
     <Modal open={open} title={brand ? 'Edit Vehicle Brand' : 'New Vehicle Brand'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required={!brand}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!brand} />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required={!brand}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Brand Of (optional)" errors={errors.usage_type}>

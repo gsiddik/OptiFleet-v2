@@ -146,7 +146,7 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
 
   return (
     <Modal open={open} title="New Purchase Request" onClose={onClose}>
-      <FormField label="Warehouse" errors={errors.warehouse_id}>
+      <FormField label="Warehouse" errors={errors.warehouse_id} required>
         <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {warehouses.map((w) => (
@@ -200,7 +200,7 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
           <input value={modelFilter} onChange={(e) => setModelFilter(e.target.value)} placeholder="e.g. Dutro" style={inputStyle} />
         </FormField>
       </div>
-      <FormField label="Product" errors={errors['items.0.product_id']}>
+      <FormField label="Product" errors={errors['items.0.product_id']} required>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
           {filteredProducts.map((p) => (
@@ -211,7 +211,7 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
           ))}
         </select>
       </FormField>
-      <FormField label="Requested Quantity" errors={errors['items.0.requested_quantity']}>
+      <FormField label="Requested Quantity" errors={errors['items.0.requested_quantity']} required>
         <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Priority" errors={errors.priority}>
