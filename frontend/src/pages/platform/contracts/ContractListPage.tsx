@@ -158,7 +158,7 @@ function CreateContractModal({ open, onClose, onCreated }: { open: boolean; onCl
   return (
     <Modal open={open} title="New Contract" onClose={onClose} width={720}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Tenant" errors={errors.tenant_id}>
+        <FormField label="Tenant" errors={errors.tenant_id} required>
           <select value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={inputStyle}>
             <option value="">Select tenant…</option>
             {tenants.map((t) => (
@@ -168,7 +168,7 @@ function CreateContractModal({ open, onClose, onCreated }: { open: boolean; onCl
             ))}
           </select>
         </FormField>
-        <FormField label="Billing Cycle" errors={errors.billing_cycle}>
+        <FormField label="Billing Cycle" errors={errors.billing_cycle} required>
           <select value={billingCycle} onChange={(e) => setBillingCycle(e.target.value)} style={inputStyle}>
             {FREQUENCIES.map((f) => (
               <option key={f} value={f}>
@@ -177,10 +177,10 @@ function CreateContractModal({ open, onClose, onCreated }: { open: boolean; onCl
             ))}
           </select>
         </FormField>
-        <FormField label="Start Date" errors={errors.start_date}>
+        <FormField label="Start Date" errors={errors.start_date} required>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="End Date" errors={errors.end_date}>
+        <FormField label="End Date" errors={errors.end_date} required>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Payment Terms (days)" errors={errors.payment_terms_days}>

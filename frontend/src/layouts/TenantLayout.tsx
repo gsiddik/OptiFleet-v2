@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { Breadcrumb } from '../components/Breadcrumb';
 
 interface NavItem {
   to: string;
@@ -344,6 +345,7 @@ export function TenantLayout() {
           </div>
         )}
         <main style={{ flex: 1, padding: 24, minWidth: 0 }}>
+          <Breadcrumb />
           <Outlet />
         </main>
       </div>

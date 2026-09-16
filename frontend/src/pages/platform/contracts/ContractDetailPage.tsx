@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
+import { BackButton } from '../../../components/BackButton';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ContractAmendmentItem, ContractItem } from '../../../types';
 
@@ -14,12 +16,19 @@ const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'CUSTOM'];
 export function ContractDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
+  const [searchParams] = useSearchParams();
   const [contract, setContract] = useState<ContractItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [noteModal, setNoteModal] = useState<'approve' | 'reject' | 'terminate' | null>(null);
   const [showAmendModal, setShowAmendModal] = useState(false);
   const [showRenewModal, setShowRenewModal] = useState(false);
+
+  // Reached from a Tenant Detail page's Contract tab -> Back must return
+  // there (to the Contract tab specifically), not to Contract Management.
+  const fromTenantId = searchParams.get('fromTenant');
+  const backFallback = fromTenantId ? `/platform/tenants/${fromTenantId}?tab=Contract` : '/platform/contracts';
+  const backLabel = fromTenantId ? '← Back to Tenant Contracts' : '← Back to Contract Management';
 
   function load() {
     apiClient
@@ -29,6 +38,8 @@ export function ContractDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(contract?.id, contract ? contract.contract_number : undefined);
 
   async function action(path: string, body?: Record<string, unknown>) {
     setBusy(true);
@@ -54,6 +65,7 @@ export function ContractDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo={backFallback} label={backLabel} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {contract.contract_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({contract.tenant?.name})</span>
@@ -244,10 +256,10 @@ function CreateAmendmentModal({ contractId, onClose, onCreated }: { contractId: 
 
   return (
     <Modal open title="New Amendment" onClose={onClose}>
-      <FormField label="Reason" errors={errors.reason}>
+      <FormField label="Reason" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
-      <FormField label="Effective Date" errors={errors.effective_date}>
+      <FormField label="Effective Date" errors={errors.effective_date} required>
         <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
@@ -406,7 +418,7 @@ function AddAmendmentItemModal({
 
   return (
     <Modal open title="Add Amendment Item" onClose={onClose}>
-      <FormField label="Product Type" errors={errors.product_type}>
+      <FormField label="Product Type" errors={errors.product_type} required>
         <select value={productType} onChange={(e) => setProductType(e.target.value)} style={inputStyle}>
           {PRODUCT_TYPES.map((p) => (
             <option key={p} value={p}>
@@ -418,10 +430,10 @@ function AddAmendmentItemModal({
       <FormField label="Product Reference (code)" errors={errors.product_reference}>
         <input value={productReference} onChange={(e) => setProductReference(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label="Description" errors={errors.description} required>
         <input value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Billing Frequency" errors={errors.billing_frequency}>
+      <FormField label="Billing Frequency" errors={errors.billing_frequency} required>
         <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} style={inputStyle}>
           {FREQUENCIES.map((f) => (
             <option key={f} value={f}>
@@ -431,10 +443,10 @@ function AddAmendmentItemModal({
         </select>
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Quantity" errors={errors.quantity}>
+        <FormField label="Quantity" errors={errors.quantity} required>
           <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Unit Price" errors={errors.unit_price}>
+        <FormField label="Unit Price" errors={errors.unit_price} required>
           <input type="number" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
@@ -492,10 +504,10 @@ function RenewModal({ contract, onClose, onCreated }: { contract: ContractItem; 
         contract for approval separately.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="New End Date" errors={errors.end_date}>
+        <FormField label="New End Date" errors={errors.end_date} required>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Billing Cycle" errors={errors.billing_cycle}>
+        <FormField label="Billing Cycle" errors={errors.billing_cycle} required>
           <select value={billingCycle} onChange={(e) => setBillingCycle(e.target.value)} style={inputStyle}>
             {FREQUENCIES.map((f) => (
               <option key={f} value={f}>

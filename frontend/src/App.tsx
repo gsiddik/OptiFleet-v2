@@ -4,6 +4,8 @@ import { RequirePermission, RequirePlatform, RequireTenant } from './components/
 import { PlatformLayout } from './layouts/PlatformLayout';
 import { TenantLayout } from './layouts/TenantLayout';
 import { LoginPage } from './pages/LoginPage';
+import { BreadcrumbLabelProvider } from './navigation/BreadcrumbLabelContext';
+import { NavigationTrailProvider } from './navigation/NavigationTrailContext';
 
 import { PlatformDashboardPage } from './pages/platform/DashboardPage';
 import { TenantListPage } from './pages/platform/tenants/TenantListPage';
@@ -142,6 +144,8 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <NavigationTrailProvider>
+        <BreadcrumbLabelProvider>
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<LoginPage />} />
@@ -760,6 +764,8 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </BreadcrumbLabelProvider>
+        </NavigationTrailProvider>
       </AuthProvider>
     </BrowserRouter>
   );

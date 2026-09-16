@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { Breadcrumb } from '../components/Breadcrumb';
 
 const NAV = [
   { to: '/platform/dashboard', label: 'Dashboard', permission: null },
@@ -64,6 +65,7 @@ export function PlatformLayout() {
           </button>
         </header>
         <main style={{ flex: 1, padding: 24 }}>
+          <Breadcrumb />
           <Outlet />
         </main>
       </div>

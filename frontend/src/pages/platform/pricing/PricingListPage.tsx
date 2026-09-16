@@ -115,7 +115,7 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
 
   return (
     <Modal open={open} title="New Pricing" onClose={onClose}>
-      <FormField label="Priceable Type" errors={errors.priceable_type}>
+      <FormField label="Priceable Type" errors={errors.priceable_type} required>
         <select value={priceableType} onChange={(e) => setPriceableType(e.target.value)} style={inputStyle}>
           {PRICEABLE_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -124,10 +124,10 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Code (module/bundle code or capacity resource type)" errors={errors.priceable_code}>
+      <FormField label="Code (module/bundle code or capacity resource type)" errors={errors.priceable_code} required>
         <input value={priceableCode} onChange={(e) => setPriceableCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Pricing Method" errors={errors.pricing_method}>
+      <FormField label="Pricing Method" errors={errors.pricing_method} required>
         <select value={pricingMethod} onChange={(e) => setPricingMethod(e.target.value)} style={inputStyle}>
           {PRICING_METHODS.map((m) => (
             <option key={m} value={m}>
@@ -136,7 +136,7 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Billing Frequency" errors={errors.billing_frequency}>
+      <FormField label="Billing Frequency" errors={errors.billing_frequency} required>
         <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} style={inputStyle}>
           {FREQUENCIES.map((f) => (
             <option key={f} value={f}>
@@ -145,10 +145,10 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Amount (IDR)" errors={errors.amount}>
+      <FormField label="Amount (IDR)" errors={errors.amount} required>
         <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Effective From" errors={errors.effective_from}>
+      <FormField label="Effective From" errors={errors.effective_from} required>
         <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
@@ -185,10 +185,10 @@ function VersionModal({ pricing, onClose, onCreated }: { pricing: PricingItem; o
 
   return (
     <Modal open title={`New Price Version — ${pricing.priceable_code}`} onClose={onClose}>
-      <FormField label="Amount (IDR)" errors={errors.amount}>
+      <FormField label="Amount (IDR)" errors={errors.amount} required>
         <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Effective From" errors={errors.effective_from}>
+      <FormField label="Effective From" errors={errors.effective_from} required>
         <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

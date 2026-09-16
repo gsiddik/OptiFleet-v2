@@ -76,10 +76,10 @@ function CreateBundleModal({ open, onClose, onCreated }: { open: boolean; onClos
 
   return (
     <Modal open={open} title="New Bundle" onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
+      <FormField label="Code" errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} placeholder="e.g. OPTIFLEET_CUSTOM" />
       </FormField>
-      <FormField label="Name" errors={errors.name}>
+      <FormField label="Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Description" errors={errors.description}>

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
+import { BackButton } from '../../../components/BackButton';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { Tenant } from '../../../types';
 import { TenantUsersTab } from './tabs/TenantUsersTab';
 import { TenantEntitlementsTab } from './tabs/TenantEntitlementsTab';
@@ -16,7 +18,16 @@ export function TenantDetailPage() {
   const { hasPermission } = useAuth();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<(typeof TABS)[number]>('Overview');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (searchParams.get('tab') as (typeof TABS)[number] | null) ?? 'Overview';
+  const [tab, setTab] = useState<(typeof TABS)[number]>(TABS.includes(initialTab) ? initialTab : 'Overview');
+
+  useBreadcrumbLabel(tenant?.id, tenant ? `${tenant.name} (${tenant.code})` : undefined);
+
+  function selectTab(t: (typeof TABS)[number]) {
+    setTab(t);
+    setSearchParams(t === 'Overview' ? {} : { tab: t }, { replace: true });
+  }
 
   function load() {
     apiClient
@@ -40,6 +51,7 @@ export function TenantDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/platform/tenants" label="← Back to Tenant Management" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {tenant.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({tenant.code})</span>
@@ -58,7 +70,7 @@ export function TenantDetailPage() {
         {TABS.map((t) => (
           <button
             key={t}
-            onClick={() => setTab(t)}
+            onClick={() => selectTab(t)}
             style={{
               background: 'none',
               border: 'none',

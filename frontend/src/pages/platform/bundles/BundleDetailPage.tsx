@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
+import { BackButton } from '../../../components/BackButton';
+import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { useAuth } from '../../../auth/AuthContext';
 import type { BundleItem, ModuleCatalogItem } from '../../../types';
 
@@ -28,6 +30,8 @@ export function BundleDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  useBreadcrumbLabel(bundle?.id, bundle ? `${bundle.name} (${bundle.code})` : undefined);
 
   function toggle(moduleId: string) {
     const next = new Set(selected);
@@ -69,6 +73,7 @@ export function BundleDetailPage() {
 
   return (
     <div>
+      <BackButton fallbackTo="/platform/bundles" label="← Back to Bundle Management" />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {bundle.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({bundle.code})</span>
