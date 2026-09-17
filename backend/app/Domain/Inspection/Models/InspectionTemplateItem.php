@@ -13,12 +13,13 @@ class InspectionTemplateItem extends Model
 
     protected $fillable = [
         'inspection_template_id', 'component_group_id', 'item_text', 'input_type',
-        'options', 'required', 'sequence', 'threshold', 'status',
+        'options', 'required', 'sequence', 'threshold', 'status', 'is_system',
     ];
 
     protected $casts = [
         'options' => 'array',
         'required' => 'boolean',
+        'is_system' => 'boolean',
     ];
 
     public function template(): BelongsTo

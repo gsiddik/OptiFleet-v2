@@ -30,6 +30,7 @@ export function InspectionListPage() {
     { key: 'vehicle', header: 'Vehicle', render: (i) => <Link to={`/app/inspections/${i.id}`}>{i.vehicle?.registration_number ?? i.vehicle_id}</Link> },
     { key: 'type', header: 'Type', render: (i) => i.inspection_type },
     { key: 'template', header: 'Template', render: (i) => i.template?.name ?? '—' },
+    { key: 'inspection_date', header: 'Inspection Date', render: (i) => new Date(i.created_at).toLocaleString() },
     { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },
   ];
 

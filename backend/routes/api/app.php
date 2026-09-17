@@ -214,6 +214,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/inspections/{inspection}/start', [InspectionController::class, 'start'])->middleware('permission:inspection.perform');
             Route::post('/inspections/{inspection}/submit', [InspectionController::class, 'submit'])->middleware('permission:inspection.submit');
             Route::post('/inspections/{inspection}/maintenance-request', [InspectionController::class, 'createMaintenanceRequest'])->middleware('permission:maintenance_request.create');
+            Route::get('/inspections/{inspection}/logs', [InspectionController::class, 'logs'])->middleware('permission:inspection.view');
         });
 
         Route::middleware('module:MAINTENANCE')->group(function () {

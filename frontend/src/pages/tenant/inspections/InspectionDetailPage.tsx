@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { inputStyle } from '../../../components/FormField';
@@ -7,7 +7,7 @@ import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
-import type { InspectionItem } from '../../../types';
+import type { InspectionItem, InspectionLogEntry } from '../../../types';
 
 export function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -78,7 +78,10 @@ export function InspectionDetailPage() {
   if (error && !inspection) return <ErrorState message={error} />;
   if (!inspection) return <LoadingState />;
 
-  const items = inspection.template?.items ?? [];
+  // Section 9 (historical snapshot): the checklist actually used by this
+  // inspection is frozen at creation time — prefer it over the live
+  // template, which may have since gained or lost items.
+  const items = inspection.template_snapshot ?? inspection.template?.items ?? [];
 
   return (
     <div>
@@ -193,7 +196,7 @@ export function InspectionDetailPage() {
       )}
 
       {(inspection.findings?.length ?? 0) > 0 && (
-        <div className="card">
+        <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Recorded Findings</h3>
           {inspection.findings!.map((f) => (
             <div key={f.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10 }}>
@@ -203,6 +206,53 @@ export function InspectionDetailPage() {
           ))}
         </div>
       )}
+
+      <InspectionLog inspectionId={inspection.id} />
+    </div>
+  );
+}
+
+function InspectionLog({ inspectionId }: { inspectionId: string }) {
+  const [logs, setLogs] = useState<InspectionLogEntry[] | null>(null);
+
+  useEffect(() => {
+    apiClient.get(`/app/inspections/${inspectionId}/logs`).then((res) => setLogs(res.data.data));
+  }, [inspectionId]);
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Log</h3>
+      {logs === null && <p style={{ color: '#9ca3af', fontSize: 13 }}>Loading…</p>}
+      {logs?.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No history yet.</p>}
+      {logs?.map((log) => (
+        <div key={log.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 12, alignItems: 'baseline' }}>
+          <span style={{ color: '#9ca3af', minWidth: 160 }}>{new Date(log.created_at).toLocaleString()}</span>
+          <span style={{ flex: 1 }}>
+            {log.action === 'maintenance_request_created' ? (
+              <>
+                Maintenance Request created from this inspection's result
+                {typeof log.new_values?.maintenance_request_id === 'string' && (
+                  <>
+                    {' '}
+                    (
+                    <Link to={`/app/maintenance-requests/${log.new_values.maintenance_request_id}`}>view</Link>
+                    )
+                  </>
+                )}
+              </>
+            ) : log.action === 'created' && typeof log.new_values?.status === 'string' ? (
+              <>Inspection created (status: {log.new_values.status})</>
+            ) : typeof log.old_values?.status === 'string' && typeof log.new_values?.status === 'string' ? (
+              <>
+                Status changed from {log.old_values.status} to {log.new_values.status}
+              </>
+            ) : (
+              log.action
+            )}
+          </span>
+          <span style={{ color: '#6b7280' }}>{log.actor_name ?? 'System'}</span>
+        </div>
+      ))}
     </div>
   );
 }

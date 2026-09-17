@@ -5,6 +5,7 @@ namespace App\Domain\Inspection\Services;
 use App\Domain\Inspection\Models\Inspection;
 use App\Domain\Inspection\Models\InspectionFinding;
 use App\Domain\Inspection\Models\InspectionResult;
+use App\Domain\Inspection\Models\InspectionTemplateItem;
 use App\Domain\Vehicle\Models\Vehicle;
 use Illuminate\Support\Facades\DB;
 
@@ -48,11 +49,26 @@ class InspectionService
         return DB::transaction(function () use ($inspection, $results, $findings) {
             $inspection = Inspection::query()->lockForUpdate()->findOrFail($inspection->id);
 
+            // Section 9: the mandatory "Odometer" checklist item is the fresh
+            // reading the technician actually takes during this inspection,
+            // so it takes precedence as the update source over the header
+            // odometer_at_inspection field (usually just defaulted at
+            // creation, before the vehicle was even in front of anyone).
+            $odometerItemId = InspectionTemplateItem::query()
+                ->where('inspection_template_id', $inspection->inspection_template_id)
+                ->where('is_system', true)
+                ->where('item_text', 'Odometer')
+                ->value('id');
+
             $anyFailedItem = false;
+            $submittedOdometer = null;
             foreach ($results as $result) {
                 $passed = $result['passed'] ?? null;
                 if ($passed === false) {
                     $anyFailedItem = true;
+                }
+                if ($odometerItemId !== null && $result['inspection_template_item_id'] === $odometerItemId && isset($result['value_number'])) {
+                    $submittedOdometer = $result['value_number'];
                 }
                 InspectionResult::query()->updateOrCreate(
                     ['inspection_id' => $inspection->id, 'inspection_template_item_id' => $result['inspection_template_item_id']],
@@ -84,10 +100,17 @@ class InspectionService
 
             $inspection->update(['status' => $status, 'submitted_at' => now()]);
 
-            if ($odometer = $inspection->odometer_at_inspection) {
-                Vehicle::query()->where('id', $inspection->vehicle_id)
-                    ->where('current_odometer', '<', $odometer)
-                    ->update(['current_odometer' => $odometer]);
+            // Section 8: locked to the same transaction, updated through the
+            // Eloquent instance (not a bare Builder::update) so the change
+            // goes through Vehicle's Auditable trait, and never lowers the
+            // reading — a lower value is either stale data or needs a
+            // dedicated correction workflow, neither of which this endpoint is.
+            $odometer = $submittedOdometer ?? $inspection->odometer_at_inspection;
+            if ($odometer !== null) {
+                $vehicle = Vehicle::query()->lockForUpdate()->find($inspection->vehicle_id);
+                if ($vehicle && $vehicle->tenant_id === $inspection->tenant_id && $odometer >= 0 && (float) $odometer > (float) $vehicle->current_odometer) {
+                    $vehicle->update(['current_odometer' => $odometer]);
+                }
             }
 
             return $inspection->fresh(['results', 'findings']);

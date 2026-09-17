@@ -19,7 +19,9 @@ class StoreInspectionRequest extends FormRequest
 
         return [
             'vehicle_id' => ['required', 'uuid', Rule::exists('vehicles', 'id')->where('tenant_id', $tenantId)],
-            'inspection_template_id' => ['required', 'uuid', Rule::exists('inspection_templates', 'id')->where('tenant_id', $tenantId)],
+            'inspection_template_id' => ['required', 'uuid', Rule::exists('inspection_templates', 'id')->where(
+                fn ($q) => $q->where('tenant_id', $tenantId)->where('status', 'ACTIVE')
+            )],
             'workshop_id' => ['nullable', 'uuid', Rule::exists('workshops', 'id')->where('tenant_id', $tenantId)],
             'odometer_at_inspection' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],

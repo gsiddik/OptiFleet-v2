@@ -130,6 +130,8 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
   const [itemText, setItemText] = useState('');
   const [inputType, setInputType] = useState('PASS_FAIL');
   const [busy, setBusy] = useState(false);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function load() {
     apiClient.get(`/app/inspection-templates/${templateId}`).then((res) => setTemplate(res.data.data));
@@ -139,23 +141,60 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
 
   async function addItem() {
     setBusy(true);
+    setError(null);
     try {
       await apiClient.post(`/app/inspection-templates/${templateId}/items`, { item_text: itemText, input_type: inputType });
       setItemText('');
       load();
       onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
     } finally {
       setBusy(false);
     }
   }
 
+  async function removeItem(itemId: string) {
+    setRemovingId(itemId);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/inspection-templates/${templateId}/items/${itemId}`);
+      load();
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setRemovingId(null);
+    }
+  }
+
   async function activate() {
-    await apiClient.post(`/app/inspection-templates/${templateId}/activate`);
-    load();
-    onChanged();
+    setError(null);
+    try {
+      await apiClient.post(`/app/inspection-templates/${templateId}/activate`);
+      load();
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
+  }
+
+  async function deactivate() {
+    setError(null);
+    try {
+      await apiClient.post(`/app/inspection-templates/${templateId}/archive`);
+      load();
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
   }
 
   if (!template) return null;
+
+  // Templates remain editable after activation (Section 9's snapshot is what
+  // protects inspections already created from an earlier composition).
+  const canEdit = hasPermission('inspection.create');
 
   return (
     <Modal open title={template.name} onClose={onClose} width={600}>
@@ -166,18 +205,38 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
             Activate
           </button>
         )}
+        {template.status === 'ACTIVE' && hasPermission('inspection.create') && (
+          <button className="btn-secondary" onClick={deactivate}>
+            Deactivate
+          </button>
+        )}
       </div>
+      {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
       <table style={{ width: '100%', fontSize: 13, marginBottom: 12, borderCollapse: 'collapse' }}>
         <tbody>
           {(template.items ?? []).map((item) => (
             <tr key={item.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <td style={{ padding: '6px 4px' }}>{item.item_text}</td>
+              <td style={{ padding: '6px 4px' }}>
+                {item.item_text}
+                {item.is_system && (
+                  <span style={{ marginLeft: 6, fontSize: 10, color: '#6b7280', background: '#f3f4f6', padding: '1px 6px', borderRadius: 4 }}>
+                    System
+                  </span>
+                )}
+              </td>
               <td style={{ padding: '6px 4px', color: '#6b7280' }}>{item.input_type}</td>
+              <td style={{ padding: '6px 4px', textAlign: 'right' }}>
+                {canEdit && !item.is_system && (
+                  <button className="btn-link" disabled={removingId === item.id} onClick={() => removeItem(item.id)}>
+                    {removingId === item.id ? 'Removing…' : 'Remove'}
+                  </button>
+                )}
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
-      {hasPermission('inspection.create') && (
+      {canEdit && (
         <div style={{ display: 'flex', gap: 8 }}>
           <input placeholder="Checklist item text" value={itemText} onChange={(e) => setItemText(e.target.value)} style={inputStyle} />
           <select value={inputType} onChange={(e) => setInputType(e.target.value)} style={{ ...inputStyle, width: 140 }}>
@@ -188,7 +247,7 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
             ))}
           </select>
           <button className="btn-secondary" disabled={busy || !itemText} onClick={addItem}>
-            Add
+            {busy ? 'Adding…' : 'Add'}
           </button>
         </div>
       )}

@@ -28,11 +28,30 @@ class InspectionTemplateController extends Controller
         return $this->paginated($query->latest('created_at')->paginate($request->integer('per_page', 20)));
     }
 
+    private const ODOMETER_MANDATORY_TYPES = ['PRE_TRIP', 'POST_TRIP', 'PERIODIC', 'WORKSHOP', 'MAINTENANCE'];
+
     public function store(StoreInspectionTemplateRequest $request)
     {
         $template = InspectionTemplate::query()->create($request->validated() + ['status' => 'DRAFT']);
 
-        return $this->ok($template, 201);
+        // Section 9: every new template of these types must start with a
+        // system-mandatory, non-removable "Odometer" checklist item. Created
+        // once here, at template creation, so re-opening/re-saving the form
+        // (which only adds/removes items through separate endpoints) can
+        // never duplicate it.
+        if (in_array($template->inspection_type, self::ODOMETER_MANDATORY_TYPES, true)) {
+            InspectionTemplateItem::query()->create([
+                'inspection_template_id' => $template->id,
+                'item_text' => 'Odometer',
+                'input_type' => 'NUMBER',
+                'required' => true,
+                'sequence' => 0,
+                'status' => 'ACTIVE',
+                'is_system' => true,
+            ]);
+        }
+
+        return $this->ok($template->load('items'), 201);
     }
 
     public function show(InspectionTemplate $inspectionTemplate)
@@ -82,6 +101,7 @@ class InspectionTemplateController extends Controller
     {
         $this->authorizeTenant($inspectionTemplate);
         abort_unless($item->inspection_template_id === $inspectionTemplate->id, 404);
+        abort_if($item->is_system, 403, 'This is a system-required item and cannot be removed.');
 
         $item->delete();
 

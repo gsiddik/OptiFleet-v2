@@ -467,6 +467,7 @@ export interface InspectionTemplateItemRow {
   required: boolean;
   sequence: number;
   threshold: string | null;
+  is_system: boolean;
 }
 
 export interface InspectionTemplateItem {
@@ -508,10 +509,32 @@ export interface InspectionItem {
   status: 'CREATED' | 'ASSIGNED' | 'STARTED' | 'SUBMITTED' | 'PASSED' | 'WARNING' | 'FAILED';
   odometer_at_inspection: string | null;
   notes: string | null;
+  created_at: string;
+  template_snapshot: InspectionTemplateSnapshotItem[] | null;
   vehicle?: VehicleItem;
   template?: InspectionTemplateItem;
   results?: InspectionResultItem[];
   findings?: InspectionFindingItem[];
+}
+
+export interface InspectionTemplateSnapshotItem {
+  id: string;
+  item_text: string;
+  input_type: 'CHECKBOX' | 'PASS_FAIL' | 'TEXT' | 'NUMBER' | 'SELECT' | 'PHOTO';
+  options: string[] | null;
+  required: boolean;
+  sequence: number;
+  is_system: boolean;
+}
+
+export interface InspectionLogEntry {
+  id: string;
+  actor_user_id: string | null;
+  actor_name: string | null;
+  action: string;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  created_at: string;
 }
 
 export interface MaintenancePackageItemRow {

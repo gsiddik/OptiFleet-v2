@@ -18,12 +18,13 @@ class Inspection extends Model
 
     protected $fillable = [
         'tenant_id', 'branch_id', 'workshop_id', 'vehicle_id', 'inspection_template_id',
-        'inspection_type', 'status', 'assigned_to', 'odometer_at_inspection',
+        'template_snapshot', 'inspection_type', 'status', 'assigned_to', 'odometer_at_inspection',
         'started_at', 'submitted_at', 'created_by', 'notes',
     ];
 
     protected $casts = [
         'odometer_at_inspection' => 'decimal:2',
+        'template_snapshot' => 'array',
         'started_at' => 'datetime',
         'submitted_at' => 'datetime',
     ];

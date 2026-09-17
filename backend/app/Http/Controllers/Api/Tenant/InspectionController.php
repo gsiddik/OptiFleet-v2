@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Audit\Models\AuditLog;
+use App\Domain\Audit\Services\AuditService;
 use App\Domain\Inspection\Models\Inspection;
+use App\Domain\Inspection\Models\InspectionTemplate;
 use App\Domain\Inspection\Services\InspectionService;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\Vehicle\Models\Vehicle;
@@ -19,6 +22,7 @@ class InspectionController extends Controller
         private readonly MaintenanceRequestService $requests,
         private readonly DataScopeService $scope,
         private readonly TenantContext $context,
+        private readonly AuditService $audit,
     ) {}
 
     public function index(Request $request)
@@ -45,13 +49,29 @@ class InspectionController extends Controller
         abort_unless($vehicle->tenant_id === $tenantId, 404);
         abort_unless($this->scope->canAccessBranch($this->context->user(), $tenantId, $vehicle->branch_id), 403);
 
+        $template = InspectionTemplate::query()->with('items')->findOrFail($request->input('inspection_template_id'));
+
+        // Section 9 (historical snapshot): freeze the checklist composition
+        // used by this inspection so later template edits (items added or
+        // removed) can never alter an inspection already created from it.
+        $snapshot = $template->items->map(fn ($item) => [
+            'id' => $item->id,
+            'item_text' => $item->item_text,
+            'input_type' => $item->input_type,
+            'options' => $item->options,
+            'required' => $item->required,
+            'sequence' => $item->sequence,
+            'is_system' => $item->is_system,
+        ])->values()->all();
+
         $inspection = Inspection::query()->create([
             'tenant_id' => $tenantId,
             'branch_id' => $vehicle->branch_id,
             'workshop_id' => $request->input('workshop_id', $vehicle->default_workshop_id),
             'vehicle_id' => $vehicle->id,
-            'inspection_template_id' => $request->input('inspection_template_id'),
-            'inspection_type' => $request->input('inspection_type') ?? $this->templateType($request->input('inspection_template_id')),
+            'inspection_template_id' => $template->id,
+            'template_snapshot' => $snapshot,
+            'inspection_type' => $request->input('inspection_type') ?? $template->inspection_type,
             'status' => 'CREATED',
             'odometer_at_inspection' => $request->input('odometer_at_inspection', $vehicle->current_odometer),
             'created_by' => $this->context->user()->id,
@@ -124,12 +144,35 @@ class InspectionController extends Controller
             'status' => 'SUBMITTED',
         ], $this->context->user()->id);
 
+        $this->audit->log('Inspection', $inspection->id, 'maintenance_request_created', null, [
+            'maintenance_request_id' => $maintenanceRequest->id,
+        ]);
+
         return $this->ok($maintenanceRequest, 201);
     }
 
-    private function templateType(?string $templateId): string
+    public function logs(Inspection $inspection)
     {
-        return \App\Domain\Inspection\Models\InspectionTemplate::query()->find($templateId)?->inspection_type ?? 'PERIODIC';
+        $this->authorizeScope($inspection);
+
+        $logs = AuditLog::query()
+            ->where('tenant_id', $this->context->tenantId())
+            ->where('resource_type', 'Inspection')
+            ->where('resource_id', $inspection->id)
+            ->with('actor')
+            ->oldest('created_at')
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'actor_user_id' => $log->actor_user_id,
+                'actor_name' => $log->actor?->name,
+                'action' => $log->action,
+                'old_values' => $log->old_values,
+                'new_values' => $log->new_values,
+                'created_at' => $log->created_at,
+            ]);
+
+        return $this->ok($logs);
     }
 
     private function authorizeScope(Inspection $inspection): void
