@@ -580,6 +580,7 @@ export interface MaintenanceScheduleItem {
   id: string;
   vehicle_id: string;
   maintenance_package_id: string;
+  schedule_start_date: string | null;
   next_due_date: string | null;
   next_due_odometer: number | null;
   next_due_engine_hour: number | null;

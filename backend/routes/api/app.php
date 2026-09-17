@@ -228,7 +228,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/maintenance-policies/{maintenancePackage}/assign', [MaintenancePackageController::class, 'assignToVehicle'])->middleware('permission:maintenance_policy.manage');
 
             Route::get('/maintenance-schedules', [MaintenanceScheduleController::class, 'index'])->middleware('permission:maintenance_schedule.view');
+            Route::post('/maintenance-schedules', [MaintenanceScheduleController::class, 'store'])->middleware('permission:maintenance_schedule.create');
             Route::post('/maintenance-schedules/{maintenanceSchedule}/refresh', [MaintenanceScheduleController::class, 'refresh'])->middleware('permission:maintenance_schedule.manage');
+            Route::post('/maintenance-schedules/{maintenanceSchedule}/maintenance-request', [MaintenanceScheduleController::class, 'convertToMaintenanceRequest'])->middleware('permission:maintenance_schedule.convert_maintenance_request');
 
             Route::get('/maintenance-requests', [MaintenanceRequestController::class, 'index'])->middleware('permission:maintenance_request.view');
             Route::post('/maintenance-requests', [MaintenanceRequestController::class, 'store'])->middleware('permission:maintenance_request.create');

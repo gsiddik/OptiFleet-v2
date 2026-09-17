@@ -43,7 +43,10 @@ class PermissionSeeder extends Seeder
             'vehicle' => ['view', 'create', 'update', 'assign', 'transfer', 'status.update'],
             'inspection' => ['view', 'create', 'perform', 'submit', 'review'],
             'maintenance_policy' => ['view', 'manage'],
-            'maintenance_schedule' => ['view', 'manage', 'convert_work_order'],
+            // 'create'/'convert_maintenance_request' added for Enhancement
+            // Section 12 (Planning and Schedule: manual schedule creation and
+            // schedule -> Maintenance Request conversion).
+            'maintenance_schedule' => ['view', 'manage', 'create', 'convert_work_order', 'convert_maintenance_request'],
             'maintenance_request' => ['view', 'create', 'review', 'approve', 'reject', 'convert_work_order'],
             'breakdown' => ['view', 'report', 'review', 'resolve'],
             'work_order' => ['view', 'create', 'update', 'submit', 'approve', 'reject', 'assign', 'schedule', 'start', 'pause', 'complete', 'cancel', 'close', 'estimate'],

@@ -2,12 +2,14 @@
 
 namespace App\Domain\MaintenancePolicy\Services;
 
+use App\Domain\Identity\Models\Tenant;
 use App\Domain\MaintenancePolicy\Models\MaintenanceInterval;
 use App\Domain\MaintenancePolicy\Models\MaintenancePackage;
 use App\Domain\MaintenancePolicy\Models\MaintenanceSchedule;
 use App\Domain\MaintenancePolicy\Models\VehicleMaintenanceProfile;
 use App\Domain\Vehicle\Models\Vehicle;
 use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -21,7 +23,10 @@ use Illuminate\Support\Facades\DB;
  */
 class MaintenanceScheduleService
 {
-    public function __construct(private readonly MaintenanceDueService $due) {}
+    public function __construct(
+        private readonly MaintenanceDueService $due,
+        private readonly WorkingDayService $workingDays,
+    ) {}
 
     public function generateForProfile(VehicleMaintenanceProfile $profile): MaintenanceSchedule
     {
@@ -29,6 +34,87 @@ class MaintenanceScheduleService
         $package = MaintenancePackage::query()->with('intervals')->findOrFail($profile->maintenance_package_id);
 
         return $this->refresh($vehicle, $package, $profile);
+    }
+
+    /**
+     * Section 12: manual "Add New Schedule" for a PERIODIC package. Backend
+     * is the source of truth for the package's period_by/schedule_period —
+     * the frontend's own preview calculation is never trusted here. Re-uses
+     * the existing single-row-per-(vehicle,package) model: if that pair
+     * already has a schedule, this updates it in place rather than
+     * inserting a second row, matching refresh()'s established behavior.
+     * Unlike refresh() (whose snapshot is captured once, at first
+     * creation, for ongoing automatic recalculation), every call to this
+     * manual entry point re-captures the package snapshot, since the user
+     * is deliberately (re)scheduling against the package's current
+     * configuration at this moment.
+     */
+    public function createManualPeriodicSchedule(Vehicle $vehicle, MaintenancePackage $package, CarbonImmutable $scheduleStartDate): MaintenanceSchedule
+    {
+        if ($package->maintenance_type !== 'PERIODIC' || $package->status !== 'ACTIVE') {
+            throw new MaintenancePolicyException('Only an active periodic package can be used to create a schedule.');
+        }
+
+        $tenant = Tenant::query()->find($vehicle->tenant_id);
+        if ($tenant?->workshop_working_days === null) {
+            throw new MaintenancePolicyException('Workshop Working Days must be set in Company Profile before creating a periodic schedule.');
+        }
+
+        $nextDueDate = match ($package->period_by) {
+            'CALENDAR_DAY' => $this->workingDays->addCalendarDays($scheduleStartDate, $package->schedule_period, $tenant->workshop_working_days),
+            'MONTH' => $this->workingDays->addCalendarMonths($scheduleStartDate, $package->schedule_period, $tenant->workshop_working_days),
+            default => throw new MaintenancePolicyException('This package\'s Maintenance Period By is not compatible with periodic scheduling.'),
+        };
+
+        return DB::transaction(function () use ($vehicle, $package, $scheduleStartDate, $nextDueDate) {
+            $dateCollision = MaintenanceSchedule::query()
+                ->where('vehicle_id', $vehicle->id)
+                ->where('maintenance_package_id', '!=', $package->id)
+                ->where('schedule_start_date', $scheduleStartDate->toDateString())
+                ->exists();
+            if ($dateCollision) {
+                throw new MaintenancePolicyException('This vehicle already has a schedule on this date.');
+            }
+
+            $existing = MaintenanceSchedule::query()
+                ->where('vehicle_id', $vehicle->id)
+                ->where('maintenance_package_id', $package->id)
+                ->lockForUpdate()
+                ->first();
+
+            $attributes = [
+                'tenant_id' => $vehicle->tenant_id,
+                'vehicle_id' => $vehicle->id,
+                'maintenance_package_id' => $package->id,
+                'schedule_start_date' => $scheduleStartDate->toDateString(),
+                'next_due_date' => $nextDueDate->toDateString(),
+                'source_policy' => $package->code,
+                'status' => 'SCHEDULED',
+                'package_snapshot' => $package->toSnapshot(),
+            ];
+
+            if ($existing) {
+                return tap($existing)->update($attributes);
+            }
+
+            try {
+                return MaintenanceSchedule::query()->create($attributes);
+            } catch (\Illuminate\Database\QueryException $e) {
+                if (str_contains($e->getMessage(), 'maintenance_schedules_vehicle_start_date_unique')) {
+                    throw new MaintenancePolicyException('This vehicle already has a schedule on this date.');
+                }
+
+                // Lost the race against a concurrent first-time generation for
+                // this (vehicle, package) pair.
+                $winner = MaintenanceSchedule::query()
+                    ->where('vehicle_id', $vehicle->id)
+                    ->where('maintenance_package_id', $package->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                return tap($winner)->update($attributes);
+            }
+        });
     }
 
     public function refresh(Vehicle $vehicle, MaintenancePackage $package, ?VehicleMaintenanceProfile $profile = null): MaintenanceSchedule
