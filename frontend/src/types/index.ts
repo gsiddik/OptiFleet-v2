@@ -561,12 +561,19 @@ export interface MaintenancePackageItemType {
   id: string;
   code: string;
   name: string;
-  maintenance_type: 'PREVENTIVE' | 'CORRECTIVE' | 'BREAKDOWN' | 'INSPECTION' | 'CAMPAIGN';
+  maintenance_type: 'PREVENTIVE' | 'CORRECTIVE' | 'BREAKDOWN' | 'INSPECTION' | 'CAMPAIGN' | 'PERIODIC';
   description: string | null;
   standard_labor_hours: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+  period_by: 'CALENDAR_DAY' | 'MONTH' | 'ODOMETER' | 'ENGINE_HOUR' | null;
+  threshold_days: number | null;
+  threshold_month: number | null;
+  threshold_km: number | null;
+  threshold_engine_hour: number | null;
+  schedule_period: number | null;
   items?: MaintenancePackageItemRow[];
   intervals?: MaintenanceIntervalItem[];
+  component_groups?: ComponentGroup[];
 }
 
 export interface MaintenanceScheduleItem {

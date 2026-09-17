@@ -223,6 +223,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/maintenance-policies/{maintenancePackage}', [MaintenancePackageController::class, 'show'])->middleware('permission:maintenance_policy.view');
             Route::post('/maintenance-policies/{maintenancePackage}/activate', [MaintenancePackageController::class, 'activate'])->middleware('permission:maintenance_policy.manage');
             Route::post('/maintenance-policies/{maintenancePackage}/items', [MaintenancePackageController::class, 'addItem'])->middleware('permission:maintenance_policy.manage');
+            Route::put('/maintenance-policies/{maintenancePackage}/items', [MaintenancePackageController::class, 'updateItems'])->middleware('permission:maintenance_policy.manage');
             Route::post('/maintenance-policies/{maintenancePackage}/intervals', [MaintenancePackageController::class, 'addInterval'])->middleware('permission:maintenance_policy.manage');
             Route::post('/maintenance-policies/{maintenancePackage}/assign', [MaintenancePackageController::class, 'assignToVehicle'])->middleware('permission:maintenance_policy.manage');
 

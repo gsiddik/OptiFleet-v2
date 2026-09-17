@@ -30,6 +30,7 @@ class MaintenancePolicyAndScheduleTest extends TestCase
 
         $create = $this->postJson('/api/v1/app/maintenance-policies', [
             'code' => 'PM-1', 'name' => 'Oil Service', 'maintenance_type' => 'PREVENTIVE',
+            'period_by' => 'ODOMETER', 'threshold_km' => 5000,
         ], $headers)->assertStatus(201);
         $packageId = $create->json('data.id');
 

@@ -108,6 +108,11 @@ class MaintenanceScheduleService
                 return tap($existing)->update($attributes);
             }
 
+            // Section 10-11: captured once, only at first creation — later
+            // package edits (items, thresholds) must never alter a schedule
+            // already generated from an earlier package composition.
+            $attributes['package_snapshot'] = $package->toSnapshot();
+
             try {
                 return MaintenanceSchedule::query()->create($attributes);
             } catch (\Illuminate\Database\QueryException $e) {
