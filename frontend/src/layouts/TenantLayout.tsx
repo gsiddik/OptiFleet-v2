@@ -3,6 +3,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { Logo } from '../components/Logo';
+import { NavDropdown } from '../components/NavDropdown';
 
 interface NavItem {
   to: string;
@@ -159,14 +161,6 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Organization',
-    items: [
-      { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view', module: 'ORGANIZATION' },
-      { to: '/app/organization/workshops', label: 'Workshops', permission: 'workshop.view', module: 'ORGANIZATION' },
-      { to: '/app/organization/warehouses', label: 'Warehouses', permission: 'warehouse.view', module: 'ORGANIZATION' },
-    ],
-  },
-  {
     label: 'Master Data',
     items: [
       { to: '/app/master-data/vehicle-categories', label: 'Vehicle Categories', permission: 'vehicle_category.view', module: 'CORE' },
@@ -178,14 +172,6 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Access',
-    items: [
-      { to: '/app/access/users', label: 'Users', permission: 'user.view', module: 'ACCESS_MANAGEMENT' },
-      { to: '/app/access/roles', label: 'Roles', permission: 'role.view', module: 'ACCESS_MANAGEMENT' },
-    ],
-  },
-  { label: null, items: [{ to: '/app/audit-logs', label: 'Audit Log', permission: 'audit.view', module: null }] },
-  {
     label: 'Configuration',
     items: [
       { to: '/app/configuration/numbering', label: 'Document Numbering', permission: 'configuration.view', module: null },
@@ -196,14 +182,32 @@ const NAV_GROUPS: NavGroup[] = [
       { to: '/app/configuration/history', label: 'Configuration History', permission: 'configuration_history.view', module: null },
     ],
   },
+  // Section 5.6: Audit Log now sits after Configuration History with a
+  // visual gap (marginTop below), rather than immediately following Access
+  // as it did before Account/Organization/Access moved to the navbar.
+  { label: null, items: [{ to: '/app/audit-logs', label: 'Audit Log', permission: 'audit.view', module: null }] },
 ];
 
+// Section 5.2/5.3/5.4: these three groups now render as navbar hover/click
+// dropdowns (see the header below) instead of sidebar entries — same
+// routes, same permissions, just relocated.
 const ACCOUNT_NAV = [
   { to: '/app/account/company', label: 'Company Profile', permission: 'company.view' },
   { to: '/app/account/subscription', label: 'Subscription', permission: 'account.subscription.view' },
   { to: '/app/account/contract', label: 'Contract', permission: 'account.contract.view' },
   { to: '/app/account/invoices', label: 'Invoices', permission: 'account.invoice.view' },
   { to: '/app/account/payments', label: 'Payments', permission: 'account.payment.view' },
+];
+
+const ORGANIZATION_NAV = [
+  { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view' },
+  { to: '/app/organization/workshops', label: 'Workshops', permission: 'workshop.view' },
+  { to: '/app/organization/warehouses', label: 'Warehouses', permission: 'warehouse.view' },
+];
+
+const ACCESS_NAV = [
+  { to: '/app/access/users', label: 'Users', permission: 'user.view' },
+  { to: '/app/access/roles', label: 'Roles', permission: 'role.view' },
 ];
 
 export function TenantLayout() {
@@ -236,7 +240,14 @@ export function TenantLayout() {
           if ((e.target as HTMLElement).tagName === 'A') setSidebarOpen(false);
         }}
       >
-        <div style={{ padding: '0 20px 20px', fontSize: 18, fontWeight: 700 }}>OptiFleet</div>
+        <div style={{ padding: '16px 20px 20px' }}>
+          {/* Section 4a: the source logo's wordmark/tagline are dark text designed for a
+              light background, so a white card keeps it legible on this dark sidebar
+              without altering the logo asset itself. */}
+          <div style={{ display: 'inline-block', background: '#fff', borderRadius: 8, padding: '10px 14px' }}>
+            <Logo height={40} />
+          </div>
+        </div>
         <div style={{ padding: '0 20px 16px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>
           Tenant Portal
         </div>
@@ -246,8 +257,9 @@ export function TenantLayout() {
               .filter((item) => !item.permission || hasPermission(item.permission))
               .filter((item) => !item.module || activeModules === null || activeModules.includes(item.module));
             if (items.length === 0) return null;
+            const isAuditLogGroup = items[0].to === '/app/audit-logs';
             return (
-              <div key={group.label ?? items[0].to}>
+              <div key={group.label ?? items[0].to} style={isAuditLogGroup ? { marginTop: 24 } : undefined}>
                 {group.label && (
                   <div style={{ padding: '14px 20px 4px', fontSize: 11, textTransform: 'uppercase', color: '#6b7280', letterSpacing: 1 }}>
                     {group.label}
@@ -274,64 +286,70 @@ export function TenantLayout() {
             );
           })}
         </nav>
-        <div style={{ padding: '16px 20px 8px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>Account</div>
-        <nav>
-          {ACCOUNT_NAV.filter((item) => hasPermission(item.permission)).map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              style={({ isActive }) => ({
-                display: 'block',
-                padding: '10px 20px',
-                color: isActive ? '#fff' : '#cbd5e1',
-                background: isActive ? '#1d4ed8' : 'transparent',
-                textDecoration: 'none',
-                fontSize: 14,
-              })}
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
       </aside>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <header
           style={{
             display: 'flex',
-            justifyContent: 'flex-end',
+            justifyContent: 'space-between',
             alignItems: 'center',
             gap: 16,
             padding: '12px 24px',
             background: '#fff',
             borderBottom: '1px solid #e5e7eb',
+            flexWrap: 'wrap',
           }}
         >
-          <button
-            className="tenant-mobile-toggle btn-secondary"
-            aria-label="Toggle menu"
-            onClick={() => setSidebarOpen((v) => !v)}
-            style={{ marginRight: 'auto' }}
-          >
-            ☰ Menu
-          </button>
-          {user && user.memberships.length > 1 && (
-            <select
-              value={activeTenantId ?? ''}
-              onChange={(e) => switchTenant(e.target.value)}
-              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+          <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 4, minWidth: 0 }}>
+            <button
+              className="tenant-mobile-toggle btn-secondary"
+              aria-label="Toggle menu"
+              onClick={() => setSidebarOpen((v) => !v)}
+              style={{ marginRight: 8 }}
             >
-              {user.memberships.map((m) => (
-                <option key={m.tenant_id} value={m.tenant_id}>
-                  {m.tenant_name}
-                </option>
-              ))}
-            </select>
-          )}
-          <span style={{ fontSize: 13, color: '#6b7280' }}>{currentMembership?.tenant_name}</span>
-          <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
-          <button className="btn-secondary" onClick={() => logout()}>
-            Logout
-          </button>
+              ☰ Menu
+            </button>
+            {/* Section 5.1: tenant name moved from the right side of the navbar to here, on the left. */}
+            <span
+              title={currentMembership?.tenant_name}
+              style={{
+                fontSize: 14,
+                fontWeight: 600,
+                color: '#111827',
+                marginRight: 8,
+                flexShrink: 0,
+                minWidth: 60,
+                maxWidth: 220,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {currentMembership?.tenant_name}
+            </span>
+            <NavDropdown label="Account" items={ACCOUNT_NAV.filter((item) => hasPermission(item.permission))} />
+            <NavDropdown label="Organization" items={ORGANIZATION_NAV.filter((item) => hasPermission(item.permission))} />
+            <NavDropdown label="Access" items={ACCESS_NAV.filter((item) => hasPermission(item.permission))} />
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {user && user.memberships.length > 1 && (
+              <select
+                value={activeTenantId ?? ''}
+                onChange={(e) => switchTenant(e.target.value)}
+                style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+              >
+                {user.memberships.map((m) => (
+                  <option key={m.tenant_id} value={m.tenant_id}>
+                    {m.tenant_name}
+                  </option>
+                ))}
+              </select>
+            )}
+            <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
+            <button className="btn-secondary" onClick={() => logout()}>
+              Logout
+            </button>
+          </div>
         </header>
         {subscriptionStatus === 'SUSPENDED' && (
           <div style={{ background: '#b91c1c', color: '#fff', padding: '10px 24px', fontSize: 13, textAlign: 'center' }}>

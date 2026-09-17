@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { Breadcrumb } from '../components/Breadcrumb';
+import { Logo } from '../components/Logo';
 
 const NAV = [
   { to: '/platform/dashboard', label: 'Dashboard', permission: null },
@@ -24,7 +25,14 @@ export function PlatformLayout() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <aside style={{ width: 230, background: '#111827', color: '#fff', padding: '20px 0', flexShrink: 0 }}>
-        <div style={{ padding: '0 20px 20px', fontSize: 18, fontWeight: 700 }}>OptiFleet</div>
+        <div style={{ padding: '16px 20px 20px' }}>
+          {/* Section 4a: the source logo's wordmark/tagline are dark text designed for a
+              light background, so a white card keeps it legible on this dark sidebar
+              without altering the logo asset itself. */}
+          <div style={{ display: 'inline-block', background: '#fff', borderRadius: 8, padding: '10px 14px' }}>
+            <Logo height={40} />
+          </div>
+        </div>
         <div style={{ padding: '0 20px 16px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>
           Platform Portal
         </div>
