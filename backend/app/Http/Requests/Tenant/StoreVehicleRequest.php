@@ -23,13 +23,14 @@ class StoreVehicleRequest extends FormRequest
             'vehicle_category_id' => ['required', 'uuid', Rule::exists('vehicle_categories', 'id')->where(
                 fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
             )],
-            'brand' => ['required', 'string', 'max:100'],
-            'vehicle_brand_id' => ['nullable', 'uuid', Rule::exists('vehicle_brands', 'id')->where(
+            'brand' => ['sometimes', 'string', 'max:100'],
+            'vehicle_brand_id' => ['required', 'uuid', Rule::exists('vehicle_brands', 'id')->where(
                 fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
             )],
-            'model' => ['required', 'string', 'max:100'],
-            'vehicle_model_id' => ['nullable', 'uuid', Rule::exists('vehicle_models', 'id')->where(
+            'model' => ['sometimes', 'string', 'max:100'],
+            'vehicle_model_id' => ['required', 'uuid', Rule::exists('vehicle_models', 'id')->where(
                 fn ($q) => $q->where(fn ($q2) => $q2->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))
+                    ->where('vehicle_brand_id', $this->input('vehicle_brand_id'))
             )],
             'vehicle_type' => ['nullable', 'string', 'max:100'],
             'registration_number' => ['required', 'string', 'max:50', Rule::unique('vehicles', 'registration_number')->where('tenant_id', $tenantId)],

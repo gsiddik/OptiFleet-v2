@@ -27,7 +27,12 @@ class Vehicle extends Model
         'color', 'doors', 'seats', 'length_mm', 'width_mm', 'height_mm',
         'fuel_tank_capacity_liters', 'engine_capacity_cc', 'suspension_type', 'axle_count',
         'empty_weight_kg', 'load_weight_kg', 'wheel_count', 'photo_url',
+        'photo_disk', 'photo_path', 'photo_mime_type', 'photo_size',
     ];
+
+    protected $hidden = ['photo_disk', 'photo_path'];
+
+    protected $appends = ['photo_available'];
 
     protected $casts = [
         'current_odometer' => 'decimal:2',
@@ -84,5 +89,10 @@ class Vehicle extends Model
     public function componentGroupIds(): array
     {
         return $this->vehicleCategory?->componentGroups()->pluck('component_groups.id')->all() ?? [];
+    }
+
+    public function getPhotoAvailableAttribute(): bool
+    {
+        return $this->photo_path !== null;
     }
 }

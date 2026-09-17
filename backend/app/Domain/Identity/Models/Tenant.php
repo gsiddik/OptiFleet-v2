@@ -36,6 +36,11 @@ class Tenant extends Model
         'logo_url',
         'status',
         'timezone',
+        'workshop_working_days',
+    ];
+
+    protected $casts = [
+        'workshop_working_days' => 'integer',
     ];
 
     public function users(): BelongsToMany

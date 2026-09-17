@@ -69,13 +69,10 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [vehicleModels, setVehicleModels] = useState<VehicleModelItem[]>([]);
   const [branchId, setBranchId] = useState('');
   const [categoryId, setCategoryId] = useState('');
-  const [brand, setBrand] = useState('');
-  const [model, setModel] = useState('');
   const [vehicleBrandId, setVehicleBrandId] = useState('');
   const [vehicleModelId, setVehicleModelId] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [vin, setVin] = useState('');
-  const [vehicleType, setVehicleType] = useState('');
   const [currentOdometer, setCurrentOdometer] = useState('0');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -106,22 +103,16 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
       await apiClient.post('/app/vehicles', {
         branch_id: branchId,
         vehicle_category_id: categoryId,
-        brand,
-        model,
-        vehicle_brand_id: vehicleBrandId || undefined,
-        vehicle_model_id: vehicleModelId || undefined,
+        vehicle_brand_id: vehicleBrandId,
+        vehicle_model_id: vehicleModelId,
         registration_number: registrationNumber,
         vin: vin || null,
-        vehicle_type: vehicleType || null,
         current_odometer: currentOdometer,
       });
-      setBrand('');
-      setModel('');
       setVehicleBrandId('');
       setVehicleModelId('');
       setRegistrationNumber('');
       setVin('');
-      setVehicleType('');
       onCreated();
       onClose();
     } catch (err) {
@@ -155,15 +146,9 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
             ))}
           </select>
         </FormField>
-        <FormField label="Brand" errors={errors.brand} required>
-          <input value={brand} onChange={(e) => setBrand(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Model" errors={errors.model} required>
-          <input value={model} onChange={(e) => setModel(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Brand (master data, optional)" errors={errors.vehicle_brand_id}>
+        <FormField label="Brand" errors={errors.vehicle_brand_id} required>
           <select value={vehicleBrandId} onChange={(e) => setVehicleBrandId(e.target.value)} style={inputStyle}>
-            <option value="">None</option>
+            <option value="">Select…</option>
             {vehicleBrands.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -171,9 +156,9 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
             ))}
           </select>
         </FormField>
-        <FormField label="Model (master data, optional)" errors={errors.vehicle_model_id}>
+        <FormField label="Model" errors={errors.vehicle_model_id} required>
           <select value={vehicleModelId} onChange={(e) => setVehicleModelId(e.target.value)} style={inputStyle} disabled={!vehicleBrandId}>
-            <option value="">None</option>
+            <option value="">Select…</option>
             {vehicleModels.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.name}
@@ -187,9 +172,6 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         <FormField label="VIN (optional)" errors={errors.vin}>
           <input value={vin} onChange={(e) => setVin(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Vehicle Type (optional)" errors={errors.vehicle_type}>
-          <input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle} placeholder="e.g. Truck, Pickup, Bus" />
-        </FormField>
         <FormField label="Current Odometer" errors={errors.current_odometer}>
           <input type="number" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
         </FormField>
@@ -198,7 +180,11 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         <button className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
-        <button className="btn-primary" disabled={submitting || !branchId || !categoryId} onClick={submit}>
+        <button
+          className="btn-primary"
+          disabled={submitting || !branchId || !categoryId || !vehicleBrandId || !vehicleModelId || !registrationNumber}
+          onClick={submit}
+        >
           {submitting ? 'Creating…' : 'Create Vehicle'}
         </button>
       </div>

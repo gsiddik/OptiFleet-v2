@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api\Tenant;
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Entitlement\Services\CapacityService;
 use App\Domain\History\Services\HistoryService;
+use App\Domain\MasterData\Models\VehicleBrand;
+use App\Domain\MasterData\Models\VehicleModel as VehicleModelMaster;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Vehicle\Services\VehicleAssignmentService;
 use App\Http\Controllers\Controller;
@@ -60,10 +62,19 @@ class VehicleController extends Controller
         $this->capacity->assertCanCreate($tenantId, 'vehicle');
         abort_unless($this->scope->canAccessBranch($this->context->user(), $tenantId, $request->input('branch_id')), 403, 'This branch is outside your assigned data scope.');
 
-        $vehicle = Vehicle::query()->create($request->validated() + [
+        // Section 7: the New Vehicle form only offers Brand/Model dropdowns, so the
+        // brand/model text columns (kept for backward compatibility with pre-existing
+        // free-text vehicles) are derived server-side from the selected master data
+        // rather than trusted from the client.
+        $brandName = VehicleBrand::query()->findOrFail($request->input('vehicle_brand_id'))->name;
+        $modelName = VehicleModelMaster::query()->findOrFail($request->input('vehicle_model_id'))->name;
+
+        $vehicle = Vehicle::query()->create(array_merge($request->validated(), [
+            'brand' => $brandName,
+            'model' => $modelName,
             'status' => 'ACTIVE',
             'operational_status' => $request->input('operational_status', 'AVAILABLE'),
-        ]);
+        ]));
 
         return $this->ok($vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']), 201);
     }
@@ -118,7 +129,7 @@ class VehicleController extends Controller
     {
         $this->authorizeScope($vehicle);
 
-        return $this->ok($vehicle->assignments()->get());
+        return $this->ok($vehicle->assignments()->with(['fromBranch', 'toBranch'])->get());
     }
 
     public function history(Vehicle $vehicle)

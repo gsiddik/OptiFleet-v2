@@ -67,6 +67,7 @@ use App\Http\Controllers\Api\Tenant\VehicleBrandController;
 use App\Http\Controllers\Api\Tenant\VehicleCategoryController;
 use App\Http\Controllers\Api\Tenant\VehicleController;
 use App\Http\Controllers\Api\Tenant\VehicleDocumentController;
+use App\Http\Controllers\Api\Tenant\VehiclePhotoController;
 use App\Http\Controllers\Api\Tenant\VehicleModelController;
 use App\Http\Controllers\Api\Tenant\VehicleReleaseController;
 use App\Http\Controllers\Api\Tenant\VehicleTransferController;
@@ -180,6 +181,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/vehicles/{vehicle}/documents', [VehicleDocumentController::class, 'store'])->middleware('permission:vehicle.update');
             Route::get('/vehicles/{vehicle}/documents/{document}', [VehicleDocumentController::class, 'download'])->middleware('permission:vehicle.view');
             Route::delete('/vehicles/{vehicle}/documents/{document}', [VehicleDocumentController::class, 'destroy'])->middleware('permission:vehicle.update');
+
+            Route::post('/vehicles/{vehicle}/photo', [VehiclePhotoController::class, 'store'])->middleware('permission:vehicle.update');
+            Route::get('/vehicles/{vehicle}/photo', [VehiclePhotoController::class, 'show'])->middleware('permission:vehicle.view');
 
             Route::get('/vehicle-transfers', [VehicleTransferController::class, 'index'])->middleware('permission:vehicle.transfer');
             Route::post('/vehicle-transfers', [VehicleTransferController::class, 'store'])->middleware('permission:vehicle.transfer');

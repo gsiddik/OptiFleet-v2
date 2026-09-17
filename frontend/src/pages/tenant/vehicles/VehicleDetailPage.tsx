@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
@@ -79,6 +79,124 @@ export function VehicleDetailPage() {
   );
 }
 
+function VehiclePhoto({ vehicle, onUploaded }: { vehicle: VehicleItem; onUploaded: () => void }) {
+  const { hasPermission } = useAuth();
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const canEdit = hasPermission('vehicle.update');
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    if (vehicle.photo_available) {
+      apiClient.get(`/app/vehicles/${vehicle.id}/photo`, { responseType: 'blob' }).then((res) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(res.data);
+        setPreviewUrl(objectUrl);
+      });
+    } else if (vehicle.photo_url) {
+      setPreviewUrl(vehicle.photo_url);
+    } else {
+      setPreviewUrl(null);
+    }
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [vehicle.id, vehicle.photo_available, vehicle.photo_url]);
+
+  async function handleFile(file: File) {
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setError('Only JPG, JPEG, or PNG images are accepted.');
+      return;
+    }
+    setUploading(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      await apiClient.post(`/app/vehicles/${vehicle.id}/photo`, form);
+      onUploaded();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <div
+        role={canEdit ? 'button' : undefined}
+        tabIndex={canEdit ? 0 : undefined}
+        onClick={() => canEdit && inputRef.current?.click()}
+        onKeyDown={(e) => {
+          if (canEdit && (e.key === 'Enter' || e.key === ' ')) inputRef.current?.click();
+        }}
+        style={{
+          width: 240,
+          height: 160,
+          border: previewUrl ? 'none' : '2px dashed #d1d5db',
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: canEdit ? 'pointer' : 'default',
+          background: '#f9fafb',
+          overflow: 'hidden',
+          position: 'relative',
+        }}
+      >
+        {previewUrl ? (
+          <img
+            src={previewUrl}
+            alt={`${vehicle.registration_number} photo`}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        ) : (
+          <span style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: 12 }}>
+            {canEdit ? 'Click to upload photo (JPG/PNG)' : 'No photo'}
+          </span>
+        )}
+        {uploading && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              background: 'rgba(255,255,255,0.8)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 13,
+              color: '#374151',
+            }}
+          >
+            Uploading…
+          </div>
+        )}
+      </div>
+      {canEdit && (
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png"
+          style={{ display: 'none' }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = '';
+            if (f) handleFile(f);
+          }}
+        />
+      )}
+      {error && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>{error}</div>}
+    </div>
+  );
+}
+
 function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
   const [editing, setEditing] = useState(false);
@@ -109,9 +227,7 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
 
   return (
     <div className="card">
-      {vehicle.photo_url && (
-        <img src={vehicle.photo_url} alt={vehicle.registration_number} style={{ maxWidth: 240, marginBottom: 16, borderRadius: 6 }} />
-      )}
+      <VehiclePhoto vehicle={vehicle} onUploaded={onChanged} />
       {hasPermission('vehicle.update') && (
         <div style={{ textAlign: 'right', marginBottom: 12 }}>
           <button className="btn-secondary" onClick={() => setEditing(true)}>
@@ -133,7 +249,8 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
 }
 
 function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem; onClose: () => void; onSaved: () => void }) {
-  const [vehicleType, setVehicleType] = useState(vehicle.vehicle_type ?? '');
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categoryId, setCategoryId] = useState(vehicle.vehicle_category_id);
   const [year, setYear] = useState(vehicle.year != null ? String(vehicle.year) : '');
   const [fuelType, setFuelType] = useState(vehicle.fuel_type ?? '');
   const [transmissionType, setTransmissionType] = useState(vehicle.transmission_type ?? '');
@@ -151,16 +268,19 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
   const [emptyWeight, setEmptyWeight] = useState(vehicle.empty_weight_kg ?? '');
   const [loadWeight, setLoadWeight] = useState(vehicle.load_weight_kg ?? '');
   const [wheelCount, setWheelCount] = useState(vehicle.wheel_count != null ? String(vehicle.wheel_count) : '');
-  const [photoUrl, setPhotoUrl] = useState(vehicle.photo_url ?? '');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
+  }, []);
 
   async function submit() {
     setSubmitting(true);
     setErrors({});
     try {
       await apiClient.put(`/app/vehicles/${vehicle.id}`, {
-        vehicle_type: vehicleType || null,
+        vehicle_category_id: categoryId,
         year: year || null,
         fuel_type: fuelType || null,
         transmission_type: transmissionType || null,
@@ -178,7 +298,6 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
         empty_weight_kg: emptyWeight || null,
         load_weight_kg: loadWeight || null,
         wheel_count: wheelCount || null,
-        photo_url: photoUrl || null,
       });
       onSaved();
     } catch (err) {
@@ -192,8 +311,15 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
   return (
     <Modal open title="Edit Vehicle Specifications" onClose={onClose} width={640}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Vehicle Type" errors={errors.vehicle_type}>
-          <input value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle} />
+        <FormField label="Category" errors={errors.vehicle_category_id} required>
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
+            <option value="">Select…</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
         </FormField>
         <FormField label="Year" errors={errors.year}>
           <input type="number" value={year} onChange={(e) => setYear(e.target.value)} style={inputStyle} />
@@ -237,24 +363,21 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
         <FormField label="Axles" errors={errors.axle_count}>
           <input type="number" value={axleCount} onChange={(e) => setAxleCount(e.target.value)} style={inputStyle} />
         </FormField>
+        <FormField label="Wheels" errors={errors.wheel_count}>
+          <input type="number" value={wheelCount} onChange={(e) => setWheelCount(e.target.value)} style={inputStyle} />
+        </FormField>
         <FormField label="Empty Weight (kg)" errors={errors.empty_weight_kg}>
           <input type="number" value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Load Weight (kg)" errors={errors.load_weight_kg}>
           <input type="number" value={loadWeight} onChange={(e) => setLoadWeight(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Wheels" errors={errors.wheel_count}>
-          <input type="number" value={wheelCount} onChange={(e) => setWheelCount(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Photo URL" errors={errors.photo_url}>
-          <input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} style={inputStyle} />
-        </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
-        <button className="btn-primary" disabled={submitting} onClick={submit}>
+        <button className="btn-primary" disabled={submitting || !categoryId} onClick={submit}>
           {submitting ? 'Saving…' : 'Save'}
         </button>
       </div>
@@ -341,8 +464,8 @@ function AssignmentTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged
         <tbody>
           {history.map((h) => (
             <tr key={h.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <td style={{ padding: '6px 8px' }}>Branch {h.from_branch_id?.slice(0, 8) ?? '—'}</td>
-              <td style={{ padding: '6px 8px' }}>Branch {h.to_branch_id?.slice(0, 8) ?? '—'}</td>
+              <td style={{ padding: '6px 8px' }}>{h.from_branch?.name ?? '—'}</td>
+              <td style={{ padding: '6px 8px' }}>{h.to_branch?.name ?? '—'}</td>
               <td style={{ padding: '6px 8px' }}>{h.effective_from}</td>
               <td style={{ padding: '6px 8px' }}>{h.effective_until ?? 'current'}</td>
             </tr>
@@ -574,13 +697,38 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
     }
   }
 
-  async function download(docId: string, filename: string) {
+  async function fetchBlob(docId: string) {
     const res = await apiClient.get(`/app/vehicles/${vehicle.id}/documents/${docId}`, { responseType: 'blob' });
-    const url = URL.createObjectURL(new Blob([res.data]));
+    const contentType = typeof res.headers['content-type'] === 'string' ? res.headers['content-type'] : undefined;
+    return new Blob([res.data], { type: contentType });
+  }
+
+  async function download(docId: string, filename: string) {
+    const url = URL.createObjectURL(await fetchBlob(docId));
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
     a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  async function preview(docId: string) {
+    const url = URL.createObjectURL(await fetchBlob(docId));
+    // Opens in the browser's native viewer for previewable types; the browser
+    // falls back to a download prompt for anything it cannot render inline.
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+
+  async function remove(docId: string) {
+    if (!window.confirm('Delete this document? This cannot be undone.')) return;
+    setError(null);
+    try {
+      await apiClient.delete(`/app/vehicles/${vehicle.id}/documents/${docId}`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
   }
 
   return (
@@ -592,9 +740,19 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
           <span>
             {d.document_type} — {d.original_filename} <span style={{ color: '#9ca3af' }}>({(d.size / 1024).toFixed(0)} KB)</span>
           </span>
-          <button className="btn-link" onClick={() => download(d.id, d.original_filename)}>
-            Download
-          </button>
+          <span style={{ display: 'flex', gap: 12 }}>
+            <button className="btn-link" onClick={() => preview(d.id)}>
+              Preview
+            </button>
+            <button className="btn-link" onClick={() => download(d.id, d.original_filename)}>
+              Download
+            </button>
+            {hasPermission('vehicle.update') && (
+              <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => remove(d.id)}>
+                Delete
+              </button>
+            )}
+          </span>
         </div>
       ))}
       {documents.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No documents uploaded.</p>}

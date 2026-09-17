@@ -255,6 +255,29 @@ abstract class TestCase extends BaseTestCase
         ], $overrides));
     }
 
+    protected function makeVehicleBrand(array $overrides = []): \App\Domain\MasterData\Models\VehicleBrand
+    {
+        return \App\Domain\MasterData\Models\VehicleBrand::query()->create(array_merge([
+            'tenant_id' => null,
+            'code' => 'VB-'.Str::upper(Str::random(6)),
+            'name' => 'Test Brand',
+            'is_system' => true,
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
+    protected function makeVehicleModel(\App\Domain\MasterData\Models\VehicleBrand $brand, array $overrides = []): \App\Domain\MasterData\Models\VehicleModel
+    {
+        return \App\Domain\MasterData\Models\VehicleModel::query()->create(array_merge([
+            'tenant_id' => null,
+            'vehicle_brand_id' => $brand->id,
+            'code' => 'VM-'.Str::upper(Str::random(6)),
+            'name' => 'Test Model',
+            'is_system' => true,
+            'status' => 'ACTIVE',
+        ], $overrides));
+    }
+
     protected function makeComponentGroup(array $overrides = []): \App\Domain\MasterData\Models\ComponentGroup
     {
         return \App\Domain\MasterData\Models\ComponentGroup::query()->create(array_merge([

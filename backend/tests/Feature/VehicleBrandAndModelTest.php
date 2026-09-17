@@ -8,8 +8,10 @@ use Tests\TestCase;
 
 /**
  * Phase G — G-13: Vehicle brand/model were always free-text with no shared
- * master data behind them. New VehicleBrand/VehicleModel tables are purely
- * additive — the free-text brand/model columns are untouched.
+ * master data behind them. VehicleBrand/VehicleModel tables were added, and
+ * (Enhancement, Section 7) the New Vehicle workflow now requires selecting
+ * from them — the free-text brand/model columns remain only for backward
+ * compatibility with vehicles created before this change.
  */
 class VehicleBrandAndModelTest extends TestCase
 {
@@ -54,7 +56,7 @@ class VehicleBrandAndModelTest extends TestCase
         $this->postJson('/api/v1/app/vehicle-models', ['vehicle_brand_id' => $brandB, 'code' => '300', 'name' => 'Same code, different brand'], $headers)->assertStatus(201);
     }
 
-    public function test_vehicle_can_optionally_link_a_brand_and_model_alongside_the_existing_free_text_fields(): void
+    public function test_vehicle_creation_links_the_selected_brand_and_model_and_derives_the_free_text_columns(): void
     {
         [$tenant, $token] = $this->setUpTenant();
         $branch = $this->makeBranch($tenant);
@@ -66,28 +68,27 @@ class VehicleBrandAndModelTest extends TestCase
 
         $response = $this->postJson('/api/v1/app/vehicles', [
             'branch_id' => $branch->id, 'vehicle_category_id' => $category->id,
-            'brand' => 'Hino', 'model' => 'Dutro', 'vehicle_brand_id' => $brandId, 'vehicle_model_id' => $modelId,
+            'vehicle_brand_id' => $brandId, 'vehicle_model_id' => $modelId,
             'registration_number' => 'B 1234 XYZ',
         ], $headers)->assertStatus(201);
 
         $this->assertSame('Hino', $response->json('data.brand'));
+        $this->assertSame('Dutro', $response->json('data.model'));
         $this->assertSame($brandId, $response->json('data.vehicle_brand_id'));
         $this->assertSame($modelId, $response->json('data.vehicle_model_id'));
     }
 
-    public function test_vehicle_creation_without_brand_and_model_master_data_still_works(): void
+    public function test_vehicle_creation_without_brand_and_model_master_data_is_rejected(): void
     {
         [$tenant, $token] = $this->setUpTenant();
         $branch = $this->makeBranch($tenant);
         $category = $this->makeVehicleCategory();
 
-        $response = $this->postJson('/api/v1/app/vehicles', [
-            'branch_id' => $branch->id, 'vehicle_category_id' => $category->id,
-            'brand' => 'Generic Brand', 'model' => 'Generic Model', 'registration_number' => 'B 5678 XYZ',
-        ], $this->authHeaders($token))->assertStatus(201);
-
-        $this->assertNull($response->json('data.vehicle_brand_id'));
-        $this->assertSame('Generic Brand', $response->json('data.brand'));
+        $this->postJson('/api/v1/app/vehicles', [
+            'branch_id' => $branch->id, 'vehicle_category_id' => $category->id, 'registration_number' => 'B 5678 XYZ',
+        ], $this->authHeaders($token))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['vehicle_brand_id', 'vehicle_model_id']);
     }
 
     public function test_brand_in_use_by_a_vehicle_cannot_be_deleted(): void
@@ -98,9 +99,10 @@ class VehicleBrandAndModelTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $brandId = $this->postJson('/api/v1/app/vehicle-brands', ['code' => 'HINO', 'name' => 'Hino'], $headers)->json('data.id');
+        $modelId = $this->postJson('/api/v1/app/vehicle-models', ['vehicle_brand_id' => $brandId, 'code' => 'DUTRO', 'name' => 'Dutro'], $headers)->json('data.id');
         $this->postJson('/api/v1/app/vehicles', [
             'branch_id' => $branch->id, 'vehicle_category_id' => $category->id,
-            'brand' => 'Hino', 'model' => 'Dutro', 'vehicle_brand_id' => $brandId, 'registration_number' => 'B 9999 XYZ',
+            'vehicle_brand_id' => $brandId, 'vehicle_model_id' => $modelId, 'registration_number' => 'B 9999 XYZ',
         ], $headers)->assertStatus(201);
 
         $this->deleteJson("/api/v1/app/vehicle-brands/{$brandId}", [], $headers)->assertStatus(422);

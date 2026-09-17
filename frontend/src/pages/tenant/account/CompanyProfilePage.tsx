@@ -19,6 +19,7 @@ interface CompanyProfile {
   email: string | null;
   website: string | null;
   logo_url: string | null;
+  workshop_working_days: number | null;
 }
 
 /** G-15: previously a tenant had no self-service way to view or maintain its own company profile. */
@@ -36,6 +37,7 @@ export function CompanyProfilePage() {
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
+  const [workshopWorkingDays, setWorkshopWorkingDays] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
@@ -58,6 +60,7 @@ export function CompanyProfilePage() {
         setEmail(p.email ?? '');
         setWebsite(p.website ?? '');
         setLogoUrl(p.logo_url ?? '');
+        setWorkshopWorkingDays(p.workshop_working_days ? String(p.workshop_working_days) : '');
       })
       .catch((err) => setError(extractApiError(err).message));
   }
@@ -81,6 +84,7 @@ export function CompanyProfilePage() {
         email: email || null,
         website: website || null,
         logo_url: logoUrl || null,
+        workshop_working_days: workshopWorkingDays ? Number(workshopWorkingDays) : null,
       });
       setSaved(true);
       load();
@@ -147,6 +151,23 @@ export function CompanyProfilePage() {
         </FormField>
         <FormField label="Logo URL" errors={errors.logo_url}>
           <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} style={inputStyle} disabled={!canEdit} />
+        </FormField>
+        <FormField label="Workshop Working Days" required errors={errors.workshop_working_days}>
+          <select
+            value={workshopWorkingDays}
+            onChange={(e) => setWorkshopWorkingDays(e.target.value)}
+            style={inputStyle}
+            disabled={!canEdit}
+          >
+            <option value="">Select…</option>
+            <option value="5">5 days (Monday–Friday)</option>
+            <option value="6">6 days (Monday–Saturday)</option>
+            <option value="7">7 days (Monday–Sunday)</option>
+          </select>
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            Drives working-day calculations for Planning &amp; Schedule. Must be completed before a periodic
+            maintenance schedule can be created.
+          </div>
         </FormField>
         {profile.logo_url && <img src={profile.logo_url} alt={profile.name} style={{ maxWidth: 160, marginBottom: 12, borderRadius: 6 }} />}
         {canEdit && (

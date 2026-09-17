@@ -35,6 +35,7 @@ class CompanyProfileController extends Controller
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'logo_url' => ['nullable', 'string', 'max:255'],
+            'workshop_working_days' => ['required', 'integer', 'in:5,6,7'],
         ]);
 
         $tenant = Tenant::query()->findOrFail($this->context->tenantId());

@@ -30,6 +30,7 @@ class CompanyProfileTest extends TestCase
             'email' => 'ops@testfleet.example',
             'website' => 'https://testfleet.example',
             'logo_url' => 'https://files.example/logo.png',
+            'workshop_working_days' => 6,
         ], $headers)->assertOk();
 
         $this->assertSame('PT Test Fleet Indonesia', $update->json('data.legal_name'));
@@ -38,7 +39,27 @@ class CompanyProfileTest extends TestCase
         $this->assertSame('Jakarta Selatan', $update->json('data.city'));
         $this->assertSame('+62-21-5551235', $update->json('data.fax'));
         $this->assertSame('https://files.example/logo.png', $update->json('data.logo_url'));
+        $this->assertSame(6, $update->json('data.workshop_working_days'));
         $this->assertSame($tenant->id, $update->json('data.id'));
+    }
+
+    public function test_workshop_working_days_is_required_and_restricted_to_five_six_or_seven(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'COE-'.Str::random(4)]);
+        [, $token] = $this->makeTenantUser($tenant, ['company.update']);
+        $headers = $this->authHeaders($token);
+
+        $this->putJson('/api/v1/app/account/company', [], $headers)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('workshop_working_days');
+
+        $this->putJson('/api/v1/app/account/company', ['workshop_working_days' => 4], $headers)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('workshop_working_days');
+
+        $this->putJson('/api/v1/app/account/company', ['workshop_working_days' => 7], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.workshop_working_days', 7);
     }
 
     public function test_company_profile_denied_without_permission(): void

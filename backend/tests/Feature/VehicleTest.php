@@ -19,21 +19,35 @@ class VehicleTest extends TestCase
         return [$tenant, $branch, $category];
     }
 
-    public function test_vehicle_crud_works(): void
+    private function setUpTenantWithBrandModel(): array
     {
         [$tenant, $branch, $category] = $this->setUpTenant();
+        $brand = $this->makeVehicleBrand();
+        $model = $this->makeVehicleModel($brand);
+
+        return [$tenant, $branch, $category, $brand, $model];
+    }
+
+    public function test_vehicle_crud_works(): void
+    {
+        [$tenant, $branch, $category, $brand, $model] = $this->setUpTenantWithBrandModel();
         [, $token] = $this->makeTenantUser($tenant, ['vehicle.view', 'vehicle.create', 'vehicle.update']);
 
         $create = $this->postJson('/api/v1/app/vehicles', [
             'branch_id' => $branch->id,
             'vehicle_category_id' => $category->id,
-            'brand' => 'Toyota',
-            'model' => 'Hilux',
+            'vehicle_brand_id' => $brand->id,
+            'vehicle_model_id' => $model->id,
             'registration_number' => 'B 1234 XYZ',
             'current_odometer' => 1000,
         ], $this->authHeaders($token));
         $create->assertStatus(201);
         $id = $create->json('data.id');
+
+        // brand/model text columns (kept for backward compatibility) are derived
+        // server-side from the selected master data, never trusted from the client.
+        $this->assertSame($brand->name, $create->json('data.brand'));
+        $this->assertSame($model->name, $create->json('data.model'));
 
         $this->getJson("/api/v1/app/vehicles/{$id}", $this->authHeaders($token))
             ->assertOk()->assertJsonPath('data.registration_number', 'B 1234 XYZ');
@@ -48,12 +62,12 @@ class VehicleTest extends TestCase
 
     public function test_vehicle_physical_spec_fields_are_optional_and_stored(): void
     {
-        [$tenant, $branch, $category] = $this->setUpTenant();
+        [$tenant, $branch, $category, $brand, $model] = $this->setUpTenantWithBrandModel();
         [, $token] = $this->makeTenantUser($tenant, ['vehicle.view', 'vehicle.create', 'vehicle.update']);
 
         $create = $this->postJson('/api/v1/app/vehicles', [
             'branch_id' => $branch->id, 'vehicle_category_id' => $category->id,
-            'brand' => 'Toyota', 'model' => 'Hilux', 'registration_number' => 'B 5678 ABC',
+            'vehicle_brand_id' => $brand->id, 'vehicle_model_id' => $model->id, 'registration_number' => 'B 5678 ABC',
             'color' => 'White', 'doors' => 4, 'seats' => 5, 'wheel_count' => 6,
         ], $this->authHeaders($token))->assertStatus(201);
 
@@ -74,7 +88,7 @@ class VehicleTest extends TestCase
 
     public function test_registration_number_must_be_unique_per_tenant(): void
     {
-        [$tenant, $branch, $category] = $this->setUpTenant();
+        [$tenant, $branch, $category, $brand, $model] = $this->setUpTenantWithBrandModel();
         [, $token] = $this->makeTenantUser($tenant, ['vehicle.create']);
 
         $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'B 9999 DUP']);
@@ -82,7 +96,7 @@ class VehicleTest extends TestCase
         $response = $this->postJson('/api/v1/app/vehicles', [
             'branch_id' => $branch->id,
             'vehicle_category_id' => $category->id,
-            'brand' => 'Toyota', 'model' => 'Avanza',
+            'vehicle_brand_id' => $brand->id, 'vehicle_model_id' => $model->id,
             'registration_number' => 'B 9999 DUP',
         ], $this->authHeaders($token));
 
@@ -91,7 +105,7 @@ class VehicleTest extends TestCase
 
     public function test_nullable_vin_does_not_collide_across_vehicles(): void
     {
-        [$tenant, $branch, $category] = $this->setUpTenant();
+        [$tenant, $branch, $category, $brand, $model] = $this->setUpTenantWithBrandModel();
         [, $token] = $this->makeTenantUser($tenant, ['vehicle.create']);
 
         $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'B 1', 'vin' => null]);
@@ -99,11 +113,43 @@ class VehicleTest extends TestCase
         $response = $this->postJson('/api/v1/app/vehicles', [
             'branch_id' => $branch->id,
             'vehicle_category_id' => $category->id,
-            'brand' => 'Toyota', 'model' => 'Avanza',
+            'vehicle_brand_id' => $brand->id, 'vehicle_model_id' => $model->id,
             'registration_number' => 'B 2',
         ], $this->authHeaders($token));
 
         $response->assertStatus(201);
+    }
+
+    public function test_vehicle_create_requires_brand_and_model_from_master_data(): void
+    {
+        [$tenant, $branch, $category] = $this->setUpTenant();
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.create']);
+
+        $this->postJson('/api/v1/app/vehicles', [
+            'branch_id' => $branch->id,
+            'vehicle_category_id' => $category->id,
+            'registration_number' => 'B 3',
+        ], $this->authHeaders($token))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['vehicle_brand_id', 'vehicle_model_id']);
+    }
+
+    public function test_vehicle_create_rejects_a_model_that_does_not_belong_to_the_selected_brand(): void
+    {
+        [$tenant, $branch, $category, $brand] = $this->setUpTenantWithBrandModel();
+        $otherBrand = $this->makeVehicleBrand(['code' => 'VB-OTHER']);
+        $mismatchedModel = $this->makeVehicleModel($otherBrand, ['code' => 'VM-OTHER']);
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.create']);
+
+        $this->postJson('/api/v1/app/vehicles', [
+            'branch_id' => $branch->id,
+            'vehicle_category_id' => $category->id,
+            'vehicle_brand_id' => $brand->id,
+            'vehicle_model_id' => $mismatchedModel->id,
+            'registration_number' => 'B 4',
+        ], $this->authHeaders($token))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('vehicle_model_id');
     }
 
     public function test_vehicle_tenant_isolation(): void
@@ -162,6 +208,8 @@ class VehicleTest extends TestCase
         $this->assertCount(1, $history->json('data'));
         $this->assertSame($branchA->id, $history->json('data.0.from_branch_id'));
         $this->assertSame($branchB->id, $history->json('data.0.to_branch_id'));
+        $this->assertSame($branchA->name, $history->json('data.0.from_branch.name'));
+        $this->assertSame($branchB->name, $history->json('data.0.to_branch.name'));
     }
 
     public function test_vehicle_transfer_workflow_end_to_end(): void
@@ -265,5 +313,75 @@ class VehicleTest extends TestCase
         $this->postJson("/api/v1/app/vehicles/{$vehicle->id}/documents", [
             'file' => $file, 'document_type' => 'OTHER',
         ], $this->authHeaders($token))->assertStatus(422);
+    }
+
+    public function test_vehicle_document_can_be_deleted(): void
+    {
+        [$tenant, $branch, $category] = $this->setUpTenant();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category);
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.update', 'vehicle.view']);
+        $headers = $this->authHeaders($token);
+
+        $file = UploadedFile::fake()->image('registration.jpg');
+        $docId = $this->postJson("/api/v1/app/vehicles/{$vehicle->id}/documents", [
+            'file' => $file, 'document_type' => 'REGISTRATION',
+        ], $headers)->json('data.id');
+
+        $this->deleteJson("/api/v1/app/vehicles/{$vehicle->id}/documents/{$docId}", [], $headers)->assertOk();
+        $this->getJson("/api/v1/app/vehicles/{$vehicle->id}/documents/{$docId}", $headers)->assertStatus(404);
+        $this->assertSoftDeleted('vehicle_documents', ['id' => $docId]);
+    }
+
+    public function test_vehicle_photo_can_be_uploaded_and_served_and_replaced(): void
+    {
+        [$tenant, $branch, $category, $brand, $model] = $this->setUpTenantWithBrandModel();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category);
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.update', 'vehicle.view']);
+        $headers = $this->authHeaders($token);
+
+        $first = UploadedFile::fake()->image('front.jpg', 200, 200);
+        $upload = $this->postJson("/api/v1/app/vehicles/{$vehicle->id}/photo", ['file' => $first], $headers)->assertOk();
+        $this->assertTrue($upload->json('data.photo_available'));
+        $this->assertArrayNotHasKey('photo_path', $upload->json('data'));
+        $this->assertArrayNotHasKey('photo_disk', $upload->json('data'));
+
+        $firstPath = $vehicle->fresh()->photo_path;
+        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($firstPath);
+
+        $this->getJson("/api/v1/app/vehicles/{$vehicle->id}/photo", $headers)->assertOk();
+
+        // Replacing the photo stores the new file and removes the old one only
+        // after the vehicle record is updated to point at it.
+        $second = UploadedFile::fake()->image('side.png', 200, 200);
+        $this->postJson("/api/v1/app/vehicles/{$vehicle->id}/photo", ['file' => $second], $headers)->assertOk();
+
+        $secondPath = $vehicle->fresh()->photo_path;
+        $this->assertNotSame($firstPath, $secondPath);
+        \Illuminate\Support\Facades\Storage::disk('local')->assertExists($secondPath);
+        \Illuminate\Support\Facades\Storage::disk('local')->assertMissing($firstPath);
+    }
+
+    public function test_vehicle_photo_upload_rejects_disallowed_mime_type(): void
+    {
+        [$tenant, $branch, $category] = $this->setUpTenant();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category);
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.update']);
+
+        $file = UploadedFile::fake()->create('malware.exe', 10, 'application/x-msdownload');
+        $this->postJson("/api/v1/app/vehicles/{$vehicle->id}/photo", ['file' => $file], $this->authHeaders($token))
+            ->assertStatus(422);
+    }
+
+    public function test_vehicle_photo_is_blocked_outside_data_scope(): void
+    {
+        [$tenant, $branchA, $category] = $this->setUpTenant();
+        $branchB = $this->makeBranch($tenant);
+        $vehicle = $this->makeVehicle($tenant, $branchB, $category);
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.update', 'vehicle.view'], ['BRANCH' => $branchA->id]);
+        $headers = $this->authHeaders($token);
+
+        $file = UploadedFile::fake()->image('front.jpg', 200, 200);
+        $this->postJson("/api/v1/app/vehicles/{$vehicle->id}/photo", ['file' => $file], $headers)->assertStatus(403);
+        $this->getJson("/api/v1/app/vehicles/{$vehicle->id}/photo", $headers)->assertStatus(403);
     }
 }

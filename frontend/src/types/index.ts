@@ -406,6 +406,9 @@ export interface VehicleItem {
   load_weight_kg: string | null;
   wheel_count: number | null;
   photo_url: string | null;
+  photo_mime_type: string | null;
+  photo_size: number | null;
+  photo_available: boolean;
   branch?: Branch;
   default_workshop?: Workshop;
   vehicle_category?: VehicleCategory;
@@ -423,6 +426,8 @@ export interface VehicleAssignmentItem {
   effective_from: string;
   effective_until: string | null;
   notes: string | null;
+  from_branch?: Branch | null;
+  to_branch?: Branch | null;
 }
 
 export interface VehicleTransferItem {
