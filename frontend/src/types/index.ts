@@ -873,6 +873,9 @@ export interface WorkOrderItem {
   completed_at: string | null;
   closed_at: string | null;
   status: 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'ASSIGNED' | 'SCHEDULED' | 'IN_PROGRESS' | 'ON_HOLD' | 'WAITING_PART' | 'EXTERNAL' | 'QC_PENDING' | 'REWORK' | 'COMPLETED' | 'CLOSED' | 'REJECTED' | 'CANCELLED';
+  execution_mode: 'INTERNAL' | 'EXTERNAL';
+  external_finalized_revision: number;
+  cancellation_reason: string | null;
   vehicle?: VehicleItem;
   branch?: Branch;
   workshop?: Workshop;

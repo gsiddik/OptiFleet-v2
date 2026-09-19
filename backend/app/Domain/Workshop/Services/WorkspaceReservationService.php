@@ -2,6 +2,7 @@
 
 namespace App\Domain\Workshop\Services;
 
+use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\Workshop\Models\Workspace;
 use App\Domain\Workshop\Models\WorkspaceReservation;
 use Illuminate\Support\Facades\DB;
@@ -21,6 +22,11 @@ class WorkspaceReservationService
     {
         if ($startAt >= $endAt) {
             throw new WorkshopOpsException('Reservation start must be before its end.');
+        }
+        // Workspace is an internal-workshop-execution capability — never usable for an External
+        // Work Order (Findings-only scope carried out by an external workshop).
+        if ($workOrderId && WorkOrder::query()->where('id', $workOrderId)->value('status') === 'EXTERNAL') {
+            throw new WorkshopOpsException('Workspace reservations are not available for an External Work Order.');
         }
 
         return DB::transaction(function () use ($workspace, $startAt, $endAt, $workOrderId, $createdByUserId) {

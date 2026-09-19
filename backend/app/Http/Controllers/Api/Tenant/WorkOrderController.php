@@ -177,11 +177,6 @@ class WorkOrderController extends Controller
         return $this->act($workOrder, 'waitForPart');
     }
 
-    public function sendExternal(WorkOrder $workOrder)
-    {
-        return $this->act($workOrder, 'sendExternal');
-    }
-
     public function submitToQc(WorkOrder $workOrder)
     {
         return $this->act($workOrder, 'submitToQc');
@@ -216,6 +211,9 @@ class WorkOrderController extends Controller
 
     public function cancel(WorkOrder $workOrder)
     {
+        // EXTERNAL has its own cancel action (mandatory reason) — see ExternalWorkOrderController.
+        abort_if($workOrder->status === 'EXTERNAL', 422, 'Use the External Work Order cancel action, which requires a reason.');
+
         return $this->act($workOrder, 'cancel');
     }
 

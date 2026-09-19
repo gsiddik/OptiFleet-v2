@@ -49,7 +49,13 @@ class PermissionSeeder extends Seeder
             'maintenance_schedule' => ['view', 'manage', 'create', 'convert_work_order', 'convert_maintenance_request'],
             'maintenance_request' => ['view', 'create', 'review', 'approve', 'reject', 'convert_work_order'],
             'breakdown' => ['view', 'report', 'review', 'resolve'],
-            'work_order' => ['view', 'create', 'update', 'submit', 'approve', 'reject', 'assign', 'schedule', 'start', 'pause', 'complete', 'cancel', 'close', 'estimate'],
+            'work_order' => [
+                'view', 'create', 'update', 'submit', 'approve', 'reject', 'assign', 'schedule', 'start', 'pause', 'complete', 'cancel', 'close', 'estimate',
+                // Consolidated External Workshop business rules: kept separate from the generic
+                // actions above so an External Work Order's Findings-only flow (a distinct action
+                // set — prepare/finalize/revise/cancel) can never be granted via the internal ones.
+                'prepare_external', 'finalize_external', 'revise_external', 'cancel_external', 'view_workshop_invoice_reference',
+            ],
             'diagnosis' => ['manage'],
             'maintenance_job' => ['manage'],
             'work_order_external_service' => ['create', 'complete', 'cancel'],

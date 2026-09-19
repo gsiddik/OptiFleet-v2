@@ -80,6 +80,7 @@ use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
 use App\Http\Controllers\Api\Tenant\WarrantyController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
 use App\Http\Controllers\Api\Tenant\WorkerController;
+use App\Http\Controllers\Api\Tenant\ExternalWorkOrderController;
 use App\Http\Controllers\Api\Tenant\WorkOrderController;
 use App\Http\Controllers\Api\Tenant\WorkOrderExecutionController;
 use App\Http\Controllers\Api\Tenant\WorkOrderExternalServiceController;
@@ -273,9 +274,19 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/hold', [WorkOrderController::class, 'hold'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/resume', [WorkOrderController::class, 'resume'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/wait-for-part', [WorkOrderController::class, 'waitForPart'])->middleware('permission:work_order.pause');
-            Route::post('/work-orders/{workOrder}/external', [WorkOrderController::class, 'sendExternal'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/findings', [WorkOrderExecutionController::class, 'addFinding'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/findings/{finding}/resolve', [WorkOrderExecutionController::class, 'resolveFinding'])->middleware('permission:diagnosis.manage');
+
+            // Consolidated External Workshop business rules — deliberately separate from the
+            // internal-workshop execution routes above (Findings-only scope, own permission set).
+            Route::post('/work-orders/{workOrder}/execution-mode/external', [ExternalWorkOrderController::class, 'markExternalMode'])->middleware('permission:work_order.prepare_external');
+            Route::post('/work-orders/{workOrder}/external-findings', [ExternalWorkOrderController::class, 'addFinding'])->middleware('permission:work_order.prepare_external');
+            Route::put('/work-orders/{workOrder}/external-findings/{finding}', [ExternalWorkOrderController::class, 'updateFinding'])->middleware('permission:work_order.prepare_external');
+            Route::delete('/work-orders/{workOrder}/external-findings/{finding}', [ExternalWorkOrderController::class, 'deleteFinding'])->middleware('permission:work_order.prepare_external');
+            Route::post('/work-orders/{workOrder}/external', [ExternalWorkOrderController::class, 'finalize'])->middleware('permission:work_order.finalize_external');
+            Route::post('/work-orders/{workOrder}/external/revise', [ExternalWorkOrderController::class, 'revise'])->middleware('permission:work_order.revise_external');
+            Route::post('/work-orders/{workOrder}/external/cancel', [ExternalWorkOrderController::class, 'cancel'])->middleware('permission:work_order.cancel_external');
+            Route::get('/external-work-order-references', [ExternalWorkOrderController::class, 'referenceIndex'])->middleware('permission:work_order.view_workshop_invoice_reference');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/corrective-actions', [WorkOrderExecutionController::class, 'addCorrectiveAction'])->middleware('permission:diagnosis.manage');

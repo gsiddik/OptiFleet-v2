@@ -29,7 +29,7 @@ class WorkOrder extends Model
         'estimated_labor_cost', 'estimated_parts_cost', 'estimated_total_cost', 'estimated_by', 'estimated_at',
         'target_start_at', 'target_completion_at', 'started_at', 'completed_at', 'closed_at',
         'result_summary', 'result_recorded_by', 'result_recorded_at',
-        'status', 'created_by',
+        'status', 'execution_mode', 'external_finalized_revision', 'cancellation_reason', 'created_by',
     ];
 
     protected $casts = [
@@ -115,5 +115,10 @@ class WorkOrder extends Model
     public function maintenanceRequest(): BelongsTo
     {
         return $this->belongsTo(MaintenanceRequest::class);
+    }
+
+    public function externalReference(): HasOne
+    {
+        return $this->hasOne(WorkOrderExternalReference::class);
     }
 }

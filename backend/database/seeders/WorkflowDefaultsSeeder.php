@@ -83,26 +83,29 @@ class WorkflowDefaultsSeeder extends Seeder
                     $this->status('ASSIGNED'), $this->status('SCHEDULED'), $this->status('IN_PROGRESS'), $this->status('QC_PENDING'),
                     $this->status('ON_HOLD'), $this->status('WAITING_PART'), $this->status('REWORK'), $this->status('COMPLETED'),
                     $this->status('CLOSED'), $this->status('CANCELLED'),
-                    // EXTERNAL: the work is being carried out by an external workshop, a top-level
-                    // status parallel to IN_PROGRESS (not a sub-state of it and not the separate
+                    // EXTERNAL: a finalized External Work Order (Findings-only scope, carried out by
+                    // an external workshop) — reachable only from DRAFT, never from SCHEDULED/
+                    // IN_PROGRESS. Not a sub-state of IN_PROGRESS and not the separate
                     // WorkOrderExternalService towing/3rd-party-invoicing sub-resource, which is
-                    // unrelated). Existing print/PDF export is reused to hand this WO's data to the
-                    // external workshop — no separate send mechanism was added for that.
+                    // unrelated. See ExternalWorkOrderService for the Findings/finalize/revise/cancel
+                    // rules the workflow engine alone cannot express.
                     $this->status('EXTERNAL'),
                 ],
                 'transitions' => [
                     $this->transition('DRAFT', 'SUBMITTED'), $this->transition('DRAFT', 'CANCELLED'),
+                    // Finalizing a Findings-only Draft into an External Work Order (ExternalWorkOrderService
+                    // additionally requires execution_mode=EXTERNAL and >=1 Finding before allowing this).
+                    $this->transition('DRAFT', 'EXTERNAL'),
                     $this->transition('SUBMITTED', 'APPROVED'), $this->transition('SUBMITTED', 'REJECTED'), $this->transition('SUBMITTED', 'CANCELLED'),
                     $this->transition('APPROVED', 'ASSIGNED'), $this->transition('APPROVED', 'CANCELLED'),
                     $this->transition('ASSIGNED', 'SCHEDULED'), $this->transition('ASSIGNED', 'CANCELLED'),
-                    $this->transition('SCHEDULED', 'IN_PROGRESS'), $this->transition('SCHEDULED', 'EXTERNAL'), $this->transition('SCHEDULED', 'CANCELLED'),
+                    $this->transition('SCHEDULED', 'IN_PROGRESS'), $this->transition('SCHEDULED', 'CANCELLED'),
                     $this->transition('IN_PROGRESS', 'QC_PENDING'), $this->transition('IN_PROGRESS', 'ON_HOLD'),
-                    $this->transition('IN_PROGRESS', 'WAITING_PART'), $this->transition('IN_PROGRESS', 'EXTERNAL'), $this->transition('IN_PROGRESS', 'CANCELLED'),
+                    $this->transition('IN_PROGRESS', 'WAITING_PART'), $this->transition('IN_PROGRESS', 'CANCELLED'),
                     $this->transition('ON_HOLD', 'IN_PROGRESS'), $this->transition('ON_HOLD', 'CANCELLED'),
                     $this->transition('WAITING_PART', 'IN_PROGRESS'), $this->transition('WAITING_PART', 'CANCELLED'),
-                    // EXTERNAL exits mirror IN_PROGRESS's own: resume in-house work, or the external
-                    // workshop finished the job outright and it goes straight to QC like any other WO.
-                    $this->transition('EXTERNAL', 'IN_PROGRESS'), $this->transition('EXTERNAL', 'QC_PENDING'), $this->transition('EXTERNAL', 'CANCELLED'),
+                    // EXTERNAL: only Revise (back to Draft, re-finalizable) and Cancel — no other exit.
+                    $this->transition('EXTERNAL', 'DRAFT'), $this->transition('EXTERNAL', 'CANCELLED'),
                     $this->transition('QC_PENDING', 'COMPLETED'), $this->transition('QC_PENDING', 'REWORK'),
                     $this->transition('REWORK', 'IN_PROGRESS'), // intentional loop back into the main flow
                     $this->transition('COMPLETED', 'CLOSED'),

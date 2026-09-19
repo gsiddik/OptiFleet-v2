@@ -15,15 +15,21 @@ import type {
   PartnerItem,
   QcInspectionItem,
   WorkerItem,
+  WorkOrderFindingItem,
   WorkOrderItem,
   WorkspaceItem,
 } from '../../../types';
 
-const TABS = [
+const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
   'Planned Parts', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
 ] as const;
-type Tab = (typeof TABS)[number];
+// Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
+// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Workspace,
+// QC, Road Test) is hidden, not just its actions. "External Services" here is the separate towing/
+// 3rd-party-invoicing sub-resource (WorkOrderExternalService) and stays available either way.
+const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'External Services', 'Documents', 'History', 'Audit'] as const;
+type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'work_order.submit', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
@@ -72,6 +78,9 @@ export function WorkOrderDetailPage() {
   const [showSchedule, setShowSchedule] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [printing, setPrinting] = useState(false);
+  const [showReviseConfirm, setShowReviseConfirm] = useState(false);
+  const [showCancelExternal, setShowCancelExternal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   function load() {
     apiClient
@@ -120,10 +129,71 @@ export function WorkOrderDetailPage() {
     }
   }
 
+  async function markExternalWorkshop() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${id}/execution-mode/external`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finalizeExternal() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${id}/external`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function reviseExternal() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${id}/external/revise`);
+      setShowReviseConfirm(false);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancelExternal() {
+    if (!cancelReason.trim()) {
+      setError('A cancellation reason is required.');
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${id}/external/cancel`, { reason: cancelReason });
+      setShowCancelExternal(false);
+      setCancelReason('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (error && !wo) return <ErrorState message={error} />;
   if (!wo) return <LoadingState />;
 
-  const actions = (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission));
+  const isExternalMode = wo.execution_mode === 'EXTERNAL';
+  const visibleTabs: readonly Tab[] = isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS;
+  const actions = isExternalMode ? [] : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
     <div>
@@ -134,23 +204,104 @@ export function WorkOrderDetailPage() {
         </h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusBadge status={wo.status} />
+          {isExternalMode && (
+            <span style={{ fontSize: 12, color: '#6b7280' }}>
+              External · Rev {wo.external_finalized_revision || '—'}
+            </span>
+          )}
           {hasPermission('work_order.view') && (
             <button className="btn-secondary" disabled={printing} onClick={printWorkOrder}>
               {printing ? 'Loading…' : 'Print'}
             </button>
           )}
-          {actions.map((a) => (
-            <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
-              {a.label}
+          {!isExternalMode && wo.status === 'DRAFT' && hasPermission('work_order.prepare_external') && (
+            <button className="btn-secondary" disabled={busy} onClick={markExternalWorkshop}>
+              Select External Workshop
             </button>
-          ))}
+          )}
+          {isExternalMode && wo.status === 'DRAFT' && hasPermission('work_order.finalize_external') && (
+            <button
+              className="btn-primary"
+              disabled={busy || (wo.findings?.length ?? 0) < 1}
+              title={(wo.findings?.length ?? 0) < 1 ? 'At least one Finding is required before finalizing.' : undefined}
+              onClick={finalizeExternal}
+            >
+              External Workshop
+            </button>
+          )}
+          {isExternalMode && wo.status === 'DRAFT' && hasPermission('work_order.cancel') && (
+            <button className="btn-secondary" disabled={busy} onClick={() => act('cancel')}>
+              Cancel
+            </button>
+          )}
+          {isExternalMode && wo.status === 'EXTERNAL' && hasPermission('work_order.revise_external') && (
+            <button className="btn-secondary" disabled={busy} onClick={() => setShowReviseConfirm(true)}>
+              Revise
+            </button>
+          )}
+          {isExternalMode && wo.status === 'EXTERNAL' && hasPermission('work_order.cancel_external') && (
+            <button className="btn-secondary" disabled={busy} onClick={() => setShowCancelExternal(true)}>
+              Cancel
+            </button>
+          )}
+          {!isExternalMode &&
+            actions.map((a) => (
+              <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
+                {a.label}
+              </button>
+            ))}
         </div>
       </div>
+
+      {isExternalMode && wo.status === 'DRAFT' && (wo.findings?.length ?? 0) < 1 && (
+        <p style={{ fontSize: 13, color: '#b45309', marginTop: -8, marginBottom: 16 }}>
+          Add at least one Finding on the Findings tab before this Work Order can be finalized as External.
+        </p>
+      )}
+
+      {wo.status === 'CANCELLED' && wo.cancellation_reason && (
+        <p style={{ fontSize: 13, color: '#6b7280', marginTop: -8, marginBottom: 16 }}>
+          <strong>Cancellation reason:</strong> {wo.cancellation_reason}
+        </p>
+      )}
+
+      <Modal open={showReviseConfirm} title="Revise External Work Order" onClose={() => setShowReviseConfirm(false)}>
+        <p style={{ fontSize: 13 }}>
+          This returns the Work Order to Draft so its Findings can be edited. The current finalized revision
+          (Rev {wo.external_finalized_revision}) is preserved in history. Continue?
+        </p>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button className="btn-secondary" onClick={() => setShowReviseConfirm(false)} disabled={busy}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={reviseExternal} disabled={busy}>
+            Revise
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={showCancelExternal} title="Cancel External Work Order" onClose={() => setShowCancelExternal(false)}>
+        <p style={{ fontSize: 13 }}>This cannot be undone. A cancellation reason is required.</p>
+        <textarea
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          placeholder="Cancellation reason (required)"
+          style={{ width: '100%', minHeight: 70, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+        />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button className="btn-secondary" onClick={() => setShowCancelExternal(false)} disabled={busy}>
+            Back
+          </button>
+          <button className="btn-primary" onClick={cancelExternal} disabled={busy}>
+            Confirm Cancel
+          </button>
+        </div>
+      </Modal>
 
       {error && <ErrorState message={error} />}
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
-        {TABS.map((t) => (
+        {visibleTabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -179,6 +330,7 @@ export function WorkOrderDetailPage() {
       {tab === 'Workspace' && <WorkspaceTab wo={wo} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
       {tab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
+      {tab === 'Findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
       {tab === 'External Services' && <ExternalServicesTab wo={wo} onChanged={load} />}
       {tab === 'Documents' && <DocumentsTab />}
       {tab === 'History' && <HistoryTab vehicleId={wo.vehicle_id} />}
@@ -441,6 +593,138 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Consolidated External Workshop business rules: Findings are the ONLY
+ * scope-of-work data for an External Work Order. Add/edit/delete are only
+ * permitted while status=DRAFT (findings become an immutable finalized
+ * snapshot once EXTERNAL) — enforced server-side regardless of what this
+ * component renders.
+ */
+function ExternalFindingsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [severity, setSeverity] = useState('MEDIUM');
+  const [description, setDescription] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDescription, setEditDescription] = useState('');
+  const [editSeverity, setEditSeverity] = useState('MEDIUM');
+
+  const editable = wo.status === 'DRAFT' && hasPermission('work_order.prepare_external');
+
+  async function addFinding() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/external-findings`, { severity, description });
+      setDescription('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(f: WorkOrderFindingItem) {
+    setEditingId(f.id);
+    setEditDescription(f.description);
+    setEditSeverity(f.severity);
+  }
+
+  async function saveEdit(findingId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.put(`/app/work-orders/${wo.id}/external-findings/${findingId}`, {
+        description: editDescription,
+        severity: editSeverity,
+      });
+      setEditingId(null);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteFinding(findingId: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/external-findings/${findingId}`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Findings (External Scope of Work)</h3>
+      {error && <ErrorState message={error} />}
+      {(wo.findings ?? []).length === 0 && <EmptyState label="No findings recorded." />}
+      {(wo.findings ?? []).map((f) => (
+        <div key={f.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          {editingId === f.id ? (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <select value={editSeverity} onChange={(e) => setEditSeverity(e.target.value)} style={{ ...inputStyle, width: 140 }}>
+                {['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+              <input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} style={inputStyle} />
+              <button className="btn-primary" disabled={busy} onClick={() => saveEdit(f.id)}>
+                Save
+              </button>
+              <button className="btn-secondary" disabled={busy} onClick={() => setEditingId(null)}>
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+              <StatusBadge status={f.severity} />
+              <span style={{ flex: 1 }}>{f.description}</span>
+              {editable && (
+                <>
+                  <button className="btn-secondary" disabled={busy} onClick={() => startEdit(f)}>
+                    Edit
+                  </button>
+                  <button className="btn-secondary" disabled={busy} onClick={() => deleteFinding(f.id)}>
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+      {editable ? (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+          <select value={severity} onChange={(e) => setSeverity(e.target.value)} style={{ ...inputStyle, width: 140 }}>
+            {['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <input placeholder="Finding description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
+          <button className="btn-secondary" disabled={busy || !description} onClick={addFinding}>
+            Add Finding
+          </button>
+        </div>
+      ) : (
+        wo.status !== 'DRAFT' && <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 12 }}>Findings are read-only once finalized.</p>
+      )}
     </div>
   );
 }
