@@ -102,6 +102,28 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderMechanicAssignment::class);
     }
 
+    /**
+     * Computed suggestion only — sums each Job's estimated_labor_cost_computed
+     * (estimated_hours x its PRIMARY mechanic's snapshotted hourly rate).
+     * Distinct from `estimated_labor_cost`, which remains the
+     * manually-entered figure WorkOrderService::estimate() persists; this
+     * never overwrites it, so existing manual-estimate behavior is
+     * unchanged.
+     */
+    public function computedEstimatedLaborCost(): ?string
+    {
+        $total = null;
+        foreach ($this->jobs as $job) {
+            $jobCost = $job->estimated_labor_cost_computed;
+            if ($jobCost === null) {
+                continue;
+            }
+            $total = ($total === null ? \Brick\Math\BigDecimal::of($jobCost) : $total->plus(\Brick\Math\BigDecimal::of($jobCost)));
+        }
+
+        return $total !== null ? (string) $total->toScale(4, \Brick\Math\RoundingMode::HALF_UP) : null;
+    }
+
     public function roadTests(): HasMany
     {
         return $this->hasMany(RoadTest::class);

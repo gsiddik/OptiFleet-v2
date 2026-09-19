@@ -462,6 +462,7 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Priority', wo.priority],
     ['Current Odometer', wo.current_odometer ?? '—'],
     ['Estimated Labor Cost', wo.estimated_labor_cost ?? '—'],
+    ['Estimated Labor Cost (computed from Jobs)', wo.estimated_labor_cost_computed ?? '—'],
     ['Estimated Parts Cost', wo.estimated_parts_cost ?? '—'],
     ['Estimated Total Cost', wo.estimated_total_cost ?? '—'],
     ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
@@ -870,6 +871,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
               <strong>{j.service_item ?? 'Job'}</strong> — {j.description}
               <div style={{ color: '#6b7280' }}>
                 Est. {j.estimated_hours ?? '—'}h / Actual {j.actual_hours ?? '—'}h
+                {j.estimated_labor_cost_computed && ` · Est. Labor Cost: ${j.estimated_labor_cost_computed}`}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -987,6 +989,7 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           <div key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
             <span>
               {a.worker?.name ?? a.worker_id} — {a.role} {a.maintenance_job_id ? '(job-specific)' : '(WO-wide)'}
+              {a.hourly_rate_snapshot && ` · Rate at assignment: ${a.hourly_rate_snapshot}/hr`}
             </span>
             {canAssign && !a.unassigned_at && (
               <button className="btn-secondary" disabled={busy} onClick={() => unassign(a.id)}>

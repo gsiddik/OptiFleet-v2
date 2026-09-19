@@ -12,9 +12,9 @@ class WorkOrderMechanicAssignment extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['work_order_id', 'maintenance_job_id', 'worker_id', 'role', 'assigned_at', 'assigned_by', 'unassigned_at'];
+    protected $fillable = ['work_order_id', 'maintenance_job_id', 'worker_id', 'role', 'hourly_rate_snapshot', 'assigned_at', 'assigned_by', 'unassigned_at'];
 
-    protected $casts = ['assigned_at' => 'datetime', 'unassigned_at' => 'datetime'];
+    protected $casts = ['hourly_rate_snapshot' => 'decimal:4', 'assigned_at' => 'datetime', 'unassigned_at' => 'datetime'];
 
     public function workOrder(): BelongsTo
     {

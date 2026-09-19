@@ -701,6 +701,7 @@ export interface MaintenanceJobItem {
   actual_hours: string | null;
   status: 'PENDING' | 'ASSIGNED' | 'IN_PROGRESS' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED';
   assigned_mechanic: string | null;
+  estimated_labor_cost_computed: string | null;
   labor_logs?: WorkOrderLaborLogItem[];
 }
 
@@ -842,6 +843,7 @@ export interface WorkOrderMechanicAssignmentItem {
   maintenance_job_id: string | null;
   worker_id: string;
   role: 'PRIMARY' | 'ASSISTANT';
+  hourly_rate_snapshot: string | null;
   assigned_at: string;
   unassigned_at: string | null;
   worker?: WorkerItem;
@@ -876,6 +878,7 @@ export interface WorkOrderItem {
   execution_mode: 'INTERNAL' | 'EXTERNAL';
   external_finalized_revision: number;
   cancellation_reason: string | null;
+  estimated_labor_cost_computed?: string | null;
   vehicle?: VehicleItem;
   branch?: Branch;
   workshop?: Workshop;

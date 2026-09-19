@@ -40,6 +40,10 @@ class MechanicAssignmentService
                 'maintenance_job_id' => $jobId,
                 'worker_id' => $worker->id,
                 'role' => $role,
+                // Snapshotted at assignment time so a later rate change never retroactively
+                // changes the cost basis of already-assigned work (same pattern as
+                // work_order_planned_parts.unit_cost_at_issue).
+                'hourly_rate_snapshot' => $worker->hourly_rate,
                 'assigned_at' => now(),
                 'assigned_by' => $assignedByUserId,
             ]);
