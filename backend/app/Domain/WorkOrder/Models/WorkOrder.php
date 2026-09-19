@@ -11,6 +11,7 @@ use App\Domain\Shared\Concerns\BelongsToTenant;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\VehicleRelease\Models\VehicleRelease;
 use App\Domain\Workshop\Models\WorkOrderMechanicAssignment;
+use App\Domain\Workshop\Models\WorkspaceReservation;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -100,6 +101,11 @@ class WorkOrder extends Model
     public function mechanicAssignments(): HasMany
     {
         return $this->hasMany(WorkOrderMechanicAssignment::class);
+    }
+
+    public function workspaceReservations(): HasMany
+    {
+        return $this->hasMany(WorkspaceReservation::class)->orderByDesc('start_at');
     }
 
     /**

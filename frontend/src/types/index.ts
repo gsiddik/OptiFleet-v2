@@ -892,6 +892,7 @@ export interface WorkOrderItem {
   road_tests?: RoadTestItem[];
   vehicle_release?: VehicleReleaseItem | null;
   external_services?: WorkOrderExternalServiceItem[];
+  workspace_reservations?: WorkspaceReservationItem[];
 }
 
 export interface WorkerSkillItem {

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\Workshop\Models\Workspace;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -133,5 +134,40 @@ class WorkspaceReservationTest extends TestCase
         $this->postJson('/api/v1/app/workspace-reservations', [
             'workspace_id' => $workspace->id, 'start_at' => $start->toIso8601String(), 'end_at' => $start->copy()->addHours(2)->toIso8601String(),
         ], $headers)->assertStatus(201);
+    }
+
+    public function test_index_can_be_filtered_by_work_order_id(): void
+    {
+        [$tenant, $branch, $workshop] = $this->setUpWorkshop();
+        $category = $this->makeVehicleCategory();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category, ['default_workshop_id' => $workshop->id]);
+        $workspace = Workspace::query()->create([
+            'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
+            'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
+        ]);
+        $workOrder = WorkOrder::query()->create([
+            'tenant_id' => $tenant->id, 'branch_id' => $branch->id, 'workshop_id' => $workshop->id, 'vehicle_id' => $vehicle->id,
+            'wo_number' => 'WO-FILTER-1', 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM', 'status' => 'DRAFT',
+        ]);
+        $otherWorkOrder = WorkOrder::query()->create([
+            'tenant_id' => $tenant->id, 'branch_id' => $branch->id, 'workshop_id' => $workshop->id, 'vehicle_id' => $vehicle->id,
+            'wo_number' => 'WO-FILTER-2', 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM', 'status' => 'DRAFT',
+        ]);
+
+        [, $token] = $this->makeTenantUser($tenant, ['workspace.view', 'workspace.reserve']);
+        $headers = $this->authHeaders($token);
+
+        $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id, 'work_order_id' => $workOrder->id,
+            'start_at' => now()->addHour()->toIso8601String(), 'end_at' => now()->addHours(2)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+        $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id, 'work_order_id' => $otherWorkOrder->id,
+            'start_at' => now()->addHours(3)->toIso8601String(), 'end_at' => now()->addHours(4)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+
+        $filtered = $this->getJson("/api/v1/app/workspace-reservations?work_order_id={$workOrder->id}", $headers)->assertOk();
+        $this->assertCount(1, $filtered->json('data'));
+        $this->assertSame($workOrder->id, $filtered->json('data.0.work_order_id'));
     }
 }

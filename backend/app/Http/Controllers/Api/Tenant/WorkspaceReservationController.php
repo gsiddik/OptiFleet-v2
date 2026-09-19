@@ -32,6 +32,9 @@ class WorkspaceReservationController extends Controller
         if ($workspaceId = $request->string('workspace_id')->value()) {
             $query->where('workspace_id', $workspaceId);
         }
+        if ($workOrderId = $request->string('work_order_id')->value()) {
+            $query->where('work_order_id', $workOrderId);
+        }
         if ($workshopId = $request->string('workshop_id')->value()) {
             $query->whereHas('workspace', fn ($q) => $q->where('workshop_id', $workshopId));
         }

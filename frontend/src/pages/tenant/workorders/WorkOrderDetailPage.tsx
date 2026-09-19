@@ -18,6 +18,7 @@ import type {
   WorkOrderFindingItem,
   WorkOrderItem,
   WorkspaceItem,
+  WorkspaceReservationItem,
 } from '../../../types';
 
 const INTERNAL_TABS = [
@@ -327,7 +328,7 @@ export function WorkOrderDetailPage() {
       {tab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
       {tab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
       {tab === 'Planned Parts' && <PlannedPartsTab wo={wo} onChanged={load} />}
-      {tab === 'Workspace' && <WorkspaceTab wo={wo} />}
+      {tab === 'Workspace' && <WorkspaceTab wo={wo} onChanged={load} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
       {tab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
       {tab === 'Findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
@@ -1264,14 +1265,75 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   );
 }
 
-function WorkspaceTab({ wo }: { wo: WorkOrderItem }) {
+function WorkspaceTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const reservations: WorkspaceReservationItem[] = wo.workspace_reservations ?? [];
+  const canManage = hasPermission('workspace.reserve');
+
+  async function act(id: string, action: 'activate' | 'complete' | 'cancel') {
+    setBusyId(id);
+    setError(null);
+    try {
+      await apiClient.post(`/app/workspace-reservations/${id}/${action}`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Assigned Workspace</h3>
-      {wo.workspace_id ? (
-        <p style={{ fontSize: 13 }}>Workspace assigned via Schedule action (id: {wo.workspace_id}). See Workshop Operations &gt; Scheduler for the bay calendar.</p>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Workspace Reservations</h3>
+      {error && <ErrorState message={error} />}
+      {reservations.length === 0 ? (
+        <EmptyState label="No workspace reserved yet. Use the Schedule action to assign one." />
       ) : (
-        <EmptyState label="No workspace assigned yet. Use the Schedule action to assign one." />
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
+              <th style={{ padding: '6px 4px' }}>Workspace</th>
+              <th style={{ padding: '6px 4px' }}>Start</th>
+              <th style={{ padding: '6px 4px' }}>End</th>
+              <th style={{ padding: '6px 4px' }}>Status</th>
+              {canManage && <th style={{ padding: '6px 4px' }} />}
+            </tr>
+          </thead>
+          <tbody>
+            {reservations.map((r) => (
+              <tr key={r.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
+                <td style={{ padding: '6px 4px' }}>{r.workspace?.name ?? r.workspace_id} {r.workspace?.code ? `(${r.workspace.code})` : ''}</td>
+                <td style={{ padding: '6px 4px' }}>{new Date(r.start_at).toLocaleString()}</td>
+                <td style={{ padding: '6px 4px' }}>{new Date(r.end_at).toLocaleString()}</td>
+                <td style={{ padding: '6px 4px' }}><StatusBadge status={r.status} /></td>
+                {canManage && (
+                  <td style={{ padding: '6px 4px' }}>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {r.status === 'RESERVED' && (
+                        <>
+                          <button className="btn-secondary" disabled={busyId === r.id} onClick={() => act(r.id, 'activate')}>
+                            Activate
+                          </button>
+                          <button className="btn-secondary" disabled={busyId === r.id} onClick={() => act(r.id, 'cancel')}>
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                      {r.status === 'ACTIVE' && (
+                        <button className="btn-secondary" disabled={busyId === r.id} onClick={() => act(r.id, 'complete')}>
+                          Complete
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

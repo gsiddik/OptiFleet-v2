@@ -100,7 +100,7 @@ class WorkOrderController extends Controller
         $workOrder->load([
             'vehicle', 'branch', 'workshop', 'findings', 'diagnoses', 'correctiveActions',
             'jobs.laborLogs', 'jobs.primaryAssignment', 'plannedParts.product', 'plannedParts.warehouse', 'additionalWorks', 'mechanicAssignments.worker',
-            'roadTests', 'vehicleRelease', 'externalServices.partner',
+            'roadTests', 'vehicleRelease', 'externalServices.partner', 'workspaceReservations.workspace',
         ]);
         // Computed suggestion only, scoped to this single-record response (never appended
         // globally — a list endpoint appending it to every row would N+1 across the page).

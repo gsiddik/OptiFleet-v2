@@ -61,6 +61,32 @@ class WorkOrderTest extends TestCase
         $this->assertSame($numbers, array_unique($numbers));
     }
 
+    public function test_show_exposes_workspace_reservations(): void
+    {
+        [$tenant, , $workshop, $vehicle] = $this->setUpTenant();
+        $this->grantModule($tenant, 'WORKSHOP');
+        $permissions = array_merge($this->fullPermissions(), ['workspace.view', 'workspace.reserve']);
+        [, $token] = $this->makeTenantUser($tenant, $permissions);
+        $headers = $this->authHeaders($token);
+
+        $woId = $this->postJson('/api/v1/app/work-orders', [
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+        ], $headers)->assertStatus(201)->json('data.id');
+
+        $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
+            'tenant_id' => $tenant->id, 'workshop_id' => $workshop->id, 'code' => 'BAY-1', 'name' => 'Bay 1',
+            'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
+        ]);
+        $this->postJson('/api/v1/app/workspace-reservations', [
+            'workspace_id' => $workspace->id, 'work_order_id' => $woId,
+            'start_at' => now()->addHour()->toIso8601String(), 'end_at' => now()->addHours(2)->toIso8601String(),
+        ], $headers)->assertStatus(201);
+
+        $show = $this->getJson("/api/v1/app/work-orders/{$woId}", $headers)->assertOk();
+        $this->assertCount(1, $show->json('data.workspace_reservations'));
+        $this->assertSame($workspace->id, $show->json('data.workspace_reservations.0.workspace_id'));
+    }
+
     public function test_work_order_full_transition_chain(): void
     {
         [$tenant, , $workshop, $vehicle] = $this->setUpTenant();
