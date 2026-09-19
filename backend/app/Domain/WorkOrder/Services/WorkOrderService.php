@@ -202,6 +202,12 @@ class WorkOrderService
         return $this->transitions->transition($workOrder, 'WAITING_PART');
     }
 
+    /** EXTERNAL: work is being carried out by an external workshop (reachable from SCHEDULED or IN_PROGRESS). */
+    public function sendExternal(WorkOrder $workOrder): WorkOrder
+    {
+        return $this->transitions->transition($workOrder, 'EXTERNAL');
+    }
+
     public function submitToQc(WorkOrder $workOrder): WorkOrder
     {
         return $this->transitions->transition($workOrder, 'QC_PENDING');

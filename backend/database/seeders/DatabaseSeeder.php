@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             ConfigurationDefaultsSeeder::class,
             WorkflowDefaultsSeeder::class,
             RetireMaintenanceRequestNeedInformationSeeder::class,
+            AddWorkOrderExternalStatusSeeder::class,
             NotificationDefaultsSeeder::class,
             MasterDataSeeder::class,
             DemoDataSeeder::class,

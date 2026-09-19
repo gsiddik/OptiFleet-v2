@@ -34,15 +34,28 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   ],
   APPROVED: [{ action: 'assign', label: 'Assign', permission: 'work_order.assign', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   ASSIGNED: [{ action: 'schedule', label: 'Schedule', permission: 'work_order.schedule', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
-  SCHEDULED: [{ action: 'start', label: 'Start', permission: 'work_order.start', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
+  SCHEDULED: [
+    { action: 'start', label: 'Start', permission: 'work_order.start', primary: true },
+    { action: 'external', label: 'Send External', permission: 'work_order.pause' },
+    { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
+  ],
   IN_PROGRESS: [
     { action: 'hold', label: 'Hold', permission: 'work_order.pause' },
-    { action: 'waitForPart', label: 'Wait for Part', permission: 'work_order.pause' },
-    { action: 'submitToQc', label: 'Submit to QC', permission: 'work_order.complete', primary: true },
+    { action: 'wait-for-part', label: 'Wait for Part', permission: 'work_order.pause' },
+    { action: 'external', label: 'Send External', permission: 'work_order.pause' },
+    { action: 'submit-to-qc', label: 'Submit to QC', permission: 'work_order.complete', primary: true },
     { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
   ],
   ON_HOLD: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   WAITING_PART: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
+  // EXTERNAL: work is being carried out by an external workshop (a top-level status parallel to
+  // IN_PROGRESS, not the separate WorkOrderExternalService towing sub-resource on this same page).
+  // Existing Print (see header) already covers handing this WO's data to the external workshop.
+  EXTERNAL: [
+    { action: 'resume', label: 'Resume In-House', permission: 'work_order.pause', primary: true },
+    { action: 'submit-to-qc', label: 'Submit to QC', permission: 'work_order.complete' },
+    { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
+  ],
   REWORK: [{ action: 'resume', label: 'Resume to In Progress', permission: 'work_order.pause', primary: true }],
   /** G-03: previously nothing in the UI could ever invoke this transition — a WO reaching QC_PENDING had no path to COMPLETED at all. */
   QC_PENDING: [{ action: 'complete', label: 'Complete', permission: 'work_order.complete', primary: true }],

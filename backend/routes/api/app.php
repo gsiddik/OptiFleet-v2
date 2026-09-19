@@ -273,6 +273,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/hold', [WorkOrderController::class, 'hold'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/resume', [WorkOrderController::class, 'resume'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/wait-for-part', [WorkOrderController::class, 'waitForPart'])->middleware('permission:work_order.pause');
+            Route::post('/work-orders/{workOrder}/external', [WorkOrderController::class, 'sendExternal'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/findings', [WorkOrderExecutionController::class, 'addFinding'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/findings/{finding}/resolve', [WorkOrderExecutionController::class, 'resolveFinding'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');

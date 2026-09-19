@@ -77,7 +77,7 @@ class DashboardController extends Controller
             $woQuery = WorkOrder::query();
             $this->scope->applyWorkshopScope($woQuery, $user, $tenantId, 'workshop_id');
             $data['work_orders_active'] = (clone $woQuery)
-                ->whereIn('status', ['SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'])
+                ->whereIn('status', ['SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'EXTERNAL', 'REWORK'])
                 ->count();
             $data['work_orders_pending_qc'] = (clone $woQuery)->where('status', 'QC_PENDING')->count();
         }

@@ -177,6 +177,11 @@ class WorkOrderController extends Controller
         return $this->act($workOrder, 'waitForPart');
     }
 
+    public function sendExternal(WorkOrder $workOrder)
+    {
+        return $this->act($workOrder, 'sendExternal');
+    }
+
     public function submitToQc(WorkOrder $workOrder)
     {
         return $this->act($workOrder, 'submitToQc');

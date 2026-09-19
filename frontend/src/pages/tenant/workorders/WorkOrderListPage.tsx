@@ -13,7 +13,7 @@ import type { WorkOrderItem } from '../../../types';
 
 const STATUSES = [
   '', 'DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS',
-  'ON_HOLD', 'WAITING_PART', 'QC_PENDING', 'REWORK', 'COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED',
+  'ON_HOLD', 'WAITING_PART', 'EXTERNAL', 'QC_PENDING', 'REWORK', 'COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED',
 ];
 
 export function WorkOrderListPage() {

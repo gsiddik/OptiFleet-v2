@@ -22,7 +22,7 @@ class VehicleReleaseService
 
     private const BLOCKING_STATUSES = [
         'DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS',
-        'ON_HOLD', 'WAITING_PART', 'QC_PENDING', 'REWORK', 'COMPLETED',
+        'ON_HOLD', 'WAITING_PART', 'EXTERNAL', 'QC_PENDING', 'REWORK', 'COMPLETED',
     ];
 
     public function release(WorkOrder $workOrder, array $attributes, ?string $releasedByUserId = null): VehicleRelease
