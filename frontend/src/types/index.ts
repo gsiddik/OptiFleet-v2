@@ -724,6 +724,33 @@ export interface WorkOrderPlannedPartItem {
   total_cost: string | null;
 }
 
+export interface PartRequestLineItem {
+  id: string;
+  part_request_id: string;
+  product_id: string | null;
+  product_reference: string | null;
+  description: string;
+  quantity_requested: string;
+  quantity_approved: string | null;
+  planned_part_id: string | null;
+  product?: ProductItem;
+  planned_part?: WorkOrderPlannedPartItem;
+}
+
+export interface PartRequestItem {
+  id: string;
+  work_order_id: string;
+  notes: string | null;
+  status: 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  requested_by: string | null;
+  requested_at: string | null;
+  decided_by: string | null;
+  decided_at: string | null;
+  decision_note: string | null;
+  items?: PartRequestLineItem[];
+  work_order?: WorkOrderItem;
+}
+
 export interface WorkOrderExternalServiceItem {
   id: string;
   memo_number: string | null;

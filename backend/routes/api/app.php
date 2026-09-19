@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\Tenant\MaintenanceScheduleController;
 use App\Http\Controllers\Api\Tenant\MasterDataMappingController;
 use App\Http\Controllers\Api\Tenant\NotificationRuleController;
 use App\Http\Controllers\Api\Tenant\PartnerController;
+use App\Http\Controllers\Api\Tenant\PartRequestController;
 use App\Http\Controllers\Api\Tenant\PermissionController;
 use App\Http\Controllers\Api\Tenant\ProductCategoryController;
 use App\Http\Controllers\Api\Tenant\ProductController;
@@ -295,6 +296,18 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/planned-parts', [WorkOrderExecutionController::class, 'addPlannedPart'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works', [WorkOrderExecutionController::class, 'requestAdditionalWork'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works/{additionalWork}/decide', [WorkOrderExecutionController::class, 'decideAdditionalWork'])->middleware('permission:work_order.approve');
+
+            // Phase 5: Request Parts — a mechanic-initiated request/approval document, kept
+            // deliberately separate from Planned Parts (own permission set; approval creates a
+            // Planned Part rather than mutating stock directly — see WorkOrderPartRequestService).
+            Route::get('/part-requests', [PartRequestController::class, 'index'])->middleware('permission:part_request.view');
+            Route::get('/part-requests/{partRequest}', [PartRequestController::class, 'show'])->middleware('permission:part_request.view');
+            Route::get('/work-orders/{workOrder}/part-requests', [PartRequestController::class, 'indexForWorkOrder'])->middleware('permission:part_request.view');
+            Route::post('/work-orders/{workOrder}/part-requests', [PartRequestController::class, 'store'])->middleware('permission:part_request.create');
+            Route::post('/part-requests/{partRequest}/approve', [PartRequestController::class, 'approve'])->middleware('permission:part_request.approve');
+            Route::post('/part-requests/{partRequest}/reject', [PartRequestController::class, 'reject'])->middleware('permission:part_request.reject');
+            Route::post('/part-requests/{partRequest}/cancel', [PartRequestController::class, 'cancel'])->middleware('permission:part_request.cancel');
+
             Route::post('/work-orders/{workOrder}/external-services', [WorkOrderExternalServiceController::class, 'store'])->middleware('permission:work_order_external_service.create');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/complete', [WorkOrderExternalServiceController::class, 'complete'])->middleware('permission:work_order_external_service.complete');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/cancel', [WorkOrderExternalServiceController::class, 'cancel'])->middleware('permission:work_order_external_service.cancel');

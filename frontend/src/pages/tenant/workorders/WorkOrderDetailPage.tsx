@@ -13,6 +13,7 @@ import type {
   AuditLogEntry,
   HistoryEventItem,
   PartnerItem,
+  PartRequestItem,
   QcInspectionItem,
   WorkerItem,
   WorkOrderFindingItem,
@@ -23,12 +24,13 @@ import type {
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
+  'Planned Parts', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
 ] as const;
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
-// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Workspace,
-// QC, Road Test) is hidden, not just its actions. "External Services" here is the separate towing/
-// 3rd-party-invoicing sub-resource (WorkOrderExternalService) and stays available either way.
+// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Part
+// Requests, Workspace, QC, Road Test) is hidden, not just its actions. "External Services" here is
+// the separate towing/3rd-party-invoicing sub-resource (WorkOrderExternalService) and stays
+// available either way.
 const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'External Services', 'Documents', 'History', 'Audit'] as const;
 type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
 
@@ -328,6 +330,7 @@ export function WorkOrderDetailPage() {
       {tab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
       {tab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
       {tab === 'Planned Parts' && <PlannedPartsTab wo={wo} onChanged={load} />}
+      {tab === 'Part Requests' && <PartRequestsTab wo={wo} onChanged={load} />}
       {tab === 'Workspace' && <WorkspaceTab wo={wo} onChanged={load} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
       {tab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
@@ -1259,6 +1262,211 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
           <button className="btn-secondary" disabled={busy || !description} onClick={addPart}>
             Add
           </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+type DraftLine = { description: string; product_id: string; quantity_requested: string };
+
+function PartRequestsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [requests, setRequests] = useState<PartRequestItem[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [notes, setNotes] = useState('');
+  const [lines, setLines] = useState<DraftLine[]>([{ description: '', product_id: '', quantity_requested: '1' }]);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canCreate = hasPermission('part_request.create');
+  const canApprove = hasPermission('part_request.approve');
+  const canReject = hasPermission('part_request.reject');
+  const canCancel = hasPermission('part_request.cancel');
+
+  function loadRequests() {
+    apiClient
+      .get(`/app/work-orders/${wo.id}/part-requests`)
+      .then((res) => setRequests(res.data.data))
+      .catch(() => setRequests([]));
+  }
+
+  useEffect(loadRequests, [wo.id]);
+  useEffect(() => {
+    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
+  }, []);
+
+  function updateLine(index: number, patch: Partial<DraftLine>) {
+    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
+  }
+
+  function addLine() {
+    setLines((prev) => [...prev, { description: '', product_id: '', quantity_requested: '1' }]);
+  }
+
+  function removeLine(index: number) {
+    setLines((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function submitRequest() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/part-requests`, {
+        notes: notes || undefined,
+        items: lines
+          .filter((line) => line.description)
+          .map((line) => ({ description: line.description, product_id: line.product_id || undefined, quantity_requested: line.quantity_requested })),
+      });
+      setNotes('');
+      setLines([{ description: '', product_id: '', quantity_requested: '1' }]);
+      loadRequests();
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function approve(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/part-requests/${id}/approve`, {});
+      loadRequests();
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitReject(id: string) {
+    if (!rejectReason) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/part-requests/${id}/reject`, { reason: rejectReason });
+      setRejectingId(null);
+      setRejectReason('');
+      loadRequests();
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function cancel(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/part-requests/${id}/cancel`, {});
+      loadRequests();
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Part Requests</h3>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: -8 }}>
+        A mechanic-initiated request for parts, separate from Planned Parts — an approval here creates a Planned Part for fulfillment.
+      </p>
+      {error && <ErrorState message={error} />}
+      {requests.length === 0 && <EmptyState label="No part requests yet." />}
+      {requests.map((r) => (
+        <div key={r.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span>{r.notes || <em style={{ color: '#9ca3af' }}>No notes</em>}</span>
+            <StatusBadge status={r.status} />
+          </div>
+          <ul style={{ margin: '4px 0 6px', paddingLeft: 18, color: '#374151' }}>
+            {(r.items ?? []).map((item) => (
+              <li key={item.id}>
+                {item.description} — requested {item.quantity_requested}
+                {item.quantity_approved !== null && ` · approved ${item.quantity_approved}`}
+              </li>
+            ))}
+          </ul>
+          {r.decision_note && <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Decision note: {r.decision_note}</div>}
+          {r.status === 'REQUESTED' && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+              {canApprove && (
+                <button className="btn-secondary" disabled={busy} onClick={() => approve(r.id)}>
+                  Approve
+                </button>
+              )}
+              {canReject && rejectingId !== r.id && (
+                <button className="btn-secondary" disabled={busy} onClick={() => setRejectingId(r.id)}>
+                  Reject
+                </button>
+              )}
+              {canCancel && (
+                <button className="btn-secondary" disabled={busy} onClick={() => cancel(r.id)}>
+                  Cancel
+                </button>
+              )}
+              {rejectingId === r.id && (
+                <>
+                  <input placeholder="Reason (required)" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+                  <button className="btn-secondary" disabled={busy || !rejectReason} onClick={() => submitReject(r.id)}>
+                    Confirm reject
+                  </button>
+                  <button className="btn-secondary" disabled={busy} onClick={() => setRejectingId(null)}>
+                    Back
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      ))}
+      {canCreate && (
+        <div style={{ marginTop: 12, background: '#f9fafb', padding: 10, borderRadius: 6 }}>
+          {lines.map((line, i) => (
+            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input placeholder="Description" value={line.description} onChange={(e) => updateLine(i, { description: e.target.value })} style={inputStyle} />
+              <select value={line.product_id} onChange={(e) => updateLine(i, { product_id: e.target.value })} style={{ ...inputStyle, width: 200 }}>
+                <option value="">No catalog product</option>
+                {products.map((prod) => (
+                  <option key={prod.id} value={prod.id}>
+                    {prod.name}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                step="0.01"
+                placeholder="Qty"
+                value={line.quantity_requested}
+                onChange={(e) => updateLine(i, { quantity_requested: e.target.value })}
+                style={{ ...inputStyle, width: 90 }}
+              />
+              {lines.length > 1 && (
+                <button className="btn-secondary" disabled={busy} onClick={() => removeLine(i)}>
+                  Remove
+                </button>
+              )}
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <button className="btn-secondary" disabled={busy} onClick={addLine}>
+              + Add line
+            </button>
+            <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+            <button className="btn-secondary" disabled={busy || !lines.some((l) => l.description)} onClick={submitRequest}>
+              Submit request
+            </button>
+          </div>
         </div>
       )}
     </div>

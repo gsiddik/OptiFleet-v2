@@ -108,6 +108,11 @@ class WorkOrder extends Model
         return $this->hasMany(WorkspaceReservation::class)->orderByDesc('start_at');
     }
 
+    public function partRequests(): HasMany
+    {
+        return $this->hasMany(WorkOrderPartRequest::class);
+    }
+
     /**
      * Computed suggestion only — sums each Job's estimated_labor_cost_computed
      * (estimated_hours x its PRIMARY mechanic's snapshotted hourly rate).

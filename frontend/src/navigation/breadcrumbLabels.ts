@@ -43,6 +43,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   'maintenance-requests': 'Maintenance Requests',
   breakdowns: 'Breakdowns',
   'work-orders': 'Work Orders',
+  'part-requests': 'Part Requests',
   'workshop-invoices': 'Workshop Invoices',
 
   // Workshop Operations
