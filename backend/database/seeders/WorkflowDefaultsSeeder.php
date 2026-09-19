@@ -56,14 +56,23 @@ class WorkflowDefaultsSeeder extends Seeder
             'maintenance_request' => [
                 'statuses' => [
                     $this->status('DRAFT', true), $this->status('SUBMITTED'), $this->status('UNDER_REVIEW'),
-                    $this->status('NEED_INFORMATION'), $this->status('APPROVED'), $this->status('WORK_ORDER_CREATED'),
+                    // NEED_INFORMATION — LEGACY, NO NEW TRANSITIONS. Kept in the graph only so any
+                    // pre-existing legacy record retains its two exit transitions below; no status or
+                    // transition here may target NEED_INFORMATION as a destination anymore. Marked
+                    // is_start=true (same convention as other bespoke-side-effect-only statuses in this
+                    // seeder) since it is no longer reachable via any live transition() call — only a
+                    // pre-existing legacy row can ever hold it.
+                    $this->status('NEED_INFORMATION', true), $this->status('APPROVED'), $this->status('WORK_ORDER_CREATED'),
                     $this->status('REJECTED'), $this->status('CANCELLED'),
                 ],
                 'transitions' => [
                     $this->transition('DRAFT', 'SUBMITTED'), $this->transition('DRAFT', 'CANCELLED'),
                     $this->transition('SUBMITTED', 'UNDER_REVIEW'), $this->transition('SUBMITTED', 'CANCELLED'),
+                    // Reviewer actions are Approve/Reject only — Request Info / NEED_INFORMATION retired.
                     $this->transition('UNDER_REVIEW', 'APPROVED'), $this->transition('UNDER_REVIEW', 'REJECTED'),
-                    $this->transition('UNDER_REVIEW', 'NEED_INFORMATION'), $this->transition('UNDER_REVIEW', 'CANCELLED'),
+                    $this->transition('UNDER_REVIEW', 'CANCELLED'),
+                    // Legacy-only exit paths for any pre-existing NEED_INFORMATION record; not reachable
+                    // from any new transition since nothing transitions INTO NEED_INFORMATION anymore.
                     $this->transition('NEED_INFORMATION', 'UNDER_REVIEW'), $this->transition('NEED_INFORMATION', 'CANCELLED'),
                     $this->transition('APPROVED', 'WORK_ORDER_CREATED'), $this->transition('APPROVED', 'CANCELLED'),
                 ],

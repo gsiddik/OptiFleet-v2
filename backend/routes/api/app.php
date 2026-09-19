@@ -40,6 +40,7 @@ use App\Http\Controllers\Api\Tenant\Intelligence\RecommendationController;
 use App\Http\Controllers\Api\Tenant\Intelligence\TireIntelligenceApiController;
 use App\Http\Controllers\Api\Tenant\Intelligence\VehicleIntelligenceController;
 use App\Http\Controllers\Api\Tenant\MaintenancePackageController;
+use App\Http\Controllers\Api\Tenant\MaintenanceRequestAssessmentController;
 use App\Http\Controllers\Api\Tenant\MaintenanceRequestController;
 use App\Http\Controllers\Api\Tenant\MaintenanceScheduleController;
 use App\Http\Controllers\Api\Tenant\MasterDataMappingController;
@@ -239,8 +240,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/maintenance-requests/{maintenanceRequest}/review', [MaintenanceRequestController::class, 'review'])->middleware('permission:maintenance_request.review');
             Route::post('/maintenance-requests/{maintenanceRequest}/approve', [MaintenanceRequestController::class, 'approve'])->middleware('permission:maintenance_request.approve');
             Route::post('/maintenance-requests/{maintenanceRequest}/reject', [MaintenanceRequestController::class, 'reject'])->middleware('permission:maintenance_request.reject');
-            Route::post('/maintenance-requests/{maintenanceRequest}/request-info', [MaintenanceRequestController::class, 'requestInfo'])->middleware('permission:maintenance_request.review');
+            // Request Info / NEED_INFORMATION retired: reviewers only Approve or Reject (see WorkflowDefaultsSeeder).
             Route::post('/maintenance-requests/{maintenanceRequest}/cancel', [MaintenanceRequestController::class, 'cancel'])->middleware('permission:maintenance_request.create');
+
+            Route::get('/maintenance-requests/{maintenanceRequest}/assessment', [MaintenanceRequestAssessmentController::class, 'show'])->middleware('permission:maintenance_request.view');
+            Route::post('/maintenance-requests/{maintenanceRequest}/assessment', [MaintenanceRequestAssessmentController::class, 'store'])->middleware('permission:maintenance_request.create');
+            Route::delete('/maintenance-requests/{maintenanceRequest}/assessment', [MaintenanceRequestAssessmentController::class, 'destroy'])->middleware('permission:maintenance_request.create');
 
             Route::get('/breakdowns', [BreakdownController::class, 'index'])->middleware('permission:breakdown.view');
             Route::post('/breakdowns', [BreakdownController::class, 'store'])->middleware('permission:breakdown.report');

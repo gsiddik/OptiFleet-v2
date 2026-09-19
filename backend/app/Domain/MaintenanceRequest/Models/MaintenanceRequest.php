@@ -11,6 +11,7 @@ use App\Domain\Vehicle\Models\Vehicle;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MaintenanceRequest extends Model
 {
@@ -44,5 +45,10 @@ class MaintenanceRequest extends Model
     public function componentGroup(): BelongsTo
     {
         return $this->belongsTo(ComponentGroup::class);
+    }
+
+    public function assessment(): HasOne
+    {
+        return $this->hasOne(MaintenanceRequestAssessment::class);
     }
 }

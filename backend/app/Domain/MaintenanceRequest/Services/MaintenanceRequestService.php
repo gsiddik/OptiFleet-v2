@@ -10,12 +10,19 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Section 19/25: DRAFT -> SUBMITTED -> UNDER_REVIEW -> APPROVED ->
- * WORK_ORDER_CREATED, with REJECTED / NEED_INFORMATION / CANCELLED side
- * branches. Transition validity is now delegated to the Phase 5 workflow
- * engine (against the platform-default "maintenance_request" workflow,
- * which reproduces this exact graph) instead of a hardcoded array; the
+ * WORK_ORDER_CREATED, with REJECTED / CANCELLED side branches. Transition
+ * validity is delegated to the workflow engine (against the platform-default
+ * "maintenance_request" workflow) instead of a hardcoded array; the
  * request's own workflow_configuration_version_id, pinned at creation, is
  * what every future transition attempt is checked against.
+ *
+ * NEED_INFORMATION — LEGACY, NO NEW TRANSITIONS. Retired at the application
+ * level only: the seeded workflow no longer allows any NEW transition into
+ * it (see WorkflowDefaultsSeeder), so this branch is unreachable for new
+ * requests. Any pre-existing record left in NEED_INFORMATION remains
+ * readable/displayable and keeps a path out via its existing
+ * NEED_INFORMATION -> UNDER_REVIEW / CANCELLED transitions — do not remove
+ * those, and do not bulk-remap existing rows without an approved migration.
  */
 class MaintenanceRequestService
 {
@@ -58,7 +65,7 @@ class MaintenanceRequestService
             }
 
             $attributes = ['status' => $to];
-            if (in_array($to, ['APPROVED', 'REJECTED', 'NEED_INFORMATION'], true)) {
+            if (in_array($to, ['APPROVED', 'REJECTED'], true)) {
                 $attributes['reviewed_by'] = $actorUserId;
                 $attributes['reviewed_at'] = now();
                 $attributes['review_note'] = $note;

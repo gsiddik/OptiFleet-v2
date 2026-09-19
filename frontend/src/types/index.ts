@@ -611,6 +611,31 @@ export interface MaintenanceRequestItem {
   component_group?: ComponentGroup;
 }
 
+export const INSPECTION_GROUP_CODES = [
+  'ENGINE', 'LUBRICATION_SYSTEM', 'CLUTCH_TORQUE_CONVERTER', 'COOLING_SYSTEM',
+  'FUEL_SYSTEM', 'TRANSMISSION_SYSTEM', 'EXHAUST_SYSTEM', 'STEERING_SYSTEM',
+  'DRIVE_AXLE_ASSEMBLY', 'FRAME_CHASSIS', 'ELECTRICAL_SYSTEM', 'BRAKE_SYSTEM',
+  'SUSPENSION_SYSTEM', 'TYRE_WHEEL',
+] as const;
+
+export type InspectionGroupCode = (typeof INSPECTION_GROUP_CODES)[number];
+export type InspectionGroupStatus = 'GOOD' | 'ATTENTION' | 'REPAIR_REQUIRED' | 'CRITICAL_UNSAFE' | 'NOT_APPLICABLE';
+
+export interface MaintenanceRequestInspectionGroupItem {
+  group_code: InspectionGroupCode;
+  status: InspectionGroupStatus;
+  notes: string | null;
+}
+
+export interface MaintenanceRequestAssessmentItem {
+  id: string;
+  maintenance_request_id: string;
+  assessed_by: string | null;
+  assessed_at: string | null;
+  notes: string | null;
+  groups: MaintenanceRequestInspectionGroupItem[];
+}
+
 export interface BreakdownItem {
   id: string;
   branch_id: string;

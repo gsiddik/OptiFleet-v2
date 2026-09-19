@@ -8,6 +8,7 @@ import { ErrorState, LoadingState, EmptyState } from '../../../components/States
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
+import { AssessmentSection } from '../maintenance/MaintenanceRequestDetailPage';
 import type {
   AuditLogEntry,
   HistoryEventItem,
@@ -336,6 +337,11 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           ))}
         </div>
       </div>
+      {wo.maintenance_request_id && (
+        <div style={{ marginTop: 16 }}>
+          <AssessmentSection maintenanceRequestId={wo.maintenance_request_id} editable={false} />
+        </div>
+      )}
       {ESTIMABLE_STATUSES.includes(wo.status) && hasPermission('work_order.estimate') && (
         <div className="card" style={{ marginTop: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Cost Estimate</h3>

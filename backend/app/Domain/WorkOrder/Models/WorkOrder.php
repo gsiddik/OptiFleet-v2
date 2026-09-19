@@ -3,6 +3,7 @@
 namespace App\Domain\WorkOrder\Models;
 
 use App\Domain\Audit\Concerns\Auditable;
+use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
 use App\Domain\Organization\Models\Branch;
 use App\Domain\Organization\Models\Workshop;
 use App\Domain\QualityControl\Models\RoadTest;
@@ -109,5 +110,10 @@ class WorkOrder extends Model
     public function vehicleRelease(): HasOne
     {
         return $this->hasOne(VehicleRelease::class);
+    }
+
+    public function maintenanceRequest(): BelongsTo
+    {
+        return $this->belongsTo(MaintenanceRequest::class);
     }
 }

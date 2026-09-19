@@ -80,13 +80,6 @@ class MaintenanceRequestController extends Controller
         return $this->transition($maintenanceRequest, 'REJECTED', $request->input('note'));
     }
 
-    public function requestInfo(Request $request, MaintenanceRequest $maintenanceRequest)
-    {
-        $request->validate(['note' => ['required', 'string']]);
-
-        return $this->transition($maintenanceRequest, 'NEED_INFORMATION', $request->input('note'));
-    }
-
     public function cancel(Request $request, MaintenanceRequest $maintenanceRequest)
     {
         return $this->transition($maintenanceRequest, 'CANCELLED', $request->input('note'));
