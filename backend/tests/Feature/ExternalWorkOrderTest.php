@@ -3,7 +3,7 @@
 namespace Tests\Feature;
 
 use App\Domain\WorkOrder\Models\WorkOrder;
-use App\Domain\WorkOrder\Models\WorkOrderExternalReference;
+use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use App\Domain\WorkOrder\Models\WorkOrderFinding;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -101,7 +101,7 @@ class ExternalWorkOrderTest extends TestCase
 
         $this->postJson("/api/v1/app/work-orders/{$id}/external", [], $headers)->assertStatus(422);
         $this->assertSame('DRAFT', WorkOrder::query()->findOrFail($id)->status);
-        $this->assertSame(0, WorkOrderExternalReference::query()->where('work_order_id', $id)->count());
+        $this->assertSame(0, WorkOrderExternalInvoice::query()->where('work_order_id', $id)->count());
     }
 
     // --- Initial finalization -------------------------------------------------
@@ -117,7 +117,7 @@ class ExternalWorkOrderTest extends TestCase
         $response = $this->postJson("/api/v1/app/work-orders/{$id}/external", [], $headers)->assertOk();
         $this->assertSame('EXTERNAL', $response->json('data.status'));
         $this->assertSame(1, $response->json('data.external_finalized_revision'));
-        $this->assertSame(1, WorkOrderExternalReference::query()->where('work_order_id', $id)->count());
+        $this->assertSame(1, WorkOrderExternalInvoice::query()->where('work_order_id', $id)->count());
     }
 
     public function test_repeated_finalization_requests_are_idempotent(): void
@@ -132,7 +132,7 @@ class ExternalWorkOrderTest extends TestCase
         $second = $this->postJson("/api/v1/app/work-orders/{$id}/external", [], $headers)->assertOk();
 
         $this->assertSame(1, $second->json('data.external_finalized_revision'), 'A repeated finalize call must not double-increment.');
-        $this->assertSame(1, WorkOrderExternalReference::query()->where('work_order_id', $id)->count());
+        $this->assertSame(1, WorkOrderExternalInvoice::query()->where('work_order_id', $id)->count());
     }
 
     public function test_finalizing_without_execution_mode_set_is_rejected(): void
@@ -214,7 +214,7 @@ class ExternalWorkOrderTest extends TestCase
         $this->assertSame($woNumber, $response->json('data.wo_number'));
         $this->assertSame(1, $response->json('data.external_finalized_revision'), 'Revise must not change the last finalized revision number.');
         $this->assertSame(1, WorkOrderFinding::query()->where('work_order_id', $id)->count());
-        $this->assertSame(1, WorkOrderExternalReference::query()->where('work_order_id', $id)->count(), 'Revise must reuse, not duplicate, the reference.');
+        $this->assertSame(1, WorkOrderExternalInvoice::query()->where('work_order_id', $id)->count(), 'Revise must reuse, not duplicate, the reference.');
     }
 
     public function test_revised_work_order_reference_is_not_active_while_under_revision(): void
@@ -267,7 +267,7 @@ class ExternalWorkOrderTest extends TestCase
 
         $active = $this->getJson('/api/v1/app/external-work-order-references', $headers)->assertOk()->json('data');
         $this->assertNotEmpty(array_filter($active, fn ($row) => $row['work_order_id'] === $id && $row['revision'] === 2));
-        $this->assertSame(1, WorkOrderExternalReference::query()->where('work_order_id', $id)->count(), 'Re-finalization must reuse, not duplicate, the reference.');
+        $this->assertSame(1, WorkOrderExternalInvoice::query()->where('work_order_id', $id)->count(), 'Re-finalization must reuse, not duplicate, the reference.');
     }
 
     // --- Cancel ----------------------------------------------------------------
@@ -298,7 +298,7 @@ class ExternalWorkOrderTest extends TestCase
         $this->assertSame('Vehicle no longer needs this repair.', $response->json('data.cancellation_reason'));
 
         $this->assertSame(1, WorkOrderFinding::query()->where('work_order_id', $id)->count(), 'Cancel must not delete Findings.');
-        $this->assertSame(1, WorkOrderExternalReference::query()->where('work_order_id', $id)->count(), 'Cancel must not delete the reference.');
+        $this->assertSame(1, WorkOrderExternalInvoice::query()->where('work_order_id', $id)->count(), 'Cancel must not delete the reference.');
 
         $active = $this->getJson('/api/v1/app/external-work-order-references', $headers)->assertOk()->json('data');
         $this->assertEmpty(array_filter($active, fn ($row) => $row['work_order_id'] === $id));

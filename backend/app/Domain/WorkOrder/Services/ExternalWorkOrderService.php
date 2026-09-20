@@ -3,7 +3,7 @@
 namespace App\Domain\WorkOrder\Services;
 
 use App\Domain\WorkOrder\Models\WorkOrder;
-use App\Domain\WorkOrder\Models\WorkOrderExternalReference;
+use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use App\Domain\WorkOrder\Models\WorkOrderFinding;
 use Illuminate\Support\Facades\DB;
 
@@ -112,16 +112,24 @@ class ExternalWorkOrderService
                 'external_finalized_revision' => $locked->external_finalized_revision + 1,
             ]);
 
-            WorkOrderExternalReference::query()->firstOrCreate(
+            WorkOrderExternalInvoice::query()->firstOrCreate(
                 ['work_order_id' => $updated->id],
-                ['tenant_id' => $updated->tenant_id, 'branch_id' => $updated->branch_id]
+                ['tenant_id' => $updated->tenant_id, 'branch_id' => $updated->branch_id, 'status' => 'NEW_EXTERNAL_WO']
             );
 
             return $updated;
         });
     }
 
-    /** Revise: EXTERNAL -> DRAFT, keeping External mode, WO number, and the last finalized revision. */
+    /**
+     * Revise: EXTERNAL -> DRAFT, keeping External mode, WO number, and the last finalized
+     * revision. Only allowed while the Invoice is still NEW_EXTERNAL_WO (before Deliver) — once
+     * the physical Work Order + Work Authorization Letter have been handed to the external
+     * workshop, editing Findings back in Draft would leave the printed documents out of sync
+     * with what the workshop actually holds. The consolidated business document does not state
+     * this restriction explicitly for Revise (only for Cancel); this is a deliberate,
+     * disclosed judgment call pending business confirmation.
+     */
     public function revise(WorkOrder $workOrder): WorkOrder
     {
         return DB::transaction(function () use ($workOrder) {
@@ -131,21 +139,46 @@ class ExternalWorkOrderService
                 throw new WorkOrderException('Only a finalized External Work Order can be revised.');
             }
 
+            $invoice = WorkOrderExternalInvoice::query()->where('work_order_id', $locked->id)->first();
+            if ($invoice && $invoice->status !== 'NEW_EXTERNAL_WO') {
+                throw new WorkOrderException('This Work Order can no longer be revised — its External Invoice has already moved past New External WO.');
+            }
+
             return $this->transitions->transition($locked, 'DRAFT');
         });
     }
 
-    /** Cancel: EXTERNAL -> CANCELLED, reason mandatory. Separate from the generic internal cancel action. */
-    public function cancel(WorkOrder $workOrder, string $reason): WorkOrder
+    /**
+     * Cancel: EXTERNAL -> CANCELLED, reason mandatory. Separate from the generic internal cancel
+     * action. Synchronizes the linked External Invoice to CANCELLED in the same transaction,
+     * unless it has already moved past a business-safe-to-cancel stage (see
+     * WorkOrderExternalInvoice::CANCELLABLE_STATUSES / the action matrix), in which case the
+     * whole cancel is rejected rather than leaving the two aggregates inconsistent.
+     */
+    public function cancel(WorkOrder $workOrder, string $reason, ?string $actorUserId = null): WorkOrder
     {
-        return DB::transaction(function () use ($workOrder, $reason) {
+        return DB::transaction(function () use ($workOrder, $reason, $actorUserId) {
             $locked = WorkOrder::query()->lockForUpdate()->findOrFail($workOrder->id);
 
             if ($locked->status !== 'EXTERNAL') {
                 throw new WorkOrderException('Only a finalized External Work Order can be cancelled through this action.');
             }
 
-            return $this->transitions->transition($locked, 'CANCELLED', ['cancellation_reason' => $reason]);
+            $invoice = WorkOrderExternalInvoice::query()->where('work_order_id', $locked->id)->lockForUpdate()->first();
+            if ($invoice && ! in_array($invoice->status, WorkOrderExternalInvoice::CANCELLABLE_STATUSES, true)) {
+                throw new WorkOrderException("This Work Order's External Invoice is already {$invoice->status} and can no longer be cancelled.");
+            }
+
+            $updated = $this->transitions->transition($locked, 'CANCELLED', ['cancellation_reason' => $reason]);
+
+            $invoice?->update([
+                'status' => 'CANCELLED',
+                'cancelled_by' => $actorUserId,
+                'cancelled_at' => now(),
+                'cancellation_reason' => $reason,
+            ]);
+
+            return $updated;
         });
     }
 }

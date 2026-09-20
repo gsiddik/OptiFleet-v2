@@ -150,8 +150,8 @@ class WorkOrder extends Model
         return $this->belongsTo(MaintenanceRequest::class);
     }
 
-    public function externalReference(): HasOne
+    public function externalInvoice(): HasOne
     {
-        return $this->hasOne(WorkOrderExternalReference::class);
+        return $this->hasOne(WorkOrderExternalInvoice::class);
     }
 }

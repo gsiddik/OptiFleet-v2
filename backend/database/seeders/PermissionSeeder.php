@@ -56,6 +56,13 @@ class PermissionSeeder extends Seeder
                 // set — prepare/finalize/revise/cancel) can never be granted via the internal ones.
                 'prepare_external', 'finalize_external', 'revise_external', 'cancel_external', 'view_workshop_invoice_reference',
             ],
+            // "Perbaikan Tenant Portal - Work Order Status External dan Workshop Invoice": the
+            // External Work Order Invoice lifecycle (New External WO -> ... -> Paid) has its own
+            // permission group, deliberately separate from 'workshop_invoice' (the pre-existing,
+            // unrelated R1 externally-issued-invoice-recording feature for towing/3rd-party memos).
+            'external_work_order_invoice' => [
+                'view', 'generate_authorization', 'deliver', 'acknowledge', 'complete', 'settle', 'cancel',
+            ],
             'diagnosis' => ['manage'],
             'maintenance_job' => ['manage'],
             // Phase 5: Request Parts — deliberately its own maker-checker permission set

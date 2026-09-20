@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             RetireMaintenanceRequestNeedInformationSeeder::class,
             AddWorkOrderExternalStatusSeeder::class,
             CorrectWorkOrderExternalTransitionsSeeder::class,
+            AddWorkOrderExternalClosedTransitionSeeder::class,
             NotificationDefaultsSeeder::class,
             MasterDataSeeder::class,
             DemoDataSeeder::class,

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\WorkOrder\Models\WorkOrder;
-use App\Domain\WorkOrder\Models\WorkOrderExternalReference;
+use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use App\Domain\WorkOrder\Models\WorkOrderFinding;
 use App\Domain\WorkOrder\Services\ExternalWorkOrderService;
 use App\Http\Controllers\Controller;
@@ -87,28 +87,33 @@ class ExternalWorkOrderController extends Controller
         $this->authorizeScope($workOrder);
         $validated = $request->validate(['reason' => ['required', 'string']]);
 
-        return $this->ok($this->external->cancel($workOrder, $validated['reason']));
+        return $this->ok($this->external->cancel($workOrder, $validated['reason'], $this->context->user()->id));
     }
 
-    /** Minimum fields needed for the Workshop Invoice "New External WO" reference list. */
+    /**
+     * A bare, read-only reference list — kept for any existing caller of this endpoint. The full
+     * External Work Order Invoice list/detail (real persisted status, Work Authorization,
+     * Deliver/Acknowledge/Complete/Settlement actions) lives in its own controller — see
+     * /api/v1/app/external-work-order-invoices.
+     */
     public function referenceIndex(Request $request)
     {
         $tenantId = $this->context->tenantId();
-        $query = WorkOrderExternalReference::query()
+        $query = WorkOrderExternalInvoice::query()
             ->with(['workOrder.vehicle', 'workOrder.branch'])
             ->whereHas('workOrder', fn ($q) => $q->where('status', 'EXTERNAL'));
         $this->scope->applyBranchScope($query, $this->context->user(), $tenantId, 'branch_id');
 
-        $references = $query->get()->map(fn (WorkOrderExternalReference $ref) => [
-            'work_order_id' => $ref->work_order_id,
-            'wo_number' => $ref->workOrder->wo_number,
-            'revision' => $ref->workOrder->external_finalized_revision,
-            'wo_date' => $ref->workOrder->created_at,
-            'vehicle' => $ref->workOrder->vehicle?->registration_number,
-            'tenant_id' => $ref->tenant_id,
-            'branch_id' => $ref->branch_id,
-            'source_status' => $ref->workOrder->status,
-            'display_status' => WorkOrderExternalReference::DISPLAY_STATUS,
+        $references = $query->get()->map(fn (WorkOrderExternalInvoice $invoice) => [
+            'work_order_id' => $invoice->work_order_id,
+            'wo_number' => $invoice->workOrder->wo_number,
+            'revision' => $invoice->workOrder->external_finalized_revision,
+            'wo_date' => $invoice->workOrder->created_at,
+            'vehicle' => $invoice->workOrder->vehicle?->registration_number,
+            'tenant_id' => $invoice->tenant_id,
+            'branch_id' => $invoice->branch_id,
+            'source_status' => $invoice->workOrder->status,
+            'display_status' => $invoice->status,
         ]);
 
         return $this->ok($references);
