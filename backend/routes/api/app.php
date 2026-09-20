@@ -82,6 +82,7 @@ use App\Http\Controllers\Api\Tenant\WarrantyController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
 use App\Http\Controllers\Api\Tenant\WorkerController;
 use App\Http\Controllers\Api\Tenant\ExternalWorkOrderController;
+use App\Http\Controllers\Api\Tenant\ExternalWorkOrderInvoiceController;
 use App\Http\Controllers\Api\Tenant\WorkOrderController;
 use App\Http\Controllers\Api\Tenant\WorkOrderExecutionController;
 use App\Http\Controllers\Api\Tenant\WorkOrderExternalServiceController;
@@ -288,6 +289,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/external/revise', [ExternalWorkOrderController::class, 'revise'])->middleware('permission:work_order.revise_external');
             Route::post('/work-orders/{workOrder}/external/cancel', [ExternalWorkOrderController::class, 'cancel'])->middleware('permission:work_order.cancel_external');
             Route::get('/external-work-order-references', [ExternalWorkOrderController::class, 'referenceIndex'])->middleware('permission:work_order.view_workshop_invoice_reference');
+
+            // "Perbaikan Tenant Portal - Work Order Status External dan Workshop Invoice": the
+            // full External Work Order Invoice list/detail — own permission namespace, deliberately
+            // separate from workshop_invoice.* (the pre-existing, unrelated R1 feature).
+            Route::get('/external-work-order-invoices', [ExternalWorkOrderInvoiceController::class, 'index'])->middleware('permission:external_work_order_invoice.view');
+            Route::get('/external-work-order-invoices/{externalInvoice}', [ExternalWorkOrderInvoiceController::class, 'show'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/corrective-actions', [WorkOrderExecutionController::class, 'addCorrectiveAction'])->middleware('permission:diagnosis.manage');

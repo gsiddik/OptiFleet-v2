@@ -751,6 +751,58 @@ export interface PartRequestItem {
   work_order?: WorkOrderItem;
 }
 
+export type ExternalWorkOrderInvoiceAction =
+  | 'generate_authorization'
+  | 'view_authorization'
+  | 'deliver'
+  | 'acknowledge'
+  | 'view_acknowledgement'
+  | 'complete'
+  | 'view_bill'
+  | 'settle'
+  | 'view_settlement'
+  | 'cancel'
+  | 'view_history';
+
+/** "Perbaikan Tenant Portal - Work Order Status External dan Workshop Invoice" — the tenant-facing
+ * "Workshop Invoice" tracking entity, distinct from any WorkshopInvoiceItem (the pre-existing,
+ * unrelated R1 externally-issued-invoice-recording feature). */
+export interface ExternalWorkOrderInvoiceItem {
+  id: string;
+  tenant_id: string;
+  branch_id: string;
+  work_order_id: string;
+  status: 'NEW_EXTERNAL_WO' | 'DELIVERED' | 'IN_PROGRESS' | 'CANCELLED' | 'BILLED' | 'PAID';
+  work_authorization_status: 'NOT_GENERATED' | 'GENERATED' | 'ACKNOWLEDGED';
+  wal_number: string | null;
+  wal_issue_date: string | null;
+  wal_workshop_partner_id: string | null;
+  wal_workshop_name: string | null;
+  wal_workshop_address: string | null;
+  wal_workshop_pic: string | null;
+  wal_workshop_phone: string | null;
+  wal_vehicle_unit_number: string | null;
+  wal_vehicle_registration_number: string | null;
+  wal_vehicle_make_model: string | null;
+  wal_vehicle_odometer: string | null;
+  wal_company_name: string | null;
+  wal_revision: number;
+  wal_generated_at: string | null;
+  delivered_at: string | null;
+  acknowledged_at: string | null;
+  vendor_invoice_date: string | null;
+  vendor_invoice_amount: string | null;
+  payment_term: string | null;
+  completed_at: string | null;
+  payment_date: string | null;
+  paid_amount: string | null;
+  settled_at: string | null;
+  cancelled_at: string | null;
+  cancellation_reason: string | null;
+  allowed_actions: ExternalWorkOrderInvoiceAction[];
+  work_order?: WorkOrderItem & { vehicle?: VehicleItem; workshop?: Workshop };
+}
+
 export interface WorkOrderExternalServiceItem {
   id: string;
   memo_number: string | null;

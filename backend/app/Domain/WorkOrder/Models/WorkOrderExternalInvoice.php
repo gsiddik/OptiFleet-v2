@@ -103,4 +103,37 @@ class WorkOrderExternalInvoice extends Model
     {
         return $this->hasOne(WorkOrderExternalInvoiceFile::class, 'external_invoice_id')->where('file_role', 'PAYMENT_PROOF');
     }
+
+    /**
+     * Section 5's Workshop Invoice / Work Authorization action matrix, encoded once here so
+     * every controller/service action checks the SAME source of truth rather than re-deriving
+     * it — an illegal action must be rejected even if its endpoint is called directly, not just
+     * hidden in the UI. 'view_history' is always available (the document's table only bothers
+     * listing it for the terminal/no-further-action rows, but there is no reason to withhold a
+     * read-only history view at any other stage).
+     */
+    public function allowedActions(): array
+    {
+        $actions = match (true) {
+            $this->status === 'CANCELLED' => [],
+            $this->status === 'NEW_EXTERNAL_WO' && $this->work_authorization_status === 'NOT_GENERATED' => ['generate_authorization', 'cancel'],
+            $this->status === 'NEW_EXTERNAL_WO' && $this->work_authorization_status === 'GENERATED' => ['view_authorization', 'deliver', 'cancel'],
+            $this->status === 'DELIVERED' => ['view_authorization', 'acknowledge', 'cancel'],
+            $this->status === 'IN_PROGRESS' => ['view_acknowledgement', 'complete'],
+            $this->status === 'BILLED' => ['view_bill', 'settle'],
+            $this->status === 'PAID' => ['view_settlement'],
+            default => [],
+        };
+
+        return [...$actions, 'view_history'];
+    }
+
+    public function assertActionAllowed(string $action): void
+    {
+        if (! in_array($action, $this->allowedActions(), true)) {
+            throw new \App\Domain\WorkOrder\Services\WorkOrderException(
+                "Action \"{$action}\" is not allowed while this External Invoice is {$this->status} / {$this->work_authorization_status}."
+            );
+        }
+    }
 }
