@@ -95,6 +95,19 @@ class TemplateVariableRegistry
             ],
             'sections' => [],
         ],
+        // "Perbaikan Tenant Portal - Work Order Status External dan Workshop Invoice" Section 6:
+        // rendered only from the WAL's own frozen snapshot columns (see
+        // DocumentTemplateContextBuilder::forWorkAuthorizationLetter) — never the live
+        // Partner/Vehicle/Tenant it was generated against.
+        'work_authorization_letter' => [
+            'scalars' => [
+                'wal.number', 'wal.issue_date', 'wal.workshop_name', 'wal.workshop_address',
+                'wal.workshop_pic', 'wal.workshop_phone', 'wal.vehicle_unit_number',
+                'wal.vehicle_registration_number', 'wal.vehicle_make_model', 'wal.vehicle_odometer',
+                'wal.company_name', 'wal.revision', 'work_order.number',
+            ],
+            'sections' => [],
+        ],
         // R1: OptiFleet's own record of an externally-issued Workshop Invoice —
         // deliberately named/worded so a template can never be built that implies
         // OptiFleet issued the invoice (see ConfigurationDefaultsSeeder's default template).

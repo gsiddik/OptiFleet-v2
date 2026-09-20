@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Configuration\Services\DocumentPdfService;
+use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
+use App\Domain\Configuration\Services\DocumentTemplateRenderService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
+use App\Domain\WorkOrder\Services\WorkOrderExternalInvoiceService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * "Perbaikan Tenant Portal - Work Order Status External dan Workshop
@@ -19,12 +24,13 @@ use Illuminate\Http\Request;
  * Cancel is not duplicated here — it stays on ExternalWorkOrderController
  * (POST /work-orders/{workOrder}/external/cancel), which already
  * synchronizes this Invoice's own status in the same transaction (see
- * ExternalWorkOrderService::cancel()). Generate/View Authorization,
- * Deliver, Acknowledge, Complete, and Settlement land in later phases.
+ * ExternalWorkOrderService::cancel()). Complete and Settlement land in
+ * Phase 5.
  */
 class ExternalWorkOrderInvoiceController extends Controller
 {
     public function __construct(
+        private readonly WorkOrderExternalInvoiceService $invoices,
         private readonly DataScopeService $scope,
         private readonly TenantContext $context,
     ) {}
@@ -63,6 +69,57 @@ class ExternalWorkOrderInvoiceController extends Controller
         $externalInvoice->setAttribute('allowed_actions', $externalInvoice->allowedActions());
 
         return $this->ok($externalInvoice);
+    }
+
+    public function generateAuthorization(Request $request, WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        $validated = $request->validate(['partner_id' => ['required', 'uuid', 'exists:partners,id']]);
+
+        return $this->ok($this->invoices->generateAuthorization($externalInvoice, $validated['partner_id'], $this->context->user()->id));
+    }
+
+    public function viewAuthorization(WorkOrderExternalInvoice $externalInvoice, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    {
+        $this->authorizeScope($externalInvoice);
+        abort_if($externalInvoice->work_authorization_status === 'NOT_GENERATED', 404, 'No Work Authorization Letter has been generated yet.');
+
+        $context = DocumentTemplateContextBuilder::forWorkAuthorizationLetter($externalInvoice);
+        $rendered = $templates->render(
+            'work_authorization_letter', $context, $externalInvoice->tenant_id,
+            $externalInvoice->workOrder?->branch_id, $externalInvoice->workOrder?->workshop_id,
+        );
+
+        return response($pdf->fromHtml($rendered['html']), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$externalInvoice->wal_number.'.pdf"',
+        ]);
+    }
+
+    public function deliver(WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+
+        return $this->ok($this->invoices->deliver($externalInvoice, $this->context->user()->id));
+    }
+
+    public function acknowledge(Request $request, WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        $request->validate([
+            'file' => ['required', 'file', 'max:10240', 'mimes:doc,docx,pdf'],
+        ]);
+
+        return $this->ok($this->invoices->acknowledge($externalInvoice, $request->file('file'), $this->context->user()->id));
+    }
+
+    public function viewAcknowledgement(WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        $file = $externalInvoice->acknowledgementFile;
+        abort_unless($file !== null, 404);
+
+        return Storage::disk($file->disk)->response($file->path, $file->original_filename);
     }
 
     private function authorizeScope(WorkOrderExternalInvoice $externalInvoice): void

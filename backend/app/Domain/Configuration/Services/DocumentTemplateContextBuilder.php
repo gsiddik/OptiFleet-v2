@@ -5,6 +5,7 @@ namespace App\Domain\Configuration\Services;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use App\Domain\WorkOrder\Models\WorkOrderExternalService;
 use App\Domain\WorkOrder\Models\WorkshopInvoice;
 
@@ -64,6 +65,38 @@ class DocumentTemplateContextBuilder
                 'description' => $finding->description,
                 'status' => $finding->status,
             ])->all(),
+        ];
+    }
+
+    /**
+     * Section 6: renders ONLY from the frozen snapshot columns on the invoice row itself — never
+     * from the live Partner/Vehicle/Tenant it was generated against — so a later change to any
+     * of that master data can never alter an already-issued Work Authorization Letter.
+     */
+    public static function forWorkAuthorizationLetter(WorkOrderExternalInvoice $invoice): array
+    {
+        $invoice->loadMissing('workOrder');
+
+        return [
+            'company' => self::company(),
+            'tenant' => ['name' => $invoice->wal_company_name],
+            'document_number' => $invoice->wal_number,
+            'configuration_version' => null,
+            'wal' => [
+                'number' => $invoice->wal_number,
+                'issue_date' => optional($invoice->wal_issue_date)->toDateString(),
+                'workshop_name' => $invoice->wal_workshop_name,
+                'workshop_address' => $invoice->wal_workshop_address,
+                'workshop_pic' => $invoice->wal_workshop_pic,
+                'workshop_phone' => $invoice->wal_workshop_phone,
+                'vehicle_unit_number' => $invoice->wal_vehicle_unit_number,
+                'vehicle_registration_number' => $invoice->wal_vehicle_registration_number,
+                'vehicle_make_model' => $invoice->wal_vehicle_make_model,
+                'vehicle_odometer' => $invoice->wal_vehicle_odometer !== null ? (string) $invoice->wal_vehicle_odometer : null,
+                'company_name' => $invoice->wal_company_name,
+                'revision' => $invoice->wal_revision,
+            ],
+            'work_order' => ['number' => $invoice->workOrder?->wo_number],
         ];
     }
 

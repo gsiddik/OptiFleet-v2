@@ -295,6 +295,11 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             // separate from workshop_invoice.* (the pre-existing, unrelated R1 feature).
             Route::get('/external-work-order-invoices', [ExternalWorkOrderInvoiceController::class, 'index'])->middleware('permission:external_work_order_invoice.view');
             Route::get('/external-work-order-invoices/{externalInvoice}', [ExternalWorkOrderInvoiceController::class, 'show'])->middleware('permission:external_work_order_invoice.view');
+            Route::post('/external-work-order-invoices/{externalInvoice}/generate-authorization', [ExternalWorkOrderInvoiceController::class, 'generateAuthorization'])->middleware('permission:external_work_order_invoice.generate_authorization');
+            Route::get('/external-work-order-invoices/{externalInvoice}/authorization', [ExternalWorkOrderInvoiceController::class, 'viewAuthorization'])->middleware('permission:external_work_order_invoice.view');
+            Route::post('/external-work-order-invoices/{externalInvoice}/deliver', [ExternalWorkOrderInvoiceController::class, 'deliver'])->middleware('permission:external_work_order_invoice.deliver');
+            Route::post('/external-work-order-invoices/{externalInvoice}/acknowledge', [ExternalWorkOrderInvoiceController::class, 'acknowledge'])->middleware('permission:external_work_order_invoice.acknowledge');
+            Route::get('/external-work-order-invoices/{externalInvoice}/acknowledgement', [ExternalWorkOrderInvoiceController::class, 'viewAcknowledgement'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/corrective-actions', [WorkOrderExecutionController::class, 'addCorrectiveAction'])->middleware('permission:diagnosis.manage');

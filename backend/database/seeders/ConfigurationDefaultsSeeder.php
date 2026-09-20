@@ -109,6 +109,68 @@ class ConfigurationDefaultsSeeder extends Seeder
                   {{#findings}}<tr><td>{{item_name}}</td><td>{{result}}</td><td>{{note}}</td></tr>{{/findings}}
                 </table>
                 HTML),
+            // "Perbaikan Tenant Portal - Work Order Status External dan Workshop Invoice" Section
+            // 6: the Work Authorization Letter follows the source document's own letter layout
+            // (TO / VEHICLE INFORMATION / WORK AUTHORIZATION / handover / signature blocks), not
+            // the generic $wrap() business-document header+"Prepared by/Approved by" footer used
+            // above — a signed letter needs its own two-party signature blocks instead.
+            'work_authorization_letter' => <<<'HTML'
+                <div style="font-family:sans-serif;font-size:12px;">
+                  <h2 style="text-align:center;">WORK AUTHORIZATION LETTER</h2>
+                  <p>Authorization No.: {{wal.number}}<br>
+                  Work Order No.: {{work_order.number}}<br>
+                  Issue Date: {{wal.issue_date}}</p>
+                  <p><strong>TO</strong><br>
+                  Workshop: {{wal.workshop_name}}<br>
+                  Address: {{wal.workshop_address}}<br>
+                  Contact Person: {{wal.workshop_pic}}<br>
+                  Phone: {{wal.workshop_phone}}</p>
+                  <p><strong>VEHICLE INFORMATION</strong><br>
+                  Vehicle / Unit No.: {{wal.vehicle_unit_number}}<br>
+                  Registration No.: {{wal.vehicle_registration_number}}<br>
+                  Make / Model: {{wal.vehicle_make_model}}<br>
+                  Current Odometer: {{wal.vehicle_odometer}} km</p>
+                  <p><strong>WORK AUTHORIZATION</strong><br>
+                  We hereby authorize {{wal.workshop_name}} to perform the maintenance and/or repair work on the vehicle
+                  specified above in accordance with Work Order No. {{work_order.number}}.</p>
+                  <p>The detailed scope of work, parts, services, and other technical requirements are specified in the
+                  associated Work Order delivered together with the vehicle. The workshop is authorized to perform only
+                  the work specified in the Work Order. Any additional work, replacement of parts, or costs outside the
+                  approved Work Order must obtain prior approval from {{wal.company_name}} before execution. This
+                  authorization does not constitute approval for any additional work or charges beyond those specified
+                  in the approved Work Order.</p>
+                  <p><strong>VEHICLE &amp; WORK ORDER HANDOVER</strong><br>
+                  By signing this document, the workshop acknowledges that it has received: the vehicle specified in
+                  this authorization; the associated Work Order; and authorization to perform the work specified in the
+                  Work Order. The Work Order shall remain with the workshop during the maintenance or repair process.
+                  This Work Authorization Letter shall be signed by the workshop representative and returned to
+                  {{wal.company_name}} as evidence of receipt and acceptance of the authorized work.</p>
+                  <div style="display:flex;justify-content:space-between;margin-top:24px;">
+                    <div style="width:45%;">
+                      <strong>AUTHORIZED BY</strong><br>{{wal.company_name}}<br><br>
+                      Name: ______________________________<br>
+                      Position: ___________________________<br>
+                      Signature: __________________________<br>
+                      Date: _______________________________
+                    </div>
+                    <div style="width:45%;">
+                      <strong>WORKSHOP ACKNOWLEDGEMENT</strong><br>
+                      We hereby acknowledge receipt of the vehicle and the associated Work Order and confirm our
+                      acceptance to perform the authorized work in accordance with the Work Order.<br><br>
+                      Workshop: _________________________<br>
+                      Received By: ______________________<br>
+                      Position: _________________________<br>
+                      Date &amp; Time Received: _____________<br>
+                      Signature: ________________________<br>
+                      Workshop Stamp:
+                    </div>
+                  </div>
+                  <p style="margin-top:16px;font-size:10px;"><em>Important: Any additional work, parts, or costs not
+                  specified in the approved Work Order must receive prior authorization from {{wal.company_name}}
+                  before the work is performed.</em></p>
+                  <div style="margin-top:8px;font-size:9px;color:#666;">Revision {{wal.revision}} | Template v{{template_version}} | Config v{{configuration_version}}</div>
+                </div>
+                HTML,
             'vehicle_transfer' => $wrap('Vehicle Transfer', <<<'HTML'
                 <p>Vehicle: {{vehicle.registration_number}} ({{vehicle.brand}} {{vehicle.model}})<br>
                 From: {{from_branch.name}} &rarr; To: {{to_branch.name}}<br>
