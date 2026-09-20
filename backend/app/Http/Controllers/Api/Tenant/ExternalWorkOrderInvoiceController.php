@@ -24,8 +24,7 @@ use Illuminate\Support\Facades\Storage;
  * Cancel is not duplicated here — it stays on ExternalWorkOrderController
  * (POST /work-orders/{workOrder}/external/cancel), which already
  * synchronizes this Invoice's own status in the same transaction (see
- * ExternalWorkOrderService::cancel()). Complete and Settlement land in
- * Phase 5.
+ * ExternalWorkOrderService::cancel()).
  */
 class ExternalWorkOrderInvoiceController extends Controller
 {
@@ -116,7 +115,73 @@ class ExternalWorkOrderInvoiceController extends Controller
     public function viewAcknowledgement(WorkOrderExternalInvoice $externalInvoice)
     {
         $this->authorizeScope($externalInvoice);
-        $file = $externalInvoice->acknowledgementFile;
+
+        return $this->serveFile($externalInvoice->acknowledgementFile);
+    }
+
+    public function complete(Request $request, WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        $validated = $request->validate([
+            'completed_work_order_file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
+            'vendor_invoice_file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
+            'vendor_invoice_date' => ['required', 'date'],
+            'vendor_invoice_amount' => ['required', 'numeric', 'gt:0'],
+            'payment_term' => ['required', 'string', 'max:255'],
+        ]);
+
+        return $this->ok($this->invoices->complete(
+            $externalInvoice,
+            $request->file('completed_work_order_file'),
+            $request->file('vendor_invoice_file'),
+            $validated['vendor_invoice_date'],
+            (string) $validated['vendor_invoice_amount'],
+            $validated['payment_term'],
+            $this->context->user()->id,
+        ));
+    }
+
+    public function viewCompletedWorkOrder(WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+
+        return $this->serveFile($externalInvoice->completedWorkOrderFile);
+    }
+
+    public function viewVendorInvoice(WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+
+        return $this->serveFile($externalInvoice->vendorInvoiceFile);
+    }
+
+    public function settle(Request $request, WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        $validated = $request->validate([
+            'payment_proof_file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,pdf'],
+            'payment_date' => ['required', 'date'],
+            'paid_amount' => ['required', 'numeric', 'gt:0'],
+        ]);
+
+        return $this->ok($this->invoices->settle(
+            $externalInvoice,
+            $request->file('payment_proof_file'),
+            $validated['payment_date'],
+            (string) $validated['paid_amount'],
+            $this->context->user()->id,
+        ));
+    }
+
+    public function viewPaymentProof(WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+
+        return $this->serveFile($externalInvoice->paymentProofFile);
+    }
+
+    private function serveFile(?\App\Domain\WorkOrder\Models\WorkOrderExternalInvoiceFile $file)
+    {
         abort_unless($file !== null, 404);
 
         return Storage::disk($file->disk)->response($file->path, $file->original_filename);

@@ -300,6 +300,11 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/external-work-order-invoices/{externalInvoice}/deliver', [ExternalWorkOrderInvoiceController::class, 'deliver'])->middleware('permission:external_work_order_invoice.deliver');
             Route::post('/external-work-order-invoices/{externalInvoice}/acknowledge', [ExternalWorkOrderInvoiceController::class, 'acknowledge'])->middleware('permission:external_work_order_invoice.acknowledge');
             Route::get('/external-work-order-invoices/{externalInvoice}/acknowledgement', [ExternalWorkOrderInvoiceController::class, 'viewAcknowledgement'])->middleware('permission:external_work_order_invoice.view');
+            Route::post('/external-work-order-invoices/{externalInvoice}/complete', [ExternalWorkOrderInvoiceController::class, 'complete'])->middleware('permission:external_work_order_invoice.complete');
+            Route::get('/external-work-order-invoices/{externalInvoice}/completed-work-order', [ExternalWorkOrderInvoiceController::class, 'viewCompletedWorkOrder'])->middleware('permission:external_work_order_invoice.view');
+            Route::get('/external-work-order-invoices/{externalInvoice}/vendor-invoice', [ExternalWorkOrderInvoiceController::class, 'viewVendorInvoice'])->middleware('permission:external_work_order_invoice.view');
+            Route::post('/external-work-order-invoices/{externalInvoice}/settle', [ExternalWorkOrderInvoiceController::class, 'settle'])->middleware('permission:external_work_order_invoice.settle');
+            Route::get('/external-work-order-invoices/{externalInvoice}/payment-proof', [ExternalWorkOrderInvoiceController::class, 'viewPaymentProof'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/corrective-actions', [WorkOrderExecutionController::class, 'addCorrectiveAction'])->middleware('permission:diagnosis.manage');

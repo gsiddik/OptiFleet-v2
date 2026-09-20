@@ -41,11 +41,12 @@ async function openPdf(path: string, setError: (m: string | null) => void) {
  * "Perbaikan Tenant Portal - Work Order Status External dan Workshop
  * Invoice": the tenant-facing "Workshop Invoice" list — Work Orders being
  * carried out by an External Workshop, and the primary surface for the
- * Section 5 action matrix (Generate/View Work Authorization, Deliver,
- * Acknowledge here; Complete/Settlement land in Phase 5). Deliberately
- * its own page/route, separate from WorkshopInvoiceListPage (the pre-
- * existing, unrelated R1 feature). Cancel reuses the existing Work Order
- * detail page's Cancel action rather than duplicating that logic here.
+ * full Section 5 action matrix (Generate/View Work Authorization,
+ * Deliver, Acknowledge, Complete, View Bill, Settlement, View
+ * Settlement). Deliberately its own page/route, separate from
+ * WorkshopInvoiceListPage (the pre-existing, unrelated R1 feature).
+ * Cancel reuses the existing Work Order detail page's Cancel action
+ * rather than duplicating that logic here.
  */
 export function ExternalWorkOrderInvoiceListPage() {
   const { hasPermission } = useAuth();
@@ -60,6 +61,18 @@ export function ExternalWorkOrderInvoiceListPage() {
   const [deliveringFor, setDeliveringFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
   const [acknowledgingFor, setAcknowledgingFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
   const [ackFile, setAckFile] = useState<File | null>(null);
+  const [completingFor, setCompletingFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
+  const [completedWoFile, setCompletedWoFile] = useState<File | null>(null);
+  const [vendorInvoiceFile, setVendorInvoiceFile] = useState<File | null>(null);
+  const [vendorInvoiceDate, setVendorInvoiceDate] = useState('');
+  const [vendorInvoiceAmount, setVendorInvoiceAmount] = useState('');
+  const [paymentTerm, setPaymentTerm] = useState('');
+  const [settlingFor, setSettlingFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [paymentDate, setPaymentDate] = useState('');
+  const [paidAmount, setPaidAmount] = useState('');
+  const [billFor, setBillFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
+  const [settlementFor, setSettlementFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
 
   useEffect(() => {
     if (!generatingFor) return;
@@ -125,6 +138,68 @@ export function ExternalWorkOrderInvoiceListPage() {
     }
   }
 
+  function openComplete(row: ExternalWorkOrderInvoiceItem) {
+    setActionError(null);
+    setCompletedWoFile(null);
+    setVendorInvoiceFile(null);
+    setVendorInvoiceDate('');
+    setVendorInvoiceAmount('');
+    setPaymentTerm('');
+    setCompletingFor(row);
+  }
+
+  async function submitComplete() {
+    if (!completingFor || !completedWoFile || !vendorInvoiceFile || !vendorInvoiceDate || !vendorInvoiceAmount || !paymentTerm) return;
+    setBusyId(completingFor.id);
+    setActionError(null);
+    try {
+      const form = new FormData();
+      form.append('completed_work_order_file', completedWoFile);
+      form.append('vendor_invoice_file', vendorInvoiceFile);
+      form.append('vendor_invoice_date', vendorInvoiceDate);
+      form.append('vendor_invoice_amount', vendorInvoiceAmount);
+      form.append('payment_term', paymentTerm);
+      await apiClient.post(`/app/external-work-order-invoices/${completingFor.id}/complete`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setCompletingFor(null);
+      reload();
+    } catch (err) {
+      setActionError(extractApiError(err).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  function openSettle(row: ExternalWorkOrderInvoiceItem) {
+    setActionError(null);
+    setPaymentProofFile(null);
+    setPaymentDate('');
+    setPaidAmount(row.vendor_invoice_amount ?? '');
+    setSettlingFor(row);
+  }
+
+  async function submitSettle() {
+    if (!settlingFor || !paymentProofFile || !paymentDate || !paidAmount) return;
+    setBusyId(settlingFor.id);
+    setActionError(null);
+    try {
+      const form = new FormData();
+      form.append('payment_proof_file', paymentProofFile);
+      form.append('payment_date', paymentDate);
+      form.append('paid_amount', paidAmount);
+      await apiClient.post(`/app/external-work-order-invoices/${settlingFor.id}/settle`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setSettlingFor(null);
+      reload();
+    } catch (err) {
+      setActionError(extractApiError(err).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const columns: Column<ExternalWorkOrderInvoiceItem>[] = [
     {
       key: 'wo_number',
@@ -163,6 +238,26 @@ export function ExternalWorkOrderInvoiceListPage() {
           {r.allowed_actions.includes('view_acknowledgement') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openPdf(`/app/external-work-order-invoices/${r.id}/acknowledgement`, setActionError)}>
               View Acknowledgement
+            </button>
+          )}
+          {r.allowed_actions.includes('complete') && hasPermission('external_work_order_invoice.complete') && (
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openComplete(r)}>
+              Complete
+            </button>
+          )}
+          {r.allowed_actions.includes('view_bill') && (
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setBillFor(r)}>
+              View Bill
+            </button>
+          )}
+          {r.allowed_actions.includes('settle') && hasPermission('external_work_order_invoice.settle') && (
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openSettle(r)}>
+              Settlement
+            </button>
+          )}
+          {r.allowed_actions.includes('view_settlement') && (
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setSettlementFor(r)}>
+              View Settlement
             </button>
           )}
           {r.allowed_actions.includes('cancel') && (
@@ -252,6 +347,104 @@ export function ExternalWorkOrderInvoiceListPage() {
             Upload
           </button>
         </div>
+      </Modal>
+
+      <Modal open={completingFor !== null} title="Complete" onClose={() => setCompletingFor(null)} width={520}>
+        <p style={{ fontSize: 13 }}>Confirm that the External Workshop has finished the maintenance work.</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <label style={{ fontSize: 12 }}>
+            Completed Work Order (JPG, PNG, or PDF)
+            <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setCompletedWoFile(e.target.files?.[0] ?? null)} />
+          </label>
+          <label style={{ fontSize: 12 }}>
+            Vendor Invoice (JPG, PNG, or PDF)
+            <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setVendorInvoiceFile(e.target.files?.[0] ?? null)} />
+          </label>
+          <label style={{ fontSize: 12 }}>
+            Invoice Date
+            <input type="date" value={vendorInvoiceDate} onChange={(e) => setVendorInvoiceDate(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+          </label>
+          <label style={{ fontSize: 12 }}>
+            Invoice Amount
+            <input type="number" step="0.01" min="0.01" value={vendorInvoiceAmount} onChange={(e) => setVendorInvoiceAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+          </label>
+          <label style={{ fontSize: 12 }}>
+            Payment Term
+            <input placeholder="e.g. NET 30" value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button className="btn-secondary" onClick={() => setCompletingFor(null)} disabled={busyId !== null}>
+            Cancel
+          </button>
+          <button
+            className="btn-primary"
+            onClick={submitComplete}
+            disabled={busyId !== null || !completedWoFile || !vendorInvoiceFile || !vendorInvoiceDate || !vendorInvoiceAmount || !paymentTerm}
+          >
+            Confirm Complete
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={billFor !== null} title="Bill" onClose={() => setBillFor(null)}>
+        {billFor && (
+          <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div>Invoice Date: {billFor.vendor_invoice_date ?? '—'}</div>
+            <div>Invoice Amount: {billFor.vendor_invoice_amount ?? '—'}</div>
+            <div>Payment Term: {billFor.payment_term ?? '—'}</div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+              <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${billFor.id}/completed-work-order`, setActionError)}>
+                Open Completed Work Order
+              </button>
+              <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${billFor.id}/vendor-invoice`, setActionError)}>
+                Open Vendor Invoice
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={settlingFor !== null} title="Settlement" onClose={() => setSettlingFor(null)}>
+        <p style={{ fontSize: 13 }}>
+          Paid amount must exactly match the vendor invoice amount ({settlingFor?.vendor_invoice_amount ?? '—'}) — partial settlement is not supported.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <label style={{ fontSize: 12 }}>
+            Payment Date
+            <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+          </label>
+          <label style={{ fontSize: 12 }}>
+            Paid Amount
+            <input type="number" step="0.01" min="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+          </label>
+          <label style={{ fontSize: 12 }}>
+            Payment Proof (JPG, PNG, or PDF)
+            <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] ?? null)} />
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button className="btn-secondary" onClick={() => setSettlingFor(null)} disabled={busyId !== null}>
+            Cancel
+          </button>
+          <button className="btn-primary" onClick={submitSettle} disabled={busyId !== null || !paymentProofFile || !paymentDate || !paidAmount}>
+            Confirm Settlement
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={settlementFor !== null} title="Settlement Details" onClose={() => setSettlementFor(null)}>
+        {settlementFor && (
+          <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div>Payment Date: {settlementFor.payment_date ?? '—'}</div>
+            <div>Paid Amount: {settlementFor.paid_amount ?? '—'}</div>
+            <div style={{ marginTop: 8 }}>
+              <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${settlementFor.id}/payment-proof`, setActionError)}>
+                Open Payment Proof
+              </button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
