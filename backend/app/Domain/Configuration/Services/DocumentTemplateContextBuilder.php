@@ -20,14 +20,20 @@ class DocumentTemplateContextBuilder
 {
     public static function forWorkOrder(WorkOrder $workOrder): array
     {
-        $workOrder->loadMissing(['vehicle', 'branch', 'workshop', 'jobs']);
+        $workOrder->loadMissing(['vehicle', 'branch', 'workshop', 'jobs', 'findings']);
         $tenant = Tenant::query()->find($workOrder->tenant_id);
+        // Consolidated External Workshop business rules: printing an External Work Order must
+        // show only Findings that have been finalized (i.e. the Work Order has actually reached
+        // EXTERNAL at least once) and never internal Jobs/Diagnosis content — the template's
+        // {{#is_external}}/{{^is_external}} sections branch on this single flag.
+        $isExternal = $workOrder->execution_mode === 'EXTERNAL';
 
         return [
             'company' => self::company(),
             'tenant' => ['name' => $tenant?->name, 'code' => $tenant?->code],
             'document_number' => $workOrder->wo_number,
             'configuration_version' => $workOrder->numbering_configuration_version_id,
+            'is_external' => $isExternal,
             'work_order' => [
                 'number' => $workOrder->wo_number,
                 'status' => $workOrder->status,
@@ -37,6 +43,7 @@ class DocumentTemplateContextBuilder
                 'created_at' => optional($workOrder->created_at)->toDateTimeString(),
                 'started_at' => optional($workOrder->started_at)->toDateTimeString(),
                 'completed_at' => optional($workOrder->completed_at)->toDateTimeString(),
+                'revision' => $workOrder->external_finalized_revision,
             ],
             'vehicle' => [
                 'registration_number' => $workOrder->vehicle?->registration_number,
@@ -51,6 +58,11 @@ class DocumentTemplateContextBuilder
                 'status' => $job->status,
                 'estimated_hours' => (string) $job->estimated_hours,
                 'actual_hours' => (string) $job->actual_hours,
+            ])->all(),
+            'findings' => $workOrder->findings->map(fn ($finding) => [
+                'severity' => $finding->severity,
+                'description' => $finding->description,
+                'status' => $finding->status,
             ])->all(),
         ];
     }

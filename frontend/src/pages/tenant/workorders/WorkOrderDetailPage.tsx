@@ -57,14 +57,9 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   ],
   ON_HOLD: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   WAITING_PART: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
-  // EXTERNAL: work is being carried out by an external workshop (a top-level status parallel to
-  // IN_PROGRESS, not the separate WorkOrderExternalService towing sub-resource on this same page).
-  // Existing Print (see header) already covers handing this WO's data to the external workshop.
-  EXTERNAL: [
-    { action: 'resume', label: 'Resume In-House', permission: 'work_order.pause', primary: true },
-    { action: 'submit-to-qc', label: 'Submit to QC', permission: 'work_order.complete' },
-    { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
-  ],
+  // EXTERNAL has no entry here: its header actions (Print/Revise/Cancel) are rendered by the
+  // isExternalMode branch below, which forces `actions` to [] — see "Perbaikan Tenant Portal -
+  // Work Order Status External dan Workshop Invoice" Section 3.
   REWORK: [{ action: 'resume', label: 'Resume to In Progress', permission: 'work_order.pause', primary: true }],
   /** G-03: previously nothing in the UI could ever invoke this transition — a WO reaching QC_PENDING had no path to COMPLETED at all. */
   QC_PENDING: [{ action: 'complete', label: 'Complete', permission: 'work_order.complete', primary: true }],

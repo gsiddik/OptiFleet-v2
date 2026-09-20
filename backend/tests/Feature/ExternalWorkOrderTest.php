@@ -196,6 +196,53 @@ class ExternalWorkOrderTest extends TestCase
         $this->assertSame('application/pdf', $response->headers->get('Content-Type'));
     }
 
+    /**
+     * Section 3: the printed External Work Order must show its finalized Findings and revision,
+     * and must not show internal-only content (Jobs). The PDF binary itself isn't practical to
+     * assert on (established convention in DocumentTemplateTest only checks status/content-type),
+     * so this renders the same context+template the print endpoint uses and asserts on the HTML.
+     */
+    public function test_print_shows_findings_and_revision_and_hides_jobs_for_external_work_order(): void
+    {
+        [$tenant, , $workshop, $vehicle] = $this->setUpTenant();
+        [, $token] = $this->makeTenantUser($tenant, $this->externalPermissions());
+        $headers = $this->authHeaders($token);
+        $id = $this->createDraftWorkOrder($workshop, $vehicle, $headers);
+        $this->markExternalAndAddFinding($id, $headers);
+        $this->postJson("/api/v1/app/work-orders/{$id}/external", [], $headers)->assertOk();
+
+        $workOrder = \App\Domain\WorkOrder\Models\WorkOrder::query()->findOrFail($id);
+        $context = \App\Domain\Configuration\Services\DocumentTemplateContextBuilder::forWorkOrder($workOrder);
+        $this->assertTrue($context['is_external']);
+        $this->assertSame(1, $context['work_order']['revision']);
+        $this->assertSame('Cracked cylinder head.', $context['findings'][0]['description'] ?? null);
+
+        $rendered = app(\App\Domain\Configuration\Services\DocumentTemplateRenderService::class)
+            ->render('work_order', $context, $tenant->id, $workOrder->branch_id, $workOrder->workshop_id);
+
+        $this->assertStringContainsString('Cracked cylinder head.', $rendered['html']);
+        $this->assertStringContainsString('Revision: 1', $rendered['html']);
+        $this->assertStringNotContainsString('Est. Hours', $rendered['html']);
+    }
+
+    public function test_print_still_shows_jobs_and_no_findings_section_for_a_normal_internal_work_order(): void
+    {
+        [$tenant, , $workshop, $vehicle] = $this->setUpTenant();
+        [, $token] = $this->makeTenantUser($tenant, $this->externalPermissions());
+        $headers = $this->authHeaders($token);
+        $id = $this->createDraftWorkOrder($workshop, $vehicle, $headers);
+
+        $workOrder = \App\Domain\WorkOrder\Models\WorkOrder::query()->findOrFail($id);
+        $context = \App\Domain\Configuration\Services\DocumentTemplateContextBuilder::forWorkOrder($workOrder);
+        $this->assertFalse($context['is_external']);
+
+        $rendered = app(\App\Domain\Configuration\Services\DocumentTemplateRenderService::class)
+            ->render('work_order', $context, $tenant->id, $workOrder->branch_id, $workOrder->workshop_id);
+
+        $this->assertStringContainsString('Est. Hours', $rendered['html']);
+        $this->assertStringNotContainsString('Revision:', $rendered['html']);
+    }
+
     // --- Revise ----------------------------------------------------------------
 
     public function test_revise_returns_to_draft_and_retains_mode_number_and_findings(): void

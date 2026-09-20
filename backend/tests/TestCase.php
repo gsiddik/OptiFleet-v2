@@ -23,6 +23,7 @@ abstract class TestCase extends BaseTestCase
         $this->seed(\Database\Seeders\PermissionSeeder::class);
         $this->seed(\Database\Seeders\ModuleSeeder::class);
         $this->seed(\Database\Seeders\ConfigurationDefaultsSeeder::class);
+        $this->seed(\Database\Seeders\AddExternalWorkOrderPrintSectionSeeder::class);
         $this->seed(\Database\Seeders\WorkflowDefaultsSeeder::class);
         $this->seed(\Database\Seeders\RetireMaintenanceRequestNeedInformationSeeder::class);
         $this->seed(\Database\Seeders\AddWorkOrderExternalStatusSeeder::class);

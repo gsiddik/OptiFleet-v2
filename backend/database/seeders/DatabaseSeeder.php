@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             ModuleSeeder::class,
             ConfigurationDefaultsSeeder::class,
+            AddExternalWorkOrderPrintSectionSeeder::class,
             WorkflowDefaultsSeeder::class,
             RetireMaintenanceRequestNeedInformationSeeder::class,
             AddWorkOrderExternalStatusSeeder::class,

@@ -24,12 +24,18 @@ class TemplateVariableRegistry
             'scalars' => [
                 'work_order.number', 'work_order.status', 'work_order.maintenance_type',
                 'work_order.priority', 'work_order.complaint', 'work_order.created_at',
-                'work_order.started_at', 'work_order.completed_at',
+                'work_order.started_at', 'work_order.completed_at', 'work_order.revision',
                 'vehicle.registration_number', 'vehicle.brand', 'vehicle.model', 'vehicle.vin',
                 'branch.name', 'workshop.name',
+                // Consolidated External Workshop business rules: a plain boolean conditional
+                // (not a repeating list) is registered as a scalar, per TemplateValidator's
+                // isConditionalScalar check — {{#is_external}}/{{^is_external}} branch the
+                // template between the internal Jobs table and the External Findings section.
+                'is_external',
             ],
             'sections' => [
                 'jobs' => ['description', 'status', 'estimated_hours', 'actual_hours'],
+                'findings' => ['severity', 'description', 'status'],
             ],
         ],
         'maintenance_report' => [
