@@ -1,35 +1,57 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { inputStyle } from '../../../components/FormField';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import type { WorkspaceItem, WorkspaceReservationItem } from '../../../types';
 
-function startOfWeek(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1) - day;
-  d.setDate(d.getDate() + diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 function toDateInput(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+function todayDateInput(): string {
+  return toDateInput(new Date());
+}
+
+function addDays(dateInput: string, days: number): string {
+  const d = new Date(`${dateInput}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toDateInput(d);
+}
+
+/**
+ * "Next Improvement Tenant Portal - Products" (Scheduler): status color
+ * per the source document — Scheduled=Yellow, In Progress=Red, On Hold/
+ * Waiting Part/QC Pending=Orange, Completed=Green. Closed Work Orders
+ * never appear here at all (excluded server-side), so no color is
+ * defined for it. Anything earlier in the lifecycle (Draft/Submitted/
+ * Approved/Assigned) or terminal-but-not-closed (Rework/Rejected/
+ * Cancelled) falls back to a neutral color — the document only specifies
+ * these five.
+ */
+const STATUS_COLORS: Record<string, string> = {
+  SCHEDULED: '#fef9c3',
+  IN_PROGRESS: '#fee2e2',
+  ON_HOLD: '#ffedd5',
+  WAITING_PART: '#ffedd5',
+  QC_PENDING: '#ffedd5',
+  COMPLETED: '#dcfce7',
+};
+
+function cardColor(status: string | undefined): string {
+  return (status && STATUS_COLORS[status]) || '#eff6ff';
 }
 
 export function WorkshopSchedulerPage() {
   const [workshops, setWorkshops] = useState<{ id: string; name: string }[]>([]);
   const [workshopId, setWorkshopId] = useState('');
-  const [from, setFrom] = useState(toDateInput(startOfWeek(new Date())));
-  const [to, setTo] = useState(() => {
-    const d = startOfWeek(new Date());
-    d.setDate(d.getDate() + 6);
-    return toDateInput(d);
-  });
+  const [from, setFrom] = useState(todayDateInput());
   const [workspaces, setWorkspaces] = useState<(WorkspaceItem & { reservations?: WorkspaceReservationItem[] })[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const to = useMemo(() => addDays(from, 6), [from]);
 
   useEffect(() => {
     apiClient.get('/app/workshops', { params: { per_page: 100 } }).then((res) => {
@@ -49,15 +71,13 @@ export function WorkshopSchedulerPage() {
       .finally(() => setLoading(false));
   }, [workshopId, from, to]);
 
+  // Leftmost column is always today by default; Prev/Next Week shift the
+  // whole seven-day window a week at a time in either direction.
   const days = useMemo(() => {
     const result: string[] = [];
-    const start = new Date(from);
-    const end = new Date(to);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      result.push(toDateInput(d));
-    }
+    for (let i = 0; i < 7; i++) result.push(addDays(from, i));
     return result;
-  }, [from, to]);
+  }, [from]);
 
   return (
     <div>
@@ -70,12 +90,18 @@ export function WorkshopSchedulerPage() {
             </option>
           ))}
         </select>
-        <label style={{ fontSize: 13 }}>
-          From <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} style={{ ...inputStyle, width: 150 }} />
-        </label>
-        <label style={{ fontSize: 13 }}>
-          To <input type="date" value={to} onChange={(e) => setTo(e.target.value)} style={{ ...inputStyle, width: 150 }} />
-        </label>
+        <button className="btn-secondary" onClick={() => setFrom((d) => addDays(d, -7))}>
+          ← Previous Week
+        </button>
+        <span style={{ fontSize: 13, color: '#374151' }}>
+          {from} – {to}
+        </span>
+        <button className="btn-secondary" onClick={() => setFrom((d) => addDays(d, 7))}>
+          Next Week →
+        </button>
+        <button className="btn-secondary" onClick={() => setFrom(todayDateInput())}>
+          Today
+        </button>
       </div>
 
       {error && <ErrorState message={error} />}
@@ -89,7 +115,7 @@ export function WorkshopSchedulerPage() {
                 <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e5e7eb', minWidth: 160 }}>Workspace</th>
                 {days.map((d) => (
                   <th key={d} style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e5e7eb', minWidth: 160 }}>
-                    {d}
+                    {d === todayDateInput() ? `${d} (Today)` : d}
                   </th>
                 ))}
               </tr>
@@ -103,15 +129,24 @@ export function WorkshopSchedulerPage() {
                     <StatusBadge status={ws.status} />
                   </td>
                   {days.map((d) => {
-                    const dayReservations = (ws.reservations ?? []).filter((r) => r.start_at.slice(0, 10) <= d && r.end_at.slice(0, 10) >= d);
+                    const dayReservations = (ws.reservations ?? [])
+                      .filter((r) => r.start_at.slice(0, 10) <= d && r.end_at.slice(0, 10) >= d)
+                      .sort((a, b) => a.start_at.localeCompare(b.start_at));
                     return (
                       <td key={d} style={{ padding: 6, borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }}>
                         {dayReservations.map((r) => (
-                          <div key={r.id} style={{ background: '#eff6ff', borderRadius: 6, padding: '4px 6px', marginBottom: 4 }}>
+                          <Link
+                            key={r.id}
+                            to={r.work_order_id ? `/app/work-orders/${r.work_order_id}` : '#'}
+                            style={{
+                              display: 'block', background: cardColor(r.work_order?.status), borderRadius: 6,
+                              padding: '4px 6px', marginBottom: 4, textDecoration: 'none', color: 'inherit',
+                            }}
+                          >
                             <div style={{ fontWeight: 600 }}>{r.work_order?.wo_number ?? 'Reserved'}</div>
                             <div style={{ color: '#6b7280' }}>{r.work_order?.vehicle?.registration_number ?? ''}</div>
-                            <StatusBadge status={r.status} />
-                          </div>
+                            <div style={{ color: '#6b7280' }}>{r.start_at.slice(11, 16)}</div>
+                          </Link>
                         ))}
                       </td>
                     );

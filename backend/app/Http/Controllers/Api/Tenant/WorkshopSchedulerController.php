@@ -40,7 +40,13 @@ class WorkshopSchedulerController extends Controller
                 $q->where('end_at', '>=', $request->input('from'))
                     ->where('start_at', '<=', $request->input('to'))
                     ->whereIn('status', ['RESERVED', 'ACTIVE'])
-                    ->with(['workOrder.vehicle', 'workOrder.mechanicAssignments.worker']);
+                    // "Next Improvement Tenant Portal - Products" (Scheduler): a
+                    // Closed Work Order's card is removed from the scheduler
+                    // entirely, even if its reservation row itself hasn't been
+                    // marked COMPLETED/CANCELLED.
+                    ->whereHas('workOrder', fn ($wq) => $wq->where('status', '!=', 'CLOSED'))
+                    ->with(['workOrder.vehicle', 'workOrder.mechanicAssignments.worker'])
+                    ->orderBy('start_at');
             }])
             ->get();
 
