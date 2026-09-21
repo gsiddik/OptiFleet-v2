@@ -1101,7 +1101,7 @@ export interface ProductItem {
   sku: string;
   name: string;
   product_category_id: string;
-  product_type: 'SPARE_PART' | 'TOOL' | 'TIRE' | 'CONSUMABLE' | 'EQUIPMENT' | 'OTHER';
+  product_type: 'SPARE_PART' | 'TOOL' | 'TIRE' | 'CONSUMABLE' | 'EQUIPMENT' | 'RIM' | 'OTHER';
   uom_id: string;
   brand: string | null;
   manufacturer: string | null;

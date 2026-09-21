@@ -81,6 +81,14 @@ use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
 use App\Http\Controllers\Api\Tenant\WarrantyController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
 use App\Http\Controllers\Api\Tenant\WorkerController;
+use App\Http\Controllers\Api\Tenant\WorkerTypeController;
+use App\Http\Controllers\Api\Tenant\ToolTypeController;
+use App\Http\Controllers\Api\Tenant\EquipmentTypeController;
+use App\Http\Controllers\Api\Tenant\StorageRequirementController;
+use App\Http\Controllers\Api\Tenant\TireLoadIndexController;
+use App\Http\Controllers\Api\Tenant\TireSpeedRatingController;
+use App\Http\Controllers\Api\Tenant\TirePlyRatingController;
+use App\Http\Controllers\Api\Tenant\TireTraCodeController;
 use App\Http\Controllers\Api\Tenant\ExternalWorkOrderController;
 use App\Http\Controllers\Api\Tenant\ExternalWorkOrderInvoiceController;
 use App\Http\Controllers\Api\Tenant\WorkOrderController;
@@ -377,6 +385,11 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/workers/{worker}/unlink-user', [WorkerController::class, 'unlinkUser'])->middleware('permission:worker.manage');
             Route::post('/workers/{worker}/assign', [WorkerController::class, 'assign'])->middleware('permission:worker.assign');
 
+            Route::get('/worker-types', [WorkerTypeController::class, 'index'])->middleware('permission:worker.view');
+            Route::post('/worker-types', [WorkerTypeController::class, 'store'])->middleware('permission:worker.manage');
+            Route::put('/worker-types/{workerType}', [WorkerTypeController::class, 'update'])->middleware('permission:worker.manage');
+            Route::delete('/worker-types/{workerType}', [WorkerTypeController::class, 'destroy'])->middleware('permission:worker.manage');
+
             Route::get('/workspaces', [WorkspaceController::class, 'index'])->middleware('permission:workspace.view');
             Route::post('/workspaces', [WorkspaceController::class, 'store'])->middleware('permission:workspace.manage');
             Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->middleware('permission:workspace.view');
@@ -404,6 +417,45 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/uoms', [UomController::class, 'store'])->middleware('permission:product.create');
             Route::put('/uoms/{uom}', [UomController::class, 'update'])->middleware('permission:product.update');
             Route::delete('/uoms/{uom}', [UomController::class, 'destroy'])->middleware('permission:product.delete');
+
+            Route::get('/tool-types', [ToolTypeController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/tool-types', [ToolTypeController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/tool-types/{toolType}', [ToolTypeController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/tool-types/{toolType}', [ToolTypeController::class, 'destroy'])->middleware('permission:product.delete');
+
+            Route::get('/equipment-types', [EquipmentTypeController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/equipment-types', [EquipmentTypeController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/equipment-types/{equipmentType}', [EquipmentTypeController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/equipment-types/{equipmentType}', [EquipmentTypeController::class, 'destroy'])->middleware('permission:product.delete');
+
+            Route::get('/storage-requirements', [StorageRequirementController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/storage-requirements', [StorageRequirementController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/storage-requirements/{storageRequirement}', [StorageRequirementController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/storage-requirements/{storageRequirement}', [StorageRequirementController::class, 'destroy'])->middleware('permission:product.delete');
+
+            Route::get('/tire-load-indices', [TireLoadIndexController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/tire-load-indices', [TireLoadIndexController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/tire-load-indices/{tireLoadIndex}', [TireLoadIndexController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/tire-load-indices/{tireLoadIndex}', [TireLoadIndexController::class, 'destroy'])->middleware('permission:product.delete');
+
+            Route::get('/tire-speed-ratings', [TireSpeedRatingController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/tire-speed-ratings', [TireSpeedRatingController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/tire-speed-ratings/{tireSpeedRating}', [TireSpeedRatingController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/tire-speed-ratings/{tireSpeedRating}', [TireSpeedRatingController::class, 'destroy'])->middleware('permission:product.delete');
+
+            Route::get('/tire-ply-ratings', [TirePlyRatingController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/tire-ply-ratings', [TirePlyRatingController::class, 'store'])->middleware('permission:product.create');
+            Route::put('/tire-ply-ratings/{tirePlyRating}', [TirePlyRatingController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/tire-ply-ratings/{tirePlyRating}', [TirePlyRatingController::class, 'destroy'])->middleware('permission:product.delete');
+
+            Route::get('/tire-tra-codes', [TireTraCodeController::class, 'index'])->middleware('permission:product.view');
+            Route::post('/tire-tra-codes', [TireTraCodeController::class, 'store'])->middleware('permission:product.create');
+            Route::get('/tire-tra-codes/{tireTraCode}', [TireTraCodeController::class, 'show'])->middleware('permission:product.view');
+            Route::put('/tire-tra-codes/{tireTraCode}', [TireTraCodeController::class, 'update'])->middleware('permission:product.update');
+            Route::delete('/tire-tra-codes/{tireTraCode}', [TireTraCodeController::class, 'destroy'])->middleware('permission:product.delete');
+            Route::post('/tire-tra-codes/{tireTraCode}/star-ratings', [TireTraCodeController::class, 'storeStarRating'])->middleware('permission:product.create');
+            Route::put('/tire-tra-codes/{tireTraCode}/star-ratings/{starRating}', [TireTraCodeController::class, 'updateStarRating'])->middleware('permission:product.update');
+            Route::delete('/tire-tra-codes/{tireTraCode}/star-ratings/{starRating}', [TireTraCodeController::class, 'destroyStarRating'])->middleware('permission:product.delete');
 
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
             Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');

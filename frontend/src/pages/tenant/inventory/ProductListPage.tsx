@@ -11,7 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ProductCategoryItem, ProductItem, UomItem } from '../../../types';
 
-const PRODUCT_TYPES = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'OTHER'];
+const PRODUCT_TYPES = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'RIM', 'OTHER'];
 
 export function ProductListPage() {
   const { hasPermission } = useAuth();
@@ -64,7 +64,6 @@ export function ProductListPage() {
 function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
   const [uoms, setUoms] = useState<UomItem[]>([]);
-  const [code, setCode] = useState('');
   const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
@@ -85,10 +84,9 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
     setErrors({});
     try {
       await apiClient.post('/app/products', {
-        code, sku, name, product_category_id: categoryId, uom_id: uomId, product_type: productType,
+        sku, name, product_category_id: categoryId, uom_id: uomId, product_type: productType,
         reference_tread_depth_mm: productType === 'TIRE' && referenceTreadDepthMm ? referenceTreadDepthMm : undefined,
       });
-      setCode('');
       setSku('');
       setName('');
       setReferenceTreadDepthMm('');
@@ -104,8 +102,8 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
 
   return (
     <Modal open={open} title="New Product" onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required>
-        <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
+      <FormField label="Code" errors={errors.code}>
+        <input value="Auto-generated on save" disabled style={{ ...inputStyle, color: '#888' }} />
       </FormField>
       <FormField label="SKU" errors={errors.sku} required>
         <input value={sku} onChange={(e) => setSku(e.target.value)} style={inputStyle} />
@@ -151,7 +149,7 @@ function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClo
         <button className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
-        <button className="btn-primary" disabled={submitting || !code || !sku || !name || !categoryId || !uomId} onClick={submit}>
+        <button className="btn-primary" disabled={submitting || !sku || !name || !categoryId || !uomId} onClick={submit}>
           Create
         </button>
       </div>

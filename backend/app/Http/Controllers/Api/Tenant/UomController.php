@@ -32,6 +32,7 @@ class UomController extends Controller
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:20', Rule::unique('uoms', 'code')->where('tenant_id', $tenantId)],
             'name' => ['required', 'string', 'max:100'],
+            'measure_type' => ['nullable', 'in:LENGTH,PACKAGING,CAPACITY,WEIGHT,PRESSURE'],
             'description' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -47,6 +48,7 @@ class UomController extends Controller
 
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:100'],
+            'measure_type' => ['sometimes', 'nullable', 'in:LENGTH,PACKAGING,CAPACITY,WEIGHT,PRESSURE'],
             'description' => ['sometimes', 'nullable', 'string', 'max:255'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
         ]);

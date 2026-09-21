@@ -39,6 +39,11 @@ class ConfigurationDefaultsSeeder extends Seeder
             // Workshop Invoice is new in this batch. Both follow the exact
             // same platform-default-numbering pattern as every other document.
             'maintenance_memo' => ['format' => 'MEMO/OPTIFLEET/{YYYY}/{SEQ:6}', 'doc_code' => 'MEMO', 'reset_rule' => 'YEARLY'],
+            // "Next Improvement Tenant Portal - Products" Section 20: Item Code is
+            // net-new (no prior hardcoded generator to reproduce) — auto-generated,
+            // read-only, and extends this same configurable numbering engine rather
+            // than inventing a separate mechanism.
+            'product_item' => ['format' => 'ITM/{YYYY}/{SEQ:6}', 'doc_code' => 'ITM', 'reset_rule' => 'YEARLY'],
         ];
 
         foreach ($numbering as $code => $payload) {

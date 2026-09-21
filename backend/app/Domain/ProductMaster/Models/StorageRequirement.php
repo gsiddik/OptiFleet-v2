@@ -8,11 +8,11 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Uom extends Model
+class StorageRequirement extends Model
 {
     use Auditable, BelongsToTenantOrPlatform, HasUuids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'code', 'name', 'measure_type', 'description', 'is_system', 'status'];
+    protected $fillable = ['tenant_id', 'code', 'name', 'description', 'is_system', 'status'];
 
     protected function casts(): array
     {

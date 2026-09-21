@@ -18,11 +18,13 @@ class StoreProductRequest extends FormRequest
         $tenantId = app(TenantContext::class)->tenantId();
 
         return [
-            'code' => ['required', 'string', 'max:50', Rule::unique('products', 'code')->where('tenant_id', $tenantId)],
+            // "Next Improvement Tenant Portal - Products" Section 20: Item Code is
+            // server-generated (ProductController::store) and never accepted from
+            // the client — deliberately absent from this rule set.
             'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->where('tenant_id', $tenantId)],
             'name' => ['required', 'string', 'max:255'],
             'product_category_id' => ['required', 'uuid', Rule::exists('product_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
-            'product_type' => ['required', 'in:SPARE_PART,TOOL,TIRE,CONSUMABLE,EQUIPMENT,OTHER'],
+            'product_type' => ['required', 'in:SPARE_PART,TOOL,TIRE,CONSUMABLE,EQUIPMENT,RIM,OTHER'],
             'uom_id' => ['required', 'uuid', Rule::exists('uoms', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             'brand' => ['nullable', 'string', 'max:100'],
             'manufacturer' => ['nullable', 'string', 'max:150'],

@@ -17,7 +17,7 @@ class Product extends Model
     use Auditable, BelongsToTenantOrPlatform, HasUuids, SoftDeletes;
 
     protected $fillable = [
-        'tenant_id', 'code', 'sku', 'name', 'product_category_id', 'product_type', 'uom_id',
+        'tenant_id', 'code', 'numbering_configuration_version_id', 'sku', 'name', 'product_category_id', 'product_type', 'uom_id',
         'brand', 'manufacturer', 'material', 'production_year', 'weight_kg', 'length_mm', 'width_mm', 'height_mm', 'image_url',
         'manufacturer_part_number', 'description', 'reference_tread_depth_mm',
         'track_serial_number', 'track_batch', 'is_system', 'status',

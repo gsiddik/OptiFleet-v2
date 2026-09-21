@@ -18,7 +18,7 @@ class Worker extends Model
     use Auditable, BelongsToTenant, HasUuids, SoftDeletes;
 
     protected $fillable = [
-        'tenant_id', 'employee_code', 'name', 'branch_id', 'workshop_id', 'worker_type', 'status', 'user_id',
+        'tenant_id', 'employee_code', 'name', 'branch_id', 'workshop_id', 'worker_type', 'worker_type_id', 'status', 'user_id',
         'phone', 'email', 'address', 'monthly_rate', 'hourly_rate', 'photo_url',
     ];
 
@@ -40,6 +40,11 @@ class Worker extends Model
     public function workshop(): BelongsTo
     {
         return $this->belongsTo(Workshop::class);
+    }
+
+    public function workerType(): BelongsTo
+    {
+        return $this->belongsTo(WorkerType::class);
     }
 
     public function skills(): HasMany

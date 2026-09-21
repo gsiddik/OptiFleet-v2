@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCompatibility;
 use App\Domain\ProductMaster\Services\ProductCompatibilityService;
@@ -10,11 +11,13 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreProductRequest;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ProductController extends Controller
 {
     public function __construct(
         private readonly ProductCompatibilityService $compatibility,
+        private readonly DocumentNumberingService $numbers,
         private readonly TenantContext $context,
     ) {}
 
@@ -36,9 +39,19 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request)
     {
-        $product = Product::query()->create($request->validated() + [
-            'tenant_id' => $this->context->tenantId(), 'is_system' => false, 'status' => 'ACTIVE',
-        ]);
+        $tenantId = $this->context->tenantId();
+
+        $product = DB::transaction(function () use ($request, $tenantId) {
+            $number = $this->numbers->generate('product_item', $tenantId);
+
+            return Product::query()->create($request->validated() + [
+                'tenant_id' => $tenantId,
+                'code' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
+                'is_system' => false,
+                'status' => 'ACTIVE',
+            ]);
+        });
 
         return $this->ok($product, 201);
     }
