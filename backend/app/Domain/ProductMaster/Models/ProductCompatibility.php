@@ -14,7 +14,8 @@ class ProductCompatibility extends Model
     use BelongsToTenantOrPlatform, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'product_id', 'component_group_id', 'vehicle_category_id', 'vehicle_brand', 'vehicle_model', 'notes',
+        'tenant_id', 'product_id', 'component_group_id', 'vehicle_category_id', 'vehicle_brand', 'vehicle_model',
+        'variant', 'year_from', 'year_to', 'position', 'notes',
     ];
 
     public function product(): BelongsTo

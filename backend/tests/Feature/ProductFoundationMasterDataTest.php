@@ -31,15 +31,23 @@ class ProductFoundationMasterDataTest extends TestCase
         $category = $this->makeProductCategory();
         $uom = $this->makeUom();
 
+        $sparepartSpec = [
+            'part_number' => 'PN-'.Str::random(4), 'part_type' => 'GENUINE',
+            'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+        ];
+
         $first = $this->postJson('/api/v1/app/products', [
             'code' => 'CLIENT-SUPPLIED-SHOULD-BE-IGNORED',
             'sku' => 'SKU-A-'.Str::random(4), 'name' => 'Item A',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
+            'brand' => 'Bosch', 'track_serial_number' => false, 'spec' => $sparepartSpec,
         ], $headers)->assertStatus(201);
 
         $second = $this->postJson('/api/v1/app/products', [
             'sku' => 'SKU-B-'.Str::random(4), 'name' => 'Item B',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
+            'brand' => 'Bosch', 'track_serial_number' => false,
+            'spec' => ['part_number' => 'PN-'.Str::random(4), 'part_type' => 'GENUINE', 'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']]],
         ], $headers)->assertStatus(201);
 
         $firstCode = $first->json('data.code');
@@ -64,6 +72,10 @@ class ProductFoundationMasterDataTest extends TestCase
         $this->postJson('/api/v1/app/products', [
             'sku' => 'SKU-RIM-'.Str::random(4), 'name' => 'Alloy Rim',
             'product_category_id' => $category->id, 'product_type' => 'RIM', 'uom_id' => $uom->id,
+            'brand' => 'Enkei', 'track_serial_number' => true,
+            'spec' => [
+                'rim_type' => 'ALLOY', 'diameter_inch' => 17.5, 'width_inch' => 6.0, 'bolt_holes' => 6, 'pcd_mm' => 139.7,
+            ],
         ], $headers)->assertStatus(201)->assertJsonPath('data.product_type', 'RIM');
     }
 

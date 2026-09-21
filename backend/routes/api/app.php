@@ -76,6 +76,9 @@ use App\Http\Controllers\Api\Tenant\VehicleTransferController;
 use App\Http\Controllers\Api\Tenant\VendorInvoiceReferenceController;
 use App\Http\Controllers\Api\Tenant\VendorQuotationController;
 use App\Http\Controllers\Api\Tenant\WarehouseController;
+use App\Http\Controllers\Api\Tenant\WarehouseZoneController;
+use App\Http\Controllers\Api\Tenant\WarehouseRackController;
+use App\Http\Controllers\Api\Tenant\WarehouseBinController;
 use App\Http\Controllers\Api\Tenant\WarehouseStockController;
 use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
 use App\Http\Controllers\Api\Tenant\WarrantyController;
@@ -153,6 +156,21 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/warehouses/{warehouse}', [WarehouseController::class, 'update'])->middleware('permission:warehouse.update');
             Route::post('/warehouses/{warehouse}/activate', [WarehouseController::class, 'activate'])->middleware('permission:warehouse.activate');
             Route::post('/warehouses/{warehouse}/deactivate', [WarehouseController::class, 'deactivate'])->middleware('permission:warehouse.deactivate');
+
+            Route::get('/warehouse-zones', [WarehouseZoneController::class, 'index'])->middleware('permission:warehouse.view');
+            Route::post('/warehouse-zones', [WarehouseZoneController::class, 'store'])->middleware('permission:warehouse.update');
+            Route::put('/warehouse-zones/{warehouseZone}', [WarehouseZoneController::class, 'update'])->middleware('permission:warehouse.update');
+            Route::delete('/warehouse-zones/{warehouseZone}', [WarehouseZoneController::class, 'destroy'])->middleware('permission:warehouse.update');
+
+            Route::get('/warehouse-racks', [WarehouseRackController::class, 'index'])->middleware('permission:warehouse.view');
+            Route::post('/warehouse-racks', [WarehouseRackController::class, 'store'])->middleware('permission:warehouse.update');
+            Route::put('/warehouse-racks/{warehouseRack}', [WarehouseRackController::class, 'update'])->middleware('permission:warehouse.update');
+            Route::delete('/warehouse-racks/{warehouseRack}', [WarehouseRackController::class, 'destroy'])->middleware('permission:warehouse.update');
+
+            Route::get('/warehouse-bins', [WarehouseBinController::class, 'index'])->middleware('permission:warehouse.view');
+            Route::post('/warehouse-bins', [WarehouseBinController::class, 'store'])->middleware('permission:warehouse.update');
+            Route::put('/warehouse-bins/{warehouseBin}', [WarehouseBinController::class, 'update'])->middleware('permission:warehouse.update');
+            Route::delete('/warehouse-bins/{warehouseBin}', [WarehouseBinController::class, 'destroy'])->middleware('permission:warehouse.update');
         });
 
         Route::middleware('module:CORE')->group(function () {

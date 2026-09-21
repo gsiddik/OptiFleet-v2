@@ -18,8 +18,13 @@ class ProductTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/products', [
-            'code' => 'BRK-PAD-01', 'sku' => 'SKU-BRK-01', 'name' => 'Brake Pad Set',
+            'sku' => 'SKU-BRK-01', 'name' => 'Brake Pad Set',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
+            'brand' => 'Bosch', 'track_serial_number' => false,
+            'spec' => [
+                'part_number' => 'BRK-PAD-01', 'part_type' => 'GENUINE',
+                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+            ],
         ], $headers)->assertStatus(201);
         $productId = $create->json('data.id');
 
@@ -42,9 +47,14 @@ class ProductTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/products', [
-            'code' => 'BRK-PAD-02', 'sku' => 'SKU-BRK-02', 'name' => 'Brake Pad Set',
+            'sku' => 'SKU-BRK-02', 'name' => 'Brake Pad Set',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
+            'brand' => 'Bosch', 'track_serial_number' => false,
             'manufacturer' => 'Bosch', 'material' => 'Ceramic', 'production_year' => 2024,
+            'spec' => [
+                'part_number' => 'BRK-PAD-02', 'part_type' => 'GENUINE',
+                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+            ],
         ], $headers)->assertStatus(201);
 
         $this->assertSame('Bosch', $create->json('data.manufacturer'));
