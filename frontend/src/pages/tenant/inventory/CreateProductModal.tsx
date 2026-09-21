@@ -31,6 +31,13 @@ function emptyCompatRow(): CompatRow {
   return { vehicle_brand: '', vehicle_model: '', variant: '', year_from: '', year_to: '', position: '' };
 }
 
+function splitCommaList(value: string): string[] {
+  return value
+    .split(',')
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
 /**
  * "Next Improvement Tenant Portal - Products": the Dynamic Product Form.
  * General Information (Section: all Item Types) always renders first;
@@ -448,6 +455,41 @@ function IntervalPair({
   );
 }
 
+/** Optional "Number + Unit Dropdown" pair with no required/enabling toggle (e.g. Warranty Period, Shelf Life). */
+function NumberUnitField({
+  label,
+  value,
+  unit,
+  onValueChange,
+  onUnitChange,
+  errorKey,
+  errors,
+}: {
+  label: string;
+  value: string;
+  unit: string;
+  onValueChange: (v: string) => void;
+  onUnitChange: (v: string) => void;
+  errorKey: string;
+  errors: Record<string, string[]>;
+}) {
+  return (
+    <FormField label={label} errors={errors[errorKey]}>
+      <div style={{ display: 'flex', gap: 6 }}>
+        <input type="number" min="0" value={value} onChange={(e) => onValueChange(e.target.value)} style={inputStyle} />
+        <select value={unit} onChange={(e) => onUnitChange(e.target.value)} style={inputStyle}>
+          <option value="">Unit…</option>
+          {INTERVAL_UNITS.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
+        </select>
+      </div>
+    </FormField>
+  );
+}
+
 function CompatibilityRows({
   compatibilities,
   updateCompatRow,
@@ -514,11 +556,60 @@ function SparepartFields({
       <FormField label="OEM Part Number" errors={errors['spec.oem_part_number']}>
         <input value={(spec.oem_part_number as string) ?? ''} onChange={(e) => setSpecField('oem_part_number', e.target.value)} style={inputStyle} />
       </FormField>
+      <FormField label="Alternate Part Number" errors={errors['spec.alternate_part_numbers']}>
+        <input
+          placeholder="Comma-separated, e.g. ALT-1, ALT-2"
+          value={((spec.alternate_part_numbers as string[]) ?? []).join(', ')}
+          onChange={(e) => setSpecField('alternate_part_numbers', splitCommaList(e.target.value))}
+          style={inputStyle}
+        />
+      </FormField>
+      <FormField label="Specification" errors={errors['spec.specification']}>
+        <textarea value={(spec.specification as string) ?? ''} onChange={(e) => setSpecField('specification', e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
+      </FormField>
+      <FormField label="Applicable Position" errors={errors['spec.applicable_position']}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {['FRONT', 'REAR', 'LEFT', 'RIGHT', 'UPPER', 'LOWER', 'INNER', 'OUTER'].map((pos) => {
+            const selected = (spec.applicable_position as string[]) ?? [];
+            return (
+              <label key={pos} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <input
+                  type="checkbox"
+                  checked={selected.includes(pos)}
+                  onChange={(e) => setSpecField('applicable_position', e.target.checked ? [...selected, pos] : selected.filter((p) => p !== pos))}
+                />{' '}
+                {pos}
+              </label>
+            );
+          })}
+        </div>
+      </FormField>
       <FormField label="Critical Part" errors={errors['spec.critical_part']}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="checkbox" checked={(spec.critical_part as boolean) ?? false} onChange={(e) => setSpecField('critical_part', e.target.checked)} /> Safety / operation critical
         </label>
       </FormField>
+      <NumberUnitField
+        label="Warranty Period"
+        value={(spec.warranty_period_value as string) ?? ''}
+        unit={(spec.warranty_period_unit as string) ?? ''}
+        onValueChange={(v) => setSpecField('warranty_period_value', v)}
+        onUnitChange={(v) => setSpecField('warranty_period_unit', v)}
+        errorKey="spec.warranty_period_value"
+        errors={errors}
+      />
+      <FormField label="Warranty Mileage (km)" errors={errors['spec.warranty_mileage_km']}>
+        <input type="number" min="0" value={(spec.warranty_mileage_km as string) ?? ''} onChange={(e) => setSpecField('warranty_mileage_km', e.target.value)} style={inputStyle} />
+      </FormField>
+      <NumberUnitField
+        label="Shelf Life"
+        value={(spec.shelf_life_value as string) ?? ''}
+        unit={(spec.shelf_life_unit as string) ?? ''}
+        onValueChange={(v) => setSpecField('shelf_life_value', v)}
+        onUnitChange={(v) => setSpecField('shelf_life_unit', v)}
+        errorKey="spec.shelf_life_value"
+        errors={errors}
+      />
       <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required />
     </>
   );
@@ -554,6 +645,30 @@ function ConsumableFields({
       </FormField>
       <FormField label="Specification / Grade" errors={errors['spec.grade_specification']}>
         <input placeholder="e.g. SAE 15W-40, DOT 4" value={(spec.grade_specification as string) ?? ''} onChange={(e) => setSpecField('grade_specification', e.target.value)} style={inputStyle} />
+        {/* TODO(business-rule): the authoritative document marks this Conditional Mandatory
+            but does not define the trigger condition. Until that rule is confirmed, this
+            field stays Optional-enforced (never rejected for being absent) — see
+            ProductSpecificationService::validateConsumable() for the backend mirror. */}
+      </FormField>
+      <FormField label="Package Size" errors={errors['spec.package_size_value']}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input
+            type="number"
+            step="0.001"
+            placeholder="e.g. 20"
+            value={(spec.package_size_value as string) ?? ''}
+            onChange={(e) => setSpecField('package_size_value', e.target.value)}
+            style={inputStyle}
+          />
+          <select value={(spec.package_size_uom_id as string) ?? ''} onChange={(e) => setSpecField('package_size_uom_id', e.target.value || undefined)} style={inputStyle}>
+            <option value="">UOM…</option>
+            {uoms.map((u) => (
+              <option key={u.id} value={u.id}>
+                {u.name}
+              </option>
+            ))}
+          </select>
+        </div>
       </FormField>
       <FormField label="Purchase UOM" errors={errors['spec.purchase_uom_id']}>
         <select value={(spec.purchase_uom_id as string) ?? ''} onChange={(e) => setSpecField('purchase_uom_id', e.target.value || undefined)} style={inputStyle}>
@@ -570,6 +685,16 @@ function ConsumableFields({
           <input type="number" step="0.0001" value={(spec.conversion_to_base_uom as string) ?? ''} onChange={(e) => setSpecField('conversion_to_base_uom', e.target.value)} style={inputStyle} />
         </FormField>
       )}
+      <FormField label="Issue UOM" errors={errors['spec.issue_uom_id']}>
+        <select value={(spec.issue_uom_id as string) ?? ''} onChange={(e) => setSpecField('issue_uom_id', e.target.value || undefined)} style={inputStyle}>
+          <option value="">None</option>
+          {uoms.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
+      </FormField>
       <FormField label="Expiry Tracking" errors={errors.track_expiry} required>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <input type="checkbox" checked={trackExpiry} onChange={(e) => setSpecField('track_expiry', e.target.checked)} /> Yes
@@ -632,6 +757,9 @@ function RimFields({
 }) {
   return (
     <>
+      <FormField label="Model" errors={errors['spec.model']}>
+        <input value={(spec.model as string) ?? ''} onChange={(e) => setSpecField('model', e.target.value)} style={inputStyle} />
+      </FormField>
       <FormField label="Rim Type" errors={errors['spec.rim_type']} required>
         <select value={(spec.rim_type as string) ?? ''} onChange={(e) => setSpecField('rim_type', e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
@@ -654,8 +782,25 @@ function RimFields({
       <FormField label="PCD (mm)" errors={errors['spec.pcd_mm']} required>
         <input type="number" step="0.01" value={(spec.pcd_mm as string) ?? ''} onChange={(e) => setSpecField('pcd_mm', e.target.value)} style={inputStyle} />
       </FormField>
+      <FormField label="Center Bore (mm)" errors={errors['spec.center_bore_mm']}>
+        <input type="number" step="0.01" value={(spec.center_bore_mm as string) ?? ''} onChange={(e) => setSpecField('center_bore_mm', e.target.value)} style={inputStyle} />
+      </FormField>
       <FormField label="Offset (mm)" errors={errors['spec.offset_mm']}>
         <input type="number" step="0.01" value={(spec.offset_mm as string) ?? ''} onChange={(e) => setSpecField('offset_mm', e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Material" errors={errors['spec.material']}>
+        <input value={(spec.material as string) ?? ''} onChange={(e) => setSpecField('material', e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Maximum Load (kg)" errors={errors['spec.max_load_kg']}>
+        <input type="number" step="0.01" value={(spec.max_load_kg as string) ?? ''} onChange={(e) => setSpecField('max_load_kg', e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Compatible Tire Size" errors={errors['spec.compatible_tire_sizes']}>
+        <input
+          placeholder="Comma-separated, e.g. 185/70 R14, 195/65 R14"
+          value={((spec.compatible_tire_sizes as string[]) ?? []).join(', ')}
+          onChange={(e) => setSpecField('compatible_tire_sizes', splitCommaList(e.target.value))}
+          style={inputStyle}
+        />
       </FormField>
       <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required={false} />
     </>
@@ -949,6 +1094,16 @@ function EquipmentFields({
             </option>
           ))}
         </select>
+      </FormField>
+      <FormField label="Power Rating" errors={errors['spec.power_rating_value']}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          <input type="number" step="0.01" value={(spec.power_rating_value as string) ?? ''} onChange={(e) => setSpecField('power_rating_value', e.target.value)} style={inputStyle} />
+          <select value={(spec.power_rating_unit as string) ?? ''} onChange={(e) => setSpecField('power_rating_unit', e.target.value || undefined)} style={inputStyle}>
+            <option value="">Unit…</option>
+            <option value="KW">kW</option>
+            <option value="HP">HP</option>
+          </select>
+        </div>
       </FormField>
       <FormField label="Voltage (V)" errors={errors['spec.voltage_v']}>
         <input type="number" value={(spec.voltage_v as string) ?? ''} onChange={(e) => setSpecField('voltage_v', e.target.value)} style={inputStyle} />
