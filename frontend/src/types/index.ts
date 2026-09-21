@@ -1066,10 +1066,14 @@ export interface HistoryEventItem {
 
 // --- Phase 4: Supply Chain & Asset Lifecycle ---
 
+export type ItemType = 'SPARE_PART' | 'TOOL' | 'TIRE' | 'CONSUMABLE' | 'EQUIPMENT' | 'RIM' | 'OTHER';
+
 export interface ProductCategoryItem {
   id: string;
   code: string;
   name: string;
+  parent_id: string | null;
+  item_type: ItemType | null;
   description: string | null;
   is_system: boolean;
   status: string;
@@ -1079,6 +1083,7 @@ export interface UomItem {
   id: string;
   code: string;
   name: string;
+  measure_type: 'LENGTH' | 'PACKAGING' | 'CAPACITY' | 'WEIGHT' | 'PRESSURE' | null;
   description: string | null;
   is_system: boolean;
   status: string;
@@ -1091,8 +1096,209 @@ export interface ProductCompatibilityItem {
   vehicle_category_id: string | null;
   vehicle_brand: string | null;
   vehicle_model: string | null;
+  variant: string | null;
+  year_from: number | null;
+  year_to: number | null;
+  position: string | null;
   component_group?: ComponentGroup;
   vehicle_category?: VehicleCategory;
+}
+
+export interface WarehouseZoneItem {
+  id: string;
+  warehouse_id: string;
+  code: string;
+  name: string;
+  status: string;
+}
+
+export interface WarehouseRackItem {
+  id: string;
+  warehouse_zone_id: string;
+  code: string;
+  name: string;
+  status: string;
+}
+
+export interface WarehouseBinItem {
+  id: string;
+  warehouse_rack_id: string;
+  code: string;
+  name: string;
+  status: string;
+}
+
+export interface ToolTypeItem {
+  id: string;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: string;
+}
+
+export interface EquipmentTypeItem {
+  id: string;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: string;
+}
+
+export interface StorageRequirementItem {
+  id: string;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: string;
+}
+
+export interface WorkerTypeItem {
+  id: string;
+  code: string;
+  name: string;
+  is_system: boolean;
+  status: string;
+}
+
+export interface TireLoadIndexItem {
+  id: string;
+  code: string;
+  max_load_single_kg: string | null;
+  max_load_dual_kg: string | null;
+  status: string;
+}
+
+export interface TireSpeedRatingItem {
+  id: string;
+  code: string;
+  max_speed_kmh: string | null;
+  status: string;
+}
+
+export interface TirePlyRatingItem {
+  id: string;
+  code: string;
+  load_range: string | null;
+  status: string;
+}
+
+export interface TireTraCodeItem {
+  id: string;
+  code: string;
+  profile: string | null;
+  status: string;
+}
+
+export interface TireTraStarRatingItem {
+  id: string;
+  tra_code_id: string;
+  star_rating: string;
+  purpose: string | null;
+}
+
+export interface ProductSparepartSpecItem {
+  part_number: string;
+  part_type: 'GENUINE' | 'OEM' | 'OES' | 'AFTERMARKET';
+  oem_part_number: string | null;
+  alternate_part_numbers: string[] | null;
+  specification: string | null;
+  applicable_position: string[] | null;
+  critical_part: boolean | null;
+  warranty_period_value: number | null;
+  warranty_period_unit: string | null;
+  warranty_mileage_km: number | null;
+  shelf_life_value: number | null;
+  shelf_life_unit: string | null;
+}
+
+export interface ProductConsumableSpecItem {
+  grade_specification: string | null;
+  package_size_value: string | null;
+  package_size_uom_id: string | null;
+  purchase_uom_id: string | null;
+  conversion_to_base_uom: string | null;
+  issue_uom_id: string | null;
+  track_expiry: boolean;
+  shelf_life_value: number | null;
+  shelf_life_unit: string | null;
+  is_hazardous: boolean;
+  sds_file_path: string | null;
+  storage_requirements?: StorageRequirementItem[];
+}
+
+export interface ProductRimSpecItem {
+  model: string | null;
+  rim_type: 'STEEL' | 'ALLOY' | 'FORGED';
+  diameter_inch: string;
+  width_inch: string;
+  bolt_holes: number;
+  pcd_mm: string;
+  center_bore_mm: string | null;
+  offset_mm: string | null;
+  material: string | null;
+  max_load_kg: string | null;
+  compatible_tire_sizes: string[] | null;
+}
+
+export interface ProductTireSpecItem {
+  vehicle_group: 'CAR' | 'TRUCK_BUS';
+  pattern_name: string;
+  width_mm: number;
+  aspect_ratio_percent: number;
+  construction_type: 'RADIAL' | 'BIAS';
+  rim_diameter_inch: string;
+  tire_type: 'TUBELESS' | 'TUBE_TYPE';
+  single_load_index_id: string;
+  speed_rating_id: string;
+  dual_load_index_id: string | null;
+  ply_rating_id: string | null;
+  tra_code_id: string | null;
+  tra_star_rating_id: string | null;
+  tire_size_computed: string | null;
+  single_max_load_kg_computed: string | null;
+  max_speed_kmh_computed: string | null;
+  dual_max_load_kg_computed: string | null;
+  load_range_computed: string | null;
+  tra_profile_computed: string | null;
+  purpose_computed: string | null;
+}
+
+export interface ProductToolSpecItem {
+  model: string | null;
+  tool_type_id: string;
+  specification: string | null;
+  checkout_required: boolean;
+  calibration_required: boolean;
+  calibration_interval_value: number | null;
+  calibration_interval_unit: string | null;
+  maintenance_required: boolean;
+  maintenance_interval_value: number | null;
+  maintenance_interval_unit: string | null;
+  tool_type?: ToolTypeItem;
+}
+
+export interface ProductEquipmentSpecItem {
+  model: string;
+  equipment_type_id: string;
+  specification: string | null;
+  capacity_value: string | null;
+  capacity_uom_id: string | null;
+  power_source: string | null;
+  power_rating_value: string | null;
+  power_rating_unit: string | null;
+  voltage_v: number | null;
+  maintenance_required: boolean;
+  maintenance_interval_value: number | null;
+  maintenance_interval_unit: string | null;
+  inspection_required: boolean;
+  inspection_interval_value: number | null;
+  inspection_interval_unit: string | null;
+  calibration_required: boolean;
+  calibration_interval_value: number | null;
+  calibration_interval_unit: string | null;
+  certification_required: boolean | null;
+  certification_type: string | null;
+  equipment_type?: EquipmentTypeItem;
 }
 
 export interface ProductItem {
@@ -1101,8 +1307,9 @@ export interface ProductItem {
   sku: string;
   name: string;
   product_category_id: string;
-  product_type: 'SPARE_PART' | 'TOOL' | 'TIRE' | 'CONSUMABLE' | 'EQUIPMENT' | 'RIM' | 'OTHER';
+  product_type: ItemType;
   uom_id: string;
+  default_storage_bin_id: string | null;
   brand: string | null;
   manufacturer: string | null;
   material: string | null;
@@ -1121,8 +1328,15 @@ export interface ProductItem {
   reference_tread_depth_mm: string | null;
   category?: ProductCategoryItem;
   uom?: UomItem;
+  default_storage_bin?: WarehouseBinItem;
   component_groups?: ComponentGroup[];
   compatibilities?: ProductCompatibilityItem[];
+  sparepart_spec?: ProductSparepartSpecItem;
+  consumable_spec?: ProductConsumableSpecItem;
+  rim_spec?: ProductRimSpecItem;
+  tire_spec?: ProductTireSpecItem;
+  tool_spec?: ProductToolSpecItem;
+  equipment_spec?: ProductEquipmentSpecItem;
 }
 
 export interface WarehouseStockItem {

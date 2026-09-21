@@ -1,17 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
-import { FormField, inputStyle } from '../../../components/FormField';
-import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { ProductCategoryItem, ProductItem, UomItem } from '../../../types';
-
-const PRODUCT_TYPES = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'RIM', 'OTHER'];
+import type { ProductItem } from '../../../types';
+import { CreateProductModal, ITEM_TYPES as PRODUCT_TYPES } from './CreateProductModal';
 
 export function ProductListPage() {
   const { hasPermission } = useAuth();
@@ -58,101 +54,5 @@ export function ProductListPage() {
 
       <CreateProductModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
     </div>
-  );
-}
-
-function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
-  const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
-  const [uoms, setUoms] = useState<UomItem[]>([]);
-  const [sku, setSku] = useState('');
-  const [name, setName] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [uomId, setUomId] = useState('');
-  const [productType, setProductType] = useState('SPARE_PART');
-  const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    apiClient.get('/app/product-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
-    apiClient.get('/app/uoms', { params: { per_page: 100 } }).then((res) => setUoms(res.data.data));
-  }, [open]);
-
-  async function submit() {
-    setSubmitting(true);
-    setErrors({});
-    try {
-      await apiClient.post('/app/products', {
-        sku, name, product_category_id: categoryId, uom_id: uomId, product_type: productType,
-        reference_tread_depth_mm: productType === 'TIRE' && referenceTreadDepthMm ? referenceTreadDepthMm : undefined,
-      });
-      setSku('');
-      setName('');
-      setReferenceTreadDepthMm('');
-      onCreated();
-      onClose();
-    } catch (err) {
-      const apiError: ApiErrorShape = extractApiError(err);
-      setErrors(apiError.errors ?? {});
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal open={open} title="New Product" onClose={onClose}>
-      <FormField label="Code" errors={errors.code}>
-        <input value="Auto-generated on save" disabled style={{ ...inputStyle, color: '#888' }} />
-      </FormField>
-      <FormField label="SKU" errors={errors.sku} required>
-        <input value={sku} onChange={(e) => setSku(e.target.value)} style={inputStyle} />
-      </FormField>
-      <FormField label="Name" errors={errors.name} required>
-        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
-      </FormField>
-      <FormField label="Category" errors={errors.product_category_id} required>
-        <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </FormField>
-      <FormField label="UOM" errors={errors.uom_id} required>
-        <select value={uomId} onChange={(e) => setUomId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
-          {uoms.map((u) => (
-            <option key={u.id} value={u.id}>
-              {u.name}
-            </option>
-          ))}
-        </select>
-      </FormField>
-      <FormField label="Product Type" errors={errors.product_type} required>
-        <select value={productType} onChange={(e) => setProductType(e.target.value)} style={inputStyle}>
-          {PRODUCT_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </FormField>
-      {productType === 'TIRE' && (
-        <FormField label="Reference Tread Depth (mm)" errors={errors.reference_tread_depth_mm}>
-          <input type="number" step="0.01" min="0.01" value={referenceTreadDepthMm} onChange={(e) => setReferenceTreadDepthMm(e.target.value)} placeholder="e.g. 8.00 — required before this Tire product can be scored" style={inputStyle} />
-        </FormField>
-      )}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
-          Cancel
-        </button>
-        <button className="btn-primary" disabled={submitting || !sku || !name || !categoryId || !uomId} onClick={submit}>
-          Create
-        </button>
-      </div>
-    </Modal>
   );
 }
