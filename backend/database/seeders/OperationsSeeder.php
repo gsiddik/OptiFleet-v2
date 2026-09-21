@@ -225,6 +225,12 @@ class OperationsSeeder extends Seeder
         $laborTimer->finish($log);
         $execution->updateJobStatus($job->fresh(), 'COMPLETED');
 
+        // G-04: WorkOrderClosureGuardService now rejects COMPLETED/CLOSED while
+        // any Finding is still OPEN — resolve it through the same service the
+        // API uses (WorkOrderExecutionController::resolveFinding()) once the
+        // corrective work is actually done, mirroring the real user flow.
+        $execution->resolveFinding($finding, 'Brake pads replaced.', $mechanic1->id);
+
         $wo = $workOrders->submitToQc($wo);
         $qc = app(QualityControlService::class);
         $inspectionQc = $qc->start($wo, $qcInspector->id, $wsManager->id);
