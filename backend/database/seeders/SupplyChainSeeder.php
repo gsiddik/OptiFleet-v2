@@ -131,13 +131,8 @@ class SupplyChainSeeder extends Seeder
                 'construction_type' => 'RADIAL', 'rim_diameter_inch' => 22.5, 'tire_type' => 'TUBELESS',
                 'single_load_index_id' => $tireRefs['loadIndex']->id, 'speed_rating_id' => $tireRefs['speedRating']->id,
                 'dual_load_index_id' => $tireRefs['loadIndex']->id, 'ply_rating_id' => $tireRefs['plyRating']->id,
-                // Explicit nulls, not omitted: ProductSpecificationService::persistTire()
-                // unconditionally reads $v['tra_code_id']/$v['tra_star_rating_id'], and
-                // Laravel's validate() drops an optional key entirely when it's absent
-                // from input rather than defaulting it — omitting these two crashes with
-                // "Undefined array key" (confirmed live). TRA code/star rating are
-                // optional per validateTire() and not applicable to this tire.
-                'tra_code_id' => null, 'tra_star_rating_id' => null,
+                // TRA Code/Star Rating genuinely omitted, not applicable to this tire —
+                // ProductSpecificationService::validateTire() now defaults both when absent.
             ]);
         $this->makeProduct($tenant, 'SKU-IMPACT-WR', 'Impact Wrench', $toolCategory->id, 'TOOL', $uomPcs->id, $bin->id,
             ['track_serial_number' => true],

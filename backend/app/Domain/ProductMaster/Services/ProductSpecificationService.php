@@ -283,6 +283,16 @@ class ProductSpecificationService
             if (empty($v['ply_rating_id'])) {
                 throw ValidationException::withMessages(['ply_rating_id' => 'Ply Rating is required for Truck & Bus tires.']);
             }
+            // TRA Code/Star Rating are genuinely optional for Truck & Bus — unlike
+            // every other field here, Laravel's validate() omits them from $v
+            // entirely when the client doesn't send them at all (not merely null),
+            // so they must be defaulted explicitly, the same way the Car branch
+            // below defaults its four not-applicable fields. Without this,
+            // persistTire()'s direct $v['tra_code_id']/$v['tra_star_rating_id']
+            // access throws "Undefined array key" for a valid Truck & Bus tire
+            // that legitimately has no TRA rating.
+            $v['tra_code_id'] = $v['tra_code_id'] ?? null;
+            $v['tra_star_rating_id'] = $v['tra_star_rating_id'] ?? null;
             // Star Rating is Conditional Mandatory: "Aktif setelah TRA Code dipilih".
             if (! empty($v['tra_code_id']) && empty($v['tra_star_rating_id'])) {
                 throw ValidationException::withMessages(['tra_star_rating_id' => 'Star Rating is required once a TRA Code is selected.']);
