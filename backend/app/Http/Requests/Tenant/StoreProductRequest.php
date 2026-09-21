@@ -26,10 +26,14 @@ class StoreProductRequest extends FormRequest
             'product_category_id' => ['required', 'uuid', Rule::exists('product_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             'product_type' => ['required', 'in:SPARE_PART,TOOL,TIRE,CONSUMABLE,EQUIPMENT,RIM,OTHER'],
             'uom_id' => ['required', 'uuid', Rule::exists('uoms', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
-            // Mandatory per the Dynamic Product Form, but kept optional here until
-            // Phase 3 ships the hierarchical Warehouse->Zone->Rack->Bin picker —
-            // enforcing it now would break every caller that predates this field.
-            'default_storage_bin_id' => ['nullable', 'uuid', Rule::exists('warehouse_bins', 'id')->where('tenant_id', $tenantId)],
+            // Mandatory per the authoritative document (Hierarchical Lookup:
+            // Warehouse -> Zone -> Rack -> Bin). Authoritative here, not just in
+            // the UI — a request bypassing the hierarchical picker must still be
+            // rejected. Existing pre-Phase-7-correction Products created before
+            // this became mandatory may still carry a NULL value (no destructive
+            // backfill was performed — see ProductController::update()), but
+            // every NEW Product must supply one.
+            'default_storage_bin_id' => ['required', 'uuid', Rule::exists('warehouse_bins', 'id')->where('tenant_id', $tenantId)],
             'brand' => ['nullable', 'string', 'max:100'],
             'manufacturer' => ['nullable', 'string', 'max:150'],
             'material' => ['nullable', 'string', 'max:100'],

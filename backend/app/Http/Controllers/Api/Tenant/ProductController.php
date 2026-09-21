@@ -123,7 +123,16 @@ class ProductController extends Controller
             'image_url' => ['nullable', 'string', 'max:255'],
             'manufacturer_part_number' => ['nullable', 'string', 'max:100'],
             'description' => ['nullable', 'string'],
-            'default_storage_bin_id' => ['sometimes', 'nullable', 'uuid', \Illuminate\Validation\Rule::exists('warehouse_bins', 'id')->where('tenant_id', $tenantId)],
+            // Mandatory per the authoritative document, but a pre-existing
+            // Product may legitimately still have NULL here (no destructive
+            // database-wide backfill was performed to satisfy the new rule).
+            // Strategy: once the caller explicitly touches this field (i.e. the
+            // key is present in the request — the edit flow that carries the
+            // hierarchical Warehouse->Zone->Rack->Bin picker), it must resolve
+            // to a real bin and can never be cleared back to NULL. An update
+            // that doesn't touch this field at all (e.g. a status toggle) is
+            // left alone, so a legacy NULL record remains readable and editable.
+            'default_storage_bin_id' => ['sometimes', 'required', 'uuid', \Illuminate\Validation\Rule::exists('warehouse_bins', 'id')->where('tenant_id', $tenantId)],
             'track_serial_number' => ['sometimes', 'boolean'],
             'track_batch' => ['sometimes', 'boolean'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],

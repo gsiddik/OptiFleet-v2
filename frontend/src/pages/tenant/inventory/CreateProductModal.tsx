@@ -219,7 +219,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
         product_category_id: subcategoryId || categoryId,
         product_type: itemType,
         uom_id: uomId,
-        default_storage_bin_id: binId || undefined,
+        default_storage_bin_id: binId,
         description: description || undefined,
         brand: brand || undefined,
         track_serial_number: needsField('track_serial_number', itemType) ? trackSerialNumber : undefined,
@@ -242,7 +242,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
     setCompatibilities((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   }
 
-  const canSubmit = sku && name && (subcategoryId || categoryId) && uomId && !submitting;
+  const canSubmit = sku && name && (subcategoryId || categoryId) && uomId && binId && !submitting;
 
   return (
     <Modal open={open} title="New Product" onClose={onClose} width={680}>
@@ -300,7 +300,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
         </select>
       </FormField>
 
-      <FormField label="Default Storage Location" errors={errors.default_storage_bin_id}>
+      <FormField label="Default Storage Location" errors={errors.default_storage_bin_id} required>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
           <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
             <option value="">Warehouse…</option>

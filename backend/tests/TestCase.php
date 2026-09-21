@@ -335,6 +335,30 @@ abstract class TestCase extends BaseTestCase
         ], $overrides));
     }
 
+    /**
+     * "Next Improvement Tenant Portal - Products" (gap-correction cycle):
+     * Default Storage Location is Mandatory (Warehouse -> Zone -> Rack ->
+     * Bin). Builds the full chain in one call so product-creation tests can
+     * supply a valid `default_storage_bin_id` without repeating the setup.
+     */
+    protected function makeWarehouseBin(Tenant $tenant, ?\App\Domain\Organization\Models\Warehouse $warehouse = null): \App\Domain\Organization\Models\WarehouseBin
+    {
+        $warehouse ??= $this->makeWarehouse($tenant);
+        $zone = \App\Domain\Organization\Models\WarehouseZone::query()->create([
+            'tenant_id' => $tenant->id, 'warehouse_id' => $warehouse->id,
+            'code' => 'ZN-'.Str::upper(Str::random(6)), 'name' => 'Test Zone', 'status' => 'ACTIVE',
+        ]);
+        $rack = \App\Domain\Organization\Models\WarehouseRack::query()->create([
+            'tenant_id' => $tenant->id, 'warehouse_zone_id' => $zone->id,
+            'code' => 'RK-'.Str::upper(Str::random(6)), 'name' => 'Test Rack', 'status' => 'ACTIVE',
+        ]);
+
+        return \App\Domain\Organization\Models\WarehouseBin::query()->create([
+            'tenant_id' => $tenant->id, 'warehouse_rack_id' => $rack->id,
+            'code' => 'BIN-'.Str::upper(Str::random(6)), 'name' => 'Test Bin', 'status' => 'ACTIVE',
+        ]);
+    }
+
     protected function makeProductCategory(array $overrides = []): \App\Domain\ProductMaster\Models\ProductCategory
     {
         return \App\Domain\ProductMaster\Models\ProductCategory::query()->create(array_merge([

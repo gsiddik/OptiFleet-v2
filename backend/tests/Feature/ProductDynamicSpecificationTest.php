@@ -22,12 +22,21 @@ use Tests\TestCase;
  */
 class ProductDynamicSpecificationTest extends TestCase
 {
+    /**
+     * "Next Improvement Tenant Portal - Products" (gap-correction cycle):
+     * Default Storage Location is Mandatory, so every `base()` payload
+     * needs a real bin. Stashed here so the many existing call sites
+     * (`[, $token] = $this->setUpTenant();`) don't all need editing.
+     */
+    private ?string $defaultStorageBinId = null;
+
     private function setUpTenant(): array
     {
         $tenant = $this->makeTenant(['code' => 'PDS-'.Str::random(4)]);
         $this->grantModule($tenant, 'INVENTORY');
         $this->grantModule($tenant, 'ORGANIZATION');
         [, $token] = $this->makeTenantUser($tenant, ['product.view', 'product.create', 'product.update', 'product.delete', 'warehouse.view', 'warehouse.update']);
+        $this->defaultStorageBinId = $this->makeWarehouseBin($tenant)->id;
 
         return [$tenant, $token];
     }
@@ -39,6 +48,7 @@ class ProductDynamicSpecificationTest extends TestCase
             'product_category_id' => $this->makeProductCategory()->id,
             'product_type' => $productType,
             'uom_id' => $this->makeUom()->id,
+            'default_storage_bin_id' => $this->defaultStorageBinId,
         ], $overrides);
     }
 

@@ -30,6 +30,7 @@ class ProductFoundationMasterDataTest extends TestCase
         $headers = $this->authHeaders($token);
         $category = $this->makeProductCategory();
         $uom = $this->makeUom();
+        $bin = $this->makeWarehouseBin($tenant);
 
         $sparepartSpec = [
             'part_number' => 'PN-'.Str::random(4), 'part_type' => 'GENUINE',
@@ -40,12 +41,14 @@ class ProductFoundationMasterDataTest extends TestCase
             'code' => 'CLIENT-SUPPLIED-SHOULD-BE-IGNORED',
             'sku' => 'SKU-A-'.Str::random(4), 'name' => 'Item A',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
+            'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false, 'spec' => $sparepartSpec,
         ], $headers)->assertStatus(201);
 
         $second = $this->postJson('/api/v1/app/products', [
             'sku' => 'SKU-B-'.Str::random(4), 'name' => 'Item B',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
+            'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false,
             'spec' => ['part_number' => 'PN-'.Str::random(4), 'part_type' => 'GENUINE', 'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']]],
         ], $headers)->assertStatus(201);
@@ -64,14 +67,16 @@ class ProductFoundationMasterDataTest extends TestCase
 
     public function test_product_type_accepts_rim(): void
     {
-        [, $token] = $this->setUpTenant(['product.view', 'product.create']);
+        [$tenant, $token] = $this->setUpTenant(['product.view', 'product.create']);
         $headers = $this->authHeaders($token);
         $category = $this->makeProductCategory();
         $uom = $this->makeUom();
+        $bin = $this->makeWarehouseBin($tenant);
 
         $this->postJson('/api/v1/app/products', [
             'sku' => 'SKU-RIM-'.Str::random(4), 'name' => 'Alloy Rim',
             'product_category_id' => $category->id, 'product_type' => 'RIM', 'uom_id' => $uom->id,
+            'default_storage_bin_id' => $bin->id,
             'brand' => 'Enkei', 'track_serial_number' => true,
             'spec' => [
                 'rim_type' => 'ALLOY', 'diameter_inch' => 17.5, 'width_inch' => 6.0, 'bolt_holes' => 6, 'pcd_mm' => 139.7,
