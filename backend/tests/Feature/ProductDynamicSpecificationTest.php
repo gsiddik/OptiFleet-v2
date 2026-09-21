@@ -300,6 +300,61 @@ class ProductDynamicSpecificationTest extends TestCase
         $this->assertNull($response->json('data.tire_spec.load_range_computed'));
     }
 
+    /**
+     * Reproduces the latent bug found during the SupplyChainSeeder
+     * correction: a valid Truck & Bus tire that genuinely OMITS the
+     * optional `tra_code_id`/`tra_star_rating_id` keys (not merely sends
+     * them as null) previously crashed persistTire() with "Undefined
+     * array key" — Laravel's Validator::validate() does not add an absent
+     * optional key to its returned array, and persistTire() accessed both
+     * unconditionally. Exercises the real POST /products API path.
+     */
+    public function test_tire_truck_bus_creation_succeeds_with_tra_fields_genuinely_absent(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $refs = $this->tireRefs();
+
+        $spec = [
+            'vehicle_group' => 'TRUCK_BUS', 'pattern_name' => 'X Multi', 'width_mm' => 295, 'aspect_ratio_percent' => 80,
+            'construction_type' => 'RADIAL', 'rim_diameter_inch' => 22.5, 'tire_type' => 'TUBELESS',
+            'single_load_index_id' => $refs['single']->id, 'speed_rating_id' => $refs['speed']->id,
+            'dual_load_index_id' => $refs['dual']->id, 'ply_rating_id' => $refs['ply']->id,
+        ];
+        $this->assertArrayNotHasKey('tra_code_id', $spec);
+        $this->assertArrayNotHasKey('tra_star_rating_id', $spec);
+
+        $response = $this->postJson('/api/v1/app/products', $this->base('TIRE', [
+            'brand' => 'Michelin', 'spec' => $spec,
+        ]), $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertNull($response->json('data.tire_spec.tra_code_id'));
+        $this->assertNull($response->json('data.tire_spec.tra_star_rating_id'));
+        $this->assertNull($response->json('data.tire_spec.tra_profile_computed'));
+        $this->assertNull($response->json('data.tire_spec.purpose_computed'));
+        $this->assertSame('3150.00', $response->json('data.tire_spec.dual_max_load_kg_computed'));
+    }
+
+    /** Explicit null (rather than genuinely absent) must remain supported too — this is the shape SupplyChainSeeder's workaround relied on. */
+    public function test_tire_truck_bus_creation_succeeds_with_tra_fields_explicitly_null(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $refs = $this->tireRefs();
+
+        $response = $this->postJson('/api/v1/app/products', $this->base('TIRE', [
+            'brand' => 'Michelin',
+            'spec' => [
+                'vehicle_group' => 'TRUCK_BUS', 'pattern_name' => 'X Multi', 'width_mm' => 295, 'aspect_ratio_percent' => 80,
+                'construction_type' => 'RADIAL', 'rim_diameter_inch' => 22.5, 'tire_type' => 'TUBELESS',
+                'single_load_index_id' => $refs['single']->id, 'speed_rating_id' => $refs['speed']->id,
+                'dual_load_index_id' => $refs['dual']->id, 'ply_rating_id' => $refs['ply']->id,
+                'tra_code_id' => null, 'tra_star_rating_id' => null,
+            ],
+        ]), $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertNull($response->json('data.tire_spec.tra_code_id'));
+        $this->assertNull($response->json('data.tire_spec.tra_star_rating_id'));
+    }
+
     public function test_tire_star_rating_must_belong_to_selected_tra_code(): void
     {
         [, $token] = $this->setUpTenant();

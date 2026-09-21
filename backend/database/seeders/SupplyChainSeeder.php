@@ -7,12 +7,16 @@ use App\Domain\AccessControl\Models\Role;
 use App\Domain\AccessControl\Models\RoleAssignment;
 use App\Domain\ComponentAsset\Models\ComponentAsset;
 use App\Domain\ComponentAsset\Services\ComponentAssetService;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\MasterData\Models\ComponentGroup;
 use App\Domain\MasterData\Models\VehicleCategory;
 use App\Domain\Organization\Models\Warehouse;
+use App\Domain\Organization\Models\WarehouseBin;
+use App\Domain\Organization\Models\WarehouseRack;
+use App\Domain\Organization\Models\WarehouseZone;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Services\GoodsReceiptService;
 use App\Domain\Procurement\Services\PurchaseOrderService;
@@ -20,9 +24,13 @@ use App\Domain\Procurement\Services\PurchaseRequestService;
 use App\Domain\Procurement\Services\RfqService;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
-use App\Domain\ProductMaster\Models\ProductCompatibility;
+use App\Domain\ProductMaster\Models\ToolType;
 use App\Domain\ProductMaster\Models\Uom;
+use App\Domain\ProductMaster\Services\ProductSpecificationService;
 use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Models\TireLoadIndex;
+use App\Domain\Tire\Models\TirePlyRating;
+use App\Domain\Tire\Models\TireSpeedRating;
 use App\Domain\Tire\Services\TireService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Warranty\Models\Warranty;
@@ -30,7 +38,9 @@ use App\Domain\Warranty\Services\WarrantyClaimService;
 use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use App\Models\User;
+use App\Support\TenantContext;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -75,41 +85,61 @@ class SupplyChainSeeder extends Seeder
         ]);
 
         // --- Product master ---
+        // Item-type-scoped categories + the Warehouse -> Zone -> Rack -> Bin
+        // hierarchy the Dynamic Product Form requires, then every Product
+        // created through the same ProductSpecificationService +
+        // DocumentNumberingService flow ProductController::store() uses —
+        // never a raw Product::create() (see $this->makeProduct() below).
+        // `sku` is the stable identity used for idempotency, since `code` is
+        // now server-generated per product.
         $uomPcs = Uom::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PCS'], ['name' => 'Piece', 'is_system' => true, 'status' => 'ACTIVE']);
-        $sparePartCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-SPARE'], ['name' => 'Spare Parts', 'is_system' => true, 'status' => 'ACTIVE']);
-        $tireCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-TIRE'], ['name' => 'Tires', 'is_system' => true, 'status' => 'ACTIVE']);
-        $toolCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-TOOL'], ['name' => 'Tools', 'is_system' => true, 'status' => 'ACTIVE']);
+        $sparePartCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-SPARE'], ['name' => 'Spare Parts', 'item_type' => 'SPARE_PART', 'is_system' => true, 'status' => 'ACTIVE']);
+        $tireCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-TIRE'], ['name' => 'Tires', 'item_type' => 'TIRE', 'is_system' => true, 'status' => 'ACTIVE']);
+        $toolCategory = ProductCategory::query()->updateOrCreate(['tenant_id' => null, 'code' => 'PC-TOOL'], ['name' => 'Tools', 'item_type' => 'TOOL', 'is_system' => true, 'status' => 'ACTIVE']);
 
-        $brakePad = Product::query()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'code' => 'SP-BRK-PAD'],
-            ['sku' => 'SKU-BRK-PAD', 'name' => 'Brake Pad Set (Front)', 'product_category_id' => $sparePartCategory->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uomPcs->id, 'status' => 'ACTIVE']
-        );
-        $oilFilter = Product::query()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'code' => 'SP-OIL-FLT'],
-            ['sku' => 'SKU-OIL-FLT', 'name' => 'Engine Oil Filter', 'product_category_id' => $sparePartCategory->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uomPcs->id, 'status' => 'ACTIVE']
-        );
-        $battery = Product::query()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'code' => 'SP-BATTERY'],
-            ['sku' => 'SKU-BATTERY', 'name' => 'Truck Battery 12V 100Ah', 'product_category_id' => $sparePartCategory->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uomPcs->id, 'track_serial_number' => true, 'status' => 'ACTIVE']
-        );
-        $tireProduct = Product::query()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'code' => 'TR-295-80-R225'],
-            ['sku' => 'SKU-TR-29580', 'name' => 'Truck Tire 295/80R22.5', 'product_category_id' => $tireCategory->id, 'product_type' => 'TIRE', 'uom_id' => $uomPcs->id, 'track_serial_number' => true, 'status' => 'ACTIVE']
-        );
-        Product::query()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'code' => 'TL-IMPACT-WR'],
-            ['sku' => 'SKU-IMPACT-WR', 'name' => 'Impact Wrench', 'product_category_id' => $toolCategory->id, 'product_type' => 'TOOL', 'uom_id' => $uomPcs->id, 'status' => 'ACTIVE']
+        $bin = $this->resolveStorageBin($tenant, $jktWarehouse);
+        $tireRefs = $this->resolveTireReferences($tenant);
+        $toolType = ToolType::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'PWR-TOOL'],
+            ['name' => 'Power Tool', 'is_system' => false, 'status' => 'ACTIVE']
         );
 
-        ProductCompatibility::query()->firstOrCreate([
-            'tenant_id' => $tenant->id, 'product_id' => $brakePad->id, 'component_group_id' => $brakeGroup->id, 'vehicle_category_id' => $truck->id,
-        ]);
-        ProductCompatibility::query()->firstOrCreate([
-            'tenant_id' => $tenant->id, 'product_id' => $oilFilter->id, 'component_group_id' => $engineGroup->id, 'vehicle_category_id' => $truck->id,
-        ]);
-        ProductCompatibility::query()->firstOrCreate([
-            'tenant_id' => $tenant->id, 'product_id' => $battery->id, 'component_group_id' => $elecGroup->id, 'vehicle_category_id' => $truck->id,
-        ]);
+        app(TenantContext::class)->setTenantId($tenant->id);
+
+        $brakePad = $this->makeProduct($tenant, 'SKU-BRK-PAD', 'Brake Pad Set (Front)', $sparePartCategory->id, 'SPARE_PART', $uomPcs->id, $bin->id,
+            ['brand' => 'Akebono', 'track_serial_number' => false],
+            [
+                'part_number' => 'BRK-PAD-FRT-01', 'part_type' => 'AFTERMARKET',
+                'compatibilities' => [['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger FG', 'vehicle_category_id' => $truck->id, 'component_group_id' => $brakeGroup->id]],
+            ]);
+        $oilFilter = $this->makeProduct($tenant, 'SKU-OIL-FLT', 'Engine Oil Filter', $sparePartCategory->id, 'SPARE_PART', $uomPcs->id, $bin->id,
+            ['brand' => 'Denso', 'track_serial_number' => false],
+            [
+                'part_number' => 'OIL-FLT-01', 'part_type' => 'OEM',
+                'compatibilities' => [['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger FG', 'vehicle_category_id' => $truck->id, 'component_group_id' => $engineGroup->id]],
+            ]);
+        $battery = $this->makeProduct($tenant, 'SKU-BATTERY', 'Truck Battery 12V 100Ah', $sparePartCategory->id, 'SPARE_PART', $uomPcs->id, $bin->id,
+            ['brand' => 'GS Astra', 'track_serial_number' => true],
+            [
+                'part_number' => 'BAT-12V-100AH', 'part_type' => 'AFTERMARKET',
+                'compatibilities' => [['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger FG', 'vehicle_category_id' => $truck->id, 'component_group_id' => $elecGroup->id]],
+            ]);
+        $tireProduct = $this->makeProduct($tenant, 'SKU-TR-29580', 'Truck Tire 295/80R22.5', $tireCategory->id, 'TIRE', $uomPcs->id, $bin->id,
+            ['brand' => 'Bridgestone', 'track_serial_number' => true],
+            [
+                'vehicle_group' => 'TRUCK_BUS', 'pattern_name' => 'Highway Rib', 'width_mm' => 295, 'aspect_ratio_percent' => 80,
+                'construction_type' => 'RADIAL', 'rim_diameter_inch' => 22.5, 'tire_type' => 'TUBELESS',
+                'single_load_index_id' => $tireRefs['loadIndex']->id, 'speed_rating_id' => $tireRefs['speedRating']->id,
+                'dual_load_index_id' => $tireRefs['loadIndex']->id, 'ply_rating_id' => $tireRefs['plyRating']->id,
+                // TRA Code/Star Rating genuinely omitted, not applicable to this tire —
+                // ProductSpecificationService::validateTire() now defaults both when absent.
+            ]);
+        $this->makeProduct($tenant, 'SKU-IMPACT-WR', 'Impact Wrench', $toolCategory->id, 'TOOL', $uomPcs->id, $bin->id,
+            ['track_serial_number' => true],
+            [
+                'tool_type_id' => $toolType->id, 'checkout_required' => true, 'calibration_required' => false,
+                'maintenance_required' => true, 'maintenance_interval_value' => 6, 'maintenance_interval_unit' => 'MONTHS',
+            ]);
 
         // --- Stock balances across both warehouses ---
         $inventory = app(InventoryService::class);
@@ -233,5 +263,97 @@ class SupplyChainSeeder extends Seeder
             $claim = $claimService->transition($claim, 'SUBMITTED');
             $claimService->transition($claim, 'UNDER_REVIEW');
         }
+    }
+
+    /**
+     * ALPHA has no Warehouse -> Zone -> Rack -> Bin hierarchy anywhere yet
+     * (DemoDataSeeder only creates the Warehouse row itself) — Default
+     * Storage Location is mandatory for every newly created Product, so a
+     * minimal, deterministic chain is required before any Product below
+     * can be created through the real validation flow.
+     */
+    private function resolveStorageBin(Tenant $tenant, Warehouse $warehouse): WarehouseBin
+    {
+        $zone = WarehouseZone::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'warehouse_id' => $warehouse->id, 'code' => 'GENERAL'],
+            ['name' => 'General Zone', 'status' => 'ACTIVE']
+        );
+        $rack = WarehouseRack::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'warehouse_zone_id' => $zone->id, 'code' => 'GENERAL'],
+            ['name' => 'General Rack', 'status' => 'ACTIVE']
+        );
+
+        return WarehouseBin::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'warehouse_rack_id' => $rack->id, 'code' => 'GENERAL'],
+            ['name' => 'General Bin', 'status' => 'ACTIVE']
+        );
+    }
+
+    /**
+     * No global (tenant_id=null) Tire reference data is seeded anywhere in
+     * this codebase — the Tire spec's FKs need real rows to point at.
+     * Values reflect a realistic 295/80R22.5 highway truck tire spec
+     * rather than placeholders.
+     *
+     * @return array{loadIndex: TireLoadIndex, speedRating: TireSpeedRating, plyRating: TirePlyRating}
+     */
+    private function resolveTireReferences(Tenant $tenant): array
+    {
+        $loadIndex = TireLoadIndex::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'LI-146'],
+            ['max_load_single_kg' => 3000, 'max_load_dual_kg' => 2725, 'is_system' => false, 'status' => 'ACTIVE']
+        );
+        $speedRating = TireSpeedRating::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'L'],
+            ['max_speed_kmh' => 120, 'is_system' => false, 'status' => 'ACTIVE']
+        );
+        $plyRating = TirePlyRating::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => '16PR'],
+            ['load_range' => 'G', 'is_system' => false, 'status' => 'ACTIVE']
+        );
+
+        return ['loadIndex' => $loadIndex, 'speedRating' => $speedRating, 'plyRating' => $plyRating];
+    }
+
+    /**
+     * Replicates ProductController::store()'s own body: validate the
+     * conditional spec fields BEFORE any numbering sequence is touched,
+     * then generate the Item Code and persist the CTI spec row inside one
+     * transaction. Looks the Product up by `sku` first so a rerun never
+     * consumes a fresh Item Code or duplicates the spec/compatibility rows.
+     */
+    private function makeProduct(Tenant $tenant, string $sku, string $name, string $categoryId, string $productType, string $uomId, string $binId, array $general, array $spec): Product
+    {
+        $existing = Product::query()->where('tenant_id', $tenant->id)->where('sku', $sku)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $specs = app(ProductSpecificationService::class);
+        $numbers = app(DocumentNumberingService::class);
+
+        ['general' => $generalOverrides, 'spec' => $validatedSpec] = $specs->validate($productType, $general, $spec);
+
+        return DB::transaction(function () use ($tenant, $sku, $name, $categoryId, $productType, $uomId, $binId, $generalOverrides, $validatedSpec, $numbers, $specs) {
+            $number = $numbers->generate('product_item', $tenant->id);
+
+            $product = Product::query()->create(array_merge($generalOverrides, [
+                'tenant_id' => $tenant->id,
+                'code' => $number['document_number'],
+                'numbering_configuration_version_id' => $number['configuration_version_id'],
+                'sku' => $sku,
+                'name' => $name,
+                'product_category_id' => $categoryId,
+                'product_type' => $productType,
+                'uom_id' => $uomId,
+                'default_storage_bin_id' => $binId,
+                'is_system' => false,
+                'status' => 'ACTIVE',
+            ]));
+
+            $specs->persist($product, $validatedSpec);
+
+            return $product;
+        });
     }
 }
