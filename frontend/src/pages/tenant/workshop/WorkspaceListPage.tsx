@@ -8,7 +8,7 @@ import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { WorkspaceItem } from '../../../types';
+import type { VehicleCategory, WorkspaceItem } from '../../../types';
 
 const TYPES = ['GENERAL_SERVICE_BAY', 'HEAVY_VEHICLE_BAY', 'INSPECTION_BAY', 'ELECTRICAL_BAY', 'TIRE_BAY', 'QC_BAY', 'WASHING_BAY', 'PARKING_LOT', 'HOLDING_AREA', 'OTHER'];
 const STATUSES = ['', 'AVAILABLE', 'RESERVED', 'OCCUPIED', 'BLOCKED', 'UNDER_MAINTENANCE', 'INACTIVE'];
@@ -18,6 +18,7 @@ export function WorkspaceListPage() {
   const [status, setStatus] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState<WorkspaceItem | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const { data, loading, error } = useApiList<WorkspaceItem>('/app/workspaces', { status: status || undefined }, reloadKey);
 
@@ -36,18 +37,26 @@ export function WorkspaceListPage() {
     { key: 'name', header: 'Name', render: (w) => w.name },
     { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
     { key: 'type', header: 'Type', render: (w) => w.workspace_type },
-    { key: 'capacity', header: 'Capacity', render: (w) => (w.capacity ? `${w.capacity} ${w.capacity_unit ?? ''}`.trim() : '—') },
+    { key: 'capacity', header: 'Capacity', render: (w) => w.capacity ?? '—' },
     { key: 'categories', header: 'Vehicle Categories', render: (w) => (w.vehicle_categories ?? []).map((c) => c.name).join(', ') || 'Any' },
     { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
     {
       key: 'actions',
       header: '',
-      render: (w) =>
-        hasPermission('workspace.block') && ['AVAILABLE', 'BLOCKED'].includes(w.status) ? (
-          <button className="btn-secondary" disabled={busyId === w.id} onClick={() => toggleBlock(w)}>
-            {w.status === 'BLOCKED' ? 'Unblock' : 'Block'}
-          </button>
-        ) : null,
+      render: (w) => (
+        <div style={{ display: 'flex', gap: 6 }}>
+          {hasPermission('workspace.manage') && (
+            <button className="btn-secondary" onClick={() => setEditing(w)}>
+              Edit
+            </button>
+          )}
+          {hasPermission('workspace.block') && ['AVAILABLE', 'BLOCKED'].includes(w.status) && (
+            <button className="btn-secondary" disabled={busyId === w.id} onClick={() => toggleBlock(w)}>
+              {w.status === 'BLOCKED' ? 'Unblock' : 'Block'}
+            </button>
+          )}
+        </div>
+      ),
     },
   ];
 
@@ -76,38 +85,64 @@ export function WorkspaceListPage() {
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateWorkspaceModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
+      <EditWorkspaceModal workspace={editing} onClose={() => setEditing(null)} onSaved={() => setReloadKey((k) => k + 1)} />
     </div>
+  );
+}
+
+function VehicleCategoryChecklist({ categories, selected, onToggle }: { categories: VehicleCategory[]; selected: string[]; onToggle: (id: string) => void }) {
+  return (
+    <FormField label="Vehicle Categories" errors={undefined}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 140, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 8 }}>
+        {categories.length === 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>No vehicle categories available.</span>}
+        {categories.map((c) => (
+          <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <input type="checkbox" checked={selected.includes(c.id)} onChange={() => onToggle(c.id)} /> {c.name}
+          </label>
+        ))}
+      </div>
+      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>Leave all unchecked to allow any vehicle category.</div>
+    </FormField>
   );
 }
 
 function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [workshops, setWorkshops] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<VehicleCategory[]>([]);
   const [workshopId, setWorkshopId] = useState('');
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   const [type, setType] = useState('GENERAL_SERVICE_BAY');
   const [capacity, setCapacity] = useState('');
-  const [capacityUnit, setCapacityUnit] = useState('');
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     apiClient.get('/app/workshops', { params: { per_page: 100 } }).then((res) => setWorkshops(res.data.data));
+    apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
   }, [open]);
+
+  function toggleCategory(id: string) {
+    setCategoryIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  }
 
   async function submit() {
     setSubmitting(true);
     setErrors({});
     try {
-      await apiClient.post('/app/workspaces', {
+      const res = await apiClient.post('/app/workspaces', {
         workshop_id: workshopId, code, name, workspace_type: type,
-        capacity: capacity || undefined, capacity_unit: capacityUnit || undefined,
+        capacity: capacity || undefined,
       });
+      if (categoryIds.length > 0) {
+        await apiClient.post(`/app/workspaces/${res.data.data.id}/vehicle-categories`, { vehicle_category_ids: categoryIds });
+      }
       setCode('');
       setName('');
       setCapacity('');
-      setCapacityUnit('');
+      setCategoryIds([]);
       onCreated();
       onClose();
     } catch (err) {
@@ -145,20 +180,90 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Capacity" errors={errors.capacity}>
-          <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Capacity Unit" errors={errors.capacity_unit}>
-          <input value={capacityUnit} onChange={(e) => setCapacityUnit(e.target.value)} placeholder="e.g. vehicles" style={inputStyle} />
-        </FormField>
-      </div>
+      <FormField label="Capacity" errors={errors.capacity}>
+        <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
+      </FormField>
+      <VehicleCategoryChecklist categories={categories} selected={categoryIds} onToggle={toggleCategory} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
         <button className="btn-primary" disabled={submitting || !workshopId || !code || !name} onClick={submit}>
           Create
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+function EditWorkspaceModal({ workspace, onClose, onSaved }: { workspace: WorkspaceItem | null; onClose: () => void; onSaved: () => void }) {
+  const [categories, setCategories] = useState<VehicleCategory[]>([]);
+  const [name, setName] = useState('');
+  const [type, setType] = useState('GENERAL_SERVICE_BAY');
+  const [capacity, setCapacity] = useState('');
+  const [categoryIds, setCategoryIds] = useState<string[]>([]);
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!workspace) return;
+    setName(workspace.name);
+    setType(workspace.workspace_type);
+    setCapacity(workspace.capacity != null ? String(workspace.capacity) : '');
+    setCategoryIds((workspace.vehicle_categories ?? []).map((c) => c.id));
+    setErrors({});
+    apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
+  }, [workspace]);
+
+  if (!workspace) return null;
+
+  function toggleCategory(id: string) {
+    setCategoryIds((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]));
+  }
+
+  async function submit() {
+    if (!workspace) return;
+    setSubmitting(true);
+    setErrors({});
+    try {
+      await apiClient.put(`/app/workspaces/${workspace.id}`, {
+        name, workspace_type: type, capacity: capacity || null,
+      });
+      await apiClient.post(`/app/workspaces/${workspace.id}/vehicle-categories`, { vehicle_category_ids: categoryIds });
+      onSaved();
+      onClose();
+    } catch (err) {
+      const apiError: ApiErrorShape = extractApiError(err);
+      setErrors(apiError.errors ?? {});
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open={!!workspace} title={`Edit Workspace — ${workspace.code}`} onClose={onClose}>
+      <FormField label="Name" errors={errors.name} required>
+        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Type" errors={errors.workspace_type} required>
+        <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle}>
+          {TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField label="Capacity" errors={errors.capacity}>
+        <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
+      </FormField>
+      <VehicleCategoryChecklist categories={categories} selected={categoryIds} onToggle={toggleCategory} />
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <button className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn-primary" disabled={submitting || !name} onClick={submit}>
+          Save
         </button>
       </div>
     </Modal>

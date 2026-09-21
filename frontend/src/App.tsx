@@ -11,6 +11,7 @@ import { PlatformDashboardPage } from './pages/platform/DashboardPage';
 import { TenantListPage } from './pages/platform/tenants/TenantListPage';
 import { TenantDetailPage } from './pages/platform/tenants/TenantDetailPage';
 import { ModuleCatalogPage } from './pages/platform/modules/ModuleCatalogPage';
+import { ProductCategoriesPage as PlatformProductCategoriesPage } from './pages/platform/masterdata/ProductCategoriesPage';
 import { ModuleDetailPage } from './pages/platform/modules/ModuleDetailPage';
 import { PlatformUsersPage } from './pages/platform/access/PlatformUsersPage';
 import { PlatformRolesPage } from './pages/platform/access/PlatformRolesPage';
@@ -190,6 +191,14 @@ export default function App() {
               element={
                 <RequirePermission permission="module.view">
                   <ModuleDetailPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="product-categories"
+              element={
+                <RequirePermission permission="product_category.view">
+                  <PlatformProductCategoriesPage />
                 </RequirePermission>
               }
             />

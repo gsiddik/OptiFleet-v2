@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Platform\PaymentController;
 use App\Http\Controllers\Api\Platform\PermissionController;
 use App\Http\Controllers\Api\Platform\PlatformUserController;
 use App\Http\Controllers\Api\Platform\PricingController;
+use App\Http\Controllers\Api\Platform\ProductCategoryController;
 use App\Http\Controllers\Api\Platform\RoleController;
 use App\Http\Controllers\Api\Platform\SubscriptionController;
 use App\Http\Controllers\Api\Platform\TenantCapacityController;
@@ -57,6 +58,14 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::get('/modules/{module}/dependencies', [ModuleDependencyController::class, 'index'])->middleware('permission:module.view');
     Route::post('/modules/{module}/dependencies', [ModuleDependencyController::class, 'store'])->middleware('permission:module.manage');
     Route::delete('/modules/{module}/dependencies/{dependsOn}', [ModuleDependencyController::class, 'destroy'])->middleware('permission:module.manage');
+
+    // "Next Improvement Tenant Portal - Products": Product Categories are
+    // Superadmin-managed only — tenants keep GET /app/product-categories
+    // (read-only) for the Dynamic Product Form, nothing more.
+    Route::get('/product-categories', [ProductCategoryController::class, 'index'])->middleware('permission:product_category.view');
+    Route::post('/product-categories', [ProductCategoryController::class, 'store'])->middleware('permission:product_category.create');
+    Route::put('/product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->middleware('permission:product_category.update');
+    Route::delete('/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->middleware('permission:product_category.delete');
 
     Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:role.view');
     Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:role.create');

@@ -348,22 +348,6 @@ class ProductDynamicSpecificationTest extends TestCase
 
     // --- Category scoped by Item Type ---
 
-    public function test_subcategory_inherits_parent_item_type_regardless_of_client_input(): void
-    {
-        [, $token] = $this->setUpTenant();
-        $headers = $this->authHeaders($token);
-
-        $parent = $this->postJson('/api/v1/app/product-categories', [
-            'code' => 'CAT-SP', 'name' => 'Sparepart Category', 'item_type' => 'SPARE_PART',
-        ], $headers)->assertStatus(201);
-
-        $child = $this->postJson('/api/v1/app/product-categories', [
-            'code' => 'CAT-SP-SUB', 'name' => 'Brake', 'parent_id' => $parent->json('data.id'), 'item_type' => 'TIRE',
-        ], $headers)->assertStatus(201);
-
-        $this->assertSame('SPARE_PART', $child->json('data.item_type'));
-    }
-
     public function test_product_creation_rejects_category_from_a_different_item_type(): void
     {
         [, $token] = $this->setUpTenant();

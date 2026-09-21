@@ -28,6 +28,10 @@ class PermissionSeeder extends Seeder
             'billing' => ['view', 'generate', 'adjust'],
             'invoice' => ['view', 'generate', 'issue', 'void'],
             'payment' => ['view', 'verify', 'reject'],
+
+            // "Next Improvement Tenant Portal - Products": Product Categories
+            // move from tenant-governed to Superadmin-only management.
+            'product_category' => ['view', 'create', 'update', 'delete'],
         ];
 
         $tenantOnly = [

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -12,6 +12,13 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleBrandItem } from '../../../types';
+
+const USAGE_TYPES = [
+  { value: 'CAR', label: 'Car' },
+  { value: 'TRUCK', label: 'Truck' },
+  { value: 'BUS', label: 'Bus' },
+  { value: 'HEAVY_EQUIPMENT', label: 'Heavy Equipment' },
+];
 
 export function VehicleBrandsPage() {
   const { hasPermission } = useAuth();
@@ -44,7 +51,7 @@ export function VehicleBrandsPage() {
   const columns: Column<VehicleBrandItem>[] = [
     { key: 'code', header: 'Code', render: (b) => b.code },
     { key: 'name', header: 'Name', render: (b) => b.name },
-    { key: 'usage_type', header: 'Brand Of', render: (b) => b.usage_type ?? '—' },
+    { key: 'usage_types', header: 'Brand Of', render: (b) => (b.usage_types && b.usage_types.length > 0 ? b.usage_types.join(', ') : b.usage_type ?? '—') },
     { key: 'is_system', header: 'Source', render: (b) => (b.is_system ? 'System' : 'Tenant') },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
     {
@@ -142,20 +149,67 @@ function BrandFormModal({
 }) {
   const [code, setCode] = useState(brand?.code ?? '');
   const [name, setName] = useState(brand?.name ?? '');
-  const [logoUrl, setLogoUrl] = useState(brand?.logo_url ?? '');
-  const [usageType, setUsageType] = useState(brand?.usage_type ?? '');
+  const [usageTypes, setUsageTypes] = useState<string[]>(brand?.usage_types ?? (brand?.usage_type ? [brand.usage_type] : []));
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    if (logoFile) {
+      objectUrl = URL.createObjectURL(logoFile);
+      setLogoPreview(objectUrl);
+    } else if (brand?.logo_available) {
+      apiClient.get(`/app/vehicle-brands/${brand.id}/logo`, { responseType: 'blob' }).then((res) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(res.data);
+        setLogoPreview(objectUrl);
+      });
+    } else if (brand?.logo_url) {
+      setLogoPreview(brand.logo_url);
+    } else {
+      setLogoPreview(null);
+    }
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [brand, logoFile]);
+
+  function toggleUsageType(value: string) {
+    setUsageTypes((types) => (types.includes(value) ? types.filter((t) => t !== value) : [...types, value]));
+  }
+
+  function handleFileChange(file: File | undefined) {
+    if (!file) return;
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setErrors({ logo: ['Only JPG or PNG images are accepted.'] });
+      return;
+    }
+    setErrors({});
+    setLogoFile(file);
+  }
 
   async function submit() {
     setSubmitting(true);
     setErrors({});
     try {
-      const payload = { name, logo_url: logoUrl || null, usage_type: usageType || null };
+      const payload = { name, usage_types: usageTypes };
+      let brandId = brand?.id;
       if (brand) {
         await apiClient.put(`/app/vehicle-brands/${brand.id}`, payload);
       } else {
-        await apiClient.post('/app/vehicle-brands', { code, ...payload });
+        const res = await apiClient.post('/app/vehicle-brands', { code, ...payload });
+        brandId = res.data.data.id;
+      }
+      if (logoFile && brandId) {
+        const form = new FormData();
+        form.append('file', logoFile);
+        await apiClient.post(`/app/vehicle-brands/${brandId}/logo`, form);
       }
       onSaved();
     } catch (err) {
@@ -174,19 +228,19 @@ function BrandFormModal({
       <FormField label="Name" errors={errors.name} required={!brand}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Brand Of (optional)" errors={errors.usage_type}>
-        <select value={usageType} onChange={(e) => setUsageType(e.target.value)} style={inputStyle}>
-          <option value="">Unspecified</option>
-          <option value="CAR">Car</option>
-          <option value="TRUCK">Truck</option>
-          <option value="BUS">Bus</option>
-          <option value="HEAVY_EQUIPMENT">Heavy Equipment</option>
-        </select>
+      <FormField label="Brand Of" errors={errors.usage_types}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {USAGE_TYPES.map((t) => (
+            <label key={t.value} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <input type="checkbox" checked={usageTypes.includes(t.value)} onChange={() => toggleUsageType(t.value)} /> {t.label}
+            </label>
+          ))}
+        </div>
       </FormField>
-      <FormField label="Logo URL (optional)" errors={errors.logo_url}>
-        <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} style={inputStyle} />
+      <FormField label="Logo (JPG or PNG)" errors={errors.logo ?? errors.file}>
+        <input type="file" accept="image/jpeg,image/png" onChange={(e) => handleFileChange(e.target.files?.[0])} style={inputStyle} />
       </FormField>
-      {logoUrl && <img src={logoUrl} alt={name} style={{ maxWidth: 100, marginBottom: 12, borderRadius: 4 }} />}
+      {logoPreview && <img src={logoPreview} alt={name} style={{ maxWidth: 100, marginBottom: 12, borderRadius: 4 }} />}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           Cancel

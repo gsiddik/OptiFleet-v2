@@ -17,7 +17,6 @@ export function ComponentGroupsPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
-  const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<ComponentGroup | null>(null);
   const [mapping, setMapping] = useState<ComponentGroup | null>(null);
   const [deleting, setDeleting] = useState<ComponentGroup | null>(null);
@@ -83,13 +82,6 @@ export function ComponentGroupsPage() {
           setSearch(v);
           setPage(1);
         }}
-        actions={
-          hasPermission('component_group.create') ? (
-            <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Component Group
-            </button>
-          ) : null
-        }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
@@ -101,12 +93,6 @@ export function ComponentGroupsPage() {
         </>
       )}
 
-      <GroupFormModal
-        open={showCreate}
-        allGroups={allGroups}
-        onClose={() => setShowCreate(false)}
-        onSaved={() => setReloadKey((k) => k + 1)}
-      />
       {editing && (
         <GroupFormModal
           open

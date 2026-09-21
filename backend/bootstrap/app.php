@@ -129,6 +129,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json(['message' => $e->getMessage()], 422);
         });
 
+        $exceptions->render(function (\App\Domain\MasterData\Services\MasterDataException $e, Request $request) {
+            return response()->json(['message' => $e->getMessage()], 422);
+        });
+
         $exceptions->render(function (\App\Domain\Inspection\Services\InspectionException $e, Request $request) {
             return response()->json(['message' => $e->getMessage()], 422);
         });

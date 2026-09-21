@@ -122,7 +122,9 @@ export interface VehicleBrandItem {
   code: string;
   name: string;
   logo_url: string | null;
+  logo_available: boolean;
   usage_type: 'CAR' | 'TRUCK' | 'BUS' | 'HEAVY_EQUIPMENT' | null;
+  usage_types: ('CAR' | 'TRUCK' | 'BUS' | 'HEAVY_EQUIPMENT')[] | null;
   is_system: boolean;
   status: 'ACTIVE' | 'INACTIVE';
 }
@@ -386,6 +388,8 @@ export interface VehicleItem {
   chassis_number: string | null;
   engine_number: string | null;
   year: number | null;
+  purchase_month: number | null;
+  purchase_year: number | null;
   fuel_type: string | null;
   transmission_type: string | null;
   current_odometer: string;

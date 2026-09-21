@@ -6,9 +6,14 @@ use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
- * Phase G — G-12: ProductCategory previously had no delete endpoint and
- * Uom had neither update nor delete, despite both being routed through the
- * same 'product.*' permission group as the Product resource itself.
+ * Phase G — G-12: Uom previously had neither update nor delete, despite
+ * being routed through the same 'product.*' permission group as the
+ * Product resource itself.
+ *
+ * Product Category CRUD moved to the platform portal ("Next Improvement
+ * Tenant Portal - Products": Product Categories are Superadmin-managed
+ * only) — see PlatformProductCategoryTest for that coverage. This file
+ * keeps only Uom, which remains tenant-governed.
  */
 class ProductCategoryAndUomTest extends TestCase
 {
@@ -21,38 +26,19 @@ class ProductCategoryAndUomTest extends TestCase
         return [$tenant, $token];
     }
 
-    public function test_product_category_can_be_created_updated_and_deleted(): void
+    public function test_tenant_can_read_but_not_write_product_categories(): void
     {
         [, $token] = $this->setUpTenant();
         $headers = $this->authHeaders($token);
+        $category = $this->makeProductCategory();
 
-        $create = $this->postJson('/api/v1/app/product-categories', ['code' => 'CAT-1', 'name' => 'Brakes'], $headers)->assertStatus(201);
-        $id = $create->json('data.id');
-
-        $this->putJson("/api/v1/app/product-categories/{$id}", ['name' => 'Brake Parts'], $headers)
-            ->assertOk()->assertJsonPath('data.name', 'Brake Parts');
-
-        $this->deleteJson("/api/v1/app/product-categories/{$id}", [], $headers)->assertOk();
-        $this->assertSoftDeleted('product_categories', ['id' => $id]);
-    }
-
-    public function test_product_category_in_use_by_a_product_cannot_be_deleted(): void
-    {
-        [$tenant, $token] = $this->setUpTenant();
-        $category = $this->makeProductCategory(['tenant_id' => $tenant->id, 'is_system' => false]);
-        $this->makeProduct($tenant, $category);
-
-        $this->deleteJson("/api/v1/app/product-categories/{$category->id}", [], $this->authHeaders($token))->assertStatus(422);
-        $this->assertDatabaseHas('product_categories', ['id' => $category->id, 'deleted_at' => null]);
-    }
-
-    public function test_system_product_category_cannot_be_modified_by_a_tenant(): void
-    {
-        [, $token] = $this->setUpTenant();
-        $systemCategory = $this->makeProductCategory(['is_system' => true, 'tenant_id' => null]);
-
-        $this->putJson("/api/v1/app/product-categories/{$systemCategory->id}", ['name' => 'Hacked'], $this->authHeaders($token))->assertStatus(403);
-        $this->deleteJson("/api/v1/app/product-categories/{$systemCategory->id}", [], $this->authHeaders($token))->assertStatus(403);
+        $this->getJson('/api/v1/app/product-categories', $headers)->assertOk();
+        // The write routes no longer exist on the tenant side at all — the
+        // GET route on the same URI still resolves, so an unsupported verb
+        // is a 405, while a URI with no route at all (the {id} variants) is a 404.
+        $this->postJson('/api/v1/app/product-categories', ['code' => 'X', 'name' => 'X'], $headers)->assertStatus(405);
+        $this->putJson("/api/v1/app/product-categories/{$category->id}", ['name' => 'X'], $headers)->assertStatus(404);
+        $this->deleteJson("/api/v1/app/product-categories/{$category->id}", [], $headers)->assertStatus(404);
     }
 
     public function test_uom_can_be_created_updated_and_deleted(): void
@@ -98,14 +84,12 @@ class ProductCategoryAndUomTest extends TestCase
         $this->assertDatabaseHas('uoms', ['id' => $uom->id, 'deleted_at' => null]);
     }
 
-    public function test_product_category_and_uom_are_isolated_from_another_tenants_records(): void
+    public function test_uom_is_isolated_from_another_tenants_records(): void
     {
         [, $token] = $this->setUpTenant();
         $otherTenant = $this->makeTenant(['code' => 'PCUB-'.Str::random(4)]);
-        $foreignCategory = $this->makeProductCategory(['tenant_id' => $otherTenant->id, 'is_system' => false]);
         $foreignUom = $this->makeUom(['tenant_id' => $otherTenant->id, 'is_system' => false]);
 
-        $this->putJson("/api/v1/app/product-categories/{$foreignCategory->id}", ['name' => 'X'], $this->authHeaders($token))->assertStatus(404);
         $this->putJson("/api/v1/app/uoms/{$foreignUom->id}", ['name' => 'X'], $this->authHeaders($token))->assertStatus(404);
     }
 }

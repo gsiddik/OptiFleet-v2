@@ -24,6 +24,7 @@ export function WorkerListPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<WorkerItem | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const { data, meta, loading, error } = useApiList<WorkerItem>(
     '/app/workers',
     {
@@ -41,6 +42,16 @@ export function WorkerListPage() {
     apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data)).catch(() => setBranches([]));
   }, []);
 
+  async function toggleActive(w: WorkerItem) {
+    setBusyId(w.id);
+    try {
+      await apiClient.put(`/app/workers/${w.id}`, { status: w.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' });
+      setReloadKey((k) => k + 1);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   const columns: Column<WorkerItem>[] = [
     { key: 'employee_code', header: 'Code', render: (w) => <button className="btn-link" onClick={() => setEditing(w)}>{w.employee_code}</button> },
     { key: 'name', header: 'Name', render: (w) => w.name },
@@ -49,6 +60,16 @@ export function WorkerListPage() {
     { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
     { key: 'skills', header: 'Skills', render: (w) => (w.skills ?? []).map((s) => s.component_group?.name).filter(Boolean).join(', ') || '—' },
     { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
+    {
+      key: 'actions',
+      header: '',
+      render: (w) =>
+        hasPermission('worker.manage') ? (
+          <button className="btn-secondary" disabled={busyId === w.id} onClick={() => toggleActive(w)}>
+            {w.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+          </button>
+        ) : null,
+    },
   ];
 
   return (

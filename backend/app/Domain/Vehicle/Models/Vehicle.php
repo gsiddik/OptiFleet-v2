@@ -22,7 +22,7 @@ class Vehicle extends Model
     protected $fillable = [
         'tenant_id', 'branch_id', 'default_workshop_id', 'vehicle_category_id',
         'brand', 'vehicle_brand_id', 'model', 'vehicle_model_id', 'vehicle_type', 'registration_number', 'vin', 'chassis_number',
-        'engine_number', 'year', 'fuel_type', 'transmission_type',
+        'engine_number', 'year', 'purchase_month', 'purchase_year', 'fuel_type', 'transmission_type',
         'current_odometer', 'engine_hour', 'status', 'operational_status',
         'color', 'doors', 'seats', 'length_mm', 'width_mm', 'height_mm',
         'fuel_tank_capacity_liters', 'engine_capacity_cc', 'suspension_type', 'axle_count',

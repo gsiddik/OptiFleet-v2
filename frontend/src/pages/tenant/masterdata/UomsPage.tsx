@@ -12,6 +12,8 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { UomItem } from '../../../types';
 
+const MEASURE_TYPES = ['LENGTH', 'PACKAGING', 'CAPACITY', 'WEIGHT', 'PRESSURE'];
+
 export function UomsPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
@@ -39,6 +41,7 @@ export function UomsPage() {
   const columns: Column<UomItem>[] = [
     { key: 'code', header: 'Code', render: (u) => u.code },
     { key: 'name', header: 'Name', render: (u) => u.name },
+    { key: 'measure_type', header: 'Type of Measure', render: (u) => u.measure_type ?? '—' },
     { key: 'description', header: 'Description', render: (u) => u.description ?? '—' },
     { key: 'is_system', header: 'Source', render: (u) => (u.is_system ? 'System' : 'Tenant') },
     { key: 'status', header: 'Status', render: (u) => <StatusBadge status={u.status} /> },
@@ -121,6 +124,7 @@ export function UomsPage() {
 function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: UomItem; onClose: () => void; onSaved: () => void }) {
   const [code, setCode] = useState(uom?.code ?? '');
   const [name, setName] = useState(uom?.name ?? '');
+  const [measureType, setMeasureType] = useState(uom?.measure_type ?? '');
   const [description, setDescription] = useState(uom?.description ?? '');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -130,9 +134,9 @@ function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: Uo
     setErrors({});
     try {
       if (uom) {
-        await apiClient.put(`/app/uoms/${uom.id}`, { name, description: description || null });
+        await apiClient.put(`/app/uoms/${uom.id}`, { name, measure_type: measureType || null, description: description || null });
       } else {
-        await apiClient.post('/app/uoms', { code, name, description: description || undefined });
+        await apiClient.post('/app/uoms', { code, name, measure_type: measureType || undefined, description: description || undefined });
       }
       onSaved();
     } catch (err) {
@@ -150,6 +154,16 @@ function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: Uo
       </FormField>
       <FormField label="Name" errors={errors.name} required={!uom}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Type of Measure" errors={errors.measure_type}>
+        <select value={measureType ?? ''} onChange={(e) => setMeasureType(e.target.value)} style={inputStyle}>
+          <option value="">— None —</option>
+          {MEASURE_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
       </FormField>
       <FormField label="Description" errors={errors.description}>
         <input value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />

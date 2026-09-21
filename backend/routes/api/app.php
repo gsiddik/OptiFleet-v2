@@ -184,6 +184,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/vehicle-brands', [VehicleBrandController::class, 'store'])->middleware('permission:vehicle_brand.create');
             Route::put('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'update'])->middleware('permission:vehicle_brand.update');
             Route::delete('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'destroy'])->middleware('permission:vehicle_brand.update');
+            Route::post('/vehicle-brands/{vehicleBrand}/logo', [VehicleBrandController::class, 'uploadLogo'])->middleware('permission:vehicle_brand.update');
+            Route::get('/vehicle-brands/{vehicleBrand}/logo', [VehicleBrandController::class, 'showLogo'])->middleware('permission:vehicle_brand.view');
             Route::get('/vehicle-models', [VehicleModelController::class, 'index'])->middleware('permission:vehicle_brand.view');
             Route::post('/vehicle-models', [VehicleModelController::class, 'store'])->middleware('permission:vehicle_brand.create');
             Route::put('/vehicle-models/{vehicleModel}', [VehicleModelController::class, 'update'])->middleware('permission:vehicle_brand.update');
@@ -426,10 +428,11 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
         });
 
         Route::middleware('module:INVENTORY')->group(function () {
+            // "Next Improvement Tenant Portal - Products": Product Categories
+            // are Superadmin-managed only — tenants keep read-only access
+            // for the Dynamic Product Form; create/update/delete moved to
+            // routes/api/platform.php.
             Route::get('/product-categories', [ProductCategoryController::class, 'index'])->middleware('permission:product.view');
-            Route::post('/product-categories', [ProductCategoryController::class, 'store'])->middleware('permission:product.create');
-            Route::put('/product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->middleware('permission:product.update');
-            Route::delete('/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->middleware('permission:product.delete');
 
             Route::get('/uoms', [UomController::class, 'index'])->middleware('permission:product.view');
             Route::post('/uoms', [UomController::class, 'store'])->middleware('permission:product.create');

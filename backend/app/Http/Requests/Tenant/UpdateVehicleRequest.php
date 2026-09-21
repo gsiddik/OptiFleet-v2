@@ -36,6 +36,8 @@ class UpdateVehicleRequest extends FormRequest
             'chassis_number' => ['nullable', 'string', 'max:50', Rule::unique('vehicles', 'chassis_number')->where('tenant_id', $tenantId)->ignore($vehicleId)],
             'engine_number' => ['nullable', 'string', 'max:50'],
             'year' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
+            'purchase_month' => ['nullable', 'integer', 'min:1', 'max:12'],
+            'purchase_year' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
             'fuel_type' => ['nullable', 'string', 'max:50'],
             'transmission_type' => ['nullable', 'string', 'max:50'],
             'current_odometer' => ['sometimes', 'numeric', 'min:0'],

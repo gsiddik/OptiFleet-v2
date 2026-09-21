@@ -13,6 +13,11 @@ import type { VehicleBrandItem, VehicleItem, VehicleModelItem } from '../../../t
 
 const STATUSES = ['', 'ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'];
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+
 export function VehicleListPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
@@ -74,6 +79,8 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [vin, setVin] = useState('');
   const [currentOdometer, setCurrentOdometer] = useState('0');
+  const [purchaseMonth, setPurchaseMonth] = useState('');
+  const [purchaseYear, setPurchaseYear] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -108,11 +115,15 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         registration_number: registrationNumber,
         vin: vin || null,
         current_odometer: currentOdometer,
+        purchase_month: purchaseMonth || undefined,
+        purchase_year: purchaseYear || undefined,
       });
       setVehicleBrandId('');
       setVehicleModelId('');
       setRegistrationNumber('');
       setVin('');
+      setPurchaseMonth('');
+      setPurchaseYear('');
       onCreated();
       onClose();
     } catch (err) {
@@ -174,6 +185,19 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         </FormField>
         <FormField label="Current Odometer" errors={errors.current_odometer}>
           <input type="number" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
+        </FormField>
+        <FormField label="Purchase Month" errors={errors.purchase_month}>
+          <select value={purchaseMonth} onChange={(e) => setPurchaseMonth(e.target.value)} style={inputStyle}>
+            <option value="">Select…</option>
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label="Purchase Year" errors={errors.purchase_year}>
+          <input type="number" min="1900" max={new Date().getFullYear() + 1} value={purchaseYear} onChange={(e) => setPurchaseYear(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
