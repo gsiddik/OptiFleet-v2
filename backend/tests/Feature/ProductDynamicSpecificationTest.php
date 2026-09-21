@@ -272,6 +272,34 @@ class ProductDynamicSpecificationTest extends TestCase
         $this->assertSame('On/Off Road', $response->json('data.tire_spec.purpose_computed'));
     }
 
+    /**
+     * "Next Improvement Tenant Portal - Products" (gap-correction cycle,
+     * section 8): Truck & Bus-only fields must never become a client-
+     * writable back door for a Car tire — even if a request bypassing the
+     * UI sends them, the server must ignore/null them, never persist them.
+     */
+    public function test_tire_car_ignores_truck_bus_only_fields_even_if_supplied(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $refs = $this->tireRefs();
+
+        $response = $this->postJson('/api/v1/app/products', $this->base('TIRE', [
+            'brand' => 'Dunlop',
+            'spec' => [
+                'vehicle_group' => 'CAR', 'pattern_name' => 'Enasave', 'width_mm' => 185, 'aspect_ratio_percent' => 70,
+                'construction_type' => 'RADIAL', 'rim_diameter_inch' => 14, 'tire_type' => 'TUBELESS',
+                'single_load_index_id' => $refs['single']->id, 'speed_rating_id' => $refs['speed']->id,
+                // Bypassing the UI: a Car submission still sends Truck/Bus-only fields.
+                'dual_load_index_id' => $refs['dual']->id, 'ply_rating_id' => $refs['ply']->id,
+            ],
+        ]), $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertNull($response->json('data.tire_spec.dual_load_index_id'));
+        $this->assertNull($response->json('data.tire_spec.ply_rating_id'));
+        $this->assertNull($response->json('data.tire_spec.dual_max_load_kg_computed'));
+        $this->assertNull($response->json('data.tire_spec.load_range_computed'));
+    }
+
     public function test_tire_star_rating_must_belong_to_selected_tra_code(): void
     {
         [, $token] = $this->setUpTenant();
@@ -322,6 +350,24 @@ class ProductDynamicSpecificationTest extends TestCase
         $this->assertSame('TW-200', $response->json('data.tool_spec.model'));
     }
 
+    /**
+     * "Next Improvement Tenant Portal - Products" (gap-correction cycle,
+     * section 9): every Conditional-Mandatory trigger that IS defined in
+     * the document must be verified with both a positive and a negative
+     * case. Calibration's own interval-required rule was already covered;
+     * Maintenance's mirror rule was not — closing that test-coverage gap.
+     */
+    public function test_tool_maintenance_interval_required_when_maintenance_required(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $toolType = \App\Domain\ProductMaster\Models\ToolType::query()->create(['tenant_id' => null, 'code' => 'MEASURE3', 'name' => 'Measuring Tool', 'is_system' => true, 'status' => 'ACTIVE']);
+
+        $this->postJson('/api/v1/app/products', $this->base('TOOL', [
+            'track_serial_number' => true,
+            'spec' => ['tool_type_id' => $toolType->id, 'checkout_required' => false, 'calibration_required' => false, 'maintenance_required' => true],
+        ]), $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['maintenance_interval_value']);
+    }
+
     // --- Equipment ---
 
     public function test_equipment_maintenance_interval_required_when_maintenance_required(): void
@@ -354,6 +400,73 @@ class ProductDynamicSpecificationTest extends TestCase
 
         $this->assertSame('L-2000', $response->json('data.equipment_spec.model'));
         $this->assertSame(380, $response->json('data.equipment_spec.voltage_v'));
+    }
+
+    /**
+     * "Next Improvement Tenant Portal - Products" (gap-correction cycle,
+     * section 9): Equipment has four independent Conditional-Mandatory
+     * triggers (Maintenance, Inspection, Calibration, Certification).
+     * Only Maintenance's negative case existed before this cycle; the
+     * other three are added here for full positive/negative coverage.
+     */
+    public function test_equipment_inspection_interval_required_when_inspection_required(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $equipType = \App\Domain\ProductMaster\Models\EquipmentType::query()->create(['tenant_id' => null, 'code' => 'LIFT3', 'name' => 'Vehicle Lift', 'is_system' => true, 'status' => 'ACTIVE']);
+
+        $this->postJson('/api/v1/app/products', $this->base('EQUIPMENT', [
+            'brand' => 'Bosch', 'track_serial_number' => true,
+            'spec' => [
+                'model' => 'L-3000', 'equipment_type_id' => $equipType->id,
+                'maintenance_required' => false, 'inspection_required' => true, 'calibration_required' => false,
+            ],
+        ]), $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['inspection_interval_value']);
+    }
+
+    public function test_equipment_calibration_interval_required_when_calibration_required(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $equipType = \App\Domain\ProductMaster\Models\EquipmentType::query()->create(['tenant_id' => null, 'code' => 'LIFT4', 'name' => 'Vehicle Lift', 'is_system' => true, 'status' => 'ACTIVE']);
+
+        $this->postJson('/api/v1/app/products', $this->base('EQUIPMENT', [
+            'brand' => 'Bosch', 'track_serial_number' => true,
+            'spec' => [
+                'model' => 'L-4000', 'equipment_type_id' => $equipType->id,
+                'maintenance_required' => false, 'inspection_required' => false, 'calibration_required' => true,
+            ],
+        ]), $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['calibration_interval_value']);
+    }
+
+    public function test_equipment_certification_type_required_when_certification_required(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $equipType = \App\Domain\ProductMaster\Models\EquipmentType::query()->create(['tenant_id' => null, 'code' => 'LIFT5', 'name' => 'Vehicle Lift', 'is_system' => true, 'status' => 'ACTIVE']);
+
+        $this->postJson('/api/v1/app/products', $this->base('EQUIPMENT', [
+            'brand' => 'Bosch', 'track_serial_number' => true,
+            'spec' => [
+                'model' => 'L-5000', 'equipment_type_id' => $equipType->id,
+                'maintenance_required' => false, 'inspection_required' => false, 'calibration_required' => false,
+                'certification_required' => true,
+            ],
+        ]), $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['certification_type']);
+    }
+
+    public function test_equipment_certification_type_persisted_when_certification_required(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $equipType = \App\Domain\ProductMaster\Models\EquipmentType::query()->create(['tenant_id' => null, 'code' => 'LIFT6', 'name' => 'Vehicle Lift', 'is_system' => true, 'status' => 'ACTIVE']);
+
+        $response = $this->postJson('/api/v1/app/products', $this->base('EQUIPMENT', [
+            'brand' => 'Bosch', 'track_serial_number' => true,
+            'spec' => [
+                'model' => 'L-6000', 'equipment_type_id' => $equipType->id,
+                'maintenance_required' => false, 'inspection_required' => false, 'calibration_required' => false,
+                'certification_required' => true, 'certification_type' => 'ISO 45001 Lifting Equipment',
+            ],
+        ]), $this->authHeaders($token))->assertStatus(201);
+
+        $this->assertSame('ISO 45001 Lifting Equipment', $response->json('data.equipment_spec.certification_type'));
     }
 
     // --- Category scoped by Item Type ---
