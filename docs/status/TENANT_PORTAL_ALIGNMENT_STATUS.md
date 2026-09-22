@@ -134,7 +134,7 @@ uses its own batch numbering (Batch 1-8), per explicit owner instruction.
 |---|---|---|
 | 1 | Maintenance Request list columns, NEED_INFORMATION cleanup, Assessment Save/Edit toggle | DONE (commit pending push) |
 | 2 | Work Order per-action status gates (422 fix) | DONE (commit pending push) — Overview restructure, Est. Number of Mechanic/Total Hours, Consume/Return popup redesign still open, see detail below |
-| 3 | Workshop Invoice View History | NOT STARTED |
+| 3 | Workshop Invoice View History | DONE (commit pending push) |
 | 4-5 | Product Edit dynamic form, Active toggle, Inventory Configuration section | NOT STARTED |
 | 6 | Worker Type frontend wiring, Component Group create UI | NOT STARTED |
 | 7 | Maintenance Packages legacy popup cleanup (low priority) | NOT STARTED |

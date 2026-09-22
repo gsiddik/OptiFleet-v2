@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
 use App\Domain\Configuration\Services\DocumentTemplateRenderService;
@@ -178,6 +179,35 @@ class ExternalWorkOrderInvoiceController extends Controller
         $this->authorizeScope($externalInvoice);
 
         return $this->serveFile($externalInvoice->paymentProofFile);
+    }
+
+    /**
+     * "View History": date, activity, and actor for every status/field change on this
+     * invoice — built on the generic audit log the Auditable trait already populates
+     * (see the model's own docblock), not a bespoke history table.
+     */
+    public function history(WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+
+        $logs = AuditLog::query()
+            ->where('tenant_id', $this->context->tenantId())
+            ->where('resource_type', 'WorkOrderExternalInvoice')
+            ->where('resource_id', $externalInvoice->id)
+            ->with('actor')
+            ->oldest('created_at')
+            ->get()
+            ->map(fn (AuditLog $log) => [
+                'id' => $log->id,
+                'actor_user_id' => $log->actor_user_id,
+                'actor_name' => $log->actor?->name,
+                'action' => $log->action,
+                'old_values' => $log->old_values,
+                'new_values' => $log->new_values,
+                'created_at' => $log->created_at,
+            ]);
+
+        return $this->ok($logs);
     }
 
     private function serveFile(?\App\Domain\WorkOrder\Models\WorkOrderExternalInvoiceFile $file)

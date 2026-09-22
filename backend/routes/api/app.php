@@ -334,6 +334,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/external-work-order-invoices/{externalInvoice}/vendor-invoice', [ExternalWorkOrderInvoiceController::class, 'viewVendorInvoice'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/external-work-order-invoices/{externalInvoice}/settle', [ExternalWorkOrderInvoiceController::class, 'settle'])->middleware('permission:external_work_order_invoice.settle');
             Route::get('/external-work-order-invoices/{externalInvoice}/payment-proof', [ExternalWorkOrderInvoiceController::class, 'viewPaymentProof'])->middleware('permission:external_work_order_invoice.view');
+            Route::get('/external-work-order-invoices/{externalInvoice}/history', [ExternalWorkOrderInvoiceController::class, 'history'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::delete('/work-orders/{workOrder}/diagnoses/{diagnosis}', [WorkOrderExecutionController::class, 'deleteDiagnosis'])->middleware('permission:diagnosis.manage');
