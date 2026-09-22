@@ -227,6 +227,32 @@ only appear starting In Progress; current app has both as always-visible,
 architecturally distinct tabs from a prior session — reconciling this is
 a larger design question, not a one-line fix).
 
+## Batch 3 Detail (Workshop Invoice View History)
+
+Gap: `ExternalWorkOrderInvoiceController::allowedActions()` advertised a
+"View History" action in its response matrix, but no route or UI backed
+it — the same generic `AuditLog` mechanism already used elsewhere
+(`Auditable` trait, auto-recorded on every mutating action) was simply
+never surfaced for this resource.
+
+- `ExternalWorkOrderInvoiceController::history()` (new): queries
+  `AuditLog::query()->where('resource_type', 'WorkOrderExternalInvoice')
+  ->where('resource_id', $externalInvoice->id)`, ordered newest-first, no
+  new table or write path needed since `Auditable` was already recording
+  these events.
+- Route: `GET /app/external-work-order-invoices/{externalInvoice}/history`
+  (`permission:external_work_order_invoice.view` — read-only, same gate as
+  viewing the invoice itself).
+- Frontend `ExternalWorkOrderInvoiceListPage.tsx`: added a "View History"
+  button opening a modal listing the audit trail (actor, action, timestamp,
+  changed fields).
+
+Tests: new case in `ExternalWorkOrderInvoiceTest` asserting the history
+endpoint returns the recorded lifecycle events in order and is tenant/
+permission-scoped like the rest of the resource. Re-ran
+`ExternalWorkOrderInvoiceTest` full file — PASS, no regressions. Frontend:
+tsc/oxlint/build clean.
+
 ## Batch 4-5 Detail (Product Edit Dynamic Form)
 
 The single biggest gap in the whole audit: `ProductController::update()` never
