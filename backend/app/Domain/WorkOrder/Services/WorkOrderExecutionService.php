@@ -15,24 +15,47 @@ use Illuminate\Support\Facades\DB;
  * Sections 25/26/34/35: Complaint -> Finding -> Diagnosis -> Root Cause ->
  * Corrective Action, the WO's job list, planned parts (reservation/issue/
  * return lifecycle lives in WorkOrderPartService, Phase 4), and the
- * additional-work request/approve/reject sub-flow. A WO
- * only accepts execution activity while genuinely being worked
- * (IN_PROGRESS/ON_HOLD/WAITING_PART) or still open for review
- * (ASSIGNED/SCHEDULED) — never once it has left the active workflow.
+ * additional-work request/approve/reject sub-flow.
+ *
+ * Three distinct gates, per "Improvement OptiFleet - Maintenance Request dan
+ * Work Order" Section (Work Order per-status tab behavior):
+ * - Findings/Diagnosis/Corrective Actions are a Draft-only scoping exercise:
+ *   the Complaint/Diagnosis tabs' Add controls (and Delete/Remove) are only
+ *   ever shown while status=DRAFT, hidden (not just disabled) afterward.
+ * - Jobs/Mechanic (assign)/Planned Parts stay addable from Draft all the way
+ *   through the active execution window (through On Hold/Waiting Part/
+ *   Rework) — PLANNING_STATUSES / assertPlanningEditable(). This is
+ *   deliberately its own gate, NOT the same as EXECUTABLE_STATUSES below:
+ *   Part Requests (a separate tab/service from Planned Parts) and
+ *   Reserve/Issue/Return (WorkOrderPartService) only become available once
+ *   the WO reaches IN_PROGRESS ("Request Parts" is introduced there, and
+ *   Draft's Planned Parts tab explicitly hides Reserve/Issue/Consume/Return)
+ *   — those keep using the original, narrower EXECUTABLE_STATUSES.
+ * - Everything else already gated by assertExecutable() (Part Requests,
+ *   External Services, Additional Work) is unchanged from before this batch.
  */
 class WorkOrderExecutionService
 {
     private const EXECUTABLE_STATUSES = ['ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
+    private const PLANNING_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
+    private const FINDING_SCOPE_STATUSES = ['DRAFT'];
 
     public function addFinding(WorkOrder $workOrder, array $attributes, ?string $userId = null): WorkOrderFinding
     {
-        $this->assertExecutable($workOrder);
+        $this->assertFindingScopeEditable($workOrder);
 
         return WorkOrderFinding::query()->create(array_merge($attributes, [
             'work_order_id' => $workOrder->id,
             'status' => 'OPEN',
             'created_by' => $userId,
         ]));
+    }
+
+    public function deleteFinding(WorkOrderFinding $finding): void
+    {
+        $workOrder = WorkOrder::query()->findOrFail($finding->work_order_id);
+        $this->assertFindingScopeEditable($workOrder);
+        $finding->delete();
     }
 
     /**
@@ -56,7 +79,7 @@ class WorkOrderExecutionService
 
     public function addDiagnosis(WorkOrder $workOrder, array $attributes, ?string $userId = null): WorkOrderDiagnosis
     {
-        $this->assertExecutable($workOrder);
+        $this->assertFindingScopeEditable($workOrder);
 
         return WorkOrderDiagnosis::query()->create(array_merge($attributes, [
             'work_order_id' => $workOrder->id,
@@ -65,16 +88,30 @@ class WorkOrderExecutionService
         ]));
     }
 
+    public function deleteDiagnosis(WorkOrderDiagnosis $diagnosis): void
+    {
+        $workOrder = WorkOrder::query()->findOrFail($diagnosis->work_order_id);
+        $this->assertFindingScopeEditable($workOrder);
+        $diagnosis->delete();
+    }
+
     public function addCorrectiveAction(WorkOrder $workOrder, array $attributes): WorkOrderCorrectiveAction
     {
-        $this->assertExecutable($workOrder);
+        $this->assertFindingScopeEditable($workOrder);
 
         return WorkOrderCorrectiveAction::query()->create(array_merge($attributes, ['work_order_id' => $workOrder->id]));
     }
 
+    public function deleteCorrectiveAction(WorkOrderCorrectiveAction $correctiveAction): void
+    {
+        $workOrder = WorkOrder::query()->findOrFail($correctiveAction->work_order_id);
+        $this->assertFindingScopeEditable($workOrder);
+        $correctiveAction->delete();
+    }
+
     public function addJob(WorkOrder $workOrder, array $attributes): MaintenanceJob
     {
-        $this->assertExecutable($workOrder);
+        $this->assertPlanningEditable($workOrder);
 
         return MaintenanceJob::query()->create(array_merge($attributes, [
             'work_order_id' => $workOrder->id,
@@ -108,7 +145,7 @@ class WorkOrderExecutionService
 
     public function addPlannedPart(WorkOrder $workOrder, array $attributes): WorkOrderPlannedPart
     {
-        $this->assertExecutable($workOrder);
+        $this->assertPlanningEditable($workOrder);
 
         $quantity = (float) ($attributes['quantity'] ?? 1);
 
@@ -164,8 +201,40 @@ class WorkOrderExecutionService
 
     public function assertExecutable(WorkOrder $workOrder): void
     {
+        $this->assertNotExternalMode($workOrder);
         if (! in_array($workOrder->status, self::EXECUTABLE_STATUSES, true)) {
             throw new WorkOrderException("Work Order execution actions are not allowed while status is {$workOrder->status}.");
+        }
+    }
+
+    public function assertFindingScopeEditable(WorkOrder $workOrder): void
+    {
+        $this->assertNotExternalMode($workOrder);
+        if (! in_array($workOrder->status, self::FINDING_SCOPE_STATUSES, true)) {
+            throw new WorkOrderException("Findings and Diagnosis can only be added or removed while status is Draft (currently {$workOrder->status}).");
+        }
+    }
+
+    public function assertPlanningEditable(WorkOrder $workOrder): void
+    {
+        $this->assertNotExternalMode($workOrder);
+        if (! in_array($workOrder->status, self::PLANNING_STATUSES, true)) {
+            throw new WorkOrderException("Jobs, Mechanic, and Planned Parts cannot be added while status is {$workOrder->status}.");
+        }
+    }
+
+    /**
+     * "Consolidated External Workshop business rules": every internal-workshop capability
+     * (Findings/Diagnosis/Corrective Actions/Jobs/Mechanic/Planned Parts) is off-limits for an
+     * External-mode Work Order at any status — it only ever uses the separate
+     * external-findings/external/* endpoints. Without this, adding DRAFT to
+     * EXECUTABLE_STATUSES/FINDING_SCOPE_STATUSES (so internal Draft WOs can use these tabs)
+     * would also open them up on a Draft External-mode WO, which must never happen.
+     */
+    private function assertNotExternalMode(WorkOrder $workOrder): void
+    {
+        if ($workOrder->execution_mode === 'EXTERNAL') {
+            throw new WorkOrderException('This action is not available for an External-mode Work Order.');
         }
     }
 }

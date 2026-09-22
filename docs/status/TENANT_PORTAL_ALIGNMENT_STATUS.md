@@ -133,7 +133,7 @@ uses its own batch numbering (Batch 1-8), per explicit owner instruction.
 | Batch | Scope | Status |
 |---|---|---|
 | 1 | Maintenance Request list columns, NEED_INFORMATION cleanup, Assessment Save/Edit toggle | DONE (commit pending push) |
-| 2 | Work Order per-action status gates (422 fix), Overview restructure, Est. Number of Mechanic/Total Hours, Consume/Return popups | NOT STARTED |
+| 2 | Work Order per-action status gates (422 fix) | DONE (commit pending push) — Overview restructure, Est. Number of Mechanic/Total Hours, Consume/Return popup redesign still open, see detail below |
 | 3 | Workshop Invoice View History | NOT STARTED |
 | 4-5 | Product Edit dynamic form, Active toggle, Inventory Configuration section | NOT STARTED |
 | 6 | Worker Type frontend wiring, Component Group create UI | NOT STARTED |
@@ -172,3 +172,52 @@ relocating the 3 Mongo-touching migrations out of database/migrations/ for
 the test run, then restoring them byte-for-byte (confirmed via git diff)
 before committing. Frontend: tsc -b clean, oxlint clean (pre-existing
 warnings only, all in files I did not touch), production build succeeds.
+
+## Batch 2 Detail (Work Order Finding 422 remediation)
+
+Root cause confirmed and fixed: `WorkOrderExecutionService` used ONE shared
+status gate (`assertExecutable`) for six unrelated actions. Replaced with
+three purpose-built gates:
+- `assertFindingScopeEditable()` — DRAFT only. Findings/Diagnosis/
+  Corrective Actions: add AND delete (new DELETE endpoints added — these
+  didn't exist before despite the doc explicitly requiring "dapat
+  dihapusnya kembali" for all three).
+- `assertPlanningEditable()` — DRAFT through REWORK (new, broader).
+  Jobs/Planned-Parts add, Mechanic assign (MechanicAssignmentService now
+  injects WorkOrderExecutionService and gates on this — previously
+  completely ungated).
+- `assertExecutable()` — unchanged, original ASSIGNED..REWORK set. Still
+  used by Part Requests, Reserve/Issue/Return, External Services,
+  Additional Work (none of these are addressed by the 5 requirement docs;
+  left exactly as before to avoid unrelated regressions).
+- All three gates now also reject execution_mode=EXTERNAL outright — a gap
+  that would otherwise have let a Draft External-mode WO reach internal-only
+  endpoints once DRAFT was added to the broadened gates.
+
+Frontend: ComplaintTab/DiagnosisTab Add forms + new Delete buttons now
+gated to DRAFT; JobsTab/MechanicTab/PlannedPartsTab Add forms gated to the
+broader Planning window; Reserve/Issue/Consume/Return hidden entirely
+before ASSIGNED (doc: these must not even render during Draft).
+
+Tests: WorkOrderExecutionTest, WorkOrderLifecycleGapsTest,
+ExternalWorkOrderTest, WorkOrderPartRequestTest, WorkOrderStockIntegrationTest,
+MechanicHourlyRateAndLaborCostTest, WorkOrderTest, WorkOrderClosureGuardTest,
+ExternalWorkOrderInvoiceCompletionTest, ExternalWorkOrderInvoiceTest,
+WorkOrderExternalInvoiceTest, WorkOrderExternalServiceTest, WorkerUserLinkTest
+— 119/119 PASS (run individually/sequentially per-file to avoid a Postgres
+test-DB deadlock this sandbox hits under a combined multi-file `--filter`;
+not related to my changes). Two pre-existing tests updated to add
+Findings/Diagnosis while the WO is still Draft (the behavior the doc
+actually requires) instead of after driving it to In Progress (the old,
+incorrect assumption those tests encoded). Frontend: tsc/oxlint/build clean.
+
+REMAINING Batch 2 gaps (not yet done, deferred to a follow-up push):
+Overview tab restructuring (move Complaint section there for user-created
+WOs, move Est. Labor/Parts Cost fields to their own tabs), Est. Number of
+Mechanic + Est. Total Hours accumulation, Consume popup (Install All +
+Installed Qty), Return popup redesign (split Unused/Used subtables, renamed
+Condition values, actual image upload instead of a URL textfield),
+Planned-Parts-vs-Request-Parts architecture (doc wants Request Parts to
+only appear starting In Progress; current app has both as always-visible,
+architecturally distinct tabs from a prior session — reconciling this is
+a larger design question, not a one-line fix).

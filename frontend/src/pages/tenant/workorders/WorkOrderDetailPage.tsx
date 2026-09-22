@@ -34,6 +34,17 @@ const INTERNAL_TABS = [
 const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'External Services', 'Documents', 'History', 'Audit'] as const;
 type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
 
+// Mirrors backend WorkOrderExecutionService — Findings/Diagnosis/Corrective Actions are
+// Draft-only (Add + Delete/Remove hidden afterward); Jobs/Mechanic/Planned Parts stay
+// addable through the whole active-planning window.
+const FINDING_SCOPE_STATUSES = ['DRAFT'];
+const PLANNING_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
+// Reserve/Issue/Consume/Return only apply once real execution has started — Draft's Planned
+// Parts tab explicitly must not show these buttons at all (doc: "jangan tampilkan tombol
+// Reserve, tombol Issue, Consume atau Return" while Draft). Mirrors backend's unmodified,
+// narrower EXECUTABLE_STATUSES used by WorkOrderPartService.
+const PART_ACTION_STATUSES = ['ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
+
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'work_order.submit', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   SUBMITTED: [
@@ -533,12 +544,25 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
   const [severity, setSeverity] = useState('MEDIUM');
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
+  // Findings are a Draft-only scoping exercise — Add and Delete/Remove are only ever
+  // shown while status=DRAFT, matching WorkOrderExecutionService::assertFindingScopeEditable.
+  const editable = FINDING_SCOPE_STATUSES.includes(wo.status) && hasPermission('diagnosis.manage');
 
   async function addFinding() {
     setBusy(true);
     try {
       await apiClient.post(`/app/work-orders/${wo.id}/findings`, { severity, description });
       setDescription('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteFinding(findingId: string) {
+    setBusy(true);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/findings/${findingId}`);
       onChanged();
     } finally {
       setBusy(false);
@@ -575,9 +599,14 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
                 Resolve
               </button>
             )}
+            {editable && (
+              <button className="btn-secondary" disabled={busy} onClick={() => deleteFinding(f.id)}>
+                Delete
+              </button>
+            )}
           </div>
         ))}
-        {hasPermission('diagnosis.manage') && (
+        {editable && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <select value={severity} onChange={(e) => setSeverity(e.target.value)} style={{ ...inputStyle, width: 140 }}>
               {['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((s) => (
@@ -737,7 +766,8 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
   const [diagnosisId, setDiagnosisId] = useState('');
   const [actionDescription, setActionDescription] = useState('');
   const [busy, setBusy] = useState(false);
-  const canManage = hasPermission('diagnosis.manage');
+  // Diagnosis/Corrective Actions share Findings' Draft-only scope (see ComplaintTab).
+  const canManage = FINDING_SCOPE_STATUSES.includes(wo.status) && hasPermission('diagnosis.manage');
 
   async function addDiagnosis() {
     setBusy(true);
@@ -745,6 +775,16 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
       await apiClient.post(`/app/work-orders/${wo.id}/diagnoses`, { work_order_finding_id: findingId || undefined, root_cause: rootCause, notes: notes || undefined });
       setRootCause('');
       setNotes('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteDiagnosis(id: string) {
+    setBusy(true);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/diagnoses/${id}`);
       onChanged();
     } finally {
       setBusy(false);
@@ -762,17 +802,34 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
     }
   }
 
+  async function deleteCorrectiveAction(actionId: string) {
+    setBusy(true);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/corrective-actions/${actionId}`);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Diagnoses</h3>
         {(wo.diagnoses ?? []).length === 0 && <EmptyState label="No diagnoses recorded." />}
         {(wo.diagnoses ?? []).map((d) => (
-          <div key={d.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          <div key={d.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <strong>Root Cause:</strong> {d.root_cause}
+              <div>
+                <strong>Root Cause:</strong> {d.root_cause}
+              </div>
+              {d.notes && <div style={{ color: '#6b7280' }}>{d.notes}</div>}
             </div>
-            {d.notes && <div style={{ color: '#6b7280' }}>{d.notes}</div>}
+            {canManage && (
+              <button className="btn-secondary" disabled={busy} onClick={() => deleteDiagnosis(d.id)}>
+                Delete
+              </button>
+            )}
           </div>
         ))}
         {canManage && (
@@ -800,9 +857,14 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Corrective Actions</h3>
         {(wo.corrective_actions ?? []).length === 0 && <EmptyState label="No corrective actions recorded." />}
         {(wo.corrective_actions ?? []).map((c) => (
-          <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10 }}>
+          <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10, alignItems: 'center' }}>
             <StatusBadge status={c.status} />
-            <span>{c.action_description}</span>
+            <span style={{ flex: 1 }}>{c.action_description}</span>
+            {canManage && (
+              <button className="btn-secondary" disabled={busy} onClick={() => deleteCorrectiveAction(c.id)}>
+                Delete
+              </button>
+            )}
           </div>
         ))}
         {canManage && (
@@ -833,6 +895,9 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
   const [estimatedHours, setEstimatedHours] = useState('');
   const [busy, setBusy] = useState(false);
   const canManage = hasPermission('maintenance_job.manage');
+  // Adding a Job is Draft-through-active-execution only; changing an existing Job's own
+  // status is a separate state machine the backend never WO-status-gates.
+  const canAdd = PLANNING_STATUSES.includes(wo.status) && canManage;
 
   async function addJob() {
     setBusy(true);
@@ -897,7 +962,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
           </div>
         </div>
       ))}
-      {canManage && (
+      {canAdd && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <input placeholder="Service item" value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} style={{ ...inputStyle, width: 160 }} />
           <input placeholder="Job description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
@@ -921,6 +986,9 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   const [error, setError] = useState<string | null>(null);
   const [runningLog, setRunningLog] = useState<Record<string, string>>({});
   const canAssign = hasPermission('worker.assign');
+  // Assigning a new mechanic is Draft-through-active-execution only (mirrors Jobs/Planned
+  // Parts); unassigning an existing one stays permission-only, unchanged.
+  const canAdd = PLANNING_STATUSES.includes(wo.status) && canAssign;
   const canManageJobs = hasPermission('maintenance_job.manage');
 
   useEffect(() => {
@@ -997,7 +1065,7 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
             )}
           </div>
         ))}
-        {canAssign && (
+        {canAdd && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <select value={workerId} onChange={(e) => setWorkerId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
               <option value="">Select worker…</option>
@@ -1098,10 +1166,13 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   const [returnCondition, setReturnCondition] = useState<'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY'>('UNUSED_NEW');
   const [returnReason, setReturnReason] = useState('');
   const [returnEvidence, setReturnEvidence] = useState('');
-  const canManage = hasPermission('maintenance_job.manage');
-  const canReserve = hasPermission('inventory.reserve');
-  const canIssue = hasPermission('inventory.issue');
-  const canReturn = hasPermission('inventory.return');
+  // Adding a Planned Part is Draft-through-active-execution; Reserve/Issue/Consume/Return
+  // only ever apply once the WO is actually executing (see PART_ACTION_STATUSES).
+  const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+  const partActionsAvailable = PART_ACTION_STATUSES.includes(wo.status);
+  const canReserve = partActionsAvailable && hasPermission('inventory.reserve');
+  const canIssue = partActionsAvailable && hasPermission('inventory.issue');
+  const canReturn = partActionsAvailable && hasPermission('inventory.return');
 
   useEffect(() => {
     apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));

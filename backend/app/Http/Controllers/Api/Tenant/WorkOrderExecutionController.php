@@ -6,6 +6,8 @@ use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\WorkOrder\Models\MaintenanceJob;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderAdditionalWork;
+use App\Domain\WorkOrder\Models\WorkOrderCorrectiveAction;
+use App\Domain\WorkOrder\Models\WorkOrderDiagnosis;
 use App\Domain\WorkOrder\Models\WorkOrderFinding;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
@@ -42,6 +44,15 @@ class WorkOrderExecutionController extends Controller
         return $this->ok($this->execution->addFinding($workOrder, $validated, $this->context->user()->id), 201);
     }
 
+    public function deleteFinding(WorkOrder $workOrder, WorkOrderFinding $finding)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($finding->work_order_id === $workOrder->id, 404);
+        $this->execution->deleteFinding($finding);
+
+        return $this->message('Finding deleted.');
+    }
+
     /** G-04: resolving a finding is what lets WorkOrderClosureGuardService allow COMPLETED/CLOSED. */
     public function resolveFinding(Request $request, WorkOrder $workOrder, WorkOrderFinding $finding)
     {
@@ -64,6 +75,15 @@ class WorkOrderExecutionController extends Controller
         return $this->ok($this->execution->addDiagnosis($workOrder, $validated, $this->context->user()->id), 201);
     }
 
+    public function deleteDiagnosis(WorkOrder $workOrder, WorkOrderDiagnosis $diagnosis)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($diagnosis->work_order_id === $workOrder->id, 404);
+        $this->execution->deleteDiagnosis($diagnosis);
+
+        return $this->message('Diagnosis deleted.');
+    }
+
     public function addCorrectiveAction(Request $request, WorkOrder $workOrder)
     {
         $this->authorizeScope($workOrder);
@@ -73,6 +93,15 @@ class WorkOrderExecutionController extends Controller
         ]);
 
         return $this->ok($this->execution->addCorrectiveAction($workOrder, $validated), 201);
+    }
+
+    public function deleteCorrectiveAction(WorkOrder $workOrder, WorkOrderCorrectiveAction $correctiveAction)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($correctiveAction->work_order_id === $workOrder->id, 404);
+        $this->execution->deleteCorrectiveAction($correctiveAction);
+
+        return $this->message('Corrective action deleted.');
     }
 
     public function addJob(Request $request, WorkOrder $workOrder)

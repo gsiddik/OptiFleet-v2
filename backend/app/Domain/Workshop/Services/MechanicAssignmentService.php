@@ -3,6 +3,7 @@
 namespace App\Domain\Workshop\Services;
 
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
 use App\Domain\Workshop\Models\Worker;
 use App\Domain\Workshop\Models\WorkOrderMechanicAssignment;
 use Illuminate\Support\Facades\DB;
@@ -12,12 +13,18 @@ use Illuminate\Support\Facades\DB;
  * workshop — cross-workshop assignment is rejected outright, not merely
  * hidden in the UI (Section 61's "frontend guards are UX only"). Assigning
  * a new PRIMARY closes out the previous one (unassigned_at) rather than
- * leaving two concurrent primaries.
+ * leaving two concurrent primaries. Mechanic tab is editable across the same
+ * status window as Jobs/Planned Parts (WorkOrderExecutionService::
+ * assertExecutable) — previously unguarded here entirely.
  */
 class MechanicAssignmentService
 {
+    public function __construct(private readonly WorkOrderExecutionService $execution) {}
+
     public function assign(WorkOrder $workOrder, Worker $worker, string $role = 'PRIMARY', ?string $jobId = null, ?string $assignedByUserId = null): WorkOrderMechanicAssignment
     {
+        $this->execution->assertPlanningEditable($workOrder);
+
         if ($worker->tenant_id !== $workOrder->tenant_id) {
             throw new WorkshopOpsException('Cannot assign a worker from another tenant.');
         }

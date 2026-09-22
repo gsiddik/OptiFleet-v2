@@ -305,6 +305,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/resume', [WorkOrderController::class, 'resume'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/wait-for-part', [WorkOrderController::class, 'waitForPart'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/findings', [WorkOrderExecutionController::class, 'addFinding'])->middleware('permission:diagnosis.manage');
+            Route::delete('/work-orders/{workOrder}/findings/{finding}', [WorkOrderExecutionController::class, 'deleteFinding'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/findings/{finding}/resolve', [WorkOrderExecutionController::class, 'resolveFinding'])->middleware('permission:diagnosis.manage');
 
             // Consolidated External Workshop business rules — deliberately separate from the
@@ -335,7 +336,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/external-work-order-invoices/{externalInvoice}/payment-proof', [ExternalWorkOrderInvoiceController::class, 'viewPaymentProof'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
+            Route::delete('/work-orders/{workOrder}/diagnoses/{diagnosis}', [WorkOrderExecutionController::class, 'deleteDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/corrective-actions', [WorkOrderExecutionController::class, 'addCorrectiveAction'])->middleware('permission:diagnosis.manage');
+            Route::delete('/work-orders/{workOrder}/corrective-actions/{correctiveAction}', [WorkOrderExecutionController::class, 'deleteCorrectiveAction'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/jobs', [WorkOrderExecutionController::class, 'addJob'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/jobs/{job}/status', [WorkOrderExecutionController::class, 'updateJobStatus'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/planned-parts', [WorkOrderExecutionController::class, 'addPlannedPart'])->middleware('permission:maintenance_job.manage');
