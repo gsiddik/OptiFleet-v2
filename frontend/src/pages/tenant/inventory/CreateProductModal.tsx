@@ -24,14 +24,14 @@ export const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE
 
 const INTERVAL_UNITS = ['DAYS', 'WEEKS', 'MONTHS', 'YEARS'];
 
-type Spec = Record<string, unknown>;
-type CompatRow = { vehicle_brand: string; vehicle_model: string; variant: string; year_from: string; year_to: string; position: string };
+export type Spec = Record<string, unknown>;
+export type CompatRow = { vehicle_brand: string; vehicle_model: string; variant: string; year_from: string; year_to: string; position: string };
 
-function emptyCompatRow(): CompatRow {
+export function emptyCompatRow(): CompatRow {
   return { vehicle_brand: '', vehicle_model: '', variant: '', year_from: '', year_to: '', position: '' };
 }
 
-function splitCommaList(value: string): string[] {
+export function splitCommaList(value: string): string[] {
   return value
     .split(',')
     .map((v) => v.trim())
@@ -397,11 +397,11 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   );
 }
 
-function brandRequired(itemType: ItemType): boolean {
+export function brandRequired(itemType: ItemType): boolean {
   return ['SPARE_PART', 'RIM', 'TIRE', 'EQUIPMENT'].includes(itemType);
 }
 
-function needsField(field: 'track_serial_number', itemType: ItemType): boolean {
+export function needsField(field: 'track_serial_number', itemType: ItemType): boolean {
   if (field === 'track_serial_number') return ['SPARE_PART', 'RIM', 'TOOL', 'EQUIPMENT'].includes(itemType);
   return false;
 }
@@ -523,13 +523,14 @@ function CompatibilityRows({
   );
 }
 
-function SparepartFields({
+export function SparepartFields({
   spec,
   setSpecField,
   errors,
   compatibilities,
   updateCompatRow,
   setCompatibilities,
+  showCompatibility = true,
 }: {
   spec: Spec;
   setSpecField: (k: string, v: unknown) => void;
@@ -537,6 +538,7 @@ function SparepartFields({
   compatibilities: CompatRow[];
   updateCompatRow: (i: number, patch: Partial<CompatRow>) => void;
   setCompatibilities: (rows: CompatRow[]) => void;
+  showCompatibility?: boolean;
 }) {
   return (
     <>
@@ -610,12 +612,14 @@ function SparepartFields({
         errorKey="spec.shelf_life_value"
         errors={errors}
       />
-      <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required />
+      {showCompatibility && (
+        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required />
+      )}
     </>
   );
 }
 
-function ConsumableFields({
+export function ConsumableFields({
   spec,
   setSpecField,
   errors,
@@ -740,13 +744,14 @@ function ConsumableFields({
   );
 }
 
-function RimFields({
+export function RimFields({
   spec,
   setSpecField,
   errors,
   compatibilities,
   updateCompatRow,
   setCompatibilities,
+  showCompatibility = true,
 }: {
   spec: Spec;
   setSpecField: (k: string, v: unknown) => void;
@@ -754,6 +759,7 @@ function RimFields({
   compatibilities: CompatRow[];
   updateCompatRow: (i: number, patch: Partial<CompatRow>) => void;
   setCompatibilities: (rows: CompatRow[]) => void;
+  showCompatibility?: boolean;
 }) {
   return (
     <>
@@ -802,12 +808,14 @@ function RimFields({
           style={inputStyle}
         />
       </FormField>
-      <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required={false} />
+      {showCompatibility && (
+        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required={false} />
+      )}
     </>
   );
 }
 
-function TireFields({
+export function TireFields({
   spec,
   setSpecField,
   errors,
@@ -989,7 +997,7 @@ function TireFields({
   );
 }
 
-function ToolFields({ spec, setSpecField, errors, toolTypes }: { spec: Spec; setSpecField: (k: string, v: unknown) => void; errors: Record<string, string[]>; toolTypes: ToolTypeItem[] }) {
+export function ToolFields({ spec, setSpecField, errors, toolTypes }: { spec: Spec; setSpecField: (k: string, v: unknown) => void; errors: Record<string, string[]>; toolTypes: ToolTypeItem[] }) {
   return (
     <>
       <FormField label="Tool Type" errors={errors['spec.tool_type_id']} required>
@@ -1041,7 +1049,7 @@ function ToolFields({ spec, setSpecField, errors, toolTypes }: { spec: Spec; set
   );
 }
 
-function EquipmentFields({
+export function EquipmentFields({
   spec,
   setSpecField,
   errors,

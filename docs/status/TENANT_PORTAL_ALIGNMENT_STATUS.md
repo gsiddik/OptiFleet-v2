@@ -135,7 +135,7 @@ uses its own batch numbering (Batch 1-8), per explicit owner instruction.
 | 1 | Maintenance Request list columns, NEED_INFORMATION cleanup, Assessment Save/Edit toggle | DONE (commit pending push) |
 | 2 | Work Order per-action status gates (422 fix) | DONE (commit pending push) — Overview restructure, Est. Number of Mechanic/Total Hours, Consume/Return popup redesign still open, see detail below |
 | 3 | Workshop Invoice View History | DONE (commit pending push) |
-| 4-5 | Product Edit dynamic form, Active toggle, Inventory Configuration section | NOT STARTED |
+| 4-5 | Product Edit dynamic form, Active toggle | DONE (commit pending push) — Inventory Configuration section still open |
 | 6 | Worker Type frontend wiring, Component Group create UI | NOT STARTED |
 | 7 | Maintenance Packages legacy popup cleanup (low priority) | NOT STARTED |
 | 8 | Tenant logo upload + favicon wiring | NOT STARTED |
@@ -221,3 +221,55 @@ Planned-Parts-vs-Request-Parts architecture (doc wants Request Parts to
 only appear starting In Progress; current app has both as always-visible,
 architecturally distinct tabs from a prior session — reconciling this is
 a larger design question, not a one-line fix).
+
+## Batch 4-5 Detail (Product Edit Dynamic Form)
+
+The single biggest gap in the whole audit: `ProductController::update()` never
+touched Category/Subcategory/UOM/Default Storage Location or any of the 6
+Item Type spec tables — only generic physical columns (weight, dimensions,
+material) were editable post-creation.
+
+- `ProductSpecificationService::persist()` now uses `updateOrCreate()` keyed
+  on `product_id` for all 6 spec tables instead of `create()`, so the exact
+  same method now serves both Create (no row exists yet) and Edit. Added an
+  `$includeCompatibilities` flag (Sparepart/Rim only) so Edit's dynamic form
+  never touches Vehicle Compatibility — that stays on its own existing
+  add/remove UI on the Product detail page, per Section 17's Item-Master-vs-
+  Asset-data boundary applied to relational data too.
+- `ProductController::update()`: accepts `product_category_id`/`uom_id`
+  (validated against the product's own immutable `product_type`, same
+  category-matches-type check as Create), and a `spec` payload — only
+  validated/persisted when the key is actually present, so a bare status
+  toggle doesn't have to resend the whole form and can't accidentally null
+  the spec out. Item Type and Item Code both stay immutable on Edit (Section
+  13's read-only precedent extended to Item Type, since changing it would
+  mean an entirely different spec table — a new-product decision, not an
+  edit).
+- Frontend: new `EditProductModal.tsx` reuses the exact same field
+  components as `CreateProductModal.tsx` (exported, not duplicated) so the
+  two forms structurally cannot drift apart. Hydrates General Information,
+  the Active toggle (previously had no UI anywhere), the legacy physical-
+  attribute fields (kept, not dropped, to avoid a backward-compatibility
+  regression — collapsed into a details/summary so they don't crowd the
+  primary form), and the correct per-Item-Type spec section with existing
+  values — including live-recomputing Tire's derived preview (Tire Size /
+  Max Load / Max Speed / etc.) as the user edits. Category/Subcategory
+  hydration walks the category's own parent_id; Default Storage Location
+  hydration walks Bin->Rack->Zone->Warehouse once client-side (no
+  single-record lookup endpoint exists for these).
+
+Tests: new ProductEditDynamicFormTest (8/8: spec update, compatibility
+untouched, spec-omitted update leaves spec alone, validation parity with
+Create, category/uom/bin change, cross-item-type category rejected,
+product_type ignored if sent, Tire spec update + derived-value recompute).
+Full existing Product suite re-run: ProductDynamicSpecificationTest (28),
+ProductTest (7), ProductFoundationMasterDataTest (9),
+ProductCategoryAndUomTest (5), ProductsCyclePhase5SupportingModulesTest (7),
+PlatformProductCategoryTest (5) — 61/61 PASS, no regressions. Frontend:
+tsc/oxlint/build clean.
+
+REMAINING: Inventory Configuration section (Stock Tracking/Min/Reorder/Max
+Stock — these don't exist on Product master data at all, would need a
+schema change; deferred), extra `OTHER` item type beyond the documented 6
+(flagging, not removing — unclear if used elsewhere), Consumable SDS file
+upload UI (backend columns exist, no upload control).

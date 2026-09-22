@@ -104,6 +104,16 @@ class ProductController extends Controller
         return $this->ok($product->load($relations));
     }
 
+    /**
+     * Section 15/Edit Dynamic Form: Edit must reconstruct and persist the Item Type's spec
+     * table, not just the generic physical columns — previously this endpoint never touched
+     * Category/Subcategory/UOM/Default Storage Location or any of the 6 spec tables at all.
+     * Item Type itself stays immutable on Edit (same precedent as Item Code): changing it
+     * would mean an entirely different spec table, which is a new-product decision, not an
+     * edit. A `spec` payload is required only when the product_type actually has spec fields
+     * (not OTHER); its absence is a no-op rather than an error, so a caller only touching
+     * general fields (e.g. a bare Active toggle) doesn't have to resend the whole form.
+     */
     public function update(Request $request, Product $product)
     {
         $this->authorizeVisible($product);
@@ -112,6 +122,8 @@ class ProductController extends Controller
         $tenantId = $this->context->tenantId();
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
+            'product_category_id' => ['sometimes', 'uuid', \Illuminate\Validation\Rule::exists('product_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
+            'uom_id' => ['sometimes', 'uuid', \Illuminate\Validation\Rule::exists('uoms', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             'brand' => ['nullable', 'string', 'max:100'],
             'manufacturer' => ['nullable', 'string', 'max:150'],
             'material' => ['nullable', 'string', 'max:100'],
@@ -138,9 +150,36 @@ class ProductController extends Controller
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
             'reference_tread_depth_mm' => ['sometimes', 'nullable', 'numeric', 'min:0.01'],
         ]);
-        $product->update($validated);
 
-        return $this->ok($product->fresh());
+        if (! empty($validated['product_category_id'])) {
+            $category = ProductCategory::query()->find($validated['product_category_id']);
+            if ($category && $category->item_type && $category->item_type !== $product->product_type) {
+                throw ValidationException::withMessages(['product_category_id' => 'The selected category does not apply to this Item Type.']);
+            }
+        }
+
+        $generalOverrides = [];
+        $validatedSpec = null;
+        if ($request->has('spec') && (self::SPEC_RELATIONS[$product->product_type] ?? null)) {
+            ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate(
+                $product->product_type,
+                $validated,
+                (array) $request->input('spec', []),
+                includeCompatibilities: false,
+            );
+        }
+
+        DB::transaction(function () use ($product, $validated, $generalOverrides, $validatedSpec) {
+            $product->update(array_merge($validated, $generalOverrides));
+            if ($validatedSpec !== null) {
+                $this->specs->persist($product, $validatedSpec, includeCompatibilities: false);
+            }
+        });
+
+        $relation = self::SPEC_RELATIONS[$product->product_type] ?? null;
+        $product = $product->fresh();
+
+        return $this->ok($relation ? $product->load($relation) : $product);
     }
 
     public function syncComponentGroups(Request $request, Product $product)

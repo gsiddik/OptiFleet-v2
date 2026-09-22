@@ -3,11 +3,11 @@ import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
-import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
+import { EditProductModal } from './EditProductModal';
 import type { ProductItem, VehicleCategory } from '../../../types';
 
 export function ProductDetailPage() {
@@ -122,7 +122,7 @@ export function ProductDetailPage() {
         {!product.is_system && hasPermission('product.update') && (
           <div style={{ marginTop: 10 }}>
             <button className="btn-secondary" onClick={() => setEditingSpecs(true)}>
-              Edit Specifications
+              Edit Product
             </button>
           </div>
         )}
@@ -187,82 +187,7 @@ export function ProductDetailPage() {
           </div>
         )}
       </div>
-      {editingSpecs && <EditSpecsModal product={product} onClose={() => setEditingSpecs(false)} onSaved={() => { setEditingSpecs(false); load(); }} />}
+      {editingSpecs && <EditProductModal product={product} onClose={() => setEditingSpecs(false)} onSaved={() => { setEditingSpecs(false); load(); }} />}
     </div>
-  );
-}
-
-function EditSpecsModal({ product, onClose, onSaved }: { product: ProductItem; onClose: () => void; onSaved: () => void }) {
-  const [manufacturer, setManufacturer] = useState(product.manufacturer ?? '');
-  const [material, setMaterial] = useState(product.material ?? '');
-  const [productionYear, setProductionYear] = useState(product.production_year != null ? String(product.production_year) : '');
-  const [weightKg, setWeightKg] = useState(product.weight_kg ?? '');
-  const [lengthMm, setLengthMm] = useState(product.length_mm ?? '');
-  const [widthMm, setWidthMm] = useState(product.width_mm ?? '');
-  const [heightMm, setHeightMm] = useState(product.height_mm ?? '');
-  const [imageUrl, setImageUrl] = useState(product.image_url ?? '');
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  async function submit() {
-    setSubmitting(true);
-    setErrors({});
-    try {
-      await apiClient.put(`/app/products/${product.id}`, {
-        manufacturer: manufacturer || null,
-        material: material || null,
-        production_year: productionYear || null,
-        weight_kg: weightKg || null,
-        length_mm: lengthMm || null,
-        width_mm: widthMm || null,
-        height_mm: heightMm || null,
-        image_url: imageUrl || null,
-      });
-      onSaved();
-    } catch (err) {
-      const apiError = extractApiError(err);
-      setErrors(apiError.errors ?? {});
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal open title="Edit Product Specifications" onClose={onClose} width={560}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Manufacturer" errors={errors.manufacturer}>
-          <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Material" errors={errors.material}>
-          <input value={material} onChange={(e) => setMaterial(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Production Year" errors={errors.production_year}>
-          <input type="number" value={productionYear} onChange={(e) => setProductionYear(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Weight (kg)" errors={errors.weight_kg}>
-          <input type="number" step="0.001" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Length (mm)" errors={errors.length_mm}>
-          <input type="number" value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Width (mm)" errors={errors.width_mm}>
-          <input type="number" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Height (mm)" errors={errors.height_mm}>
-          <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Image URL" errors={errors.image_url}>
-          <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} style={inputStyle} />
-        </FormField>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
-          Cancel
-        </button>
-        <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
-        </button>
-      </div>
-    </Modal>
   );
 }

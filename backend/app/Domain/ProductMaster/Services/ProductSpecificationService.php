@@ -46,7 +46,7 @@ class ProductSpecificationService
      *
      * @return array{general: array, spec: array}
      */
-    public function validate(string $productType, array $generalInput, array $specInput): array
+    public function validate(string $productType, array $generalInput, array $specInput, bool $includeCompatibilities = true): array
     {
         $generalRules = match ($productType) {
             'SPARE_PART', 'RIM', 'TIRE', 'EQUIPMENT' => ['brand' => ['required', 'string', 'max:100']],
@@ -61,7 +61,7 @@ class ProductSpecificationService
         $general = Validator::make($generalInput, $generalRules)->validate();
 
         $spec = match ($productType) {
-            'SPARE_PART' => $this->validateSparepart($specInput),
+            'SPARE_PART' => $this->validateSparepart($specInput, $includeCompatibilities),
             'CONSUMABLE' => $this->validateConsumable($specInput),
             'RIM' => $this->validateRim($specInput),
             'TIRE' => $this->validateTire($specInput),
@@ -73,13 +73,21 @@ class ProductSpecificationService
         return ['general' => $general, 'spec' => $spec];
     }
 
-    /** Persists the CTI spec row (and any related rows) for an already-created, already-validated Product. */
-    public function persist(Product $product, array $validatedSpec): void
+    /**
+     * Persists the CTI spec row (and any related rows) for an already-validated Product.
+     * Each per-type persistX() uses updateOrCreate() keyed on product_id, so this same
+     * method serves both Create (no row exists yet — behaves like a plain insert) and Edit
+     * (Section 15: Edit must reconstruct and save the Item Type's spec table, not just the
+     * generic physical columns). Vehicle Compatibility is deliberately excluded from the
+     * Edit path — it already has its own dedicated add/remove endpoints/UI on the Product
+     * detail page, so resubmitting the dynamic form must never touch it.
+     */
+    public function persist(Product $product, array $validatedSpec, bool $includeCompatibilities = true): void
     {
         match ($product->product_type) {
-            'SPARE_PART' => $this->persistSparepart($product, $validatedSpec),
+            'SPARE_PART' => $this->persistSparepart($product, $validatedSpec, $includeCompatibilities),
             'CONSUMABLE' => $this->persistConsumable($product, $validatedSpec),
-            'RIM' => $this->persistRim($product, $validatedSpec),
+            'RIM' => $this->persistRim($product, $validatedSpec, $includeCompatibilities),
             'TIRE' => $this->persistTire($product, $validatedSpec),
             'TOOL' => $this->persistTool($product, $validatedSpec),
             'EQUIPMENT' => $this->persistEquipment($product, $validatedSpec),
@@ -89,7 +97,7 @@ class ProductSpecificationService
 
     // --- Sparepart ---
 
-    private function validateSparepart(array $input): array
+    private function validateSparepart(array $input, bool $includeCompatibilities = true): array
     {
         $tenantId = $this->context->tenantId();
 
@@ -108,8 +116,11 @@ class ProductSpecificationService
             'warranty_mileage_km' => ['nullable', 'integer', 'min:0'],
             'shelf_life_value' => ['nullable', 'integer', 'min:0'],
             'shelf_life_unit' => ['nullable', 'in:'.self::INTERVAL_UNITS],
-            // Vehicle Compatibility is Mandatory for Sparepart — at least one row.
-            'compatibilities' => ['required', 'array', 'min:1'],
+            // Vehicle Compatibility is Mandatory for Sparepart — at least one row — but only
+            // when this submission actually manages compatibilities (Create). On Edit, the
+            // dynamic form never touches Vehicle Compatibility (it has its own dedicated
+            // add/remove endpoints on the Product detail page), so this key is skipped/absent.
+            'compatibilities' => [$includeCompatibilities ? 'required' : 'nullable', 'array', $includeCompatibilities ? 'min:1' : 'sometimes'],
             'compatibilities.*.vehicle_brand' => ['required', 'string', 'max:100'],
             'compatibilities.*.vehicle_model' => ['required', 'string', 'max:100'],
             'compatibilities.*.variant' => ['nullable', 'string', 'max:100'],
@@ -121,10 +132,9 @@ class ProductSpecificationService
         ])->validate();
     }
 
-    private function persistSparepart(Product $product, array $v): void
+    private function persistSparepart(Product $product, array $v, bool $includeCompatibilities = true): void
     {
-        ProductSparepartSpec::query()->create([
-            'product_id' => $product->id,
+        ProductSparepartSpec::query()->updateOrCreate(['product_id' => $product->id], [
             'part_number' => $v['part_number'],
             'part_type' => $v['part_type'],
             'oem_part_number' => $v['oem_part_number'] ?? null,
@@ -139,7 +149,9 @@ class ProductSpecificationService
             'shelf_life_unit' => $v['shelf_life_unit'] ?? null,
         ]);
 
-        $this->persistCompatibilities($product, $v['compatibilities']);
+        if ($includeCompatibilities) {
+            $this->persistCompatibilities($product, $v['compatibilities']);
+        }
     }
 
     // --- Consumable ---
@@ -182,8 +194,7 @@ class ProductSpecificationService
             throw ValidationException::withMessages(['conversion_to_base_uom' => 'Conversion to Base UOM is required when Purchase UOM differs from Base UOM.']);
         }
 
-        $spec = ProductConsumableSpec::query()->create([
-            'product_id' => $product->id,
+        $spec = ProductConsumableSpec::query()->updateOrCreate(['product_id' => $product->id], [
             'grade_specification' => $v['grade_specification'] ?? null,
             'package_size_value' => $v['package_size_value'] ?? null,
             'package_size_uom_id' => $v['package_size_uom_id'] ?? null,
@@ -198,9 +209,9 @@ class ProductSpecificationService
             'sds_original_filename' => $v['sds_original_filename'] ?? null,
         ]);
 
-        if (! empty($v['storage_requirement_ids'])) {
-            $spec->storageRequirements()->sync($v['storage_requirement_ids']);
-        }
+        // Always sync (not `if (!empty(...))`) so an Edit that explicitly clears every
+        // Storage Requirement actually clears them, rather than leaving stale rows attached.
+        $spec->storageRequirements()->sync($v['storage_requirement_ids'] ?? []);
     }
 
     // --- Rim ---
@@ -231,10 +242,9 @@ class ProductSpecificationService
         ])->validate();
     }
 
-    private function persistRim(Product $product, array $v): void
+    private function persistRim(Product $product, array $v, bool $includeCompatibilities = true): void
     {
-        ProductRimSpec::query()->create([
-            'product_id' => $product->id,
+        ProductRimSpec::query()->updateOrCreate(['product_id' => $product->id], [
             'model' => $v['model'] ?? null,
             'rim_type' => $v['rim_type'],
             'diameter_inch' => $v['diameter_inch'],
@@ -248,7 +258,7 @@ class ProductSpecificationService
             'compatible_tire_sizes' => $v['compatible_tire_sizes'] ?? null,
         ]);
 
-        if (! empty($v['compatibilities'])) {
+        if ($includeCompatibilities && ! empty($v['compatibilities'])) {
             $this->persistCompatibilities($product, $v['compatibilities']);
         }
     }
@@ -348,8 +358,7 @@ class ProductSpecificationService
             }
         }
 
-        ProductTireSpec::query()->create(array_merge([
-            'product_id' => $product->id,
+        ProductTireSpec::query()->updateOrCreate(['product_id' => $product->id], array_merge([
             'vehicle_group' => $v['vehicle_group'],
             'pattern_name' => $v['pattern_name'],
             'width_mm' => $v['width_mm'],
@@ -396,8 +405,7 @@ class ProductSpecificationService
 
     private function persistTool(Product $product, array $v): void
     {
-        ProductToolSpec::query()->create([
-            'product_id' => $product->id,
+        ProductToolSpec::query()->updateOrCreate(['product_id' => $product->id], [
             'model' => $v['model'] ?? null,
             'tool_type_id' => $v['tool_type_id'],
             'specification' => $v['specification'] ?? null,
@@ -453,7 +461,7 @@ class ProductSpecificationService
 
     private function persistEquipment(Product $product, array $v): void
     {
-        ProductEquipmentSpec::query()->create(array_merge(['product_id' => $product->id], $v));
+        ProductEquipmentSpec::query()->updateOrCreate(['product_id' => $product->id], $v);
     }
 
     // --- Shared helpers ---

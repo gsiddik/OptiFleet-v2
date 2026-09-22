@@ -1319,6 +1319,7 @@ export interface ProductItem {
   product_type: ItemType;
   uom_id: string;
   default_storage_bin_id: string | null;
+  description: string | null;
   brand: string | null;
   manufacturer: string | null;
   material: string | null;
