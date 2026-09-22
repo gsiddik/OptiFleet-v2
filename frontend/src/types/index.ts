@@ -12,6 +12,7 @@ export interface TenantMembership {
   tenant_id: string;
   tenant_code: string;
   tenant_name: string;
+  tenant_logo_url: string | null;
   status: 'active' | 'inactive';
   roles: string[];
 }

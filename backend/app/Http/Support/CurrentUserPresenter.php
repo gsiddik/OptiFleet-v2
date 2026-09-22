@@ -46,6 +46,7 @@ class CurrentUserPresenter
                     'tenant_id' => $membership->tenant_id,
                     'tenant_code' => $membership->tenant->code,
                     'tenant_name' => $membership->tenant->name,
+                    'tenant_logo_url' => $membership->tenant->logo_url,
                     'status' => $membership->status,
                     'roles' => $roles,
                 ];

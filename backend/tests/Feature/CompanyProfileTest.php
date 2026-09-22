@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -79,5 +81,49 @@ class CompanyProfileTest extends TestCase
         $response = $this->getJson('/api/v1/app/account/company', $this->authHeaders($tokenA))->assertOk();
         $this->assertSame('Tenant A Legal Name', $response->json('data.legal_name'));
         $this->assertNotSame($tenantB->id, $response->json('data.id'));
+    }
+
+    public function test_tenant_can_upload_a_logo_and_the_public_url_replaces_the_previous_one(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'COL-'.Str::random(4)]);
+        [, $token] = $this->makeTenantUser($tenant, ['company.update']);
+        $headers = $this->authHeaders($token);
+
+        $first = UploadedFile::fake()->image('logo.jpg', 200, 200);
+        $upload = $this->postJson('/api/v1/app/account/company/logo', ['file' => $first], $headers)->assertOk();
+
+        $logoUrl = $upload->json('data.logo_url');
+        $this->assertNotNull($logoUrl);
+        $this->assertStringContainsString('/storage/tenant-logos/', $logoUrl);
+
+        $firstPath = 'tenant-logos/'.$tenant->id.'/'.basename(parse_url($logoUrl, PHP_URL_PATH));
+        Storage::disk('public')->assertExists($firstPath);
+
+        $second = UploadedFile::fake()->image('logo2.png', 200, 200);
+        $replace = $this->postJson('/api/v1/app/account/company/logo', ['file' => $second], $headers)->assertOk();
+
+        $secondUrl = $replace->json('data.logo_url');
+        $this->assertNotSame($logoUrl, $secondUrl);
+        Storage::disk('public')->assertMissing($firstPath);
+    }
+
+    public function test_company_logo_upload_rejects_disallowed_mime_type(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'COM-'.Str::random(4)]);
+        [, $token] = $this->makeTenantUser($tenant, ['company.update']);
+
+        $file = UploadedFile::fake()->create('malware.exe', 10, 'application/x-msdownload');
+        $this->postJson('/api/v1/app/account/company/logo', ['file' => $file], $this->authHeaders($token))
+            ->assertStatus(422);
+    }
+
+    public function test_company_logo_upload_denied_without_permission(): void
+    {
+        $tenant = $this->makeTenant(['code' => 'CON-'.Str::random(4)]);
+        [, $token] = $this->makeTenantUser($tenant, []);
+
+        $file = UploadedFile::fake()->image('logo.jpg', 200, 200);
+        $this->postJson('/api/v1/app/account/company/logo', ['file' => $file], $this->authHeaders($token))
+            ->assertStatus(403);
     }
 }

@@ -231,6 +231,27 @@ export function TenantLayout() {
   }, [activeTenantId]);
 
   const currentMembership = user?.memberships.find((m) => m.tenant_id === activeTenantId);
+  const tenantLogoUrl = currentMembership?.tenant_logo_url ?? null;
+
+  // Section: tenant logo upload — the favicon `<link>` tags in index.html
+  // are static and can't carry an Authorization header, so this swaps them
+  // to the tenant's public logo URL once known, and restores the default
+  // OptiFleet favicon on unmount (e.g. when logging out to the login page).
+  useEffect(() => {
+    const icons = document.querySelectorAll<HTMLLinkElement>('link[rel="icon"]');
+    if (icons.length === 0) return;
+    const originalHrefs = Array.from(icons).map((icon) => icon.href);
+    if (tenantLogoUrl) {
+      icons.forEach((icon) => {
+        icon.href = tenantLogoUrl;
+      });
+    }
+    return () => {
+      icons.forEach((icon, i) => {
+        icon.href = originalHrefs[i];
+      });
+    };
+  }, [tenantLogoUrl]);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
@@ -247,7 +268,7 @@ export function TenantLayout() {
               light background, so a white card keeps it legible on this dark sidebar
               without altering the logo asset itself. */}
           <div style={{ display: 'inline-block', background: '#fff', borderRadius: 8, padding: '10px 14px' }}>
-            <Logo height={40} />
+            <Logo height={40} src={tenantLogoUrl ?? undefined} />
           </div>
         </div>
         <div style={{ padding: '0 20px 16px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>

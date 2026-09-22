@@ -142,8 +142,8 @@ uses its own batch numbering (Batch 1-8), per explicit owner instruction.
 | 3 | Workshop Invoice View History | DONE (commit pending push) |
 | 4-5 | Product Edit dynamic form, Active toggle | DONE (commit pending push) — Inventory Configuration section still open |
 | 6 | Worker Type frontend wiring | DONE (commit pending push) — Component Group "New" button correction below |
-| 7 | Maintenance Packages legacy popup cleanup (low priority) | NOT STARTED |
-| 8 | Tenant logo upload + favicon wiring | NOT STARTED |
+| 7 | Maintenance Packages + Planning & Schedule | REVIEWED, NO CHANGE NEEDED — already fully compliant per audit; the "legacy popup" note is intentional coexistence for non-PREVENTIVE/PERIODIC package types, not a gap |
+| 8 | Tenant logo upload + favicon wiring | DONE (commit pending push) — Inspection/Navigation items reviewed separately, see detail |
 
 ## Batch 1 Detail (Maintenance Request + Assessment)
 
@@ -314,3 +314,71 @@ update, cross-tenant type rejected). Re-ran WorkerUserLinkTest (8),
 ProductFoundationMasterDataTest (9), ProductsCyclePhase5SupportingModulesTest
 (7), WorkOrderExecutionTest (6, exercises makeWorker()) — 30/30 PASS, no
 regressions. Frontend: tsc/oxlint/build clean.
+
+## Batch 8 Detail (Tenant logo upload + favicon wiring)
+
+Gap identified in the original audit: `Tenant.logo_url` existed as a DB
+column but was only a plain URL text input on the Company Profile page —
+never wired into the sidebar `Logo.tsx` or the browser favicon, and with no
+actual file-upload pipeline (VehicleBrand already has one to copy the
+pattern from).
+
+Architectural decision: VehicleBrand's logo pattern serves the file from
+the private `local` disk through an authenticated controller action
+(`Storage::disk()->response()`), which works for `<img>` tags fetched with
+an Authorization header but cannot work for a browser `<link rel="icon">`
+tag (no custom headers on that request) or for the SPA's very first paint
+before `/auth/me` resolves. So the tenant logo is stored on Laravel's
+`public` disk instead and served via a genuinely public URL. Rather than
+add four new logo_disk/logo_path/logo_mime_type/logo_size columns (the
+VehicleBrand shape), the existing `Tenant.logo_url` string column is reused
+— the upload endpoint just writes the resulting public URL string into it,
+avoiding an unnecessary schema change.
+
+- `TenantLogoService` (new, `App\Domain\Identity\Services`): validates
+  JPG/PNG and a 5MB cap (same limits as VehicleBrandLogoService), stores to
+  `tenant-logos/{tenant_id}/{uuid}.{ext}` on the `public` disk, writes
+  `Storage::disk('public')->url($path)` into `Tenant.logo_url`, and deletes
+  the previous file once the new one is committed (mirrors the "delete
+  after re-point" ordering used for vehicle photos/brand logos).
+- `CompanyProfileController::uploadLogo()` (new) + `POST
+  /app/account/company/logo` (multipart, `permission:company.update`,
+  reuses the existing `company.update` gate rather than adding a new
+  permission).
+- `CurrentUserPresenter::memberships()`: added `tenant_logo_url` per
+  membership so the sidebar/favicon have it globally on every page load
+  (not just when visiting Company Profile), since `/auth/me` populates
+  `AuthContext` once at session start.
+- Frontend: `CompanyProfilePage.tsx` — the "Logo URL" text input is
+  replaced with an actual file picker that uploads immediately on
+  selection (its own request, decoupled from the text-fields Save button,
+  so a slow/failed logo upload never blocks or gets tangled with the rest
+  of the form); shows the current logo and an inline validation/upload
+  error. `Logo.tsx` gained an optional `src` prop (defaults to the static
+  wordmark, so the login screen and any tenant with no uploaded logo are
+  unaffected). `TenantLayout.tsx` passes the active membership's
+  `tenant_logo_url` into the sidebar `<Logo>` and added an effect that
+  swaps every static `<link rel="icon">` href in `index.html` to the
+  tenant's logo URL when one is set, restoring the original hrefs on
+  unmount (covers logout back to the static login page).
+- Deployment prerequisite (not committed code, cannot be verified in this
+  sandbox): `php artisan storage:link` must be run once per environment so
+  `public/storage` resolves to `storage/app/public` — without it, uploaded
+  logo URLs 404 even though the upload itself succeeds.
+
+Tests: new `CompanyProfileTest` cases — upload replaces the previous file
+and returns a `/storage/tenant-logos/...` URL, disallowed MIME type
+rejected (422), denied without `company.update` permission (403). Ran
+alongside existing `CompanyProfileTest` (4), `AuthTest` (10),
+`VehicleBrandAndModelTest` (7), `VehicleTest` (18, exercises the same
+UploadedFile/Storage patterns) — 42/42 PASS, no regressions. `pint --test`
+clean on all changed/new PHP files. Frontend: `tsc --noEmit`, `oxlint`
+(project-wide — pre-existing warnings only, none in changed files), and
+`vite build` all clean.
+
+MongoDB: NOT RUN — `ext-mongodb` is unavailable in this sandbox and
+network-blocked from installing (org policy). Verified instead by
+temporarily relocating the 3 Mongo-touching migrations out of
+`database/migrations/`, running the full test sweep above, then restoring
+them byte-for-byte (confirmed via `git status --porcelain` showing zero
+diff) before committing.

@@ -119,6 +119,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
         Route::get('/company', [CompanyProfileController::class, 'show'])->middleware('permission:company.view');
         Route::put('/company', [CompanyProfileController::class, 'update'])->middleware('permission:company.update');
+        Route::post('/company/logo', [CompanyProfileController::class, 'uploadLogo'])->middleware('permission:company.update');
 
         Route::get('/invoices', [AccountInvoiceController::class, 'index'])->middleware('permission:account.invoice.view');
         Route::get('/invoices/{invoice}', [AccountInvoiceController::class, 'show'])->middleware('permission:account.invoice.view');
