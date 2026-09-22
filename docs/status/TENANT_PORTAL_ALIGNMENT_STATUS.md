@@ -98,8 +98,13 @@ uses its own batch numbering (Batch 1-8), per explicit owner instruction.
   delete/preview, Product Categories superadmin-only, UOM Type of Measure,
   Vehicle Brand multi-select+logo-upload: all correct.
 - GAPS: Worker Type master data fully built server-side but frontend still
-  hardcodes the old enum (never wired). Component Groups has no "New"
-  creation UI despite backend support. Workspace "Capacity Unit" is
+  hardcodes the old enum (never wired) — FIXED in Batch 6.
+  CORRECTION: "Component Groups has no New creation UI" was NOT a gap —
+  doc c686cc8d Section 31 explicitly says "Sembunyikan tombol New Component
+  Group" (hide the New Component Group button), and the button is indeed
+  already absent. No change needed; my original audit misread this as a
+  missing feature rather than a compliant hidden one.
+  Workspace "Capacity Unit" is
   implemented as two separate controls (numeric Capacity + multi-select
   Vehicle Categories checklist) rather than one field, though this
   functionally satisfies the underlying intent.
@@ -136,7 +141,7 @@ uses its own batch numbering (Batch 1-8), per explicit owner instruction.
 | 2 | Work Order per-action status gates (422 fix) | DONE (commit pending push) — Overview restructure, Est. Number of Mechanic/Total Hours, Consume/Return popup redesign still open, see detail below |
 | 3 | Workshop Invoice View History | DONE (commit pending push) |
 | 4-5 | Product Edit dynamic form, Active toggle | DONE (commit pending push) — Inventory Configuration section still open |
-| 6 | Worker Type frontend wiring, Component Group create UI | NOT STARTED |
+| 6 | Worker Type frontend wiring | DONE (commit pending push) — Component Group "New" button correction below |
 | 7 | Maintenance Packages legacy popup cleanup (low priority) | NOT STARTED |
 | 8 | Tenant logo upload + favicon wiring | NOT STARTED |
 
@@ -273,3 +278,39 @@ Stock — these don't exist on Product master data at all, would need a
 schema change; deferred), extra `OTHER` item type beyond the documented 6
 (flagging, not removing — unclear if used elsewhere), Consumable SDS file
 upload UI (backend columns exist, no upload control).
+
+## Batch 6 Detail (Worker Type wiring)
+
+Backend already had `worker_types` master-data table + `WorkerTypeController`
++ an additive `workers.worker_type_id` FK (seeded from the legacy 5-value
+enum) built in a prior session, but `WorkerController::store()`/`update()`
+never accepted `worker_type_id` at all, and the frontend still hardcoded
+the old enum array.
+
+- `Worker::workerType()` renamed to `workerTypeMaster()` before wiring
+  anything up: Eloquent snake_cases a relation name to build its JSON key,
+  and `workerType` -> `worker_type` collides with (and silently overwrites)
+  the pre-existing legacy string column the moment it's eager-loaded. Fixed
+  before it could ship as a real bug, not found by chance — traced through
+  deliberately once I noticed the naming pattern.
+- `StoreWorkerRequest`/`WorkerController::update()`: `worker_type_id` now
+  accepted (tenant-or-system scoped); `worker_type` (legacy) and
+  `worker_type_id` are `required_without` each other, so old API callers
+  keep working unchanged. `deriveLegacyWorkerType()` mirrors the legacy
+  column automatically when the selected type's code is one of the
+  original 5 (keeps any existing worker_type-keyed report/query working);
+  a custom tenant-defined type just leaves the legacy column at its DB
+  default, since it's no longer authoritative once worker_type_id is set.
+  `store()` uses `fresh()` after create (not `load()`) so the response
+  actually reflects that DB-applied default rather than a stale null.
+- Frontend `WorkerListPage.tsx`: Worker Type filter, Create form, and List/
+  Detail display all now source from `GET /app/worker-types` instead of a
+  hardcoded array; display prefers `worker_type_master.name`, falling back
+  to the legacy string for any pre-existing record without a linked type.
+
+Tests: new WorkerTypeWiringTest (6/6: create+legacy mirror, relation
+doesn't collide with the column, custom type, filter by worker_type_id,
+update, cross-tenant type rejected). Re-ran WorkerUserLinkTest (8),
+ProductFoundationMasterDataTest (9), ProductsCyclePhase5SupportingModulesTest
+(7), WorkOrderExecutionTest (6, exercises makeWorker()) — 30/30 PASS, no
+regressions. Frontend: tsc/oxlint/build clean.

@@ -997,6 +997,7 @@ export interface WorkerItem {
   branch_id: string;
   workshop_id: string | null;
   worker_type: 'LEAD_MECHANIC' | 'MECHANIC' | 'TECHNICIAN' | 'INSPECTOR' | 'QC';
+  worker_type_id: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   user_id: string | null;
   phone: string | null;
@@ -1009,6 +1010,7 @@ export interface WorkerItem {
   workshop?: Workshop;
   skills?: WorkerSkillItem[];
   active_job_count?: number;
+  worker_type_master?: WorkerTypeItem;
 }
 
 export interface WorkspaceItem {

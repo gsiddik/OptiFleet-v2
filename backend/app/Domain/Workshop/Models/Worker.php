@@ -42,9 +42,17 @@ class Worker extends Model
         return $this->belongsTo(Workshop::class);
     }
 
-    public function workerType(): BelongsTo
+    /**
+     * Named workerTypeMaster (not workerType) deliberately: Eloquent's relation
+     * serialization snake_cases the relation name to build its JSON key, and
+     * `Str::snake('workerType')` is literally `worker_type` — the same key as the
+     * pre-existing legacy `worker_type` enum column. Loading a relation named
+     * `workerType` would silently overwrite that column's string value in every
+     * API response the moment it's eager-loaded.
+     */
+    public function workerTypeMaster(): BelongsTo
     {
-        return $this->belongsTo(WorkerType::class);
+        return $this->belongsTo(WorkerType::class, 'worker_type_id');
     }
 
     public function skills(): HasMany
