@@ -603,16 +603,21 @@ export interface MaintenanceRequestItem {
   workshop_id: string | null;
   vehicle_id: string;
   component_group_id: string | null;
-  source_type: 'USER' | 'INSPECTION' | 'SCHEDULE' | 'BREAKDOWN' | 'TELEMATICS' | 'MECHANIC';
+  source_type: 'USER' | 'INSPECTION' | 'SCHEDULE' | 'BREAKDOWN' | 'TELEMATICS' | 'MECHANIC' | 'INTELLIGENCE';
+  source_inspection_id: string | null;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   complaint: string;
   status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'WORK_ORDER_CREATED' | 'REJECTED' | 'NEED_INFORMATION' | 'CANCELLED';
   review_note: string | null;
+  cancellation_reason: string | null;
   work_order_id: string | null;
+  requested_by: string | null;
+  created_at: string;
   vehicle?: VehicleItem;
   branch?: Branch;
   workshop?: Workshop;
   component_group?: ComponentGroup;
+  requested_by_user?: { id: string; name: string } | null;
 }
 
 export const INSPECTION_GROUP_CODES = [

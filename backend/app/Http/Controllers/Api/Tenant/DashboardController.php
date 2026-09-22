@@ -69,7 +69,7 @@ class DashboardController extends Controller
             $requestQuery = MaintenanceRequest::query();
             $this->scope->applyBranchScope($requestQuery, $user, $tenantId, 'branch_id');
             $data['maintenance_requests_open'] = (clone $requestQuery)
-                ->whereIn('status', ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'NEED_INFORMATION'])
+                ->whereIn('status', ['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED'])
                 ->count();
         }
 

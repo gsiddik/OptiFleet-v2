@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
@@ -11,14 +11,29 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { MaintenanceRequestItem } from '../../../types';
 
-const STATUSES = ['', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'WORK_ORDER_CREATED', 'REJECTED', 'NEED_INFORMATION', 'CANCELLED'];
+// NEED_INFORMATION is retired (see MaintenanceRequestService docblock) — omitted from the
+// filter bar since no request can be in that status going forward, but the status itself
+// still displays correctly via StatusBadge if a legacy record ever surfaces.
+const STATUSES = ['', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'WORK_ORDER_CREATED', 'REJECTED', 'CANCELLED'];
 
 export function MaintenanceRequestListPage() {
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [status, setStatus] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [convertError, setConvertError] = useState<string | null>(null);
   const { data, loading, error } = useApiList<MaintenanceRequestItem>('/app/maintenance-requests', { status: status || undefined }, reloadKey);
+
+  async function convertToWorkOrder(r: MaintenanceRequestItem) {
+    setConvertError(null);
+    try {
+      const res = await apiClient.post(`/app/maintenance-requests/${r.id}/work-order`);
+      navigate(`/app/work-orders/${res.data.data.id}`);
+    } catch (err) {
+      setConvertError(extractApiError(err).message);
+    }
+  }
 
   const columns: Column<MaintenanceRequestItem>[] = [
     { key: 'request_number', header: 'Request #', render: (r) => <Link to={`/app/maintenance-requests/${r.id}`}>{r.request_number}</Link> },
@@ -26,6 +41,20 @@ export function MaintenanceRequestListPage() {
     { key: 'source_type', header: 'Source', render: (r) => r.source_type },
     { key: 'priority', header: 'Priority', render: (r) => r.priority },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'created_at', header: 'Created At', render: (r) => new Date(r.created_at).toLocaleString() },
+    { key: 'submitted_by', header: 'Submitted by', render: (r) => r.requested_by_user?.name ?? '—' },
+    {
+      key: 'actions',
+      header: 'Actions',
+      render: (r) =>
+        r.status === 'APPROVED' && hasPermission('maintenance_request.convert_work_order') ? (
+          <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => convertToWorkOrder(r)}>
+            Create Work Order
+          </button>
+        ) : (
+          '—'
+        ),
+    },
   ];
 
   return (
@@ -48,6 +77,7 @@ export function MaintenanceRequestListPage() {
         }
       />
       {error && <ErrorState message={error} />}
+      {convertError && <ErrorState message={convertError} />}
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && <EmptyState label="No maintenance requests found." />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}

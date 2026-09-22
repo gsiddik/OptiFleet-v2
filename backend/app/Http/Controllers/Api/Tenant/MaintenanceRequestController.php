@@ -24,7 +24,7 @@ class MaintenanceRequestController extends Controller
         $user = $this->context->user();
         $tenantId = $this->context->tenantId();
 
-        $query = MaintenanceRequest::query()->with(['vehicle', 'branch', 'workshop']);
+        $query = MaintenanceRequest::query()->with(['vehicle', 'branch', 'workshop', 'requestedByUser']);
         $this->scope->applyBranchScope($query, $user, $tenantId, 'branch_id');
 
         foreach (['status', 'priority', 'source_type', 'vehicle_id', 'branch_id', 'workshop_id'] as $filter) {
@@ -55,7 +55,7 @@ class MaintenanceRequestController extends Controller
     {
         $this->authorizeScope($maintenanceRequest);
 
-        return $this->ok($maintenanceRequest->load(['vehicle', 'branch', 'workshop', 'componentGroup']));
+        return $this->ok($maintenanceRequest->load(['vehicle', 'branch', 'workshop', 'componentGroup', 'requestedByUser']));
     }
 
     public function submit(MaintenanceRequest $maintenanceRequest)
@@ -82,6 +82,8 @@ class MaintenanceRequestController extends Controller
 
     public function cancel(Request $request, MaintenanceRequest $maintenanceRequest)
     {
+        $request->validate(['note' => ['required', 'string']]);
+
         return $this->transition($maintenanceRequest, 'CANCELLED', $request->input('note'));
     }
 

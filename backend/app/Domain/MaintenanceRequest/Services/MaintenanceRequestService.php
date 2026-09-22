@@ -70,6 +70,9 @@ class MaintenanceRequestService
                 $attributes['reviewed_at'] = now();
                 $attributes['review_note'] = $note;
             }
+            if ($to === 'CANCELLED') {
+                $attributes['cancellation_reason'] = $note;
+            }
 
             $request->update($attributes);
 

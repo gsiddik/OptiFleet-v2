@@ -11,6 +11,13 @@ const COLORS: Record<string, string> = {
   QUARANTINED: '#b91c1c',
   REPAIR: '#a16207',
   SOLD: '#6b7280',
+  SUBMITTED: '#1d4ed8',
+  UNDER_REVIEW: '#7c3aed',
+  APPROVED: '#15803d',
+  WORK_ORDER_CREATED: '#0f766e',
+  REJECTED: '#b91c1c',
+  CANCELLED: '#6b7280',
+  NEED_INFORMATION: '#a16207',
 };
 
 export function StatusBadge({ status }: { status: string }) {
