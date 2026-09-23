@@ -18,6 +18,21 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
+/**
+ * Deployment-readiness audit: DEV/DEMO ONLY — never part of the
+ * production bootstrap path (`DatabaseSeeder`). Creates a hardcoded
+ * platform superadmin login (admin@optifleet.test / "password") for
+ * local development convenience, plus two fully-populated demo tenants
+ * (ALPHA/BETA). Run explicitly via `php artisan db:seed
+ * --class=DevDemoSeeder` (which calls this together with CommercialSeeder/
+ * OperationsSeeder/SupplyChainSeeder in the correct order) — never by a
+ * production deployment. For a real environment's first admin account use
+ * `php artisan platform:create-admin` instead (reads credentials from
+ * the environment, never hardcodes them). The "Platform Superadmin" ROLE
+ * this class also creates is duplicated, safely and idempotently, by
+ * PlatformSuperadminRoleSeeder in the production bootstrap chain — that
+ * duplication is intentional so this class stays runnable standalone.
+ */
 class DemoDataSeeder extends Seeder
 {
     public function run(): void

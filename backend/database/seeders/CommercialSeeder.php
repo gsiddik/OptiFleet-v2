@@ -49,7 +49,14 @@ class CommercialSeeder extends Seeder
         $this->seedPastDueTenant();
     }
 
-    private function seedBundlesAndPricing(): void
+    /**
+     * Public so CommercialCatalogSeeder (the production-safe path) can
+     * reuse this exact logic without duplicating it — the bundle/pricing
+     * catalog itself is real commercial reference data, not demo data,
+     * but this class' other methods (below) build the ALPHA/BETA/GAMMA/
+     * DELTA demo subscription scenarios and must not run in production.
+     */
+    public function seedBundlesAndPricing(): void
     {
         $definitions = [
             'OPTIFLEET_BASIC' => ['name' => 'OptiFleet Basic', 'price' => 3000000, 'modules' => [
