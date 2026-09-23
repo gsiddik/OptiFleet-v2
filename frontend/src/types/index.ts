@@ -734,6 +734,16 @@ export interface WorkOrderPlannedPartItem {
   total_cost: string | null;
 }
 
+/** Doc's true "Planned Parts" tab — pure budgeting, never touches warehouse stock. */
+export interface WorkOrderPlannedPartEstimateItem {
+  id: string;
+  work_order_id: string;
+  product_id: string;
+  quantity: string;
+  notes: string | null;
+  product?: ProductItem;
+}
+
 export interface WorkOrderPartReturnEvidenceItem {
   id: string;
   work_order_planned_part_id: string;
@@ -1009,6 +1019,7 @@ export interface WorkOrderItem {
   estimated_labor_cost_computed?: string | null;
   estimated_total_hours?: string | null;
   estimated_number_of_mechanics?: number;
+  estimated_parts_cost_computed?: string | null;
   vehicle?: VehicleItem;
   branch?: Branch;
   workshop?: Workshop;
@@ -1017,6 +1028,7 @@ export interface WorkOrderItem {
   corrective_actions?: WorkOrderCorrectiveActionItem[];
   jobs?: MaintenanceJobItem[];
   planned_parts?: WorkOrderPlannedPartItem[];
+  planned_part_estimates?: WorkOrderPlannedPartEstimateItem[];
   removed_components?: WorkOrderRemovedComponentItem[];
   additional_works?: WorkOrderAdditionalWorkItem[];
   mechanic_assignments?: WorkOrderMechanicAssignmentItem[];

@@ -98,6 +98,37 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderRemovedComponent::class);
     }
 
+    public function plannedPartEstimates(): HasMany
+    {
+        return $this->hasMany(WorkOrderPlannedPartEstimate::class);
+    }
+
+    /**
+     * Doc formula: Σ(Qty x the Product's price). No dedicated "list price" field exists
+     * anywhere in the Product/Inventory schema, so — same posture as
+     * computedEstimatedLaborCost() being a documented suggestion, not a redefinition of the
+     * legacy manually-entered `estimated_parts_cost` column — this uses each product's own
+     * `average_unit_cost` from any one of its WarehouseStock rows (the closest existing
+     * analogue to "harga product") as the per-unit price; a product with no stock record
+     * anywhere yet simply contributes 0 rather than blocking the whole total.
+     */
+    public function computedEstimatedPartsCost(): ?string
+    {
+        $total = null;
+        foreach ($this->plannedPartEstimates as $estimate) {
+            $unitCost = \App\Domain\Inventory\Models\WarehouseStock::query()
+                ->where('product_id', $estimate->product_id)
+                ->value('average_unit_cost');
+            if ($unitCost === null) {
+                continue;
+            }
+            $lineCost = \Brick\Math\BigDecimal::of($unitCost)->multipliedBy(\Brick\Math\BigDecimal::of($estimate->quantity));
+            $total = $total === null ? $lineCost : $total->plus($lineCost);
+        }
+
+        return $total !== null ? (string) $total->toScale(4, \Brick\Math\RoundingMode::HALF_UP) : null;
+    }
+
     public function additionalWorks(): HasMany
     {
         return $this->hasMany(WorkOrderAdditionalWork::class);

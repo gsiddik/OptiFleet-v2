@@ -557,6 +557,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence', [WorkOrderExecutionController::class, 'uploadRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
             Route::get('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence/{evidence}', [WorkOrderExecutionController::class, 'showRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
             Route::delete('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence/{evidence}', [WorkOrderExecutionController::class, 'destroyRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+
+            // Doc's true "Planned Parts" tab — pure budgeting, distinct from
+            // "Request Parts" (the /planned-parts endpoints above, doc: "sebelumnya adalah
+            // Tab Planned Parts yang berubah nama" — the old Planned Parts tab, renamed).
+            Route::post('/work-orders/{workOrder}/planned-part-estimates', [WorkOrderExecutionController::class, 'addPlannedPartEstimate'])->middleware('permission:maintenance_job.manage');
+            Route::delete('/work-orders/{workOrder}/planned-part-estimates/{plannedPartEstimate}', [WorkOrderExecutionController::class, 'destroyPlannedPartEstimate'])->middleware('permission:maintenance_job.manage');
         });
 
         Route::middleware('module:PROCUREMENT')->group(function () {

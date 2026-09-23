@@ -11,11 +11,13 @@ use App\Domain\WorkOrder\Models\WorkOrderDiagnosis;
 use App\Domain\WorkOrder\Models\WorkOrderFinding;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturnEvidence;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
+use App\Domain\WorkOrder\Models\WorkOrderPlannedPartEstimate;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponent;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponentEvidence;
 use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
 use App\Domain\WorkOrder\Services\WorkOrderPartReturnEvidenceService;
 use App\Domain\WorkOrder\Services\WorkOrderPartService;
+use App\Domain\WorkOrder\Services\WorkOrderPlannedPartEstimateService;
 use App\Domain\WorkOrder\Services\WorkOrderRemovedComponentService;
 use App\Domain\Workshop\Models\Worker;
 use App\Domain\Workshop\Models\WorkOrderLaborLog;
@@ -35,6 +37,7 @@ class WorkOrderExecutionController extends Controller
         private readonly WorkOrderPartService $parts,
         private readonly WorkOrderPartReturnEvidenceService $returnEvidence,
         private readonly WorkOrderRemovedComponentService $removedComponents,
+        private readonly WorkOrderPlannedPartEstimateService $plannedPartEstimates,
         private readonly MechanicAssignmentService $mechanics,
         private readonly LaborTimerService $laborTimer,
         private readonly DataScopeService $scope,
@@ -318,6 +321,32 @@ class WorkOrderExecutionController extends Controller
         $this->removedComponents->deleteEvidence($evidence);
 
         return $this->message('Evidence removed.');
+    }
+
+    // --- Planned Part Estimates ("Planned Parts" tab — pure budgeting, never touches stock) ---
+
+    public function addPlannedPartEstimate(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+        $validated = $request->validate([
+            'product_id' => ['required', 'uuid', Rule::exists('products', 'id')->where(fn ($q) => $q->where('tenant_id', $this->context->tenantId())->orWhereNull('tenant_id'))],
+            'quantity' => ['required', 'numeric', 'gt:0'],
+            'notes' => ['nullable', 'string'],
+        ]);
+
+        $estimate = $this->plannedPartEstimates->add($workOrder, $validated, $this->context->user()->id);
+
+        return $this->ok($estimate->load('product'), 201);
+    }
+
+    public function destroyPlannedPartEstimate(WorkOrder $workOrder, WorkOrderPlannedPartEstimate $plannedPartEstimate)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPartEstimate->work_order_id === $workOrder->id, 404);
+
+        $this->plannedPartEstimates->delete($plannedPartEstimate);
+
+        return $this->message('Planned part estimate removed.');
     }
 
     public function consumePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)

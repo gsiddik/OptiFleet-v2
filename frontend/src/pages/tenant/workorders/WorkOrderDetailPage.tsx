@@ -27,13 +27,13 @@ import type {
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
+  'Planned Parts', 'Request Parts', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
 ] as const;
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
-// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Part
-// Requests, Workspace, QC, Road Test) is hidden, not just its actions. "External Services" here is
-// the separate towing/3rd-party-invoicing sub-resource (WorkOrderExternalService) and stays
-// available either way.
+// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Request
+// Parts, Part Requests, Workspace, QC, Road Test) is hidden, not just its actions. "External
+// Services" here is the separate towing/3rd-party-invoicing sub-resource
+// (WorkOrderExternalService) and stays available either way.
 const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'External Services', 'Documents', 'History', 'Audit'] as const;
 type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
 
@@ -42,6 +42,9 @@ type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
 // addable through the whole active-planning window.
 const FINDING_SCOPE_STATUSES = ['DRAFT'];
 const PLANNING_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
+// Doc: "Request Parts" (the old Planned Parts tab, renamed) only appears from IN_PROGRESS
+// onward — before that, only the new budgeting-only "Planned Parts" tab is shown.
+const REQUEST_PARTS_VISIBLE_STATUSES = ['IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'QC_PENDING', 'REWORK', 'COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
 // Reserve/Issue/Consume/Return only apply once real execution has started — Draft's Planned
 // Parts tab explicitly must not show these buttons at all (doc: "jangan tampilkan tombol
 // Reserve, tombol Issue, Consume atau Return" while Draft). Mirrors backend's unmodified,
@@ -204,7 +207,9 @@ export function WorkOrderDetailPage() {
   if (!wo) return <LoadingState />;
 
   const isExternalMode = wo.execution_mode === 'EXTERNAL';
-  const visibleTabs: readonly Tab[] = isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS;
+  const visibleTabs: readonly Tab[] = (isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS).filter(
+    (t) => t !== 'Request Parts' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status),
+  );
   const actions = isExternalMode ? [] : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
@@ -338,7 +343,8 @@ export function WorkOrderDetailPage() {
       {tab === 'Diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
       {tab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
       {tab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
-      {tab === 'Planned Parts' && <PlannedPartsTab wo={wo} onChanged={load} />}
+      {tab === 'Planned Parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
+      {tab === 'Request Parts' && <RequestPartsTab wo={wo} onChanged={load} />}
       {tab === 'Part Requests' && <PartRequestsTab wo={wo} onChanged={load} />}
       {tab === 'Workspace' && <WorkspaceTab wo={wo} onChanged={load} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
@@ -481,7 +487,7 @@ function MaintenanceRequestSourceSection({ maintenanceRequestId }: { maintenance
 
 function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
   const laborCost = wo.estimated_labor_cost_computed ?? null;
-  const partsCost = wo.estimated_parts_cost ?? null;
+  const partsCost = wo.estimated_parts_cost_computed ?? null;
   const totalCost =
     laborCost !== null || partsCost !== null ? (Number(laborCost ?? 0) + Number(partsCost ?? 0)).toFixed(2) : null;
 
@@ -1194,7 +1200,109 @@ function useEvidencePreviews(showUrl: (id: string) => string, ids: string[]) {
   return previews;
 }
 
-function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+const PLANNED_PART_PRODUCT_TYPES = ['SPARE_PART', 'TIRE', 'CONSUMABLE'];
+
+/**
+ * Doc: the TRUE "Planned Parts" tab — a pure budgeting line item (Product + Qty only), never
+ * Reserve/Issue/Consume/Return ("jangan tampilkan tombol Reserve, tombol Issue, Consume atau
+ * Return"). Feeds Estimated Parts Cost and nothing else. Distinct from "Request Parts" below
+ * (the OLD Planned Parts tab, renamed, with its full warehouse lifecycle intact).
+ */
+function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [products, setProducts] = useState<{ id: string; name: string; product_type: string }[]>([]);
+  const [productId, setProductId] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+
+  useEffect(() => {
+    apiClient
+      .get('/app/products', { params: { per_page: 200 } })
+      .then((res) => setProducts((res.data.data as { id: string; name: string; product_type: string }[]).filter((p) => PLANNED_PART_PRODUCT_TYPES.includes(p.product_type))))
+      .catch(() => setProducts([]));
+  }, []);
+
+  async function addEstimate() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/planned-part-estimates`, { product_id: productId, quantity, notes: notes || undefined });
+      setProductId('');
+      setQuantity('1');
+      setNotes('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteEstimate(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/planned-part-estimates/${id}`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Planned Parts</h3>
+      {error && <ErrorState message={error} />}
+      {(wo.planned_part_estimates ?? []).length === 0 && <EmptyState label="No parts planned." />}
+      {(wo.planned_part_estimates ?? []).map((e) => (
+        <div key={e.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>
+            {e.product?.name ?? e.product_id} — qty {e.quantity} {e.notes && <span style={{ color: '#6b7280' }}>({e.notes})</span>}
+          </span>
+          {canManage && (
+            <button className="btn-secondary" disabled={busy} onClick={() => deleteEstimate(e.id)}>
+              Delete
+            </button>
+          )}
+        </div>
+      ))}
+      {canManage && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+            <option value="">Product…</option>
+            {products.map((prod) => (
+              <option key={prod.id} value={prod.id}>
+                {prod.name}
+              </option>
+            ))}
+          </select>
+          <input type="number" step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+          <button className="btn-secondary" disabled={busy || !productId || !quantity} onClick={addEstimate}>
+            Add
+          </button>
+        </div>
+      )}
+      {/* SYSTEM_DERIVED — Σ(Qty x Product price), never manually editable. */}
+      <FormField label="Estimated Parts Cost">
+        <input value={wo.estimated_parts_cost_computed ?? '—'} readOnly style={{ ...inputStyle, width: 160, background: '#f9fafb' }} />
+      </FormField>
+    </div>
+  );
+}
+
+/**
+ * Doc: "Request Parts" — "sebelumnya adalah Tab Planned Parts yang berubah nama" (this IS the
+ * old "Planned Parts" tab, renamed — its full Reserve/Issue/Consume/Return lifecycle is
+ * unchanged). Only visible from IN_PROGRESS onward; see REQUEST_PARTS_VISIBLE_STATUSES.
+ */
+function RequestPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -1313,7 +1421,7 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Planned Parts</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Request Parts</h3>
       {error && <ErrorState message={error} />}
       {(wo.planned_parts ?? []).length === 0 && <EmptyState label="No planned parts." />}
       {(wo.planned_parts ?? []).map((p) => (

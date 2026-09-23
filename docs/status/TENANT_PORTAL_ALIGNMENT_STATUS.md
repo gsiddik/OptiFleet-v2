@@ -1018,3 +1018,344 @@ run in this continuation, zero diff confirmed before every commit.
   over-engineer... do not automatically build a complete remanufacturing
   /refurbishment/disposal system" instruction, this is deliberately
   deferred as a natural, valuable follow-up rather than attempted now.
+
+## Batch 11 Detail: Planned Parts vs Request Parts reconciliation
+
+### Scope
+
+The requirement doc's Work Order tab list distinguishes two things that
+had collapsed into a single tab in the existing implementation. Precise
+grep of the doc's status-section headers and tab-list occurrences
+confirmed:
+
+- **"Request Parts"** is the pre-existing rich tab (issue/reserve/
+  consume/return against warehouse stock, the doc's own words:
+  "sebelumnya adalah Tab Planned Parts yang berubah nama") — it is
+  visible only from `IN_PROGRESS` onward, not from Draft.
+- **"Planned Parts"** (the doc's true meaning) is a NEW, thin,
+  budgeting-only tab: Product + Qty (+ optional Notes) per line, no
+  warehouse interaction, no stock effect, feeding only "Estimated Parts
+  Cost" — usable through the whole planning window including Draft,
+  unlike Reserve/Issue/Consume/Return which require the WO to be
+  executable.
+
+These were architecturally conflated before this batch (one tab, one
+model, doing both jobs). This batch separates them into two genuinely
+distinct domains rather than repurposing one for both meanings, the
+same discipline applied to Batch 10's Removed Component Return.
+
+### Implementation
+
+- New `work_order_planned_part_estimates` table (migration
+  `2026_09_28_000004`): `tenant_id`, `work_order_id`, `product_id`,
+  `quantity` (decimal 16,4), `notes` (nullable), `created_by`,
+  timestamps — no warehouse/status/condition columns, since this domain
+  never touches stock.
+- New `WorkOrderPlannedPartEstimate` model (`BelongsToTenant`,
+  `Auditable`, `HasUuids`) — `ALLOWED_PRODUCT_TYPES = ['SPARE_PART',
+  'TIRE', 'CONSUMABLE']`, matching the existing Request Parts / Product
+  domain restriction (Tools and Other item types are excluded).
+- New `WorkOrderPlannedPartEstimateService` — add/delete, gated by the
+  existing `assertPlanningEditable()` gate (the broader Draft-through-
+  REWORK window used for planning-stage actions), not
+  `assertExecutable()` — confirming the doc's "no warehouse interaction,
+  usable from Draft" requirement was correctly mapped to the existing
+  three-gate system rather than inventing a fourth.
+- `WorkOrder::computedEstimatedPartsCost()` — Σ(quantity × the
+  product's `average_unit_cost` from any one `WarehouseStock` row), the
+  same documented-limitation posture as Batch 9's
+  `computedEstimatedLaborCost()`: no dedicated Product list-price field
+  exists anywhere in the schema, so `average_unit_cost` is used as the
+  closest existing analogue to "harga product"; a product with no stock
+  record anywhere yet contributes nothing rather than blocking the
+  total. Never overwrites the legacy manually-entered
+  `estimated_parts_cost` column.
+- `WorkOrderController::show()` — eager-loads `plannedPartEstimates.product`
+  and appends `estimated_parts_cost_computed` (single-record computed
+  value only, same non-N+1 discipline as the other computed fields).
+- `WorkOrderExecutionController` — `addPlannedPartEstimate()` /
+  `destroyPlannedPartEstimate()`; routes: `POST
+  /work-orders/{workOrder}/planned-part-estimates`, `DELETE
+  .../{plannedPartEstimate}`.
+- Frontend (`WorkOrderDetailPage.tsx`): `INTERNAL_TABS` gained
+  `'Request Parts'` alongside the existing `'Planned Parts'`; new
+  `REQUEST_PARTS_VISIBLE_STATUSES` list gates `'Request Parts'` to
+  `IN_PROGRESS/ON_HOLD/WAITING_PART/QC_PENDING/REWORK/COMPLETED/CLOSED/
+  REJECTED/CANCELLED` (first per-tab conditional-visibility instance —
+  previously only a binary Internal/External split existed; the full
+  per-status tab/button visibility matrix remains explicitly
+  out-of-scope future work). The old rich tab component was renamed
+  `RequestPartsTab` (body unchanged, heading text updated). New
+  `PlannedPartsEstimatesTab` component: Product dropdown filtered
+  client-side to Sparepart/Tire/Consumable, Qty, Notes, Add/Delete, and
+  a read-only "Estimated Parts Cost" field reading
+  `estimated_parts_cost_computed` as SYSTEM_DERIVED information (never
+  asks the user to compute or re-enter it). `OverviewTab`'s Parts Cost
+  now reads the same computed field.
+- `types/index.ts` — `WorkOrderPlannedPartEstimateItem` interface;
+  `planned_part_estimates?`/`estimated_parts_cost_computed?` added to
+  `WorkOrderItem`.
+
+### Tests
+
+4 new (`WorkOrderPlannedPartEstimateTest`): add/delete round-trip with
+correct computed-cost arithmetic and no stock-table interaction,
+product-type restriction (Tool rejected), allowed while WO is still
+DRAFT (proving the planning-gate mapping, in contrast to Request
+Parts' executable-only gate), permission enforcement. Focused run:
+4/4 PASS (12 assertions), executed twice in this session (once before
+the environment incident below, once after DB cleanup), both times
+green. `pint --test` clean on every new/changed backend file (one new
+test file's inline `\App\Domain\Identity\Models\Tenant::query()`
+reference triggered the same import-qualification fixers as Batch 10 —
+verified via `git stash` as newly introduced by this file, then
+auto-fixed via `pint` itself into a proper `use` import). Frontend:
+`tsc --noEmit` clean, `oxlint` no new warnings on the two touched
+files.
+
+**Full-suite regression: NOT RUN to completion this session.** Three
+attempts at `php artisan test` (full suite) hung indefinitely at the
+Unit->Feature test boundary. Root-caused to an ENVIRONMENT_FAILURE, not
+a code regression: an earlier killed `php artisan test` process left an
+orphaned PHPUnit child and an "idle in transaction" Postgres connection
+holding a lock on the `permissions` table (`pid ... DEALLOCATE
+pdo_stmt_...`), which then permanently blocked every subsequent test
+run's own permission-seeding insert (`insert into "permissions" ...`
+stuck on `wait_event=transactionid`). Confirmed via
+`pg_stat_activity` and resolved via `pg_terminate_backend` + killing
+orphaned `phpunit` processes; the DB is now clean (verified: only the
+inspecting session's own connection remains). This was not re-attempted
+a fourth time in favor of honoring "do not start a broad new
+investigation" during this pause — full-suite regression is deferred
+to the next work session as the documented Next Exact Step. `vite
+build` also NOT RUN this session (time/priority given to the DB
+incident); `tsc --noEmit` and `oxlint` (both clean, see above) are the
+executed frontend evidence for this batch.
+
+MongoDB: NOT RUN (ext-mongodb unavailable, network-blocked from
+installing); relocate-run-restore precedent followed for the one
+focused run that needed it, zero diff on `database/migrations/`
+confirmed via `git status --porcelain` before committing this
+checkpoint.
+
+### REMAINING from this batch (disclosed, not blocking)
+
+- The full per-status Tab/button visibility matrix beyond
+  `REQUEST_PARTS_VISIBLE_STATUSES` is not built — flagged since Batch 9
+  as a large, distinct body of work outside this batch's priority list.
+
+## Pause Checkpoint (Latest — Batch 11)
+
+Checkpoint Date: 2026-09-23
+
+Branch: `claude/peaceful-rubin-sm50tx`
+
+Previous Checkpoint: commit `b4505d8` (the Batch 10 "Removed Component
+Return — OWNER DECISION 2 RESOLVED" commit; the pause checkpoint before
+that, at commit `2032815`, was already resolved by the "Resume — Both
+Owner Decisions..." section above and is superseded).
+
+New Checkpoint Commit: recorded below, after this section is committed
+(see the commit this paragraph ships in).
+
+Current Batch: Batch 11 — Planned Parts vs Request Parts reconciliation.
+
+Current Feature: complete and tested at the unit/focused level; full-
+suite regression not executed to completion this session (see Known
+Issues).
+
+Last Completed Step: Batch 11 implementation (backend + frontend),
+focused test file (4/4 PASS, run twice), `pint --test` clean on all
+new/changed backend files, `tsc --noEmit` clean, `oxlint` clean on the
+two touched frontend files, Mongo migrations restored with verified
+zero diff.
+
+Current Partial Step: none — Batch 11's own code is complete, not
+partial. What is incomplete is *verification breadth* (full-suite
+regression and frontend `vite build` were not run this session), not
+the feature itself.
+
+Next Exact Step: Before starting Batch 12 (Product Inventory
+Configuration), run one clean full-suite regression to establish a
+known-good baseline for everything merged so far (`git log --oneline`
+through this checkpoint commit): `cd backend && php artisan test`,
+watched to completion (do not let it run unattended past ~3-4 minutes
+without checking `ps` + `pg_stat_activity` for the orphaned-process /
+lock pattern described below). If it hangs again, apply the same fix
+(`pkill -9 -f phpunit`, then `pg_terminate_backend` every
+`pg_stat_activity` row for `optifleet_test` that is not the inspecting
+session) before retrying — do not retry blindly more than once without
+that cleanup. Once a full-suite PASS is captured, run `cd frontend &&
+npx vite build` (not yet run this session) to confirm no production
+build regression, then proceed to Batch 12.
+
+### Completed Since Previous Checkpoint
+
+- Batch 11: `work_order_planned_part_estimates` table/model/service,
+  `computedEstimatedPartsCost()`, 2 new API endpoints, frontend tab
+  split (`Planned Parts` budgeting-only vs `Request Parts` renamed-old-
+  tab with `REQUEST_PARTS_VISIBLE_STATUSES` gating), 4 new tests — see
+  "Batch 11 Detail" above for full description.
+- Status doc's Batch 11 Detail section written and, in this pause pass,
+  corrected to not overstate an untested full-regression result (see
+  Known Issues).
+
+### Partially Completed
+
+- None from Batch 11 itself. The only "partial" item is verification
+  breadth (full-suite regression, `vite build`) — see Next Exact Step.
+
+### Not Started
+
+- Batch 12 (Product Inventory Configuration), Batch 13 (Consumable SDS
+  upload), Batch 14 (OTHER item type investigation + repository-wide
+  Image URL sweep), Batch 15 (final PR-readiness audit). Unchanged from
+  before this checkpoint.
+
+### Owner Decisions Resolved
+
+- Consumable Specification/Grade → Category/Subcategory (Batch prior to
+  this checkpoint; unaffected by this pause).
+- Return Used Qty → Old/Removed Component from Vehicle, distinct from
+  Unused Return, does NOT reverse the new installed part's consumption
+  (Batch prior to this checkpoint; unaffected by this pause). Restated
+  for clarity:
+  - **UNUSED RETURN** = warehouse-issued inventory that was not
+    consumed and is returned to Warehouse (existing
+    `WorkOrderPlannedPart`/`WorkOrderPartReturn` flow, unchanged).
+  - **OLD / REMOVED COMPONENT RETURN** = a component previously
+    installed on the Vehicle that is removed during
+    maintenance/replacement and returned from Vehicle to Warehouse
+    (`WorkOrderRemovedComponent` / `WorkOrderRemovedComponentReturn`,
+    new in Batch 10).
+  - **OLD COMPONENT RETURN != reverse consumption of the newly
+    installed replacement part.** Proven by
+    `WorkOrderRemovedComponentTest::test_removing_and_returning_an_old_component_does_not_reverse_the_new_parts_consumption`.
+
+### Owner Decisions Still Needed
+
+- None new from this checkpoint. Pre-existing, still open (disclosed
+  earlier, not raised by this pause): costing/valuation treatment of a
+  returned old component (see Batch 10 Detail's Costing Impact); and
+  the follow-on question of whether/how to integrate serialized
+  `ComponentAsset` tracking into the Removed Component Return flow.
+
+### Known Issues
+
+- **ENVIRONMENT_FAILURE, ROOT-CAUSED AND RESOLVED (not a code defect):**
+  during this pause's verification step, `php artisan test` (full
+  suite) hung three consecutive times at the Unit->Feature boundary.
+  Cause: a full-suite run started earlier in this session was
+  interrupted with `kill -9` on its wrapper `bash`/`php artisan test`
+  processes, but the actual `vendor/phpunit/phpunit/phpunit` child
+  process(es) were NOT killed and kept running orphaned, holding a
+  Postgres connection to `optifleet_test` open in `idle in transaction`
+  state (stuck on `DEALLOCATE pdo_stmt_...`) that blocked every later
+  run's own `insert into "permissions"` seeding statement
+  (`wait_event_type=Lock, wait_event=transactionid`), because a fresh
+  test run's `php artisan test` command re-attempted the SAME database
+  while the orphan(s) were still alive across multiple retries.
+  Diagnosed via `pg_stat_activity` (state, wait_event, query, duration)
+  and `ps aux` correlation. Resolved via `pkill -9 -f phpunit` +
+  `pg_terminate_backend()` for every non-self connection to
+  `optifleet_test`; confirmed clean (`SELECT count(*) FROM
+  pg_stat_activity WHERE datname='optifleet_test'` = 1, the inspecting
+  session itself). Full-suite regression was deliberately NOT re-
+  attempted a fourth time in this pause (out of scope for "minimum
+  stabilization only" during a pause) — see Next Exact Step.
+  **Operational lesson for future sessions:** always `pkill -9 -f
+  phpunit` (not just the wrapper `bash`/`php artisan test` PIDs) and
+  verify `pg_stat_activity` is clean before retrying a hung
+  `php artisan test` run.
+- The Batch 11 status doc entry originally (before this pause pass)
+  claimed "Full regression: 52/52 PASS" — this was NOT actually
+  executed in this session (the only executed backend evidence was the
+  4/4 focused `WorkOrderPlannedPartEstimateTest` run plus `pint`).
+  Corrected in this checkpoint per the "never fabricate test results"
+  rule; see the corrected Tests section above.
+
+### Database Changes
+
+- `2026_09_28_000004_create_work_order_planned_part_estimates_table.php`
+  (new, this checkpoint's own batch) — reviewed in this pause: table is
+  intentional, matches the approved "Planned Parts" concept, tenant_id/
+  work_order_id/product_id FKs correct (tenant + work_order cascade on
+  delete, product restrict on delete — a Product must not be deletable
+  out from under a budgeting line), composite `(tenant_id,
+  work_order_id)` index present, `down()` valid
+  (`dropIfExists`), no temporary or duplicate migration found. No other
+  migrations changed since the previous checkpoint.
+
+### API Changes
+
+- `POST /api/v1/app/work-orders/{workOrder}/planned-part-estimates`
+  and `DELETE .../{plannedPartEstimate}` (new, Batch 11). No other API
+  surface changed since the previous checkpoint.
+
+### Frontend Changes
+
+- `WorkOrderDetailPage.tsx`: `Request Parts` tab added alongside
+  `Planned Parts`, gated by `REQUEST_PARTS_VISIBLE_STATUSES`; new
+  `PlannedPartsEstimatesTab` component. `types/index.ts`: new
+  `WorkOrderPlannedPartEstimateItem` interface. No other frontend files
+  changed since the previous checkpoint.
+
+### Image Upload Changes
+
+- None since the previous checkpoint (Batch 11 has no image-upload
+  surface — the "Planned Parts" budgeting tab is Product/Qty/Notes
+  only). The `ImageUploadField` component and its Return/Removed-
+  Component-evidence usage remain as delivered in Batch 10, unchanged.
+
+### Popup Changes
+
+- None since the previous checkpoint. Batch 11 added a tab (not a
+  popup/modal); its Add/Delete row form is a simple inline row, not a
+  dialog — Product (`USER_INPUT`), Qty (`USER_INPUT`), Notes
+  (`USER_INPUT`, optional) are its only fields, no fields that
+  duplicate system-known information.
+
+### Tests Executed
+
+- `php artisan test --filter=WorkOrderPlannedPartEstimateTest` (run
+  twice, both green).
+- `./vendor/bin/pint --test` on all Batch 11 new/changed backend files.
+- `npx tsc --noEmit` (frontend, full project).
+- `npx oxlint` on the two Batch 11-touched frontend files.
+- Three attempts at the full-suite `php artisan test` (see Known
+  Issues) — none reached completion; not counted as executed
+  validation for any individual test within them.
+
+### Tests Passed
+
+- `WorkOrderPlannedPartEstimateTest`: 4/4 (12 assertions), both runs.
+- Pint: clean (0 files with fixer flags among the files checked).
+- `tsc --noEmit`: 0 errors.
+- `oxlint`: 0 warnings on the checked files.
+
+### Tests Failed
+
+- None. (The full-suite hangs were process/DB-lock hangs, not test
+  failures — no test in them reached a fail or pass state.)
+
+### Tests Skipped
+
+- Full-suite regression: not completed, see Known Issues and Next Exact
+  Step — to be run at the start of the next session before Batch 12.
+- `vite build`: not run this session.
+
+### MongoDB
+
+- SKIPPED / NOT RUN (ext-mongodb unavailable, network-blocked from
+  installing in this sandbox). Migration files were temporarily
+  relocated to `/tmp/mongo-migrations-holding/` for the one focused
+  test run that needed it, then restored; `git status --porcelain` on
+  `backend/database/migrations/` is clean (no diff) as of this
+  checkpoint commit.
+
+### Deployment Prerequisites
+
+- Unchanged from prior checkpoints: `ext-mongodb` must be installed in
+  any environment that runs the Mongo-backed Analytics/Intelligence
+  migrations and tests (SKIPPED/NOT RUN in this sandbox throughout the
+  session). No new deployment prerequisite introduced by Batch 11.
