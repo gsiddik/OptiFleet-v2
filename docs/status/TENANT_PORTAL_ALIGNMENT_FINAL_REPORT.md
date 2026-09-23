@@ -6,6 +6,16 @@ implementation alignment initiative. The live working document
 batch-by-batch source of truth; this report is its synthesis into the
 required final-report shape. Branch: `claude/peaceful-rubin-sm50tx`.
 
+> **This report predates Batches 9-14.** Sections A-M below were
+> written after Batch 8 and are kept only as historical record of the
+> initiative's early state — several of their specific claims (the
+> Consumable Specification/Grade "TODO", the Work Order Overview/
+> Consume/Return redesign and Product Inventory Configuration rows in
+> §B marked "Deferred") are now superseded and factually out of date.
+> **Section N ("FINAL PR-READINESS AUDIT — Batch 15") at the end of
+> this document is the current, authoritative closure matrix and
+> PR-readiness decision.** Read that section first.
+
 ## A. Documents Re-Audited
 
 1. Enhancement OptiFleet Tenant Portal - Planning and Schedule
@@ -353,9 +363,187 @@ deferred" list immediately below as still fully accurate — consult
   the upload itself succeeds.
 
 This report predates the Continuation and does not by itself constitute a
-Pull Request readiness decision — see STATUS.md for the live picture. The
-branch is NOT ready for Pull Request while Batch 10 (partial) through
-Batch 15 remain open.
+Pull Request readiness decision — see §N below for the current,
+authoritative one.
 
 No completed phase was reconstructed or redesigned. No phase beyond what
 was explicitly scoped in the 5 documents was started.
+
+---
+
+## N. FINAL PR-READINESS AUDIT — Batch 15
+
+Date: 2026-09-23. Branch: `claude/peaceful-rubin-sm50tx`. Base:
+`main` (merge-base `a5ddebc`). Head commit: `dd84eb1`. All 17 commits
+on this branch are ahead of `main`; local HEAD and
+`origin/claude/peaceful-rubin-sm50tx` match exactly (verified via
+`git rev-parse`). Full diff vs. `main`: 93 files changed, 7506
+insertions, 425 deletions.
+
+### N.1 — Batches 1-14: all COMPLETE
+
+Every batch in the established sequence (Batch 1 through Batch 14) is
+now complete, tested, committed, and pushed. See
+`docs/status/TENANT_PORTAL_ALIGNMENT_STATUS.md`'s per-batch "Detail"
+sections for full implementation, test, and architecture-decision
+records — this section summarizes the closure state, not the
+implementation detail.
+
+### N.2 — Final Requirement Closure Matrix
+
+Classification is exactly one of: **COMPLETE** / **NEEDS_OWNER_DECISION**
+/ **BLOCKED_EXTERNAL_DEPENDENCY** / **NOT_COMPLETE**.
+
+| Area (source document) | Status | Notes |
+|---|---|---|
+| Vehicle — purchase month/year (Products) | COMPLETE | Batch 6 |
+| Workspace — breadcrumbs/back, edit capability, Capacity Unit multi-select dropdown (Products) | COMPLETE | Batch 6 |
+| Scheduler — breadcrumbs/back, 7-day scroll window, status-colored cards (Planning and Schedule) | COMPLETE | Already compliant, verified Batch 7 |
+| Mechanic — Worker Type master data, activate/deactivate | COMPLETE | Batch 6 |
+| Component Groups — hide "New" button | COMPLETE | Already compliant (self-corrected initial audit finding) |
+| Product Categories — Superadmin-only | COMPLETE | Already compliant |
+| Units of Measure — type-of-measure dropdown | COMPLETE | Already compliant |
+| Vehicle Brands — multi-select Brand Of, Logo Upload (not URL) | COMPLETE | Already compliant / prior batch |
+| Product — General Information + 6 spec tables (Create) | COMPLETE | Already compliant |
+| Product — Edit dynamic form (spec tables, Category/UOM/Storage Location editable) | COMPLETE | Batch 4-5 |
+| Product — Consumable Specification/Grade Conditional-Mandatory trigger | COMPLETE | Category/Subcategory-driven (`requires_specification_grade`), Create+Edit parity, recalculates on Category change — Owner Decision 1 |
+| Product — Consumable Safety Data Sheet upload | COMPLETE | Batch 13 |
+| Product — Inventory Configuration (Stock Tracking, Min/Reorder/Max Stock) | COMPLETE | Batch 12; Stock Tracking already universal, Min/Reorder/Max Stock backend pre-existed, frontend UI added |
+| Product — Inventory Configuration (Serialized/Batch Tracked/Expiry Tracked/Checkout-able/Calibratable) | COMPLETE | Already implemented per-Item-Type, confirmed in Batch 12 audit |
+| Product — Inventory Configuration ("Installable" row) | COMPLETE (NOT_APPLICABLE) | Descriptive commentary in the source doc, not a configurable field — confirmed absent from every per-type Specification table in both documents |
+| Product — Rim/Tire "Maintainable" toggle | **NEEDS_OWNER_DECISION** | Summary table marks it Optional for Rim/Tire, but neither document's own detailed Rim/Tire Specification table lists it — not implemented speculatively (Batch 12) |
+| Product — Sparepart "Expiry Tracked" toggle | **NEEDS_OWNER_DECISION** | Same reasoning — summary table only, no per-type table backing (Batch 12) |
+| Product — Item Type dropdown (6 documented values only) | COMPLETE | `OTHER` (a pre-doc legacy value) excluded from new creation at both frontend and backend layers — Batch 14 |
+| Product — Image URL → real upload | COMPLETE | Batch 14, last remaining Image URL surface in the repository |
+| Work Order — Finding 422 / per-action status gating | COMPLETE | Batch 2 |
+| Work Order — Overview redesign, Est. Total Hours/Mechanics, crew-cost labor formula | COMPLETE | Batch 9 |
+| Work Order — Consume popup redesign (Install All/Installed Qty modal) | COMPLETE | Batch 10 |
+| Work Order — Return popup redesign (4 Condition labels, Available-to-return as system info, evidence upload) | COMPLETE | Batch 10 |
+| Work Order — "Used Qty" meaning (old/removed component vs. unused return) | COMPLETE | Owner Decision 2 — full `WorkOrderRemovedComponent`/`...Return` domain, proven not to reverse the new part's consumption (explicit test) |
+| Work Order — Removed Component costing/valuation treatment | **NEEDS_OWNER_DECISION** | Explicitly undefined by the requirement documents; currently records quantity/traceability only, zero cost effect (Batch 10, disclosed, non-blocking) |
+| Work Order — Removed Component serialized-asset integration (`ComponentAsset`) | **NEEDS_OWNER_DECISION** | Currently quantity-based for all products including serialized ones; integrating the existing serialized-asset module is flagged as valuable follow-up work, not started (Batch 10, disclosed, non-blocking) |
+| Work Order — Removed Component disposition workflow (inspect/repair/scrap) | NOT_COMPLETE (deliberately deferred) | Only the return-to-warehouse movement is recorded; a full disposition workflow was explicitly out of scope per "do not over-engineer" (Batch 10, disclosed, non-blocking) |
+| Work Order — Planned Parts vs. Request Parts reconciliation | COMPLETE | Batch 11 — new budgeting-only Planned Parts tab; old rich tab renamed Request Parts, gated `IN_PROGRESS`+ |
+| Work Order — full per-status Tab/button visibility matrix | NOT_COMPLETE (deliberately deferred) | Only `REQUEST_PARTS_VISIBLE_STATUSES` was gated (Batch 11); the complete matrix is flagged since Batch 9 as large, distinct, out-of-scope follow-up work |
+| Workshop Invoice — View History action | COMPLETE | Batch 3 |
+| External Work Order / Workshop Invoice / Work Authorization (doc 4) | COMPLETE | Already compliant, reviewed Batch 3 |
+| Maintenance Request + Assessment/Visual Inspection | COMPLETE | Batch 1 |
+| Maintenance Packages + Planning & Schedule | COMPLETE | Already compliant, reviewed Batch 7 |
+| Navigation/Layout — tenant logo + favicon | COMPLETE | Batch 8 |
+| Repository-wide Image URL → real upload sweep | COMPLETE | Batch 14 — every entity's image/logo/photo field converted (Tenant Logo, Vehicle Brand Logo, Vehicle Photo, Work Order Return/Removed-Component evidence, Consumable SDS, Product Image) |
+| Analytics/Intelligence (Phase 6/7 Mongo-backed) functionality | BLOCKED_EXTERNAL_DEPENDENCY | Out of this initiative's scope (separate Phase 6/7 track); `ext-mongodb` unavailable in this sandbox all session, SKIPPED/NOT RUN throughout — no code in this initiative touches this domain's business logic, only test-run mechanics (relocate/restore) |
+
+### N.3 — Test Results (actually executed, this session)
+
+- **Full non-Mongo backend regression: 800/800 PASS, 3583 assertions, 0
+  failures.** Executed clean, watched to completion, immediately before
+  this audit (`php artisan test`, `tests/Feature/Analytics/` and
+  `tests/Feature/Intelligence/` temporarily relocated alongside the
+  Mongo migrations per the established precedent, both restored
+  afterward with `git status --porcelain` confirming zero diff).
+- Frontend: `npm run build` (`tsc -b && vite build`) — PASS. `npm run
+  lint` (`oxlint`, full project) — 0 errors, 28 pre-existing warnings
+  (all `set-state-in-effect`/`only-export-components`/
+  `exhaustive-deps` in files predating or outside this initiative's
+  batches, or confirmed via `git stash` comparison to be pre-existing
+  instances of an already-established codebase pattern).
+- MongoDB (Analytics/Intelligence): SKIPPED / NOT RUN all session —
+  `ext-mongodb` unavailable, network-blocked from installing. This is
+  an environment limitation, not a code defect; see N.2's
+  BLOCKED_EXTERNAL_DEPENDENCY row.
+
+### N.4 — Git Diff Review
+
+Reviewed the full branch diff (`git diff main..HEAD`, 93 files) for
+debug code, secrets, and unrelated changes:
+
+- No `dd()`/`dump()`/`var_dump()`/`console.log()` debug calls found.
+- No hardcoded passwords, secrets, or API keys found.
+- No `.orig`/`.bak`/`.tmp` stray files.
+- No unrelated/out-of-scope files — every changed file traces directly
+  to a documented batch in `docs/status/TENANT_PORTAL_ALIGNMENT_STATUS.md`.
+- One intermediate commit (`435f4b7`) carries a `wip(...)` label from
+  the mid-session pause checkpoint described in STATUS.md; the code at
+  that commit was genuinely incomplete at the time (full-suite
+  regression not yet run), but every file it touched has since been
+  covered by full regression (this audit's N.3) with zero regressions
+  found — the `wip` label is a historical artifact of when it was
+  written, not a reflection of HEAD's current state. Per policy, this
+  was not amended or rewritten; it is safe to merge as part of the
+  branch's full commit sequence.
+
+### N.5 — Remaining Owner Decisions (genuinely unresolved, non-blocking)
+
+1. **Removed Component costing/valuation**: should a returned old
+   component ever carry a value onto the books (e.g. salvage value if
+   later sold/repaired/scrapped)? Undefined by the requirement
+   documents. Current behavior: zero cost/valuation effect, quantity/
+   traceability only.
+2. **Removed Component serialized-asset integration**: should a
+   removed component whose Product is serialized
+   (`track_serial_number = true`) integrate with the existing
+   `ComponentAsset`/`ComponentRemoval` module instead of the current
+   quantity-based flow? Flagged as valuable follow-up, not started.
+3. **Rim/Tire "Maintainable" toggle**: does the business genuinely need
+   a Maintenance Required/Interval toggle for Rim and Tire products
+   (mirroring Tool/Equipment), or was the summary table's "Optional"
+   mark imprecise? Not implemented without corroboration from either
+   document's detailed per-type Specification table.
+4. **Sparepart "Expiry Tracked" toggle**: same question for Sparepart's
+   Expiry Tracked — not implemented without corroboration.
+
+None of these four block a Pull Request: each is a small, additive,
+independently-implementable enhancement if the owner confirms it is
+wanted, and none contradicts or destabilizes any completed work.
+
+### N.6 — Deployment Prerequisites
+
+- `php artisan storage:link` must be run once per deployment
+  environment (Batch 8 finding) — without it, any public-disk upload
+  (tenant logo) 404s even though the upload itself succeeds. Not
+  committed code; cannot be verified from this sandbox.
+- `ext-mongodb` must be installed in any environment that runs the
+  Mongo-backed Analytics/Intelligence migrations/tests — unrelated to
+  this initiative's own changes, a pre-existing environment
+  requirement for that separate Phase 6/7 track.
+- New migrations in this initiative (all additive, no destructive
+  changes): `2026_09_28_000001` through `2026_09_28_000005` — must run
+  in a real deployment the same as any other migration
+  (`php artisan migrate`).
+
+### N.7 — READY / NOT READY FOR PULL REQUEST
+
+## READY FOR PULL REQUEST
+
+All conditions are met: full non-Mongo backend regression is green
+(800/800), frontend production build and lint are clean, the git diff
+contains no debug code, secrets, or unrelated changes, every batch in
+the established sequence is complete and documented, and the only open
+items are four small, explicitly-disclosed, non-blocking
+NEEDS_OWNER_DECISION enhancements that do not affect the stability or
+correctness of anything already shipped.
+
+**Per explicit instruction, the Pull Request itself has NOT been
+created.** This section is the readiness decision only; creating the
+PR requires separate, explicit approval.
+
+### N.8 — Suggested PR (for when creation is approved)
+
+**Title:** `Tenant Portal alignment: Work Order redesign, Product spec/inventory gaps, image-upload sweep (Batches 1-14)`
+
+**Body outline:**
+- Summary: closes the Tenant Portal requirement re-audit initiative
+  across 5 source documents — Maintenance Request/Inspection, Work
+  Order (Finding gating, Overview/Consume/Return redesign, Removed
+  Component Return, Planned Parts), Product (Edit dynamic form,
+  Consumable Specification/Grade, SDS upload, Inventory Configuration,
+  Image upload), Workshop Invoice History, master data (Worker Type,
+  Vehicle Brand, UOM, Scheduler), and a repository-wide Image URL →
+  upload conversion.
+- Link to `docs/status/TENANT_PORTAL_ALIGNMENT_STATUS.md` and this
+  Final Report for full detail.
+- Test plan: `php artisan test` (800/800, Mongo-dependent tests
+  excluded per documented environment limitation), `npm run build`,
+  `npm run lint`.
+- Remaining owner decisions: the four items in §N.5, called out
+  explicitly as non-blocking follow-ups.

@@ -1869,3 +1869,35 @@ committing.
   are complete; the sweep found and closed exactly one remaining gap
   (Product's `image_url`) — every other entity's image/logo/photo field
   in the tenant portal was already converted in an earlier batch.
+
+## Batch 15 Detail (Final PR-readiness audit)
+
+Full detail lives in
+`docs/status/TENANT_PORTAL_ALIGNMENT_FINAL_REPORT.md` §N (the
+authoritative, current closure section — §§A-M of that document predate
+Batch 9 and are kept only as historical record). Summary:
+
+- **Full non-Mongo backend regression, run clean and watched to
+  completion: 800/800 PASS, 3583 assertions, 0 failures.** Mongo
+  migrations and `tests/Feature/Analytics`/`Intelligence` relocated per
+  the established precedent, restored immediately after with
+  `git status --porcelain` confirming zero diff.
+- Frontend: `npm run build` PASS, `npm run lint` 0 errors (28
+  pre-existing warnings, no new categories).
+- Git diff review (`git diff main..HEAD`, 93 files, the full branch):
+  no debug code, no secrets, no unrelated files — every change traces
+  to a documented batch.
+- Final Requirement Closure Matrix built (COMPLETE /
+  NEEDS_OWNER_DECISION / BLOCKED_EXTERNAL_DEPENDENCY / NOT_COMPLETE) —
+  see Final Report §N.2. Four small, disclosed, non-blocking
+  NEEDS_OWNER_DECISION items remain (Removed Component costing,
+  Removed Component serialized-asset integration, Rim/Tire
+  Maintainable, Sparepart Expiry Tracked); two deliberately-deferred
+  NOT_COMPLETE follow-ups (Removed Component disposition workflow, full
+  per-status Tab/button visibility matrix); Analytics/Intelligence
+  correctly classified BLOCKED_EXTERNAL_DEPENDENCY (out of this
+  initiative's scope, pre-existing `ext-mongodb` environment
+  limitation).
+- **Decision: READY FOR PULL REQUEST.** Per explicit instruction, the
+  Pull Request itself was NOT created — this is the readiness decision
+  only, awaiting separate explicit approval to create it.
