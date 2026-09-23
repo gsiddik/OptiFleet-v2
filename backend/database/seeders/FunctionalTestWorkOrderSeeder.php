@@ -77,14 +77,19 @@ class FunctionalTestWorkOrderSeeder
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'HIGH',
                 'complaint' => '[FT-WO-IN_PROGRESS] Brake pedal soft, needs inspection.',
             ], null);
+
+            // Findings/Diagnosis are a Draft-only scoping exercise (see
+            // WorkOrderExecutionService::assertFindingScopeEditable) — must be
+            // recorded before submit()/approve()/.../start() move the WO past Draft.
+            $finding = $execution->addFinding($wo, ['component_group_id' => $brakeGroupId, 'severity' => 'HIGH', 'description' => 'Worn brake pads.'], $leadMechanic->id);
+            $execution->addDiagnosis($wo, ['work_order_finding_id' => $finding->id, 'root_cause' => 'Brake pads worn beyond limit.'], $leadMechanic->id);
+
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
             $wo = $workOrders->schedule($wo, $bay2->id, $referenceDate->copy()->setTime(8, 0), $referenceDate->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
 
-            $finding = $execution->addFinding($wo, ['component_group_id' => $brakeGroupId, 'severity' => 'HIGH', 'description' => 'Worn brake pads.'], $leadMechanic->id);
-            $execution->addDiagnosis($wo, ['work_order_finding_id' => $finding->id, 'root_cause' => 'Brake pads worn beyond limit.'], $leadMechanic->id);
             $job = $execution->addJob($wo, ['component_group_id' => $brakeGroupId, 'service_item' => 'Replace brake pads', 'description' => 'Replace front brake pads.', 'estimated_hours' => 1.5]);
             $mechanics->assign($wo, $leadMechanic, 'PRIMARY', $job->id, null);
             $execution->updateJobStatus($job, 'ASSIGNED');
@@ -99,12 +104,17 @@ class FunctionalTestWorkOrderSeeder
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
                 'complaint' => '[FT-WO-ON_HOLD] Engine noise on cold start.',
             ], null);
+
+            // Findings are a Draft-only scoping exercise (see
+            // WorkOrderExecutionService::assertFindingScopeEditable) — must be
+            // recorded before submit()/approve()/.../start() move the WO past Draft.
+            $execution->addFinding($wo, ['component_group_id' => $engineGroupId, 'severity' => 'MEDIUM', 'description' => 'Awaiting customer approval for engine mount replacement.'], null);
+
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
             $wo = $workOrders->schedule($wo, $bay2->id, $referenceDate->copy()->setTime(8, 0), $referenceDate->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
-            $execution->addFinding($wo, ['component_group_id' => $engineGroupId, 'severity' => 'MEDIUM', 'description' => 'Awaiting customer approval for engine mount replacement.'], null);
 
             return $workOrders->hold($wo);
         }, null);
@@ -153,14 +163,19 @@ class FunctionalTestWorkOrderSeeder
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'HIGH',
                 'complaint' => '[FT-WO-COMPLETED] Brake pads replaced and verified.',
             ], null);
+
+            // Findings/Diagnosis are a Draft-only scoping exercise (see
+            // WorkOrderExecutionService::assertFindingScopeEditable) — must be
+            // recorded before submit()/approve()/.../start() move the WO past Draft.
+            $finding = $execution->addFinding($wo, ['component_group_id' => $brakeGroupId, 'severity' => 'HIGH', 'description' => 'Worn brake pads.'], $leadMechanic->id);
+            $execution->addDiagnosis($wo, ['work_order_finding_id' => $finding->id, 'root_cause' => 'Brake pads worn beyond limit.'], $leadMechanic->id);
+
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
             $wo = $workOrders->schedule($wo, $bay1->id, $yesterday->copy()->setTime(8, 0), $yesterday->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
 
-            $finding = $execution->addFinding($wo, ['component_group_id' => $brakeGroupId, 'severity' => 'HIGH', 'description' => 'Worn brake pads.'], $leadMechanic->id);
-            $execution->addDiagnosis($wo, ['work_order_finding_id' => $finding->id, 'root_cause' => 'Brake pads worn beyond limit.'], $leadMechanic->id);
             $job = $execution->addJob($wo, ['component_group_id' => $brakeGroupId, 'service_item' => 'Replace brake pads', 'description' => 'Replace front brake pads.', 'estimated_hours' => 1.5]);
             $mechanics->assign($wo, $leadMechanic, 'PRIMARY', $job->id, null);
             $execution->updateJobStatus($job, 'ASSIGNED');

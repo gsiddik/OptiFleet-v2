@@ -122,7 +122,7 @@ class ConfigurationAuditAndRegressionTest extends TestCase
 
         // Phase 3: Work Order creation (numbering + workflow version pinned, Phase 5).
         $wo = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $this->assertMatchesRegularExpression('#^WO/OPTIFLEET/\d{4}/\d{6}$#', $wo->json('data.wo_number'));
 

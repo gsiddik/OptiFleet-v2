@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
@@ -24,7 +24,7 @@ interface CompanyProfile {
 
 /** G-15: previously a tenant had no self-service way to view or maintain its own company profile. */
 export function CompanyProfilePage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, refresh } = useAuth();
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [legalName, setLegalName] = useState('');
   const [industry, setIndustry] = useState('');
@@ -36,12 +36,14 @@ export function CompanyProfilePage() {
   const [fax, setFax] = useState('');
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
   const [workshopWorkingDays, setWorkshopWorkingDays] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
     apiClient
@@ -59,7 +61,6 @@ export function CompanyProfilePage() {
         setFax(p.fax ?? '');
         setEmail(p.email ?? '');
         setWebsite(p.website ?? '');
-        setLogoUrl(p.logo_url ?? '');
         setWorkshopWorkingDays(p.workshop_working_days ? String(p.workshop_working_days) : '');
       })
       .catch((err) => setError(extractApiError(err).message));
@@ -83,7 +84,6 @@ export function CompanyProfilePage() {
         fax: fax || null,
         email: email || null,
         website: website || null,
-        logo_url: logoUrl || null,
         workshop_working_days: workshopWorkingDays ? Number(workshopWorkingDays) : null,
       });
       setSaved(true);
@@ -93,6 +93,27 @@ export function CompanyProfilePage() {
       setErrors(apiError.errors ?? {});
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function uploadLogo(file: File) {
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setLogoError('Only JPG or PNG images are accepted.');
+      return;
+    }
+    setUploadingLogo(true);
+    setLogoError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await apiClient.post('/app/account/company/logo', form);
+      setProfile(res.data.data);
+      await refresh();
+    } catch (err) {
+      setLogoError(extractApiError(err).message);
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }
 
@@ -149,8 +170,28 @@ export function CompanyProfilePage() {
         <FormField label="Website" errors={errors.website}>
           <input value={website} onChange={(e) => setWebsite(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>
-        <FormField label="Logo URL" errors={errors.logo_url}>
-          <input value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} style={inputStyle} disabled={!canEdit} />
+        <FormField label="Logo (JPG or PNG)" errors={logoError ? [logoError] : undefined}>
+          {profile.logo_url && (
+            <img src={profile.logo_url} alt={profile.name} style={{ maxWidth: 160, display: 'block', marginBottom: 8, borderRadius: 6 }} />
+          )}
+          {canEdit && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png"
+                disabled={uploadingLogo}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) uploadLogo(file);
+                }}
+              />
+              {uploadingLogo && <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>Uploading…</span>}
+            </>
+          )}
+          <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+            Used in the sidebar and browser tab icon for this tenant.
+          </div>
         </FormField>
         <FormField label="Workshop Working Days" required errors={errors.workshop_working_days}>
           <select
@@ -169,7 +210,6 @@ export function CompanyProfilePage() {
             maintenance schedule can be created.
           </div>
         </FormField>
-        {profile.logo_url && <img src={profile.logo_url} alt={profile.name} style={{ maxWidth: 160, marginBottom: 12, borderRadius: 6 }} />}
         {canEdit && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
             <button className="btn-primary" disabled={saving} onClick={save}>

@@ -7,6 +7,8 @@ use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\ProductCompatibility;
 use App\Domain\ProductMaster\Services\ProductCompatibilityService;
+use App\Domain\ProductMaster\Services\ProductConsumableSdsService;
+use App\Domain\ProductMaster\Services\ProductImageService;
 use App\Domain\ProductMaster\Services\ProductSpecificationService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
@@ -14,6 +16,7 @@ use App\Http\Requests\Tenant\StoreProductRequest;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
@@ -31,6 +34,8 @@ class ProductController extends Controller
         private readonly ProductCompatibilityService $compatibility,
         private readonly DocumentNumberingService $numbers,
         private readonly ProductSpecificationService $specs,
+        private readonly ProductConsumableSdsService $sds,
+        private readonly ProductImageService $images,
         private readonly TenantContext $context,
     ) {}
 
@@ -67,7 +72,7 @@ class ProductController extends Controller
         // spec submission never burns an Item Code.
         ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate(
             $productType,
-            $request->only(['brand', 'track_serial_number', 'track_batch']),
+            $request->only(['brand', 'track_serial_number', 'track_batch', 'product_category_id']),
             (array) $request->input('spec', [])
         );
 
@@ -104,6 +109,16 @@ class ProductController extends Controller
         return $this->ok($product->load($relations));
     }
 
+    /**
+     * Section 15/Edit Dynamic Form: Edit must reconstruct and persist the Item Type's spec
+     * table, not just the generic physical columns — previously this endpoint never touched
+     * Category/Subcategory/UOM/Default Storage Location or any of the 6 spec tables at all.
+     * Item Type itself stays immutable on Edit (same precedent as Item Code): changing it
+     * would mean an entirely different spec table, which is a new-product decision, not an
+     * edit. A `spec` payload is required only when the product_type actually has spec fields
+     * (not OTHER); its absence is a no-op rather than an error, so a caller only touching
+     * general fields (e.g. a bare Active toggle) doesn't have to resend the whole form.
+     */
     public function update(Request $request, Product $product)
     {
         $this->authorizeVisible($product);
@@ -112,6 +127,8 @@ class ProductController extends Controller
         $tenantId = $this->context->tenantId();
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
+            'product_category_id' => ['sometimes', 'uuid', \Illuminate\Validation\Rule::exists('product_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
+            'uom_id' => ['sometimes', 'uuid', \Illuminate\Validation\Rule::exists('uoms', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             'brand' => ['nullable', 'string', 'max:100'],
             'manufacturer' => ['nullable', 'string', 'max:150'],
             'material' => ['nullable', 'string', 'max:100'],
@@ -138,9 +155,40 @@ class ProductController extends Controller
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
             'reference_tread_depth_mm' => ['sometimes', 'nullable', 'numeric', 'min:0.01'],
         ]);
-        $product->update($validated);
 
-        return $this->ok($product->fresh());
+        if (! empty($validated['product_category_id'])) {
+            $category = ProductCategory::query()->find($validated['product_category_id']);
+            if ($category && $category->item_type && $category->item_type !== $product->product_type) {
+                throw ValidationException::withMessages(['product_category_id' => 'The selected category does not apply to this Item Type.']);
+            }
+        }
+
+        $generalOverrides = [];
+        $validatedSpec = null;
+        if ($request->has('spec') && (self::SPEC_RELATIONS[$product->product_type] ?? null)) {
+            // A spec-only Edit (e.g. only Specification/Grade changed, Category untouched)
+            // must still evaluate the Conditional-Mandatory rule against the product's
+            // EXISTING category, not silently treat it as "no category" (i.e. never required).
+            $specValidationInput = $validated + ['product_category_id' => $product->product_category_id];
+            ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate(
+                $product->product_type,
+                $specValidationInput,
+                (array) $request->input('spec', []),
+                includeCompatibilities: false,
+            );
+        }
+
+        DB::transaction(function () use ($product, $validated, $generalOverrides, $validatedSpec) {
+            $product->update(array_merge($validated, $generalOverrides));
+            if ($validatedSpec !== null) {
+                $this->specs->persist($product, $validatedSpec, includeCompatibilities: false);
+            }
+        });
+
+        $relation = self::SPEC_RELATIONS[$product->product_type] ?? null;
+        $product = $product->fresh();
+
+        return $this->ok($relation ? $product->load($relation) : $product);
     }
 
     public function syncComponentGroups(Request $request, Product $product)
@@ -182,6 +230,67 @@ class ProductController extends Controller
         $compatibility->delete();
 
         return $this->message('Compatibility rule removed.');
+    }
+
+    public function uploadImage(Request $request, Product $product)
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
+
+        $request->validate(['file' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png']]);
+
+        $product = $this->images->upload($product, $request->file('file'));
+
+        return $this->ok($product);
+    }
+
+    public function showImage(Product $product)
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->image_path === null, 404);
+
+        return Storage::disk('local')->response($product->image_path, $product->image_original_filename);
+    }
+
+    public function destroyImage(Product $product)
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
+
+        $this->images->delete($product);
+
+        return $this->message('Product image removed.');
+    }
+
+    public function uploadSds(Request $request, Product $product)
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
+
+        $request->validate(['file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf']]);
+
+        $spec = $this->sds->upload($product, $request->file('file'));
+
+        return $this->ok($spec);
+    }
+
+    public function showSds(Product $product)
+    {
+        $this->authorizeVisible($product);
+        $spec = $product->consumableSpec;
+        abort_if($spec === null || $spec->sds_file_path === null, 404);
+
+        return Storage::disk('local')->response($spec->sds_file_path, $spec->sds_original_filename);
+    }
+
+    public function destroySds(Product $product)
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
+
+        $this->sds->delete($product);
+
+        return $this->message('Safety Data Sheet removed.');
     }
 
     public function compatibleFor(Request $request)

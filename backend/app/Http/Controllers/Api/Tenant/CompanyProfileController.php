@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\Identity\Models\Tenant;
+use App\Domain\Identity\Services\TenantLogoService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -14,7 +15,10 @@ use Illuminate\Http\Request;
  */
 class CompanyProfileController extends Controller
 {
-    public function __construct(private readonly TenantContext $context) {}
+    public function __construct(
+        private readonly TenantContext $context,
+        private readonly TenantLogoService $logos,
+    ) {}
 
     public function show()
     {
@@ -42,5 +46,15 @@ class CompanyProfileController extends Controller
         $tenant->update($validated);
 
         return $this->ok($tenant->fresh());
+    }
+
+    public function uploadLogo(Request $request)
+    {
+        $request->validate(['file' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png']]);
+
+        $tenant = Tenant::query()->findOrFail($this->context->tenantId());
+        $tenant = $this->logos->upload($tenant, $request->file('file'));
+
+        return $this->ok($tenant);
     }
 }

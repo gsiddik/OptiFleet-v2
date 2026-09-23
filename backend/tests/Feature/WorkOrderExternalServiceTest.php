@@ -44,7 +44,7 @@ class WorkOrderExternalServiceTest extends TestCase
         [, , $workshop, $vehicle] = $scenario;
         $headers = $this->authHeaders($token);
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
 
@@ -104,7 +104,7 @@ class WorkOrderExternalServiceTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
 
         $this->postJson("/api/v1/app/work-orders/{$create->json('data.id')}/external-services", [

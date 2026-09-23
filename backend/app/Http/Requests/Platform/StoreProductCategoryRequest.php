@@ -27,6 +27,9 @@ class StoreProductCategoryRequest extends FormRequest
             'parent_id' => ['nullable', 'uuid', Rule::exists('product_categories', 'id')->whereNull('tenant_id')],
             'item_type' => ['nullable', 'in:SPARE_PART,TOOL,TIRE,CONSUMABLE,EQUIPMENT,RIM,OTHER'],
             'description' => ['nullable', 'string'],
+            // Only meaningful for CONSUMABLE (Category or Subcategory) — drives whether that
+            // category's Specification/Grade field is Conditional-Mandatory on the Product form.
+            'requires_specification_grade' => ['nullable', 'boolean'],
         ];
     }
 }

@@ -63,7 +63,7 @@ export function WorkOrderListPage() {
 }
 
 function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
-  const [vehicles, setVehicles] = useState<{ id: string; registration_number: string }[]>([]);
+  const [vehicles, setVehicles] = useState<{ id: string; registration_number: string; current_odometer: string | null; engine_hour: string | null }[]>([]);
   const [vehicleId, setVehicleId] = useState('');
   const [maintenanceType, setMaintenanceType] = useState('CORRECTIVE');
   const [priority, setPriority] = useState('MEDIUM');
@@ -72,6 +72,7 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
   const [engineHour, setEngineHour] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
+  const selectedVehicle = vehicles.find((v) => v.id === vehicleId);
 
   useEffect(() => {
     if (!open) return;
@@ -117,7 +118,7 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
       </FormField>
       <FormField label="Maintenance Type" errors={errors.maintenance_type} required>
         <select value={maintenanceType} onChange={(e) => setMaintenanceType(e.target.value)} style={inputStyle}>
-          {['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECTION', 'CAMPAIGN'].map((t) => (
+          {['CORRECTIVE', 'BREAKDOWN'].map((t) => (
             <option key={t} value={t}>
               {t}
             </option>
@@ -137,10 +138,12 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
         <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Current KM (optional)" errors={errors.current_odometer}>
+        <FormField label="Current KM" required errors={errors.current_odometer}>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Last Odometer: {selectedVehicle?.current_odometer ?? '—'}</div>
           <input type="number" min="0" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Current HM (optional)" errors={errors.engine_hour}>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Last HM: {selectedVehicle?.engine_hour ?? '—'}</div>
           <input type="number" min="0" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
@@ -148,7 +151,7 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
         <button className="btn-secondary" onClick={onClose}>
           Cancel
         </button>
-        <button className="btn-primary" disabled={submitting || !vehicleId} onClick={submit}>
+        <button className="btn-primary" disabled={submitting || !vehicleId || !currentOdometer} onClick={submit}>
           Create
         </button>
       </div>

@@ -44,7 +44,7 @@ class ExternalWorkOrderTest extends TestCase
     private function createDraftWorkOrder($workshop, $vehicle, $headers): string
     {
         return $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
     }
 

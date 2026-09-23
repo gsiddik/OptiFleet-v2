@@ -182,7 +182,7 @@ class MaintenanceRequestAssessmentTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, ['maintenance_request.view', 'maintenance_request.create']);
         $headers = $this->authHeaders($token);
         $id = $this->createDraftRequest($vehicle, $headers);
-        $this->postJson("/api/v1/app/maintenance-requests/{$id}/cancel", [], $headers)->assertOk();
+        $this->postJson("/api/v1/app/maintenance-requests/{$id}/cancel", ['note' => 'no longer needed'], $headers)->assertOk();
 
         $this->postJson("/api/v1/app/maintenance-requests/{$id}/assessment", [
             'notes' => 'tampering', 'groups' => $this->fullGroupPayload(),
@@ -308,5 +308,37 @@ class MaintenanceRequestAssessmentTest extends TestCase
                 ->exists(),
             'Audit trail for a request that passed through NEED_INFORMATION must remain queryable, not purged.'
         );
+    }
+
+    public function test_cancel_requires_a_reason_and_persists_it(): void
+    {
+        [$tenant, , , $vehicle] = $this->setUpTenant();
+        [, $token] = $this->makeTenantUser($tenant, ['maintenance_request.view', 'maintenance_request.create']);
+        $headers = $this->authHeaders($token);
+        $id = $this->createDraftRequest($vehicle, $headers);
+
+        $this->postJson("/api/v1/app/maintenance-requests/{$id}/cancel", [], $headers)->assertStatus(422);
+
+        $this->postJson("/api/v1/app/maintenance-requests/{$id}/cancel", ['note' => 'Vehicle sold.'], $headers)
+            ->assertOk()
+            ->assertJsonPath('data.status', 'CANCELLED')
+            ->assertJsonPath('data.cancellation_reason', 'Vehicle sold.');
+    }
+
+    public function test_list_and_detail_expose_requested_by_user(): void
+    {
+        [$tenant, , , $vehicle] = $this->setUpTenant();
+        [$user, $token] = $this->makeTenantUser($tenant, ['maintenance_request.view', 'maintenance_request.create']);
+        $headers = $this->authHeaders($token);
+        $id = $this->createDraftRequest($vehicle, $headers);
+
+        $this->getJson('/api/v1/app/maintenance-requests', $headers)
+            ->assertOk()
+            ->assertJsonPath('data.0.requested_by_user.name', $user->name);
+
+        $this->getJson("/api/v1/app/maintenance-requests/{$id}", $headers)
+            ->assertOk()
+            ->assertJsonPath('data.requested_by_user.name', $user->name)
+            ->assertJsonPath('data.requested_by_user.id', $user->id);
     }
 }

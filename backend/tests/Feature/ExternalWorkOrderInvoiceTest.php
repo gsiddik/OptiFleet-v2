@@ -43,7 +43,7 @@ class ExternalWorkOrderInvoiceTest extends TestCase
     private function finalizeAsExternal($workshop, $vehicle, $headers): string
     {
         $id = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
         $this->postJson("/api/v1/app/work-orders/{$id}/execution-mode/external", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/external-findings", [
@@ -68,6 +68,26 @@ class ExternalWorkOrderInvoiceTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame('NEW_EXTERNAL_WO', $row['status']);
         $this->assertSame(['generate_authorization', 'cancel', 'view_history'], $row['allowed_actions']);
+    }
+
+    public function test_history_reports_status_changes_in_order(): void
+    {
+        [$tenant, , $workshop, $vehicle] = $this->setUpTenant();
+        [$user, $token] = $this->makeTenantUser($tenant, $this->externalPermissions());
+        $headers = $this->authHeaders($token);
+        $id = $this->finalizeAsExternal($workshop, $vehicle, $headers);
+        $invoiceId = WorkOrderExternalInvoice::query()->where('work_order_id', $id)->value('id');
+
+        $this->postJson("/api/v1/app/work-orders/{$id}/external/cancel", ['reason' => 'no longer needed'], $headers)->assertOk();
+
+        $response = $this->getJson("/api/v1/app/external-work-order-invoices/{$invoiceId}/history", $headers)->assertOk();
+        $entries = $response->json('data');
+
+        $this->assertGreaterThanOrEqual(2, count($entries));
+        $this->assertSame('created', $entries[0]['action']);
+        $this->assertSame($user->name, $entries[0]['actor_name']);
+        $last = $entries[count($entries) - 1];
+        $this->assertSame('CANCELLED', $last['new_values']['status'] ?? null);
     }
 
     public function test_show_returns_detail_with_allowed_actions(): void

@@ -147,7 +147,7 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
 
@@ -165,7 +165,7 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
         $this->driveToInProgress($id, $headers);
@@ -182,7 +182,7 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
         $this->driveToQcPending($id, $headers);
@@ -202,7 +202,7 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
         $this->driveToQcPending($id, $headers);
@@ -219,17 +219,18 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
-        $this->driveToInProgress($id, $headers);
 
+        // Findings are Draft-only — add before driving the WO forward.
         $finding = $this->postJson("/api/v1/app/work-orders/{$id}/findings", [
             'severity' => 'HIGH', 'description' => 'Worn fan belt found during inspection.',
         ], $headers)->assertStatus(201);
         $findingId = $finding->json('data.id');
         $this->assertSame('OPEN', $finding->json('data.status'));
 
+        $this->driveToInProgress($id, $headers);
         $this->postJson("/api/v1/app/work-orders/{$id}/submit-to-qc", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/complete", [], $headers)->assertStatus(422);
 
@@ -247,16 +248,16 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
-        $this->driveToInProgress($id, $headers);
 
         $finding = $this->postJson("/api/v1/app/work-orders/{$id}/findings", [
             'severity' => 'LOW', 'description' => 'Minor scratch.',
         ], $headers)->assertStatus(201);
         $findingId = $finding->json('data.id');
 
+        $this->driveToInProgress($id, $headers);
         $this->postJson("/api/v1/app/work-orders/{$id}/findings/{$findingId}/resolve", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/findings/{$findingId}/resolve", [], $headers)->assertStatus(422);
     }
@@ -268,7 +269,7 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
         $this->driveToQcPending($id, $headers);
@@ -298,7 +299,7 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
         $this->driveToQcPending($id, $headers);
@@ -321,19 +322,19 @@ class WorkOrderLifecycleGapsTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
-        $this->driveToInProgress($id, $headers);
         $finding = $this->postJson("/api/v1/app/work-orders/{$id}/findings", [
             'severity' => 'LOW', 'description' => 'x',
         ], $headers)->assertStatus(201);
+        $this->driveToInProgress($id, $headers);
 
         [$otherTenant, , $otherWorkshop, $otherVehicle] = $this->setUpTenant();
         [, $otherToken] = $this->makeTenantUser($otherTenant, $this->fullPermissions());
         $otherHeaders = $this->authHeaders($otherToken);
         $otherCreate = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $otherVehicle->id, 'workshop_id' => $otherWorkshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $otherVehicle->id, 'workshop_id' => $otherWorkshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $otherHeaders)->assertStatus(201);
         $otherId = $otherCreate->json('data.id');
 

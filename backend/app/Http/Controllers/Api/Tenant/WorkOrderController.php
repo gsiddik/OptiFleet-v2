@@ -101,10 +101,15 @@ class WorkOrderController extends Controller
             'vehicle', 'branch', 'workshop', 'findings', 'diagnoses', 'correctiveActions',
             'jobs.laborLogs', 'jobs.primaryAssignment', 'plannedParts.product', 'plannedParts.warehouse', 'additionalWorks', 'mechanicAssignments.worker',
             'roadTests', 'vehicleRelease', 'externalServices.partner', 'workspaceReservations.workspace',
+            'removedComponents.product', 'removedComponents.maintenanceJob', 'removedComponents.return', 'removedComponents.evidence',
+            'plannedPartEstimates.product',
         ]);
-        // Computed suggestion only, scoped to this single-record response (never appended
-        // globally — a list endpoint appending it to every row would N+1 across the page).
+        // Computed values only, scoped to this single-record response (never appended
+        // globally — a list endpoint appending them to every row would N+1 across the page).
         $workOrder->setAttribute('estimated_labor_cost_computed', $workOrder->computedEstimatedLaborCost());
+        $workOrder->setAttribute('estimated_total_hours', $workOrder->estimatedTotalHours());
+        $workOrder->setAttribute('estimated_number_of_mechanics', $workOrder->estimatedNumberOfMechanics());
+        $workOrder->setAttribute('estimated_parts_cost_computed', $workOrder->computedEstimatedPartsCost());
 
         return $this->ok($workOrder);
     }

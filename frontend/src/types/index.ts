@@ -12,6 +12,7 @@ export interface TenantMembership {
   tenant_id: string;
   tenant_code: string;
   tenant_name: string;
+  tenant_logo_url: string | null;
   status: 'active' | 'inactive';
   roles: string[];
 }
@@ -603,16 +604,21 @@ export interface MaintenanceRequestItem {
   workshop_id: string | null;
   vehicle_id: string;
   component_group_id: string | null;
-  source_type: 'USER' | 'INSPECTION' | 'SCHEDULE' | 'BREAKDOWN' | 'TELEMATICS' | 'MECHANIC';
+  source_type: 'USER' | 'INSPECTION' | 'SCHEDULE' | 'BREAKDOWN' | 'TELEMATICS' | 'MECHANIC' | 'INTELLIGENCE';
+  source_inspection_id: string | null;
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
   complaint: string;
   status: 'DRAFT' | 'SUBMITTED' | 'UNDER_REVIEW' | 'APPROVED' | 'WORK_ORDER_CREATED' | 'REJECTED' | 'NEED_INFORMATION' | 'CANCELLED';
   review_note: string | null;
+  cancellation_reason: string | null;
   work_order_id: string | null;
+  requested_by: string | null;
+  created_at: string;
   vehicle?: VehicleItem;
   branch?: Branch;
   workshop?: Workshop;
   component_group?: ComponentGroup;
+  requested_by_user?: { id: string; name: string } | null;
 }
 
 export const INSPECTION_GROUP_CODES = [
@@ -726,6 +732,55 @@ export interface WorkOrderPlannedPartItem {
   returned_quantity: string;
   unit_cost_at_issue: string | null;
   total_cost: string | null;
+}
+
+/** Doc's true "Planned Parts" tab — pure budgeting, never touches warehouse stock. */
+export interface WorkOrderPlannedPartEstimateItem {
+  id: string;
+  work_order_id: string;
+  product_id: string;
+  quantity: string;
+  notes: string | null;
+  product?: ProductItem;
+}
+
+export interface WorkOrderPartReturnEvidenceItem {
+  id: string;
+  work_order_planned_part_id: string;
+  work_order_part_return_id: string | null;
+  original_filename: string | null;
+}
+
+/** Owner decision: an old/removed component taken off the vehicle, distinct from an unused-issued-stock return. */
+export interface WorkOrderRemovedComponentItem {
+  id: string;
+  work_order_id: string;
+  maintenance_job_id: string | null;
+  replaced_by_planned_part_id: string | null;
+  product_id: string;
+  quantity: string;
+  condition: 'GOOD' | 'FAULTY';
+  notes: string | null;
+  status: 'PENDING_RETURN' | 'RETURNED';
+  removed_at: string;
+  product?: ProductItem;
+  maintenance_job?: MaintenanceJobItem;
+  return?: WorkOrderRemovedComponentReturnItem | null;
+  evidence?: WorkOrderRemovedComponentEvidenceItem[];
+}
+
+export interface WorkOrderRemovedComponentReturnItem {
+  id: string;
+  work_order_removed_component_id: string;
+  warehouse_id: string;
+  quantity: string;
+  reason: string | null;
+}
+
+export interface WorkOrderRemovedComponentEvidenceItem {
+  id: string;
+  work_order_removed_component_id: string;
+  original_filename: string | null;
 }
 
 export interface PartRequestLineItem {
@@ -962,6 +1017,9 @@ export interface WorkOrderItem {
   external_finalized_revision: number;
   cancellation_reason: string | null;
   estimated_labor_cost_computed?: string | null;
+  estimated_total_hours?: string | null;
+  estimated_number_of_mechanics?: number;
+  estimated_parts_cost_computed?: string | null;
   vehicle?: VehicleItem;
   branch?: Branch;
   workshop?: Workshop;
@@ -970,6 +1028,8 @@ export interface WorkOrderItem {
   corrective_actions?: WorkOrderCorrectiveActionItem[];
   jobs?: MaintenanceJobItem[];
   planned_parts?: WorkOrderPlannedPartItem[];
+  planned_part_estimates?: WorkOrderPlannedPartEstimateItem[];
+  removed_components?: WorkOrderRemovedComponentItem[];
   additional_works?: WorkOrderAdditionalWorkItem[];
   mechanic_assignments?: WorkOrderMechanicAssignmentItem[];
   road_tests?: RoadTestItem[];
@@ -992,6 +1052,7 @@ export interface WorkerItem {
   branch_id: string;
   workshop_id: string | null;
   worker_type: 'LEAD_MECHANIC' | 'MECHANIC' | 'TECHNICIAN' | 'INSPECTOR' | 'QC';
+  worker_type_id: string | null;
   status: 'ACTIVE' | 'INACTIVE';
   user_id: string | null;
   phone: string | null;
@@ -1004,6 +1065,7 @@ export interface WorkerItem {
   workshop?: Workshop;
   skills?: WorkerSkillItem[];
   active_job_count?: number;
+  worker_type_master?: WorkerTypeItem;
 }
 
 export interface WorkspaceItem {
@@ -1081,6 +1143,7 @@ export interface ProductCategoryItem {
   description: string | null;
   is_system: boolean;
   status: string;
+  requires_specification_grade: boolean;
 }
 
 export interface UomItem {
@@ -1227,6 +1290,7 @@ export interface ProductConsumableSpecItem {
   shelf_life_unit: string | null;
   is_hazardous: boolean;
   sds_file_path: string | null;
+  sds_original_filename: string | null;
   storage_requirements?: StorageRequirementItem[];
 }
 
@@ -1314,6 +1378,7 @@ export interface ProductItem {
   product_type: ItemType;
   uom_id: string;
   default_storage_bin_id: string | null;
+  description: string | null;
   brand: string | null;
   manufacturer: string | null;
   material: string | null;
@@ -1323,6 +1388,8 @@ export interface ProductItem {
   width_mm: string | null;
   height_mm: string | null;
   image_url: string | null;
+  image_path: string | null;
+  image_original_filename: string | null;
   manufacturer_part_number: string | null;
   track_serial_number: boolean;
   track_batch: boolean;

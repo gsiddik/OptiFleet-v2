@@ -119,6 +119,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
         Route::get('/company', [CompanyProfileController::class, 'show'])->middleware('permission:company.view');
         Route::put('/company', [CompanyProfileController::class, 'update'])->middleware('permission:company.update');
+        Route::post('/company/logo', [CompanyProfileController::class, 'uploadLogo'])->middleware('permission:company.update');
 
         Route::get('/invoices', [AccountInvoiceController::class, 'index'])->middleware('permission:account.invoice.view');
         Route::get('/invoices/{invoice}', [AccountInvoiceController::class, 'show'])->middleware('permission:account.invoice.view');
@@ -305,6 +306,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/resume', [WorkOrderController::class, 'resume'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/wait-for-part', [WorkOrderController::class, 'waitForPart'])->middleware('permission:work_order.pause');
             Route::post('/work-orders/{workOrder}/findings', [WorkOrderExecutionController::class, 'addFinding'])->middleware('permission:diagnosis.manage');
+            Route::delete('/work-orders/{workOrder}/findings/{finding}', [WorkOrderExecutionController::class, 'deleteFinding'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/findings/{finding}/resolve', [WorkOrderExecutionController::class, 'resolveFinding'])->middleware('permission:diagnosis.manage');
 
             // Consolidated External Workshop business rules — deliberately separate from the
@@ -333,9 +335,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/external-work-order-invoices/{externalInvoice}/vendor-invoice', [ExternalWorkOrderInvoiceController::class, 'viewVendorInvoice'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/external-work-order-invoices/{externalInvoice}/settle', [ExternalWorkOrderInvoiceController::class, 'settle'])->middleware('permission:external_work_order_invoice.settle');
             Route::get('/external-work-order-invoices/{externalInvoice}/payment-proof', [ExternalWorkOrderInvoiceController::class, 'viewPaymentProof'])->middleware('permission:external_work_order_invoice.view');
+            Route::get('/external-work-order-invoices/{externalInvoice}/history', [ExternalWorkOrderInvoiceController::class, 'history'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/work-orders/{workOrder}/estimate', [WorkOrderController::class, 'estimate'])->middleware('permission:work_order.estimate');
             Route::post('/work-orders/{workOrder}/diagnoses', [WorkOrderExecutionController::class, 'addDiagnosis'])->middleware('permission:diagnosis.manage');
+            Route::delete('/work-orders/{workOrder}/diagnoses/{diagnosis}', [WorkOrderExecutionController::class, 'deleteDiagnosis'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/corrective-actions', [WorkOrderExecutionController::class, 'addCorrectiveAction'])->middleware('permission:diagnosis.manage');
+            Route::delete('/work-orders/{workOrder}/corrective-actions/{correctiveAction}', [WorkOrderExecutionController::class, 'deleteCorrectiveAction'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/jobs', [WorkOrderExecutionController::class, 'addJob'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/jobs/{job}/status', [WorkOrderExecutionController::class, 'updateJobStatus'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/planned-parts', [WorkOrderExecutionController::class, 'addPlannedPart'])->middleware('permission:maintenance_job.manage');
@@ -486,6 +491,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/products/{product}/component-groups', [ProductController::class, 'syncComponentGroups'])->middleware('permission:product.update');
             Route::post('/products/{product}/compatibilities', [ProductController::class, 'addCompatibility'])->middleware('permission:product.update');
             Route::delete('/products/{product}/compatibilities/{compatibility}', [ProductController::class, 'destroyCompatibility'])->middleware('permission:product.update');
+            Route::post('/products/{product}/sds', [ProductController::class, 'uploadSds'])->middleware('permission:product.update');
+            Route::get('/products/{product}/sds', [ProductController::class, 'showSds'])->middleware('permission:product.view');
+            Route::delete('/products/{product}/sds', [ProductController::class, 'destroySds'])->middleware('permission:product.delete');
+            Route::post('/products/{product}/image', [ProductController::class, 'uploadImage'])->middleware('permission:product.update');
+            Route::get('/products/{product}/image', [ProductController::class, 'showImage'])->middleware('permission:product.view');
+            Route::delete('/products/{product}/image', [ProductController::class, 'destroyImage'])->middleware('permission:product.delete');
 
             Route::get('/inventory', [WarehouseStockController::class, 'index'])->middleware('permission:inventory.view');
             Route::post('/inventory/adjust', [WarehouseStockController::class, 'adjust'])->middleware('permission:inventory.adjust');
@@ -537,6 +548,27 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/issue', [WorkOrderExecutionController::class, 'issuePlannedPart'])->middleware('permission:inventory.issue');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return', [WorkOrderExecutionController::class, 'returnPlannedPart'])->middleware('permission:inventory.return');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/consume', [WorkOrderExecutionController::class, 'consumePlannedPart'])->middleware('permission:inventory.issue');
+            Route::get('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence', [WorkOrderExecutionController::class, 'listReturnEvidence'])->middleware('permission:inventory.return');
+            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence', [WorkOrderExecutionController::class, 'uploadReturnEvidence'])->middleware('permission:inventory.return');
+            Route::get('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence/{evidence}', [WorkOrderExecutionController::class, 'showReturnEvidence'])->middleware('permission:inventory.return');
+            Route::delete('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence/{evidence}', [WorkOrderExecutionController::class, 'destroyReturnEvidence'])->middleware('permission:inventory.return');
+
+            // Owner decision: old/removed-component domain, distinct from the Planned Part
+            // return endpoints above (those only ever represent warehouse-issued stock).
+            Route::get('/work-orders/{workOrder}/removed-components', [WorkOrderExecutionController::class, 'listRemovedComponents'])->middleware('permission:maintenance_job.manage');
+            Route::post('/work-orders/{workOrder}/removed-components', [WorkOrderExecutionController::class, 'removeComponent'])->middleware('permission:maintenance_job.manage');
+            Route::delete('/work-orders/{workOrder}/removed-components/{removedComponent}', [WorkOrderExecutionController::class, 'destroyRemovedComponent'])->middleware('permission:maintenance_job.manage');
+            Route::post('/work-orders/{workOrder}/removed-components/{removedComponent}/return', [WorkOrderExecutionController::class, 'returnRemovedComponent'])->middleware('permission:inventory.return');
+            Route::get('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence', [WorkOrderExecutionController::class, 'listRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+            Route::post('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence', [WorkOrderExecutionController::class, 'uploadRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+            Route::get('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence/{evidence}', [WorkOrderExecutionController::class, 'showRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+            Route::delete('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence/{evidence}', [WorkOrderExecutionController::class, 'destroyRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+
+            // Doc's true "Planned Parts" tab — pure budgeting, distinct from
+            // "Request Parts" (the /planned-parts endpoints above, doc: "sebelumnya adalah
+            // Tab Planned Parts yang berubah nama" — the old Planned Parts tab, renamed).
+            Route::post('/work-orders/{workOrder}/planned-part-estimates', [WorkOrderExecutionController::class, 'addPlannedPartEstimate'])->middleware('permission:maintenance_job.manage');
+            Route::delete('/work-orders/{workOrder}/planned-part-estimates/{plannedPartEstimate}', [WorkOrderExecutionController::class, 'destroyPlannedPartEstimate'])->middleware('permission:maintenance_job.manage');
         });
 
         Route::middleware('module:PROCUREMENT')->group(function () {

@@ -20,10 +20,14 @@ class StoreWorkOrderRequest extends FormRequest
         return [
             'vehicle_id' => ['required', 'uuid', Rule::exists('vehicles', 'id')->where('tenant_id', $tenantId)],
             'workshop_id' => ['nullable', 'uuid', Rule::exists('workshops', 'id')->where('tenant_id', $tenantId)],
-            'maintenance_type' => ['required', 'in:PREVENTIVE,CORRECTIVE,BREAKDOWN,INSPECTION,CAMPAIGN'],
+            // "Improvement OptiFleet - Maintenance Request dan Work Order": the manual New Work
+            // Order popup only ever offers Corrective/Breakdown — Preventive is set exclusively by
+            // the Planning & Schedule -> Work Order conversion path (WorkOrderService::
+            // fromMaintenanceSchedule), never this request class.
+            'maintenance_type' => ['required', 'in:CORRECTIVE,BREAKDOWN'],
             'priority' => ['nullable', 'in:LOW,MEDIUM,HIGH,URGENT'],
             'complaint' => ['nullable', 'string'],
-            'current_odometer' => ['nullable', 'numeric', 'min:0'],
+            'current_odometer' => ['required', 'numeric', 'min:0'],
             'engine_hour' => ['nullable', 'numeric', 'min:0'],
         ];
     }

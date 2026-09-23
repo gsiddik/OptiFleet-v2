@@ -45,6 +45,20 @@ class WorkOrderService
                 'created_by' => $createdByUserId,
             ]));
 
+            // "Current KM diubah menjadi Mandatory dan akan mengupdate Current KM dari vehicle" /
+            // "Current HM ... jika diisi akan mengupdate Current HM dari vehicle" — same
+            // never-go-backwards floor guard VehicleReleaseService already uses for odometer.
+            $vehicleUpdate = [];
+            if (isset($attributes['current_odometer'])) {
+                $vehicleUpdate['current_odometer'] = max((float) $vehicle->current_odometer, (float) $attributes['current_odometer']);
+            }
+            if (isset($attributes['engine_hour'])) {
+                $vehicleUpdate['engine_hour'] = max((float) ($vehicle->engine_hour ?? 0), (float) $attributes['engine_hour']);
+            }
+            if ($vehicleUpdate !== []) {
+                $vehicle->update($vehicleUpdate);
+            }
+
             if (! empty($attributes['maintenance_request_id'])) {
                 $request = MaintenanceRequest::query()->findOrFail($attributes['maintenance_request_id']);
                 $this->requests->markConverted($request, $workOrder->id);

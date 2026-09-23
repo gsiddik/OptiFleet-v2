@@ -8,7 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { inputStyle } from '../../../components/FormField';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { ExternalWorkOrderInvoiceItem, PartnerItem } from '../../../types';
+import type { ExternalWorkOrderInvoiceItem, InspectionLogEntry, PartnerItem } from '../../../types';
 
 const STATUSES = ['', 'NEW_EXTERNAL_WO', 'DELIVERED', 'IN_PROGRESS', 'CANCELLED', 'BILLED', 'PAID'];
 
@@ -73,6 +73,19 @@ export function ExternalWorkOrderInvoiceListPage() {
   const [paidAmount, setPaidAmount] = useState('');
   const [billFor, setBillFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
   const [settlementFor, setSettlementFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
+  const [historyFor, setHistoryFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
+  const [historyEntries, setHistoryEntries] = useState<InspectionLogEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+
+  useEffect(() => {
+    if (!historyFor) return;
+    setHistoryLoading(true);
+    apiClient
+      .get(`/app/external-work-order-invoices/${historyFor.id}/history`)
+      .then((res) => setHistoryEntries(res.data.data))
+      .catch((err) => setActionError(extractApiError(err).message))
+      .finally(() => setHistoryLoading(false));
+  }, [historyFor]);
 
   useEffect(() => {
     if (!generatingFor) return;
@@ -265,6 +278,11 @@ export function ExternalWorkOrderInvoiceListPage() {
               Cancel
             </Link>
           )}
+          {r.allowed_actions.includes('view_history') && (
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setHistoryFor(r)}>
+              View History
+            </button>
+          )}
         </div>
       ),
     },
@@ -443,6 +461,24 @@ export function ExternalWorkOrderInvoiceListPage() {
                 Open Payment Proof
               </button>
             </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal open={historyFor !== null} title="History" onClose={() => setHistoryFor(null)} width={560}>
+        {historyLoading && <LoadingState />}
+        {!historyLoading && historyEntries.length === 0 && <EmptyState label="No history recorded yet." />}
+        {!historyLoading && historyEntries.length > 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {historyEntries.map((entry) => (
+              <div key={entry.id} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+                <div style={{ color: '#6b7280', fontSize: 12 }}>{new Date(entry.created_at).toLocaleString()}</div>
+                <div>
+                  <strong>{entry.actor_name ?? 'System'}</strong> — {entry.action}
+                  {entry.new_values?.status ? ` (status: ${entry.new_values.status})` : ''}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </Modal>

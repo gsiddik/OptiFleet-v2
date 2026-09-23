@@ -9,9 +9,7 @@ import { Pagination } from '../../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { WorkerItem } from '../../../types';
-
-const WORKER_TYPES = ['LEAD_MECHANIC', 'MECHANIC', 'TECHNICIAN', 'INSPECTOR', 'QC'];
+import type { WorkerItem, WorkerTypeItem } from '../../../types';
 
 export function WorkerListPage() {
   const { hasPermission } = useAuth();
@@ -20,6 +18,7 @@ export function WorkerListPage() {
   const [workerTypeFilter, setWorkerTypeFilter] = useState('');
   const [branchFilter, setBranchFilter] = useState('');
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [workerTypes, setWorkerTypes] = useState<WorkerTypeItem[]>([]);
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
@@ -30,7 +29,7 @@ export function WorkerListPage() {
     {
       search: search || undefined,
       status: statusFilter || undefined,
-      worker_type: workerTypeFilter || undefined,
+      worker_type_id: workerTypeFilter || undefined,
       branch_id: branchFilter || undefined,
       page,
       per_page: 15,
@@ -40,6 +39,7 @@ export function WorkerListPage() {
 
   useEffect(() => {
     apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data)).catch(() => setBranches([]));
+    apiClient.get('/app/worker-types', { params: { per_page: 100, status: 'ACTIVE' } }).then((res) => setWorkerTypes(res.data.data)).catch(() => setWorkerTypes([]));
   }, []);
 
   async function toggleActive(w: WorkerItem) {
@@ -55,7 +55,7 @@ export function WorkerListPage() {
   const columns: Column<WorkerItem>[] = [
     { key: 'employee_code', header: 'Code', render: (w) => <button className="btn-link" onClick={() => setEditing(w)}>{w.employee_code}</button> },
     { key: 'name', header: 'Name', render: (w) => w.name },
-    { key: 'worker_type', header: 'Type', render: (w) => w.worker_type },
+    { key: 'worker_type', header: 'Type', render: (w) => w.worker_type_master?.name ?? w.worker_type },
     { key: 'branch', header: 'Branch', render: (w) => w.branch?.name ?? '—' },
     { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
     { key: 'skills', header: 'Skills', render: (w) => (w.skills ?? []).map((s) => s.component_group?.name).filter(Boolean).join(', ') || '—' },
@@ -98,9 +98,9 @@ export function WorkerListPage() {
           style={{ ...inputStyle, maxWidth: 180 }}
         >
           <option value="">All types</option>
-          {WORKER_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          {workerTypes.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
             </option>
           ))}
         </select>
@@ -153,11 +153,12 @@ export function WorkerListPage() {
 function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
   const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
   const [workshops, setWorkshops] = useState<{ id: string; name: string }[]>([]);
+  const [workerTypes, setWorkerTypes] = useState<WorkerTypeItem[]>([]);
   const [employeeCode, setEmployeeCode] = useState('');
   const [name, setName] = useState('');
   const [branchId, setBranchId] = useState('');
   const [workshopId, setWorkshopId] = useState('');
-  const [workerType, setWorkerType] = useState('MECHANIC');
+  const [workerTypeId, setWorkerTypeId] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
@@ -170,6 +171,10 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
     if (!open) return;
     apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data));
     apiClient.get('/app/workshops', { params: { per_page: 100 } }).then((res) => setWorkshops(res.data.data));
+    apiClient.get('/app/worker-types', { params: { per_page: 100, status: 'ACTIVE' } }).then((res) => {
+      setWorkerTypes(res.data.data);
+      setWorkerTypeId((current) => current || res.data.data[0]?.id || '');
+    });
   }, [open]);
 
   async function submit() {
@@ -177,7 +182,7 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
     setErrors({});
     try {
       await apiClient.post('/app/workers', {
-        employee_code: employeeCode, name, branch_id: branchId, workshop_id: workshopId || null, worker_type: workerType,
+        employee_code: employeeCode, name, branch_id: branchId, workshop_id: workshopId || null, worker_type_id: workerTypeId,
         phone: phone || undefined, email: email || undefined, address: address || undefined,
         monthly_rate: monthlyRate || undefined, hourly_rate: hourlyRate || undefined,
       });
@@ -227,11 +232,12 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
             ))}
           </select>
         </FormField>
-        <FormField label="Worker Type" errors={errors.worker_type} required>
-          <select value={workerType} onChange={(e) => setWorkerType(e.target.value)} style={inputStyle}>
-            {WORKER_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
+        <FormField label="Worker Type" errors={errors.worker_type_id} required>
+          <select value={workerTypeId} onChange={(e) => setWorkerTypeId(e.target.value)} style={inputStyle}>
+            <option value="">Select…</option>
+            {workerTypes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
               </option>
             ))}
           </select>
@@ -379,7 +385,7 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
       <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
         <StatusBadge status={worker.status} />
         <span style={{ fontSize: 13, color: '#6b7280' }}>
-          {worker.worker_type} — {worker.branch?.name ?? '—'} / {worker.workshop?.name ?? 'No workshop'}
+          {worker.worker_type_master?.name ?? worker.worker_type} — {worker.branch?.name ?? '—'} / {worker.workshop?.name ?? 'No workshop'}
         </span>
       </div>
 

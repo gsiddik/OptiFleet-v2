@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
-import { Modal } from '../../../components/Modal';
+import { ImageUploadField } from '../../../components/ImageUploadField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
+import { EditProductModal } from './EditProductModal';
 import type { ProductItem, VehicleCategory } from '../../../types';
 
 export function ProductDetailPage() {
@@ -22,6 +23,9 @@ export function ProductDetailPage() {
   const [vehicleModel, setVehicleModel] = useState('');
   const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
   const [editingSpecs, setEditingSpecs] = useState(false);
+  const [sdsBusy, setSdsBusy] = useState(false);
+  const sdsFileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   function load() {
     apiClient
@@ -37,6 +41,53 @@ export function ProductDetailPage() {
   useEffect(() => {
     setReferenceTreadDepthMm(product?.reference_tread_depth_mm ?? '');
   }, [product?.reference_tread_depth_mm]);
+
+  /** Batch 14: the upload replacing "Image URL" lives on the private
+   * `local` disk, so its preview (unlike the legacy public `image_url`)
+   * needs an authenticated blob fetch — same pattern as Vehicle Brand's logo. */
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    if (product?.image_path) {
+      apiClient.get(`/app/products/${product.id}/image`, { responseType: 'blob' }).then((res) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(res.data);
+        setImagePreviewUrl(objectUrl);
+      });
+    } else if (product?.image_url) {
+      setImagePreviewUrl(product.image_url);
+    } else {
+      setImagePreviewUrl(null);
+    }
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [product?.id, product?.image_path, product?.image_url]);
+
+  async function uploadImage(file: File) {
+    setError(null);
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      await apiClient.post(`/app/products/${id}/image`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
+  }
+
+  async function removeImage() {
+    setError(null);
+    try {
+      await apiClient.delete(`/app/products/${id}/image`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
+  }
 
   async function saveReferenceTreadDepth() {
     setBusy(true);
@@ -81,6 +132,51 @@ export function ProductDetailPage() {
     }
   }
 
+  /** "Next Improvement Tenant Portal - Products": Consumable's Safety Data Sheet — File Upload. */
+  async function uploadSds(file: File) {
+    setSdsBusy(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      await apiClient.post(`/app/products/${id}/sds`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setSdsBusy(false);
+      if (sdsFileInputRef.current) sdsFileInputRef.current.value = '';
+    }
+  }
+
+  async function downloadSds() {
+    setSdsBusy(true);
+    setError(null);
+    try {
+      const res = await apiClient.get(`/app/products/${id}/sds`, { responseType: 'blob' });
+      const contentType = typeof res.headers['content-type'] === 'string' ? res.headers['content-type'] : 'application/octet-stream';
+      const url = URL.createObjectURL(new Blob([res.data], { type: contentType }));
+      window.open(url, '_blank');
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setSdsBusy(false);
+    }
+  }
+
+  async function removeSds() {
+    setSdsBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/products/${id}/sds`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setSdsBusy(false);
+    }
+  }
+
   useBreadcrumbLabel(product?.id, product?.name);
 
   if (error && !product) return <ErrorState message={error} />;
@@ -117,12 +213,20 @@ export function ProductDetailPage() {
           {product.length_mm ? `${product.length_mm} × ${product.width_mm ?? '—'} × ${product.height_mm ?? '—'}` : '—'} &nbsp;
           <strong>Weight (kg):</strong> {product.weight_kg ?? '—'}
         </p>
-        {product.image_url && <img src={product.image_url} alt={product.name} style={{ maxWidth: 200, marginTop: 8, borderRadius: 6 }} />}
+        <div style={{ marginTop: 8, maxWidth: 200 }}>
+          <ImageUploadField
+            images={imagePreviewUrl ? [{ id: 'product-image', previewUrl: imagePreviewUrl, name: product.name }] : []}
+            onUpload={uploadImage}
+            onRemove={!product.is_system && hasPermission('product.delete') ? removeImage : undefined}
+            disabled={product.is_system || !hasPermission('product.update')}
+            multiple={false}
+          />
+        </div>
         {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>Platform system record — read-only.</p>}
         {!product.is_system && hasPermission('product.update') && (
           <div style={{ marginTop: 10 }}>
             <button className="btn-secondary" onClick={() => setEditingSpecs(true)}>
-              Edit Specifications
+              Edit Product
             </button>
           </div>
         )}
@@ -146,6 +250,43 @@ export function ProductDetailPage() {
           </div>
         )}
       </div>
+
+      {product.product_type === 'CONSUMABLE' && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Safety Data Sheet</h3>
+          {product.consumable_spec?.sds_file_path ? (
+            <p style={{ fontSize: 13 }}>
+              <strong>File:</strong> {product.consumable_spec.sds_original_filename ?? 'Uploaded document'}
+              &nbsp;
+              <button className="btn-link" disabled={sdsBusy} onClick={downloadSds}>
+                Download
+              </button>
+              {hasPermission('product.delete') && !product.is_system && (
+                <>
+                  &nbsp;
+                  <button className="btn-link" style={{ color: '#b91c1c' }} disabled={sdsBusy} onClick={removeSds}>
+                    Remove
+                  </button>
+                </>
+              )}
+            </p>
+          ) : (
+            <p style={{ fontSize: 13, color: '#6b7280' }}>No Safety Data Sheet uploaded.</p>
+          )}
+          {hasPermission('product.update') && !product.is_system && (
+            <div style={{ marginTop: 8 }}>
+              <input
+                ref={sdsFileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.pdf"
+                disabled={sdsBusy}
+                onChange={(e) => e.target.files?.[0] && uploadSds(e.target.files[0])}
+              />
+              <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>JPG, PNG, WEBP, or PDF — max 10MB. Uploading replaces the current file.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Compatibility</h3>
@@ -187,82 +328,7 @@ export function ProductDetailPage() {
           </div>
         )}
       </div>
-      {editingSpecs && <EditSpecsModal product={product} onClose={() => setEditingSpecs(false)} onSaved={() => { setEditingSpecs(false); load(); }} />}
+      {editingSpecs && <EditProductModal product={product} onClose={() => setEditingSpecs(false)} onSaved={() => { setEditingSpecs(false); load(); }} />}
     </div>
-  );
-}
-
-function EditSpecsModal({ product, onClose, onSaved }: { product: ProductItem; onClose: () => void; onSaved: () => void }) {
-  const [manufacturer, setManufacturer] = useState(product.manufacturer ?? '');
-  const [material, setMaterial] = useState(product.material ?? '');
-  const [productionYear, setProductionYear] = useState(product.production_year != null ? String(product.production_year) : '');
-  const [weightKg, setWeightKg] = useState(product.weight_kg ?? '');
-  const [lengthMm, setLengthMm] = useState(product.length_mm ?? '');
-  const [widthMm, setWidthMm] = useState(product.width_mm ?? '');
-  const [heightMm, setHeightMm] = useState(product.height_mm ?? '');
-  const [imageUrl, setImageUrl] = useState(product.image_url ?? '');
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  async function submit() {
-    setSubmitting(true);
-    setErrors({});
-    try {
-      await apiClient.put(`/app/products/${product.id}`, {
-        manufacturer: manufacturer || null,
-        material: material || null,
-        production_year: productionYear || null,
-        weight_kg: weightKg || null,
-        length_mm: lengthMm || null,
-        width_mm: widthMm || null,
-        height_mm: heightMm || null,
-        image_url: imageUrl || null,
-      });
-      onSaved();
-    } catch (err) {
-      const apiError = extractApiError(err);
-      setErrors(apiError.errors ?? {});
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal open title="Edit Product Specifications" onClose={onClose} width={560}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Manufacturer" errors={errors.manufacturer}>
-          <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Material" errors={errors.material}>
-          <input value={material} onChange={(e) => setMaterial(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Production Year" errors={errors.production_year}>
-          <input type="number" value={productionYear} onChange={(e) => setProductionYear(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Weight (kg)" errors={errors.weight_kg}>
-          <input type="number" step="0.001" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Length (mm)" errors={errors.length_mm}>
-          <input type="number" value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Width (mm)" errors={errors.width_mm}>
-          <input type="number" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Height (mm)" errors={errors.height_mm}>
-          <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
-        </FormField>
-        <FormField label="Image URL" errors={errors.image_url}>
-          <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} style={inputStyle} />
-        </FormField>
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
-          Cancel
-        </button>
-        <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
-        </button>
-      </div>
-    </Modal>
   );
 }

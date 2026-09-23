@@ -9,6 +9,7 @@ use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
+use App\Domain\WorkOrder\Models\WorkOrderPartReturnEvidence;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use Illuminate\Support\Facades\DB;
 
@@ -21,8 +22,14 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkOrderPartService
 {
-    /** G-14: every return must declare a condition; only UNUSED_NEW ever reaches available stock. */
-    public const CONDITIONS = ['UNUSED_NEW', 'USED_GOOD', 'USED_FAULTY'];
+    /**
+     * G-14: every return must declare a condition; only UNUSED_NEW ever reaches available
+     * stock. "Improvement OptiFleet - Maintenance Request dan Work Order": the Return popup's
+     * Condition dropdown offers "New Good"/"New Faulty" for a never-installed return and "Used
+     * Good"/"Used Faulty" for one that was — UNUSED_FAULTY added alongside UNUSED_NEW,
+     * following USED_FAULTY's own PENDING_INSPECTION (never-immediate-restock) handling below.
+     */
+    public const CONDITIONS = ['UNUSED_NEW', 'UNUSED_FAULTY', 'USED_GOOD', 'USED_FAULTY'];
 
     public function __construct(
         private readonly StockReservationService $reservations,
@@ -111,7 +118,8 @@ class WorkOrderPartService
      * reading a stale outstanding-issued snapshot and double-crediting
      * stock (the TOCTOU race this closes).
      */
-    public function returnPart(WorkOrderPlannedPart $part, float $quantity, string $condition, ?string $userId, ?string $reason = null, ?string $evidence = null): WorkOrderPlannedPart
+    /** @param array<string> $evidenceIds Not-yet-linked WorkOrderPartReturnEvidence ids uploaded for this planned part. */
+    public function returnPart(WorkOrderPlannedPart $part, float $quantity, string $condition, ?string $userId, ?string $reason = null, ?string $evidence = null, array $evidenceIds = []): WorkOrderPlannedPart
     {
         if ($quantity <= 0) {
             throw new WorkOrderException('Return quantity must be positive.');
@@ -120,7 +128,7 @@ class WorkOrderPartService
             throw new WorkOrderException('Return condition must be one of: '.implode(', ', self::CONDITIONS).'.');
         }
 
-        return DB::transaction(function () use ($part, $quantity, $condition, $userId, $reason, $evidence) {
+        return DB::transaction(function () use ($part, $quantity, $condition, $userId, $reason, $evidence, $evidenceIds) {
             $locked = WorkOrderPlannedPart::query()->lockForUpdate()->findOrFail($part->id);
 
             if ($quantity > $locked->outstandingIssued()) {
@@ -136,7 +144,7 @@ class WorkOrderPartService
             $dispositionStatus = 'PENDING_INSPECTION';
 
             if ($condition === 'UNUSED_NEW') {
-                // Only a UNUSED_NEW return ever restores available stock.
+                // Only a UNUSED_NEW ("New Good") return ever restores available stock.
                 $this->inventory->returnStock($warehouse, $product, $quantity, WorkOrderPlannedPart::class, $locked->id, $userId, $reason);
                 $stockMovementId = StockMovement::query()
                     ->where('reference_type', WorkOrderPlannedPart::class)
@@ -146,11 +154,12 @@ class WorkOrderPartService
                     ->value('id');
                 $dispositionStatus = 'RESTOCKED';
             }
-            // USED_GOOD / USED_FAULTY: deliberately never call inventory->returnStock() here —
-            // the part leaves the Work Order, but the physical stock stays out of quantity_on_hand
-            // until the (separate, not-yet-built) Used Sparepart Processing workflow inspects it.
+            // UNUSED_FAULTY / USED_GOOD / USED_FAULTY: deliberately never call
+            // inventory->returnStock() here — the part leaves the Work Order, but the physical
+            // stock stays out of quantity_on_hand until the Used Sparepart Processing workflow
+            // inspects it.
 
-            WorkOrderPartReturn::query()->create([
+            $return = WorkOrderPartReturn::query()->create([
                 'tenant_id' => $locked->tenant_id,
                 'work_order_planned_part_id' => $locked->id,
                 'warehouse_id' => $warehouse->id,
@@ -163,6 +172,14 @@ class WorkOrderPartService
                 'reason' => $reason,
                 'evidence' => $evidence,
             ]);
+
+            if ($evidenceIds !== []) {
+                WorkOrderPartReturnEvidence::query()
+                    ->where('work_order_planned_part_id', $locked->id)
+                    ->whereNull('work_order_part_return_id')
+                    ->whereIn('id', $evidenceIds)
+                    ->update(['work_order_part_return_id' => $return->id]);
+            }
 
             $locked->increment('returned_quantity', $quantity);
             $this->recomputeStatus($locked->fresh());

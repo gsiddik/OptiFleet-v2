@@ -8,6 +8,7 @@ use App\Domain\Organization\Models\Branch;
 use App\Domain\Organization\Models\Workshop;
 use App\Domain\Shared\Concerns\BelongsToTenant;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -22,7 +23,7 @@ class MaintenanceRequest extends Model
         'component_group_id', 'category_id', 'source_type', 'source_inspection_id',
         'source_schedule_id', 'source_breakdown_id', 'source_recommendation_id', 'source_prediction_id',
         'priority', 'complaint',
-        'requested_by', 'status', 'reviewed_by', 'reviewed_at', 'review_note', 'work_order_id',
+        'requested_by', 'status', 'reviewed_by', 'reviewed_at', 'review_note', 'cancellation_reason', 'work_order_id',
     ];
 
     protected $casts = ['reviewed_at' => 'datetime'];
@@ -50,5 +51,10 @@ class MaintenanceRequest extends Model
     public function assessment(): HasOne
     {
         return $this->hasOne(MaintenanceRequestAssessment::class);
+    }
+
+    public function requestedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'requested_by');
     }
 }

@@ -3,36 +3,53 @@ import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
+import { ImageUploadField } from '../../../components/ImageUploadField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
-import { AssessmentSection } from '../maintenance/MaintenanceRequestDetailPage';
+import { AssessmentSection, InspectionSourceSection } from '../maintenance/MaintenanceRequestDetailPage';
 import type {
   AuditLogEntry,
   HistoryEventItem,
+  MaintenanceRequestItem,
   PartnerItem,
   PartRequestItem,
   QcInspectionItem,
   WorkerItem,
   WorkOrderFindingItem,
   WorkOrderItem,
+  WorkOrderPlannedPartItem,
   WorkspaceItem,
   WorkspaceReservationItem,
 } from '../../../types';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
+  'Planned Parts', 'Request Parts', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
 ] as const;
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
-// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Part
-// Requests, Workspace, QC, Road Test) is hidden, not just its actions. "External Services" here is
-// the separate towing/3rd-party-invoicing sub-resource (WorkOrderExternalService) and stays
-// available either way.
+// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Request
+// Parts, Part Requests, Workspace, QC, Road Test) is hidden, not just its actions. "External
+// Services" here is the separate towing/3rd-party-invoicing sub-resource
+// (WorkOrderExternalService) and stays available either way.
 const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'External Services', 'Documents', 'History', 'Audit'] as const;
 type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
+
+// Mirrors backend WorkOrderExecutionService — Findings/Diagnosis/Corrective Actions are
+// Draft-only (Add + Delete/Remove hidden afterward); Jobs/Mechanic/Planned Parts stay
+// addable through the whole active-planning window.
+const FINDING_SCOPE_STATUSES = ['DRAFT'];
+const PLANNING_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
+// Doc: "Request Parts" (the old Planned Parts tab, renamed) only appears from IN_PROGRESS
+// onward — before that, only the new budgeting-only "Planned Parts" tab is shown.
+const REQUEST_PARTS_VISIBLE_STATUSES = ['IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'QC_PENDING', 'REWORK', 'COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
+// Reserve/Issue/Consume/Return only apply once real execution has started — Draft's Planned
+// Parts tab explicitly must not show these buttons at all (doc: "jangan tampilkan tombol
+// Reserve, tombol Issue, Consume atau Return" while Draft). Mirrors backend's unmodified,
+// narrower EXECUTABLE_STATUSES used by WorkOrderPartService.
+const PART_ACTION_STATUSES = ['ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'work_order.submit', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
@@ -190,7 +207,9 @@ export function WorkOrderDetailPage() {
   if (!wo) return <LoadingState />;
 
   const isExternalMode = wo.execution_mode === 'EXTERNAL';
-  const visibleTabs: readonly Tab[] = isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS;
+  const visibleTabs: readonly Tab[] = (isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS).filter(
+    (t) => t !== 'Request Parts' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status),
+  );
   const actions = isExternalMode ? [] : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
@@ -324,7 +343,8 @@ export function WorkOrderDetailPage() {
       {tab === 'Diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
       {tab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
       {tab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
-      {tab === 'Planned Parts' && <PlannedPartsTab wo={wo} onChanged={load} />}
+      {tab === 'Planned Parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
+      {tab === 'Request Parts' && <RequestPartsTab wo={wo} onChanged={load} />}
       {tab === 'Part Requests' && <PartRequestsTab wo={wo} onChanged={load} />}
       {tab === 'Workspace' && <WorkspaceTab wo={wo} onChanged={load} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
@@ -443,15 +463,33 @@ function ScheduleModal({ open, wo, onClose, onScheduled }: { open: boolean; wo: 
   );
 }
 
-/** G-02: previously a Work Order had no way to record a pre-work cost estimate. */
-const ESTIMABLE_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED'];
 
-function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
-  const { hasPermission } = useAuth();
-  const [laborCost, setLaborCost] = useState('');
-  const [partsCost, setPartsCost] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * "Improvement OptiFleet - Maintenance Request dan Work Order": the Overview
+ * tab must show the originating Maintenance Request's Assessment (source
+ * USER) or Inspection checklist + Recorded Findings (source INSPECTION) —
+ * never the Assessment table unconditionally, since an Inspection-sourced
+ * request never has an Assessment row to show.
+ */
+function MaintenanceRequestSourceSection({ maintenanceRequestId }: { maintenanceRequestId: string }) {
+  const [request, setRequest] = useState<MaintenanceRequestItem | null>(null);
+
+  useEffect(() => {
+    apiClient.get(`/app/maintenance-requests/${maintenanceRequestId}`).then((res) => setRequest(res.data.data)).catch(() => setRequest(null));
+  }, [maintenanceRequestId]);
+
+  if (!request) return null;
+  if (request.source_type === 'INSPECTION' && request.source_inspection_id) {
+    return <InspectionSourceSection inspectionId={request.source_inspection_id} />;
+  }
+  return <AssessmentSection maintenanceRequestId={maintenanceRequestId} editable={false} />;
+}
+
+function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const laborCost = wo.estimated_labor_cost_computed ?? null;
+  const partsCost = wo.estimated_parts_cost_computed ?? null;
+  const totalCost =
+    laborCost !== null || partsCost !== null ? (Number(laborCost ?? 0) + Number(partsCost ?? 0)).toFixed(2) : null;
 
   const rows: [string, string][] = [
     ['Vehicle', wo.vehicle?.registration_number ?? wo.vehicle_id],
@@ -460,10 +498,11 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Maintenance Type', wo.maintenance_type],
     ['Priority', wo.priority],
     ['Current Odometer', wo.current_odometer ?? '—'],
-    ['Estimated Labor Cost', wo.estimated_labor_cost ?? '—'],
-    ['Estimated Labor Cost (computed from Jobs)', wo.estimated_labor_cost_computed ?? '—'],
-    ['Estimated Parts Cost', wo.estimated_parts_cost ?? '—'],
-    ['Estimated Total Cost', wo.estimated_total_cost ?? '—'],
+    ['Est. Number of Mechanic', wo.estimated_number_of_mechanics != null ? String(wo.estimated_number_of_mechanics) : '—'],
+    ['Est. Total Hours', wo.estimated_total_hours ?? '—'],
+    ['Estimated Labor Cost', laborCost ?? '—'],
+    ['Estimated Parts Cost', partsCost ?? '—'],
+    ['Estimated Total Cost', totalCost ?? '—'],
     ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
     ['Target Completion', wo.target_completion_at ? new Date(wo.target_completion_at).toLocaleString() : '—'],
     ['Started At', wo.started_at ? new Date(wo.started_at).toLocaleString() : '—'],
@@ -471,24 +510,6 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Closed At', wo.closed_at ? new Date(wo.closed_at).toLocaleString() : '—'],
     ['Result Summary', wo.result_summary ?? '—'],
   ];
-
-  async function submitEstimate() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/work-orders/${wo.id}/estimate`, {
-        estimated_labor_cost: laborCost || undefined,
-        estimated_parts_cost: partsCost || undefined,
-      });
-      setLaborCost('');
-      setPartsCost('');
-      onChanged();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div>
@@ -502,26 +523,19 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           ))}
         </div>
       </div>
-      {wo.maintenance_request_id && (
-        <div style={{ marginTop: 16 }}>
-          <AssessmentSection maintenanceRequestId={wo.maintenance_request_id} editable={false} />
+      {/* Complaint only belongs here for a Work Order created directly by a user through the
+          Work Order feature — a Maintenance-Request-converted WO shows its source's Assessment
+          or Inspection data instead, never a Complaint block (doc: "Sembunyikan Section
+          Complaint yang seharusnya hanya muncul jika Work Order dibuat oleh user"). */}
+      {!wo.maintenance_request_id && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Complaint</h3>
+          <p style={{ fontSize: 13 }}>{wo.complaint || '—'}</p>
         </div>
       )}
-      {ESTIMABLE_STATUSES.includes(wo.status) && hasPermission('work_order.estimate') && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Cost Estimate</h3>
-          {error && <ErrorState message={error} />}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-            <FormField label="Estimated Labor Cost">
-              <input type="number" min="0" step="0.01" value={laborCost} onChange={(e) => setLaborCost(e.target.value)} style={inputStyle} />
-            </FormField>
-            <FormField label="Estimated Parts Cost">
-              <input type="number" min="0" step="0.01" value={partsCost} onChange={(e) => setPartsCost(e.target.value)} style={inputStyle} />
-            </FormField>
-            <button className="btn-secondary" disabled={busy || (!laborCost && !partsCost)} onClick={submitEstimate}>
-              Save Estimate
-            </button>
-          </div>
+      {wo.maintenance_request_id && (
+        <div style={{ marginTop: 16 }}>
+          <MaintenanceRequestSourceSection maintenanceRequestId={wo.maintenance_request_id} />
         </div>
       )}
     </div>
@@ -533,12 +547,25 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
   const [severity, setSeverity] = useState('MEDIUM');
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
+  // Findings are a Draft-only scoping exercise — Add and Delete/Remove are only ever
+  // shown while status=DRAFT, matching WorkOrderExecutionService::assertFindingScopeEditable.
+  const editable = FINDING_SCOPE_STATUSES.includes(wo.status) && hasPermission('diagnosis.manage');
 
   async function addFinding() {
     setBusy(true);
     try {
       await apiClient.post(`/app/work-orders/${wo.id}/findings`, { severity, description });
       setDescription('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteFinding(findingId: string) {
+    setBusy(true);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/findings/${findingId}`);
       onChanged();
     } finally {
       setBusy(false);
@@ -558,10 +585,6 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
 
   return (
     <div>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Complaint</h3>
-        <p style={{ fontSize: 13 }}>{wo.complaint || '—'}</p>
-      </div>
       <div className="card">
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Findings</h3>
         {(wo.findings ?? []).length === 0 && <EmptyState label="No findings recorded." />}
@@ -575,9 +598,14 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
                 Resolve
               </button>
             )}
+            {editable && (
+              <button className="btn-secondary" disabled={busy} onClick={() => deleteFinding(f.id)}>
+                Delete
+              </button>
+            )}
           </div>
         ))}
-        {hasPermission('diagnosis.manage') && (
+        {editable && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <select value={severity} onChange={(e) => setSeverity(e.target.value)} style={{ ...inputStyle, width: 140 }}>
               {['INFO', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'].map((s) => (
@@ -737,7 +765,8 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
   const [diagnosisId, setDiagnosisId] = useState('');
   const [actionDescription, setActionDescription] = useState('');
   const [busy, setBusy] = useState(false);
-  const canManage = hasPermission('diagnosis.manage');
+  // Diagnosis/Corrective Actions share Findings' Draft-only scope (see ComplaintTab).
+  const canManage = FINDING_SCOPE_STATUSES.includes(wo.status) && hasPermission('diagnosis.manage');
 
   async function addDiagnosis() {
     setBusy(true);
@@ -745,6 +774,16 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
       await apiClient.post(`/app/work-orders/${wo.id}/diagnoses`, { work_order_finding_id: findingId || undefined, root_cause: rootCause, notes: notes || undefined });
       setRootCause('');
       setNotes('');
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteDiagnosis(id: string) {
+    setBusy(true);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/diagnoses/${id}`);
       onChanged();
     } finally {
       setBusy(false);
@@ -762,17 +801,34 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
     }
   }
 
+  async function deleteCorrectiveAction(actionId: string) {
+    setBusy(true);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/corrective-actions/${actionId}`);
+      onChanged();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div>
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Diagnoses</h3>
         {(wo.diagnoses ?? []).length === 0 && <EmptyState label="No diagnoses recorded." />}
         {(wo.diagnoses ?? []).map((d) => (
-          <div key={d.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          <div key={d.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <strong>Root Cause:</strong> {d.root_cause}
+              <div>
+                <strong>Root Cause:</strong> {d.root_cause}
+              </div>
+              {d.notes && <div style={{ color: '#6b7280' }}>{d.notes}</div>}
             </div>
-            {d.notes && <div style={{ color: '#6b7280' }}>{d.notes}</div>}
+            {canManage && (
+              <button className="btn-secondary" disabled={busy} onClick={() => deleteDiagnosis(d.id)}>
+                Delete
+              </button>
+            )}
           </div>
         ))}
         {canManage && (
@@ -800,9 +856,14 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Corrective Actions</h3>
         {(wo.corrective_actions ?? []).length === 0 && <EmptyState label="No corrective actions recorded." />}
         {(wo.corrective_actions ?? []).map((c) => (
-          <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10 }}>
+          <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10, alignItems: 'center' }}>
             <StatusBadge status={c.status} />
-            <span>{c.action_description}</span>
+            <span style={{ flex: 1 }}>{c.action_description}</span>
+            {canManage && (
+              <button className="btn-secondary" disabled={busy} onClick={() => deleteCorrectiveAction(c.id)}>
+                Delete
+              </button>
+            )}
           </div>
         ))}
         {canManage && (
@@ -833,6 +894,9 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
   const [estimatedHours, setEstimatedHours] = useState('');
   const [busy, setBusy] = useState(false);
   const canManage = hasPermission('maintenance_job.manage');
+  // Adding a Job is Draft-through-active-execution only; changing an existing Job's own
+  // status is a separate state machine the backend never WO-status-gates.
+  const canAdd = PLANNING_STATUSES.includes(wo.status) && canManage;
 
   async function addJob() {
     setBusy(true);
@@ -862,6 +926,9 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
   return (
     <div className="card">
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Maintenance Jobs</h3>
+      <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>
+        Est. Total Hours: <strong>{wo.estimated_total_hours ?? '—'}</strong>
+      </div>
       {(wo.jobs ?? []).length === 0 && <EmptyState label="No jobs added." />}
       {(wo.jobs ?? []).map((j) => (
         <div key={j.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
@@ -897,7 +964,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
           </div>
         </div>
       ))}
-      {canManage && (
+      {canAdd && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <input placeholder="Service item" value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} style={{ ...inputStyle, width: 160 }} />
           <input placeholder="Job description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
@@ -921,6 +988,9 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   const [error, setError] = useState<string | null>(null);
   const [runningLog, setRunningLog] = useState<Record<string, string>>({});
   const canAssign = hasPermission('worker.assign');
+  // Assigning a new mechanic is Draft-through-active-execution only (mirrors Jobs/Planned
+  // Parts); unassigning an existing one stays permission-only, unchanged.
+  const canAdd = PLANNING_STATUSES.includes(wo.status) && canAssign;
   const canManageJobs = hasPermission('maintenance_job.manage');
 
   useEffect(() => {
@@ -997,7 +1067,7 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
             )}
           </div>
         ))}
-        {canAssign && (
+        {canAdd && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <select value={workerId} onChange={(e) => setWorkerId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
               <option value="">Select worker…</option>
@@ -1024,6 +1094,17 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
             </button>
           </div>
         )}
+        {/* Both auto-computed and read-only per the doc: Number of Mechanics reflects however
+            many are currently assigned; Estimated Labor Cost = Est. Total Hours (Jobs tab) x
+            the sum of every assigned mechanic's hourly rate — never manually editable. */}
+        <div style={{ display: 'flex', gap: 24, marginTop: 16, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
+          <FormField label="Number of Mechanics">
+            <input value={wo.estimated_number_of_mechanics ?? 0} readOnly style={{ ...inputStyle, width: 100, background: '#f9fafb' }} />
+          </FormField>
+          <FormField label="Estimated Labor Cost">
+            <input value={wo.estimated_labor_cost_computed ?? '—'} readOnly style={{ ...inputStyle, width: 160, background: '#f9fafb' }} />
+          </FormField>
+        </div>
       </div>
 
       <div className="card">
@@ -1084,7 +1165,144 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   );
 }
 
-function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY' | 'USED_GOOD' | 'USED_FAULTY'; label: string }[] = [
+  { value: 'UNUSED_NEW', label: 'New Good' },
+  { value: 'UNUSED_FAULTY', label: 'New Faulty' },
+  { value: 'USED_GOOD', label: 'Used Good' },
+  { value: 'USED_FAULTY', label: 'Used Faulty' },
+];
+
+/** Fetches a private-disk evidence image as a blob and returns an object URL for preview. */
+function useEvidencePreviews(showUrl: (id: string) => string, ids: string[]) {
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const urls: string[] = [];
+    Promise.all(
+      ids
+        .filter((id) => !previews[id])
+        .map((id) =>
+          apiClient.get(showUrl(id), { responseType: 'blob' }).then((res) => {
+            const url = URL.createObjectURL(res.data);
+            urls.push(url);
+            if (!cancelled) setPreviews((prev) => ({ ...prev, [id]: url }));
+          }),
+        ),
+    ).catch(() => {});
+    return () => {
+      cancelled = true;
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(',')]);
+
+  return previews;
+}
+
+const PLANNED_PART_PRODUCT_TYPES = ['SPARE_PART', 'TIRE', 'CONSUMABLE'];
+
+/**
+ * Doc: the TRUE "Planned Parts" tab — a pure budgeting line item (Product + Qty only), never
+ * Reserve/Issue/Consume/Return ("jangan tampilkan tombol Reserve, tombol Issue, Consume atau
+ * Return"). Feeds Estimated Parts Cost and nothing else. Distinct from "Request Parts" below
+ * (the OLD Planned Parts tab, renamed, with its full warehouse lifecycle intact).
+ */
+function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [products, setProducts] = useState<{ id: string; name: string; product_type: string }[]>([]);
+  const [productId, setProductId] = useState('');
+  const [quantity, setQuantity] = useState('1');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+
+  useEffect(() => {
+    apiClient
+      .get('/app/products', { params: { per_page: 200 } })
+      .then((res) => setProducts((res.data.data as { id: string; name: string; product_type: string }[]).filter((p) => PLANNED_PART_PRODUCT_TYPES.includes(p.product_type))))
+      .catch(() => setProducts([]));
+  }, []);
+
+  async function addEstimate() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/planned-part-estimates`, { product_id: productId, quantity, notes: notes || undefined });
+      setProductId('');
+      setQuantity('1');
+      setNotes('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteEstimate(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/planned-part-estimates/${id}`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Planned Parts</h3>
+      {error && <ErrorState message={error} />}
+      {(wo.planned_part_estimates ?? []).length === 0 && <EmptyState label="No parts planned." />}
+      {(wo.planned_part_estimates ?? []).map((e) => (
+        <div key={e.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span>
+            {e.product?.name ?? e.product_id} — qty {e.quantity} {e.notes && <span style={{ color: '#6b7280' }}>({e.notes})</span>}
+          </span>
+          {canManage && (
+            <button className="btn-secondary" disabled={busy} onClick={() => deleteEstimate(e.id)}>
+              Delete
+            </button>
+          )}
+        </div>
+      ))}
+      {canManage && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+            <option value="">Product…</option>
+            {products.map((prod) => (
+              <option key={prod.id} value={prod.id}>
+                {prod.name}
+              </option>
+            ))}
+          </select>
+          <input type="number" step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+          <button className="btn-secondary" disabled={busy || !productId || !quantity} onClick={addEstimate}>
+            Add
+          </button>
+        </div>
+      )}
+      {/* SYSTEM_DERIVED — Σ(Qty x Product price), never manually editable. */}
+      <FormField label="Estimated Parts Cost">
+        <input value={wo.estimated_parts_cost_computed ?? '—'} readOnly style={{ ...inputStyle, width: 160, background: '#f9fafb' }} />
+      </FormField>
+    </div>
+  );
+}
+
+/**
+ * Doc: "Request Parts" — "sebelumnya adalah Tab Planned Parts yang berubah nama" (this IS the
+ * old "Planned Parts" tab, renamed — its full Reserve/Issue/Consume/Return lifecycle is
+ * unchanged). Only visible from IN_PROGRESS onward; see REQUEST_PARTS_VISIBLE_STATUSES.
+ */
+function RequestPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -1093,15 +1311,28 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Consume popup state — "Install All" / "Installed Qty" (doc: only shown when Issued Qty > 1).
+  const [consumingPart, setConsumingPart] = useState<WorkOrderPlannedPartItem | null>(null);
+  const [installAll, setInstallAll] = useState(true);
+  const [installedQty, setInstalledQty] = useState('');
+
+  // Return popup state.
   const [returningPartId, setReturningPartId] = useState<string | null>(null);
   const [returnQty, setReturnQty] = useState('');
-  const [returnCondition, setReturnCondition] = useState<'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY'>('UNUSED_NEW');
+  const [returnCondition, setReturnCondition] = useState<(typeof RETURN_CONDITIONS)[number]['value']>('UNUSED_NEW');
   const [returnReason, setReturnReason] = useState('');
-  const [returnEvidence, setReturnEvidence] = useState('');
-  const canManage = hasPermission('maintenance_job.manage');
-  const canReserve = hasPermission('inventory.reserve');
-  const canIssue = hasPermission('inventory.issue');
-  const canReturn = hasPermission('inventory.return');
+  const [returnEvidenceIds, setReturnEvidenceIds] = useState<string[]>([]);
+  const returnEvidencePreviews = useEvidencePreviews(
+    (id) => `/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence/${id}`,
+    returnEvidenceIds,
+  );
+
+  const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+  const partActionsAvailable = PART_ACTION_STATUSES.includes(wo.status);
+  const canReserve = partActionsAvailable && hasPermission('inventory.reserve');
+  const canIssue = partActionsAvailable && hasPermission('inventory.issue');
+  const canReturn = partActionsAvailable && hasPermission('inventory.return');
 
   useEffect(() => {
     apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
@@ -1133,12 +1364,48 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
     }
   }
 
+  function outstandingIssued(p: WorkOrderPlannedPartItem): number {
+    return Number(p.issued_quantity) - Number(p.consumed_quantity) - Number(p.returned_quantity);
+  }
+
+  // Doc: Consume popup only appears when Issued Qty > 1 — a single outstanding unit has
+  // nothing to choose, so it's consumed directly with no dialog.
+  function startConsume(p: WorkOrderPlannedPartItem) {
+    if (outstandingIssued(p) <= 1) {
+      partAction(p.id, 'consume');
+      return;
+    }
+    setConsumingPart(p);
+    setInstallAll(true);
+    setInstalledQty(String(outstandingIssued(p)));
+  }
+
+  async function confirmConsume() {
+    if (!consumingPart || !installedQty) return;
+    await partAction(consumingPart.id, 'consume', { quantity: installedQty });
+    setConsumingPart(null);
+  }
+
   function startReturn(partId: string) {
     setReturningPartId(partId);
     setReturnQty('');
     setReturnCondition('UNUSED_NEW');
     setReturnReason('');
-    setReturnEvidence('');
+    setReturnEvidenceIds([]);
+  }
+
+  async function uploadReturnEvidence(file: File) {
+    if (!returningPartId) return;
+    const form = new FormData();
+    form.append('file', file);
+    const res = await apiClient.post(`/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence`, form);
+    setReturnEvidenceIds((prev) => [...prev, res.data.data.id]);
+  }
+
+  async function removeReturnEvidence(id: string) {
+    if (!returningPartId) return;
+    await apiClient.delete(`/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence/${id}`);
+    setReturnEvidenceIds((prev) => prev.filter((e) => e !== id));
   }
 
   async function submitReturn(partId: string) {
@@ -1147,14 +1414,14 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
       quantity: returnQty,
       condition: returnCondition,
       reason: returnReason || undefined,
-      evidence: returnEvidence || undefined,
+      evidence_ids: returnEvidenceIds.length > 0 ? returnEvidenceIds : undefined,
     });
     setReturningPartId(null);
   }
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Planned Parts</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Request Parts</h3>
       {error && <ErrorState message={error} />}
       {(wo.planned_parts ?? []).length === 0 && <EmptyState label="No planned parts." />}
       {(wo.planned_parts ?? []).map((p) => (
@@ -1182,8 +1449,8 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                     Issue
                   </button>
                 )}
-                {canIssue && Number(p.issued_quantity) - Number(p.consumed_quantity) - Number(p.returned_quantity) > 0 && (
-                  <button className="btn-secondary" disabled={busy} onClick={() => partAction(p.id, 'consume')}>
+                {canIssue && outstandingIssued(p) > 0 && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => startConsume(p)}>
                     Consume
                   </button>
                 )}
@@ -1194,47 +1461,58 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                 )}
               </div>
               {returningPartId === p.id && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center', background: '#f9fafb', padding: 8, borderRadius: 6 }}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Qty"
-                    value={returnQty}
-                    onChange={(e) => setReturnQty(e.target.value)}
-                    style={{ ...inputStyle, width: 90 }}
-                  />
-                  <select
-                    value={returnCondition}
-                    onChange={(e) => setReturnCondition(e.target.value as 'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY')}
-                    style={{ ...inputStyle, width: 160 }}
-                  >
-                    <option value="UNUSED_NEW">Unused / New</option>
-                    <option value="USED_GOOD">Used — Good</option>
-                    <option value="USED_FAULTY">Used — Faulty</option>
-                  </select>
-                  <input
-                    placeholder="Reason (optional)"
-                    value={returnReason}
-                    onChange={(e) => setReturnReason(e.target.value)}
-                    style={{ ...inputStyle, width: 180 }}
-                  />
-                  <input
-                    placeholder="Evidence / photo URL (optional)"
-                    value={returnEvidence}
-                    onChange={(e) => setReturnEvidence(e.target.value)}
-                    style={{ ...inputStyle, width: 200 }}
-                  />
-                  <button className="btn-secondary" disabled={busy || !returnQty} onClick={() => submitReturn(p.id)}>
-                    Confirm return
-                  </button>
-                  <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
-                    Cancel
-                  </button>
-                  {returnCondition !== 'UNUSED_NEW' && (
-                    <span style={{ fontSize: 11, color: '#6b7280', width: '100%' }}>
-                      Used-condition returns go to inspection — they do not restock available inventory until processed.
-                    </span>
-                  )}
+                <div style={{ marginTop: 8, background: '#f9fafb', padding: 10, borderRadius: 6 }}>
+                  {/* SYSTEM_INFORMATION — the ceiling the user is returning against, never re-entered. */}
+                  <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+                    Available to return: <strong>{Number(p.issued_quantity) - Number(p.returned_quantity)}</strong> (Issued {p.issued_quantity} − Returned {p.returned_quantity})
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Qty"
+                      value={returnQty}
+                      onChange={(e) => setReturnQty(e.target.value)}
+                      style={{ ...inputStyle, width: 90 }}
+                    />
+                    <select
+                      value={returnCondition}
+                      onChange={(e) => setReturnCondition(e.target.value as (typeof RETURN_CONDITIONS)[number]['value'])}
+                      style={{ ...inputStyle, width: 150 }}
+                    >
+                      {RETURN_CONDITIONS.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      placeholder="Reason (optional)"
+                      value={returnReason}
+                      onChange={(e) => setReturnReason(e.target.value)}
+                      style={{ ...inputStyle, width: 180 }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <ImageUploadField
+                      images={returnEvidenceIds.map((id) => ({ id, previewUrl: returnEvidencePreviews[id] ?? '' }))}
+                      onUpload={uploadReturnEvidence}
+                      onRemove={removeReturnEvidence}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button className="btn-secondary" disabled={busy || !returnQty} onClick={() => submitReturn(p.id)}>
+                      Confirm return
+                    </button>
+                    <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
+                      Cancel
+                    </button>
+                    {returnCondition !== 'UNUSED_NEW' && (
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>
+                        Not New-Good returns go to inspection — they do not restock available inventory until processed.
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </>
@@ -1256,6 +1534,271 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !description} onClick={addPart}>
             Add
+          </button>
+        </div>
+      )}
+
+      <Modal open={!!consumingPart} title="Consumed Parts" onClose={() => setConsumingPart(null)}>
+        {consumingPart && (
+          <>
+            {/* SYSTEM_INFORMATION */}
+            <div style={{ fontSize: 13, marginBottom: 12 }}>
+              <div>
+                <strong>{consumingPart.description}</strong>
+              </div>
+              <div style={{ color: '#6b7280' }}>Issued Qty: {consumingPart.issued_quantity}</div>
+            </div>
+            <FormField label="">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={installAll}
+                  onChange={(e) => {
+                    setInstallAll(e.target.checked);
+                    if (e.target.checked) setInstalledQty(String(outstandingIssued(consumingPart)));
+                  }}
+                />
+                Install All
+              </label>
+            </FormField>
+            <FormField label="Installed Qty" required>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max={outstandingIssued(consumingPart)}
+                value={installedQty}
+                disabled={installAll}
+                onChange={(e) => setInstalledQty(e.target.value)}
+                style={inputStyle}
+              />
+            </FormField>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button className="btn-secondary" onClick={() => setConsumingPart(null)}>
+                Cancel
+              </button>
+              <button className="btn-primary" disabled={!installedQty} onClick={confirmConsume}>
+                Consume
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <RemovedComponentsSection wo={wo} onChanged={onChanged} />
+    </div>
+  );
+}
+
+/**
+ * Owner decision: "Used Qty" in the doc's Return popup means an old/removed component taken
+ * off the vehicle during a replacement — architecturally distinct from the Unused-issued-stock
+ * Return above (which only ever represents warehouse-issued stock, whether installed or not).
+ * Presented as its own section so the two concepts are never conflated in the UI either.
+ */
+function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
+  const [productId, setProductId] = useState('');
+  const [jobId, setJobId] = useState('');
+  const [replacedByPlannedPartId, setReplacedByPlannedPartId] = useState('');
+  const [removeQty, setRemoveQty] = useState('1');
+  const [condition, setCondition] = useState<'GOOD' | 'FAULTY'>('GOOD');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [returningId, setReturningId] = useState<string | null>(null);
+  const [returnWarehouseId, setReturnWarehouseId] = useState('');
+  const [returnReason, setReturnReason] = useState('');
+  const [evidenceByComponent, setEvidenceByComponent] = useState<Record<string, string[]>>({});
+  const allEvidenceIds = Object.values(evidenceByComponent).flat();
+  const evidencePreviews = useEvidencePreviews(
+    (id) => {
+      const componentId = Object.keys(evidenceByComponent).find((cid) => evidenceByComponent[cid].includes(id));
+      return `/app/work-orders/${wo.id}/removed-components/${componentId}/evidence/${id}`;
+    },
+    allEvidenceIds,
+  );
+
+  const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+  const canReturn = PART_ACTION_STATUSES.includes(wo.status) && hasPermission('inventory.return');
+
+  useEffect(() => {
+    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
+    apiClient.get('/app/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
+  }, []);
+
+  function evidenceIdsFor(componentId: string): string[] {
+    return evidenceByComponent[componentId] ?? [];
+  }
+
+  async function uploadEvidence(componentId: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await apiClient.post(`/app/work-orders/${wo.id}/removed-components/${componentId}/evidence`, form);
+    setEvidenceByComponent((prev) => ({ ...prev, [componentId]: [...(prev[componentId] ?? []), res.data.data.id] }));
+  }
+
+  async function removeEvidence(componentId: string, evidenceId: string) {
+    await apiClient.delete(`/app/work-orders/${wo.id}/removed-components/${componentId}/evidence/${evidenceId}`);
+    setEvidenceByComponent((prev) => ({ ...prev, [componentId]: (prev[componentId] ?? []).filter((id) => id !== evidenceId) }));
+  }
+
+  async function submitRemoval() {
+    if (!productId || !removeQty) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/removed-components`, {
+        product_id: productId,
+        maintenance_job_id: jobId || undefined,
+        replaced_by_planned_part_id: replacedByPlannedPartId || undefined,
+        quantity: removeQty,
+        condition,
+        notes: notes || undefined,
+      });
+      setProductId('');
+      setJobId('');
+      setReplacedByPlannedPartId('');
+      setRemoveQty('1');
+      setCondition('GOOD');
+      setNotes('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteRemoval(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/removed-components/${id}`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitReturn(id: string) {
+    if (!returnWarehouseId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/removed-components/${id}/return`, {
+        warehouse_id: returnWarehouseId,
+        reason: returnReason || undefined,
+      });
+      setReturningId(null);
+      setReturnWarehouseId('');
+      setReturnReason('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Removed Components</h3>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: -8 }}>
+        Old/used components taken off the vehicle when a replacement part is installed — separate from the Unused Return above,
+        and never a reversal of the new part's consumption.
+      </p>
+      {error && <ErrorState message={error} />}
+      {(wo.removed_components ?? []).length === 0 && <EmptyState label="No components removed." />}
+      {(wo.removed_components ?? []).map((rc) => (
+        <div key={rc.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span>
+              {rc.product?.name ?? rc.product_id} — qty {rc.quantity} — {rc.condition}
+              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaces a planned part)</span>}
+            </span>
+            <StatusBadge status={rc.status} />
+          </div>
+          {rc.notes && <div style={{ color: '#6b7280', marginBottom: 6 }}>{rc.notes}</div>}
+          <ImageUploadField
+            images={evidenceIdsFor(rc.id).map((id) => ({ id, previewUrl: evidencePreviews[id] ?? '' }))}
+            onUpload={(file) => uploadEvidence(rc.id, file)}
+            onRemove={rc.status === 'PENDING_RETURN' ? (id) => removeEvidence(rc.id, id) : undefined}
+            disabled={rc.status !== 'PENDING_RETURN'}
+          />
+          {rc.status === 'PENDING_RETURN' && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+              {canReturn && returningId !== rc.id && (
+                <button className="btn-secondary" disabled={busy} onClick={() => setReturningId(rc.id)}>
+                  Return to Warehouse
+                </button>
+              )}
+              {canManage && (
+                <button className="btn-secondary" disabled={busy} onClick={() => deleteRemoval(rc.id)}>
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
+          {returningId === rc.id && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center', background: '#f9fafb', padding: 8, borderRadius: 6 }}>
+              <select value={returnWarehouseId} onChange={(e) => setReturnWarehouseId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+                <option value="">Warehouse…</option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+              <input placeholder="Reason (optional)" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} style={{ ...inputStyle, width: 180 }} />
+              <button className="btn-secondary" disabled={busy || !returnWarehouseId} onClick={() => submitReturn(rc.id)}>
+                Confirm Return
+              </button>
+              <button className="btn-secondary" disabled={busy} onClick={() => setReturningId(null)}>
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+      {canManage && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+            <option value="">Old/removed product…</option>
+            {products.map((prod) => (
+              <option key={prod.id} value={prod.id}>
+                {prod.name}
+              </option>
+            ))}
+          </select>
+          <select value={jobId} onChange={(e) => setJobId(e.target.value)} style={{ ...inputStyle, width: 160 }}>
+            <option value="">Job (optional)</option>
+            {(wo.jobs ?? []).map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.service_item ?? j.description.slice(0, 30)}
+              </option>
+            ))}
+          </select>
+          <select value={replacedByPlannedPartId} onChange={(e) => setReplacedByPlannedPartId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+            <option value="">Replaces which new part? (optional)</option>
+            {(wo.planned_parts ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.description}
+              </option>
+            ))}
+          </select>
+          <input type="number" step="0.01" placeholder="Qty" value={removeQty} onChange={(e) => setRemoveQty(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <select value={condition} onChange={(e) => setCondition(e.target.value as 'GOOD' | 'FAULTY')} style={{ ...inputStyle, width: 110 }}>
+            <option value="GOOD">Good</option>
+            <option value="FAULTY">Faulty</option>
+          </select>
+          <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+          <button className="btn-secondary" disabled={busy || !productId || !removeQty} onClick={submitRemoval}>
+            Record Removal
           </button>
         </div>
       )}

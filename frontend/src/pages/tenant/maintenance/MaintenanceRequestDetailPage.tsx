@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
+import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { INSPECTION_GROUP_CODES } from '../../../types';
-import type { InspectionGroupCode, InspectionGroupStatus, MaintenanceRequestAssessmentItem, MaintenanceRequestItem } from '../../../types';
+import type { InspectionGroupCode, InspectionGroupStatus, InspectionItem, MaintenanceRequestAssessmentItem, MaintenanceRequestItem } from '../../../types';
 
 // Reviewer actions are Approve/Reject only — Request Info / NEED_INFORMATION retired
 // at the application level (legacy records remain readable, but no request can enter
@@ -47,13 +48,26 @@ function emptyGroups(): Record<InspectionGroupCode, { status: InspectionGroupSta
   >;
 }
 
-export function AssessmentSection({ maintenanceRequestId, editable }: { maintenanceRequestId: string; editable: boolean }) {
+export function AssessmentSection({
+  maintenanceRequestId,
+  editable,
+  onStateChange,
+}: {
+  maintenanceRequestId: string;
+  editable: boolean;
+  onStateChange?: (hasAssessment: boolean) => void;
+}) {
   const [assessment, setAssessment] = useState<MaintenanceRequestAssessmentItem | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [groups, setGroups] = useState(emptyGroups());
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Section 26: a freshly-opened Draft request starts in an editable state (Save + Clear
+  // shown). Pressing Save disables the checklist and swaps Save for Edit (Clear hidden);
+  // pressing Edit re-enables it (Save + Clear shown again). This is local UI state, not
+  // derived from `editable` (which only gates whether the toggle applies at all).
+  const [editing, setEditing] = useState(true);
 
   function load() {
     apiClient
@@ -67,6 +81,8 @@ export function AssessmentSection({ maintenanceRequestId, editable }: { maintena
           setGroups(next);
           setNotes(data.notes ?? '');
         }
+        setEditing(!data);
+        onStateChange?.(!!data);
         setLoaded(true);
       })
       .catch(() => setLoaded(true));
@@ -94,10 +110,12 @@ export function AssessmentSection({ maintenanceRequestId, editable }: { maintena
     setBusy(true);
     setError(null);
     try {
-      await apiClient.delete(`/app/maintenance-requests/${maintenanceRequestId}/assessment`);
+      if (assessment) await apiClient.delete(`/app/maintenance-requests/${maintenanceRequestId}/assessment`);
       setGroups(emptyGroups());
       setNotes('');
-      load();
+      setAssessment(null);
+      setEditing(true);
+      onStateChange?.(false);
     } catch (err) {
       setError(extractApiError(err).message);
     } finally {
@@ -107,6 +125,8 @@ export function AssessmentSection({ maintenanceRequestId, editable }: { maintena
 
   if (!loaded) return null;
   if (!assessment && !editable) return null;
+
+  const showInputs = editable && editing;
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
@@ -125,7 +145,7 @@ export function AssessmentSection({ maintenanceRequestId, editable }: { maintena
             <tr key={code} style={{ borderBottom: '1px solid #f3f4f6' }}>
               <td style={{ padding: '6px 4px' }}>{GROUP_LABELS[code]}</td>
               <td style={{ padding: '6px 4px' }}>
-                {editable ? (
+                {showInputs ? (
                   <select
                     value={groups[code].status}
                     onChange={(e) => setGroups((prev) => ({ ...prev, [code]: { ...prev[code], status: e.target.value as InspectionGroupStatus } }))}
@@ -142,7 +162,7 @@ export function AssessmentSection({ maintenanceRequestId, editable }: { maintena
                 )}
               </td>
               <td style={{ padding: '6px 4px' }}>
-                {editable ? (
+                {showInputs ? (
                   <input
                     value={groups[code].notes}
                     onChange={(e) => setGroups((prev) => ({ ...prev, [code]: { ...prev[code], notes: e.target.value } }))}
@@ -157,7 +177,7 @@ export function AssessmentSection({ maintenanceRequestId, editable }: { maintena
         </tbody>
       </table>
       <div style={{ marginTop: 10 }}>
-        {editable ? (
+        {showInputs ? (
           <textarea
             placeholder="Overall assessment notes"
             value={notes}
@@ -174,14 +194,78 @@ export function AssessmentSection({ maintenanceRequestId, editable }: { maintena
       </div>
       {editable && (
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-          <button className="btn-primary" disabled={busy} onClick={save}>
-            Save
-          </button>
-          {assessment && (
-            <button className="btn-secondary" disabled={busy} onClick={clear}>
-              Clear
+          {showInputs ? (
+            <>
+              <button className="btn-primary" disabled={busy} onClick={save}>
+                Save
+              </button>
+              <button className="btn-secondary" disabled={busy} onClick={clear}>
+                Clear
+              </button>
+            </>
+          ) : (
+            <button className="btn-secondary" disabled={busy} onClick={() => setEditing(true)}>
+              Edit
             </button>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Sections 35/43/52/60/66: for a request sourced from an Inspection (rather than
+// submitted directly by a User), the detail page shows the originating Inspection's
+// own frozen checklist (template_snapshot) and Recorded Findings, read-only, instead of
+// the Initial Assessment & Visual Inspection section (which only ever applies to
+// User-sourced requests).
+export function InspectionSourceSection({ inspectionId }: { inspectionId: string }) {
+  const [inspection, setInspection] = useState<InspectionItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient
+      .get(`/app/inspections/${inspectionId}`)
+      .then((res) => setInspection(res.data.data))
+      .catch((err) => setError(extractApiError(err).message));
+  }, [inspectionId]);
+
+  if (error) return <ErrorState message={error} />;
+  if (!inspection) return null;
+
+  const items = inspection.template_snapshot ?? inspection.template?.items ?? [];
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }}>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Checklist &amp; Recorded Findings (from Inspection)</h3>
+      {items.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No checklist items recorded on the source inspection.</p>}
+      {items.map((item) => {
+        const existing = inspection.results?.find((r) => r.inspection_template_item_id === item.id);
+        return (
+          <div key={item.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ flex: 1, fontSize: 13 }}>{item.item_text}</span>
+            <span style={{ fontSize: 13 }}>
+              {(item.input_type === 'PASS_FAIL' || item.input_type === 'CHECKBOX')
+                ? existing?.passed === null || existing?.passed === undefined
+                  ? '—'
+                  : existing.passed
+                    ? 'Pass'
+                    : 'Fail'
+                : item.input_type === 'NUMBER'
+                  ? (existing?.value_number ?? '—')
+                  : (existing?.value_text ?? '—')}
+            </span>
+          </div>
+        );
+      })}
+      {(inspection.findings?.length ?? 0) > 0 && (
+        <div style={{ marginTop: 12 }}>
+          <h4 style={{ fontSize: 13, marginBottom: 6 }}>Recorded Findings</h4>
+          {inspection.findings!.map((f) => (
+            <div key={f.id} style={{ fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
+              <strong>{f.severity}</strong> — {f.description}
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -196,6 +280,9 @@ export function MaintenanceRequestDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
+  const [hasAssessment, setHasAssessment] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
 
   function load() {
     apiClient
@@ -218,6 +305,22 @@ export function MaintenanceRequestDetailPage() {
     try {
       await apiClient.post(`/app/maintenance-requests/${id}/${action}`, needsNote ? { note } : {});
       setNote('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function confirmCancel() {
+    if (!cancelReason.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/maintenance-requests/${id}/cancel`, { note: cancelReason });
+      setCancelReason('');
+      setShowCancelConfirm(false);
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -269,11 +372,29 @@ export function MaintenanceRequestDetailPage() {
             <strong>Review Note:</strong> {request.review_note}
           </p>
         )}
+        {request.cancellation_reason && (
+          <p style={{ fontSize: 13 }}>
+            <strong>Cancellation Reason:</strong> {request.cancellation_reason}
+          </p>
+        )}
       </div>
 
-      <AssessmentSection maintenanceRequestId={request.id} editable={request.status === 'DRAFT' && hasPermission('maintenance_request.create')} />
+      {request.source_type === 'USER' && (
+        <AssessmentSection
+          maintenanceRequestId={request.id}
+          editable={request.status === 'DRAFT' && hasPermission('maintenance_request.create')}
+          onStateChange={setHasAssessment}
+        />
+      )}
+      {request.source_type === 'INSPECTION' && request.source_inspection_id && (
+        <InspectionSourceSection inspectionId={request.source_inspection_id} />
+      )}
 
-      {actions.length > 0 && (
+      {/* Section 27/29: for a Draft, User-sourced request, Workflow Actions only appears
+          once the Initial Assessment & Visual Inspection has been saved at least once.
+          Inspection-sourced requests have no Assessment gate; every other status is
+          unconditional (matches ACTIONS having no DRAFT-only special case there). */}
+      {actions.length > 0 && (request.status !== 'DRAFT' || request.source_type !== 'USER' || hasAssessment) && (
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Workflow Actions</h3>
           {actions.some((a) => a.needsNote) && (
@@ -286,13 +407,36 @@ export function MaintenanceRequestDetailPage() {
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {actions.map((a) => (
-              <button key={a.action} className="btn-secondary" disabled={busy} onClick={() => act(a.action, a.needsNote)}>
+              <button
+                key={a.action}
+                className="btn-secondary"
+                disabled={busy}
+                onClick={() => (a.action === 'cancel' ? setShowCancelConfirm(true) : act(a.action, a.needsNote))}
+              >
                 {a.label}
               </button>
             ))}
           </div>
         </div>
       )}
+
+      <Modal open={showCancelConfirm} title="Cancel Maintenance Request" onClose={() => setShowCancelConfirm(false)}>
+        <p style={{ fontSize: 13, color: '#6b7280' }}>Please provide a reason for cancelling this maintenance request.</p>
+        <textarea
+          placeholder="Cancellation reason"
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          style={{ width: '100%', minHeight: 70, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button className="btn-secondary" onClick={() => setShowCancelConfirm(false)}>
+            No
+          </button>
+          <button className="btn-primary" disabled={busy || !cancelReason.trim()} onClick={confirmCancel}>
+            Yes, Cancel
+          </button>
+        </div>
+      </Modal>
 
       {request.status === 'APPROVED' && hasPermission('maintenance_request.convert_work_order') && (
         <div className="card">

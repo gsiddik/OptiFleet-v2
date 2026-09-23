@@ -14,11 +14,11 @@ class ProductCategory extends Model
 {
     use Auditable, BelongsToTenantOrPlatform, HasUuids, SoftDeletes;
 
-    protected $fillable = ['tenant_id', 'code', 'name', 'parent_id', 'item_type', 'description', 'is_system', 'status'];
+    protected $fillable = ['tenant_id', 'code', 'name', 'parent_id', 'item_type', 'description', 'is_system', 'status', 'requires_specification_grade'];
 
     protected function casts(): array
     {
-        return ['is_system' => 'boolean'];
+        return ['is_system' => 'boolean', 'requires_specification_grade' => 'boolean'];
     }
 
     public function parent(): BelongsTo

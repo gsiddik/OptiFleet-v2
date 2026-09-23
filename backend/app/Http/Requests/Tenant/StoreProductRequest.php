@@ -24,7 +24,16 @@ class StoreProductRequest extends FormRequest
             'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->where('tenant_id', $tenantId)],
             'name' => ['required', 'string', 'max:255'],
             'product_category_id' => ['required', 'uuid', Rule::exists('product_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
-            'product_type' => ['required', 'in:SPARE_PART,TOOL,TIRE,CONSUMABLE,EQUIPMENT,RIM,OTHER'],
+            // Batch 14: the documented Item Type dropdown is exactly these 6
+            // values ("Next Improvement Tenant Portal - Products": "Sparepart
+            // / Consumable / Rim / Tire / Tool / Equipment"). OTHER predates
+            // this document (the original Phase 4 catch-all, before RIM
+            // existed as its own type — see 2026_09_25_000001's docblock) and
+            // is deliberately excluded from new creation here; the database
+            // CHECK constraint still accepts it so any pre-existing OTHER row
+            // remains fully readable/editable (Item Type is immutable on
+            // Edit regardless), this only stops NEW ones from being created.
+            'product_type' => ['required', 'in:SPARE_PART,TOOL,TIRE,CONSUMABLE,EQUIPMENT,RIM'],
             'uom_id' => ['required', 'uuid', Rule::exists('uoms', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             // Mandatory per the authoritative document (Hierarchical Lookup:
             // Warehouse -> Zone -> Rack -> Bin). Authoritative here, not just in
@@ -47,6 +56,7 @@ class StoreProductRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'track_serial_number' => ['nullable', 'boolean'],
             'track_batch' => ['nullable', 'boolean'],
+            'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
             // Phase F / BD-3: reference tread depth for TIRE products — the "KTN" source for scoring.
             'reference_tread_depth_mm' => ['nullable', 'numeric', 'min:0.01'],
         ];

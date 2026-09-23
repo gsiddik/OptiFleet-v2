@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
@@ -19,6 +19,7 @@ export function WarehouseStockListPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [adjustTarget, setAdjustTarget] = useState<WarehouseStockItem | null>(null);
   const [scrapTarget, setScrapTarget] = useState<WarehouseStockItem | null>(null);
+  const [thresholdsTarget, setThresholdsTarget] = useState<WarehouseStockItem | null>(null);
   const { data, loading, error } = useApiList<WarehouseStockItem>('/app/inventory', { search: search || undefined, reorder_status: reorderStatus || undefined }, reloadKey);
 
   const columns: Column<WarehouseStockItem>[] = [
@@ -28,12 +29,20 @@ export function WarehouseStockListPage() {
     { key: 'reserved', header: 'Reserved', render: (s) => s.quantity_reserved },
     { key: 'available', header: 'Available', render: (s) => s.quantity_available },
     { key: 'avg_cost', header: 'Avg Cost', render: (s) => s.average_unit_cost },
+    { key: 'min', header: 'Min', render: (s) => s.minimum_stock },
+    { key: 'reorder', header: 'Reorder Pt.', render: (s) => s.reorder_point },
+    { key: 'max', header: 'Max', render: (s) => s.maximum_stock ?? '—' },
     { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.reorder_status} /> },
     {
       key: 'actions', header: '', render: (s) => (
         <>
           {hasPermission('inventory.adjust') && (
-            <button className="btn-link" onClick={() => setAdjustTarget(s)}>
+            <button className="btn-link" onClick={() => setThresholdsTarget(s)}>
+              Thresholds
+            </button>
+          )}
+          {hasPermission('inventory.adjust') && (
+            <button className="btn-link" style={{ marginLeft: 8 }} onClick={() => setAdjustTarget(s)}>
               Adjust
             </button>
           )}
@@ -65,7 +74,76 @@ export function WarehouseStockListPage() {
 
       <AdjustModal target={adjustTarget} onClose={() => setAdjustTarget(null)} onAdjusted={() => setReloadKey((k) => k + 1)} />
       <ScrapModal target={scrapTarget} onClose={() => setScrapTarget(null)} onScrapped={() => setReloadKey((k) => k + 1)} />
+      <ThresholdsModal target={thresholdsTarget} onClose={() => setThresholdsTarget(null)} onSaved={() => setReloadKey((k) => k + 1)} />
     </div>
+  );
+}
+
+/**
+ * "Next Improvement Tenant Portal": Inventory Configuration's Minimum
+ * Stock / Reorder Point / Maximum Stock — per-Warehouse policy (a
+ * Product can stock differently at each Warehouse), not a Product
+ * Master field, so this lives on WarehouseStock via the existing
+ * updateThresholds endpoint (already backend-complete; this was its
+ * missing frontend entry point).
+ */
+function ThresholdsModal({ target, onClose, onSaved }: { target: WarehouseStockItem | null; onClose: () => void; onSaved: () => void }) {
+  const [minimumStock, setMinimumStock] = useState('');
+  const [reorderPoint, setReorderPoint] = useState('');
+  const [maximumStock, setMaximumStock] = useState('');
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (target) {
+      setMinimumStock(target.minimum_stock ?? '');
+      setReorderPoint(target.reorder_point ?? '');
+      setMaximumStock(target.maximum_stock ?? '');
+      setErrors({});
+    }
+  }, [target]);
+
+  async function submit() {
+    if (!target) return;
+    setSubmitting(true);
+    setErrors({});
+    try {
+      await apiClient.put(`/app/inventory/${target.id}/thresholds`, {
+        minimum_stock: minimumStock || null, reorder_point: reorderPoint || null, maximum_stock: maximumStock || null,
+      });
+      onSaved();
+      onClose();
+    } catch (err) {
+      const apiError: ApiErrorShape = extractApiError(err);
+      setErrors(apiError.errors ?? {});
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open={!!target} title={`Stock Thresholds — ${target?.product?.name ?? ''}`} onClose={onClose}>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
+        Applies only to this Warehouse ({target?.warehouse?.name ?? ''}). Leave a field blank for no threshold.
+      </p>
+      <FormField label="Minimum Stock" errors={errors.minimum_stock}>
+        <input type="number" step="0.0001" min="0" value={minimumStock} onChange={(e) => setMinimumStock(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Reorder Point" errors={errors.reorder_point}>
+        <input type="number" step="0.0001" min="0" value={reorderPoint} onChange={(e) => setReorderPoint(e.target.value)} style={inputStyle} />
+      </FormField>
+      <FormField label="Maximum Stock" errors={errors.maximum_stock}>
+        <input type="number" step="0.0001" min="0" value={maximumStock} onChange={(e) => setMaximumStock(e.target.value)} style={inputStyle} />
+      </FormField>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <button className="btn-secondary" onClick={onClose}>
+          Cancel
+        </button>
+        <button className="btn-primary" disabled={submitting} onClick={submit}>
+          Save Thresholds
+        </button>
+      </div>
+    </Modal>
   );
 }
 

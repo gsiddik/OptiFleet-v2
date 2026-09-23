@@ -20,22 +20,50 @@ import type {
   WarehouseZoneItem,
 } from '../../../types';
 
-export const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'RIM', 'OTHER'];
+/**
+ * Batch 14: the doc's Item Type dropdown is exactly these 6 values
+ * ("Next Improvement Tenant Portal - Products": "Sparepart / Consumable
+ * / Rim / Tire / Tool / Equipment"). OTHER predates this document (the
+ * original Phase 4 catch-all, before RIM existed as its own type) and
+ * is deliberately excluded here — see StoreProductRequest's matching
+ * comment for the backend side of this decision.
+ */
+export const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'RIM'];
 
 const INTERVAL_UNITS = ['DAYS', 'WEEKS', 'MONTHS', 'YEARS'];
 
-type Spec = Record<string, unknown>;
-type CompatRow = { vehicle_brand: string; vehicle_model: string; variant: string; year_from: string; year_to: string; position: string };
+export type Spec = Record<string, unknown>;
+export type CompatRow = { vehicle_brand: string; vehicle_model: string; variant: string; year_from: string; year_to: string; position: string };
 
-function emptyCompatRow(): CompatRow {
+export function emptyCompatRow(): CompatRow {
   return { vehicle_brand: '', vehicle_model: '', variant: '', year_from: '', year_to: '', position: '' };
 }
 
-function splitCommaList(value: string): string[] {
+export function splitCommaList(value: string): string[] {
   return value
     .split(',')
     .map((v) => v.trim())
     .filter(Boolean);
+}
+
+/**
+ * Owner decision: Consumable Specification/Grade's Conditional-Mandatory trigger is the
+ * Product's own Category/Subcategory — mirrors `product_category_id: subcategoryId ||
+ * categoryId` (the value actually submitted): whichever leaf category row that resolves to
+ * carries the authoritative `requires_specification_grade` flag (Superadmin-managed master
+ * data, never a hardcoded name/code comparison here). The backend re-validates the same way —
+ * this is UX only.
+ */
+export function gradeSpecificationRequired(
+  categories: ProductCategoryItem[],
+  subcategories: ProductCategoryItem[],
+  categoryId: string,
+  subcategoryId: string,
+): boolean {
+  const effectiveId = subcategoryId || categoryId;
+  const match = subcategories.find((c) => c.id === effectiveId) ?? categories.find((c) => c.id === effectiveId);
+
+  return match?.requires_specification_grade ?? false;
 }
 
 /**
@@ -364,7 +392,16 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
         <SparepartFields spec={spec} setSpecField={setSpecField} errors={errors} compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} />
       )}
       {itemType === 'CONSUMABLE' && (
-        <ConsumableFields spec={spec} setSpecField={setSpecField} errors={errors} uoms={uoms} storageRequirements={storageRequirements} trackBatch={trackBatch} setTrackBatch={setTrackBatch} />
+        <ConsumableFields
+          spec={spec}
+          setSpecField={setSpecField}
+          errors={errors}
+          uoms={uoms}
+          storageRequirements={storageRequirements}
+          trackBatch={trackBatch}
+          setTrackBatch={setTrackBatch}
+          gradeRequired={gradeSpecificationRequired(categories, subcategories, categoryId, subcategoryId)}
+        />
       )}
       {itemType === 'RIM' && <RimFields spec={spec} setSpecField={setSpecField} errors={errors} compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} />}
       {itemType === 'TIRE' && (
@@ -397,11 +434,11 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   );
 }
 
-function brandRequired(itemType: ItemType): boolean {
+export function brandRequired(itemType: ItemType): boolean {
   return ['SPARE_PART', 'RIM', 'TIRE', 'EQUIPMENT'].includes(itemType);
 }
 
-function needsField(field: 'track_serial_number', itemType: ItemType): boolean {
+export function needsField(field: 'track_serial_number', itemType: ItemType): boolean {
   if (field === 'track_serial_number') return ['SPARE_PART', 'RIM', 'TOOL', 'EQUIPMENT'].includes(itemType);
   return false;
 }
@@ -523,13 +560,14 @@ function CompatibilityRows({
   );
 }
 
-function SparepartFields({
+export function SparepartFields({
   spec,
   setSpecField,
   errors,
   compatibilities,
   updateCompatRow,
   setCompatibilities,
+  showCompatibility = true,
 }: {
   spec: Spec;
   setSpecField: (k: string, v: unknown) => void;
@@ -537,6 +575,7 @@ function SparepartFields({
   compatibilities: CompatRow[];
   updateCompatRow: (i: number, patch: Partial<CompatRow>) => void;
   setCompatibilities: (rows: CompatRow[]) => void;
+  showCompatibility?: boolean;
 }) {
   return (
     <>
@@ -610,12 +649,14 @@ function SparepartFields({
         errorKey="spec.shelf_life_value"
         errors={errors}
       />
-      <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required />
+      {showCompatibility && (
+        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required />
+      )}
     </>
   );
 }
 
-function ConsumableFields({
+export function ConsumableFields({
   spec,
   setSpecField,
   errors,
@@ -623,6 +664,7 @@ function ConsumableFields({
   storageRequirements,
   trackBatch,
   setTrackBatch,
+  gradeRequired = false,
 }: {
   spec: Spec;
   setSpecField: (k: string, v: unknown) => void;
@@ -631,6 +673,7 @@ function ConsumableFields({
   storageRequirements: StorageRequirementItem[];
   trackBatch: boolean;
   setTrackBatch: (v: boolean) => void;
+  gradeRequired?: boolean;
 }) {
   const trackExpiry = (spec.track_expiry as boolean) ?? false;
   const isHazardous = (spec.is_hazardous as boolean) ?? false;
@@ -643,12 +686,11 @@ function ConsumableFields({
           <input type="checkbox" checked={trackBatch} onChange={(e) => setTrackBatch(e.target.checked)} /> Yes
         </label>
       </FormField>
-      <FormField label="Specification / Grade" errors={errors['spec.grade_specification']}>
+      <FormField label="Specification / Grade" errors={errors['spec.grade_specification']} required={gradeRequired}>
         <input placeholder="e.g. SAE 15W-40, DOT 4" value={(spec.grade_specification as string) ?? ''} onChange={(e) => setSpecField('grade_specification', e.target.value)} style={inputStyle} />
-        {/* TODO(business-rule): the authoritative document marks this Conditional Mandatory
-            but does not define the trigger condition. Until that rule is confirmed, this
-            field stays Optional-enforced (never rejected for being absent) — see
-            ProductSpecificationService::validateConsumable() for the backend mirror. */}
+        {/* Owner decision: required when the selected Category/Subcategory's
+            requires_specification_grade flag is set (Superadmin-managed master data) — see
+            ProductSpecificationService::validateConsumable() for the authoritative backend rule. */}
       </FormField>
       <FormField label="Package Size" errors={errors['spec.package_size_value']}>
         <div style={{ display: 'flex', gap: 6 }}>
@@ -740,13 +782,14 @@ function ConsumableFields({
   );
 }
 
-function RimFields({
+export function RimFields({
   spec,
   setSpecField,
   errors,
   compatibilities,
   updateCompatRow,
   setCompatibilities,
+  showCompatibility = true,
 }: {
   spec: Spec;
   setSpecField: (k: string, v: unknown) => void;
@@ -754,6 +797,7 @@ function RimFields({
   compatibilities: CompatRow[];
   updateCompatRow: (i: number, patch: Partial<CompatRow>) => void;
   setCompatibilities: (rows: CompatRow[]) => void;
+  showCompatibility?: boolean;
 }) {
   return (
     <>
@@ -802,12 +846,14 @@ function RimFields({
           style={inputStyle}
         />
       </FormField>
-      <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required={false} />
+      {showCompatibility && (
+        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required={false} />
+      )}
     </>
   );
 }
 
-function TireFields({
+export function TireFields({
   spec,
   setSpecField,
   errors,
@@ -989,7 +1035,7 @@ function TireFields({
   );
 }
 
-function ToolFields({ spec, setSpecField, errors, toolTypes }: { spec: Spec; setSpecField: (k: string, v: unknown) => void; errors: Record<string, string[]>; toolTypes: ToolTypeItem[] }) {
+export function ToolFields({ spec, setSpecField, errors, toolTypes }: { spec: Spec; setSpecField: (k: string, v: unknown) => void; errors: Record<string, string[]>; toolTypes: ToolTypeItem[] }) {
   return (
     <>
       <FormField label="Tool Type" errors={errors['spec.tool_type_id']} required>
@@ -1041,7 +1087,7 @@ function ToolFields({ spec, setSpecField, errors, toolTypes }: { spec: Spec; set
   );
 }
 
-function EquipmentFields({
+export function EquipmentFields({
   spec,
   setSpecField,
   errors,

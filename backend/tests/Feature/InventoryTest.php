@@ -204,4 +204,91 @@ class InventoryTest extends TestCase
         $this->assertFalse($warehouseIds->contains($warehouseB->id));
         $this->assertArrayHasKey('current_page', $response->json('meta'));
     }
+
+    /**
+     * "Next Improvement Tenant Portal" Inventory Configuration: Minimum
+     * Stock / Reorder Point / Maximum Stock — per-Warehouse policy (a
+     * Product can stock differently at each Warehouse), so it lives on
+     * WarehouseStock rather than the Product master.
+     */
+    public function test_thresholds_can_be_updated_and_are_warehouse_scoped(): void
+    {
+        [$tenant, $warehouse, $product] = $this->setUpWarehouseAndProduct();
+        app(InventoryService::class)->receive($warehouse, $product, 10, 5, 'OPENING', null, null, null);
+        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->firstOrFail();
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.adjust']);
+
+        $this->putJson("/api/v1/app/inventory/{$stock->id}/thresholds", [
+            'minimum_stock' => 2, 'reorder_point' => 5, 'maximum_stock' => 50,
+        ], $this->authHeaders($token))->assertOk();
+
+        $stock->refresh();
+        $this->assertSame(2.0, (float) $stock->minimum_stock);
+        $this->assertSame(5.0, (float) $stock->reorder_point);
+        $this->assertSame(50.0, (float) $stock->maximum_stock);
+    }
+
+    public function test_thresholds_update_requires_permission(): void
+    {
+        [$tenant, $warehouse, $product] = $this->setUpWarehouseAndProduct();
+        app(InventoryService::class)->receive($warehouse, $product, 10, 5, 'OPENING', null, null, null);
+        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->firstOrFail();
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.view']); // no inventory.adjust
+
+        $this->putJson("/api/v1/app/inventory/{$stock->id}/thresholds", [
+            'minimum_stock' => 2,
+        ], $this->authHeaders($token))->assertStatus(403);
+    }
+
+    public function test_thresholds_reject_negative_values(): void
+    {
+        [$tenant, $warehouse, $product] = $this->setUpWarehouseAndProduct();
+        app(InventoryService::class)->receive($warehouse, $product, 10, 5, 'OPENING', null, null, null);
+        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->firstOrFail();
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.adjust']);
+
+        $this->putJson("/api/v1/app/inventory/{$stock->id}/thresholds", [
+            'minimum_stock' => -1,
+        ], $this->authHeaders($token))->assertStatus(422);
+    }
+
+    public function test_thresholds_can_be_cleared_to_null(): void
+    {
+        [$tenant, $warehouse, $product] = $this->setUpWarehouseAndProduct();
+        app(InventoryService::class)->receive($warehouse, $product, 10, 5, 'OPENING', null, null, null);
+        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->firstOrFail();
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.adjust']);
+        $this->putJson("/api/v1/app/inventory/{$stock->id}/thresholds", ['maximum_stock' => 100], $this->authHeaders($token))->assertOk();
+
+        $this->putJson("/api/v1/app/inventory/{$stock->id}/thresholds", ['maximum_stock' => null], $this->authHeaders($token))->assertOk();
+
+        $this->assertNull($stock->refresh()->maximum_stock);
+    }
+
+    public function test_thresholds_are_warehouse_scoped_not_product_wide(): void
+    {
+        [$tenant, $warehouseA, $product] = $this->setUpWarehouseAndProduct();
+        $warehouseB = $this->makeWarehouse($tenant);
+        app(InventoryService::class)->receive($warehouseA, $product, 10, 5, 'OPENING', null, null, null);
+        app(InventoryService::class)->receive($warehouseB, $product, 10, 5, 'OPENING', null, null, null);
+        $stockA = WarehouseStock::query()->where('warehouse_id', $warehouseA->id)->where('product_id', $product->id)->firstOrFail();
+        $stockB = WarehouseStock::query()->where('warehouse_id', $warehouseB->id)->where('product_id', $product->id)->firstOrFail();
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.adjust']);
+
+        $this->putJson("/api/v1/app/inventory/{$stockA->id}/thresholds", ['minimum_stock' => 3], $this->authHeaders($token))->assertOk();
+
+        $this->assertSame(3.0, (float) $stockA->refresh()->minimum_stock);
+        $this->assertSame(0.0, (float) $stockB->refresh()->minimum_stock);
+    }
+
+    public function test_thresholds_update_is_denied_outside_assigned_warehouse_scope(): void
+    {
+        [$tenant, $warehouseA, $product] = $this->setUpWarehouseAndProduct();
+        $warehouseB = $this->makeWarehouse($tenant);
+        app(InventoryService::class)->receive($warehouseB, $product, 10, 5, 'OPENING', null, null, null);
+        $stockB = WarehouseStock::query()->where('warehouse_id', $warehouseB->id)->where('product_id', $product->id)->firstOrFail();
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.adjust'], ['WAREHOUSE' => $warehouseA->id]);
+
+        $this->putJson("/api/v1/app/inventory/{$stockB->id}/thresholds", ['minimum_stock' => 3], $this->authHeaders($token))->assertStatus(403);
+    }
 }

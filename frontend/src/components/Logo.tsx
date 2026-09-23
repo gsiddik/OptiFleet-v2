@@ -4,11 +4,15 @@ import type { CSSProperties } from 'react';
  * OptiFleet wordmark (512x188 source, transparent PNG). object-fit: contain
  * keeps the aspect ratio intact at any sidebar width/height — never
  * stretched, never cropped to fill both dimensions at once.
+ *
+ * `src` lets a tenant's own uploaded logo (Company Profile) replace the
+ * wordmark in the sidebar without touching the default asset used
+ * everywhere else (login screen, tenants with no logo uploaded yet).
  */
-export function Logo({ height = 36, style }: { height?: number; style?: CSSProperties }) {
+export function Logo({ height = 36, style, src = '/logo-optifleet.png' }: { height?: number; style?: CSSProperties; src?: string }) {
   return (
     <img
-      src="/logo-optifleet.png"
+      src={src}
       alt="OptiFleet"
       style={{
         height,

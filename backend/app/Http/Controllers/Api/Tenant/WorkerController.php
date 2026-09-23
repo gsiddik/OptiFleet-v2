@@ -6,6 +6,7 @@ use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Identity\Models\TenantUser;
 use App\Domain\Workshop\Models\Worker;
 use App\Domain\Workshop\Models\WorkerSkill;
+use App\Domain\Workshop\Models\WorkerType;
 use App\Domain\Workshop\Services\WorkerAssignmentService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreWorkerRequest;
@@ -25,10 +26,10 @@ class WorkerController extends Controller
         $user = $this->context->user();
         $tenantId = $this->context->tenantId();
 
-        $query = Worker::query()->with(['branch', 'workshop', 'skills.componentGroup']);
+        $query = Worker::query()->with(['branch', 'workshop', 'skills.componentGroup', 'workerTypeMaster']);
         $this->scope->applyWorkshopScope($query, $user, $tenantId, 'workshop_id');
 
-        foreach (['status', 'worker_type', 'branch_id', 'workshop_id'] as $filter) {
+        foreach (['status', 'worker_type', 'worker_type_id', 'branch_id', 'workshop_id'] as $filter) {
             if ($value = $request->string($filter)->value()) {
                 $query->where($filter, $value);
             }
@@ -64,24 +65,31 @@ class WorkerController extends Controller
 
     public function store(StoreWorkerRequest $request)
     {
-        $worker = Worker::query()->create($request->validated() + ['status' => 'ACTIVE']);
+        $validated = $this->deriveLegacyWorkerType($request->validated());
+        $worker = Worker::query()->create($validated + ['status' => 'ACTIVE']);
 
-        return $this->ok($worker, 201);
+        // fresh(), not load(): worker_type may have been left for the DB's own column
+        // default (see deriveLegacyWorkerType()) rather than sent explicitly, and the
+        // in-memory model from create() never reflects a DB-applied default without
+        // actually re-reading the row.
+        return $this->ok($worker->fresh(['workerTypeMaster']), 201);
     }
 
     public function show(Worker $worker)
     {
         $this->authorizeTenant($worker);
 
-        return $this->ok($worker->load(['branch', 'workshop', 'skills.componentGroup', 'assignments']));
+        return $this->ok($worker->load(['branch', 'workshop', 'skills.componentGroup', 'assignments', 'workerTypeMaster']));
     }
 
     public function update(Request $request, Worker $worker)
     {
         $this->authorizeTenant($worker);
+        $tenantId = $this->context->tenantId();
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'worker_type' => ['sometimes', 'in:LEAD_MECHANIC,MECHANIC,TECHNICIAN,INSPECTOR,QC'],
+            'worker_type_id' => ['sometimes', 'nullable', 'uuid', \Illuminate\Validation\Rule::exists('worker_types', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
@@ -90,9 +98,29 @@ class WorkerController extends Controller
             'hourly_rate' => ['nullable', 'numeric', 'min:0'],
             'photo_url' => ['nullable', 'string', 'max:255'],
         ]);
-        $worker->update($validated);
+        $worker->update($this->deriveLegacyWorkerType($validated));
 
-        return $this->ok($worker->fresh());
+        return $this->ok($worker->fresh(['workerTypeMaster']));
+    }
+
+    /**
+     * When a caller sets worker_type_id to a type whose code still matches one of the
+     * 5 legacy enum values, mirror it into the legacy worker_type column too, so any
+     * pre-existing code/report still keyed on that string column keeps working. A
+     * custom tenant-defined type (not one of the 5) simply leaves worker_type alone —
+     * worker_type_id + workerTypeMaster is the authoritative path for those.
+     */
+    private function deriveLegacyWorkerType(array $validated): array
+    {
+        if (empty($validated['worker_type_id']) || ! empty($validated['worker_type'])) {
+            return $validated;
+        }
+        $type = WorkerType::query()->find($validated['worker_type_id']);
+        if ($type && in_array($type->code, ['LEAD_MECHANIC', 'MECHANIC', 'TECHNICIAN', 'INSPECTOR', 'QC'], true)) {
+            $validated['worker_type'] = $type->code;
+        }
+
+        return $validated;
     }
 
     public function addSkill(Request $request, Worker $worker)
