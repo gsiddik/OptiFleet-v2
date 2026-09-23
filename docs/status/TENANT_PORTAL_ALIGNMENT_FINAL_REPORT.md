@@ -394,6 +394,13 @@ implementation detail.
 Classification is exactly one of: **COMPLETE** / **NEEDS_OWNER_DECISION**
 / **BLOCKED_EXTERNAL_DEPENDENCY** / **NOT_COMPLETE**.
 
+> **Update:** the four rows below previously marked NEEDS_OWNER_DECISION
+> have been registered as **DEFERRED — NEXT IMPROVEMENT** (see §N.5).
+> They are explicitly **NON-BLOCKING for Tenant Portal Alignment** — the
+> owner decision on Removed Component valuation is itself resolved (see
+> §N.5 item 1); what remains for all four is future implementation
+> work, tracked separately and out of scope for this PR.
+
 | Area (source document) | Status | Notes |
 |---|---|---|
 | Vehicle — purchase month/year (Products) | COMPLETE | Batch 6 |
@@ -411,8 +418,8 @@ Classification is exactly one of: **COMPLETE** / **NEEDS_OWNER_DECISION**
 | Product — Inventory Configuration (Stock Tracking, Min/Reorder/Max Stock) | COMPLETE | Batch 12; Stock Tracking already universal, Min/Reorder/Max Stock backend pre-existed, frontend UI added |
 | Product — Inventory Configuration (Serialized/Batch Tracked/Expiry Tracked/Checkout-able/Calibratable) | COMPLETE | Already implemented per-Item-Type, confirmed in Batch 12 audit |
 | Product — Inventory Configuration ("Installable" row) | COMPLETE (NOT_APPLICABLE) | Descriptive commentary in the source doc, not a configurable field — confirmed absent from every per-type Specification table in both documents |
-| Product — Rim/Tire "Maintainable" toggle | **NEEDS_OWNER_DECISION** | Summary table marks it Optional for Rim/Tire, but neither document's own detailed Rim/Tire Specification table lists it — not implemented speculatively (Batch 12) |
-| Product — Sparepart "Expiry Tracked" toggle | **NEEDS_OWNER_DECISION** | Same reasoning — summary table only, no per-type table backing (Batch 12) |
+| Product — Rim/Tire "Maintainable" toggle | **DEFERRED — NEXT IMPROVEMENT (non-blocking)** | Summary table marks it Optional for Rim/Tire, but neither document's own detailed Rim/Tire Specification table lists it — not implemented speculatively (Batch 12); registered as Next Improvement #3 |
+| Product — Sparepart "Expiry Tracked" toggle | **DEFERRED — NEXT IMPROVEMENT (non-blocking)** | Same reasoning — summary table only, no per-type table backing (Batch 12); registered as Next Improvement #4 |
 | Product — Item Type dropdown (6 documented values only) | COMPLETE | `OTHER` (a pre-doc legacy value) excluded from new creation at both frontend and backend layers — Batch 14 |
 | Product — Image URL → real upload | COMPLETE | Batch 14, last remaining Image URL surface in the repository |
 | Work Order — Finding 422 / per-action status gating | COMPLETE | Batch 2 |
@@ -420,8 +427,8 @@ Classification is exactly one of: **COMPLETE** / **NEEDS_OWNER_DECISION**
 | Work Order — Consume popup redesign (Install All/Installed Qty modal) | COMPLETE | Batch 10 |
 | Work Order — Return popup redesign (4 Condition labels, Available-to-return as system info, evidence upload) | COMPLETE | Batch 10 |
 | Work Order — "Used Qty" meaning (old/removed component vs. unused return) | COMPLETE | Owner Decision 2 — full `WorkOrderRemovedComponent`/`...Return` domain, proven not to reverse the new part's consumption (explicit test) |
-| Work Order — Removed Component costing/valuation treatment | **NEEDS_OWNER_DECISION** | Explicitly undefined by the requirement documents; currently records quantity/traceability only, zero cost effect (Batch 10, disclosed, non-blocking) |
-| Work Order — Removed Component serialized-asset integration (`ComponentAsset`) | **NEEDS_OWNER_DECISION** | Currently quantity-based for all products including serialized ones; integrating the existing serialized-asset module is flagged as valuable follow-up work, not started (Batch 10, disclosed, non-blocking) |
+| Work Order — Removed Component post-repair valuation | **DEFERRED — NEXT IMPROVEMENT (non-blocking)** | Owner decision now RESOLVED: a future authorized user will manually enter a Post-Repair Assessed Value after repair — OptiFleet will not automatically calculate it (no depreciation/costing formula). Implementation not started; current `REMOVED_COMPONENT_RETURN` zero-cost-effect behavior is preserved unchanged. Registered as Next Improvement #1 |
+| Work Order — Removed Component serialized-asset integration (`ComponentAsset`) | **DEFERRED — NEXT IMPROVEMENT (non-blocking)** | Currently quantity-based for all products including serialized ones; integrating the existing serialized-asset module is flagged as valuable follow-up work requiring its own architecture/lifecycle analysis, not started (Batch 10). Registered as Next Improvement #2 |
 | Work Order — Removed Component disposition workflow (inspect/repair/scrap) | NOT_COMPLETE (deliberately deferred) | Only the return-to-warehouse movement is recorded; a full disposition workflow was explicitly out of scope per "do not over-engineer" (Batch 10, disclosed, non-blocking) |
 | Work Order — Planned Parts vs. Request Parts reconciliation | COMPLETE | Batch 11 — new budgeting-only Planned Parts tab; old rich tab renamed Request Parts, gated `IN_PROGRESS`+ |
 | Work Order — full per-status Tab/button visibility matrix | NOT_COMPLETE (deliberately deferred) | Only `REQUEST_PARTS_VISIBLE_STATUSES` was gated (Batch 11); the complete matrix is flagged since Batch 9 as large, distinct, out-of-scope follow-up work |
@@ -472,29 +479,86 @@ debug code, secrets, and unrelated changes:
   was not amended or rewritten; it is safe to merge as part of the
   branch's full commit sequence.
 
-### N.5 — Remaining Owner Decisions (genuinely unresolved, non-blocking)
+### N.5 — Deferred Next Improvements (non-blocking for Tenant Portal Alignment)
 
-1. **Removed Component costing/valuation**: should a returned old
-   component ever carry a value onto the books (e.g. salvage value if
-   later sold/repaired/scrapped)? Undefined by the requirement
-   documents. Current behavior: zero cost/valuation effect, quantity/
-   traceability only.
-2. **Removed Component serialized-asset integration**: should a
-   removed component whose Product is serialized
-   (`track_serial_number = true`) integrate with the existing
-   `ComponentAsset`/`ComponentRemoval` module instead of the current
-   quantity-based flow? Flagged as valuable follow-up, not started.
-3. **Rim/Tire "Maintainable" toggle**: does the business genuinely need
-   a Maintenance Required/Interval toggle for Rim and Tire products
-   (mirroring Tool/Equipment), or was the summary table's "Optional"
-   mark imprecise? Not implemented without corroboration from either
-   document's detailed per-type Specification table.
-4. **Sparepart "Expiry Tracked" toggle**: same question for Sparepart's
-   Expiry Tracked — not implemented without corroboration.
+The four items below were tracked during the initiative as open owner
+decisions. They are now registered as **Next Improvement** work,
+explicitly deferred until after this Tenant Portal Alignment PR is
+merged. None of them are implemented in this branch, and none blocks
+this PR — each is additive, independent of anything already shipped,
+and does not affect the stability or correctness of any completed
+batch.
 
-None of these four block a Pull Request: each is a small, additive,
-independently-implementable enhancement if the owner confirms it is
-wanted, and none contradicts or destabilizes any completed work.
+1. **Removed Component Post-Repair Valuation.** The owner decision on
+   *how* this will eventually work is now resolved:
+
+   ```
+   Component Installed on Vehicle
+           ↓
+   Removed from Vehicle
+           ↓
+   Returned to Warehouse
+           ↓
+   Awaiting Repair / Assessment
+           ↓
+   Repair
+           ↓
+   Repair Completed
+           ↓
+   Post-Repair Assessment
+           ↓
+   User manually enters Assessed Value
+           ↓
+   OptiFleet records assessment
+   ```
+
+   Future OptiFleet behavior: an authorized user will manually enter a
+   **Post-Repair Assessed Value** (plus Assessed By/At/Notes) after a
+   removed component has been repaired. **OptiFleet will not
+   automatically calculate this valuation** — no depreciation, salvage,
+   or cost-derivation formula (`Original Cost - Depreciation + Repair
+   Cost = Current Value` is explicitly NOT the model). Original/Purchase
+   Cost, Repair Cost, and Post-Repair Assessed Value are three distinct,
+   non-interchangeable concepts. This also does not imply an accounting
+   engine — no automatic journals, GL accounts, or asset gain/loss
+   recognition; the intended future scope is an operational record, a
+   lifecycle record, the user-entered assessment, and an audit trail.
+   Financial/accounting integration, if ever needed, is a separate
+   future business decision. **Not implemented in this PR** — the
+   current `REMOVED_COMPONENT_RETURN` zero-cost-effect behavior is
+   preserved unchanged; no valuation fields, logic, or migration were
+   added.
+2. **Removed Component `ComponentAsset` Integration.** Future goal:
+   track the identity and lifecycle of an individual (especially
+   serialized) removed component through the existing `ComponentAsset`
+   domain:
+
+   ```
+   ComponentAsset → Installed on Vehicle → Removed through Work Order
+   → Returned → Inspected → Repairable/Reusable/Scrap → Repair
+   → Post-Repair Assessment → Available/Disposition → Potential Reinstallation
+   ```
+
+   Requires its own architecture and lifecycle analysis. **Not
+   implemented in this PR** — the current quantity-based flow (applying
+   equally to serialized and non-serialized products) is unchanged.
+3. **Rim/Tire "Maintainable" toggle.** Whether Rim and/or Tire products
+   should have a configurable Maintenance Required/Interval toggle
+   (mirroring Tool/Equipment) is not determined by either source
+   document's own detailed per-type Specification table — only by an
+   imprecise summary row. Future analysis must determine whether Rim
+   and/or Tire are maintainable, what `Maintainable = true` means
+   operationally, whether it drives maintenance scheduling or
+   repair/lifecycle functionality, and whether it is configurable or
+   derived. **No business rule is guessed and no toggle is added or
+   removed in this PR.**
+4. **Sparepart "Expiry Tracked" toggle.** Same situation for Sparepart.
+   Future analysis must determine which spareparts can expire, whether
+   tracking is product-level configuration vs. Batch/Lot/Inventory-
+   Instance-level, how expiry affects stock availability, warning/
+   notification requirements, FEFO/allocation implications, warehouse
+   behavior, and reporting requirements. **No business rule is guessed
+   and nothing is implemented in this PR.**
 
 ### N.6 — Deployment Prerequisites
 
@@ -519,9 +583,9 @@ All conditions are met: full non-Mongo backend regression is green
 (800/800), frontend production build and lint are clean, the git diff
 contains no debug code, secrets, or unrelated changes, every batch in
 the established sequence is complete and documented, and the only open
-items are four small, explicitly-disclosed, non-blocking
-NEEDS_OWNER_DECISION enhancements that do not affect the stability or
-correctness of anything already shipped.
+items are the four Deferred Next Improvement items in §N.5 — explicitly
+non-blocking, registered as future work, not implemented here, and not
+affecting the stability or correctness of anything already shipped.
 
 **Per explicit instruction, the Pull Request itself has NOT been
 created.** This section is the readiness decision only; creating the
@@ -529,21 +593,30 @@ PR requires separate, explicit approval.
 
 ### N.8 — Suggested PR (for when creation is approved)
 
-**Title:** `Tenant Portal alignment: Work Order redesign, Product spec/inventory gaps, image-upload sweep (Batches 1-14)`
+**Title:** `feat: complete Tenant Portal requirement alignment`
 
 **Body outline:**
-- Summary: closes the Tenant Portal requirement re-audit initiative
-  across 5 source documents — Maintenance Request/Inspection, Work
-  Order (Finding gating, Overview/Consume/Return redesign, Removed
+- Objective: Tenant Portal Requirement Re-Audit and Implementation
+  Alignment.
+- Scope: Batch 1-15.
+- Major areas (from this Final Report): Maintenance Request/Inspection,
+  Work Order (Finding gating, Overview/Consume/Return redesign, Removed
   Component Return, Planned Parts), Product (Edit dynamic form,
   Consumable Specification/Grade, SDS upload, Inventory Configuration,
   Image upload), Workshop Invoice History, master data (Worker Type,
   Vehicle Brand, UOM, Scheduler), and a repository-wide Image URL →
   upload conversion.
+- Verification: backend regression 800/800 PASS (3583 assertions, 0
+  failures), `npm run build` PASS, `npm run lint` 0 errors.
+- MongoDB: Analytics/Intelligence is a separate track, out of this
+  initiative's regression scope — not claimed as passing here.
+- Deployment prerequisites: `php artisan storage:link`; migrations
+  `2026_09_28_000001` through `2026_09_28_000005`.
+- Deferred Next Improvements (non-blocking, intentionally deferred
+  until after this PR is merged):
+  1. Removed Component Post-Repair Valuation
+  2. Removed Component `ComponentAsset` Integration
+  3. Rim/Tire `Maintainable` behavior
+  4. Sparepart `Expiry Tracked` behavior
 - Link to `docs/status/TENANT_PORTAL_ALIGNMENT_STATUS.md` and this
   Final Report for full detail.
-- Test plan: `php artisan test` (800/800, Mongo-dependent tests
-  excluded per documented environment limitation), `npm run build`,
-  `npm run lint`.
-- Remaining owner decisions: the four items in §N.5, called out
-  explicitly as non-blocking follow-ups.

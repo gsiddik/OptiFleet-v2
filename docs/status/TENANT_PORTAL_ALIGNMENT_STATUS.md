@@ -1889,15 +1889,45 @@ Batch 9 and are kept only as historical record). Summary:
   to a documented batch.
 - Final Requirement Closure Matrix built (COMPLETE /
   NEEDS_OWNER_DECISION / BLOCKED_EXTERNAL_DEPENDENCY / NOT_COMPLETE) —
-  see Final Report §N.2. Four small, disclosed, non-blocking
-  NEEDS_OWNER_DECISION items remain (Removed Component costing,
-  Removed Component serialized-asset integration, Rim/Tire
-  Maintainable, Sparepart Expiry Tracked); two deliberately-deferred
-  NOT_COMPLETE follow-ups (Removed Component disposition workflow, full
-  per-status Tab/button visibility matrix); Analytics/Intelligence
-  correctly classified BLOCKED_EXTERNAL_DEPENDENCY (out of this
-  initiative's scope, pre-existing `ext-mongodb` environment
-  limitation).
+  see Final Report §N.2. Four small, disclosed, non-blocking items
+  remain (Removed Component post-repair valuation, Removed Component
+  serialized-asset integration, Rim/Tire Maintainable, Sparepart
+  Expiry Tracked) — **update (finalization step below): these four are
+  now registered as DEFERRED — NEXT IMPROVEMENT, explicitly
+  non-blocking**; two deliberately-deferred NOT_COMPLETE follow-ups
+  (Removed Component disposition workflow, full per-status Tab/button
+  visibility matrix); Analytics/Intelligence correctly classified
+  BLOCKED_EXTERNAL_DEPENDENCY (out of this initiative's scope,
+  pre-existing `ext-mongodb` environment limitation).
 - **Decision: READY FOR PULL REQUEST.** Per explicit instruction, the
   Pull Request itself was NOT created — this is the readiness decision
   only, awaiting separate explicit approval to create it.
+
+## Finalization: Next Improvements registered + Pull Request created
+
+Continuation from the Batch 15 audit, per explicit owner instruction to
+finalize. No Batch 1-15 functionality was reopened, reconstructed, or
+changed — this step is documentation-only plus PR creation.
+
+- The four items above are formally registered as **Next Improvement**
+  work (Final Report §N.5), explicitly deferred until after this PR
+  merges and explicitly non-blocking for it. Item 1 (Removed Component
+  valuation) has its previously-open conceptual question resolved:
+  future OptiFleet behavior is a **user-entered Post-Repair Assessed
+  Value**, never an automatically-calculated one (no depreciation/
+  costing formula, no accounting engine) — this is a decision about
+  future scope, not an implementation; `REMOVED_COMPONENT_RETURN`'s
+  current zero-cost-effect behavior is unchanged in this branch.
+- Migrations `2026_09_28_000001` through `2026_09_28_000005` were
+  re-reviewed (ordering, FKs, indexes, CHECK-constraint widening
+  pattern, rollback `down()` methods, additive-only/no destructive
+  changes, no duplicate migrations) — no issue found, none modified.
+- Full branch diff (`git diff main..HEAD`, the actual PR-level diff)
+  independently re-reviewed for architecture, database, backend,
+  frontend, security, and repository-hygiene concerns per the
+  finalization checklist — see the PR description and this session's
+  report for the itemized results.
+- Pull Request created from `claude/peaceful-rubin-sm50tx` to `main`
+  (confirmed as the correct target: `main` is the repository's actual
+  default/HEAD branch; no `Improvement` branch exists locally or on
+  the remote). **Not merged**, per explicit instruction.
