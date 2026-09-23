@@ -101,6 +101,7 @@ class WorkOrderController extends Controller
             'vehicle', 'branch', 'workshop', 'findings', 'diagnoses', 'correctiveActions',
             'jobs.laborLogs', 'jobs.primaryAssignment', 'plannedParts.product', 'plannedParts.warehouse', 'additionalWorks', 'mechanicAssignments.worker',
             'roadTests', 'vehicleRelease', 'externalServices.partner', 'workspaceReservations.workspace',
+            'removedComponents.product', 'removedComponents.maintenanceJob', 'removedComponents.return', 'removedComponents.evidence',
         ]);
         // Computed values only, scoped to this single-record response (never appended
         // globally — a list endpoint appending them to every row would N+1 across the page).

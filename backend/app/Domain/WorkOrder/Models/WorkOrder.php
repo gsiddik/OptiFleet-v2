@@ -93,6 +93,11 @@ class WorkOrder extends Model
         return $this->hasMany(WorkOrderPlannedPart::class);
     }
 
+    public function removedComponents(): HasMany
+    {
+        return $this->hasMany(WorkOrderRemovedComponent::class);
+    }
+
     public function additionalWorks(): HasMany
     {
         return $this->hasMany(WorkOrderAdditionalWork::class);

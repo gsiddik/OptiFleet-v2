@@ -789,6 +789,232 @@ requirement — reuses the already-configured `local` disk).
    removed-component-from-vehicle concept, distinct from an unused-issued-
    stock return, and explicitly must never reverse the newly-installed
    replacement part's consumption. This is a domain/inventory lifecycle
-   change, not a UI label change — see the new "Batch 10 Detail
-   (continued): Removed Component Return" section below for the
-   architecture impact analysis and implementation.
+   change, not a UI label change — see "Batch 10 Detail (continued):
+   Removed Component Return" below for the architecture impact analysis
+   and implementation.
+
+## Batch 10 Detail (continued): Removed Component Return — OWNER DECISION 2 RESOLVED
+
+### Architecture impact assessment
+
+**Current Return Model.** `WorkOrderPlannedPart` (a quantity-based,
+warehouse-issued line item on a WO) → Reserve/Issue/Consume/Return via
+`WorkOrderPartService`. `WorkOrderPartReturn` records every return with a
+`condition` (as of this batch's earlier checkpoint:
+UNUSED_NEW/UNUSED_FAULTY/USED_GOOD/USED_FAULTY) — but every one of these,
+including the USED_* values, represents stock that originated from a
+warehouse Issue and is flowing back, whether it was ever installed or
+not. Confirmed by re-reading the existing (tested) test suite: a
+USED_GOOD/USED_FAULTY return is exercised in `InventoryReturnClassification
+Test` against a part that was **issued but never consumed** — i.e. the
+existing "Used" condition already meant "physical condition of returned-
+but-never-installed stock," not "a part that was on the vehicle."
+
+**Current Inventory Movement.** `InventoryService` + `stock_movements`
+ledger. `writeZeroEffectMovement()` is an established primitive (already
+used for `CONSUME` and `SALE`) for an immutable, balance-neutral ledger
+marker — exactly the posture an old-component return needs (must never
+auto-restock).
+
+**Separately existing:** `ComponentAsset`/`ComponentInstallation`/
+`ComponentRemoval` already model a full serialized-asset install/remove/
+replace/repair lifecycle (serial numbers, asset numbers, purchase cost) —
+but for individually-serialized, high-value components, not routine
+quantity-tracked spare parts. The Work Order doc's Return popup (Planned
+Parts) is squarely quantity-based (Product + Qty), matching the lighter
+`WorkOrderPlannedPart` domain, not this heavier one. Per the owner's
+instruction to reuse serialized-asset tracking where it already exists
+rather than inventing a parallel one: if a returned component's Product
+has `track_serial_number = true`, the ComponentAsset module is the
+architecturally correct home for it — wiring that integration is
+explicitly out of scope for this batch (see REMAINING below) and was not
+attempted without a dedicated design pass, to avoid a rushed integration
+with an existing, working module.
+
+**Gap.** No concept existed for "N units of Product X were removed FROM
+THE VEHICLE (not from warehouse stock) during Job Y of WO Z, and returned
+to the warehouse in [condition]" for non-serialized parts.
+
+**Proposed Old-Component Model (implemented).** Two new tables, mirroring
+the existing "Removal" / "Return" split ComponentAsset already uses for
+the same real-world event, sized for ordinary quantity-tracked parts:
+- `work_order_removed_components` — the removal event: `work_order_id`,
+  `maintenance_job_id` (nullable), `replaced_by_planned_part_id`
+  (nullable — traces to the new part installed in its place, when
+  applicable), `product_id` (the old/removed product — independently
+  selected, never auto-copied from the replacement, since the two are
+  not guaranteed equal), `quantity`, `condition` (`GOOD`/`FAULTY` —
+  reusing the vocabulary `work_order_part_returns.condition` already
+  established for USED_GOOD/USED_FAULTY rather than inventing new
+  terms), `notes`, `status` (`PENDING_RETURN`/`RETURNED`).
+- `work_order_removed_component_returns` — the return-to-warehouse event:
+  `warehouse_id`, `quantity`, `stock_movement_id`. Writes exactly one
+  `stock_movements` row via a new `InventoryService::
+  recordRemovedComponentReturn()` (mirrors `recordSale()`/
+  `recordConsumption()` exactly) using a new `REMOVED_COMPONENT_RETURN`
+  movement type — zero on-hand/available effect (same posture as
+  CONSUME/SALE), so it can never accidentally become normal available
+  stock.
+- `work_order_removed_component_evidence` — mirrors
+  `work_order_part_return_evidence` (private `local` disk, UUID
+  filenames, JPG/PNG + 5MB validated) but simpler: a Removed Component
+  has exactly one lifecycle and exactly one return, so evidence tied to
+  `work_order_removed_component_id` is unambiguous from upload time —
+  no separate "link to a specific return" step is needed (unlike Planned
+  Part evidence, where one part can be returned in several batches over
+  time).
+
+**Relationship to the New Installed Part.** `replaced_by_planned_part_id`
+(nullable FK to `work_order_planned_parts`) — nullable because a removal
+is not always a like-for-like replacement (a straight decommission has no
+"this replaced it" part) and the doc gives no mechanism to force that
+link.
+
+**Inventory Effect.** Zero. Removal itself creates no ledger entry (no
+warehouse-side event yet — it only leaves the vehicle). The Return
+creates exactly one zero-balance-effect `StockMovement`
+(`REMOVED_COMPONENT_RETURN`); `quantity_on_hand` is never touched.
+Verified by test: after a removed component is returned,
+`warehouse_stocks.quantity_on_hand` for that product is `0` (the ledger-
+anchor row `writeZeroEffectMovement()`'s `lockOrCreateStock()` always
+creates exists, but its balance never moves) — the same posture already
+proven correct for CONSUME/SALE.
+
+**New Part Consumption Reversed by Old-Part Return: NO** — confirmed by
+test (`test_removing_and_returning_an_old_component_does_not_reverse_the
+_new_parts_consumption`): the replacement Planned Part's `consumed_quantity`
+and `status=CONSUMED` are asserted unchanged after the old component's
+full removal + return cycle. The two are entirely separate write paths
+with no shared mutation.
+
+**Database Impact.** 3 new tables (additive, tenant-scoped, FK-indexed),
+`stock_movements.movement_type` CHECK constraint widened by one value
+(`REMOVED_COMPONENT_RETURN`), following the exact precedent the existing
+`CONSUME`/`SALE` widenings already used. No existing table altered
+destructively; no existing data touched.
+
+**API Impact.** New endpoints under `/work-orders/{wo}/removed-
+components` (list, create, delete-while-pending), `.../return`, and
+`.../evidence` (upload/list/show/delete) — `permission:maintenance_job.
+manage` for the removal record itself (recording what was done is akin
+to logging work), `permission:inventory.return` for the actual return-
+to-warehouse step (same permission the existing Unused Return uses,
+since it's the warehouse-facing action). The existing `/planned-parts/
+.../return` endpoint is unchanged in meaning — still purely the unused-
+issued-stock return it always was; only its Condition vocabulary/upload
+mechanism changed (see the "backend half" Detail above).
+
+**Frontend Impact.** New `RemovedComponentsSection` inside the Planned
+Parts tab, below the existing (per-part) Unused Return UI — presented as
+a clearly distinct section (not a merged/ambiguous quantity field) so
+the two concepts are never conflated, satisfying the doc's own
+conceptual popup split (Unused Part vs Old/Removed Component) without
+literally forcing a WO-level concept into a single-planned-part-scoped
+dialog, since `replaced_by_planned_part_id` is optional or (item 18's
+"two clearly different concepts" combined with this domain's real
+cardinality — a removal isn't always 1:1 with one planned part row).
+
+**History/Audit Impact.** Both new models `use Auditable`, so removal and
+return events automatically surface in the existing generic Audit tab
+(`audit_logs`, `resource_type` = the new model classes) — no bespoke
+event log needed, reusing the same mechanism `WorkOrderPartReturn`
+already relies on.
+
+**Costing Impact.** Per the owner's explicit instruction not to invent a
+financial rule: the removed component's return records quantity/
+traceability only, with zero cost/valuation effect — no accounting
+credit, no reversal of the replacement part's cost. **Flagged
+separately, not blocking:** whether a returned old component should ever
+carry a value onto the books (e.g. if later sold/repaired/scrapped with
+salvage value) is genuinely undefined by the requirement documents and
+is a new NEEDS_OWNER_DECISION, distinct from the "Used Qty" definition
+itself.
+
+**Migration Risk.** Low — purely additive; the only existing-file changes
+are a `WorkOrder::removedComponents()` relation, an `InventoryService`
+method addition, and `WorkOrderController::show()`'s eager-load list
+(all additive, none touch existing behavior). Full regression (70 tests
+across `WorkOrderRemovedComponentTest`, `InventoryReturnClassification
+Test`, `UsedPartDispositionTest`, `SparePartSaleTest`,
+`WorkOrderExecutionTest`, `WorkOrderPartRequestTest`,
+`WorkOrderClosureGuardTest`, `WorkOrderTest`) confirms zero regressions.
+
+### Implementation
+
+- `WorkOrderRemovedComponent`/`WorkOrderRemovedComponentReturn`/
+  `WorkOrderRemovedComponentEvidence` models (`App\Domain\WorkOrder\Models`).
+- `WorkOrderRemovedComponentService`: `remove()` (gated by the same
+  `assertExecutable()` as the rest of the active-execution part
+  lifecycle — Draft/External excluded), `delete()` (only while
+  `PENDING_RETURN` — a `RETURNED` record is an immutable inventory
+  transaction, per the owner's own instruction not to add Edit merely
+  for UI consistency), `returnToWarehouse()` (row-locked, rejects a
+  second return, writes the zero-effect movement), `uploadEvidence()`/
+  `deleteEvidence()` (JPG/PNG + 5MB, delete rejected once the component
+  is `RETURNED`).
+- `InventoryService::recordRemovedComponentReturn()` — new, mirrors
+  `recordSale()` exactly.
+- `WorkOrderExecutionController`: 8 new actions (list/create/delete
+  removal, return, evidence upload/list/show/delete), added to
+  `routes/api/app.php` under the existing `work-orders/{workOrder}/...`
+  group.
+- Frontend: `ImageUploadField` (new, `src/components/`) — the reusable
+  "Image Placeholder → JPG/PNG Upload → Preview" control the owner's
+  image-upload scope requires repository-wide; presentational only
+  (upload/remove delegated to the caller), used by both the Unused
+  Return evidence (backend half of this batch) and the new
+  `RemovedComponentsSection`. `PlannedPartsTab` rewritten: the Consume
+  action now opens a Modal with Install All / Installed Qty when
+  outstanding issued qty > 1 (doc: a single unit has nothing to choose,
+  consumed directly with no dialog); the Return form's Condition
+  dropdown now shows the doc's 4 labels (New Good/New Faulty/Used Good/
+  Used Faulty) and displays "Available to return" as read-only
+  SYSTEM_INFORMATION instead of asking the user to re-derive it; the
+  Evidence URL text field is replaced by `ImageUploadField` wired to the
+  new upload endpoints. New `RemovedComponentsSection` component: record
+  a removal (Product/Job/Replaces-which-planned-part/Qty/Condition/
+  Notes — Job and replacement-part are optional CONDITIONAL_INPUT,
+  Product/Qty/Condition are USER_INPUT), per-component evidence upload,
+  and a "Return to Warehouse" action (Warehouse + Reason) once ready.
+
+### Tests
+
+11 new (`WorkOrderRemovedComponentTest`): new-part-remains-consumed
+(the core domain invariant), double-return rejected, old product can
+differ from the new one, removal without a replacement part is allowed,
+invalid condition rejected, delete allowed only while pending, removal
+rejected while WO not executable, evidence upload accepts JPG/PNG and
+rejects other MIME types, evidence delete rejected once returned, tenant
+isolation, permission enforcement. Full regression: 70/70 PASS across 8
+files (listed above under Migration Risk), no regressions. `pint --test`
+clean on every new/changed backend file (one file's Rule::exists inline-
+qualification was auto-fixed via `pint` itself, matching existing repo
+style — verified via `git stash` that the fixer flags were newly
+introduced by this batch's own code, not pre-existing debt, then fixed
+before committing). Frontend: `tsc --noEmit` clean, `oxlint` clean (no
+new warnings in any touched file), `vite build` succeeds.
+
+MongoDB: NOT RUN, relocate-run-restore precedent followed for every test
+run in this continuation, zero diff confirmed before every commit.
+
+### REMAINING from this decision (disclosed, not blocking)
+
+- Serialized-component integration: a removed component whose Product
+  has `track_serial_number = true` currently goes through the same
+  quantity-based flow as any other — it does NOT yet integrate with the
+  existing `ComponentAsset`/`ComponentRemoval` serialized-asset module.
+  Per the owner's own "reuse it if available, do not invent parallel
+  serial-number tracking" instruction, the correct long-term direction
+  is wiring THAT module in for serialized products, not building a
+  second serial-tracking mechanism here — this needs its own design
+  pass (how does a WO Return popup select a *specific* ComponentAsset
+  instance to remove?) and was intentionally not rushed into this batch.
+- Costing/valuation treatment of a returned old component (see Costing
+  Impact above) — NEEDS_OWNER_DECISION, not answered by the requirement
+  documents.
+- Full disposition workflow (inspect → propose → decide, mirroring
+  `UsedPartDispositionService`) for removed components is NOT built —
+  the return only records the movement. Per the owner's own "do not
+  over-engineer... do not automatically build a complete remanufacturing
+  /refurbishment/disposal system" instruction, this is deliberately
+  deferred as a natural, valuable follow-up rather than attempted now.

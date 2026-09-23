@@ -546,6 +546,17 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence', [WorkOrderExecutionController::class, 'uploadReturnEvidence'])->middleware('permission:inventory.return');
             Route::get('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence/{evidence}', [WorkOrderExecutionController::class, 'showReturnEvidence'])->middleware('permission:inventory.return');
             Route::delete('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence/{evidence}', [WorkOrderExecutionController::class, 'destroyReturnEvidence'])->middleware('permission:inventory.return');
+
+            // Owner decision: old/removed-component domain, distinct from the Planned Part
+            // return endpoints above (those only ever represent warehouse-issued stock).
+            Route::get('/work-orders/{workOrder}/removed-components', [WorkOrderExecutionController::class, 'listRemovedComponents'])->middleware('permission:maintenance_job.manage');
+            Route::post('/work-orders/{workOrder}/removed-components', [WorkOrderExecutionController::class, 'removeComponent'])->middleware('permission:maintenance_job.manage');
+            Route::delete('/work-orders/{workOrder}/removed-components/{removedComponent}', [WorkOrderExecutionController::class, 'destroyRemovedComponent'])->middleware('permission:maintenance_job.manage');
+            Route::post('/work-orders/{workOrder}/removed-components/{removedComponent}/return', [WorkOrderExecutionController::class, 'returnRemovedComponent'])->middleware('permission:inventory.return');
+            Route::get('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence', [WorkOrderExecutionController::class, 'listRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+            Route::post('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence', [WorkOrderExecutionController::class, 'uploadRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+            Route::get('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence/{evidence}', [WorkOrderExecutionController::class, 'showRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
+            Route::delete('/work-orders/{workOrder}/removed-components/{removedComponent}/evidence/{evidence}', [WorkOrderExecutionController::class, 'destroyRemovedComponentEvidence'])->middleware('permission:maintenance_job.manage');
         });
 
         Route::middleware('module:PROCUREMENT')->group(function () {

@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
+import { ImageUploadField } from '../../../components/ImageUploadField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -19,6 +20,7 @@ import type {
   WorkerItem,
   WorkOrderFindingItem,
   WorkOrderItem,
+  WorkOrderPlannedPartItem,
   WorkspaceItem,
   WorkspaceReservationItem,
 } from '../../../types';
@@ -1157,6 +1159,41 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   );
 }
 
+const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY' | 'USED_GOOD' | 'USED_FAULTY'; label: string }[] = [
+  { value: 'UNUSED_NEW', label: 'New Good' },
+  { value: 'UNUSED_FAULTY', label: 'New Faulty' },
+  { value: 'USED_GOOD', label: 'Used Good' },
+  { value: 'USED_FAULTY', label: 'Used Faulty' },
+];
+
+/** Fetches a private-disk evidence image as a blob and returns an object URL for preview. */
+function useEvidencePreviews(showUrl: (id: string) => string, ids: string[]) {
+  const [previews, setPreviews] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    const urls: string[] = [];
+    Promise.all(
+      ids
+        .filter((id) => !previews[id])
+        .map((id) =>
+          apiClient.get(showUrl(id), { responseType: 'blob' }).then((res) => {
+            const url = URL.createObjectURL(res.data);
+            urls.push(url);
+            if (!cancelled) setPreviews((prev) => ({ ...prev, [id]: url }));
+          }),
+        ),
+    ).catch(() => {});
+    return () => {
+      cancelled = true;
+      urls.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(',')]);
+
+  return previews;
+}
+
 function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
   const [description, setDescription] = useState('');
@@ -1166,13 +1203,23 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Consume popup state — "Install All" / "Installed Qty" (doc: only shown when Issued Qty > 1).
+  const [consumingPart, setConsumingPart] = useState<WorkOrderPlannedPartItem | null>(null);
+  const [installAll, setInstallAll] = useState(true);
+  const [installedQty, setInstalledQty] = useState('');
+
+  // Return popup state.
   const [returningPartId, setReturningPartId] = useState<string | null>(null);
   const [returnQty, setReturnQty] = useState('');
-  const [returnCondition, setReturnCondition] = useState<'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY'>('UNUSED_NEW');
+  const [returnCondition, setReturnCondition] = useState<(typeof RETURN_CONDITIONS)[number]['value']>('UNUSED_NEW');
   const [returnReason, setReturnReason] = useState('');
-  const [returnEvidence, setReturnEvidence] = useState('');
-  // Adding a Planned Part is Draft-through-active-execution; Reserve/Issue/Consume/Return
-  // only ever apply once the WO is actually executing (see PART_ACTION_STATUSES).
+  const [returnEvidenceIds, setReturnEvidenceIds] = useState<string[]>([]);
+  const returnEvidencePreviews = useEvidencePreviews(
+    (id) => `/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence/${id}`,
+    returnEvidenceIds,
+  );
+
   const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
   const partActionsAvailable = PART_ACTION_STATUSES.includes(wo.status);
   const canReserve = partActionsAvailable && hasPermission('inventory.reserve');
@@ -1209,12 +1256,48 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
     }
   }
 
+  function outstandingIssued(p: WorkOrderPlannedPartItem): number {
+    return Number(p.issued_quantity) - Number(p.consumed_quantity) - Number(p.returned_quantity);
+  }
+
+  // Doc: Consume popup only appears when Issued Qty > 1 — a single outstanding unit has
+  // nothing to choose, so it's consumed directly with no dialog.
+  function startConsume(p: WorkOrderPlannedPartItem) {
+    if (outstandingIssued(p) <= 1) {
+      partAction(p.id, 'consume');
+      return;
+    }
+    setConsumingPart(p);
+    setInstallAll(true);
+    setInstalledQty(String(outstandingIssued(p)));
+  }
+
+  async function confirmConsume() {
+    if (!consumingPart || !installedQty) return;
+    await partAction(consumingPart.id, 'consume', { quantity: installedQty });
+    setConsumingPart(null);
+  }
+
   function startReturn(partId: string) {
     setReturningPartId(partId);
     setReturnQty('');
     setReturnCondition('UNUSED_NEW');
     setReturnReason('');
-    setReturnEvidence('');
+    setReturnEvidenceIds([]);
+  }
+
+  async function uploadReturnEvidence(file: File) {
+    if (!returningPartId) return;
+    const form = new FormData();
+    form.append('file', file);
+    const res = await apiClient.post(`/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence`, form);
+    setReturnEvidenceIds((prev) => [...prev, res.data.data.id]);
+  }
+
+  async function removeReturnEvidence(id: string) {
+    if (!returningPartId) return;
+    await apiClient.delete(`/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence/${id}`);
+    setReturnEvidenceIds((prev) => prev.filter((e) => e !== id));
   }
 
   async function submitReturn(partId: string) {
@@ -1223,7 +1306,7 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
       quantity: returnQty,
       condition: returnCondition,
       reason: returnReason || undefined,
-      evidence: returnEvidence || undefined,
+      evidence_ids: returnEvidenceIds.length > 0 ? returnEvidenceIds : undefined,
     });
     setReturningPartId(null);
   }
@@ -1258,8 +1341,8 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                     Issue
                   </button>
                 )}
-                {canIssue && Number(p.issued_quantity) - Number(p.consumed_quantity) - Number(p.returned_quantity) > 0 && (
-                  <button className="btn-secondary" disabled={busy} onClick={() => partAction(p.id, 'consume')}>
+                {canIssue && outstandingIssued(p) > 0 && (
+                  <button className="btn-secondary" disabled={busy} onClick={() => startConsume(p)}>
                     Consume
                   </button>
                 )}
@@ -1270,47 +1353,58 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                 )}
               </div>
               {returningPartId === p.id && (
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center', background: '#f9fafb', padding: 8, borderRadius: 6 }}>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="Qty"
-                    value={returnQty}
-                    onChange={(e) => setReturnQty(e.target.value)}
-                    style={{ ...inputStyle, width: 90 }}
-                  />
-                  <select
-                    value={returnCondition}
-                    onChange={(e) => setReturnCondition(e.target.value as 'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY')}
-                    style={{ ...inputStyle, width: 160 }}
-                  >
-                    <option value="UNUSED_NEW">Unused / New</option>
-                    <option value="USED_GOOD">Used — Good</option>
-                    <option value="USED_FAULTY">Used — Faulty</option>
-                  </select>
-                  <input
-                    placeholder="Reason (optional)"
-                    value={returnReason}
-                    onChange={(e) => setReturnReason(e.target.value)}
-                    style={{ ...inputStyle, width: 180 }}
-                  />
-                  <input
-                    placeholder="Evidence / photo URL (optional)"
-                    value={returnEvidence}
-                    onChange={(e) => setReturnEvidence(e.target.value)}
-                    style={{ ...inputStyle, width: 200 }}
-                  />
-                  <button className="btn-secondary" disabled={busy || !returnQty} onClick={() => submitReturn(p.id)}>
-                    Confirm return
-                  </button>
-                  <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
-                    Cancel
-                  </button>
-                  {returnCondition !== 'UNUSED_NEW' && (
-                    <span style={{ fontSize: 11, color: '#6b7280', width: '100%' }}>
-                      Used-condition returns go to inspection — they do not restock available inventory until processed.
-                    </span>
-                  )}
+                <div style={{ marginTop: 8, background: '#f9fafb', padding: 10, borderRadius: 6 }}>
+                  {/* SYSTEM_INFORMATION — the ceiling the user is returning against, never re-entered. */}
+                  <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
+                    Available to return: <strong>{Number(p.issued_quantity) - Number(p.returned_quantity)}</strong> (Issued {p.issued_quantity} − Returned {p.returned_quantity})
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
+                    <input
+                      type="number"
+                      step="0.01"
+                      placeholder="Qty"
+                      value={returnQty}
+                      onChange={(e) => setReturnQty(e.target.value)}
+                      style={{ ...inputStyle, width: 90 }}
+                    />
+                    <select
+                      value={returnCondition}
+                      onChange={(e) => setReturnCondition(e.target.value as (typeof RETURN_CONDITIONS)[number]['value'])}
+                      style={{ ...inputStyle, width: 150 }}
+                    >
+                      {RETURN_CONDITIONS.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      placeholder="Reason (optional)"
+                      value={returnReason}
+                      onChange={(e) => setReturnReason(e.target.value)}
+                      style={{ ...inputStyle, width: 180 }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: 8 }}>
+                    <ImageUploadField
+                      images={returnEvidenceIds.map((id) => ({ id, previewUrl: returnEvidencePreviews[id] ?? '' }))}
+                      onUpload={uploadReturnEvidence}
+                      onRemove={removeReturnEvidence}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    <button className="btn-secondary" disabled={busy || !returnQty} onClick={() => submitReturn(p.id)}>
+                      Confirm return
+                    </button>
+                    <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
+                      Cancel
+                    </button>
+                    {returnCondition !== 'UNUSED_NEW' && (
+                      <span style={{ fontSize: 11, color: '#6b7280' }}>
+                        Not New-Good returns go to inspection — they do not restock available inventory until processed.
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </>
@@ -1332,6 +1426,271 @@ function PlannedPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !description} onClick={addPart}>
             Add
+          </button>
+        </div>
+      )}
+
+      <Modal open={!!consumingPart} title="Consumed Parts" onClose={() => setConsumingPart(null)}>
+        {consumingPart && (
+          <>
+            {/* SYSTEM_INFORMATION */}
+            <div style={{ fontSize: 13, marginBottom: 12 }}>
+              <div>
+                <strong>{consumingPart.description}</strong>
+              </div>
+              <div style={{ color: '#6b7280' }}>Issued Qty: {consumingPart.issued_quantity}</div>
+            </div>
+            <FormField label="">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={installAll}
+                  onChange={(e) => {
+                    setInstallAll(e.target.checked);
+                    if (e.target.checked) setInstalledQty(String(outstandingIssued(consumingPart)));
+                  }}
+                />
+                Install All
+              </label>
+            </FormField>
+            <FormField label="Installed Qty" required>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                max={outstandingIssued(consumingPart)}
+                value={installedQty}
+                disabled={installAll}
+                onChange={(e) => setInstalledQty(e.target.value)}
+                style={inputStyle}
+              />
+            </FormField>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+              <button className="btn-secondary" onClick={() => setConsumingPart(null)}>
+                Cancel
+              </button>
+              <button className="btn-primary" disabled={!installedQty} onClick={confirmConsume}>
+                Consume
+              </button>
+            </div>
+          </>
+        )}
+      </Modal>
+
+      <RemovedComponentsSection wo={wo} onChanged={onChanged} />
+    </div>
+  );
+}
+
+/**
+ * Owner decision: "Used Qty" in the doc's Return popup means an old/removed component taken
+ * off the vehicle during a replacement — architecturally distinct from the Unused-issued-stock
+ * Return above (which only ever represents warehouse-issued stock, whether installed or not).
+ * Presented as its own section so the two concepts are never conflated in the UI either.
+ */
+function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
+  const [productId, setProductId] = useState('');
+  const [jobId, setJobId] = useState('');
+  const [replacedByPlannedPartId, setReplacedByPlannedPartId] = useState('');
+  const [removeQty, setRemoveQty] = useState('1');
+  const [condition, setCondition] = useState<'GOOD' | 'FAULTY'>('GOOD');
+  const [notes, setNotes] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [returningId, setReturningId] = useState<string | null>(null);
+  const [returnWarehouseId, setReturnWarehouseId] = useState('');
+  const [returnReason, setReturnReason] = useState('');
+  const [evidenceByComponent, setEvidenceByComponent] = useState<Record<string, string[]>>({});
+  const allEvidenceIds = Object.values(evidenceByComponent).flat();
+  const evidencePreviews = useEvidencePreviews(
+    (id) => {
+      const componentId = Object.keys(evidenceByComponent).find((cid) => evidenceByComponent[cid].includes(id));
+      return `/app/work-orders/${wo.id}/removed-components/${componentId}/evidence/${id}`;
+    },
+    allEvidenceIds,
+  );
+
+  const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+  const canReturn = PART_ACTION_STATUSES.includes(wo.status) && hasPermission('inventory.return');
+
+  useEffect(() => {
+    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
+    apiClient.get('/app/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
+  }, []);
+
+  function evidenceIdsFor(componentId: string): string[] {
+    return evidenceByComponent[componentId] ?? [];
+  }
+
+  async function uploadEvidence(componentId: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await apiClient.post(`/app/work-orders/${wo.id}/removed-components/${componentId}/evidence`, form);
+    setEvidenceByComponent((prev) => ({ ...prev, [componentId]: [...(prev[componentId] ?? []), res.data.data.id] }));
+  }
+
+  async function removeEvidence(componentId: string, evidenceId: string) {
+    await apiClient.delete(`/app/work-orders/${wo.id}/removed-components/${componentId}/evidence/${evidenceId}`);
+    setEvidenceByComponent((prev) => ({ ...prev, [componentId]: (prev[componentId] ?? []).filter((id) => id !== evidenceId) }));
+  }
+
+  async function submitRemoval() {
+    if (!productId || !removeQty) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/removed-components`, {
+        product_id: productId,
+        maintenance_job_id: jobId || undefined,
+        replaced_by_planned_part_id: replacedByPlannedPartId || undefined,
+        quantity: removeQty,
+        condition,
+        notes: notes || undefined,
+      });
+      setProductId('');
+      setJobId('');
+      setReplacedByPlannedPartId('');
+      setRemoveQty('1');
+      setCondition('GOOD');
+      setNotes('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteRemoval(id: string) {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/work-orders/${wo.id}/removed-components/${id}`);
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitReturn(id: string) {
+    if (!returnWarehouseId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/work-orders/${wo.id}/removed-components/${id}/return`, {
+        warehouse_id: returnWarehouseId,
+        reason: returnReason || undefined,
+      });
+      setReturningId(null);
+      setReturnWarehouseId('');
+      setReturnReason('');
+      onChanged();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Removed Components</h3>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: -8 }}>
+        Old/used components taken off the vehicle when a replacement part is installed — separate from the Unused Return above,
+        and never a reversal of the new part's consumption.
+      </p>
+      {error && <ErrorState message={error} />}
+      {(wo.removed_components ?? []).length === 0 && <EmptyState label="No components removed." />}
+      {(wo.removed_components ?? []).map((rc) => (
+        <div key={rc.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <span>
+              {rc.product?.name ?? rc.product_id} — qty {rc.quantity} — {rc.condition}
+              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaces a planned part)</span>}
+            </span>
+            <StatusBadge status={rc.status} />
+          </div>
+          {rc.notes && <div style={{ color: '#6b7280', marginBottom: 6 }}>{rc.notes}</div>}
+          <ImageUploadField
+            images={evidenceIdsFor(rc.id).map((id) => ({ id, previewUrl: evidencePreviews[id] ?? '' }))}
+            onUpload={(file) => uploadEvidence(rc.id, file)}
+            onRemove={rc.status === 'PENDING_RETURN' ? (id) => removeEvidence(rc.id, id) : undefined}
+            disabled={rc.status !== 'PENDING_RETURN'}
+          />
+          {rc.status === 'PENDING_RETURN' && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+              {canReturn && returningId !== rc.id && (
+                <button className="btn-secondary" disabled={busy} onClick={() => setReturningId(rc.id)}>
+                  Return to Warehouse
+                </button>
+              )}
+              {canManage && (
+                <button className="btn-secondary" disabled={busy} onClick={() => deleteRemoval(rc.id)}>
+                  Delete
+                </button>
+              )}
+            </div>
+          )}
+          {returningId === rc.id && (
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center', background: '#f9fafb', padding: 8, borderRadius: 6 }}>
+              <select value={returnWarehouseId} onChange={(e) => setReturnWarehouseId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+                <option value="">Warehouse…</option>
+                {warehouses.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+              <input placeholder="Reason (optional)" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} style={{ ...inputStyle, width: 180 }} />
+              <button className="btn-secondary" disabled={busy || !returnWarehouseId} onClick={() => submitReturn(rc.id)}>
+                Confirm Return
+              </button>
+              <button className="btn-secondary" disabled={busy} onClick={() => setReturningId(null)}>
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+      {canManage && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+            <option value="">Old/removed product…</option>
+            {products.map((prod) => (
+              <option key={prod.id} value={prod.id}>
+                {prod.name}
+              </option>
+            ))}
+          </select>
+          <select value={jobId} onChange={(e) => setJobId(e.target.value)} style={{ ...inputStyle, width: 160 }}>
+            <option value="">Job (optional)</option>
+            {(wo.jobs ?? []).map((j) => (
+              <option key={j.id} value={j.id}>
+                {j.service_item ?? j.description.slice(0, 30)}
+              </option>
+            ))}
+          </select>
+          <select value={replacedByPlannedPartId} onChange={(e) => setReplacedByPlannedPartId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+            <option value="">Replaces which new part? (optional)</option>
+            {(wo.planned_parts ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.description}
+              </option>
+            ))}
+          </select>
+          <input type="number" step="0.01" placeholder="Qty" value={removeQty} onChange={(e) => setRemoveQty(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <select value={condition} onChange={(e) => setCondition(e.target.value as 'GOOD' | 'FAULTY')} style={{ ...inputStyle, width: 110 }}>
+            <option value="GOOD">Good</option>
+            <option value="FAULTY">Faulty</option>
+          </select>
+          <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+          <button className="btn-secondary" disabled={busy || !productId || !removeQty} onClick={submitRemoval}>
+            Record Removal
           </button>
         </div>
       )}

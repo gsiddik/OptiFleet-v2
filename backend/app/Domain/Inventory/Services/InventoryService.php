@@ -150,6 +150,23 @@ class InventoryService
         return $this->writeZeroEffectMovement($warehouse, $product, 'SALE', $quantity, $referenceType, $referenceId, $userId, $reason);
     }
 
+    /**
+     * Owner decision: an old/removed component returned from a vehicle to a warehouse is
+     * NOT a reversal of the replacement part's own consumption, and must never silently
+     * become normal available stock — exactly the same zero-balance-effect, ledger-only
+     * posture CONSUME/SALE already established. The actual inspect/dispose/repair/scrap/sell
+     * decision (if the business wants one for these) is deliberately out of scope here; this
+     * only records that the movement happened.
+     */
+    public function recordRemovedComponentReturn(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): StockMovement
+    {
+        if ($quantity <= 0) {
+            throw new InventoryException('Return quantity must be positive.');
+        }
+
+        return $this->writeZeroEffectMovement($warehouse, $product, 'REMOVED_COMPONENT_RETURN', $quantity, $referenceType, $referenceId, $userId, $reason);
+    }
+
     private function writeZeroEffectMovement(Warehouse $warehouse, Product $product, string $movementType, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason): StockMovement
     {
         return DB::transaction(function () use ($warehouse, $product, $movementType, $quantity, $referenceType, $referenceId, $userId, $reason) {

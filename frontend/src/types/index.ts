@@ -734,6 +734,45 @@ export interface WorkOrderPlannedPartItem {
   total_cost: string | null;
 }
 
+export interface WorkOrderPartReturnEvidenceItem {
+  id: string;
+  work_order_planned_part_id: string;
+  work_order_part_return_id: string | null;
+  original_filename: string | null;
+}
+
+/** Owner decision: an old/removed component taken off the vehicle, distinct from an unused-issued-stock return. */
+export interface WorkOrderRemovedComponentItem {
+  id: string;
+  work_order_id: string;
+  maintenance_job_id: string | null;
+  replaced_by_planned_part_id: string | null;
+  product_id: string;
+  quantity: string;
+  condition: 'GOOD' | 'FAULTY';
+  notes: string | null;
+  status: 'PENDING_RETURN' | 'RETURNED';
+  removed_at: string;
+  product?: ProductItem;
+  maintenance_job?: MaintenanceJobItem;
+  return?: WorkOrderRemovedComponentReturnItem | null;
+  evidence?: WorkOrderRemovedComponentEvidenceItem[];
+}
+
+export interface WorkOrderRemovedComponentReturnItem {
+  id: string;
+  work_order_removed_component_id: string;
+  warehouse_id: string;
+  quantity: string;
+  reason: string | null;
+}
+
+export interface WorkOrderRemovedComponentEvidenceItem {
+  id: string;
+  work_order_removed_component_id: string;
+  original_filename: string | null;
+}
+
 export interface PartRequestLineItem {
   id: string;
   part_request_id: string;
@@ -978,6 +1017,7 @@ export interface WorkOrderItem {
   corrective_actions?: WorkOrderCorrectiveActionItem[];
   jobs?: MaintenanceJobItem[];
   planned_parts?: WorkOrderPlannedPartItem[];
+  removed_components?: WorkOrderRemovedComponentItem[];
   additional_works?: WorkOrderAdditionalWorkItem[];
   mechanic_assignments?: WorkOrderMechanicAssignmentItem[];
   road_tests?: RoadTestItem[];
