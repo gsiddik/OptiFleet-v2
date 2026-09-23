@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
+import { ImageUploadField } from '../../../components/ImageUploadField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
@@ -24,6 +25,7 @@ export function ProductDetailPage() {
   const [editingSpecs, setEditingSpecs] = useState(false);
   const [sdsBusy, setSdsBusy] = useState(false);
   const sdsFileInputRef = useRef<HTMLInputElement>(null);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   function load() {
     apiClient
@@ -39,6 +41,53 @@ export function ProductDetailPage() {
   useEffect(() => {
     setReferenceTreadDepthMm(product?.reference_tread_depth_mm ?? '');
   }, [product?.reference_tread_depth_mm]);
+
+  /** Batch 14: the upload replacing "Image URL" lives on the private
+   * `local` disk, so its preview (unlike the legacy public `image_url`)
+   * needs an authenticated blob fetch — same pattern as Vehicle Brand's logo. */
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+
+    if (product?.image_path) {
+      apiClient.get(`/app/products/${product.id}/image`, { responseType: 'blob' }).then((res) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(res.data);
+        setImagePreviewUrl(objectUrl);
+      });
+    } else if (product?.image_url) {
+      setImagePreviewUrl(product.image_url);
+    } else {
+      setImagePreviewUrl(null);
+    }
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [product?.id, product?.image_path, product?.image_url]);
+
+  async function uploadImage(file: File) {
+    setError(null);
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      await apiClient.post(`/app/products/${id}/image`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
+  }
+
+  async function removeImage() {
+    setError(null);
+    try {
+      await apiClient.delete(`/app/products/${id}/image`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
+  }
 
   async function saveReferenceTreadDepth() {
     setBusy(true);
@@ -164,7 +213,15 @@ export function ProductDetailPage() {
           {product.length_mm ? `${product.length_mm} × ${product.width_mm ?? '—'} × ${product.height_mm ?? '—'}` : '—'} &nbsp;
           <strong>Weight (kg):</strong> {product.weight_kg ?? '—'}
         </p>
-        {product.image_url && <img src={product.image_url} alt={product.name} style={{ maxWidth: 200, marginTop: 8, borderRadius: 6 }} />}
+        <div style={{ marginTop: 8, maxWidth: 200 }}>
+          <ImageUploadField
+            images={imagePreviewUrl ? [{ id: 'product-image', previewUrl: imagePreviewUrl, name: product.name }] : []}
+            onUpload={uploadImage}
+            onRemove={!product.is_system && hasPermission('product.delete') ? removeImage : undefined}
+            disabled={product.is_system || !hasPermission('product.update')}
+            multiple={false}
+          />
+        </div>
         {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>Platform system record — read-only.</p>}
         {!product.is_system && hasPermission('product.update') && (
           <div style={{ marginTop: 10 }}>

@@ -91,7 +91,6 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
   const [lengthMm, setLengthMm] = useState(product.length_mm ?? '');
   const [widthMm, setWidthMm] = useState(product.width_mm ?? '');
   const [heightMm, setHeightMm] = useState(product.height_mm ?? '');
-  const [imageUrl, setImageUrl] = useState(product.image_url ?? '');
   const [locationHydrated, setLocationHydrated] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -258,7 +257,6 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         length_mm: lengthMm || null,
         width_mm: widthMm || null,
         height_mm: heightMm || null,
-        image_url: imageUrl || null,
         brand: itemType !== 'OTHER' ? brand || null : undefined,
         track_serial_number: needsField('track_serial_number', itemType) ? trackSerialNumber : undefined,
         track_batch: itemType === 'CONSUMABLE' ? trackBatch : undefined,
@@ -390,11 +388,12 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
           <FormField label="Height (mm)" errors={errors.height_mm}>
             <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
           </FormField>
-          <FormField label="Image URL" errors={errors.image_url}>
-            <input value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} style={inputStyle} />
-          </FormField>
         </div>
       </details>
+      {/* Batch 14: the raw "Image URL" text field is replaced by a real upload —
+          see the "Product Image" card on the Product Detail page (same
+          precedent as Consumable's Safety Data Sheet: an upload needs an
+          existing Product ID, so it belongs outside this Create/Edit form). */}
 
       {itemType !== 'OTHER' && (
         <FormField label="Brand / Manufacturer" errors={errors.brand} required={brandRequired(itemType)}>

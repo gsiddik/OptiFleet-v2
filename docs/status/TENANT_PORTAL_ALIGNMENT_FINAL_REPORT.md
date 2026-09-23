@@ -73,9 +73,15 @@ looser contract than the API accepts.
 | TOOL | `product_tools` | Calibration fields (C, keyed off a calibration-required flag) |
 | EQUIPMENT | `product_equipment` | Capacity/Power fields (O) |
 
-An extra `OTHER` item type exists beyond the 6 documented types; flagged
-but not removed since its usage elsewhere in the codebase was not
-established.
+**Update (Batch 14):** the extra `OTHER` item type's usage was fully
+investigated — confirmed unused by any seeder/demo data and predates
+this document entirely (the original Phase 4 catch-all, before RIM
+existed as its own type). It has been removed from the selectable
+Create dropdown (frontend) and from `StoreProductRequest`'s validation
+(backend), so no new Product can be created with it; the database
+CHECK constraint still accepts it, so any pre-existing `OTHER` row
+(none found in this repository's own seed/demo data) remains fully
+readable and editable. See STATUS.md Batch 14 Detail.
 
 ## D. Create/Edit Audit
 
@@ -316,23 +322,31 @@ deferred" list immediately below as still fully accurate — consult
   A genuine architecture ambiguity was found in the Return popup's "Used
   Qty" concept during this work — see STATUS.md Batch 10 Detail for the
   full reasoning; flagged as a new NEEDS_OWNER_DECISION, not yet blocking.
-- The Planned-Parts-vs-Request-Parts architecture question (the doc wants
-  Request Parts visible only from IN_PROGRESS; the current app has both
-  as always-visible, architecturally distinct tabs from a prior session —
-  reconciling this is a design decision, not a one-line fix) — Batch 11,
-  NOT STARTED.
-- Product "Inventory Configuration" section (Min/Reorder/Max Stock —
-  no backing schema today; a schema change) — Batch 12, NOT STARTED. Re-
-  audit found the OTHER 7 rows of that same requirement table (Serialized/
-  Batch Tracked/Expiry Tracked/Installable/Checkout-able/Maintainable/
-  Calibratable) are already fully implemented per-Item-Type; only Stock
-  Tracking/Min/Reorder/Max Stock are genuinely missing.
-- Consumable SDS file upload UI (backend columns already exist) — Batch
-  13, NOT STARTED.
-- Extra `OTHER` Product item type beyond the documented 6 (flagged, not
-  removed — usage elsewhere not established) — Batch 14, NOT STARTED.
+- **Update: Batches 11-14 are now COMPLETE** (this paragraph and the one
+  above it predate them and are kept only as historical record of the
+  gap as it was first found — see STATUS.md for the authoritative,
+  up-to-date detail of each):
+  - Batch 11: Planned-Parts-vs-Request-Parts reconciled — a new,
+    budgeting-only "Planned Parts" tab was built; the old rich tab was
+    renamed "Request Parts" and gated to `IN_PROGRESS` onward via
+    `REQUEST_PARTS_VISIBLE_STATUSES`.
+  - Batch 12: Product Inventory Configuration — Minimum/Reorder Point/
+    Maximum Stock were already fully backend-complete
+    (`WarehouseStockController::updateThresholds`) but had no frontend
+    entry point; a Thresholds action/modal was added to
+    `WarehouseStockListPage`. The other 7 rows of that table were
+    already correct, as this paragraph originally found.
+  - Batch 13: Consumable SDS upload — `ProductConsumableSdsService` +
+    controller/routes + a Safety Data Sheet card on the Product Detail
+    page now wire the already-existing `sds_file_path`/
+    `sds_original_filename` columns end-to-end.
+  - Batch 14: `OTHER` item type resolved (see the update above) and the
+    repository-wide Image URL sweep completed — Product's `image_url`
+    text field (the last remaining one) is now a real upload
+    (`ProductImageService`), matching every other entity already
+    converted.
 - The one NEEDS_CONFIRMATION item in §A (Consumable Specification/Grade
-  trigger condition) — still unresolved, carried forward to Batch 14.
+  trigger condition) is RESOLVED — see STATUS.md "OWNER DECISION 1".
 - Deployment prerequisite for Batch 8: `php artisan storage:link` must be
   run once per environment (not committed code, cannot be verified from
   this sandbox) — without it, uploaded tenant logo URLs 404 even though

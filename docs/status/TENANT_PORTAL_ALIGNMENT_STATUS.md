@@ -1740,3 +1740,132 @@ committing.
 
 - None. This batch's scope (wiring the already-existing SDS columns to
   a real upload/download/delete flow) is complete end-to-end.
+
+## Batch 14 Detail (OTHER item type resolution + repository-wide Image URL sweep)
+
+### Part 1: Product Item Type OTHER — usage/impact investigation
+
+Investigated before any removal decision, per the resume mandate. Found:
+
+- `OTHER` originates in the ORIGINAL Phase 4 migration
+  (`2024_04_01_000001_create_product_master_tables.php`, `product_type`
+  enum `['SPARE_PART','TOOL','TIRE','CONSUMABLE','EQUIPMENT','OTHER']`)
+  — it predates the "Next Improvement Tenant Portal" documents entirely
+  and was the original catch-all before RIM existed as its own type.
+  Neither source document ever lists "Other" among the doc's own
+  explicit 6-value Item Type dropdown ("Sparepart / Consumable / Rim /
+  Tire / Tool / Equipment").
+- A prior batch's migration (`2026_09_25_000001_extend_product_type_and_categories.php`)
+  already documented this exact history in its own docblock when adding
+  RIM, and deliberately left OTHER in the CHECK constraint "every
+  existing... OTHER row is unaffected" — i.e., backward compatibility
+  for OTHER was already a considered, explicit decision, not an
+  oversight.
+- Usage search across `app/`, `database/seeders/`, and `tests/`: **zero**
+  seeder, demo-data generator, or test ever creates an OTHER-typed
+  Product. It was, however, still **actively selectable** in
+  `CreateProductModal.tsx`'s `ITEM_TYPES` dropdown (a tenant user could
+  create a new OTHER product today, getting only General Information
+  fields — no specification section, since `ProductSpecificationService`
+  has no OTHER case), directly contradicting the doc's own explicit
+  6-option dropdown list.
+
+**Decision:** exclude OTHER from new creation (both layers — the
+frontend dropdown AND `StoreProductRequest`'s validation), while
+leaving the database CHECK constraint untouched (it still accepts
+OTHER, so if any tenant somewhere already has one — none found in this
+repository's own data — it remains fully readable and editable; Item
+Type is immutable on Edit regardless, per the pre-existing rule). This
+is the smallest correct change: no destructive migration, no data
+touched, only the creation surface tightened to match the doc.
+
+### Part 2: Repository-wide Image URL sweep
+
+Searched every tenant-portal page for `image_url`/`logo_url`/
+`photo_url`/"Image URL"/"Logo URL"/"Photo URL" references. Found:
+
+| Location | State found | Action |
+|---|---|---|
+| `CompanyProfilePage.tsx` (`logo_url`) | Display-only (`<img src=...>`), upload already exists (Batch 8) | None — already correct |
+| `VehicleBrandsPage.tsx` (`logo_url`) | Authenticated blob-fetch preview, upload already exists (prior batch) | None — already correct |
+| `VehicleDetailPage.tsx` (`photo_url`) | Authenticated blob-fetch preview, upload already exists (prior batch) | None — already correct |
+| `ProductDetailPage.tsx` (`image_url`) | Display-only `<img src={product.image_url}>` | Superseded — see below |
+| `EditProductModal.tsx` (`image_url`) | **Raw editable text `FormField`** — the one remaining genuine gap | **Converted this batch** |
+
+### Implementation (Product Image)
+
+- New migration `2026_09_28_000005_add_image_path_to_products.php`:
+  additive `image_path`/`image_original_filename` nullable columns on
+  `products`. `image_url` itself is deliberately left completely
+  untouched (schema and semantics) — any pre-existing row with a real
+  external URL keeps rendering exactly as before; the new columns are
+  populated only once a tenant uploads a replacement image through the
+  new flow. Considered reusing `image_url` itself (as `TenantLogoService`
+  does for `Tenant.logo_url`, writing a public-disk URL string into the
+  same column) but rejected it: a Product image is tenant-internal
+  catalog data, not public branding like a Tenant's logo (which
+  deliberately needs to render in unauthenticated contexts — the
+  favicon, the pre-login page paint) — the correct, secure posture is
+  the private `local` disk + authenticated-blob-fetch pattern already
+  established for Vehicle Brand Logo and Vehicle Photo, which requires
+  a real path/URL distinction, not a single reused string column.
+- New `ProductImageService` (`upload()`/`delete()`), mirroring
+  `VehicleBrandLogoService` exactly: private `local` disk, JPG/PNG only,
+  5MB max, single-file overwrite-on-reupload with old-file cleanup.
+- `ProductController`: `uploadImage()`/`showImage()`/`destroyImage()`,
+  same `product.update`/`product.view`/`product.delete` permission
+  mapping as the SDS endpoints (Batch 13) and Vehicle Brand's logo
+  routes. Routes: `POST/GET/DELETE /products/{product}/image`.
+- `StoreProductRequest`: `product_type` tightened to the 6 documented
+  values (OTHER excluded — see Part 1).
+- Frontend: `EditProductModal.tsx`'s raw "Image URL" `FormField` and its
+  `imageUrl` state/payload field removed entirely (upload needs an
+  existing Product ID, so — same reasoning as Batch 13's SDS card — it
+  cannot live in the Create/Edit form; it belongs on the Detail page).
+  `ProductDetailPage.tsx` gained a `ImageUploadField`-based control
+  (the same reusable component from Batch 10, `multiple={false}`)
+  replacing the old plain `<img src={product.image_url}>` line, backed
+  by a new authenticated-blob-fetch `useEffect` (identical pattern to
+  `VehicleBrandsPage.tsx`'s `logoPreview` effect) that prefers the new
+  `image_path` when present and falls back to the legacy `image_url`
+  for any product that only has the old field — so an existing row's
+  image never disappears, it just isn't re-fetched through the new
+  authenticated endpoint. `CreateProductModal.tsx`'s `ITEM_TYPES` const
+  (shared by the Create dropdown and the Product List page's type
+  filter) had `'OTHER'` removed.
+
+### Tests
+
+15 new: `ProductImageTest` (8 — upload/download round-trip, re-upload
+replaces and deletes the previous file, disallowed MIME rejected (422),
+permission enforcement (403), delete clears both columns and removes
+the file, tenant isolation (404), **the legacy `image_url` column
+remains directly writable through the general update endpoint** —
+explicit backward-compatibility test, same precedent as Vehicle
+Brand/Company Profile's `logo_url`, and OTHER rejected on create
+(422)). Regression: `ProductDynamicSpecificationTest` (32/32),
+`ProductEditDynamicFormTest` (8/8), `ProductConsumableSdsTest` (7/7),
+and `ProductFoundationMasterDataTest` (9/9 — includes
+`product_type_accepts_rim`) all re-run clean, confirming the OTHER
+restriction and the new image columns don't interfere with any
+existing Product flow. `pint --test`: `ProductController.php`/
+`routes/api/app.php` show only the same pre-existing fixer flags
+already confirmed via `git stash` in Batches 11 and 13; every other
+touched/new file is clean. Frontend: `npm run build` (the authoritative
+check per Batch 13's finding) — PASS; `oxlint` — 0 new warning
+categories (one additional `set-state-in-effect` instance on the new
+blob-fetch effect, same established pattern used throughout this
+codebase, confirmed via `git stash` comparison against the pre-existing
+count).
+
+MongoDB: NOT RUN (ext-mongodb unavailable, network-blocked from
+installing); relocate-run-restore precedent followed, zero diff on
+`database/migrations/` confirmed via `git status --porcelain` before
+committing.
+
+### REMAINING from this batch (disclosed, not blocking)
+
+- None. Both parts of this batch (OTHER resolution, Image URL sweep)
+  are complete; the sweep found and closed exactly one remaining gap
+  (Product's `image_url`) — every other entity's image/logo/photo field
+  in the tenant portal was already converted in an earlier batch.

@@ -494,6 +494,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/products/{product}/sds', [ProductController::class, 'uploadSds'])->middleware('permission:product.update');
             Route::get('/products/{product}/sds', [ProductController::class, 'showSds'])->middleware('permission:product.view');
             Route::delete('/products/{product}/sds', [ProductController::class, 'destroySds'])->middleware('permission:product.delete');
+            Route::post('/products/{product}/image', [ProductController::class, 'uploadImage'])->middleware('permission:product.update');
+            Route::get('/products/{product}/image', [ProductController::class, 'showImage'])->middleware('permission:product.view');
+            Route::delete('/products/{product}/image', [ProductController::class, 'destroyImage'])->middleware('permission:product.delete');
 
             Route::get('/inventory', [WarehouseStockController::class, 'index'])->middleware('permission:inventory.view');
             Route::post('/inventory/adjust', [WarehouseStockController::class, 'adjust'])->middleware('permission:inventory.adjust');

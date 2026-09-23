@@ -24,6 +24,7 @@ class Product extends Model
         'tenant_id', 'code', 'numbering_configuration_version_id', 'sku', 'name', 'product_category_id', 'product_type', 'uom_id',
         'default_storage_bin_id',
         'brand', 'manufacturer', 'material', 'production_year', 'weight_kg', 'length_mm', 'width_mm', 'height_mm', 'image_url',
+        'image_path', 'image_original_filename',
         'manufacturer_part_number', 'description', 'reference_tread_depth_mm',
         'track_serial_number', 'track_batch', 'is_system', 'status',
     ];

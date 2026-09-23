@@ -20,7 +20,15 @@ import type {
   WarehouseZoneItem,
 } from '../../../types';
 
-export const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'RIM', 'OTHER'];
+/**
+ * Batch 14: the doc's Item Type dropdown is exactly these 6 values
+ * ("Next Improvement Tenant Portal - Products": "Sparepart / Consumable
+ * / Rim / Tire / Tool / Equipment"). OTHER predates this document (the
+ * original Phase 4 catch-all, before RIM existed as its own type) and
+ * is deliberately excluded here — see StoreProductRequest's matching
+ * comment for the backend side of this decision.
+ */
+export const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'RIM'];
 
 const INTERVAL_UNITS = ['DAYS', 'WEEKS', 'MONTHS', 'YEARS'];
 

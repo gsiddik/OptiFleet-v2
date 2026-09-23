@@ -1388,6 +1388,8 @@ export interface ProductItem {
   width_mm: string | null;
   height_mm: string | null;
   image_url: string | null;
+  image_path: string | null;
+  image_original_filename: string | null;
   manufacturer_part_number: string | null;
   track_serial_number: boolean;
   track_batch: boolean;
