@@ -284,29 +284,64 @@ force-pushed, never pushed with a known-failing test:
    adding the Batch 3 detail section that had been missing from the
    status doc.
 
-### Explicitly deferred (documented as REMAINING, not silently dropped)
+### Continuation (post-Final-Report, owner-directed re-audit)
 
-- Work Order Overview tab restructuring (move Complaint section there;
-  relocate Est. Labor/Parts Cost fields), Est. Number of Mechanic + Est.
-  Total Hours accumulation, Consume popup redesign (Install All +
-  Installed Qty), Return popup redesign (split Unused/Used subtables,
-  renamed Condition values, real image upload instead of a URL text
-  field), and the Planned-Parts-vs-Request-Parts architecture question
-  (the doc wants Request Parts visible only from IN_PROGRESS; the current
-  app has both as always-visible, architecturally distinct tabs from a
-  prior session — reconciling this is a design decision, not a one-line
-  fix, and was not attempted without owner sign-off).
+Per explicit owner instruction, work continued past this report to close
+as many REMAINING/Deferred/NEEDS_CONFIRMATION items below as possible
+before Pull Request. This section is being superseded in real time by
+`docs/status/TENANT_PORTAL_ALIGNMENT_STATUS.md`, which is now the
+authoritative live tracker (see its "Continuation" and "Pause Checkpoint"
+sections) — this report is not re-issued after every batch, only patched
+here where it would otherwise actively mislead. As of the last update to
+this report: Batch 9 (Work Order Overview restructuring, Complaint
+placement, Est. Number of Mechanic/Est. Total Hours, computed-only Labor/
+Parts Cost, Last Odometer/HM labels, Current KM mandatory, Maintenance
+Type dropdown fix) is DONE and pushed. Batch 10 (Consume/Return popup
+redesign) is IN PROGRESS — its backend half (Return evidence upload
+infra, a new `UNUSED_FAULTY` condition) is done, tested, and pushed; its
+frontend half (the actual Consume/Return popups) is NOT yet started, and
+the work is currently PAUSED at that exact point per owner instruction.
+Batches 11-15 have not been started. Do not treat the "Explicitly
+deferred" list immediately below as still fully accurate — consult
+`TENANT_PORTAL_ALIGNMENT_STATUS.md` for current status of each item.
+
+### Explicitly deferred as of this report (see Continuation above for what has since changed)
+
+- ~~Work Order Overview tab restructuring... Est. Number of Mechanic + Est.
+  Total Hours accumulation~~ — DONE in Batch 9.
+- Consume popup redesign (Install All + Installed Qty), Return popup
+  redesign (split Unused/Used subtables, renamed Condition values, real
+  image upload instead of a URL text field) — Batch 10, IN PROGRESS/PAUSED
+  (backend done; frontend not started — see STATUS.md Pause Checkpoint).
+  A genuine architecture ambiguity was found in the Return popup's "Used
+  Qty" concept during this work — see STATUS.md Batch 10 Detail for the
+  full reasoning; flagged as a new NEEDS_OWNER_DECISION, not yet blocking.
+- The Planned-Parts-vs-Request-Parts architecture question (the doc wants
+  Request Parts visible only from IN_PROGRESS; the current app has both
+  as always-visible, architecturally distinct tabs from a prior session —
+  reconciling this is a design decision, not a one-line fix) — Batch 11,
+  NOT STARTED.
 - Product "Inventory Configuration" section (Min/Reorder/Max Stock —
-  no backing schema today; a schema change, deferred).
-- Consumable SDS file upload UI (backend columns already exist).
+  no backing schema today; a schema change) — Batch 12, NOT STARTED. Re-
+  audit found the OTHER 7 rows of that same requirement table (Serialized/
+  Batch Tracked/Expiry Tracked/Installable/Checkout-able/Maintainable/
+  Calibratable) are already fully implemented per-Item-Type; only Stock
+  Tracking/Min/Reorder/Max Stock are genuinely missing.
+- Consumable SDS file upload UI (backend columns already exist) — Batch
+  13, NOT STARTED.
 - Extra `OTHER` Product item type beyond the documented 6 (flagged, not
-  removed — usage elsewhere not established).
+  removed — usage elsewhere not established) — Batch 14, NOT STARTED.
 - The one NEEDS_CONFIRMATION item in §A (Consumable Specification/Grade
-  trigger condition).
+  trigger condition) — still unresolved, carried forward to Batch 14.
 - Deployment prerequisite for Batch 8: `php artisan storage:link` must be
   run once per environment (not committed code, cannot be verified from
   this sandbox) — without it, uploaded tenant logo URLs 404 even though
   the upload itself succeeds.
+
+This report predates the Continuation and does not by itself constitute a
+Pull Request readiness decision — see STATUS.md for the live picture. The
+branch is NOT ready for Pull Request while Batch 10 (partial) through
+Batch 15 remain open.
 
 No completed phase was reconstructed or redesigned. No phase beyond what
 was explicitly scoped in the 5 documents was started.

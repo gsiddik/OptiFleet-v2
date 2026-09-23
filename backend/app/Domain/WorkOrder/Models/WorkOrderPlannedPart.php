@@ -54,6 +54,11 @@ class WorkOrderPlannedPart extends Model
         return $this->hasMany(WorkOrderPartReturn::class, 'work_order_planned_part_id');
     }
 
+    public function returnEvidence(): HasMany
+    {
+        return $this->hasMany(WorkOrderPartReturnEvidence::class, 'work_order_planned_part_id');
+    }
+
     /** Quantity still issued-but-not-consumed-or-returned — the ceiling for a return. */
     public function outstandingIssued(): float
     {

@@ -62,6 +62,11 @@ class WorkOrderPartReturn extends Model
         return $this->hasMany(SparePartSale::class, 'work_order_part_return_id');
     }
 
+    public function evidenceFiles(): HasMany
+    {
+        return $this->hasMany(WorkOrderPartReturnEvidence::class, 'work_order_part_return_id');
+    }
+
     /** G-16: SELL_ELIGIBLE quantity not yet consumed by an active (non-rejected/cancelled) sale. */
     public function remainingEligibleQuantity(): float
     {

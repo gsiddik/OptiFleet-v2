@@ -542,6 +542,10 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/issue', [WorkOrderExecutionController::class, 'issuePlannedPart'])->middleware('permission:inventory.issue');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return', [WorkOrderExecutionController::class, 'returnPlannedPart'])->middleware('permission:inventory.return');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/consume', [WorkOrderExecutionController::class, 'consumePlannedPart'])->middleware('permission:inventory.issue');
+            Route::get('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence', [WorkOrderExecutionController::class, 'listReturnEvidence'])->middleware('permission:inventory.return');
+            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence', [WorkOrderExecutionController::class, 'uploadReturnEvidence'])->middleware('permission:inventory.return');
+            Route::get('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence/{evidence}', [WorkOrderExecutionController::class, 'showReturnEvidence'])->middleware('permission:inventory.return');
+            Route::delete('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence/{evidence}', [WorkOrderExecutionController::class, 'destroyReturnEvidence'])->middleware('permission:inventory.return');
         });
 
         Route::middleware('module:PROCUREMENT')->group(function () {

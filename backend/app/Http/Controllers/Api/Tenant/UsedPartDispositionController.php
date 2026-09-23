@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 /**
  * G-15: Used Sparepart Processing queue — every USED_GOOD/USED_FAULTY
  * return from Phase A surfaces here for inspect -> propose -> decide.
+ * UNUSED_FAULTY (a never-installed return the returner already flagged as
+ * defective) follows the exact same PENDING_INSPECTION pipeline.
  */
 class UsedPartDispositionController extends Controller
 {
@@ -22,7 +24,7 @@ class UsedPartDispositionController extends Controller
     public function index(Request $request)
     {
         $query = WorkOrderPartReturn::query()
-            ->whereIn('condition', ['USED_GOOD', 'USED_FAULTY'])
+            ->whereIn('condition', ['UNUSED_FAULTY', 'USED_GOOD', 'USED_FAULTY'])
             ->with(['product', 'warehouse', 'plannedPart.workOrder']);
 
         if ($status = $request->string('disposition_status')->value()) {

@@ -9,8 +9,10 @@ use App\Domain\WorkOrder\Models\WorkOrderAdditionalWork;
 use App\Domain\WorkOrder\Models\WorkOrderCorrectiveAction;
 use App\Domain\WorkOrder\Models\WorkOrderDiagnosis;
 use App\Domain\WorkOrder\Models\WorkOrderFinding;
+use App\Domain\WorkOrder\Models\WorkOrderPartReturnEvidence;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
+use App\Domain\WorkOrder\Services\WorkOrderPartReturnEvidenceService;
 use App\Domain\WorkOrder\Services\WorkOrderPartService;
 use App\Domain\Workshop\Models\Worker;
 use App\Domain\Workshop\Models\WorkOrderLaborLog;
@@ -20,12 +22,14 @@ use App\Domain\Workshop\Services\MechanicAssignmentService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class WorkOrderExecutionController extends Controller
 {
     public function __construct(
         private readonly WorkOrderExecutionService $execution,
         private readonly WorkOrderPartService $parts,
+        private readonly WorkOrderPartReturnEvidenceService $returnEvidence,
         private readonly MechanicAssignmentService $mechanics,
         private readonly LaborTimerService $laborTimer,
         private readonly DataScopeService $scope,
@@ -172,9 +176,54 @@ class WorkOrderExecutionController extends Controller
             'condition' => ['required', 'string', 'in:'.implode(',', WorkOrderPartService::CONDITIONS)],
             'reason' => ['nullable', 'string'],
             'evidence' => ['nullable', 'string', 'max:255'],
+            'evidence_ids' => ['nullable', 'array'],
+            'evidence_ids.*' => ['uuid'],
         ]);
 
-        return $this->ok($this->parts->returnPart($plannedPart, (float) $validated['quantity'], $validated['condition'], $this->context->user()->id, $validated['reason'] ?? null, $validated['evidence'] ?? null));
+        return $this->ok($this->parts->returnPart(
+            $plannedPart, (float) $validated['quantity'], $validated['condition'], $this->context->user()->id,
+            $validated['reason'] ?? null, $validated['evidence'] ?? null, $validated['evidence_ids'] ?? [],
+        ));
+    }
+
+    /** "Image Placeholder ... JPG/PNG Upload ... Preview" for the Return Parts evidence field. */
+    public function uploadReturnEvidence(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+        $request->validate(['file' => ['required', 'file', 'max:5120', 'mimes:jpg,jpeg,png']]);
+
+        $evidence = $this->returnEvidence->upload($plannedPart, $request->file('file'), $this->context->user()->id);
+
+        return $this->ok($evidence, 201);
+    }
+
+    public function listReturnEvidence(WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+
+        return $this->ok($plannedPart->returnEvidence()->latest('created_at')->get());
+    }
+
+    public function showReturnEvidence(WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart, WorkOrderPartReturnEvidence $evidence)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+        abort_unless($evidence->work_order_planned_part_id === $plannedPart->id, 404);
+
+        return Storage::disk($evidence->disk)->response($evidence->path, $evidence->original_filename);
+    }
+
+    public function destroyReturnEvidence(WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart, WorkOrderPartReturnEvidence $evidence)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
+        abort_unless($evidence->work_order_planned_part_id === $plannedPart->id, 404);
+
+        $this->returnEvidence->delete($evidence);
+
+        return $this->message('Evidence removed.');
     }
 
     public function consumePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)

@@ -546,3 +546,173 @@ discovered during this re-audit that was not in the owner's explicit
 Batch 9-14 priority list; flagging it honestly here rather than silently
 leaving it undiscovered. Consume/Return popup redesign and Planned-Parts-
 vs-Request-Parts reconciliation are Batches 10-11, not yet done.
+
+## Batch 10 Detail (Return evidence upload backend — part 1 of 2, PAUSED)
+
+Scope: Consume popup (Install All/Installed Qty) + Return popup redesign
+(Unused/Used split, Condition values, JPG/PNG upload replacing the
+Evidence URL text field). Paused mid-batch per explicit owner instruction
+before the frontend half was started — see Pause Checkpoint below for the
+exact resume point.
+
+**Architecture note surfaced during this batch (unresolved, disclosed
+rather than guessed):** re-reading the doc's Return popup section against
+the actual repository found that the existing (tested, working)
+`WorkOrderPartService::returnPart()`/`WorkOrderPartReturn` architecture
+treats "Unused" vs "Used" as a CONDITION CLASSIFICATION the returner
+assigns to any returned-but-not-yet-consumed issued quantity (all capped
+by one shared `outstandingIssued()` ceiling) — not as two independently
+tracked quantities. The doc's own wording ("Used: qty parts yang
+dilepas/bekas DARI KENDARAAN") describes a materially different concept:
+an old/removed part taken OFF the vehicle during a replacement, which has
+no corresponding field anywhere in the schema (Consume-time only records
+how much NEW product was installed, never how much old product was
+removed). Resolving this properly would mean either (a) accepting the
+existing architecture's "Used" = "issued stock returned in used-but-not-
+defective condition" reading (a schema-free, zero-risk interpretation), or
+(b) building a genuinely new "old part removed" tracking concept with its
+own input point (most naturally at Consume time) — a real new feature, not
+a popup redesign. **NEEDS_OWNER_DECISION**, recorded here rather than
+guessed silently; nothing in Batches 9 or this partial Batch 10 depends on
+resolving it, so it did not block the backend work below.
+
+Backend changes made (code-complete, migrated, tested — this slice only):
+
+- `work_order_part_returns.condition` gains `UNUSED_FAULTY` (doc: Return
+  popup's Condition dropdown for a never-installed return offers "New
+  Good"/"New Faulty", not just one option) via `ALTER TABLE ... DROP/ADD
+  CONSTRAINT`, following the exact same pattern the pre-existing
+  `disposition_status` widening migration used.
+  `WorkOrderPartService::CONDITIONS` now
+  `['UNUSED_NEW','UNUSED_FAULTY','USED_GOOD','USED_FAULTY']`;
+  `UNUSED_FAULTY` behaves exactly like `USED_FAULTY` in `returnPart()`
+  (`PENDING_INSPECTION`, never restocks immediately) and was added to
+  `UsedPartDispositionController::index()`'s queue filter so it surfaces
+  in the existing Used Sparepart Processing workflow rather than being
+  silently invisible.
+- New `work_order_part_return_evidence` table +
+  `WorkOrderPartReturnEvidence` model + `WorkOrderPartReturnEvidenceService`
+  — mirrors `VehicleDocumentService`/`VehicleDocumentController` exactly:
+  private `local` disk (this is operational evidence, never publicly
+  servable — per item 24 of the owner's image-upload scope, chosen by use
+  not by copying VehicleBrand's public-disk pattern), UUID filename never
+  the client's, JPG/PNG + 5MB validated server-side. Uploaded independently
+  of the return itself (so a user can upload, preview, and individually
+  remove images before confirming — doc: "Image yang berhasil diupload
+  dapat di remove"), then linked to the `WorkOrderPartReturn` row
+  `returnPart()` creates via a new optional `evidenceIds` parameter (only
+  links rows still unlinked and belonging to the same planned part —
+  can't hijack another part's evidence). The legacy single `evidence`
+  string column is untouched for backward compatibility.
+- New endpoints (all `permission:inventory.return`, all scoped to the
+  owning Work Order + Planned Part, 404 otherwise):
+  `GET/POST /work-orders/{wo}/planned-parts/{part}/return-evidence`,
+  `GET/DELETE .../return-evidence/{evidence}`. Delete is rejected once an
+  evidence row is linked to a confirmed return (immutable audit trail
+  after the fact, matching the "three different operations" safety rule
+  for image update — no new image supplied / replace / explicit remove
+  are kept distinct).
+
+Not yet done (the frontend half of Batch 10, paused before starting):
+reusable `ImageUploadField` component (placeholder/preview/select/replace/
+remove/JPG-PNG-validate/error-state), Consume popup (Install All checkbox
++ Installed Qty, opens only when outstanding issued qty > 1 per doc), and
+the Return popup UI itself (system-info display of the outstanding
+returnable quantity, Condition dropdown using the 4 values above with
+their doc labels, Reason, and the new evidence upload wired to the
+endpoints above instead of the current plain URL text input).
+
+Tests: re-ran `InventoryReturnClassificationTest`(10),
+`UsedPartDispositionTest`(10), `SparePartSaleTest`(8),
+`WorkOrderExecutionTest`(6), `WorkOrderPartRequestTest`(12),
+`WorkOrderClosureGuardTest`(3) — 49/49 PASS, no regressions (the new
+`UNUSED_FAULTY` value and `evidenceIds` parameter are purely additive).
+`pint --test` clean on every new/changed file. `php -l` clean on every new
+file. MongoDB: NOT RUN, relocate-run-restore precedent followed, zero diff
+confirmed before committing. Frontend: unchanged this slice (no frontend
+file touched), not re-verified since nothing changed.
+
+## Pause Checkpoint
+
+Date/Checkpoint: 2026-09-23, mid-Batch-10, backend-only slice.
+Branch: `claude/peaceful-rubin-sm50tx`.
+Commit: see the commit immediately following this doc update in `git log`
+(message starts `feat(work-order): add Return evidence upload backend`).
+
+Current Batch: Batch 10 — Reusable image upload + Consume/Return popup
+redesign (per "Improvement OptiFleet - Maintenance Request dan Work
+Order").
+Current Feature: Work Order Return Parts evidence upload + Consume popup
+redesign.
+
+Completed:
+- Batches 1-9 (see their own Detail sections above) — fully done, tested,
+  pushed.
+- Batch 10, backend half only: `UNUSED_FAULTY` condition,
+  `WorkOrderPartReturnEvidence` model/table/service, 4 new evidence
+  endpoints, `returnPart()`'s new `evidenceIds` linking parameter,
+  `UsedPartDispositionController` queue filter widened. See Batch 10
+  Detail above for the full list.
+
+Partially Completed:
+- Batch 10 overall: backend infra is code-complete and tested; nothing in
+  the frontend calls it yet, so it is inert (safe, non-breaking) until the
+  frontend half lands.
+
+Not Started:
+- Batch 10's frontend half: reusable `ImageUploadField` component, Consume
+  popup redesign, Return popup redesign.
+- Batch 11 (Planned Parts vs Request Parts reconciliation), Batch 12
+  (Product Inventory Configuration), Batch 13 (Consumable SDS upload),
+  Batch 14 (OTHER item type investigation, Specification/Grade
+  discriminator investigation, repository-wide image-URL sweep), Batch 15
+  (final PR-readiness audit + report update).
+
+Current In-Progress Point: nothing left mid-file — the backend slice above
+was brought to a clean, tested, committed stopping point specifically so
+the pause lands between files, not inside one.
+
+Next Step: Resume Batch 10 by building the frontend `ImageUploadField`
+component (placeholder/preview/select/replace/remove/JPG-PNG-validate),
+then wire the Consume popup (Install All checkbox + Installed Qty,
+gated on `outstandingIssued() > 1`) and the Return popup (system-info
+display of the returnable quantity, Condition dropdown with the 4 values
+this batch's backend now supports, Reason, and the evidence upload wired
+to the `return-evidence` endpoints already built) into
+`WorkOrderDetailPage.tsx`'s `PlannedPartsTab`. After that: `tsc`/`oxlint`/
+`vite build`, a fresh backend regression pass, commit, push, then continue
+to Batch 11.
+
+Known Issues: none new. The pre-existing `WorkOrderService.php`/
+`WorkOrder.php` Pint style debt (noted in the Batch 9 Detail) remains
+untouched, out of scope.
+
+Owner Decisions Needed:
+1. The Consumable Specification/Grade conditional-mandatory trigger
+   (carried over from the original Final Report, still unresolved).
+2. **New, from this batch:** whether the Return popup's "Used Qty" should
+   keep its current schema-free reading (issued stock returned in a
+   used-but-not-defective condition, capped by the same outstanding-issued
+   ceiling as "Unused Qty") or become a genuinely new "old part removed
+   from the vehicle" concept requiring its own input point — see the
+   Architecture note in the Batch 10 Detail above for the full reasoning.
+   Not blocking: the frontend Consume/Return popup work can proceed under
+   reading (a) and be revisited if the owner prefers (b).
+
+Tests Executed: `InventoryReturnClassificationTest`,
+`UsedPartDispositionTest`, `SparePartSaleTest`, `WorkOrderExecutionTest`,
+`WorkOrderPartRequestTest`, `WorkOrderClosureGuardTest`, `pint --test`,
+`php -l` on every new/changed file.
+Tests Passed: 49/49 backend assertions across the 6 files above; pint and
+php -l both clean.
+Tests Failed: none.
+Tests Skipped: none this slice (no frontend files changed, so `tsc`/
+`oxlint`/`vite build` were not re-run — nothing to check).
+
+MongoDB: NOT RUN — `ext-mongodb` unavailable in this sandbox, network-
+installation blocked by org policy. Verified via the same relocate-run-
+restore precedent as every prior batch; zero diff confirmed
+(`git status --porcelain database/migrations/`) before committing.
+
+Deployment Prerequisites: none new this slice (no new disk/env
+requirement — reuses the already-configured `local` disk).
