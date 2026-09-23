@@ -205,15 +205,20 @@ class OperationsSeeder extends Seeder
 
         $workOrders = app(WorkOrderService::class);
         $wo = $workOrders->fromMaintenanceRequest($approvedRequest, ['maintenance_type' => 'CORRECTIVE'], $wsManager->id);
+
+        // Findings/Diagnosis are a Draft-only scoping exercise (see
+        // WorkOrderExecutionService::assertFindingScopeEditable) — must be
+        // recorded before submit()/approve()/.../start() move the WO past Draft.
+        $execution = app(WorkOrderExecutionService::class);
+        $finding = $execution->addFinding($wo, ['component_group_id' => $brakeGroupId, 'severity' => 'HIGH', 'description' => 'Worn brake pads.'], $mechanic1->id);
+        $execution->addDiagnosis($wo, ['work_order_finding_id' => $finding->id, 'root_cause' => 'Brake pads worn beyond limit.'], $mechanic1->id);
+
         $wo = $workOrders->submit($wo);
         $wo = $workOrders->approve($wo);
         $wo = $workOrders->assign($wo);
         $wo = $workOrders->schedule($wo, $bay1->id, now(), now()->addHours(3));
         $wo = $workOrders->start($wo);
 
-        $execution = app(WorkOrderExecutionService::class);
-        $finding = $execution->addFinding($wo, ['component_group_id' => $brakeGroupId, 'severity' => 'HIGH', 'description' => 'Worn brake pads.'], $mechanic1->id);
-        $execution->addDiagnosis($wo, ['work_order_finding_id' => $finding->id, 'root_cause' => 'Brake pads worn beyond limit.'], $mechanic1->id);
         $job = $execution->addJob($wo, ['component_group_id' => $brakeGroupId, 'service_item' => 'Replace brake pads', 'description' => 'Replace front brake pads.', 'estimated_hours' => 1.5]);
 
         $mechanics = app(MechanicAssignmentService::class);

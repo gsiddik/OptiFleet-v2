@@ -1359,3 +1359,155 @@ build regression, then proceed to Batch 12.
   any environment that runs the Mongo-backed Analytics/Intelligence
   migrations and tests (SKIPPED/NOT RUN in this sandbox throughout the
   session). No new deployment prerequisite introduced by Batch 11.
+
+## Resume From Checkpoint `435f4b7`: Full Backend Regression + Frontend Build (baseline established)
+
+### What this section is
+
+The Next Exact Step recorded in the pause checkpoint above was: run one
+clean, watched full-suite backend regression, then a frontend
+production build, before starting Batch 12. This section records the
+actual, executed results — not a repeat of Batch 11's own
+implementation (unchanged, see above).
+
+### Environment: Postgres was not running
+
+This sandbox session started fresh; `service postgresql start` was
+required before any test could run (`SELECT 1` failed with "connection
+refused" beforehand). This is routine sandbox startup, not a defect.
+
+### Confirming and root-causing the deadlock from the previous checkpoint
+
+The full suite was run watched, per the Next Exact Step. It reproduced
+the same hang pattern recorded in the pause checkpoint — but this time
+on a single, freshly-started `php artisan test` process (no orphaned
+process from a prior `kill -9` was involved, ruling out that theory).
+`pg_stat_activity` showed the identical signature: one connection
+`idle in transaction` (stuck on `DEALLOCATE pdo_stmt_...`), a second
+connection blocked (`wait_event=transactionid`) on
+`insert into "permissions" ...`. Both connections belonged to the same
+`phpunit` PID.
+
+**Isolation test:** the full suite was re-run with
+`tests/Feature/Analytics/` and `tests/Feature/Intelligence/`
+temporarily relocated (same technique as the Mongo migrations — these
+two directories reference the Mongo-backed Analytics/Intelligence
+domain and were the prime suspect, per the architecture doc's own
+"MongoDB is an analytical projection only" framing). With them
+excluded, the full suite ran to completion cleanly — no hang. This
+narrows the deadlock to something in/around the Analytics or
+Intelligence Feature tests interacting badly with `ext-mongodb`'s
+absence (most likely a service provider or lazy-connection path that
+behaves differently — hangs instead of throwing — when the driver
+class is missing versus when the migrations are simply absent).
+**Root-causing the exact mechanism inside Analytics/Intelligence was
+NOT pursued further** — those tests are already an established,
+disclosed MongoDB dependency (SKIPPED/NOT RUN throughout this session
+for the same underlying reason: `ext-mongodb` unavailable, network-
+blocked from installing), so this is classified **MONGODB_DEPENDENCY**,
+not a new defect, and pursuing the exact hang-vs-throw mechanism inside
+those tests would be a disproportionate detour for an already out-of-
+scope area. Both directories were restored byte-for-byte afterward
+(`git status --porcelain` confirms zero diff on
+`tests/Feature/Analytics/`, `tests/Feature/Intelligence/`, and
+`database/migrations/`).
+
+### A real, pre-existing defect found and fixed
+
+With Analytics/Intelligence excluded, the full suite completed with
+**17 failures**, all sharing one identical error:
+
+```
+WorkOrderException: Findings and Diagnosis can only be added or
+removed while status is Draft (currently IN_PROGRESS).
+at app/Domain/WorkOrder/Services/WorkOrderExecutionService.php:214
+```
+
+**Root cause:** `OperationsSeeder.php` and `FunctionalTestWorkOrderSeeder.php`
+(4 call sites total) call `WorkOrderExecutionService::addFinding()`
+**after** calling `WorkOrderService::start()`. This directly violates
+the Draft-only Finding/Diagnosis scoping rule established by the
+Finding-422 remediation (commit `6cae9fa`, `FINDING_SCOPE_STATUSES =
+['DRAFT']`) — a rule that predates this entire continuation (Batches
+8-11) and was never violated by any code this session touched
+(`git diff` from the Batch 8 checkpoint through Batch 11 shows zero
+changes to either seeder file). `git log` confirms both seeders were
+last aligned (`03bcdd9`, `8cefb2b`) **before** the Finding-422 fix
+(`6cae9fa`) was written, and neither was ever updated afterward to
+respect the new Draft-only rule. **Classification:
+PRE_EXISTING_FAILURE** — not a regression from Batch 11 or from any
+batch completed in this continuation.
+
+All 17 failing tests were 3 seeder-integration test classes
+(`OperationsSeederTest`, `SupplyChainSeederTest` — which itself seeds
+`OperationsSeeder` — and `FunctionalTestingSeederTest`) whose `setUp()`
+runs the affected seeder; since a `setUp()` exception fails every test
+method in the class, 1 root cause produced all 17 failures (1 in
+`OperationsSeederTest`, 7 cascaded through `SupplyChainSeederTest`, 8
+cascaded through `FunctionalTestingSeederTest` via
+`FunctionalTestWorkOrderSeeder`). `FunctionalTestExternalWorkOrderSeeder.php`'s
+own `addFinding()` calls were verified NOT affected — they call
+`ExternalWorkOrderService::addFinding()`, a distinct method with its
+own status rule for the External Work Order flow, unrelated to
+`WorkOrderExecutionService::assertFindingScopeEditable()`.
+
+**Fix (smallest correct change, no business rule altered):** reordered
+each of the 4 call sites so `addFinding()`/`addDiagnosis()` run
+immediately after `WorkOrder::create()`/`fromMaintenanceRequest()`
+(while status is still DRAFT), before `submit()`/`approve()`/.../`start()`
+move the WO past Draft — i.e. the seeders were corrected to match the
+already-approved business rule, the rule itself was not touched.
+`addJob()` (gated by the broader `assertPlanningEditable()` window) and
+`resolveFinding()` (ungated) were left exactly where they were —
+verified via reading `WorkOrderExecutionService.php` that only
+`addFinding`/`addDiagnosis` use `assertFindingScopeEditable()`.
+
+- `database/seeders/OperationsSeeder.php`: 1 call site.
+- `database/seeders/FunctionalTestWorkOrderSeeder.php`: 3 call sites
+  (`FT-WO-IN_PROGRESS`, `FT-WO-ON_HOLD`, `FT-WO-COMPLETED` scenarios).
+
+`pint --test` on both files: pre-existing fixer flags only, confirmed
+via `git stash` comparison (identical flags before and after this
+fix's own edits — no new style debt introduced).
+
+### Verification
+
+- Focused re-run of the 3 previously-failing test classes:
+  `OperationsSeederTest` 1/1 PASS, `FunctionalTestingSeederTest` 8/8
+  PASS, `SupplyChainSeederTest` 8/8 PASS.
+- **Full non-Mongo backend regression (clean, watched, to completion):
+  779/779 PASS, 3525 assertions, 0 failures.** This is the actual,
+  executed full-suite baseline for everything merged through this
+  checkpoint (Batches 1-11 inclusive), including
+  `WorkOrderPlannedPartEstimateTest` (4/4), `WorkOrderRemovedComponentTest`
+  (11/11), and every other Feature/Unit test file outside
+  Analytics/Intelligence.
+- MongoDB (Analytics/Intelligence): SKIPPED / NOT RUN — `ext-mongodb`
+  unavailable, network-blocked from installing; this session's hang
+  investigation (above) further confirms excluding them is necessary,
+  not merely a convenience.
+- Frontend: `cd frontend && npm run build` (the repository's canonical
+  `tsc -b && vite build` script) — **PASS**, built in 2.25s (one
+  pre-existing advisory about a >500kB chunk, not an error, unrelated
+  to this session's changes). `npm run lint` (`oxlint`, full project) —
+  0 errors; the ~25 warnings printed are all pre-existing, in files
+  never touched by this continuation (e.g. `VehicleListPage.tsx`,
+  `AuthContext.tsx`, `MaintenancePackagesPage.tsx`) — none in
+  `WorkOrderDetailPage.tsx` or `types/index.ts`.
+
+### Checkpoint gate status
+
+```text
+Backend broad non-Mongo regression  -> PASS (779/779, 0 failures)
+Frontend type check                 -> PASS (tsc -b, part of build)
+Frontend lint                       -> PASS (0 errors; pre-existing warnings only)
+Frontend production build           -> PASS
+MongoDB (Analytics/Intelligence)    -> SKIPPED / NOT RUN (documented dependency)
+Working tree                        -> controlled (git status --porcelain
+                                        clean except the 2 seeder files
+                                        this fix touches)
+Known blocker                       -> NONE
+```
+
+Gate satisfied. Proceeding to Batch 12 (Product Inventory
+Configuration).
