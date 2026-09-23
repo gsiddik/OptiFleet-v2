@@ -1511,3 +1511,123 @@ Known blocker                       -> NONE
 
 Gate satisfied. Proceeding to Batch 12 (Product Inventory
 Configuration).
+
+## Batch 12 Detail (Product Inventory Configuration)
+
+### Source document
+
+The "Inventory Configuration" requirement is **not** in
+`Next_Improvement_Tenant_Portal_-_Products` (the doc used for Batches
+4-5's per-Item-Type Specification work) — that doc's Product section
+ends with an explicit principle (`## Prinsip pemisahan data`) listing
+exactly what must stay OFF the Item Master form (Current Stock among
+them). The Inventory Configuration table is a distinct, later section
+found only in the sibling document `Next_Improvement_Tenant_Portal`
+(no "-Products" suffix), added after the per-Item-Type Specification
+sections, introduced by: *"Saya justru akan menambahkan satu section
+Inventory Configuration setelah Type Specification. Field ini dapat
+digunakan lintas Item Type tetapi perilakunya berbeda."* Both source
+`.txt` extractions were re-read directly for this batch (not
+summarized from a prior Final Report), per the re-audit discipline.
+
+### Requirement matrix (from the source table, cross-referenced against the repository)
+
+| Field | Doc: Sparepart/Consumable/Rim/Tire/Tool/Equipment | Domain owner | Existing implementation | Batch 12 action |
+|---|---|---|---|---|
+| Stock Tracking | ✓ all | INVENTORY_LEVEL (implicit) | Every Product gets a `WarehouseStock` row via any `InventoryService` operation, universally — not a per-product toggle to configure, a system fact | None — already true by construction |
+| Minimum Stock | O all | INVENTORY_LEVEL (`WarehouseStock`) | Migration/model/`WarehouseStockController::updateThresholds()`/route/permission all already existed (backend-complete); **zero frontend UI ever called it** | **Built**: `ThresholdsModal` in `WarehouseStockListPage.tsx` |
+| Reorder Point | O all | INVENTORY_LEVEL (`WarehouseStock`) | Same as above; also already consumed by `WarehouseStock::reorderStatus()`, `DashboardController`'s low-stock query, `InventoryMetricsExtractor` (Analytics), `InventoryDemandForecastService` (Intelligence), and `PurchaseRequest`'s `REORDER_POINT` source type | **Built**: same modal |
+| Maximum Stock | O all | INVENTORY_LEVEL (`WarehouseStock`) | Same as above | **Built**: same modal |
+| Serialized | Sparepart optional/Consumable No*/Rim recommended/Tire Yes(system)/Tool recommended/Equipment Yes | PRODUCT_MASTER_LEVEL | `Product.track_serial_number` (universal boolean, already on the base Product model, not per-spec-table) — already wired end-to-end in `CreateProductModal`/`EditProductModal` via `needsField('track_serial_number', itemType)`, gated exactly to `['SPARE_PART','RIM','TOOL','EQUIPMENT']` (Consumable excluded per "No*", Tire excluded because it is system-controlled, not user-set, matching the doc's "YES (System Controlled)") | None — already correct |
+| Batch Tracked | Consumable optional, others No | PRODUCT_MASTER_LEVEL | `Product.track_batch` (universal boolean) — wired in Create/Edit, applied only when `itemType === 'CONSUMABLE'` | None — already correct |
+| Expiry Tracked | Consumable optional, others No | ITEM_TYPE_DEFAULT (`ProductConsumableSpec.track_expiry`) | Already implemented (Consumable-only spec field), wired in Create/Edit | None — already correct |
+| Installable | Sparepart "Usually Yes"/Rim/Tire Yes/others No | N/A | Descriptive-only row explaining why the item type distinction exists (whether the item physically mounts on a vehicle) — not phrased as a Requirement/Input-Type field anywhere in either source doc, no Create-form row proposed for it | **NOT_APPLICABLE** — informational commentary, not a configurable field; confirmed by its absence from every per-Item-Type Specification table in both source docs |
+| Checkout-able | Tool Yes, others No | ITEM_TYPE_DEFAULT (`ProductToolSpec.checkout_required`) | Already implemented (Tool-only), wired in Create/Edit | None — already correct |
+| Maintainable | Tool/Equipment "Optional", Rim/Tire "Optional", others No | ITEM_TYPE_DEFAULT (`*.maintenance_required`) | Exists on `ProductToolSpec`/`ProductEquipmentSpec` only. Rim/Tire's own detailed Specification tables (the authoritative, field-by-field sections earlier in the same documents) never list a Maintenance Required field for Rim or Tire — this summary row's "Optional" mark for Rim/Tire is not corroborated by either doc's own per-type table | **Deliberately not added** — see REMAINING below |
+| Calibratable | Tool/Equipment "Optional", others No | ITEM_TYPE_DEFAULT (`*.calibration_required`) | Already implemented (Tool/Equipment only), wired in Create/Edit | None — already correct |
+
+### Architecture audit before touching anything
+
+Per the "audit before schema design" discipline: inspected `Product`,
+`ProductConsumableSpec`, `ProductToolSpec`, `ProductEquipmentSpec`,
+`App\Domain\Tire\Models\ProductRimSpec`/`ProductTireSpec`,
+`WarehouseStock`, `WarehouseStockController`,
+`ProductSpecificationService`, `CreateProductModal.tsx`,
+`EditProductModal.tsx`, and the full `PermissionSeeder` inventory
+group, before writing any code. This confirmed: (a) the correct
+Product-Master-vs-Inventory-Instance boundary was already respected —
+Minimum/Reorder/Maximum Stock were correctly modeled as `WarehouseStock`
+columns from the start (Phase 4), never as Product columns, consistent
+with a Product being stocked differently at different Warehouses; (b)
+every other row in the table already had a real backing field, so no
+new migration, model, or duplicate source of truth was needed anywhere
+in this batch.
+
+### Implementation
+
+- `WarehouseStockListPage.tsx`: added Min/Reorder Pt./Max columns to the
+  table (SYSTEM_DERIVED display, read from the existing `WarehouseStockItem`
+  type — already fully typed, unused until now), and a new "Thresholds"
+  row action (gated by the existing `inventory.adjust` permission — the
+  same one the route itself already required — no new permission
+  invented), following the file's established `AdjustModal`/`ScrapModal`
+  pattern exactly: a `target`-driven `Modal` with local form state
+  hydrated via `useEffect` from the target row, calling
+  `PUT /app/inventory/{id}/thresholds`, blank input mapped to `null`
+  (clearing a threshold, not `0`).
+- No backend production code changed — `WarehouseStockController`,
+  `WarehouseStock`, and the migration were already correct and complete.
+- `tests/Feature/InventoryTest.php`: 6 new focused tests for the
+  previously-uncovered `updateThresholds` endpoint — update persists
+  correctly, requires `inventory.adjust` permission, rejects negative
+  values (422), a threshold can be cleared back to `null`, thresholds
+  are per-Warehouse (setting them on one Warehouse's stock row for a
+  Product does not affect another Warehouse's row for the same
+  Product), and the update is denied when the acting user's warehouse
+  data-scope doesn't include the target stock's Warehouse.
+
+### Tests
+
+Focused: `InventoryTest` 18/18 PASS (46 assertions; 12 pre-existing +
+6 new), executed with the Mongo migrations relocated
+(ext-mongodb unavailable) and restored immediately after with `git
+status --porcelain` confirming zero diff. `pint --test` on the touched
+test file: pre-existing fixer flags only, confirmed via `git stash`
+comparison (identical before/after — no new style debt). Frontend:
+`tsc --noEmit` clean, `oxlint` on the touched file shows one
+`set-state-in-effect` warning — the exact same pattern already used
+throughout `EditProductModal.tsx` and other existing modals in this
+codebase for hydrating local form state from a changing `target` prop,
+not a new anti-pattern introduced by this batch. `npm run build`
+(`tsc -b && vite build`) — PASS.
+
+Full-suite regression was not re-run for this batch: no backend
+production code was modified (only a new test file's assertions and a
+frontend-only page), so the risk surface is limited to
+`WarehouseStockListPage.tsx`'s own rendering and the already-passing
+`InventoryTest` suite: RAN.
+
+### REMAINING from this batch (disclosed, not blocking)
+
+- **Maintainable for Rim/Tire**: the Inventory Configuration summary
+  table marks this "Optional" for Rim and Tire, but neither document's
+  own detailed, field-by-field Rim/Tire Specification table (the
+  authoritative source used for Batches 4-5) lists a Maintenance
+  Required field for either type. Adding one now would mean inventing
+  a field the primary specification tables never defined, based only
+  on a summary row's imprecise wording — the kind of guess the owner's
+  own instructions say to avoid. **NEEDS_OWNER_DECISION** if the intent
+  really is periodic Rim/Tire maintenance tracking (e.g., re-torque or
+  balance-check intervals) distinct from Tire's own disposition/
+  retread/repair governance (already extensively implemented in
+  `TireDispositionEligibilityTest`/`TireRepairRetreadGovernanceTest`),
+  not implemented speculatively here.
+- **Sparepart Expiry Tracked**: the summary table marks this "Optional"
+  for Sparepart, but `track_expiry` only exists on
+  `ProductConsumableSpec` (Consumable-only) — `ProductSparepartSpec`
+  has no such field, and neither does the Sparepart Specification table
+  in either source doc list a Shelf Life / Expiry concept as
+  configurable (the "-Products" doc's Sparepart table does list
+  `Shelf Life | O | Number + Unit Dropdown`, distinct from a
+  Yes/No Expiry Tracked toggle). Same reasoning as above — flagged, not
+  invented.
