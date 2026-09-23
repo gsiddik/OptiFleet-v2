@@ -337,7 +337,7 @@ docker-compose.yml
 ```bash
 cp .env.example .env
 docker compose up -d --build
-docker compose exec backend php artisan db:seed --force
+docker compose exec backend php artisan db:seed --class=DevDemoSeeder --force
 ```
 
 - Frontend: http://localhost:5173
@@ -371,7 +371,7 @@ php artisan key:generate
 createdb optifleet        # and optifleet_test for running tests
 composer install
 php artisan migrate       # also provisions the Mongo analytics collections/indexes
-php artisan db:seed
+php artisan db:seed --class=DevDemoSeeder   # full local/demo environment — see "Seed data" below
 
 # Frontend
 cd ../frontend
@@ -382,7 +382,52 @@ npm run dev
 
 Backend dev server: `php artisan serve` (http://127.0.0.1:8000).
 
+## Production deployment
+
+A fresh production environment runs the bootstrap-only path — no demo
+tenant, no demo user, no operational history. It is idempotent and safe
+to re-run:
+
+```bash
+php artisan migrate --force
+php artisan db:seed --force
+php artisan storage:link
+php artisan platform:create-admin     # provisions the first platform login; see below
+```
+
+`php artisan db:seed` (i.e. `DatabaseSeeder`, the default target of `db:seed`
+with no `--class`) seeds only global, idempotent system/reference data:
+Access Management (permissions, the `Platform Superadmin` role), Modules,
+Configuration/Workflow/Notification platform defaults, and reference/master
+data (Vehicle Category, Component Group, Product Category, UOM, Tire/Tool/
+Equipment reference data, Storage Requirement, and the default commercial
+bundle/pricing catalog). It creates **no tenant, no user, and no
+operational record** — running it twice in a row never duplicates data.
+
+`php artisan platform:create-admin` provisions the first platform-level
+administrator account. It never hardcodes a credential: pass
+`--email`/`--password`, set `PLATFORM_ADMIN_EMAIL`/`PLATFORM_ADMIN_PASSWORD`
+for a scripted/unattended deploy, or omit both for an interactive prompt.
+Re-running it against an existing admin email updates that user's role
+assignment and only changes the password if one was explicitly supplied
+that run.
+
+Production requires `CACHE_STORE`/`SESSION_DRIVER=redis` (per `.env`) to
+have a running Redis instance reachable before `db:seed` — the
+Configuration platform-default seeder depends on the cache layer.
+
+Demo/development data (`DemoDataSeeder`'s two fully-populated demo tenants
+and hardcoded local-dev login, `CommercialSeeder`'s subscription-scenario
+tenants, `OperationsSeeder`'s Work Order history, `SupplyChainSeeder`'s
+product/inventory/tire supply chain) is exclusively opt-in via
+`php artisan db:seed --class=DevDemoSeeder` (see "Running locally without
+Docker" above) and must never run against production.
+
 ## Seed data
+
+The table and scenarios below are produced by `DevDemoSeeder` (dev/demo
+only, opt-in — see "Production deployment" above for what the default
+`db:seed` actually creates).
 
 | Account | Email | Password | Scope |
 |---|---|---|---|
