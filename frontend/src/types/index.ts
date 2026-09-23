@@ -1091,6 +1091,7 @@ export interface ProductCategoryItem {
   description: string | null;
   is_system: boolean;
   status: string;
+  requires_specification_grade: boolean;
 }
 
 export interface UomItem {

@@ -3,6 +3,7 @@
 namespace App\Domain\ProductMaster\Services;
 
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\ProductCompatibility;
 use App\Domain\ProductMaster\Models\ProductConsumableSpec;
 use App\Domain\ProductMaster\Models\ProductEquipmentSpec;
@@ -62,7 +63,7 @@ class ProductSpecificationService
 
         $spec = match ($productType) {
             'SPARE_PART' => $this->validateSparepart($specInput, $includeCompatibilities),
-            'CONSUMABLE' => $this->validateConsumable($specInput),
+            'CONSUMABLE' => $this->validateConsumable($specInput, $this->specificationGradeRequired($generalInput['product_category_id'] ?? null)),
             'RIM' => $this->validateRim($specInput),
             'TIRE' => $this->validateTire($specInput),
             'TOOL' => $this->validateTool($specInput),
@@ -156,10 +157,28 @@ class ProductSpecificationService
 
     // --- Consumable ---
 
-    private function validateConsumable(array $input): array
+    /**
+     * Owner decision: Specification/Grade's Conditional-Mandatory trigger is the Product's
+     * OWN Category/Subcategory (`product_category_id` already resolves to whichever
+     * granularity the user picked — the leaf, Subcategory if chosen else Category — so a
+     * single flag on that one row covers both levels without climbing to a parent).
+     * `requires_specification_grade` is Superadmin-managed platform master data, never a
+     * hardcoded name/code comparison, so a tenant can never accidentally change this rule
+     * by renaming a category.
+     */
+    private function specificationGradeRequired(?string $productCategoryId): bool
+    {
+        if ($productCategoryId === null) {
+            return false;
+        }
+
+        return (bool) ProductCategory::query()->whereKey($productCategoryId)->value('requires_specification_grade');
+    }
+
+    private function validateConsumable(array $input, bool $specificationGradeRequired = false): array
     {
         $v = Validator::make($input, [
-            'grade_specification' => ['nullable', 'string', 'max:255'],
+            'grade_specification' => [$specificationGradeRequired ? 'required' : 'nullable', 'string', 'max:255'],
             'package_size_value' => ['nullable', 'numeric', 'min:0'],
             'package_size_uom_id' => ['nullable', 'uuid', $this->uomExistsRule()],
             'purchase_uom_id' => ['nullable', 'uuid', $this->uomExistsRule()],

@@ -18,6 +18,7 @@ class UpdateProductCategoryRequest extends FormRequest
             'item_type' => ['sometimes', 'nullable', 'in:SPARE_PART,TOOL,TIRE,CONSUMABLE,EQUIPMENT,RIM,OTHER'],
             'description' => ['nullable', 'string'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
+            'requires_specification_grade' => ['sometimes', 'boolean'],
         ];
     }
 }

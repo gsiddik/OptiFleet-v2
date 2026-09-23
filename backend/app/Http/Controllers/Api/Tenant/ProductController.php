@@ -67,7 +67,7 @@ class ProductController extends Controller
         // spec submission never burns an Item Code.
         ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate(
             $productType,
-            $request->only(['brand', 'track_serial_number', 'track_batch']),
+            $request->only(['brand', 'track_serial_number', 'track_batch', 'product_category_id']),
             (array) $request->input('spec', [])
         );
 
@@ -161,9 +161,13 @@ class ProductController extends Controller
         $generalOverrides = [];
         $validatedSpec = null;
         if ($request->has('spec') && (self::SPEC_RELATIONS[$product->product_type] ?? null)) {
+            // A spec-only Edit (e.g. only Specification/Grade changed, Category untouched)
+            // must still evaluate the Conditional-Mandatory rule against the product's
+            // EXISTING category, not silently treat it as "no category" (i.e. never required).
+            $specValidationInput = $validated + ['product_category_id' => $product->product_category_id];
             ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate(
                 $product->product_type,
-                $validated,
+                $specValidationInput,
                 (array) $request->input('spec', []),
                 includeCompatibilities: false,
             );

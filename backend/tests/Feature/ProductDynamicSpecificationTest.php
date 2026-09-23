@@ -154,6 +154,88 @@ class ProductDynamicSpecificationTest extends TestCase
         $this->assertCount(1, $response->json('data.consumable_spec.storage_requirements'));
     }
 
+    /**
+     * Owner decision: Specification/Grade's Conditional-Mandatory trigger is the Product's
+     * Category/Subcategory (a Superadmin-managed `requires_specification_grade` flag on the
+     * category row), not a hardcoded frontend/backend name comparison against "Oil"/"Coolant".
+     */
+    public function test_consumable_grade_specification_required_when_category_flags_it(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $engineOilCategory = $this->makeProductCategory(['code' => 'ENGINE-OIL', 'name' => 'Engine Oil', 'item_type' => 'CONSUMABLE', 'requires_specification_grade' => true]);
+
+        $this->postJson('/api/v1/app/products', $this->base('CONSUMABLE', [
+            'product_category_id' => $engineOilCategory->id, 'track_batch' => false,
+            'spec' => ['track_expiry' => false, 'is_hazardous' => false],
+        ]), $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['grade_specification']);
+
+        $response = $this->postJson('/api/v1/app/products', $this->base('CONSUMABLE', [
+            'product_category_id' => $engineOilCategory->id, 'track_batch' => false,
+            'spec' => ['grade_specification' => 'SAE 15W-40', 'track_expiry' => false, 'is_hazardous' => false],
+        ]), $this->authHeaders($token))->assertStatus(201);
+        $this->assertSame('SAE 15W-40', $response->json('data.consumable_spec.grade_specification'));
+    }
+
+    public function test_consumable_grade_specification_optional_when_category_does_not_flag_it(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $ragsCategory = $this->makeProductCategory(['code' => 'SHOP-RAGS', 'name' => 'Shop Rags', 'item_type' => 'CONSUMABLE', 'requires_specification_grade' => false]);
+
+        $this->postJson('/api/v1/app/products', $this->base('CONSUMABLE', [
+            'product_category_id' => $ragsCategory->id, 'track_batch' => false,
+            'spec' => ['track_expiry' => false, 'is_hazardous' => false],
+        ]), $this->authHeaders($token))->assertStatus(201);
+    }
+
+    public function test_consumable_grade_specification_requirement_is_recalculated_on_edit_category_change(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $headers = $this->authHeaders($token);
+        $ragsCategory = $this->makeProductCategory(['code' => 'SHOP-RAGS-2', 'item_type' => 'CONSUMABLE', 'requires_specification_grade' => false]);
+        $oilCategory = $this->makeProductCategory(['code' => 'ENGINE-OIL-2', 'item_type' => 'CONSUMABLE', 'requires_specification_grade' => true]);
+
+        $productId = $this->postJson('/api/v1/app/products', $this->base('CONSUMABLE', [
+            'product_category_id' => $ragsCategory->id, 'track_batch' => false,
+            'spec' => ['track_expiry' => false, 'is_hazardous' => false],
+        ]), $headers)->assertStatus(201)->json('data.id');
+
+        // Changing Category to one that now requires Grade, without supplying it, is rejected.
+        $this->putJson("/api/v1/app/products/{$productId}", [
+            'product_category_id' => $oilCategory->id, 'track_batch' => false,
+            'spec' => ['track_expiry' => false, 'is_hazardous' => false],
+        ], $headers)->assertStatus(422)->assertJsonValidationErrors(['grade_specification']);
+
+        // Supplying it alongside the new category succeeds.
+        $this->putJson("/api/v1/app/products/{$productId}", [
+            'product_category_id' => $oilCategory->id, 'track_batch' => false,
+            'spec' => ['grade_specification' => 'SAE 5W-30', 'track_expiry' => false, 'is_hazardous' => false],
+        ], $headers)->assertStatus(200)->assertJsonPath('data.consumable_spec.grade_specification', 'SAE 5W-30');
+    }
+
+    public function test_consumable_grade_specification_requirement_uses_existing_category_when_edit_omits_it(): void
+    {
+        [, $token] = $this->setUpTenant();
+        $headers = $this->authHeaders($token);
+        $oilCategory = $this->makeProductCategory(['code' => 'ENGINE-OIL-3', 'item_type' => 'CONSUMABLE', 'requires_specification_grade' => true]);
+
+        $productId = $this->postJson('/api/v1/app/products', $this->base('CONSUMABLE', [
+            'product_category_id' => $oilCategory->id, 'track_batch' => false,
+            'spec' => ['grade_specification' => 'SAE 15W-40', 'track_expiry' => false, 'is_hazardous' => false],
+        ]), $headers)->assertStatus(201)->json('data.id');
+
+        // An edit that never touches product_category_id must still enforce the existing
+        // category's rule — omitting grade_specification here is rejected, not silently allowed.
+        $this->putJson("/api/v1/app/products/{$productId}", [
+            'track_batch' => false, 'spec' => ['track_expiry' => false, 'is_hazardous' => false],
+        ], $headers)->assertStatus(422)->assertJsonValidationErrors(['grade_specification']);
+
+        // Preserving the existing value (full resubmit, the established Edit pattern) succeeds
+        // and leaves the data untouched — an edit must never silently null it out.
+        $this->putJson("/api/v1/app/products/{$productId}", [
+            'track_batch' => false, 'spec' => ['grade_specification' => 'SAE 15W-40', 'track_expiry' => false, 'is_hazardous' => false],
+        ], $headers)->assertStatus(200)->assertJsonPath('data.consumable_spec.grade_specification', 'SAE 15W-40');
+    }
+
     // --- Rim ---
 
     public function test_rim_full_creation_with_optional_compatibility(): void

@@ -10,6 +10,7 @@ import {
   TireFields,
   ToolFields,
   brandRequired,
+  gradeSpecificationRequired,
   needsField,
   type Spec,
 } from './CreateProductModal';
@@ -430,7 +431,16 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         />
       )}
       {itemType === 'CONSUMABLE' && (
-        <ConsumableFields spec={spec} setSpecField={setSpecField} errors={errors} uoms={uoms} storageRequirements={storageRequirements} trackBatch={trackBatch} setTrackBatch={setTrackBatch} />
+        <ConsumableFields
+          spec={spec}
+          setSpecField={setSpecField}
+          errors={errors}
+          uoms={uoms}
+          storageRequirements={storageRequirements}
+          trackBatch={trackBatch}
+          setTrackBatch={setTrackBatch}
+          gradeRequired={gradeSpecificationRequired(categories, subcategories, categoryId, subcategoryId)}
+        />
       )}
       {itemType === 'RIM' && (
         <RimFields

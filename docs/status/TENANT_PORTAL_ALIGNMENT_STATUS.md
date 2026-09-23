@@ -21,12 +21,74 @@ uses its own batch numbering (Batch 1-8), per explicit owner instruction.
 
 ## NEEDS_CONFIRMATION (flagged, not blocking other work)
 
-1. **Consumable "Specification/Grade" conditional-mandatory trigger undefined.**
-   Doc says Conditional Mandatory "for oil, coolant, brake fluid, grease, and
-   certain chemicals" but no discrete field (e.g. a Consumable sub-type)
-   exists to key the condition off. Left Optional (prior session's decision,
-   documented with a TODO in ConsumableFields). Flagging for owner decision;
-   not re-litigating without an answer.
+*(none currently open from the original audit — see "OWNER DECISION 1 — RESOLVED" below for
+how the Consumable Specification/Grade item was closed. New items discovered during the
+Return/Removed-Component work are tracked in that batch's own Detail section instead of here.)*
+
+## OWNER DECISION 1 — RESOLVED: Consumable Specification/Grade trigger = Category/Subcategory
+
+Previously NEEDS_CONFIRMATION ("Doc says Conditional Mandatory 'for oil,
+coolant, brake fluid, grease, and certain chemicals' but no discrete field
+exists to key the condition off"). Owner decision: driven by the Product's
+own **Category/Subcategory**, not a new Consumable sub-type, and not a
+hardcoded frontend/backend string comparison against a category name.
+
+Architecture chosen: `product_categories` (Category and Subcategory are
+both rows in this one self-referencing table; a Product stores a single
+`product_category_id` pointing at whichever leaf the user picked) gains a
+new Superadmin-managed boolean, `requires_specification_grade`. This was
+the smallest correct escalation — `code`/`name` were ruled out first
+because Product Categories are platform (Superadmin-only) master data
+with no fixed, code-enumerable taxonomy today (no "Oil"/"Coolant"/etc.
+subcategories are seeded anywhere in the repository yet), so a hardcoded
+code list would be exactly the fragile string-matching the owner
+instructed against. A boolean flag on the category row itself is stable
+master-data metadata instead.
+
+- Backend: `ProductSpecificationService::specificationGradeRequired()`
+  looks up the resolved `product_category_id`'s flag and threads it into
+  `validateConsumable()`'s `grade_specification` rule
+  (`required`/`nullable`). `ProductController::store()` now passes
+  `product_category_id` into the general input `specs->validate()` sees;
+  `update()` falls back to the product's EXISTING category when the edit
+  request doesn't touch `product_category_id` at all, so a spec-only edit
+  still enforces the right rule instead of silently treating "no category
+  in this request" as "never required" — see the dedicated regression
+  test for this exact case.
+- Platform `StoreProductCategoryRequest`/`UpdateProductCategoryRequest`:
+  accept the new flag so Superadmin tooling can set it per category/
+  subcategory.
+- Frontend: `gradeSpecificationRequired()` (exported from
+  `CreateProductModal.tsx`, reused by `EditProductModal.tsx`) mirrors the
+  backend's own leaf-resolution exactly (`subcategoryId || categoryId`),
+  marks the field `required` on the FormField when true — never hides it
+  when optional, per the owner's UI instruction. Edit's existing Category/
+  Subcategory hydration effect already recalculates on every render, so
+  changing Category on Edit live-updates the requirement with no
+  additional wiring; an Edit that never touches Category/spec preserves
+  the existing Specification/Grade value untouched (full-resubmit is the
+  established Edit pattern for every other spec field already).
+- Data: no "Oil"/"Coolant"/"Brake Fluid"/"Grease" subcategories are seeded
+  with the flag set anywhere yet — that is a Superadmin content/data task
+  (creating the actual category rows via the Platform endpoint), not a
+  code gap; the mechanism is fully implemented and tested against
+  synthetic categories.
+
+Tests: 4 new cases in `ProductDynamicSpecificationTest` — required when
+flagged (missing -> 422, present -> 201), optional when not flagged,
+Edit recalculates on Category change (old category's rule -> reject,
+new category + value -> accept), Edit omitting Category still enforces
+the product's existing category's rule and preserves the existing value
+when resubmitted. Full regression:
+`ProductDynamicSpecificationTest`(32), `ProductCategoryAndUomTest`(5),
+`PlatformProductCategoryTest`(5), `ProductEditDynamicFormTest`(8),
+`ProductTest`(7), `ProductFoundationMasterDataTest`(9),
+`ProductsCyclePhase5SupportingModulesTest`(7) — 73/73 PASS, no
+regressions. `pint --test` clean (pre-existing fixer flags on
+`ProductSpecificationService.php`/`ProductController.php` confirmed via
+`git stash` to predate this change). Frontend: `tsc --noEmit` clean,
+`oxlint` clean, `vite build` succeeds. MongoDB: NOT RUN, relocate-run-
+restore precedent followed, zero diff confirmed.
 
 ## Gap Analysis Summary (by area)
 
@@ -716,3 +778,17 @@ restore precedent as every prior batch; zero diff confirmed
 
 Deployment Prerequisites: none new this slice (no new disk/env
 requirement — reuses the already-configured `local` disk).
+
+## Resume — Both Owner Decisions From the Pause Checkpoint Are Now Resolved
+
+1. Consumable Specification/Grade trigger — **RESOLVED**, implemented and
+   tested. See "OWNER DECISION 1 — RESOLVED" above (placed earlier in this
+   document, next to where the item used to live under
+   NEEDS_CONFIRMATION).
+2. Return popup "Used Qty" — **RESOLVED** by the owner as a genuine old/
+   removed-component-from-vehicle concept, distinct from an unused-issued-
+   stock return, and explicitly must never reverse the newly-installed
+   replacement part's consumption. This is a domain/inventory lifecycle
+   change, not a UI label change — see the new "Batch 10 Detail
+   (continued): Removed Component Return" section below for the
+   architecture impact analysis and implementation.

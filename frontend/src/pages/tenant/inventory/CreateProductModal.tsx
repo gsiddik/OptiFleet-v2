@@ -39,6 +39,26 @@ export function splitCommaList(value: string): string[] {
 }
 
 /**
+ * Owner decision: Consumable Specification/Grade's Conditional-Mandatory trigger is the
+ * Product's own Category/Subcategory — mirrors `product_category_id: subcategoryId ||
+ * categoryId` (the value actually submitted): whichever leaf category row that resolves to
+ * carries the authoritative `requires_specification_grade` flag (Superadmin-managed master
+ * data, never a hardcoded name/code comparison here). The backend re-validates the same way —
+ * this is UX only.
+ */
+export function gradeSpecificationRequired(
+  categories: ProductCategoryItem[],
+  subcategories: ProductCategoryItem[],
+  categoryId: string,
+  subcategoryId: string,
+): boolean {
+  const effectiveId = subcategoryId || categoryId;
+  const match = subcategories.find((c) => c.id === effectiveId) ?? categories.find((c) => c.id === effectiveId);
+
+  return match?.requires_specification_grade ?? false;
+}
+
+/**
  * "Next Improvement Tenant Portal - Products": the Dynamic Product Form.
  * General Information (Section: all Item Types) always renders first;
  * selecting an Item Type reveals that type's own specification section
@@ -364,7 +384,16 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
         <SparepartFields spec={spec} setSpecField={setSpecField} errors={errors} compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} />
       )}
       {itemType === 'CONSUMABLE' && (
-        <ConsumableFields spec={spec} setSpecField={setSpecField} errors={errors} uoms={uoms} storageRequirements={storageRequirements} trackBatch={trackBatch} setTrackBatch={setTrackBatch} />
+        <ConsumableFields
+          spec={spec}
+          setSpecField={setSpecField}
+          errors={errors}
+          uoms={uoms}
+          storageRequirements={storageRequirements}
+          trackBatch={trackBatch}
+          setTrackBatch={setTrackBatch}
+          gradeRequired={gradeSpecificationRequired(categories, subcategories, categoryId, subcategoryId)}
+        />
       )}
       {itemType === 'RIM' && <RimFields spec={spec} setSpecField={setSpecField} errors={errors} compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} />}
       {itemType === 'TIRE' && (
@@ -627,6 +656,7 @@ export function ConsumableFields({
   storageRequirements,
   trackBatch,
   setTrackBatch,
+  gradeRequired = false,
 }: {
   spec: Spec;
   setSpecField: (k: string, v: unknown) => void;
@@ -635,6 +665,7 @@ export function ConsumableFields({
   storageRequirements: StorageRequirementItem[];
   trackBatch: boolean;
   setTrackBatch: (v: boolean) => void;
+  gradeRequired?: boolean;
 }) {
   const trackExpiry = (spec.track_expiry as boolean) ?? false;
   const isHazardous = (spec.is_hazardous as boolean) ?? false;
@@ -647,12 +678,11 @@ export function ConsumableFields({
           <input type="checkbox" checked={trackBatch} onChange={(e) => setTrackBatch(e.target.checked)} /> Yes
         </label>
       </FormField>
-      <FormField label="Specification / Grade" errors={errors['spec.grade_specification']}>
+      <FormField label="Specification / Grade" errors={errors['spec.grade_specification']} required={gradeRequired}>
         <input placeholder="e.g. SAE 15W-40, DOT 4" value={(spec.grade_specification as string) ?? ''} onChange={(e) => setSpecField('grade_specification', e.target.value)} style={inputStyle} />
-        {/* TODO(business-rule): the authoritative document marks this Conditional Mandatory
-            but does not define the trigger condition. Until that rule is confirmed, this
-            field stays Optional-enforced (never rejected for being absent) — see
-            ProductSpecificationService::validateConsumable() for the backend mirror. */}
+        {/* Owner decision: required when the selected Category/Subcategory's
+            requires_specification_grade flag is set (Superadmin-managed master data) — see
+            ProductSpecificationService::validateConsumable() for the authoritative backend rule. */}
       </FormField>
       <FormField label="Package Size" errors={errors['spec.package_size_value']}>
         <div style={{ display: 'flex', gap: 6 }}>
