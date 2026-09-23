@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
@@ -22,6 +22,8 @@ export function ProductDetailPage() {
   const [vehicleModel, setVehicleModel] = useState('');
   const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
   const [editingSpecs, setEditingSpecs] = useState(false);
+  const [sdsBusy, setSdsBusy] = useState(false);
+  const sdsFileInputRef = useRef<HTMLInputElement>(null);
 
   function load() {
     apiClient
@@ -78,6 +80,51 @@ export function ProductDetailPage() {
       load();
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** "Next Improvement Tenant Portal - Products": Consumable's Safety Data Sheet — File Upload. */
+  async function uploadSds(file: File) {
+    setSdsBusy(true);
+    setError(null);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      await apiClient.post(`/app/products/${id}/sds`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setSdsBusy(false);
+      if (sdsFileInputRef.current) sdsFileInputRef.current.value = '';
+    }
+  }
+
+  async function downloadSds() {
+    setSdsBusy(true);
+    setError(null);
+    try {
+      const res = await apiClient.get(`/app/products/${id}/sds`, { responseType: 'blob' });
+      const contentType = typeof res.headers['content-type'] === 'string' ? res.headers['content-type'] : 'application/octet-stream';
+      const url = URL.createObjectURL(new Blob([res.data], { type: contentType }));
+      window.open(url, '_blank');
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setSdsBusy(false);
+    }
+  }
+
+  async function removeSds() {
+    setSdsBusy(true);
+    setError(null);
+    try {
+      await apiClient.delete(`/app/products/${id}/sds`);
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setSdsBusy(false);
     }
   }
 
@@ -146,6 +193,43 @@ export function ProductDetailPage() {
           </div>
         )}
       </div>
+
+      {product.product_type === 'CONSUMABLE' && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Safety Data Sheet</h3>
+          {product.consumable_spec?.sds_file_path ? (
+            <p style={{ fontSize: 13 }}>
+              <strong>File:</strong> {product.consumable_spec.sds_original_filename ?? 'Uploaded document'}
+              &nbsp;
+              <button className="btn-link" disabled={sdsBusy} onClick={downloadSds}>
+                Download
+              </button>
+              {hasPermission('product.delete') && !product.is_system && (
+                <>
+                  &nbsp;
+                  <button className="btn-link" style={{ color: '#b91c1c' }} disabled={sdsBusy} onClick={removeSds}>
+                    Remove
+                  </button>
+                </>
+              )}
+            </p>
+          ) : (
+            <p style={{ fontSize: 13, color: '#6b7280' }}>No Safety Data Sheet uploaded.</p>
+          )}
+          {hasPermission('product.update') && !product.is_system && (
+            <div style={{ marginTop: 8 }}>
+              <input
+                ref={sdsFileInputRef}
+                type="file"
+                accept=".jpg,.jpeg,.png,.webp,.pdf"
+                disabled={sdsBusy}
+                onChange={(e) => e.target.files?.[0] && uploadSds(e.target.files[0])}
+              />
+              <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>JPG, PNG, WEBP, or PDF — max 10MB. Uploading replaces the current file.</p>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Compatibility</h3>

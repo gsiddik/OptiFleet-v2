@@ -1631,3 +1631,112 @@ frontend-only page), so the risk surface is limited to
   `Shelf Life | O | Number + Unit Dropdown`, distinct from a
   Yes/No Expiry Tracked toggle). Same reasoning as above — flagged, not
   invented.
+
+## Batch 13 Detail (Consumable Safety Data Sheet upload)
+
+### Scope
+
+Doc requirement (both "-Products" and the plain "Next Improvement
+Tenant Portal" documents, Consumable Specification table): `Safety
+Data Sheet | O | File Upload | SDS/MSDS jika tersedia`. Audited before
+writing any code: `ProductConsumableSpec.sds_file_path`/
+`sds_original_filename` columns and their `ProductSpecificationService`
+validation rules already existed (from an earlier batch), but were
+**entirely dead** — accepted as plain nullable strings with nothing
+ever populating them: no upload service, no controller action, no
+route, no frontend field anywhere in the repository. This is the exact
+same "columns exist, entry point missing" shape as Batch 12's
+Warehouse Stock Thresholds gap.
+
+### Architecture decision: single-file overwrite, not a multi-document table
+
+Considered two options: (a) a dedicated `product_consumable_sds`
+evidence-style table (the `WorkOrderPartReturnEvidence`/
+`VehicleDocument` multi-file pattern), or (b) two columns directly on
+`ProductConsumableSpec`, overwritten on re-upload (the
+`VehicleBrandLogoService`/`TenantLogoService` single-file pattern).
+Chose (b): the two columns already existed from an earlier batch (no
+new migration needed at all), and the doc describes SDS as a single
+current document per Consumable Product ("SDS/MSDS jika tersedia" —
+singular), not a history of documents — matching the semantics of
+`VehicleBrandLogoService` exactly (delete-and-replace on re-upload) far
+more than the multi-file Return-evidence pattern.
+
+### Implementation
+
+- New `ProductConsumableSdsService` (`app/Domain/ProductMaster/Services/`):
+  `upload()`/`delete()`, private `local` disk (a hazmat safety document
+  is never publicly servable — same posture as `VehicleDocumentService`),
+  MIME allowlist `[jpeg, png, webp, pdf]` (matching
+  `VehicleDocumentService`/`PaymentSubmissionService`/
+  `VendorInvoiceReferenceService`'s established document-upload
+  allowlist, not the image-only allowlist used for pure photos), 10MB
+  max (matching the same document-upload precedent, not the 5MB
+  image-only limit). Rejects upload for any non-`CONSUMABLE` product
+  (`sds_file_path` exists only on `ProductConsumableSpec`).
+- `ProductController`: `uploadSds()`/`showSds()`/`destroySds()`, mirroring
+  `VehicleBrandController`'s logo upload/show pattern exactly —
+  `POST` and `DELETE` gated by `product.update`/`product.delete`
+  respectively (no new permission invented, reusing the existing
+  `product` permission group), `GET` gated by `product.view`.
+  `showSds()` streams via `Storage::disk('local')->response(...)`
+  (Laravel auto-detects Content-Type; no separate `mime_type` column
+  needed since disk is always fixed to `local`).
+- Routes: `POST/GET/DELETE /products/{product}/sds`.
+- Frontend: new "Safety Data Sheet" card in `ProductDetailPage.tsx`,
+  shown only when `product.product_type === 'CONSUMABLE'` (matching the
+  existing conditional-card pattern already used there for `TIRE`'s
+  Reference Tread Depth field). Shows the current filename
+  (SYSTEM_INFORMATION) with Download/Remove actions when a file exists,
+  or an empty state; a file input (accept
+  `.jpg,.jpeg,.png,.webp,.pdf`) uploads/replaces, gated by
+  `product.update`/`product.delete` respectively — not embedded in the
+  Create form (SDS requires an existing Product ID, so — same as
+  Vehicle Brand's logo — it is necessarily a post-create action,
+  correctly placed on the Detail page, not `CreateProductModal`).
+  Download uses the established authenticated-blob-fetch pattern
+  (`responseType: 'blob'`, `URL.createObjectURL`, `window.open`) already
+  used by every PDF "print" action in this codebase, generalized to
+  read the actual response `Content-Type` header rather than hardcoding
+  `application/pdf` (since an SDS can also be an image).
+  `types/index.ts`'s `ProductConsumableSpecItem` gained
+  `sds_original_filename` (the file path field already existed but was
+  unused before this batch).
+
+### Tests
+
+7 new (`ProductConsumableSdsTest`): upload + authenticated download
+round-trip, re-upload replaces and deletes the previous file
+(`Storage::assertMissing`), disallowed MIME type rejected (422),
+upload rejected for a non-Consumable product type (422), permission
+enforcement (403), delete clears both columns and removes the file,
+tenant isolation (404 for both upload and download from another
+tenant). Regression: `ProductDynamicSpecificationTest` (32/32) and
+`ProductEditDynamicFormTest` (8/8) re-run clean — no interference with
+the existing Product Create/Edit flows sharing `ProductController`.
+`pint --test` on all touched/new backend files: `ProductController.php`
+and `routes/api/app.php` show only the same pre-existing fixer flags
+confirmed via `git stash` earlier in this continuation (Batch 11);
+`ProductConsumableSdsService.php`/`ProductConsumableSdsTest.php` (new
+files) are clean. Frontend: `tsc --noEmit` initially reported clean but
+**`npm run build`'s `tsc -b` caught a real type error** (`Blob`'s
+`type` option rejecting Axios's `AxiosHeaderValue | undefined`,
+which includes `null`) that `--noEmit` alone missed — fixed by
+narrowing to `string | undefined` before use. This is concrete,
+observed confirmation of the "`tsc` PASS is not equivalent to
+production build PASS" rule from the checkpoint-resume instructions:
+`npm run build` is the authoritative frontend type-check going forward,
+not a bare `tsc --noEmit` in isolation. `oxlint` on all touched files:
+0 new warnings (one `set-state-in-effect` warning on
+`ProductDetailPage.tsx` confirmed pre-existing via `git stash`
+comparison). `npm run build` — PASS after the fix.
+
+MongoDB: NOT RUN (ext-mongodb unavailable, network-blocked from
+installing); relocate-run-restore precedent followed, zero diff on
+`database/migrations/` confirmed via `git status --porcelain` before
+committing.
+
+### REMAINING from this batch (disclosed, not blocking)
+
+- None. This batch's scope (wiring the already-existing SDS columns to
+  a real upload/download/delete flow) is complete end-to-end.

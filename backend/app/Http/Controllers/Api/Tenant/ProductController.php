@@ -7,6 +7,7 @@ use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\ProductCompatibility;
 use App\Domain\ProductMaster\Services\ProductCompatibilityService;
+use App\Domain\ProductMaster\Services\ProductConsumableSdsService;
 use App\Domain\ProductMaster\Services\ProductSpecificationService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
@@ -14,6 +15,7 @@ use App\Http\Requests\Tenant\StoreProductRequest;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class ProductController extends Controller
@@ -31,6 +33,7 @@ class ProductController extends Controller
         private readonly ProductCompatibilityService $compatibility,
         private readonly DocumentNumberingService $numbers,
         private readonly ProductSpecificationService $specs,
+        private readonly ProductConsumableSdsService $sds,
         private readonly TenantContext $context,
     ) {}
 
@@ -225,6 +228,37 @@ class ProductController extends Controller
         $compatibility->delete();
 
         return $this->message('Compatibility rule removed.');
+    }
+
+    public function uploadSds(Request $request, Product $product)
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
+
+        $request->validate(['file' => ['required', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf']]);
+
+        $spec = $this->sds->upload($product, $request->file('file'));
+
+        return $this->ok($spec);
+    }
+
+    public function showSds(Product $product)
+    {
+        $this->authorizeVisible($product);
+        $spec = $product->consumableSpec;
+        abort_if($spec === null || $spec->sds_file_path === null, 404);
+
+        return Storage::disk('local')->response($spec->sds_file_path, $spec->sds_original_filename);
+    }
+
+    public function destroySds(Product $product)
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
+
+        $this->sds->delete($product);
+
+        return $this->message('Safety Data Sheet removed.');
     }
 
     public function compatibleFor(Request $request)

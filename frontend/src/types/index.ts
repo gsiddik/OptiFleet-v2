@@ -1290,6 +1290,7 @@ export interface ProductConsumableSpecItem {
   shelf_life_unit: string | null;
   is_hazardous: boolean;
   sds_file_path: string | null;
+  sds_original_filename: string | null;
   storage_requirements?: StorageRequirementItem[];
 }
 
