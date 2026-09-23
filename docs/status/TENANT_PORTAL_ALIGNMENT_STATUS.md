@@ -408,3 +408,141 @@ temporarily relocating the 3 Mongo-touching migrations out of
 `database/migrations/`, running the full test sweep above, then restoring
 them byte-for-byte (confirmed via `git status --porcelain` showing zero
 diff) before committing.
+
+## Continuation: closing REMAINING items (owner-directed re-audit)
+
+Per explicit owner instruction, re-auditing every item the Final Report
+listed as REMAINING/Deferred/NEEDS_CONFIRMATION against the original 5
+requirement documents (re-extracted from the prior session's scratchpad,
+byte-identical source text) and the actual current repository code —
+not the Final Report's own summary of itself. New batch numbering
+continues from 9. Two re-audit findings worth flagging up front:
+
+- The prior Final Report's Product-module conclusion "No unified
+  Inventory Configuration section (Min/Reorder/Max Stock don't exist on
+  Product master data at all)" undersold the gap: Stock Tracking/Min
+  Stock/Reorder Point/Max Stock are genuinely new fields not in the repo
+  anywhere, but Serialized/Batch Tracked/Expiry Tracked/Installable/
+  Checkout-able/Maintainable/Calibratable — the other 7 rows of that same
+  requirement table — are already fully implemented per-Item-Type (shared
+  `products.track_serial_number`/`track_batch` columns plus each spec
+  table's own `track_expiry`/`checkout_required`/`calibration_required`/
+  `maintenance_required`). Only the 4 new fields need work (Batch 12).
+- Re-reading `WorkOrderListPage.tsx`'s Create Work Order modal directly
+  (not the Final Report) found the Maintenance Type dropdown still
+  offered all 5 types (PREVENTIVE/CORRECTIVE/BREAKDOWN/INSPECTION/
+  CAMPAIGN), contradicting the Final Report's claim this was already
+  "CONFIRM: doc also excludes Preventive from manual creation, matches."
+  No test enforced it either. Fixed in Batch 9 — a concrete example of
+  why this re-audit re-reads code rather than trusting prior summaries.
+
+## Batch 9 Detail (Work Order Overview + estimation fields)
+
+Re-read "Improvement OptiFleet - Maintenance Request dan Work Order" in
+full (not just the Final Report's excerpt). Scope: Overview restructuring,
+Complaint placement, Est. Number of Mechanic, Est. Total Hours, Estimated
+Labor/Parts Cost becoming computed-only, Last Odometer/HM labels, Current
+KM mandatory, Maintenance Type dropdown restricted to Corrective/Breakdown.
+
+- `WorkOrder` model: added `estimatedTotalHours()` (sum of Jobs'
+  `estimated_hours`) and `estimatedNumberOfMechanics()` (count of distinct
+  currently-assigned, i.e. `unassigned_at IS NULL`, mechanics). Redesigned
+  `computedEstimatedLaborCost()` to the doc's crew-cost formula — Est.
+  Total Hours x the SUM of every currently-assigned mechanic's hourly
+  rate — replacing the old per-job x per-job's-primary-mechanic
+  "suggestion" formula a prior session built before this doc's exact
+  formula was available. The legacy manually-entered `estimated_labor_cost`
+  /`estimated_parts_cost`/`estimated_total_cost` columns and the
+  `/work-orders/{id}/estimate` endpoint are left completely intact
+  (existing data and any future direct API caller keep working) — only
+  the frontend stops exposing manual entry for them, matching the doc's
+  "tidak dapat di edit secara langsung oleh user" exactly without deleting
+  a working, tested backend capability that isn't itself the problem.
+- `WorkOrderController::show()`: appends `estimated_total_hours` and
+  `estimated_number_of_mechanics` alongside the existing single-record-only
+  `estimated_labor_cost_computed` (never on `index()`, same N+1-avoidance
+  precedent).
+- `StoreWorkOrderRequest`: `maintenance_type` restricted to
+  `CORRECTIVE,BREAKDOWN` (Preventive is exclusively set by the Planning &
+  Schedule conversion path, a different code path entirely, so this is
+  safe); `current_odometer` changed from `nullable` to `required`.
+- `WorkOrderService::create()`: when `current_odometer`/`engine_hour` are
+  supplied, now actually updates the Vehicle's own fields — floor-guarded
+  with the same `max(current, new)` pattern `VehicleReleaseService`
+  already uses, so a WO can never move a vehicle's odometer backwards.
+  Previously the submitted value was stored on the WorkOrder row only and
+  never touched the Vehicle at all.
+- Frontend `OverviewTab`: added Est. Number of Mechanic / Est. Total Hours
+  rows; Estimated Labor/Parts/Total Cost rows now read the computed values
+  (Total = Labor + Parts, summed client-side from two already-authoritative
+  backend numbers — not a re-derivation of business logic). Removed the
+  "Cost Estimate" manual-entry card entirely (doc: "Hapus section Cost
+  Estimate dari tab Overview"). Complaint now renders in Overview only for
+  a user-created WO (`!wo.maintenance_request_id`); a Maintenance-Request-
+  converted WO instead shows a new `MaintenanceRequestSourceSection` that
+  fetches the source request and branches on `source_type` — Assessment
+  table for `USER`, the Inspection's frozen checklist + Recorded Findings
+  (`InspectionSourceSection`, exported from `MaintenanceRequestDetailPage`
+  for reuse) for `INSPECTION`. Previously Overview always rendered
+  `AssessmentSection` unconditionally, which silently showed nothing
+  useful for an Inspection-sourced request (no Assessment row ever exists
+  for one).
+- `ComplaintTab`: the static Complaint text block removed (moved to
+  Overview); Findings section unchanged.
+- `MechanicTab`: read-only "Number of Mechanics" and "Estimated Labor
+  Cost" fields added below the assignments table (doc: "tidak dapat di
+  edit secara langsung oleh user").
+- `JobsTab`: "Est. Total Hours" accumulator display added above the job
+  list.
+- `WorkOrderListPage.tsx` Create Work Order modal: Maintenance Type
+  dropdown restricted to Corrective/Breakdown; Current KM is now required
+  (Create button disabled without it) with a "Last Odometer: <value>"
+  label sourced from the selected vehicle; Current HM gained a matching
+  "Last HM: <value>" label.
+
+Tests: 2 new `WorkOrderTest` cases (maintenance_type restriction,
+current_odometer required + floor-guarded vehicle update). Updated
+`MechanicHourlyRateAndLaborCostTest::test_work_order_level_estimate_
+aggregates_across_multiple_jobs` to
+`..._uses_the_crew_cost_formula` — the old assertion (240.0000) encoded
+the superseded per-job formula; the new one (450.0000 = 6h total x
+$75/h combined crew rate) matches the doc's actual formula, plus new
+assertions on `estimated_total_hours`/`estimated_number_of_mechanics`. 38
+pre-existing Work Order creation calls across 15 other test files needed
+`current_odometer` added now that it's required (mechanical, verified by
+re-running every touched file); 2 of those also had their
+`maintenance_type` changed from `PREVENTIVE` to `CORRECTIVE` since neither
+test's actual assertion depended on the type. Full sweep after fixes:
+`WorkOrderTest`(10), `WorkOrderExecutionTest`(6),
+`MechanicHourlyRateAndLaborCostTest`(7), `QualityControlAndReleaseTest`(6),
+`ConfigurationAuditAndRegressionTest`(5), `DocumentTemplateTest`(11),
+`ExternalWorkOrderInvoiceCompletionTest`(6), `ExternalWorkOrderInvoiceTest`
+(13), `ExternalWorkOrderTest`(21), `WorkAuthorizationLetterTest`(10),
+`WorkOrderClosureGuardTest`(3), `WorkOrderExternalInvoiceTest`(6),
+`WorkOrderExternalServiceTest`(12), `WorkOrderLifecycleGapsTest`(13),
+`WorkflowMigrationTest`(4), `WorkshopInvoiceTest`(20),
+`HistoryAndDowntimeTest`, `InventoryReturnClassificationTest`,
+`MaintenanceRequestAndBreakdownTest`, `SparePartSaleTest`,
+`UsedPartDispositionTest`, `WorkOrderPartRequestTest` (these last 6 call
+`WorkOrderService::create()` directly, bypassing `StoreWorkOrderRequest`
+entirely, so unaffected but re-run to confirm) — 163+ assertions across
+these files, all PASS, no regressions. `pint --test` shows pre-existing
+style debt in `WorkOrderService.php`/`WorkOrder.php`/2 test files
+(confirmed via `git stash` that every flagged fixer predates this batch's
+changes — left untouched, out of scope). Frontend: `tsc --noEmit` clean,
+`oxlint` clean (no new warnings), `vite build` succeeds.
+
+MongoDB: NOT RUN — same relocate-run-restore precedent as every prior
+batch, verified zero diff before committing.
+
+REMAINING from this doc, not yet done: the doc's extremely detailed
+per-status Tab/button visibility matrix (nearly the entire rest of the
+document — e.g. QC/Road Test tabs should only appear from QC_PENDING
+onward, Workspace only from SCHEDULED onward, every tab's inputs read-only
+once CLOSED/REJECTED/CANCELLED) is NOT implemented — today all
+`INTERNAL_TABS` are always visible regardless of WO status (only the
+External-mode split exists). This is a large, distinct body of work
+discovered during this re-audit that was not in the owner's explicit
+Batch 9-14 priority list; flagging it honestly here rather than silently
+leaving it undiscovered. Consume/Return popup redesign and Planned-Parts-
+vs-Request-Parts reconciliation are Batches 10-11, not yet done.

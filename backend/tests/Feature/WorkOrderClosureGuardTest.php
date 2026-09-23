@@ -67,7 +67,7 @@ class WorkOrderClosureGuardTest extends TestCase
         [, , $workshop, , $vehicle, , $headers] = $this->setUp2();
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
 
@@ -81,7 +81,7 @@ class WorkOrderClosureGuardTest extends TestCase
         [, , $workshop, , $vehicle, $product, $headers] = $this->setUp2();
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
 
@@ -109,7 +109,7 @@ class WorkOrderClosureGuardTest extends TestCase
         $tireProduct = $this->makeProduct($tenant, null, null, ['product_type' => 'TIRE']);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $woId = $create->json('data.id');
 

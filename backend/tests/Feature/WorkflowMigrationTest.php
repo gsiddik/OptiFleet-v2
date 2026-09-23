@@ -88,7 +88,7 @@ class WorkflowMigrationTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, ['work_order.view', 'work_order.create', 'work_order.submit']);
 
         $id = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($token))->assertStatus(201)->json('data.id');
 
         $workOrder = WorkOrder::query()->findOrFail($id);

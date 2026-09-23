@@ -968,6 +968,8 @@ export interface WorkOrderItem {
   external_finalized_revision: number;
   cancellation_reason: string | null;
   estimated_labor_cost_computed?: string | null;
+  estimated_total_hours?: string | null;
+  estimated_number_of_mechanics?: number;
   vehicle?: VehicleItem;
   branch?: Branch;
   workshop?: Workshop;

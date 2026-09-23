@@ -37,7 +37,7 @@ class WorkOrderTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
 
         $response = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($token))->assertStatus(201);
 
         $this->assertMatchesRegularExpression('#^WO/OPTIFLEET/\d{4}/\d{6}$#', $response->json('data.wo_number'));
@@ -53,7 +53,7 @@ class WorkOrderTest extends TestCase
         $numbers = [];
         for ($i = 0; $i < 3; $i++) {
             $response = $this->postJson('/api/v1/app/work-orders', [
-                'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'PREVENTIVE',
+                'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
             ], $headers)->assertStatus(201);
             $numbers[] = $response->json('data.wo_number');
         }
@@ -70,7 +70,7 @@ class WorkOrderTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $woId = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
 
         $workspace = \App\Domain\Workshop\Models\Workspace::query()->create([
@@ -94,7 +94,7 @@ class WorkOrderTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
 
@@ -122,7 +122,7 @@ class WorkOrderTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
 
@@ -144,12 +144,12 @@ class WorkOrderTest extends TestCase
         [, $tokenA] = $this->makeTenantUser($tenant, $this->fullPermissions(), ['WORKSHOP' => $workshopA->id]);
 
         $woA = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicleA->id, 'workshop_id' => $workshopA->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicleA->id, 'workshop_id' => $workshopA->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($tokenA))->assertStatus(201)->json('data.id');
 
         [, $tokenAdmin] = $this->makeTenantUser($tenant, $this->fullPermissions());
         $woB = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicleB->id, 'workshop_id' => $workshopB->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicleB->id, 'workshop_id' => $workshopB->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($tokenAdmin))->assertStatus(201)->json('data.id');
 
         // Workshop-A-scoped user (e.g. "Workshop Manager Bandung") sees only their own workshop's WOs.
@@ -168,7 +168,7 @@ class WorkOrderTest extends TestCase
 
         [, $tokenA] = $this->makeTenantUser($tenantA, $this->fullPermissions());
         $woA = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicleA->id, 'workshop_id' => $workshopA->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicleA->id, 'workshop_id' => $workshopA->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($tokenA))->assertStatus(201)->json('data.id');
 
         [, $tokenB] = $this->makeTenantUser($tenantB, $this->fullPermissions());
@@ -185,5 +185,56 @@ class WorkOrderTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, ['work_order.view']);
 
         $this->getJson('/api/v1/app/work-orders', $this->authHeaders($token))->assertStatus(403);
+    }
+
+    /**
+     * "Improvement OptiFleet - Maintenance Request dan Work Order": the manual
+     * New Work Order popup only offers Corrective/Breakdown — Preventive is
+     * exclusively set by the Planning & Schedule conversion path.
+     */
+    public function test_manual_creation_rejects_maintenance_types_other_than_corrective_or_breakdown(): void
+    {
+        [$tenant, , $workshop, $vehicle] = $this->setUpTenant();
+        [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $headers = $this->authHeaders($token);
+
+        foreach (['PREVENTIVE', 'INSPECTION', 'CAMPAIGN'] as $type) {
+            $this->postJson('/api/v1/app/work-orders', [
+                'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => $type, 'current_odometer' => 1000,
+            ], $headers)->assertStatus(422)->assertJsonValidationErrors('maintenance_type');
+        }
+
+        foreach (['CORRECTIVE', 'BREAKDOWN'] as $type) {
+            $this->postJson('/api/v1/app/work-orders', [
+                'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => $type, 'current_odometer' => 1000,
+            ], $headers)->assertStatus(201);
+        }
+    }
+
+    public function test_current_odometer_is_required_and_updates_the_vehicle_floor_guarded(): void
+    {
+        [$tenant, , $workshop, $vehicle] = $this->setUpTenant();
+        [, $token] = $this->makeTenantUser($tenant, $this->fullPermissions());
+        $headers = $this->authHeaders($token);
+        $this->assertSame('10000.00', $vehicle->current_odometer);
+
+        $this->postJson('/api/v1/app/work-orders', [
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+        ], $headers)->assertStatus(422)->assertJsonValidationErrors('current_odometer');
+
+        // Higher than the vehicle's current value: the vehicle is updated to match.
+        $this->postJson('/api/v1/app/work-orders', [
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'current_odometer' => 10500, 'engine_hour' => 200,
+        ], $headers)->assertStatus(201);
+        $this->assertSame('10500.00', $vehicle->fresh()->current_odometer);
+        $this->assertSame('200.00', $vehicle->fresh()->engine_hour);
+
+        // Lower than the vehicle's now-current value: the vehicle is never moved backwards.
+        $this->postJson('/api/v1/app/work-orders', [
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'current_odometer' => 9000,
+        ], $headers)->assertStatus(201);
+        $this->assertSame('10500.00', $vehicle->fresh()->current_odometer);
     }
 }

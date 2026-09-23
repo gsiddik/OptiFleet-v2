@@ -44,7 +44,7 @@ class ExternalWorkOrderInvoiceCompletionTest extends TestCase
     private function reachInProgress($workshop, $vehicle, $headers, $tenant): array
     {
         $id = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
         $this->postJson("/api/v1/app/work-orders/{$id}/execution-mode/external", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/external-findings", [
@@ -108,7 +108,7 @@ class ExternalWorkOrderInvoiceCompletionTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, $this->permissions());
         $headers = $this->authHeaders($token);
         $id = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
         $this->postJson("/api/v1/app/work-orders/{$id}/execution-mode/external", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/external-findings", ['severity' => 'HIGH', 'description' => 'x'], $headers)->assertStatus(201);

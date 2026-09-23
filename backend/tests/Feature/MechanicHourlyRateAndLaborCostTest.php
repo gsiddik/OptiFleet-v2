@@ -33,7 +33,7 @@ class MechanicHourlyRateAndLaborCostTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
         $id = $create->json('data.id');
 
@@ -105,7 +105,13 @@ class MechanicHourlyRateAndLaborCostTest extends TestCase
         $this->assertNull($show->json('data.jobs.0.estimated_labor_cost_computed'));
     }
 
-    public function test_work_order_level_estimate_aggregates_across_multiple_jobs(): void
+    /**
+     * "Improvement OptiFleet - Maintenance Request dan Work Order" crew-cost formula:
+     * Estimated Labor Cost = Est. Total Hours (summed across every Job) x the SUM of every
+     * currently-assigned mechanic's hourly rate — not each job's own hours x its own
+     * mechanic's rate summed. The whole crew is costed against the accumulated job hours.
+     */
+    public function test_work_order_level_estimate_uses_the_crew_cost_formula(): void
     {
         [$tenant, $branch, $workshop, , $woId, $headers] = $this->setUpWorkOrder();
         $workerA = $this->makeWorker($tenant, $branch, $workshop, ['hourly_rate' => '30.0000']);
@@ -121,9 +127,11 @@ class MechanicHourlyRateAndLaborCostTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$woId}/mechanics", ['worker_id' => $workerA->id, 'maintenance_job_id' => $jobA], $headers)->assertStatus(201);
         $this->postJson("/api/v1/app/work-orders/{$woId}/mechanics", ['worker_id' => $workerB->id, 'maintenance_job_id' => $jobB], $headers)->assertStatus(201);
 
-        // Job A: 2 * 30 = 60.0000, Job B: 4 * 45 = 180.0000, total = 240.0000
+        // Est. Total Hours = 2 + 4 = 6.00; rate sum = 30 + 45 = 75.0000; 6.00 * 75.0000 = 450.0000.
         $show = $this->getJson("/api/v1/app/work-orders/{$woId}", $headers)->assertOk();
-        $this->assertSame('240.0000', $show->json('data.estimated_labor_cost_computed'));
+        $this->assertSame('6.00', $show->json('data.estimated_total_hours'));
+        $this->assertSame(2, $show->json('data.estimated_number_of_mechanics'));
+        $this->assertSame('450.0000', $show->json('data.estimated_labor_cost_computed'));
     }
 
     public function test_computed_estimate_is_independent_of_the_manual_estimate_field(): void

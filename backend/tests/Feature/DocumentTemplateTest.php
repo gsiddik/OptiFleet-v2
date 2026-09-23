@@ -131,7 +131,7 @@ class DocumentTemplateTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, ['work_order.view', 'work_order.create']);
 
         $woId = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($token))->assertStatus(201)->json('data.id');
 
         $first = $this->getJson('/api/v1/app/work-orders/'.$woId.'/print', $this->authHeaders($token));
@@ -157,7 +157,7 @@ class DocumentTemplateTest extends TestCase
         [, $tokenA] = $this->makeTenantUser($tenantA, ['work_order.view', 'work_order.create']);
 
         $woId = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicleA->id, 'workshop_id' => $workshopA->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicleA->id, 'workshop_id' => $workshopA->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($tokenA))->assertStatus(201)->json('data.id');
 
         [$tenantB] = $this->setUpTenant();
@@ -172,7 +172,7 @@ class DocumentTemplateTest extends TestCase
         [, $creatorToken] = $this->makeTenantUser($tenant, ['work_order.view', 'work_order.create']);
 
         $woId = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $this->authHeaders($creatorToken))->assertStatus(201)->json('data.id');
 
         [, $noPermToken] = $this->makeTenantUser($tenant, []);

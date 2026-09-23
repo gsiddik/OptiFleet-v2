@@ -114,25 +114,63 @@ class WorkOrder extends Model
     }
 
     /**
-     * Computed suggestion only — sums each Job's estimated_labor_cost_computed
-     * (estimated_hours x its PRIMARY mechanic's snapshotted hourly rate).
-     * Distinct from `estimated_labor_cost`, which remains the
-     * manually-entered figure WorkOrderService::estimate() persists; this
-     * never overwrites it, so existing manual-estimate behavior is
-     * unchanged.
+     * "Improvement OptiFleet - Maintenance Request dan Work Order": crew-cost
+     * formula — Est. Total Hours (summed across all Jobs) x the SUM of every
+     * currently-assigned mechanic's hourly rate, i.e. the cost of the whole
+     * crew working the accumulated job hours together. Distinct from the
+     * older per-job x per-job's-primary-mechanic "suggestion" this replaces;
+     * still never overwrites `estimated_labor_cost` (the legacy manually-
+     * entered column stays intact for any pre-existing data), it is simply
+     * no longer surfaced as an editable field in the UI.
      */
     public function computedEstimatedLaborCost(): ?string
     {
-        $total = null;
-        foreach ($this->jobs as $job) {
-            $jobCost = $job->estimated_labor_cost_computed;
-            if ($jobCost === null) {
-                continue;
-            }
-            $total = ($total === null ? \Brick\Math\BigDecimal::of($jobCost) : $total->plus(\Brick\Math\BigDecimal::of($jobCost)));
+        $hours = $this->estimatedTotalHours();
+        if ($hours === null) {
+            return null;
         }
 
-        return $total !== null ? (string) $total->toScale(4, \Brick\Math\RoundingMode::HALF_UP) : null;
+        $rateSum = null;
+        foreach ($this->activeMechanicHourlyRates() as $rate) {
+            $rateSum = $rateSum === null ? \Brick\Math\BigDecimal::of($rate) : $rateSum->plus(\Brick\Math\BigDecimal::of($rate));
+        }
+        if ($rateSum === null) {
+            return null;
+        }
+
+        return (string) \Brick\Math\BigDecimal::of($hours)->multipliedBy($rateSum)->toScale(4, \Brick\Math\RoundingMode::HALF_UP);
+    }
+
+    /** Sum of every Job's estimated_hours — "Est. Total Hours" on the Overview and Jobs tabs. */
+    public function estimatedTotalHours(): ?string
+    {
+        $total = null;
+        foreach ($this->jobs as $job) {
+            if ($job->estimated_hours === null) {
+                continue;
+            }
+            $total = $total === null ? \Brick\Math\BigDecimal::of($job->estimated_hours) : $total->plus(\Brick\Math\BigDecimal::of($job->estimated_hours));
+        }
+
+        return $total !== null ? (string) $total->toScale(2, \Brick\Math\RoundingMode::HALF_UP) : null;
+    }
+
+    /** Count of distinct currently-assigned (not unassigned) mechanics — "Number of Mechanics" on the Mechanic tab. */
+    public function estimatedNumberOfMechanics(): int
+    {
+        return $this->mechanicAssignments->whereNull('unassigned_at')->pluck('worker_id')->unique()->count();
+    }
+
+    /** @return array<string> hourly_rate_snapshot of each distinct currently-assigned mechanic. */
+    private function activeMechanicHourlyRates(): array
+    {
+        return $this->mechanicAssignments
+            ->whereNull('unassigned_at')
+            ->unique('worker_id')
+            ->pluck('hourly_rate_snapshot')
+            ->filter(fn ($rate) => $rate !== null)
+            ->values()
+            ->all();
     }
 
     public function roadTests(): HasMany

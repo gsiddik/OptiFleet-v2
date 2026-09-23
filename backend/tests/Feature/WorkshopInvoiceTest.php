@@ -55,7 +55,7 @@ class WorkshopInvoiceTest extends TestCase
         $partner = $partnerId ? Partner::query()->findOrFail($partnerId) : $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
 
         $woId = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
         $this->postJson("/api/v1/app/work-orders/{$woId}/submit", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/approve", [], $headers)->assertOk();
@@ -116,7 +116,7 @@ class WorkshopInvoiceTest extends TestCase
         $partner = $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
 
         $woId = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
         $this->postJson("/api/v1/app/work-orders/{$woId}/submit", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/approve", [], $headers)->assertOk();
@@ -224,7 +224,7 @@ class WorkshopInvoiceTest extends TestCase
         // passes a cost, so build the memo manually here without one.
         [, , $workshop, $vehicle] = $scenario;
         $partner = $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
-        $woId = $this->postJson('/api/v1/app/work-orders', ['vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], $headers)->json('data.id');
+        $woId = $this->postJson('/api/v1/app/work-orders', ['vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000], $headers)->json('data.id');
         foreach (['submit', 'approve', 'assign', 'schedule', 'start'] as $action) {
             $this->postJson("/api/v1/app/work-orders/{$woId}/{$action}", [], $headers)->assertOk();
         }

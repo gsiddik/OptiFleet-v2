@@ -43,7 +43,7 @@ class ExternalWorkOrderInvoiceTest extends TestCase
     private function finalizeAsExternal($workshop, $vehicle, $headers): string
     {
         $id = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201)->json('data.id');
         $this->postJson("/api/v1/app/work-orders/{$id}/execution-mode/external", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/external-findings", [

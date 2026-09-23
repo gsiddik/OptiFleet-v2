@@ -219,7 +219,7 @@ export function AssessmentSection({
 // own frozen checklist (template_snapshot) and Recorded Findings, read-only, instead of
 // the Initial Assessment & Visual Inspection section (which only ever applies to
 // User-sourced requests).
-function InspectionSourceSection({ inspectionId }: { inspectionId: string }) {
+export function InspectionSourceSection({ inspectionId }: { inspectionId: string }) {
   const [inspection, setInspection] = useState<InspectionItem | null>(null);
   const [error, setError] = useState<string | null>(null);
 

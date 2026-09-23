@@ -148,7 +148,7 @@ class QualityControlAndReleaseTest extends TestCase
 
         // A second, still-open WO exists for the same vehicle.
         $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'PREVENTIVE',
+            'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
         ], $headers)->assertStatus(201);
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/release", [], $headers)->assertStatus(422);

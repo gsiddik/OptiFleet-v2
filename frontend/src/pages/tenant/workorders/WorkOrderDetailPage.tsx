@@ -8,10 +8,11 @@ import { ErrorState, LoadingState, EmptyState } from '../../../components/States
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
-import { AssessmentSection } from '../maintenance/MaintenanceRequestDetailPage';
+import { AssessmentSection, InspectionSourceSection } from '../maintenance/MaintenanceRequestDetailPage';
 import type {
   AuditLogEntry,
   HistoryEventItem,
+  MaintenanceRequestItem,
   PartnerItem,
   PartRequestItem,
   QcInspectionItem,
@@ -454,15 +455,33 @@ function ScheduleModal({ open, wo, onClose, onScheduled }: { open: boolean; wo: 
   );
 }
 
-/** G-02: previously a Work Order had no way to record a pre-work cost estimate. */
-const ESTIMABLE_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED'];
 
-function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
-  const { hasPermission } = useAuth();
-  const [laborCost, setLaborCost] = useState('');
-  const [partsCost, setPartsCost] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+/**
+ * "Improvement OptiFleet - Maintenance Request dan Work Order": the Overview
+ * tab must show the originating Maintenance Request's Assessment (source
+ * USER) or Inspection checklist + Recorded Findings (source INSPECTION) —
+ * never the Assessment table unconditionally, since an Inspection-sourced
+ * request never has an Assessment row to show.
+ */
+function MaintenanceRequestSourceSection({ maintenanceRequestId }: { maintenanceRequestId: string }) {
+  const [request, setRequest] = useState<MaintenanceRequestItem | null>(null);
+
+  useEffect(() => {
+    apiClient.get(`/app/maintenance-requests/${maintenanceRequestId}`).then((res) => setRequest(res.data.data)).catch(() => setRequest(null));
+  }, [maintenanceRequestId]);
+
+  if (!request) return null;
+  if (request.source_type === 'INSPECTION' && request.source_inspection_id) {
+    return <InspectionSourceSection inspectionId={request.source_inspection_id} />;
+  }
+  return <AssessmentSection maintenanceRequestId={maintenanceRequestId} editable={false} />;
+}
+
+function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const laborCost = wo.estimated_labor_cost_computed ?? null;
+  const partsCost = wo.estimated_parts_cost ?? null;
+  const totalCost =
+    laborCost !== null || partsCost !== null ? (Number(laborCost ?? 0) + Number(partsCost ?? 0)).toFixed(2) : null;
 
   const rows: [string, string][] = [
     ['Vehicle', wo.vehicle?.registration_number ?? wo.vehicle_id],
@@ -471,10 +490,11 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Maintenance Type', wo.maintenance_type],
     ['Priority', wo.priority],
     ['Current Odometer', wo.current_odometer ?? '—'],
-    ['Estimated Labor Cost', wo.estimated_labor_cost ?? '—'],
-    ['Estimated Labor Cost (computed from Jobs)', wo.estimated_labor_cost_computed ?? '—'],
-    ['Estimated Parts Cost', wo.estimated_parts_cost ?? '—'],
-    ['Estimated Total Cost', wo.estimated_total_cost ?? '—'],
+    ['Est. Number of Mechanic', wo.estimated_number_of_mechanics != null ? String(wo.estimated_number_of_mechanics) : '—'],
+    ['Est. Total Hours', wo.estimated_total_hours ?? '—'],
+    ['Estimated Labor Cost', laborCost ?? '—'],
+    ['Estimated Parts Cost', partsCost ?? '—'],
+    ['Estimated Total Cost', totalCost ?? '—'],
     ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
     ['Target Completion', wo.target_completion_at ? new Date(wo.target_completion_at).toLocaleString() : '—'],
     ['Started At', wo.started_at ? new Date(wo.started_at).toLocaleString() : '—'],
@@ -482,24 +502,6 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Closed At', wo.closed_at ? new Date(wo.closed_at).toLocaleString() : '—'],
     ['Result Summary', wo.result_summary ?? '—'],
   ];
-
-  async function submitEstimate() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/work-orders/${wo.id}/estimate`, {
-        estimated_labor_cost: laborCost || undefined,
-        estimated_parts_cost: partsCost || undefined,
-      });
-      setLaborCost('');
-      setPartsCost('');
-      onChanged();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <div>
@@ -513,26 +515,19 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           ))}
         </div>
       </div>
-      {wo.maintenance_request_id && (
-        <div style={{ marginTop: 16 }}>
-          <AssessmentSection maintenanceRequestId={wo.maintenance_request_id} editable={false} />
+      {/* Complaint only belongs here for a Work Order created directly by a user through the
+          Work Order feature — a Maintenance-Request-converted WO shows its source's Assessment
+          or Inspection data instead, never a Complaint block (doc: "Sembunyikan Section
+          Complaint yang seharusnya hanya muncul jika Work Order dibuat oleh user"). */}
+      {!wo.maintenance_request_id && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Complaint</h3>
+          <p style={{ fontSize: 13 }}>{wo.complaint || '—'}</p>
         </div>
       )}
-      {ESTIMABLE_STATUSES.includes(wo.status) && hasPermission('work_order.estimate') && (
-        <div className="card" style={{ marginTop: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Cost Estimate</h3>
-          {error && <ErrorState message={error} />}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-            <FormField label="Estimated Labor Cost">
-              <input type="number" min="0" step="0.01" value={laborCost} onChange={(e) => setLaborCost(e.target.value)} style={inputStyle} />
-            </FormField>
-            <FormField label="Estimated Parts Cost">
-              <input type="number" min="0" step="0.01" value={partsCost} onChange={(e) => setPartsCost(e.target.value)} style={inputStyle} />
-            </FormField>
-            <button className="btn-secondary" disabled={busy || (!laborCost && !partsCost)} onClick={submitEstimate}>
-              Save Estimate
-            </button>
-          </div>
+      {wo.maintenance_request_id && (
+        <div style={{ marginTop: 16 }}>
+          <MaintenanceRequestSourceSection maintenanceRequestId={wo.maintenance_request_id} />
         </div>
       )}
     </div>
@@ -582,10 +577,6 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
 
   return (
     <div>
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Complaint</h3>
-        <p style={{ fontSize: 13 }}>{wo.complaint || '—'}</p>
-      </div>
       <div className="card">
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Findings</h3>
         {(wo.findings ?? []).length === 0 && <EmptyState label="No findings recorded." />}
@@ -927,6 +918,9 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
   return (
     <div className="card">
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Maintenance Jobs</h3>
+      <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>
+        Est. Total Hours: <strong>{wo.estimated_total_hours ?? '—'}</strong>
+      </div>
       {(wo.jobs ?? []).length === 0 && <EmptyState label="No jobs added." />}
       {(wo.jobs ?? []).map((j) => (
         <div key={j.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
@@ -1092,6 +1086,17 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
             </button>
           </div>
         )}
+        {/* Both auto-computed and read-only per the doc: Number of Mechanics reflects however
+            many are currently assigned; Estimated Labor Cost = Est. Total Hours (Jobs tab) x
+            the sum of every assigned mechanic's hourly rate — never manually editable. */}
+        <div style={{ display: 'flex', gap: 24, marginTop: 16, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
+          <FormField label="Number of Mechanics">
+            <input value={wo.estimated_number_of_mechanics ?? 0} readOnly style={{ ...inputStyle, width: 100, background: '#f9fafb' }} />
+          </FormField>
+          <FormField label="Estimated Labor Cost">
+            <input value={wo.estimated_labor_cost_computed ?? '—'} readOnly style={{ ...inputStyle, width: 160, background: '#f9fafb' }} />
+          </FormField>
+        </div>
       </div>
 
       <div className="card">
