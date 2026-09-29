@@ -3,7 +3,7 @@ import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/cli
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ComponentClassificationFields } from '../../../components/masterdata/ComponentClassificationFields';
-import { classificationPayload, type ClassificationValue } from '../../../utils/componentClassification';
+import { CATEGORY_REQUIRED_ITEM_TYPES, classificationPayload, type ClassificationValue } from '../../../utils/componentClassification';
 import {
   ConsumableFields,
   EquipmentFields,
@@ -95,6 +95,7 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
   const [heightMm, setHeightMm] = useState(product.height_mm ?? '');
   const [classification, setClassification] = useState<ClassificationValue>({
     componentGroupId: product.component_group_id ?? '',
+    componentGroupAbbreviation: product.component_group?.abbreviation ?? null,
     componentCategoryId: product.component_category_id ?? '',
     componentSubcategoryId: product.component_subcategory_id ?? '',
   });
@@ -323,6 +324,7 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         onChange={setClassification}
         errors={errors}
         current={{ group: product.component_group, category: product.component_category, subcategory: product.component_subcategory }}
+        requireCategory={CATEGORY_REQUIRED_ITEM_TYPES.includes(itemType) && !!product.component_category_id}
       />
       <FormField label="Description" errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />

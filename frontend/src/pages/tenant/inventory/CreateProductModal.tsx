@@ -3,7 +3,7 @@ import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/cli
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ComponentClassificationFields } from '../../../components/masterdata/ComponentClassificationFields';
-import { classificationPayload, emptyClassification, type ClassificationValue } from '../../../utils/componentClassification';
+import { CATEGORY_REQUIRED_ITEM_TYPES, classificationPayload, emptyClassification, skuPreview, type ClassificationValue } from '../../../utils/componentClassification';
 import type {
   EquipmentTypeItem,
   ItemType,
@@ -94,7 +94,6 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   const [starRatings, setStarRatings] = useState<TireTraStarRatingItem[]>([]);
 
   const [itemType, setItemType] = useState<ItemType>('SPARE_PART');
-  const [sku, setSku] = useState('');
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
@@ -218,7 +217,6 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
 
   function reset() {
     setItemType('SPARE_PART');
-    setSku('');
     setName('');
     setCategoryId('');
     setSubcategoryId('');
@@ -256,7 +254,6 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
       }
 
       await apiClient.post('/app/products', {
-        sku,
         name,
         product_category_id: subcategoryId || categoryId,
         product_type: itemType,
@@ -285,7 +282,8 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
     setCompatibilities((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   }
 
-  const canSubmit = sku && name && (subcategoryId || categoryId) && uomId && binId && !submitting;
+  const categoryRequired = CATEGORY_REQUIRED_ITEM_TYPES.includes(itemType);
+  const canSubmit = name && (subcategoryId || categoryId) && uomId && binId && (!categoryRequired || classification.componentCategoryId) && !submitting;
 
   return (
     <Modal open={open} title="New Product" onClose={onClose} width={680}>
@@ -304,8 +302,8 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
       <FormField label="Item Name" errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="SKU" errors={errors.sku} required>
-        <input value={sku} onChange={(e) => setSku(e.target.value)} style={inputStyle} />
+      <FormField label="SKU" errors={errors.sku}>
+        <input value={`${skuPreview(itemType, classification)} (auto-generated on save)`} disabled style={{ ...inputStyle, color: '#888', fontFamily: 'monospace' }} />
       </FormField>
       <FormField label="Category" errors={errors.product_category_id} required>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
@@ -329,7 +327,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
           </select>
         </FormField>
       )}
-      <ComponentClassificationFields itemType={itemType} value={classification} onChange={setClassification} errors={errors} />
+      <ComponentClassificationFields itemType={itemType} value={classification} onChange={setClassification} errors={errors} requireCategory={categoryRequired} />
       <FormField label="Description" errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>

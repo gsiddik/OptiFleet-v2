@@ -22,12 +22,15 @@ export function ComponentClassificationFields({
   onChange,
   errors,
   current,
+  requireCategory = false,
 }: {
   itemType: ItemType;
   value: ClassificationValue;
   onChange: (value: ClassificationValue) => void;
   errors: Record<string, string[]>;
   current?: { group?: ComponentGroup | null; category?: ComponentCategory | null; subcategory?: ComponentSubcategory | null };
+  /** Component Group + Category mandatory (Sparepart/Consumable/Tire/Rim). */
+  requireCategory?: boolean;
 }) {
   const [groups, setGroups] = useState<ComponentGroup[]>([]);
   const [categories, setCategories] = useState<ComponentCategory[]>([]);
@@ -67,13 +70,20 @@ export function ComponentClassificationFields({
   return (
     <fieldset style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px 2px', margin: '0 0 14px' }}>
       <legend style={{ fontSize: 13, fontWeight: 600, color: '#374151', padding: '0 6px' }}>Component Classification</legend>
-      <FormField label="Component Group" errors={errors.component_group_id}>
+      <FormField label="Component Group" errors={errors.component_group_id} required={requireCategory}>
         <select
           value={value.componentGroupId}
-          onChange={(e) => onChange({ componentGroupId: e.target.value, componentCategoryId: '', componentSubcategoryId: '' })}
+          onChange={(e) =>
+            onChange({
+              componentGroupId: e.target.value,
+              componentGroupAbbreviation: groupOptions.find((g) => g.id === e.target.value)?.abbreviation ?? null,
+              componentCategoryId: '',
+              componentSubcategoryId: '',
+            })
+          }
           style={inputStyle}
         >
-          <option value="">— Not classified —</option>
+          <option value="">{requireCategory ? 'Select…' : '— Not classified —'}</option>
           {groupOptions.map((g) => (
             <option key={g.id} value={g.id}>
               {componentGroupLabel(g)}
@@ -82,7 +92,7 @@ export function ComponentClassificationFields({
           ))}
         </select>
       </FormField>
-      <FormField label="Category / Assembly" errors={errors.component_category_id}>
+      <FormField label="Category / Assembly" errors={errors.component_category_id} required={requireCategory}>
         <select
           value={value.componentCategoryId}
           disabled={!value.componentGroupId}
