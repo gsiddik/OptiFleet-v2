@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * The doc's true "Planned Parts" tab — a pure budgeting line item, never
  * touching warehouse stock. See the 2026_09_28_000004 migration's
  * docblock for why this is a separate table from WorkOrderPlannedPart
- * (which backs the "Request Parts" tab — the old Planned Parts tab,
+ * (which backs the "Issuance & Return" tab — formerly "Request Parts", the old Planned Parts tab,
  * renamed, with its full Reserve/Issue/Consume/Return lifecycle intact).
  */
 class WorkOrderPlannedPartEstimate extends Model

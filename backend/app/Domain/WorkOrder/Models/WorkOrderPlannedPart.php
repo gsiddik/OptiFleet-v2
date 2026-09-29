@@ -20,6 +20,9 @@ class WorkOrderPlannedPart extends Model
         'returned_quantity', 'unit_cost_at_issue', 'total_cost', 'notes',
     ];
 
+    /** Exposed so Issuance & Return can offer Return only for genuinely returnable quantity. */
+    protected $appends = ['returnable_quantity'];
+
     protected function casts(): array
     {
         return [
@@ -60,6 +63,17 @@ class WorkOrderPlannedPart extends Model
     }
 
     /** Quantity still issued-but-not-consumed-or-returned — the ceiling for a return. */
+    /** Issued but neither consumed nor already returned — the only quantity Issuance & Return may return. */
+    public function returnableQuantity(): float
+    {
+        return $this->status === 'CONSUMED' ? 0.0 : max(0.0, $this->outstandingIssued());
+    }
+
+    protected function getReturnableQuantityAttribute(): float
+    {
+        return $this->returnableQuantity();
+    }
+
     public function outstandingIssued(): float
     {
         return (float) $this->issued_quantity - (float) $this->consumed_quantity - (float) $this->returned_quantity;

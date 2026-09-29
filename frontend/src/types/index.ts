@@ -207,13 +207,26 @@ export interface RoleItem {
   name: string;
   scope: 'platform' | 'tenant';
   is_system: boolean;
+  description?: string | null;
   permissions: string[];
+  permission_ids?: string[];
+  /** False only for the platform superadmin role (always holds every platform permission). */
+  editable?: boolean;
 }
 
 export interface PermissionItem {
   id: string;
   name: string;
   group: string;
+  scope?: 'platform' | 'tenant';
+  description?: string | null;
+  /** Module -> Feature -> Action metadata (derived server-side from the module-gated routes). */
+  module?: string;
+  module_name?: string;
+  feature?: string;
+  feature_name?: string;
+  action?: string;
+  action_name?: string;
 }
 
 // --- Phase 2: Commercial SaaS ---
@@ -782,6 +795,8 @@ export interface WorkOrderPlannedPartItem {
   returned_quantity: string;
   unit_cost_at_issue: string | null;
   total_cost: string | null;
+  /** issued − consumed − returned; 0 once CONSUMED (backend-computed). */
+  returnable_quantity?: string | number;
 }
 
 /** Doc's true "Planned Parts" tab — pure budgeting, never touches warehouse stock. */

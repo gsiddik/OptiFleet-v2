@@ -28,7 +28,7 @@ use Illuminate\Support\Facades\DB;
  *   deliberately its own gate, NOT the same as EXECUTABLE_STATUSES below:
  *   Part Requests (a separate tab/service from Planned Parts) and
  *   Reserve/Issue/Return (WorkOrderPartService) only become available once
- *   the WO reaches IN_PROGRESS ("Request Parts" is introduced there, and
+ *   the WO reaches IN_PROGRESS ("Issuance & Return", formerly "Request Parts", is introduced there, and
  *   Draft's Planned Parts tab explicitly hides Reserve/Issue/Consume/Return)
  *   — those keep using the original, narrower EXECUTABLE_STATUSES.
  * - Everything else already gated by assertExecutable() (Part Requests,
