@@ -72,7 +72,7 @@ class ConfigurationController extends Controller
         $type = strtoupper((string) $request->query('type'));
 
         return match ($type) {
-            'NUMBERING' => $this->ok(['tokens' => ['{DOC}', '{TENANT}', '{BRANCH}', '{WORKSHOP}', '{WAREHOUSE}', '{YYYY}', '{YY}', '{MM}', '{DD}', '{SEQ}', '{SEQ:N}']]),
+            'NUMBERING' => $this->ok(['tokens' => ['{DOC}', '{TENANT}', '{BRANCH}', '{WORKSHOP}', '{WAREHOUSE}', '{YYYY}', '{YY}', '{MM}', '{DD}', '{ITEMTYPE}', '{CG}', '{SEQ}', '{SEQ:N}']]),
             'TEMPLATE' => $this->ok([
                 'document_types' => $this->templateVariables->documentTypes(),
                 'variables' => $request->query('code') ? $this->templateVariables->forDocumentType($request->query('code')) : null,

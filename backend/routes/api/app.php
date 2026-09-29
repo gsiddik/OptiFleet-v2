@@ -316,7 +316,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/work-orders/{workOrder}/print', [WorkOrderController::class, 'print'])->middleware('permission:work_order.view');
             Route::post('/work-orders/{workOrder}/submit', [WorkOrderController::class, 'submit'])->middleware('permission:work_order.submit');
             Route::post('/work-orders/{workOrder}/approve', [WorkOrderController::class, 'approve'])->middleware('permission:work_order.approve');
-            Route::post('/work-orders/{workOrder}/reject', [WorkOrderController::class, 'reject'])->middleware('permission:work_order.approve');
+            Route::post('/work-orders/{workOrder}/reject', [WorkOrderController::class, 'reject'])->middleware('permission:work_order.reject');
             Route::post('/work-orders/{workOrder}/assign', [WorkOrderController::class, 'assign'])->middleware('permission:work_order.assign');
             Route::post('/work-orders/{workOrder}/schedule', [WorkOrderController::class, 'schedule'])->middleware('permission:work_order.schedule');
             Route::post('/work-orders/{workOrder}/start', [WorkOrderController::class, 'start'])->middleware('permission:work_order.start');
