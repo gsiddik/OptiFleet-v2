@@ -62,6 +62,8 @@ export const SEGMENT_LABELS: Record<string, string> = {
   'master-data': 'Master Data',
   'vehicle-categories': 'Vehicle Categories',
   'component-groups': 'Component Groups',
+  'component-categories': 'Component Categories',
+  'component-subcategories': 'Component Subcategories',
   'product-categories': 'Product Categories',
   uoms: 'Units of Measure',
   'vehicle-brands': 'Vehicle Brands',
