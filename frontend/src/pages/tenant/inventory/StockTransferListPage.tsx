@@ -94,7 +94,14 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
   return (
     <Modal open={open} title="New Stock Transfer" onClose={onClose}>
       <FormField label="From Warehouse" errors={errors.from_warehouse_id} required>
-        <select value={fromWarehouseId} onChange={(e) => setFromWarehouseId(e.target.value)} style={inputStyle}>
+        <select
+          value={fromWarehouseId}
+          onChange={(e) => {
+            setFromWarehouseId(e.target.value);
+            if (e.target.value === toWarehouseId) setToWarehouseId('');
+          }}
+          style={inputStyle}
+        >
           <option value="">Select…</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
@@ -106,7 +113,8 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
       <FormField label="To Warehouse" errors={errors.to_warehouse_id} required>
         <select value={toWarehouseId} onChange={(e) => setToWarehouseId(e.target.value)} style={inputStyle}>
           <option value="">Select…</option>
-          {warehouses.map((w) => (
+          {/* Backend requires a different destination: never offer the source warehouse. */}
+          {warehouses.filter((w) => w.id !== fromWarehouseId).map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
             </option>

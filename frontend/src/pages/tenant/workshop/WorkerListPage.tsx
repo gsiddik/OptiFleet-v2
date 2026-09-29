@@ -247,7 +247,7 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
           <input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Email (optional)" errors={errors.email}>
-          <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
+          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Monthly Rate (optional)" errors={errors.monthly_rate}>
           <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} style={inputStyle} />
