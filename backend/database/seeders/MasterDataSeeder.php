@@ -29,6 +29,8 @@ class MasterDataSeeder extends Seeder
 
         // Component Groups: production-safe baseline, see ComponentGroupSeeder.
         $this->call(ComponentGroupSeeder::class);
+        // Category / Subcategory taxonomy beneath the platform Component Groups.
+        $this->call(ComponentTaxonomySeeder::class);
 
         // Default Vehicle Category <-> Component Group mappings are bootstrap
         // only: seeded when a category has no mapping yet, never re-synced
