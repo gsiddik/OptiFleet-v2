@@ -26,7 +26,7 @@ class ProductImageTest extends TestCase
         $bin = $this->makeWarehouseBin($tenant);
 
         $productId = $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-'.Str::random(8), 'name' => 'Brake Pad',
+            ...$this->componentClassification(), 'name' => 'Brake Pad',
             'product_category_id' => $this->makeProductCategory()->id,
             'product_type' => 'SPARE_PART', 'uom_id' => $this->makeUom()->id,
             'default_storage_bin_id' => $bin->id, 'brand' => 'Bosch', 'track_serial_number' => false,
@@ -143,7 +143,7 @@ class ProductImageTest extends TestCase
         $bin = $this->makeWarehouseBin($tenant);
 
         $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-'.Str::random(8), 'name' => 'Legacy Item',
+            ...$this->componentClassification(), 'name' => 'Legacy Item',
             'product_category_id' => $this->makeProductCategory()->id,
             'product_type' => 'OTHER', 'uom_id' => $this->makeUom()->id,
             'default_storage_bin_id' => $bin->id,

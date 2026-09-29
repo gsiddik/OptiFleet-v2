@@ -44,7 +44,8 @@ class ComponentGroup extends Model
      * Product usage marker (EXISTS sub-selects, no row counting): a group is
      * "used" once any Product — soft-deleted ones included, their SKUs are
      * still history — references it through the classification pivot or a
-     * compatibility rule. Raw sub-selects on purpose: model global scopes
+     * compatibility rule, or has it as its classification group (whose
+     * abbreviation is printed in its SKU). Raw sub-selects on purpose: model global scopes
      * (tenant, soft delete) must not hide a reference that makes the
      * abbreviation part of a Product's identity.
      */
@@ -57,14 +58,16 @@ class ComponentGroup extends Model
         }
 
         return $query->selectRaw(
-            "(EXISTS (SELECT 1 FROM product_component_groups pcg WHERE pcg.component_group_id = {$table}.id)
+            "(EXISTS (SELECT 1 FROM products p WHERE p.component_group_id = {$table}.id)
+              OR EXISTS (SELECT 1 FROM product_component_groups pcg WHERE pcg.component_group_id = {$table}.id)
               OR EXISTS (SELECT 1 FROM product_compatibilities pc WHERE pc.component_group_id = {$table}.id)) AS is_used"
         );
     }
 
     public function isUsedByProducts(): bool
     {
-        return DB::table('product_component_groups')->where('component_group_id', $this->id)->exists()
+        return DB::table('products')->where('component_group_id', $this->id)->exists()
+            || DB::table('product_component_groups')->where('component_group_id', $this->id)->exists()
             || DB::table('product_compatibilities')->where('component_group_id', $this->id)->exists();
     }
 

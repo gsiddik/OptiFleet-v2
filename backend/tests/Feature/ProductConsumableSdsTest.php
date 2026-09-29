@@ -26,7 +26,7 @@ class ProductConsumableSdsTest extends TestCase
         $bin = $this->makeWarehouseBin($tenant);
 
         $product = $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-'.Str::random(8), 'name' => 'Engine Oil 15W-40',
+            ...$this->componentClassification(), 'name' => 'Engine Oil 15W-40',
             'product_category_id' => $this->makeProductCategory()->id,
             'product_type' => 'CONSUMABLE', 'track_batch' => false,
             'uom_id' => $this->makeUom()->id,
@@ -85,7 +85,7 @@ class ProductConsumableSdsTest extends TestCase
         [$tenant, $token] = $this->setUpTenant();
         $bin = $this->makeWarehouseBin($tenant);
         $productId = $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-'.Str::random(8), 'name' => 'Brake Pad',
+            ...$this->componentClassification(), 'name' => 'Brake Pad',
             'product_category_id' => $this->makeProductCategory(['item_type' => 'SPARE_PART'])->id,
             'product_type' => 'SPARE_PART', 'uom_id' => $this->makeUom()->id, 'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false,

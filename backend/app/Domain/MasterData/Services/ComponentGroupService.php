@@ -45,7 +45,7 @@ class ComponentGroupService
             if (array_key_exists('abbreviation', $attributes) && $attributes['abbreviation'] !== $group->abbreviation) {
                 if ($group->isAbbreviationLocked()) {
                     throw ValidationException::withMessages([
-                        'abbreviation' => 'Abbreviation cannot be changed because this Component Group is already used by Products and may appear in their SKUs.',
+                        'abbreviation' => 'Abbreviation cannot be changed because this Component Group has already been used by Products (and to generate Product SKUs).',
                     ]);
                 }
                 $this->assertAbbreviationAvailable($attributes['abbreviation'], $group->tenant_id, $group->id);

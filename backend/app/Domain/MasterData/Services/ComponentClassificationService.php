@@ -24,11 +24,17 @@ use Illuminate\Validation\ValidationException;
  *  - new selections must be EFFECTIVELY active (self and every ancestor
  *    ACTIVE and not soft-deleted); children are never mutated when a parent
  *    is retired or restored;
- *  - a Product may keep an unchanged, since-retired classification.
- * Classification never touches a Product's SKU.
+ *  - a Product may keep an unchanged, since-retired classification;
+ *  - Component Group + Category are mandatory for Sparepart / Consumable /
+ *    Tire / Rim; Subcategory is optional for every Item Type.
+ * Classification never touches an issued SKU (ProductSkuService reads the
+ * Component Group abbreviation once, at creation).
  */
 class ComponentClassificationService
 {
+    /** Owner decision: Component Group + Category mandatory for these Item Types; Subcategory always optional. */
+    public const CATEGORY_REQUIRED_ITEM_TYPES = ['SPARE_PART', 'CONSUMABLE', 'TIRE', 'RIM'];
+
     public function __construct(private readonly AuditService $audit) {}
 
     // ------------------------------------------------------------------ categories
@@ -210,6 +216,17 @@ class ComponentClassificationService
 
         [$groupId, $categoryId, $subcategoryId] = array_values($target);
         $errors = [];
+
+        // Mandatory Category for new Products of these Item Types, and it can never be
+        // cleared once set; a legacy unclassified Product is only held to it once its
+        // classification is actually edited (no destructive backfill).
+        if ($categoryId === null && in_array($productType, self::CATEGORY_REQUIRED_ITEM_TYPES, true)) {
+            if ($groupId === null) {
+                $errors['component_group_id'] = "A Component Group is required for Item Type {$productType}.";
+            }
+            $errors['component_category_id'] = "A Component Category is required for Item Type {$productType}.";
+            throw ValidationException::withMessages($errors);
+        }
 
         if ($subcategoryId !== null && $categoryId === null) {
             $errors['component_category_id'] = 'A Category is required when a Subcategory is selected.';

@@ -10,6 +10,7 @@ use App\Domain\ProductMaster\Models\ProductCompatibility;
 use App\Domain\ProductMaster\Services\ProductCompatibilityService;
 use App\Domain\ProductMaster\Services\ProductConsumableSdsService;
 use App\Domain\ProductMaster\Services\ProductImageService;
+use App\Domain\ProductMaster\Services\ProductSkuService;
 use App\Domain\ProductMaster\Services\ProductSpecificationService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
@@ -45,6 +46,7 @@ class ProductController extends Controller
         private readonly ProductConsumableSdsService $sds,
         private readonly ProductImageService $images,
         private readonly ComponentClassificationService $classification,
+        private readonly ProductSkuService $skus,
         private readonly TenantContext $context,
     ) {}
 
@@ -78,7 +80,7 @@ class ProductController extends Controller
         }
 
         // Component Group -> Category -> Subcategory: hierarchy, effective availability and
-        // Item Type applicability. Never feeds the SKU (still supplied as-is).
+        // Item Type applicability (Category mandatory for Sparepart/Consumable/Tire/Rim).
         $validated = array_merge($validated, $this->classification->resolveProductClassification($productType, $validated));
 
         // Validated BEFORE the numbering sequence is touched, so an invalid
@@ -91,6 +93,9 @@ class ProductController extends Controller
 
         $product = DB::transaction(function () use ($tenantId, $validated, $generalOverrides, $validatedSpec) {
             $number = $this->numbers->generate('product_item', $tenantId);
+
+            // Issued exactly once, here; later classification/master-data changes never touch it.
+            $validated['sku'] = $this->skus->generate($tenantId, $validated['product_type'], $validated['component_group_id']);
 
             $product = Product::query()->create(array_merge($validated, $generalOverrides) + [
                 'tenant_id' => $tenantId,

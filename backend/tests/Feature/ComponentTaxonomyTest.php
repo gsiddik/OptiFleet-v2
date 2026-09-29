@@ -82,7 +82,7 @@ class ComponentTaxonomyTest extends TestCase
     private function sparepartPayload($tenant, array $overrides = []): array
     {
         return array_merge([
-            'sku' => 'SPR-BRK-'.Str::upper(Str::random(6)), 'name' => 'Brake Pad Front',
+            'name' => 'Brake Pad Front',
             'product_category_id' => $this->makeProductCategory()->id,
             'product_type' => 'SPARE_PART',
             'uom_id' => $this->makeUom()->id,
@@ -362,8 +362,9 @@ class ComponentTaxonomyTest extends TestCase
         $this->seedTaxonomy();
         [$tenant, $headers] = $this->tenantWithUser();
 
-        $created = $this->postJson('/api/v1/app/products', $this->sparepartPayload($tenant, ['sku' => 'SPR-BRK-000123'] + $this->classification('CG-BRAKE', 'DISC_BRAKE', 'BRAKE_PAD')), $headers)
-            ->assertCreated()->assertJsonPath('data.sku', 'SPR-BRK-000123');
+        // A client-supplied SKU is ignored: it is server-generated from Item Type + group abbreviation.
+        $created = $this->postJson('/api/v1/app/products', $this->sparepartPayload($tenant, ['sku' => 'MANUAL-1'] + $this->classification('CG-BRAKE', 'DISC_BRAKE', 'BRAKE_PAD')), $headers)
+            ->assertCreated()->assertJsonPath('data.sku', 'SPR-BRK-000001');
         $id = $created->json('data.id');
 
         $this->postJson('/api/v1/app/products', $this->sparepartPayload($tenant, ['product_type' => 'TIRE'] + $this->classification('CG-BRAKE', 'DISC_BRAKE', 'BRAKE_PAD')), $headers)
@@ -383,7 +384,7 @@ class ComponentTaxonomyTest extends TestCase
         $this->category('CG-BRAKE', 'DISC_BRAKE')->update(['name' => 'Disc Braking']);
         $this->subcategory('CG-BRAKE', 'DISC_BRAKE', 'BRAKE_PAD')->update(['name' => 'Disc Brake Pad']);
         $this->seedTaxonomy();
-        $this->assertSame('SPR-BRK-000123', Product::query()->find($id)->sku);
+        $this->assertSame('SPR-BRK-000001', Product::query()->find($id)->sku);
         $this->assertSame('Disc Braking', $this->getJson("/api/v1/app/products/{$id}", $headers)->json('data.component_category.name'));
     }
 
@@ -460,8 +461,11 @@ class ComponentTaxonomyTest extends TestCase
         // Reclassifying to a live, consistent hierarchy works; clearing it works; SKU never changes.
         $this->putJson("/api/v1/app/products/{$product->id}", $this->classification('CG-BRAKE', 'DRUM_BRAKE', 'BRAKE_SHOE'), $headers)->assertOk();
         $this->assertSame('SPR-BRK-000125', $product->fresh()->sku);
-        $this->putJson("/api/v1/app/products/{$product->id}", ['component_group_id' => null, 'component_category_id' => null, 'component_subcategory_id' => null], $headers)->assertOk();
-        $this->assertNull($product->fresh()->component_group_id);
+        // Category is mandatory for Sparepart: it can be changed but never cleared; Subcategory can.
+        $this->putJson("/api/v1/app/products/{$product->id}", ['component_group_id' => null, 'component_category_id' => null, 'component_subcategory_id' => null], $headers)
+            ->assertStatus(422)->assertJsonValidationErrors('component_category_id');
+        $this->putJson("/api/v1/app/products/{$product->id}", ['component_subcategory_id' => null], $headers)->assertOk();
+        $this->assertNull($product->fresh()->component_subcategory_id);
         $this->assertSame('SPR-BRK-000125', $product->fresh()->sku);
     }
 

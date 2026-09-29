@@ -39,14 +39,14 @@ class ProductFoundationMasterDataTest extends TestCase
 
         $first = $this->postJson('/api/v1/app/products', [
             'code' => 'CLIENT-SUPPLIED-SHOULD-BE-IGNORED',
-            'sku' => 'SKU-A-'.Str::random(4), 'name' => 'Item A',
+            ...$this->componentClassification(), 'name' => 'Item A',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
             'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false, 'spec' => $sparepartSpec,
         ], $headers)->assertStatus(201);
 
         $second = $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-B-'.Str::random(4), 'name' => 'Item B',
+            ...$this->componentClassification(), 'name' => 'Item B',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
             'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false,
@@ -74,7 +74,7 @@ class ProductFoundationMasterDataTest extends TestCase
         $bin = $this->makeWarehouseBin($tenant);
 
         $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-RIM-'.Str::random(4), 'name' => 'Alloy Rim',
+            ...$this->componentClassification(), 'name' => 'Alloy Rim',
             'product_category_id' => $category->id, 'product_type' => 'RIM', 'uom_id' => $uom->id,
             'default_storage_bin_id' => $bin->id,
             'brand' => 'Enkei', 'track_serial_number' => true,

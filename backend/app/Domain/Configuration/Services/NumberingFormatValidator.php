@@ -10,7 +10,9 @@ namespace App\Domain\Configuration\Services;
  */
 class NumberingFormatValidator
 {
-    private const ALLOWED_TOKENS = ['DOC', 'TENANT', 'BRANCH', 'WORKSHOP', 'WAREHOUSE', 'YYYY', 'YY', 'MM', 'DD'];
+    // ITEMTYPE / CG: Product SKU context tokens (Item Type short code, Component Group
+    // abbreviation) — resolved only when the caller supplies them (product_sku), empty elsewhere.
+    private const ALLOWED_TOKENS = ['DOC', 'TENANT', 'BRANCH', 'WORKSHOP', 'WAREHOUSE', 'YYYY', 'YY', 'MM', 'DD', 'ITEMTYPE', 'CG'];
     private const ALLOWED_RESET_RULES = ['NEVER', 'YEARLY', 'MONTHLY', 'DAILY'];
 
     public function validate(array $payload): void

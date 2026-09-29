@@ -21,7 +21,8 @@ class StoreProductRequest extends FormRequest
             // "Next Improvement Tenant Portal - Products" Section 20: Item Code is
             // server-generated (ProductController::store) and never accepted from
             // the client — deliberately absent from this rule set.
-            'sku' => ['required', 'string', 'max:50', Rule::unique('products', 'sku')->where('tenant_id', $tenantId)],
+            // SKU is server-generated ([Item Type]-[Component Group abbreviation]-[sequence],
+            // ProductSkuService) and, like Item Code, never accepted from the client.
             'name' => ['required', 'string', 'max:255'],
             'product_category_id' => ['required', 'uuid', Rule::exists('product_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             // Batch 14: the documented Item Type dropdown is exactly these 6
@@ -59,8 +60,9 @@ class StoreProductRequest extends FormRequest
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
             // Phase F / BD-3: reference tread depth for TIRE products — the "KTN" source for scoring.
             'reference_tread_depth_mm' => ['nullable', 'numeric', 'min:0.01'],
-            // Mechanical classification (optional; Tools/Equipment typically have none).
-            // Hierarchy, availability and Item Type applicability: ComponentClassificationService.
+            // Mechanical classification. Component Group + Category are mandatory for
+            // Sparepart/Consumable/Tire/Rim, Subcategory is optional for every Item Type;
+            // hierarchy, availability and Item Type applicability: ComponentClassificationService.
             'component_group_id' => ['nullable', 'uuid'],
             'component_category_id' => ['nullable', 'uuid'],
             'component_subcategory_id' => ['nullable', 'uuid'],
