@@ -112,6 +112,11 @@ class ComponentGroup extends Model
         return $this->hasMany(ComponentGroup::class, 'parent_id');
     }
 
+    public function categories(): HasMany
+    {
+        return $this->hasMany(ComponentCategory::class);
+    }
+
     public function vehicleCategories(): BelongsToMany
     {
         return $this->belongsToMany(
