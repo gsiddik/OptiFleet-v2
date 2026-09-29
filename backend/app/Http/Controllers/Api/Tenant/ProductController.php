@@ -196,7 +196,10 @@ class ProductController extends Controller
         $this->authorizeVisible($product);
         abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
 
-        $request->validate(['component_group_ids' => ['array'], 'component_group_ids.*' => ['uuid']]);
+        // New selections must be live (visible, ACTIVE, not deleted) groups; a
+        // group already attached stays re-submittable even if since retired.
+        $attachedIds = $product->componentGroups()->pluck('component_groups.id')->all();
+        $request->validate(['component_group_ids' => ['array'], 'component_group_ids.*' => ['uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule($attachedIds)]]);
         $product->componentGroups()->sync($request->input('component_group_ids', []));
 
         return $this->ok($product->fresh('componentGroups'));
@@ -207,7 +210,7 @@ class ProductController extends Controller
         $this->authorizeVisible($product);
 
         $validated = $request->validate([
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'vehicle_category_id' => ['nullable', 'uuid', 'exists:vehicle_categories,id'],
             'vehicle_brand' => ['nullable', 'string', 'max:100'],
             'vehicle_model' => ['nullable', 'string', 'max:100'],

@@ -51,7 +51,7 @@ class ComponentAssetController extends Controller
         $tenantId = $this->context->tenantId();
         $validated = $request->validate([
             'product_id' => ['nullable', 'uuid', 'exists:products,id'],
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'serial_number' => ['nullable', 'string', 'max:100'],
             'asset_number' => ['nullable', 'string', 'max:100'],
             'purchase_date' => ['nullable', 'date'],

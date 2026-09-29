@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Platform\PaymentController;
 use App\Http\Controllers\Api\Platform\PermissionController;
 use App\Http\Controllers\Api\Platform\PlatformUserController;
 use App\Http\Controllers\Api\Platform\PricingController;
+use App\Http\Controllers\Api\Platform\ComponentGroupController as PlatformComponentGroupController;
 use App\Http\Controllers\Api\Platform\ProductCategoryController;
 use App\Http\Controllers\Api\Platform\RoleController;
 use App\Http\Controllers\Api\Platform\SubscriptionController;
@@ -66,6 +67,14 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::post('/product-categories', [ProductCategoryController::class, 'store'])->middleware('permission:product_category.create');
     Route::put('/product-categories/{productCategory}', [ProductCategoryController::class, 'update'])->middleware('permission:product_category.update');
     Route::delete('/product-categories/{productCategory}', [ProductCategoryController::class, 'destroy'])->middleware('permission:product_category.delete');
+
+    // Component Group Master: the shared platform baseline every tenant sees
+    // (tenants manage only their own groups via /app/component-groups).
+    Route::get('/component-groups', [PlatformComponentGroupController::class, 'index'])->middleware('permission:component_group.view');
+    Route::post('/component-groups', [PlatformComponentGroupController::class, 'store'])->middleware('permission:component_group.create');
+    Route::put('/component-groups/{componentGroup}', [PlatformComponentGroupController::class, 'update'])->middleware('permission:component_group.update');
+    Route::delete('/component-groups/{componentGroup}', [PlatformComponentGroupController::class, 'destroy'])->middleware('permission:component_group.delete');
+    Route::post('/component-groups/{componentGroup}/restore', [PlatformComponentGroupController::class, 'restore'])->middleware('permission:component_group.delete')->withTrashed();
 
     Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:role.view');
     Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:role.create');

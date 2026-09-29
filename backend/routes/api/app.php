@@ -196,7 +196,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/component-groups', [ComponentGroupController::class, 'store'])->middleware('permission:component_group.create');
             Route::get('/component-groups/{componentGroup}', [ComponentGroupController::class, 'show'])->middleware('permission:component_group.view');
             Route::put('/component-groups/{componentGroup}', [ComponentGroupController::class, 'update'])->middleware('permission:component_group.update');
-            Route::delete('/component-groups/{componentGroup}', [ComponentGroupController::class, 'destroy'])->middleware('permission:component_group.update');
+            Route::delete('/component-groups/{componentGroup}', [ComponentGroupController::class, 'destroy'])->middleware('permission:component_group.delete');
+            Route::post('/component-groups/{componentGroup}/restore', [ComponentGroupController::class, 'restore'])->middleware('permission:component_group.delete')->withTrashed();
             Route::post('/component-groups/{componentGroup}/vehicle-categories', [MasterDataMappingController::class, 'syncVehicleCategories'])->middleware('permission:component_group.map');
         });
 

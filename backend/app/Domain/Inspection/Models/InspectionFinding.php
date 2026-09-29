@@ -31,6 +31,6 @@ class InspectionFinding extends Model
 
     public function componentGroup(): BelongsTo
     {
-        return $this->belongsTo(ComponentGroup::class);
+        return $this->belongsTo(ComponentGroup::class)->withTrashed(); // soft-deleted groups stay resolvable on history
     }
 }

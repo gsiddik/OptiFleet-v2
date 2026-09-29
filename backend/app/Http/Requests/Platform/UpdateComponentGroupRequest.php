@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Requests\Tenant;
+namespace App\Http\Requests\Platform;
 
 use App\Domain\MasterData\Models\ComponentGroup;
 use App\Http\Requests\Concerns\ValidatesComponentGroupAbbreviation;
@@ -22,10 +22,12 @@ class UpdateComponentGroupRequest extends FormRequest
         $group = $this->route('componentGroup');
 
         return [
-            // Code stays immutable after creation — it is the stable machine identifier.
             'name' => ['sometimes', 'string', 'max:255'],
             'abbreviation' => $this->abbreviationRules(required: false),
-            'parent_id' => ['nullable', 'uuid', Rule::notIn([$group?->id]), ComponentGroup::selectableRule($group?->parent_id)],
+            'parent_id' => [
+                'nullable', 'uuid', Rule::notIn([$group?->id]),
+                Rule::exists('component_groups', 'id')->whereNull('tenant_id')->where(fn ($q) => $q->whereNull('deleted_at')->orWhere('id', $group?->parent_id)),
+            ],
             'sequence' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],

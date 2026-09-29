@@ -15,7 +15,7 @@ class SyncComponentGroupsRequest extends FormRequest
     {
         return [
             'component_group_ids' => ['required', 'array'],
-            'component_group_ids.*' => ['uuid', 'exists:component_groups,id'],
+            'component_group_ids.*' => ['uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
         ];
     }
 }

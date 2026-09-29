@@ -55,7 +55,8 @@ class Product extends Model
 
     public function componentGroups(): BelongsToMany
     {
-        return $this->belongsToMany(ComponentGroup::class, 'product_component_groups')->withTimestamps();
+        // withTrashed: a Product's classification (and its SKU) stays resolvable after a group is soft-deleted.
+        return $this->belongsToMany(ComponentGroup::class, 'product_component_groups')->withTimestamps()->withTrashed();
     }
 
     public function compatibilities(): HasMany

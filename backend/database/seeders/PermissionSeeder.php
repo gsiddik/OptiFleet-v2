@@ -32,6 +32,11 @@ class PermissionSeeder extends Seeder
             // "Next Improvement Tenant Portal - Products": Product Categories
             // move from tenant-governed to Superadmin-only management.
             'product_category' => ['view', 'create', 'update', 'delete'],
+
+            // Component Group Master: platform management of the shared
+            // baseline (tenant_id NULL). Same names as the tenant set below,
+            // distinct rows by scope (like user/role/audit).
+            'component_group' => ['view', 'create', 'update', 'delete'],
         ];
 
         $tenantOnly = [
@@ -41,7 +46,10 @@ class PermissionSeeder extends Seeder
             'vehicle_category' => ['view', 'create', 'update'],
             'vehicle_brand' => ['view', 'create', 'update'],
             'company' => ['view', 'update'],
-            'component_group' => ['view', 'create', 'update', 'map'],
+            // 'delete' split out of 'update' for the Component Group Master
+            // improvement (granted to every role holding 'update' by migration
+            // 2026_09_29_000004, so no existing user loses the ability).
+            'component_group' => ['view', 'create', 'update', 'delete', 'map'],
 
             // Phase 3: Core VMS Operations (Section 47)
             'vehicle' => ['view', 'create', 'update', 'assign', 'transfer', 'status.update'],
