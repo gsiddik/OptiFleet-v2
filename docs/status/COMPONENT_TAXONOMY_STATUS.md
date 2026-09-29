@@ -3,13 +3,16 @@
 Status: **COMPLETE** (all phases). Continues `COMPONENT_GROUP_MASTER_STATUS.md`
 on branch `claude/magical-volta-tv4xwl`.
 
-## Baseline discrepancy (reported, not blocking)
+## Owner decisions applied (follow-up)
 
-The instructions assumed a server-side SKU generator that uses the Component
-Group abbreviation. It does not exist: Product SKU is still free text
-supplied by the user (the abbreviation-in-SKU phase is an open owner decision
-in `COMPONENT_GROUP_MASTER_STATUS.md`). This initiative therefore leaves the
-SKU contract exactly as it is — classification never reads or writes `sku`.
+- SKU is server-generated from Item Type + Component Group abbreviation
+  (details in `COMPONENT_GROUP_MASTER_STATUS.md`). Category / Subcategory are
+  NOT part of the SKU; an issued SKU never changes.
+- **Component Group + Category are mandatory** for new Sparepart, Consumable,
+  Tire and Rim Products and cannot be cleared once set; **Subcategory is
+  optional** for every Item Type. Tools/Equipment may stay unclassified.
+  Legacy unclassified Products are only held to the rule once their
+  classification is edited (no backfill).
 
 ## Model
 
@@ -59,7 +62,7 @@ Product: component_group_id / component_category_id / component_subcategory_id (
 
 By type: SPARE_PART 746, CONSUMABLE 74, TIRE 25, RIM 10. No row maps to
 TOOL/EQUIPMENT; Tools/Equipment Products may stay unclassified (classification
-is optional for every Item Type). All mappings are editable per Subcategory.
+is mandatory only down to Category, and only for Sparepart/Consumable/Tire/Rim). All mappings are editable per Subcategory.
 
 ## Seeder (`ComponentTaxonomySeeder`, called from `MasterDataSeeder`)
 

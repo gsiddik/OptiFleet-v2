@@ -1,7 +1,7 @@
 # Component Group Master — Abbreviation, Management & Production-Safe Seeder
 
-Status: **Phases 1–4, 6, 7, 8 COMPLETE. Phase 5 (SKU integration) NOT
-IMPLEMENTED — blocked on owner decision (see bottom).**
+Status: **ALL PHASES COMPLETE.** Phase 5 (SKU integration) was implemented
+after the owner approved server-generated SKUs (see "SKU generation" below).
 
 ## Audit findings (before)
 
@@ -69,14 +69,27 @@ IMPLEMENTED — blocked on owner decision (see bottom).**
   report of this initiative (Mongo migrations/tests relocated per the
   established `ext-mongodb`-unavailable precedent and restored afterward).
 
-## OWNER DECISION REQUIRED — Phase 5 (SKU integration)
+## SKU generation (Phase 5 — owner approved)
 
-Using the abbreviation inside SKUs requires all of:
-1. SKU changes from manual free text to server-generated (breaking for the
-   Create Product API/UI and any integration that supplies SKUs);
-2. a single "primary Component Group" on Product (new column; today the
-   relation is many-to-many);
-3. a short code per Item Type (e.g. SPR/CON/TIR/RIM/TOL/EQP);
-4. a numbering sequence (existing `DocumentNumberingService` can host it,
-   e.g. a `product_sku` document type keyed per Item Type + group).
-Existing SKUs would stay untouched. Not implemented pending approval.
+- Product SKU is now **server-generated** at creation by `ProductSkuService`
+  through the existing `DocumentNumberingService` (new `product_sku`
+  document type, default format `{ITEMTYPE}-{CG}-{SEQ:6}`, reset NEVER,
+  configurable like every other numbering format). New tokens: `ITEMTYPE`
+  (SPR/CON/TIR/RIM/TOL/EQP/OTH) and `CG` (Component Group abbreviation).
+- Examples: `SPR-BRK-000001`, `CON-LUB-000001`, `TIR-WTY-000001`,
+  `RIM-WTY-000001`; a Product with no Component Group (Tools/Equipment may be
+  unclassified) gets `TOL-000001` / `EQP-000001`.
+- Sequence: per tenant and per rendered prefix (context partition of the
+  numbering counter), row-locked; a number already held by a legacy manual SKU
+  is skipped; `UNIQUE(tenant_id, sku)` still applies.
+- The abbreviation is read from the group row under a share lock; a group
+  without an abbreviation (legacy tenant group) cannot issue SKUs until one is
+  set. The group's abbreviation locks as soon as any Product uses it as its
+  classification group (`products.component_group_id`) or via the pivot /
+  compatibility links.
+- The client no longer supplies `sku` on create (ignored, like Item Code) —
+  an approved breaking change to the Create Product API/UI. The SKU is never
+  editable and never regenerated (rename, reclassification, soft delete,
+  seeder rerun). Existing SKUs were not touched.
+- Demo/dev seeders that insert Products directly (DevDemoSeeder chain) keep
+  their literal demo SKUs.
