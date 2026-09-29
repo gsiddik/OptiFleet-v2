@@ -133,6 +133,17 @@ class WorkOrderController extends Controller
         ]);
     }
 
+    public function update(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+        $validated = $request->validate([
+            'priority' => ['sometimes', 'nullable', 'in:LOW,MEDIUM,HIGH,URGENT'],
+            'complaint' => ['sometimes', 'nullable', 'string'],
+        ]);
+
+        return $this->ok($this->workOrders->update($workOrder, $validated));
+    }
+
     public function submit(WorkOrder $workOrder)
     {
         return $this->act($workOrder, 'submit');

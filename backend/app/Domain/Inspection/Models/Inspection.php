@@ -20,6 +20,7 @@ class Inspection extends Model
         'tenant_id', 'branch_id', 'workshop_id', 'vehicle_id', 'inspection_template_id',
         'template_snapshot', 'inspection_type', 'status', 'assigned_to', 'odometer_at_inspection',
         'started_at', 'submitted_at', 'created_by', 'notes',
+        'reviewed_by', 'reviewed_at', 'review_notes',
     ];
 
     protected $casts = [
@@ -27,6 +28,7 @@ class Inspection extends Model
         'template_snapshot' => 'array',
         'started_at' => 'datetime',
         'submitted_at' => 'datetime',
+        'reviewed_at' => 'datetime',
     ];
 
     public function branch(): BelongsTo

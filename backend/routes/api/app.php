@@ -264,6 +264,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/inspections/{inspection}/assign', [InspectionController::class, 'assign'])->middleware('permission:inspection.perform');
             Route::post('/inspections/{inspection}/start', [InspectionController::class, 'start'])->middleware('permission:inspection.perform');
             Route::post('/inspections/{inspection}/submit', [InspectionController::class, 'submit'])->middleware('permission:inspection.submit');
+            Route::post('/inspections/{inspection}/review', [InspectionController::class, 'review'])->middleware('permission:inspection.review');
             Route::post('/inspections/{inspection}/maintenance-request', [InspectionController::class, 'createMaintenanceRequest'])->middleware('permission:maintenance_request.create');
             Route::get('/inspections/{inspection}/logs', [InspectionController::class, 'logs'])->middleware('permission:inspection.view');
         });
@@ -313,6 +314,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/maintenance-requests/{maintenanceRequest}/work-order', [WorkOrderController::class, 'fromMaintenanceRequest'])->middleware('permission:maintenance_request.convert_work_order');
             Route::post('/maintenance-schedules/{maintenanceSchedule}/work-order', [WorkOrderController::class, 'fromMaintenanceSchedule'])->middleware('permission:maintenance_schedule.convert_work_order');
             Route::get('/work-orders/{workOrder}', [WorkOrderController::class, 'show'])->middleware('permission:work_order.view');
+            Route::put('/work-orders/{workOrder}', [WorkOrderController::class, 'update'])->middleware('permission:work_order.update');
             Route::get('/work-orders/{workOrder}/print', [WorkOrderController::class, 'print'])->middleware('permission:work_order.view');
             Route::post('/work-orders/{workOrder}/submit', [WorkOrderController::class, 'submit'])->middleware('permission:work_order.submit');
             Route::post('/work-orders/{workOrder}/approve', [WorkOrderController::class, 'approve'])->middleware('permission:work_order.approve');
@@ -344,6 +346,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/external-work-order-invoices', [ExternalWorkOrderInvoiceController::class, 'index'])->middleware('permission:external_work_order_invoice.view');
             Route::get('/external-work-order-invoices/{externalInvoice}', [ExternalWorkOrderInvoiceController::class, 'show'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/external-work-order-invoices/{externalInvoice}/generate-authorization', [ExternalWorkOrderInvoiceController::class, 'generateAuthorization'])->middleware('permission:external_work_order_invoice.generate_authorization');
+            Route::post('/external-work-order-invoices/{externalInvoice}/cancel', [ExternalWorkOrderInvoiceController::class, 'cancel'])->middleware(['permission:external_work_order_invoice.cancel', 'permission:work_order.cancel_external']);
             Route::get('/external-work-order-invoices/{externalInvoice}/authorization', [ExternalWorkOrderInvoiceController::class, 'viewAuthorization'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/external-work-order-invoices/{externalInvoice}/deliver', [ExternalWorkOrderInvoiceController::class, 'deliver'])->middleware('permission:external_work_order_invoice.deliver');
             Route::post('/external-work-order-invoices/{externalInvoice}/acknowledge', [ExternalWorkOrderInvoiceController::class, 'acknowledge'])->middleware('permission:external_work_order_invoice.acknowledge');

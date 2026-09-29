@@ -160,6 +160,25 @@ class WorkOrderService
         });
     }
 
+    /**
+     * Edits the descriptive header (priority, complaint) of a DRAFT Work Order. Everything
+     * else is either fixed at creation (vehicle, numbering, workshop) or changed by its own
+     * workflow action, and a submitted Work Order is no longer editable.
+     */
+    public function update(WorkOrder $workOrder, array $attributes): WorkOrder
+    {
+        return DB::transaction(function () use ($workOrder, $attributes) {
+            $locked = WorkOrder::query()->lockForUpdate()->findOrFail($workOrder->id);
+            if ($locked->status !== 'DRAFT') {
+                throw new WorkOrderException('Only a DRAFT Work Order can be edited.');
+            }
+
+            $locked->update(array_intersect_key($attributes, array_flip(['priority', 'complaint'])));
+
+            return $locked->fresh();
+        });
+    }
+
     public function submit(WorkOrder $workOrder): WorkOrder
     {
         return $this->transitions->transition($workOrder, 'SUBMITTED');

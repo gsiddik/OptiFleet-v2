@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
-import type { BundleItem, PricingItem, Tenant } from '../../../types';
+import type { BundleItem, ContractItem, PricingItem, Tenant } from '../../../types';
 
 const BILLING_CYCLES = [
   { value: 'MONTHLY', label: 'Monthly' },
@@ -54,18 +54,28 @@ function blankItem(): DraftItem {
  * shown read-only and the contract is created via the tenant-scoped
  * endpoint, which binds the tenant from the route rather than the payload
  * — the same rule the backend enforces regardless of what this form sends.
+ * When `contract` is set, the form edits that DRAFT contract (PUT, `contract.update`):
+ * its tenant stays fixed and every item is re-priced by the backend exactly as on create.
  */
 export function ContractForm({
   open,
   onClose,
   onCreated,
-  lockedTenant,
+  lockedTenant: lockedTenantProp,
+  contract,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: () => void;
   lockedTenant?: { id: string; name: string; code: string };
+  contract?: ContractItem;
 }) {
+  const lockedTenant = useMemo(
+    () =>
+      lockedTenantProp ??
+      (contract ? { id: contract.tenant_id, name: contract.tenant?.name ?? contract.tenant_id, code: contract.tenant?.code ?? '' } : undefined),
+    [lockedTenantProp, contract],
+  );
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [tenantId, setTenantId] = useState('');
   const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
@@ -83,6 +93,36 @@ export function ContractForm({
   const [submitting, setSubmitting] = useState(false);
 
   const effectiveTenantId = lockedTenant?.id ?? tenantId;
+
+  useEffect(() => {
+    if (!open || !contract) return;
+    setStartDate(contract.start_date.slice(0, 10));
+    setEndDate(contract.end_date.slice(0, 10));
+    setBillingCycle(contract.billing_cycle);
+    setPaymentTermsDays(String(contract.payment_terms_days ?? 0));
+    setGracePeriodDays(String(contract.grace_period_days ?? 0));
+    setActivationRequiresPayment(contract.activation_requires_payment);
+    setNotes(contract.notes ?? '');
+    setItems(
+      (contract.items ?? []).map((row) => {
+        const base = Number(row.unit_price) * Number(row.quantity) - Number(row.discount);
+        const rate = base > 0 ? Math.round((Number(row.tax) / base) * 10000) / 100 : 0;
+        return {
+          ...blankItem(),
+          product_type: row.product_type,
+          product_reference: row.product_reference ?? '',
+          description: row.description,
+          quantity: String(Number(row.quantity)),
+          unit_price: row.unit_price,
+          discount: row.discount,
+          tax_rate_percent: String(rate),
+          billing_frequency: row.billing_frequency,
+          // Keep the contract's frozen unit price; the backend still rejects one below today's Active Price.
+          resolvedKey: `${row.product_type}:${row.product_reference ?? ''}:${row.billing_frequency}:${contract.tenant_id}`,
+        };
+      }),
+    );
+  }, [open, contract]);
 
   useEffect(() => {
     if (!open) return;
@@ -197,8 +237,12 @@ export function ContractForm({
     };
 
     try {
-      const url = lockedTenant ? `/platform/tenants/${lockedTenant.id}/contracts` : '/platform/contracts';
-      await apiClient.post(url, payload);
+      if (contract) {
+        await apiClient.put(`/platform/contracts/${contract.id}`, payload);
+      } else {
+        const url = lockedTenant ? `/platform/tenants/${lockedTenant.id}/contracts` : '/platform/contracts';
+        await apiClient.post(url, payload);
+      }
       reset();
       onCreated();
       onClose();
@@ -214,7 +258,7 @@ export function ContractForm({
   const canSubmit = !!effectiveTenantId && !!endDate && !submitting;
 
   return (
-    <Modal open={open} title="New Contract" onClose={onClose} width={760}>
+    <Modal open={open} title={contract ? `Edit Contract — ${contract.contract_number}` : 'New Contract'} onClose={onClose} width={760}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <FormField label="Tenant" errors={errors.tenant_id} required>
           {lockedTenant ? (
@@ -355,7 +399,7 @@ export function ContractForm({
           Cancel
         </button>
         <button className="btn-primary" disabled={!canSubmit} onClick={submit}>
-          {submitting ? 'Creating…' : 'Create Draft Contract'}
+          {contract ? (submitting ? 'Saving…' : 'Save Draft') : submitting ? 'Creating…' : 'Create Draft Contract'}
         </button>
       </div>
     </Modal>

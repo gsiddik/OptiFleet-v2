@@ -81,6 +81,19 @@ class SubscriptionService
         });
     }
 
+    /**
+     * Manual activation (`subscription.activate`) of a PENDING subscription, e.g. when the
+     * platform waives the first-payment requirement. Suspended subscriptions use reactivate().
+     */
+    public function activatePending(Subscription $subscription): Subscription
+    {
+        if ($subscription->status !== 'PENDING') {
+            throw new SubscriptionException('Only a PENDING subscription can be activated; use Reactivate for a suspended one.');
+        }
+
+        return $this->activate($subscription);
+    }
+
     public function suspend(Subscription $subscription, ?string $reason = null): Subscription
     {
         $subscription->update([

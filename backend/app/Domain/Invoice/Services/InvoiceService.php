@@ -6,6 +6,7 @@ use App\Domain\Billing\Models\Billing;
 use App\Domain\Invoice\Models\Invoice;
 use App\Domain\Invoice\Models\InvoiceItem;
 use App\Domain\Pricing\Support\Money;
+use App\Domain\Subscription\Models\Subscription;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -91,6 +92,54 @@ class InvoiceService
         ]);
 
         return $invoice->fresh();
+    }
+
+    /**
+     * Manual billing adjustment (`billing.adjust`): an additional charge raised as its own
+     * issued invoice (billing_id NULL), the same shape as an amendment's prorated adjustment
+     * invoice. Issued invoices stay immutable — a correction is still VOID + replacement.
+     */
+    public function raiseAdjustment(Subscription $subscription, string $amount, string $description): Invoice
+    {
+        if (! Money::isGreaterThan($amount, '0')) {
+            throw new InvoiceException('An adjustment amount must be greater than zero.');
+        }
+
+        return DB::transaction(function () use ($subscription, $amount, $description) {
+            $subscription = Subscription::query()->lockForUpdate()->findOrFail($subscription->id);
+            if (in_array($subscription->status, ['CANCELLED', 'EXPIRED'], true)) {
+                throw new InvoiceException("Cannot raise an adjustment for a {$subscription->status} subscription.");
+            }
+            $contract = $subscription->contract;
+            $amount = Money::add($amount);
+
+            $invoice = Invoice::query()->create([
+                'invoice_number' => $this->numbers->generate(),
+                'tenant_id' => $subscription->tenant_id,
+                'contract_id' => $contract->id,
+                'subscription_id' => $subscription->id,
+                'billing_id' => null,
+                'invoice_date' => now()->toDateString(),
+                'due_date' => now()->addDays((int) $contract->payment_terms_days)->toDateString(),
+                'currency' => $contract->currency,
+                'subtotal' => $amount,
+                'total' => $amount,
+                'outstanding_amount' => $amount,
+                'status' => 'OUTSTANDING',
+                'issued_at' => now(),
+            ]);
+
+            InvoiceItem::query()->create([
+                'invoice_id' => $invoice->id,
+                'product_type' => 'OTHER',
+                'description' => $description,
+                'quantity' => 1,
+                'unit_price' => $amount,
+                'amount' => $amount,
+            ]);
+
+            return $invoice->fresh('items');
+        });
     }
 
     /**

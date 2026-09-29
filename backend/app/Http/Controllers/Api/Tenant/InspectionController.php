@@ -121,6 +121,14 @@ class InspectionController extends Controller
         return $this->ok($this->inspections->submit($inspection, $request->input('results'), $findings));
     }
 
+    public function review(Request $request, Inspection $inspection)
+    {
+        $this->authorizeScope($inspection);
+        $validated = $request->validate(['review_notes' => ['nullable', 'string', 'max:2000']]);
+
+        return $this->ok($this->inspections->review($inspection, $this->context->user()->id, $validated['review_notes'] ?? null));
+    }
+
     public function createMaintenanceRequest(Request $request, Inspection $inspection)
     {
         $this->authorizeScope($inspection);

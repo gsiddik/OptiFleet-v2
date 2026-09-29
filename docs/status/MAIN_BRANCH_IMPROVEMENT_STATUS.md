@@ -15,12 +15,29 @@ Status: **COMPLETE**. Branch `claude/magical-volta-tv4xwl`, started from
   `work_order.approve`; now `work_order.reject`. Migration
   `2026_09_30_000001` grants it to every role that holds `work_order.approve`
   (idempotent), so no existing user loses the action.
-- Seeded but not enforced anywhere (kept; removing them could break role
-  assignments — owner decision): `billing.adjust`, `contract.update`,
-  `external_work_order_invoice.cancel`, `inspection.review`,
-  `intelligence.model.evaluate`, `intelligence.prediction.run`,
-  `invoice.generate`, `invoice.issue`, `subscription.activate`,
-  `work_order.update`.
+- Ten permissions were seeded but enforced nowhere. Owner decision: wire each
+  into a real check (not retire). Every seeded permission is now enforced by a
+  route (asserted by `RewiredPermissionsTest`; the configuration permissions
+  are resolved per document type inside `ConfigurationController`):
+
+  | Permission | Now gates |
+  |---|---|
+  | `invoice.generate`, `invoice.issue` | `POST /platform/subscriptions/{id}/generate-billing` (it generates and issues the invoice) — together with `billing.generate`; backfilled to roles holding `billing.generate` |
+  | `billing.adjust` | `POST /platform/subscriptions/{id}/adjustment-invoices` — manual extra-charge invoice (amount > 0, issued, `billing_id` NULL, same shape as amendment proration invoices), audited |
+  | `subscription.activate` | `POST /platform/subscriptions/{id}/activate` — manual activation of a PENDING subscription (reason required, audited); suspended ones still use Reactivate |
+  | `contract.update` | `PUT /platform/contracts/{id}` — edit a DRAFT contract's terms and items (re-priced like create; tenant fixed) |
+  | `intelligence.prediction.run` | `POST /platform/intelligence/predictions/run` — queued prediction run for an entitled tenant, audited |
+  | `intelligence.model.evaluate` | `POST /platform/intelligence/evaluations/run` — queued outcome evaluation (`EvaluateOutcomesJob`), audited |
+  | `work_order.update` | `PUT /app/work-orders/{id}` — edit priority/complaint of a DRAFT Work Order |
+  | `inspection.review` | `POST /app/inspections/{id}/review` — one-time supervisor review of a submitted inspection (result unchanged; migration `2026_09_30_000002` adds nullable review columns) |
+  | `external_work_order_invoice.cancel` | `POST /app/external-work-order-invoices/{id}/cancel` — together with `work_order.cancel_external` (it cancels the External WO too); backfilled to roles holding `work_order.cancel_external` |
+
+  Backfill migration `2026_09_30_000003` is idempotent. Permissions gating a
+  new action are not backfilled (no one could do it before). UI: Subscriptions
+  (Activate / Generate Billing / Adjustment Invoice), Contract detail (Edit
+  Draft), WO Overview (Edit Details), Inspection detail (Supervisor Review),
+  Workshop Invoice (Cancel with reason). The two intelligence runs are API-only,
+  like the rest of platform Intelligence administration (no UI exists for it).
 - `PermissionSeeder` stays idempotent: it creates missing rows only and never
   touches `role_permissions` (covered by a test).
 
@@ -65,7 +82,10 @@ Status: **COMPLETE**. Branch `claude/magical-volta-tv4xwl`, started from
 ## Validation
 
 - New tests: `RolePermissionManagementTest`, `WorkOrderConsumedReturnTest`,
-  updated `RoleTenantIsolationTest`.
+  `RewiredPermissionsTest`, updated `RoleTenantIsolationTest`.
+- Owner decision: demo data does NOT get vehicle brands, a periodic package or
+  workshop working days; tenants set these up themselves before using the
+  forms that depend on them.
 - Full non-Mongo backend regression, frontend build and lint: see the final
   report of this initiative. Mongo tests NOT RUN (`ext-mongodb` unavailable;
   Mongo migrations/tests relocated during the run and restored).

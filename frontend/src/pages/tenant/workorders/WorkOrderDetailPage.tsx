@@ -485,7 +485,10 @@ function MaintenanceRequestSourceSection({ maintenanceRequestId }: { maintenance
   return <AssessmentSection maintenanceRequestId={maintenanceRequestId} editable={false} />;
 }
 
-function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
+function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const canEdit = wo.status === 'DRAFT' && hasPermission('work_order.update');
   const laborCost = wo.estimated_labor_cost_computed ?? null;
   const partsCost = wo.estimated_parts_cost_computed ?? null;
   const totalCost =
@@ -514,6 +517,13 @@ function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
   return (
     <div>
       <div className="card">
+        {canEdit && (
+          <div style={{ textAlign: 'right', marginBottom: 8 }}>
+            <button className="btn-secondary" onClick={() => setEditing(true)}>
+              Edit Details
+            </button>
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {rows.map(([label, value]) => (
             <div key={label}>
@@ -538,7 +548,67 @@ function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
           <MaintenanceRequestSourceSection maintenanceRequestId={wo.maintenance_request_id} />
         </div>
       )}
+      {editing && (
+        <EditWorkOrderModal
+          wo={wo}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onChanged();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** DRAFT-only header edit (`work_order.update`): priority, and the complaint of a directly created WO. */
+function EditWorkOrderModal({ wo, onClose, onSaved }: { wo: WorkOrderItem; onClose: () => void; onSaved: () => void }) {
+  const [priority, setPriority] = useState<string>(wo.priority ?? 'MEDIUM');
+  const [complaint, setComplaint] = useState(wo.complaint ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.put(`/app/work-orders/${wo.id}`, wo.maintenance_request_id ? { priority } : { priority, complaint: complaint || null });
+      onSaved();
+    } catch (err) {
+      const e = extractApiError(err);
+      setError(e.errors ? Object.values(e.errors).flat()[0] ?? e.message : e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={`Edit ${wo.wo_number}`} onClose={onClose}>
+      {error && <ErrorState message={error} />}
+      <FormField label="Priority" required>
+        <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>
+          {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      {!wo.maintenance_request_id && (
+        <FormField label="Complaint">
+          <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
+        </FormField>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button className="btn-secondary" onClick={onClose} disabled={busy}>
+          Cancel
+        </button>
+        <button className="btn-primary" onClick={save} disabled={busy}>
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

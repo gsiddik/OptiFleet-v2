@@ -576,6 +576,10 @@ export interface InspectionItem {
   status: 'CREATED' | 'ASSIGNED' | 'STARTED' | 'SUBMITTED' | 'PASSED' | 'WARNING' | 'FAILED';
   odometer_at_inspection: string | null;
   notes: string | null;
+  submitted_at?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  review_notes?: string | null;
   created_at: string;
   template_snapshot: InspectionTemplateSnapshotItem[] | null;
   vehicle?: VehicleItem;
