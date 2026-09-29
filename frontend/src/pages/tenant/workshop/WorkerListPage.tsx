@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WorkerItem, WorkerTypeItem } from '../../../types';
+import { componentGroupLabel } from '../../../utils/componentGroup';
 
 export function WorkerListPage() {
   const { hasPermission } = useAuth();
@@ -58,7 +59,7 @@ export function WorkerListPage() {
     { key: 'worker_type', header: 'Type', render: (w) => w.worker_type_master?.name ?? w.worker_type },
     { key: 'branch', header: 'Branch', render: (w) => w.branch?.name ?? '—' },
     { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
-    { key: 'skills', header: 'Skills', render: (w) => (w.skills ?? []).map((s) => s.component_group?.name).filter(Boolean).join(', ') || '—' },
+    { key: 'skills', header: 'Skills', render: (w) => (w.skills ?? []).map((s) => (s.component_group ? componentGroupLabel(s.component_group) : null)).filter(Boolean).join(', ') || '—' },
     { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
     {
       key: 'actions',
@@ -432,7 +433,7 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
         <tbody>
           {(worker.skills ?? []).map((s) => (
             <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <td style={{ padding: '6px 4px' }}>{s.component_group?.name ?? s.component_group_id}</td>
+              <td style={{ padding: '6px 4px' }}>{s.component_group ? componentGroupLabel(s.component_group) : s.component_group_id}</td>
               <td style={{ padding: '6px 4px', color: '#6b7280' }}>Level {s.skill_level ?? '—'}</td>
             </tr>
           ))}
@@ -444,7 +445,7 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
             <option value="">Select component group…</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {componentGroupLabel(c)}
               </option>
             ))}
           </select>

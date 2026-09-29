@@ -8,6 +8,7 @@ const NAV = [
   { to: '/platform/tenants', label: 'Tenant Management', permission: 'tenant.view' },
   { to: '/platform/modules', label: 'Module Catalog', permission: 'module.view' },
   { to: '/platform/product-categories', label: 'Product Categories', permission: 'product_category.view' },
+  { to: '/platform/component-groups', label: 'Component Groups', permission: 'component_group.view' },
   { to: '/platform/bundles', label: 'Bundles', permission: 'bundle.view' },
   { to: '/platform/pricing', label: 'Pricing', permission: 'pricing.view' },
   { to: '/platform/contracts', label: 'Contracts', permission: 'contract.view' },
