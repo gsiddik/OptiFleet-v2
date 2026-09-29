@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Branch, Warehouse, Workshop } from '../../../types';
+import { WarehouseStorageLayoutModal } from './WarehouseStorageLayoutModal';
 
 const TYPES: Warehouse['warehouse_type'][] = ['CENTRAL', 'BRANCH', 'WORKSHOP', 'TIRE', 'CONSUMABLE', 'SCRAP', 'QUARANTINE'];
 
@@ -20,6 +21,7 @@ export function WarehousesPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<Warehouse | null>(null);
+  const [layoutFor, setLayoutFor] = useState<Warehouse | null>(null);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [workshops, setWorkshops] = useState<Workshop[]>([]);
 
@@ -46,6 +48,9 @@ export function WarehousesPage() {
       header: '',
       render: (w) => (
         <div style={{ display: 'flex', gap: 8 }}>
+          <button className="btn-link" onClick={() => setLayoutFor(w)}>
+            Storage Layout
+          </button>
           {hasPermission('warehouse.update') && (
             <button className="btn-link" onClick={() => setEditing(w)}>
               Edit
@@ -108,6 +113,7 @@ export function WarehousesPage() {
           }}
         />
       )}
+      {layoutFor && <WarehouseStorageLayoutModal warehouse={layoutFor} canManage={hasPermission('warehouse.update')} onClose={() => setLayoutFor(null)} />}
     </div>
   );
 }

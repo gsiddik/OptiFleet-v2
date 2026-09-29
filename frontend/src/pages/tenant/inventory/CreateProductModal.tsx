@@ -377,6 +377,11 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
             ))}
           </select>
         </div>
+        {((warehouseId && zones.length === 0) || (zoneId && racks.length === 0) || (rackId && bins.length === 0)) && (
+          <div style={{ fontSize: 12, color: '#b45309', marginTop: 4 }}>
+            No storage location here yet — set up Zones, Racks and Bins under Organization → Warehouses → Storage Layout.
+          </div>
+        )}
       </FormField>
 
       {itemType !== 'OTHER' && (
@@ -539,16 +544,21 @@ function CompatibilityRows({
   updateCompatRow,
   setCompatibilities,
   required,
+  errors = {},
 }: {
   compatibilities: CompatRow[];
   updateCompatRow: (i: number, patch: Partial<CompatRow>) => void;
   setCompatibilities: (rows: CompatRow[]) => void;
   required: boolean;
+  errors?: Record<string, string[]>;
 }) {
+  // Backend keys: "compatibilities" (list-level) and "compatibilities.{i}.{field}" (row-level).
+  const rowErrors = (i: number) => Object.entries(errors).filter(([k]) => k.startsWith(`compatibilities.${i}.`)).flatMap(([, v]) => v);
   return (
-    <FormField label="Vehicle Compatibility" required={required}>
+    <FormField label="Vehicle Compatibility" required={required} errors={errors.compatibilities}>
       {compatibilities.map((row, i) => (
-        <div key={i} style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr) auto', gap: 4, marginBottom: 6 }}>
+        <div key={i}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr) auto', gap: 4, marginBottom: 6 }}>
           <input placeholder="Make" value={row.vehicle_brand} onChange={(e) => updateCompatRow(i, { vehicle_brand: e.target.value })} style={inputStyle} />
           <input placeholder="Model" value={row.vehicle_model} onChange={(e) => updateCompatRow(i, { vehicle_model: e.target.value })} style={inputStyle} />
           <input placeholder="Variant" value={row.variant} onChange={(e) => updateCompatRow(i, { variant: e.target.value })} style={inputStyle} />
@@ -558,6 +568,12 @@ function CompatibilityRows({
           <button className="btn-secondary" onClick={() => setCompatibilities(compatibilities.filter((_, idx) => idx !== i))} disabled={compatibilities.length === 1}>
             ×
           </button>
+        </div>
+        {rowErrors(i).map((err) => (
+          <div key={err} style={{ color: '#b91c1c', fontSize: 12, marginTop: -2, marginBottom: 6 }}>
+            Row {i + 1}: {err.replace(/compatibilities\.\d+\./, '')}
+          </div>
+        ))}
         </div>
       ))}
       <button className="btn-secondary" onClick={() => setCompatibilities([...compatibilities, emptyCompatRow()])} style={{ fontSize: 12 }}>
@@ -657,7 +673,7 @@ export function SparepartFields({
         errors={errors}
       />
       {showCompatibility && (
-        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required />
+        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required errors={errors} />
       )}
     </>
   );
@@ -854,7 +870,7 @@ export function RimFields({
         />
       </FormField>
       {showCompatibility && (
-        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required={false} />
+        <CompatibilityRows compatibilities={compatibilities} updateCompatRow={updateCompatRow} setCompatibilities={setCompatibilities} required={false} errors={errors} />
       )}
     </>
   );
