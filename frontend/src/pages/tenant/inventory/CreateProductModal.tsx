@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
+import { ComponentClassificationFields } from '../../../components/masterdata/ComponentClassificationFields';
+import { classificationPayload, emptyClassification, type ClassificationValue } from '../../../utils/componentClassification';
 import type {
   EquipmentTypeItem,
   ItemType,
@@ -108,6 +110,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
   const [spec, setSpec] = useState<Spec>({});
   const [compatibilities, setCompatibilities] = useState<CompatRow[]>([emptyCompatRow()]);
+  const [classification, setClassification] = useState<ClassificationValue>(emptyClassification);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -117,6 +120,9 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   useEffect(() => {
     setCategoryId('');
     setSubcategoryId('');
+    // Keep the chosen Component Group / Category; the Subcategory's Item Type
+    // applicability may differ, so it is re-chosen.
+    setClassification((c) => ({ ...c, componentSubcategoryId: '' }));
     setSpec({});
     setCompatibilities([emptyCompatRow()]);
     setBrand('');
@@ -228,6 +234,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
     setReferenceTreadDepthMm('');
     setSpec({});
     setCompatibilities([emptyCompatRow()]);
+    setClassification(emptyClassification);
   }
 
   async function submit() {
@@ -261,6 +268,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
         track_batch: itemType === 'CONSUMABLE' ? trackBatch : undefined,
         reference_tread_depth_mm: itemType === 'TIRE' && referenceTreadDepthMm ? referenceTreadDepthMm : undefined,
         spec: specPayload,
+        ...classificationPayload(classification),
       });
       reset();
       onCreated();
@@ -321,6 +329,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
           </select>
         </FormField>
       )}
+      <ComponentClassificationFields itemType={itemType} value={classification} onChange={setClassification} errors={errors} />
       <FormField label="Description" errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>

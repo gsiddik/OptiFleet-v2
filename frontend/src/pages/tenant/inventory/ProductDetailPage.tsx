@@ -207,6 +207,11 @@ export function ProductDetailPage() {
             </>
           )}
         </p>
+        <p style={{ fontSize: 13 }}>
+          <strong>Component Group:</strong> {product.component_group ? componentGroupLabel(product.component_group) + (product.component_group.deleted_at ? ' (deleted)' : '') : '—'}
+          &nbsp; <strong>Category:</strong> {product.component_category ? product.component_category.name + (product.component_category.deleted_at ? ' (deleted)' : '') : '—'}
+          &nbsp; <strong>Subcategory:</strong> {product.component_subcategory ? product.component_subcategory.name + (product.component_subcategory.deleted_at ? ' (deleted)' : '') : '—'}
+        </p>
         {product.brand && (
           <p style={{ fontSize: 13 }}>
             <strong>Brand:</strong> {product.brand} &nbsp; <strong>Manufacturer Part #:</strong> {product.manufacturer_part_number ?? '—'}

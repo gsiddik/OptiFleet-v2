@@ -161,6 +161,47 @@ export interface ComponentGroup {
   deleted_at?: string | null;
 }
 
+/** L2 Category / Assembly beneath a Component Group (mechanical taxonomy, not the commercial Product Category). */
+export interface ComponentCategory {
+  id: string;
+  tenant_id?: string | null;
+  component_group_id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  sequence?: number;
+  is_system?: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  deleted_at?: string | null;
+  updated_at?: string;
+  is_used?: boolean;
+  is_deleted?: boolean;
+  component_group?: ComponentGroup | null;
+}
+
+export type ComponentItemType = 'SPARE_PART' | 'CONSUMABLE' | 'TIRE' | 'RIM' | 'TOOL' | 'EQUIPMENT';
+
+/** L3 Subcategory / Component Family beneath a Category; empty `item_types` = unrestricted. */
+export interface ComponentSubcategory {
+  id: string;
+  tenant_id?: string | null;
+  component_category_id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  sequence?: number;
+  is_system?: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  deleted_at?: string | null;
+  updated_at?: string;
+  is_used?: boolean;
+  is_deleted?: boolean;
+  item_types?: ComponentItemType[];
+  /** Product-form lookup only: whether the current Item Type may use it. */
+  allowed?: boolean;
+  category?: ComponentCategory | null;
+}
+
 export interface RoleItem {
   id: string;
   name: string;
@@ -1411,6 +1452,13 @@ export interface ProductItem {
   default_storage_bin?: WarehouseBinItem;
   component_groups?: ComponentGroup[];
   compatibilities?: ProductCompatibilityItem[];
+  /** Mechanical classification (Component Group -> Category -> Subcategory); independent of `category` above. */
+  component_group_id?: string | null;
+  component_category_id?: string | null;
+  component_subcategory_id?: string | null;
+  component_group?: ComponentGroup | null;
+  component_category?: ComponentCategory | null;
+  component_subcategory?: ComponentSubcategory | null;
   sparepart_spec?: ProductSparepartSpecItem;
   consumable_spec?: ProductConsumableSpecItem;
   rim_spec?: ProductRimSpecItem;
