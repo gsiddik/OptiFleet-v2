@@ -29,7 +29,7 @@ class ProductEditDynamicFormTest extends TestCase
     private function createSparepart($token, array $overrides = []): array
     {
         $response = $this->postJson('/api/v1/app/products', array_merge([
-            'sku' => 'SKU-'.Str::random(8), 'name' => 'Original Name',
+            ...$this->componentClassification(), 'name' => 'Original Name',
             'product_category_id' => $this->makeProductCategory(['item_type' => 'SPARE_PART'])->id,
             'product_type' => 'SPARE_PART',
             'uom_id' => $this->makeUom()->id,
@@ -177,7 +177,7 @@ class ProductEditDynamicFormTest extends TestCase
         $speedRating = \App\Domain\Tire\Models\TireSpeedRating::query()->create(['code' => 'T', 'max_speed_kmh' => 190, 'status' => 'ACTIVE']);
 
         $product = $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-'.Str::random(8), 'name' => 'Tire A',
+            ...$this->componentClassification(), 'name' => 'Tire A',
             'product_category_id' => $this->makeProductCategory(['item_type' => 'TIRE'])->id,
             'product_type' => 'TIRE',
             'uom_id' => $this->makeUom()->id,

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\Configuration\Services\DocumentNumberingService;
+use App\Domain\MasterData\Services\ComponentClassificationService;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\ProductCompatibility;
 use App\Domain\ProductMaster\Services\ProductCompatibilityService;
 use App\Domain\ProductMaster\Services\ProductConsumableSdsService;
 use App\Domain\ProductMaster\Services\ProductImageService;
+use App\Domain\ProductMaster\Services\ProductSkuService;
 use App\Domain\ProductMaster\Services\ProductSpecificationService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
@@ -30,23 +32,32 @@ class ProductController extends Controller
         'EQUIPMENT' => 'equipmentSpec.equipmentType',
     ];
 
+    /** Mechanical classification, trimmed to what list/detail display needs; resolves soft-deleted rows. */
+    private const CLASSIFICATION_RELATIONS = [
+        'componentGroup:id,code,name,abbreviation,status,deleted_at',
+        'componentCategory:id,component_group_id,code,name,status,deleted_at',
+        'componentSubcategory:id,component_category_id,code,name,status,deleted_at',
+    ];
+
     public function __construct(
         private readonly ProductCompatibilityService $compatibility,
         private readonly DocumentNumberingService $numbers,
         private readonly ProductSpecificationService $specs,
         private readonly ProductConsumableSdsService $sds,
         private readonly ProductImageService $images,
+        private readonly ComponentClassificationService $classification,
+        private readonly ProductSkuService $skus,
         private readonly TenantContext $context,
     ) {}
 
     public function index(Request $request)
     {
-        $query = Product::query()->with(['category', 'uom', 'compatibilities']);
+        $query = Product::query()->with(['category', 'uom', 'compatibilities', ...self::CLASSIFICATION_RELATIONS]);
 
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(fn ($q) => $q->where('name', 'ilike', "%{$search}%")->orWhere('sku', 'ilike', "%{$search}%")->orWhere('code', 'ilike', "%{$search}%"));
         }
-        foreach (['product_type', 'status', 'product_category_id'] as $filter) {
+        foreach (['product_type', 'status', 'product_category_id', 'component_group_id', 'component_category_id', 'component_subcategory_id'] as $filter) {
             if ($value = $request->string($filter)->value()) {
                 $query->where($filter, $value);
             }
@@ -68,6 +79,10 @@ class ProductController extends Controller
             }
         }
 
+        // Component Group -> Category -> Subcategory: hierarchy, effective availability and
+        // Item Type applicability (Category mandatory for Sparepart/Consumable/Tire/Rim).
+        $validated = array_merge($validated, $this->classification->resolveProductClassification($productType, $validated));
+
         // Validated BEFORE the numbering sequence is touched, so an invalid
         // spec submission never burns an Item Code.
         ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate(
@@ -78,6 +93,9 @@ class ProductController extends Controller
 
         $product = DB::transaction(function () use ($tenantId, $validated, $generalOverrides, $validatedSpec) {
             $number = $this->numbers->generate('product_item', $tenantId);
+
+            // Issued exactly once, here; later classification/master-data changes never touch it.
+            $validated['sku'] = $this->skus->generate($tenantId, $validated['product_type'], $validated['component_group_id']);
 
             $product = Product::query()->create(array_merge($validated, $generalOverrides) + [
                 'tenant_id' => $tenantId,
@@ -101,7 +119,7 @@ class ProductController extends Controller
     {
         $this->authorizeVisible($product);
 
-        $relations = ['category', 'uom', 'defaultStorageBin', 'componentGroups', 'compatibilities.componentGroup', 'compatibilities.vehicleCategory'];
+        $relations = ['category', 'uom', 'defaultStorageBin', 'componentGroups', 'compatibilities.componentGroup', 'compatibilities.vehicleCategory', ...self::CLASSIFICATION_RELATIONS];
         if ($relation = self::SPEC_RELATIONS[$product->product_type] ?? null) {
             $relations[] = $relation;
         }
@@ -154,7 +172,14 @@ class ProductController extends Controller
             'track_batch' => ['sometimes', 'boolean'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
             'reference_tread_depth_mm' => ['sometimes', 'nullable', 'numeric', 'min:0.01'],
+            // Mechanical classification: only validated when actually changed, so an
+            // untouched classification that has since been retired never blocks a save.
+            'component_group_id' => ['sometimes', 'nullable', 'uuid'],
+            'component_category_id' => ['sometimes', 'nullable', 'uuid'],
+            'component_subcategory_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
+
+        $validated = array_merge($validated, $this->classification->resolveProductClassification($product->product_type, $validated, $product));
 
         if (! empty($validated['product_category_id'])) {
             $category = ProductCategory::query()->find($validated['product_category_id']);
@@ -196,7 +221,10 @@ class ProductController extends Controller
         $this->authorizeVisible($product);
         abort_if($product->is_system, 403, 'System master data cannot be modified by a tenant.');
 
-        $request->validate(['component_group_ids' => ['array'], 'component_group_ids.*' => ['uuid']]);
+        // New selections must be live (visible, ACTIVE, not deleted) groups; a
+        // group already attached stays re-submittable even if since retired.
+        $attachedIds = $product->componentGroups()->pluck('component_groups.id')->all();
+        $request->validate(['component_group_ids' => ['array'], 'component_group_ids.*' => ['uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule($attachedIds)]]);
         $product->componentGroups()->sync($request->input('component_group_ids', []));
 
         return $this->ok($product->fresh('componentGroups'));
@@ -207,7 +235,7 @@ class ProductController extends Controller
         $this->authorizeVisible($product);
 
         $validated = $request->validate([
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'vehicle_category_id' => ['nullable', 'uuid', 'exists:vehicle_categories,id'],
             'vehicle_brand' => ['nullable', 'string', 'max:100'],
             'vehicle_model' => ['nullable', 'string', 'max:100'],

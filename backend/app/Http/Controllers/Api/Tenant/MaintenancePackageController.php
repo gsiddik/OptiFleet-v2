@@ -139,7 +139,7 @@ class MaintenancePackageController extends Controller
     {
         $this->authorizeTenant($maintenancePackage);
         $validated = $request->validate([
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'service_item' => ['required', 'string', 'max:255'],
             'recommended_part_reference' => ['nullable', 'string', 'max:255'],
             'standard_labor_hours' => ['nullable', 'numeric', 'min:0'],

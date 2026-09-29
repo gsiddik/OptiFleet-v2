@@ -3,7 +3,9 @@
 namespace App\Domain\ProductMaster\Models;
 
 use App\Domain\Audit\Concerns\Auditable;
+use App\Domain\MasterData\Models\ComponentCategory;
 use App\Domain\MasterData\Models\ComponentGroup;
+use App\Domain\MasterData\Models\ComponentSubcategory;
 use App\Domain\Organization\Models\WarehouseBin;
 use App\Domain\Shared\Concerns\BelongsToTenantOrPlatform;
 use App\Domain\Tire\Models\ProductRimSpec;
@@ -22,6 +24,7 @@ class Product extends Model
 
     protected $fillable = [
         'tenant_id', 'code', 'numbering_configuration_version_id', 'sku', 'name', 'product_category_id', 'product_type', 'uom_id',
+        'component_group_id', 'component_category_id', 'component_subcategory_id',
         'default_storage_bin_id',
         'brand', 'manufacturer', 'material', 'production_year', 'weight_kg', 'length_mm', 'width_mm', 'height_mm', 'image_url',
         'image_path', 'image_original_filename',
@@ -53,9 +56,30 @@ class Product extends Model
         return $this->belongsTo(WarehouseBin::class, 'default_storage_bin_id');
     }
 
+    /*
+     * Mechanical classification (Component Group -> Category -> Subcategory).
+     * withTrashed: a Product keeps displaying its classification after any
+     * level is soft-deleted; nothing here ever feeds back into the SKU.
+     */
+    public function componentGroup(): BelongsTo
+    {
+        return $this->belongsTo(ComponentGroup::class)->withTrashed();
+    }
+
+    public function componentCategory(): BelongsTo
+    {
+        return $this->belongsTo(ComponentCategory::class)->withTrashed();
+    }
+
+    public function componentSubcategory(): BelongsTo
+    {
+        return $this->belongsTo(ComponentSubcategory::class)->withTrashed();
+    }
+
     public function componentGroups(): BelongsToMany
     {
-        return $this->belongsToMany(ComponentGroup::class, 'product_component_groups')->withTimestamps();
+        // withTrashed: a Product's classification (and its SKU) stays resolvable after a group is soft-deleted.
+        return $this->belongsToMany(ComponentGroup::class, 'product_component_groups')->withTimestamps()->withTrashed();
     }
 
     public function compatibilities(): HasMany

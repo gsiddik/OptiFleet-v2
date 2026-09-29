@@ -10,6 +10,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { EditProductModal } from './EditProductModal';
 import type { ProductItem, VehicleCategory } from '../../../types';
+import { componentGroupLabel } from '../../../utils/componentGroup';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -198,6 +199,18 @@ export function ProductDetailPage() {
         <p style={{ fontSize: 13 }}>
           <strong>SKU:</strong> {product.sku} &nbsp; <strong>Type:</strong> {product.product_type} &nbsp; <strong>Category:</strong>{' '}
           {product.category?.name ?? '—'} &nbsp; <strong>UOM:</strong> {product.uom?.name ?? '—'}
+          {(product.component_groups ?? []).length > 0 && (
+            <>
+              {' '}
+              &nbsp; <strong>Component Groups:</strong>{' '}
+              {(product.component_groups ?? []).map((g) => componentGroupLabel(g) + (g.deleted_at ? ' (deleted)' : '')).join(', ')}
+            </>
+          )}
+        </p>
+        <p style={{ fontSize: 13 }}>
+          <strong>Component Group:</strong> {product.component_group ? componentGroupLabel(product.component_group) + (product.component_group.deleted_at ? ' (deleted)' : '') : '—'}
+          &nbsp; <strong>Category:</strong> {product.component_category ? product.component_category.name + (product.component_category.deleted_at ? ' (deleted)' : '') : '—'}
+          &nbsp; <strong>Subcategory:</strong> {product.component_subcategory ? product.component_subcategory.name + (product.component_subcategory.deleted_at ? ' (deleted)' : '') : '—'}
         </p>
         {product.brand && (
           <p style={{ fontSize: 13 }}>
@@ -294,7 +307,7 @@ export function ProductDetailPage() {
         {(product.compatibilities ?? []).map((c) => (
           <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             <span>
-              {c.component_group?.name ?? 'Any component'} — {c.vehicle_category?.name ?? 'Any category'}
+              {c.component_group ? componentGroupLabel(c.component_group) : 'Any component'} — {c.vehicle_category?.name ?? 'Any category'}
               {c.vehicle_brand && ` — ${c.vehicle_brand}`} {c.vehicle_model && ` ${c.vehicle_model}`}
             </span>
             {hasPermission('product.update') && !product.is_system && (

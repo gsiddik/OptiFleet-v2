@@ -129,7 +129,7 @@ class ProductSpecificationService
             'compatibilities.*.year_to' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
             'compatibilities.*.position' => ['nullable', 'string', 'max:50'],
             'compatibilities.*.vehicle_category_id' => ['nullable', 'uuid', Rule::exists('vehicle_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
-            'compatibilities.*.component_group_id' => ['nullable', 'uuid', Rule::exists('component_groups', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
+            'compatibilities.*.component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
         ])->validate();
     }
 

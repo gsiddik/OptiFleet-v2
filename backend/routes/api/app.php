@@ -25,7 +25,9 @@ use App\Http\Controllers\Api\Tenant\BranchController;
 use App\Http\Controllers\Api\Tenant\BreakdownController;
 use App\Http\Controllers\Api\Tenant\CompanyProfileController;
 use App\Http\Controllers\Api\Tenant\ComponentAssetController;
+use App\Http\Controllers\Api\Tenant\ComponentCategoryController;
 use App\Http\Controllers\Api\Tenant\ComponentGroupController;
+use App\Http\Controllers\Api\Tenant\ComponentSubcategoryController;
 use App\Http\Controllers\Api\Tenant\ConfigurationController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\DataScopeController;
@@ -49,6 +51,7 @@ use App\Http\Controllers\Api\Tenant\PartnerController;
 use App\Http\Controllers\Api\Tenant\PartRequestController;
 use App\Http\Controllers\Api\Tenant\PermissionController;
 use App\Http\Controllers\Api\Tenant\ProductCategoryController;
+use App\Http\Controllers\Api\Tenant\ProductClassificationController;
 use App\Http\Controllers\Api\Tenant\ProductController;
 use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
 use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
@@ -196,8 +199,23 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/component-groups', [ComponentGroupController::class, 'store'])->middleware('permission:component_group.create');
             Route::get('/component-groups/{componentGroup}', [ComponentGroupController::class, 'show'])->middleware('permission:component_group.view');
             Route::put('/component-groups/{componentGroup}', [ComponentGroupController::class, 'update'])->middleware('permission:component_group.update');
-            Route::delete('/component-groups/{componentGroup}', [ComponentGroupController::class, 'destroy'])->middleware('permission:component_group.update');
+            Route::delete('/component-groups/{componentGroup}', [ComponentGroupController::class, 'destroy'])->middleware('permission:component_group.delete');
+            Route::post('/component-groups/{componentGroup}/restore', [ComponentGroupController::class, 'restore'])->middleware('permission:component_group.delete')->withTrashed();
             Route::post('/component-groups/{componentGroup}/vehicle-categories', [MasterDataMappingController::class, 'syncVehicleCategories'])->middleware('permission:component_group.map');
+
+            // Component Classification Master (Category / Subcategory beneath Component Group).
+            Route::get('/component-categories', [ComponentCategoryController::class, 'index'])->middleware('permission:component_category.view');
+            Route::post('/component-categories', [ComponentCategoryController::class, 'store'])->middleware('permission:component_category.create');
+            Route::get('/component-categories/{componentCategory}', [ComponentCategoryController::class, 'show'])->middleware('permission:component_category.view');
+            Route::put('/component-categories/{componentCategory}', [ComponentCategoryController::class, 'update'])->middleware('permission:component_category.update');
+            Route::delete('/component-categories/{componentCategory}', [ComponentCategoryController::class, 'destroy'])->middleware('permission:component_category.delete');
+            Route::post('/component-categories/{componentCategory}/restore', [ComponentCategoryController::class, 'restore'])->middleware('permission:component_category.delete')->withTrashed();
+            Route::get('/component-subcategories', [ComponentSubcategoryController::class, 'index'])->middleware('permission:component_subcategory.view');
+            Route::post('/component-subcategories', [ComponentSubcategoryController::class, 'store'])->middleware('permission:component_subcategory.create');
+            Route::get('/component-subcategories/{componentSubcategory}', [ComponentSubcategoryController::class, 'show'])->middleware('permission:component_subcategory.view');
+            Route::put('/component-subcategories/{componentSubcategory}', [ComponentSubcategoryController::class, 'update'])->middleware('permission:component_subcategory.update');
+            Route::delete('/component-subcategories/{componentSubcategory}', [ComponentSubcategoryController::class, 'destroy'])->middleware('permission:component_subcategory.delete');
+            Route::post('/component-subcategories/{componentSubcategory}/restore', [ComponentSubcategoryController::class, 'restore'])->middleware('permission:component_subcategory.delete')->withTrashed();
         });
 
         Route::middleware('module:VEHICLE')->group(function () {
@@ -483,6 +501,10 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/tire-tra-codes/{tireTraCode}/star-ratings/{starRating}', [TireTraCodeController::class, 'updateStarRating'])->middleware('permission:product.update');
             Route::delete('/tire-tra-codes/{tireTraCode}/star-ratings/{starRating}', [TireTraCodeController::class, 'destroyStarRating'])->middleware('permission:product.delete');
 
+            // Cascading Component Group -> Category -> Subcategory lookups for the Product form/filters.
+            Route::get('/product-classification/component-groups', [ProductClassificationController::class, 'groups'])->middleware('permission:product.view');
+            Route::get('/product-classification/categories', [ProductClassificationController::class, 'categories'])->middleware('permission:product.view');
+            Route::get('/product-classification/subcategories', [ProductClassificationController::class, 'subcategories'])->middleware('permission:product.view');
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
             Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');
             Route::get('/products/compatible', [ProductController::class, 'compatibleFor'])->middleware('permission:product.view');

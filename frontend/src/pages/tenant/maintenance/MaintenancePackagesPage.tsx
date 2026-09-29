@@ -12,6 +12,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ComponentGroup, MaintenancePackageItemType, VehicleItem } from '../../../types';
+import { componentGroupLabel } from '../../../utils/componentGroup';
 
 const ALL_MAINTENANCE_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECTION', 'CAMPAIGN', 'PERIODIC'];
 // Section 10: the new-package workflow only offers these two — legacy types
@@ -359,7 +360,7 @@ export function MaintenancePackageDetailPage() {
             {(pkg.items ?? []).map((it) => (
               <div key={it.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
                 {it.service_item}
-                {it.component_group_id && <span style={{ color: '#6b7280' }}> — {groups.find((g) => g.id === it.component_group_id)?.name ?? it.component_group_id}</span>}
+                {it.component_group_id && <span style={{ color: '#6b7280' }}> — {it.component_group ? componentGroupLabel(it.component_group) : (groups.find((g) => g.id === it.component_group_id)?.name ?? it.component_group_id)}</span>}
                 {it.standard_labor_hours && <span style={{ color: '#6b7280' }}> · {it.standard_labor_hours}h</span>}
                 {it.recommended_part_reference && <span style={{ color: '#6b7280' }}> · part ref {it.recommended_part_reference}</span>}
               </div>
@@ -490,7 +491,7 @@ function PackageItemsCheckboxCard({
                     : toggle(editedIds, setEditedIds, g.id)
                 }
               />
-              {g.name}
+              {componentGroupLabel(g)}
             </label>
           );
         })}
@@ -549,7 +550,7 @@ function AddItemModal({
           <option value="">None</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
-              {g.name}
+              {componentGroupLabel(g)}
             </option>
           ))}
         </select>

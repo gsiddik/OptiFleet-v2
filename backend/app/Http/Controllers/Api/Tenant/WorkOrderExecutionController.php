@@ -48,7 +48,7 @@ class WorkOrderExecutionController extends Controller
     {
         $this->authorizeScope($workOrder);
         $validated = $request->validate([
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'severity' => ['required', 'in:INFO,LOW,MEDIUM,HIGH,CRITICAL'],
             'description' => ['required', 'string'],
         ]);
@@ -120,7 +120,7 @@ class WorkOrderExecutionController extends Controller
     {
         $this->authorizeScope($workOrder);
         $validated = $request->validate([
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'service_item' => ['nullable', 'string', 'max:255'],
             'description' => ['required', 'string'],
             'estimated_hours' => ['nullable', 'numeric', 'min:0'],

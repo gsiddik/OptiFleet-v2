@@ -44,6 +44,10 @@ class ConfigurationDefaultsSeeder extends Seeder
             // read-only, and extends this same configurable numbering engine rather
             // than inventing a separate mechanism.
             'product_item' => ['format' => 'ITM/{YYYY}/{SEQ:6}', 'doc_code' => 'ITM', 'reset_rule' => 'YEARLY'],
+            // Component Group improvement (owner-approved): Product SKU is server-generated as
+            // [Item Type code]-[Component Group abbreviation]-[sequence]; the sequence runs per
+            // prefix (DocumentNumberingService context partition) and never resets.
+            'product_sku' => ['format' => '{ITEMTYPE}-{CG}-{SEQ:6}', 'doc_code' => 'SKU', 'reset_rule' => 'NEVER'],
         ];
 
         foreach ($numbering as $code => $payload) {

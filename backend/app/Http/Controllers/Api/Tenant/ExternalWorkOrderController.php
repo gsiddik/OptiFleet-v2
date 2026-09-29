@@ -38,7 +38,7 @@ class ExternalWorkOrderController extends Controller
     {
         $this->authorizeScope($workOrder);
         $validated = $request->validate([
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'severity' => ['required', 'in:INFO,LOW,MEDIUM,HIGH,CRITICAL'],
             'description' => ['required', 'string'],
         ]);
@@ -51,7 +51,7 @@ class ExternalWorkOrderController extends Controller
         $this->authorizeScope($workOrder);
         abort_unless($finding->work_order_id === $workOrder->id, 404);
         $validated = $request->validate([
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule($finding->component_group_id)],
             'severity' => ['sometimes', 'in:INFO,LOW,MEDIUM,HIGH,CRITICAL'],
             'description' => ['sometimes', 'string'],
         ]);

@@ -127,7 +127,7 @@ class WorkerController extends Controller
     {
         $this->authorizeTenant($worker);
         $request->validate([
-            'component_group_id' => ['required', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['required', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'skill_level' => ['nullable', 'integer', 'min:1', 'max:5'],
             'notes' => ['nullable', 'string'],
         ]);

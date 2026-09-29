@@ -12,6 +12,9 @@ import { TenantListPage } from './pages/platform/tenants/TenantListPage';
 import { TenantDetailPage } from './pages/platform/tenants/TenantDetailPage';
 import { ModuleCatalogPage } from './pages/platform/modules/ModuleCatalogPage';
 import { ProductCategoriesPage as PlatformProductCategoriesPage } from './pages/platform/masterdata/ProductCategoriesPage';
+import { ComponentGroupsPage as PlatformComponentGroupsPage } from './pages/platform/masterdata/ComponentGroupsPage';
+import { ComponentCategoriesPage as PlatformComponentCategoriesPage } from './pages/platform/masterdata/ComponentCategoriesPage';
+import { ComponentSubcategoriesPage as PlatformComponentSubcategoriesPage } from './pages/platform/masterdata/ComponentSubcategoriesPage';
 import { ModuleDetailPage } from './pages/platform/modules/ModuleDetailPage';
 import { PlatformUsersPage } from './pages/platform/access/PlatformUsersPage';
 import { PlatformRolesPage } from './pages/platform/access/PlatformRolesPage';
@@ -34,6 +37,8 @@ import { WorkshopsPage } from './pages/tenant/organization/WorkshopsPage';
 import { WarehousesPage } from './pages/tenant/organization/WarehousesPage';
 import { VehicleCategoriesPage } from './pages/tenant/masterdata/VehicleCategoriesPage';
 import { ComponentGroupsPage } from './pages/tenant/masterdata/ComponentGroupsPage';
+import { ComponentCategoriesPage } from './pages/tenant/masterdata/ComponentCategoriesPage';
+import { ComponentSubcategoriesPage } from './pages/tenant/masterdata/ComponentSubcategoriesPage';
 import { ProductCategoriesPage } from './pages/tenant/masterdata/ProductCategoriesPage';
 import { UomsPage } from './pages/tenant/masterdata/UomsPage';
 import { VehicleBrandsPage } from './pages/tenant/masterdata/VehicleBrandsPage';
@@ -199,6 +204,30 @@ export default function App() {
               element={
                 <RequirePermission permission="product_category.view">
                   <PlatformProductCategoriesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="component-groups"
+              element={
+                <RequirePermission permission="component_group.view">
+                  <PlatformComponentGroupsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="component-categories"
+              element={
+                <RequirePermission permission="component_category.view">
+                  <PlatformComponentCategoriesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="component-subcategories"
+              element={
+                <RequirePermission permission="component_subcategory.view">
+                  <PlatformComponentSubcategoriesPage />
                 </RequirePermission>
               }
             />
@@ -562,6 +591,22 @@ export default function App() {
               element={
                 <RequirePermission permission="component_group.view">
                   <ComponentGroupsPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="master-data/component-categories"
+              element={
+                <RequirePermission permission="component_category.view">
+                  <ComponentCategoriesPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="master-data/component-subcategories"
+              element={
+                <RequirePermission permission="component_subcategory.view">
+                  <ComponentSubcategoriesPage />
                 </RequirePermission>
               }
             />

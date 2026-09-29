@@ -167,6 +167,8 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/app/master-data/vehicle-categories', label: 'Vehicle Categories', permission: 'vehicle_category.view', module: 'CORE' },
       { to: '/app/master-data/component-groups', label: 'Component Groups', permission: 'component_group.view', module: 'CORE' },
+      { to: '/app/master-data/component-categories', label: 'Component Categories', permission: 'component_category.view', module: 'CORE' },
+      { to: '/app/master-data/component-subcategories', label: 'Component Subcategories', permission: 'component_subcategory.view', module: 'CORE' },
       { to: '/app/master-data/product-categories', label: 'Product Categories', permission: 'product.view', module: 'INVENTORY' },
       { to: '/app/master-data/uoms', label: 'Units of Measure', permission: 'product.view', module: 'INVENTORY' },
       { to: '/app/master-data/vehicle-brands', label: 'Vehicle Brands', permission: 'vehicle_brand.view', module: 'CORE' },

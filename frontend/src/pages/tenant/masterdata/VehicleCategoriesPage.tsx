@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ComponentGroup, VehicleCategory } from '../../../types';
+import { componentGroupLabel } from '../../../utils/componentGroup';
 
 export function VehicleCategoriesPage() {
   const { hasPermission } = useAuth();
@@ -239,7 +240,7 @@ function ComponentGroupMappingModal({
           {allGroups.map((g) => (
             <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0' }}>
               <input type="checkbox" checked={selected.has(g.id)} onChange={() => toggle(g.id)} />
-              {g.name}
+              {componentGroupLabel(g)}
             </label>
           ))}
         </div>

@@ -146,11 +146,60 @@ export interface ComponentGroup {
   tenant_id: string | null;
   code: string;
   name: string;
+  /** Exactly 3 letters A-Z; null only on legacy tenant groups created before abbreviations existed. */
+  abbreviation: string | null;
   parent_id: string | null;
   sequence: number;
   description: string | null;
   is_system: boolean;
   status: 'ACTIVE' | 'INACTIVE';
+  /** Present on Component Group list/detail endpoints only. */
+  is_used?: boolean;
+  abbreviation_locked?: boolean;
+  is_deleted?: boolean;
+  updated_at?: string;
+  deleted_at?: string | null;
+}
+
+/** L2 Category / Assembly beneath a Component Group (mechanical taxonomy, not the commercial Product Category). */
+export interface ComponentCategory {
+  id: string;
+  tenant_id?: string | null;
+  component_group_id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  sequence?: number;
+  is_system?: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  deleted_at?: string | null;
+  updated_at?: string;
+  is_used?: boolean;
+  is_deleted?: boolean;
+  component_group?: ComponentGroup | null;
+}
+
+export type ComponentItemType = 'SPARE_PART' | 'CONSUMABLE' | 'TIRE' | 'RIM' | 'TOOL' | 'EQUIPMENT';
+
+/** L3 Subcategory / Component Family beneath a Category; empty `item_types` = unrestricted. */
+export interface ComponentSubcategory {
+  id: string;
+  tenant_id?: string | null;
+  component_category_id: string;
+  code: string;
+  name: string;
+  description?: string | null;
+  sequence?: number;
+  is_system?: boolean;
+  status: 'ACTIVE' | 'INACTIVE';
+  deleted_at?: string | null;
+  updated_at?: string;
+  is_used?: boolean;
+  is_deleted?: boolean;
+  item_types?: ComponentItemType[];
+  /** Product-form lookup only: whether the current Item Type may use it. */
+  allowed?: boolean;
+  category?: ComponentCategory | null;
 }
 
 export interface RoleItem {
@@ -545,6 +594,7 @@ export interface InspectionLogEntry {
 export interface MaintenancePackageItemRow {
   id: string;
   component_group_id: string | null;
+  component_group?: ComponentGroup | null;
   service_item: string;
   recommended_part_reference: string | null;
   standard_labor_hours: string | null;
@@ -1402,6 +1452,13 @@ export interface ProductItem {
   default_storage_bin?: WarehouseBinItem;
   component_groups?: ComponentGroup[];
   compatibilities?: ProductCompatibilityItem[];
+  /** Mechanical classification (Component Group -> Category -> Subcategory); independent of `category` above. */
+  component_group_id?: string | null;
+  component_category_id?: string | null;
+  component_subcategory_id?: string | null;
+  component_group?: ComponentGroup | null;
+  component_category?: ComponentCategory | null;
+  component_subcategory?: ComponentSubcategory | null;
   sparepart_spec?: ProductSparepartSpecItem;
   consumable_spec?: ProductConsumableSpecItem;
   rim_spec?: ProductRimSpecItem;

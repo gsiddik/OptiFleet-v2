@@ -19,7 +19,7 @@ class ProductTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-BRK-01', 'name' => 'Brake Pad Set',
+            ...$this->componentClassification(), 'name' => 'Brake Pad Set',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
             'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false,
@@ -50,7 +50,7 @@ class ProductTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-BRK-02', 'name' => 'Brake Pad Set',
+            ...$this->componentClassification(), 'name' => 'Brake Pad Set',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
             'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false,
@@ -87,7 +87,7 @@ class ProductTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, ['product.create']);
 
         $this->postJson('/api/v1/app/products', [
-            'sku' => 'SKU-NOBIN-01', 'name' => 'No Bin Item',
+            ...$this->componentClassification(), 'name' => 'No Bin Item',
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
             'brand' => 'Bosch', 'track_serial_number' => false,
             'spec' => [

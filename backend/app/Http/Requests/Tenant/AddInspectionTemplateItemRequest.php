@@ -14,7 +14,7 @@ class AddInspectionTemplateItemRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'component_group_id' => ['nullable', 'uuid', 'exists:component_groups,id'],
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'item_text' => ['required', 'string', 'max:255'],
             'input_type' => ['required', 'in:CHECKBOX,PASS_FAIL,TEXT,NUMBER,SELECT,PHOTO'],
             'options' => ['nullable', 'array'],

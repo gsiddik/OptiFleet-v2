@@ -8,6 +8,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ComponentAssetItem, VehicleItem } from '../../../types';
+import { componentGroupLabel } from '../../../utils/componentGroup';
 
 export function ComponentAssetDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -108,7 +109,7 @@ export function ComponentAssetDetailPage() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13 }}>
-          <strong>Product:</strong> {asset.product?.name ?? '—'} &nbsp; <strong>Group:</strong> {asset.component_group?.name ?? '—'}
+          <strong>Product:</strong> {asset.product?.name ?? '—'} &nbsp; <strong>Group:</strong> {asset.component_group ? componentGroupLabel(asset.component_group) : '—'}
         </p>
         <p style={{ fontSize: 13 }}>
           <strong>Vehicle:</strong> {asset.current_vehicle?.registration_number ?? '—'}

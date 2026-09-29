@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
+import { ComponentClassificationFields } from '../../../components/masterdata/ComponentClassificationFields';
+import { CATEGORY_REQUIRED_ITEM_TYPES, classificationPayload, type ClassificationValue } from '../../../utils/componentClassification';
 import {
   ConsumableFields,
   EquipmentFields,
@@ -91,6 +93,12 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
   const [lengthMm, setLengthMm] = useState(product.length_mm ?? '');
   const [widthMm, setWidthMm] = useState(product.width_mm ?? '');
   const [heightMm, setHeightMm] = useState(product.height_mm ?? '');
+  const [classification, setClassification] = useState<ClassificationValue>({
+    componentGroupId: product.component_group_id ?? '',
+    componentGroupAbbreviation: product.component_group?.abbreviation ?? null,
+    componentCategoryId: product.component_category_id ?? '',
+    componentSubcategoryId: product.component_subcategory_id ?? '',
+  });
   const [locationHydrated, setLocationHydrated] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -262,6 +270,9 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         track_batch: itemType === 'CONSUMABLE' ? trackBatch : undefined,
         reference_tread_depth_mm: itemType === 'TIRE' ? referenceTreadDepthMm || null : undefined,
         spec: SPEC_RELATION_KEY[itemType] ? spec : undefined,
+        // Unchanged values (even if since retired) are accepted as-is; only a changed
+        // classification is re-validated. The SKU is never affected.
+        ...classificationPayload(classification),
       });
       onSaved();
     } catch (err) {
@@ -307,6 +318,14 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
           </select>
         </FormField>
       )}
+      <ComponentClassificationFields
+        itemType={itemType}
+        value={classification}
+        onChange={setClassification}
+        errors={errors}
+        current={{ group: product.component_group, category: product.component_category, subcategory: product.component_subcategory }}
+        requireCategory={CATEGORY_REQUIRED_ITEM_TYPES.includes(itemType) && !!product.component_category_id}
+      />
       <FormField label="Description" errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>

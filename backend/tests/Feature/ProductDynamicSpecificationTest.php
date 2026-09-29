@@ -44,7 +44,7 @@ class ProductDynamicSpecificationTest extends TestCase
     private function base(string $productType, array $overrides = []): array
     {
         return array_merge([
-            'sku' => 'SKU-'.Str::random(8), 'name' => 'Test Item',
+            ...$this->componentClassification(), 'name' => 'Test Item',
             'product_category_id' => $this->makeProductCategory()->id,
             'product_type' => $productType,
             'uom_id' => $this->makeUom()->id,

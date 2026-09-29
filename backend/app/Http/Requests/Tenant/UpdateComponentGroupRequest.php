@@ -2,12 +2,15 @@
 
 namespace App\Http\Requests\Tenant;
 
-use App\Support\TenantContext;
+use App\Domain\MasterData\Models\ComponentGroup;
+use App\Http\Requests\Concerns\ValidatesComponentGroupAbbreviation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdateComponentGroupRequest extends FormRequest
 {
+    use ValidatesComponentGroupAbbreviation;
+
     public function authorize(): bool
     {
         return true;
@@ -15,11 +18,14 @@ class UpdateComponentGroupRequest extends FormRequest
 
     public function rules(): array
     {
-        $tenantId = app(TenantContext::class)->tenantId();
+        /** @var ComponentGroup|null $group */
+        $group = $this->route('componentGroup');
 
         return [
+            // Code stays immutable after creation — it is the stable machine identifier.
             'name' => ['sometimes', 'string', 'max:255'],
-            'parent_id' => ['nullable', 'uuid', Rule::exists('component_groups', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
+            'abbreviation' => $this->abbreviationRules(required: false),
+            'parent_id' => ['nullable', 'uuid', Rule::notIn([$group?->id]), ComponentGroup::selectableRule($group?->parent_id)],
             'sequence' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],

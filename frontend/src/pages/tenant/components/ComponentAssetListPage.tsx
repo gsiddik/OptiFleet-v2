@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ComponentAssetItem, ComponentGroup, ProductItem } from '../../../types';
+import { componentGroupLabel } from '../../../utils/componentGroup';
 
 const STATUSES = ['', 'IN_STOCK', 'INSTALLED', 'ACTIVE', 'FAILED', 'REMOVED', 'UNDER_REPAIR', 'RECONDITIONED', 'SCRAPPED'];
 
@@ -24,7 +25,7 @@ export function ComponentAssetListPage() {
   const columns: Column<ComponentAssetItem>[] = [
     { key: 'serial', header: 'Serial / Asset #', render: (c) => <Link to={`/app/component-assets/${c.id}`}>{c.serial_number ?? c.asset_number ?? c.id}</Link> },
     { key: 'product', header: 'Product', render: (c) => c.product?.name ?? '—' },
-    { key: 'group', header: 'Component Group', render: (c) => c.component_group?.name ?? '—' },
+    { key: 'group', header: 'Component Group', render: (c) => (c.component_group ? componentGroupLabel(c.component_group) : '—') },
     { key: 'vehicle', header: 'Vehicle', render: (c) => c.current_vehicle?.registration_number ?? '—' },
     { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.current_status} /> },
   ];
@@ -108,7 +109,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
           <option value="">Select…</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
-              {g.name}
+              {componentGroupLabel(g)}
             </option>
           ))}
         </select>

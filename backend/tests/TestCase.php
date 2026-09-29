@@ -294,6 +294,27 @@ abstract class TestCase extends BaseTestCase
         ], $overrides));
     }
 
+    /**
+     * A fresh platform Component Group (unique 3-letter abbreviation) + Category, as
+     * the mandatory Product classification payload (Sparepart/Consumable/Tire/Rim).
+     * The SKU is then server-generated as e.g. SPR-QAB-000001.
+     *
+     * @return array{component_group_id: string, component_category_id: string}
+     */
+    protected function componentClassification(): array
+    {
+        static $counter = 0;
+        $n = $counter++ % 676;
+        $abbreviation = 'Q'.chr(65 + intdiv($n, 26)).chr(65 + $n % 26);
+        $group = $this->makeComponentGroup(['abbreviation' => $abbreviation, 'name' => "Test Group {$abbreviation}"]);
+        $category = \App\Domain\MasterData\Models\ComponentCategory::query()->create([
+            'tenant_id' => null, 'component_group_id' => $group->id, 'code' => 'TEST_CATEGORY',
+            'name' => 'Test Category', 'is_system' => true, 'status' => 'ACTIVE',
+        ]);
+
+        return ['component_group_id' => $group->id, 'component_category_id' => $category->id];
+    }
+
     protected function makeVehicle(Tenant $tenant, \App\Domain\Organization\Models\Branch $branch, \App\Domain\MasterData\Models\VehicleCategory $category, array $overrides = []): \App\Domain\Vehicle\Models\Vehicle
     {
         return \App\Domain\Vehicle\Models\Vehicle::query()->create(array_merge([

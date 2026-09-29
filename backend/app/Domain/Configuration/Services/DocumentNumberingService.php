@@ -28,9 +28,17 @@ class DocumentNumberingService
     ) {}
 
     /**
+     * `$context` supplies caller-owned tokens (e.g. ITEMTYPE / CG for product_sku).
+     * When given, the counter is additionally partitioned by the rendered prefix
+     * (the number with its sequence masked), so every distinct prefix — e.g.
+     * SPR-BRK vs CON-LUB — runs its own line and two prefixes can never collide,
+     * whatever format a tenant later publishes. Without `$context` the sequence
+     * key is exactly what it always was (existing document types are unchanged).
+     *
+     * @param  array<string, string>  $context
      * @return array{document_number:string, configuration_version_id:string}
      */
-    public function generate(string $documentType, string $tenantId, ?string $branchId = null, ?string $workshopId = null, ?string $warehouseId = null): array
+    public function generate(string $documentType, string $tenantId, ?string $branchId = null, ?string $workshopId = null, ?string $warehouseId = null, array $context = []): array
     {
         $version = $this->resolver->resolve('NUMBERING', $documentType, $tenantId, $branchId, $workshopId, $warehouseId);
         if (! $version) {
@@ -53,11 +61,14 @@ class DocumentNumberingService
         // (no prior history), starts a fresh count.
         $periodBucket = $this->periodBucket($payload['reset_rule'] ?? 'NEVER');
         $sequenceKey = "docnum:{$version->configuration_set_id}:{$scopeResourceId}:{$periodBucket}";
+        if ($context !== []) {
+            $sequenceKey .= ':'.$this->format($payload, $documentType, $tenantId, $branchId, $workshopId, $warehouseId, null, $context);
+        }
         $startAt = (int) ($payload['sequence_start'] ?? 1);
 
         $seq = $this->sequences->next($sequenceKey, 0, $startAt);
 
-        $number = $this->format($payload, $documentType, $tenantId, $branchId, $workshopId, $warehouseId, $seq);
+        $number = $this->format($payload, $documentType, $tenantId, $branchId, $workshopId, $warehouseId, $seq, $context);
 
         return ['document_number' => $number, 'configuration_version_id' => $version->id];
     }
@@ -71,7 +82,8 @@ class DocumentNumberingService
         return $this->format($payload, $documentType, $tenantId, $branchId, $workshopId, $warehouseId, max($sampleSequence, $startAt));
     }
 
-    private function format(array $payload, string $documentType, string $tenantId, ?string $branchId, ?string $workshopId, ?string $warehouseId, int $seq): string
+    /** `$seq` null renders the sequence as '#' (partition key for context-token formats). */
+    private function format(array $payload, string $documentType, string $tenantId, ?string $branchId, ?string $workshopId, ?string $warehouseId, ?int $seq, array $context = []): string
     {
         $now = now();
         $padding = (int) ($payload['sequence_padding'] ?? 6);
@@ -86,10 +98,15 @@ class DocumentNumberingService
             'YY' => $now->format('y'),
             'MM' => $now->format('m'),
             'DD' => $now->format('d'),
+            'ITEMTYPE' => $context['ITEMTYPE'] ?? '',
+            'CG' => $context['CG'] ?? '',
         ];
 
         $result = preg_replace_callback('/\{([A-Z]+)(:(\d+))?\}/', function ($m) use ($tokens, $seq, $padding) {
             if ($m[1] === 'SEQ') {
+                if ($seq === null) {
+                    return '#';
+                }
                 $pad = isset($m[3]) ? (int) $m[3] : $padding;
 
                 return str_pad((string) $seq, $pad, '0', STR_PAD_LEFT);
@@ -99,7 +116,15 @@ class DocumentNumberingService
         }, $payload['format']);
 
         // Collapse doubled separators left by an empty BRANCH/WORKSHOP/WAREHOUSE token (e.g. unscoped tenant).
-        return preg_replace('#/{2,}#', '/', trim($result, '/'));
+        $result = preg_replace('#/{2,}#', '/', trim($result, '/'));
+
+        // Context formats (product_sku) may legitimately leave a token empty — e.g. an
+        // unclassified Tool has no Component Group: "TOL-{CG}-000001" -> "TOL-000001".
+        if ($context !== []) {
+            $result = trim(preg_replace('/([-_.\/])\1+/', '$1', $result), '-_./');
+        }
+
+        return $result;
     }
 
     private function periodBucket(string $resetRule): string
