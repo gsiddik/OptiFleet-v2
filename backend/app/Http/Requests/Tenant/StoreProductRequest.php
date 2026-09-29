@@ -59,6 +59,11 @@ class StoreProductRequest extends FormRequest
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
             // Phase F / BD-3: reference tread depth for TIRE products — the "KTN" source for scoring.
             'reference_tread_depth_mm' => ['nullable', 'numeric', 'min:0.01'],
+            // Mechanical classification (optional; Tools/Equipment typically have none).
+            // Hierarchy, availability and Item Type applicability: ComponentClassificationService.
+            'component_group_id' => ['nullable', 'uuid'],
+            'component_category_id' => ['nullable', 'uuid'],
+            'component_subcategory_id' => ['nullable', 'uuid'],
         ];
     }
 }

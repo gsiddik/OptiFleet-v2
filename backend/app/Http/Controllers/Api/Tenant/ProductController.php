@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\Configuration\Services\DocumentNumberingService;
+use App\Domain\MasterData\Services\ComponentClassificationService;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\ProductCompatibility;
@@ -30,23 +31,31 @@ class ProductController extends Controller
         'EQUIPMENT' => 'equipmentSpec.equipmentType',
     ];
 
+    /** Mechanical classification, trimmed to what list/detail display needs; resolves soft-deleted rows. */
+    private const CLASSIFICATION_RELATIONS = [
+        'componentGroup:id,code,name,abbreviation,status,deleted_at',
+        'componentCategory:id,component_group_id,code,name,status,deleted_at',
+        'componentSubcategory:id,component_category_id,code,name,status,deleted_at',
+    ];
+
     public function __construct(
         private readonly ProductCompatibilityService $compatibility,
         private readonly DocumentNumberingService $numbers,
         private readonly ProductSpecificationService $specs,
         private readonly ProductConsumableSdsService $sds,
         private readonly ProductImageService $images,
+        private readonly ComponentClassificationService $classification,
         private readonly TenantContext $context,
     ) {}
 
     public function index(Request $request)
     {
-        $query = Product::query()->with(['category', 'uom', 'compatibilities']);
+        $query = Product::query()->with(['category', 'uom', 'compatibilities', ...self::CLASSIFICATION_RELATIONS]);
 
         if ($search = $request->string('search')->trim()->value()) {
             $query->where(fn ($q) => $q->where('name', 'ilike', "%{$search}%")->orWhere('sku', 'ilike', "%{$search}%")->orWhere('code', 'ilike', "%{$search}%"));
         }
-        foreach (['product_type', 'status', 'product_category_id'] as $filter) {
+        foreach (['product_type', 'status', 'product_category_id', 'component_group_id', 'component_category_id', 'component_subcategory_id'] as $filter) {
             if ($value = $request->string($filter)->value()) {
                 $query->where($filter, $value);
             }
@@ -67,6 +76,10 @@ class ProductController extends Controller
                 throw ValidationException::withMessages(['product_category_id' => 'The selected category does not apply to this Item Type.']);
             }
         }
+
+        // Component Group -> Category -> Subcategory: hierarchy, effective availability and
+        // Item Type applicability. Never feeds the SKU (still supplied as-is).
+        $validated = array_merge($validated, $this->classification->resolveProductClassification($productType, $validated));
 
         // Validated BEFORE the numbering sequence is touched, so an invalid
         // spec submission never burns an Item Code.
@@ -101,7 +114,7 @@ class ProductController extends Controller
     {
         $this->authorizeVisible($product);
 
-        $relations = ['category', 'uom', 'defaultStorageBin', 'componentGroups', 'compatibilities.componentGroup', 'compatibilities.vehicleCategory'];
+        $relations = ['category', 'uom', 'defaultStorageBin', 'componentGroups', 'compatibilities.componentGroup', 'compatibilities.vehicleCategory', ...self::CLASSIFICATION_RELATIONS];
         if ($relation = self::SPEC_RELATIONS[$product->product_type] ?? null) {
             $relations[] = $relation;
         }
@@ -154,7 +167,14 @@ class ProductController extends Controller
             'track_batch' => ['sometimes', 'boolean'],
             'status' => ['sometimes', 'in:ACTIVE,INACTIVE'],
             'reference_tread_depth_mm' => ['sometimes', 'nullable', 'numeric', 'min:0.01'],
+            // Mechanical classification: only validated when actually changed, so an
+            // untouched classification that has since been retired never blocks a save.
+            'component_group_id' => ['sometimes', 'nullable', 'uuid'],
+            'component_category_id' => ['sometimes', 'nullable', 'uuid'],
+            'component_subcategory_id' => ['sometimes', 'nullable', 'uuid'],
         ]);
+
+        $validated = array_merge($validated, $this->classification->resolveProductClassification($product->product_type, $validated, $product));
 
         if (! empty($validated['product_category_id'])) {
             $category = ProductCategory::query()->find($validated['product_category_id']);

@@ -19,7 +19,9 @@ use App\Http\Controllers\Api\Platform\PaymentController;
 use App\Http\Controllers\Api\Platform\PermissionController;
 use App\Http\Controllers\Api\Platform\PlatformUserController;
 use App\Http\Controllers\Api\Platform\PricingController;
+use App\Http\Controllers\Api\Platform\ComponentCategoryController as PlatformComponentCategoryController;
 use App\Http\Controllers\Api\Platform\ComponentGroupController as PlatformComponentGroupController;
+use App\Http\Controllers\Api\Platform\ComponentSubcategoryController as PlatformComponentSubcategoryController;
 use App\Http\Controllers\Api\Platform\ProductCategoryController;
 use App\Http\Controllers\Api\Platform\RoleController;
 use App\Http\Controllers\Api\Platform\SubscriptionController;
@@ -75,6 +77,18 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::put('/component-groups/{componentGroup}', [PlatformComponentGroupController::class, 'update'])->middleware('permission:component_group.update');
     Route::delete('/component-groups/{componentGroup}', [PlatformComponentGroupController::class, 'destroy'])->middleware('permission:component_group.delete');
     Route::post('/component-groups/{componentGroup}/restore', [PlatformComponentGroupController::class, 'restore'])->middleware('permission:component_group.delete')->withTrashed();
+    Route::get('/component-categories', [PlatformComponentCategoryController::class, 'index'])->middleware('permission:component_category.view');
+    Route::post('/component-categories', [PlatformComponentCategoryController::class, 'store'])->middleware('permission:component_category.create');
+    Route::get('/component-categories/{componentCategory}', [PlatformComponentCategoryController::class, 'show'])->middleware('permission:component_category.view');
+    Route::put('/component-categories/{componentCategory}', [PlatformComponentCategoryController::class, 'update'])->middleware('permission:component_category.update');
+    Route::delete('/component-categories/{componentCategory}', [PlatformComponentCategoryController::class, 'destroy'])->middleware('permission:component_category.delete');
+    Route::post('/component-categories/{componentCategory}/restore', [PlatformComponentCategoryController::class, 'restore'])->middleware('permission:component_category.delete')->withTrashed();
+    Route::get('/component-subcategories', [PlatformComponentSubcategoryController::class, 'index'])->middleware('permission:component_subcategory.view');
+    Route::post('/component-subcategories', [PlatformComponentSubcategoryController::class, 'store'])->middleware('permission:component_subcategory.create');
+    Route::get('/component-subcategories/{componentSubcategory}', [PlatformComponentSubcategoryController::class, 'show'])->middleware('permission:component_subcategory.view');
+    Route::put('/component-subcategories/{componentSubcategory}', [PlatformComponentSubcategoryController::class, 'update'])->middleware('permission:component_subcategory.update');
+    Route::delete('/component-subcategories/{componentSubcategory}', [PlatformComponentSubcategoryController::class, 'destroy'])->middleware('permission:component_subcategory.delete');
+    Route::post('/component-subcategories/{componentSubcategory}/restore', [PlatformComponentSubcategoryController::class, 'restore'])->middleware('permission:component_subcategory.delete')->withTrashed();
 
     Route::get('/roles', [RoleController::class, 'index'])->middleware('permission:role.view');
     Route::post('/roles', [RoleController::class, 'store'])->middleware('permission:role.create');

@@ -37,6 +37,9 @@ class PermissionSeeder extends Seeder
             // baseline (tenant_id NULL). Same names as the tenant set below,
             // distinct rows by scope (like user/role/audit).
             'component_group' => ['view', 'create', 'update', 'delete'],
+            // Component Classification Master (platform baseline taxonomy).
+            'component_category' => ['view', 'create', 'update', 'delete'],
+            'component_subcategory' => ['view', 'create', 'update', 'delete'],
         ];
 
         $tenantOnly = [
@@ -50,6 +53,11 @@ class PermissionSeeder extends Seeder
             // improvement (granted to every role holding 'update' by migration
             // 2026_09_29_000004, so no existing user loses the ability).
             'component_group' => ['view', 'create', 'update', 'delete', 'map'],
+            // Component Classification Master (Category / Subcategory); granted by
+            // migration 2026_09_29_000007 to every role holding the matching
+            // component_group action.
+            'component_category' => ['view', 'create', 'update', 'delete'],
+            'component_subcategory' => ['view', 'create', 'update', 'delete'],
 
             // Phase 3: Core VMS Operations (Section 47)
             'vehicle' => ['view', 'create', 'update', 'assign', 'transfer', 'status.update'],
