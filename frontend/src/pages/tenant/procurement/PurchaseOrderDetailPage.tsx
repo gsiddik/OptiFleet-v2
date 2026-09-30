@@ -8,6 +8,9 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PurchaseOrderItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'purchase_order.create', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'purchase_order.create' }],
@@ -136,8 +139,8 @@ export function PurchaseOrderDetailPage() {
           {po.delivery_warehouse?.name ?? po.delivery_warehouse_id}
         </p>
         <p style={{ fontSize: 13 }}>
-          <strong>Subtotal:</strong> {po.subtotal} &nbsp; <strong>Tax:</strong> {po.tax_total} &nbsp; <strong>Freight:</strong> {po.freight_cost} &nbsp;
-          <strong>Total:</strong> {po.total}
+          <strong>Subtotal:</strong> {formatMoney(po.subtotal)} &nbsp; <strong>Tax:</strong> {formatMoney(po.tax_total)} &nbsp; <strong>Freight:</strong> {formatMoney(po.freight_cost)} &nbsp;
+          <strong>Total:</strong> {formatMoney(po.total)}
         </p>
       </div>
 
@@ -175,11 +178,10 @@ export function PurchaseOrderDetailPage() {
           return (
             <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
               <div style={{ fontSize: 13, marginBottom: 6 }}>
-                {item.product?.name ?? item.product_id} — ordered {item.quantity_ordered} @ {item.unit_price} — received {item.quantity_received} — remaining {remaining}
+                {item.product?.name ?? item.product_id} — ordered {formatQty(item.quantity_ordered)} @ {formatMoney(item.unit_price)} — received {formatQty(item.quantity_received)} — remaining {remaining}
               </div>
               {canReceive && remaining > 0 && (
-                <input
-                  type="number" step="0.0001" placeholder="Accept quantity" value={accepted[item.id] ?? ''}
+                <NumericInput step="0.0001" placeholder="Accept quantity" value={accepted[item.id] ?? ''}
                   onChange={(e) => setAccepted((a) => ({ ...a, [item.id]: e.target.value }))}
                   style={{ ...inputStyle, width: 140 }}
                 />

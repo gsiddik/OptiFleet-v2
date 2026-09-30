@@ -4,6 +4,7 @@ namespace App\Domain\Configuration\Services;
 
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Procurement\Models\PurchaseOrder;
+use App\Domain\Shared\Support\DisplayFormat;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use App\Domain\WorkOrder\Models\WorkOrderExternalService;
@@ -115,10 +116,10 @@ class DocumentTemplateContextBuilder
                 'status' => $purchaseOrder->status,
                 'order_date' => optional($purchaseOrder->order_date)->toDateString(),
                 'expected_delivery_date' => optional($purchaseOrder->expected_delivery_date)->toDateString(),
-                'subtotal' => (string) $purchaseOrder->subtotal,
-                'tax_total' => (string) $purchaseOrder->tax_total,
-                'freight_cost' => (string) $purchaseOrder->freight_cost,
-                'total' => (string) $purchaseOrder->total,
+                'subtotal' => DisplayFormat::money($purchaseOrder->subtotal),
+                'tax_total' => DisplayFormat::money($purchaseOrder->tax_total),
+                'freight_cost' => DisplayFormat::money($purchaseOrder->freight_cost),
+                'total' => DisplayFormat::money($purchaseOrder->total),
             ],
             'partner' => [
                 'name' => $purchaseOrder->partner?->name,
@@ -129,11 +130,11 @@ class DocumentTemplateContextBuilder
             'delivery_warehouse' => ['name' => $purchaseOrder->deliveryWarehouse?->name],
             'items' => $purchaseOrder->items->map(fn ($item) => [
                 'product_name' => $item->product?->name,
-                'quantity_ordered' => (string) $item->quantity_ordered,
-                'unit_price' => (string) $item->unit_price,
+                'quantity_ordered' => DisplayFormat::quantity($item->quantity_ordered),
+                'unit_price' => DisplayFormat::money($item->unit_price),
                 'discount_percent' => (string) $item->discount_percent,
                 'tax_percent' => (string) $item->tax_percent,
-                'line_total' => (string) $item->line_total,
+                'line_total' => DisplayFormat::money($item->line_total),
             ])->all(),
         ];
     }
@@ -162,7 +163,7 @@ class DocumentTemplateContextBuilder
                 'condition_notes' => $service->condition_notes,
                 'priority' => $service->priority,
                 'status' => $service->status,
-                'cost' => (string) $service->cost,
+                'cost' => DisplayFormat::money($service->cost),
                 'requested_at' => optional($service->requested_at)->toDateTimeString(),
                 'completed_at' => optional($service->completed_at)->toDateTimeString(),
             ],
@@ -204,10 +205,10 @@ class DocumentTemplateContextBuilder
                 'invoice_date' => optional($invoice->invoice_date)->toDateString(),
                 'due_date' => optional($invoice->due_date)->toDateString(),
                 'currency' => $invoice->currency,
-                'subtotal' => (string) $invoice->subtotal,
-                'tax_total' => (string) $invoice->tax_total,
-                'discount_total' => (string) $invoice->discount_total,
-                'total_amount' => (string) $invoice->total_amount,
+                'subtotal' => DisplayFormat::money($invoice->subtotal),
+                'tax_total' => DisplayFormat::money($invoice->tax_total),
+                'discount_total' => DisplayFormat::money($invoice->discount_total),
+                'total_amount' => DisplayFormat::money($invoice->total_amount),
                 'status' => $invoice->status,
                 'notes' => $invoice->notes,
                 'reconciliation_note' => $invoice->reconciliation_note,
@@ -222,9 +223,9 @@ class DocumentTemplateContextBuilder
             'maintenance_memo' => ['reference_number' => $memo?->reference_number, 'description' => $memo?->description],
             'items' => collect($invoice->line_items ?? [])->map(fn ($item) => [
                 'description' => $item['description'] ?? '',
-                'quantity' => (string) ($item['quantity'] ?? ''),
-                'unit_price' => (string) ($item['unit_price'] ?? ''),
-                'line_total' => (string) ($item['line_total'] ?? ''),
+                'quantity' => DisplayFormat::quantity($item['quantity'] ?? null),
+                'unit_price' => DisplayFormat::money($item['unit_price'] ?? null),
+                'line_total' => DisplayFormat::money($item['line_total'] ?? null),
             ])->all(),
         ];
     }

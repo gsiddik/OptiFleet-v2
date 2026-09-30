@@ -9,6 +9,8 @@ import { inputStyle } from '../../../components/FormField';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ExternalWorkOrderInvoiceItem, InspectionLogEntry, PartnerItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 const STATUSES = ['', 'NEW_EXTERNAL_WO', 'DELIVERED', 'IN_PROGRESS', 'CANCELLED', 'BILLED', 'PAID'];
 
@@ -431,7 +433,7 @@ export function ExternalWorkOrderInvoiceListPage() {
           </label>
           <label style={{ fontSize: 12 }}>
             Invoice Amount
-            <input type="number" step="0.01" min="0.01" value={vendorInvoiceAmount} onChange={(e) => setVendorInvoiceAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+            <NumericInput step="0.01" min="0.01" value={vendorInvoiceAmount} onChange={(e) => setVendorInvoiceAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
           </label>
           <label style={{ fontSize: 12 }}>
             Payment Term
@@ -456,7 +458,7 @@ export function ExternalWorkOrderInvoiceListPage() {
         {billFor && (
           <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div>Invoice Date: {billFor.vendor_invoice_date ?? '—'}</div>
-            <div>Invoice Amount: {billFor.vendor_invoice_amount ?? '—'}</div>
+            <div>Invoice Amount: {formatMoney(billFor.vendor_invoice_amount)}</div>
             <div>Payment Term: {billFor.payment_term ?? '—'}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${billFor.id}/completed-work-order`, setActionError)}>
@@ -472,7 +474,7 @@ export function ExternalWorkOrderInvoiceListPage() {
 
       <Modal open={settlingFor !== null} title="Settlement" onClose={() => setSettlingFor(null)}>
         <p style={{ fontSize: 13 }}>
-          Paid amount must exactly match the vendor invoice amount ({settlingFor?.vendor_invoice_amount ?? '—'}) — partial settlement is not supported.
+          Paid amount must exactly match the vendor invoice amount ({formatMoney(settlingFor?.vendor_invoice_amount)}) — partial settlement is not supported.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <label style={{ fontSize: 12 }}>
@@ -481,7 +483,7 @@ export function ExternalWorkOrderInvoiceListPage() {
           </label>
           <label style={{ fontSize: 12 }}>
             Paid Amount
-            <input type="number" step="0.01" min="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+            <NumericInput step="0.01" min="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
           </label>
           <label style={{ fontSize: 12 }}>
             Payment Proof (JPG, PNG, or PDF)
@@ -502,7 +504,7 @@ export function ExternalWorkOrderInvoiceListPage() {
         {settlementFor && (
           <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
             <div>Payment Date: {settlementFor.payment_date ?? '—'}</div>
-            <div>Paid Amount: {settlementFor.paid_amount ?? '—'}</div>
+            <div>Paid Amount: {formatMoney(settlementFor.paid_amount)}</div>
             <div style={{ marginTop: 8 }}>
               <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${settlementFor.id}/payment-proof`, setActionError)}>
                 Open Payment Proof

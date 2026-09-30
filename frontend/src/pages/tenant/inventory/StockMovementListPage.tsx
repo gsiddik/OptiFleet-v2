@@ -7,6 +7,8 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { Pagination } from '../../../components/Pagination';
 import { useApiList } from '../../../hooks/useApiList';
 import type { StockMovementItem, ProductItem, Warehouse } from '../../../types';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 const MOVEMENT_TYPES = [
   '', 'OPENING', 'RECEIPT', 'RESERVATION', 'RELEASE_RESERVATION', 'ISSUE', 'RETURN',
@@ -65,9 +67,9 @@ export function StockMovementListPage() {
     { key: 'warehouse', header: 'Warehouse', render: (m) => m.warehouse?.name ?? m.warehouse_id },
     { key: 'product', header: 'Product', render: (m) => m.product?.name ?? m.product_id },
     { key: 'type', header: 'Type', render: (m) => <StatusBadge status={m.movement_type} /> },
-    { key: 'quantity', header: 'Quantity', render: (m) => (BALANCE_WEIGHT[m.movement_type] === -1 ? '-' : BALANCE_WEIGHT[m.movement_type] === 1 ? '+' : '') + m.quantity },
+    { key: 'quantity', header: 'Quantity', render: (m) => (BALANCE_WEIGHT[m.movement_type] === -1 ? '-' : BALANCE_WEIGHT[m.movement_type] === 1 ? '+' : '') + formatQty(m.quantity) },
     ...(isDrilldown ? [{ key: 'balance', header: 'Running Balance', render: (m: StockMovementItem & { __balance: number }) => m.__balance.toFixed(4) } as Column<StockMovementItem & { __balance: number }>] : []),
-    { key: 'unit_cost', header: 'Unit Cost', render: (m) => m.unit_cost ?? '—' },
+    { key: 'unit_cost', header: 'Unit Cost', render: (m) => formatMoney(m.unit_cost) },
     { key: 'reason', header: 'Reason', render: (m) => m.reason ?? '—' },
   ];
 

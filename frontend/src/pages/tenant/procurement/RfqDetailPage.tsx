@@ -8,6 +8,9 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem, RfqItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 interface ComparisonRow {
   quotation_id: string;
@@ -120,7 +123,7 @@ export function RfqDetailPage() {
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
         {(rfq.items ?? []).map((item) => (
           <div key={item.id} style={{ fontSize: 13, padding: '4px 0' }}>
-            {item.product?.name ?? item.product_id} — qty {item.quantity}
+            {item.product?.name ?? item.product_id} — qty {formatQty(item.quantity)}
           </div>
         ))}
       </div>
@@ -156,7 +159,7 @@ export function RfqDetailPage() {
         {comparison.map((c) => (
           <div key={c.quotation_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             <span>
-              {c.partner.name} — total {c.total} — lead time {c.lead_time_days ?? '—'}d — <StatusBadge status={c.status} />
+              {c.partner.name} — total {formatMoney(c.total)} — lead time {c.lead_time_days ?? '—'}d — <StatusBadge status={c.status} />
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               {c.status === 'SUBMITTED' && hasPermission('quotation.select') && (
@@ -185,10 +188,10 @@ export function RfqDetailPage() {
               </select>
             </FormField>
             <FormField label="Unit Price (applies to all lines)" required>
-              <input type="number" step="0.01" value={quoteUnitPrice} onChange={(e) => setQuoteUnitPrice(e.target.value)} style={{ ...inputStyle, width: 130 }} />
+              <NumericInput step="0.01" value={quoteUnitPrice} onChange={(e) => setQuoteUnitPrice(e.target.value)} style={{ ...inputStyle, width: 130 }} />
             </FormField>
             <FormField label="Lead Time (days)">
-              <input type="number" value={quoteLeadTime} onChange={(e) => setQuoteLeadTime(e.target.value)} style={{ ...inputStyle, width: 110 }} />
+              <NumericInput value={quoteLeadTime} onChange={(e) => setQuoteLeadTime(e.target.value)} style={{ ...inputStyle, width: 110 }} />
             </FormField>
             <button className="btn-secondary" disabled={busy || !quotePartnerId || !quoteUnitPrice} onClick={submitQuotation} style={{ marginBottom: 14 }}>
               Record Quotation

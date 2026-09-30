@@ -8,6 +8,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InspectionItem, InspectionLogEntry } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 export function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -179,8 +180,7 @@ export function InspectionDetailPage() {
               )}
               {item.input_type === 'NUMBER' && (
                 editable ? (
-                  <input
-                    type="number"
+                  <NumericInput
                     style={{ ...inputStyle, width: 120 }}
                     onChange={(e) => setResults((prev) => ({ ...prev, [item.id]: { value_number: e.target.value } }))}
                   />

@@ -10,6 +10,8 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { InvoiceItem, PaymentItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 const TABS = ['', 'SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED', 'REVERSED'];
 const PAYMENT_METHODS = ['BANK_TRANSFER', 'VIRTUAL_ACCOUNT', 'CREDIT_CARD', 'E_WALLET', 'CASH', 'OTHER'];
@@ -24,7 +26,7 @@ export function AccountPaymentListPage() {
   const columns: Column<PaymentItem>[] = [
     { key: 'invoice', header: 'Invoice #', render: (p) => p.invoice?.invoice_number ?? '—' },
     { key: 'payment_date', header: 'Payment Date', render: (p) => p.payment_date },
-    { key: 'amount', header: 'Amount', render: (p) => Number(p.amount).toLocaleString() },
+    { key: 'amount', header: 'Amount', render: (p) => formatMoney(p.amount) },
     { key: 'method', header: 'Method', render: (p) => p.payment_method },
     { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
     { key: 'actions', header: '', render: (p) => <Link to={`/app/account/payments/${p.id}`}>View</Link> },
@@ -125,7 +127,7 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
           <option value="">Select an outstanding invoice…</option>
           {invoices.map((inv) => (
             <option key={inv.id} value={inv.id}>
-              {inv.invoice_number} — {inv.currency} {Number(inv.outstanding_amount).toLocaleString()} outstanding
+              {inv.invoice_number} — {inv.currency} {formatMoney(inv.outstanding_amount)} outstanding
             </option>
           ))}
         </select>
@@ -135,7 +137,7 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
           <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Amount" errors={errors.amount} required>
-          <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
+          <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Payment Method" errors={errors.payment_method} required>
           <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={inputStyle}>

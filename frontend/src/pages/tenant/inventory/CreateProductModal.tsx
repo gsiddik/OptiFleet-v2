@@ -22,6 +22,7 @@ import type {
   WarehouseRackItem,
   WarehouseZoneItem,
 } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 /**
  * Batch 14: the doc's Item Type dropdown is exactly these 6 values
@@ -490,7 +491,7 @@ function IntervalPair({
       {required && (
         <FormField label={`${label} Interval`} errors={errors[errorKey]} required>
           <div style={{ display: 'flex', gap: 6 }}>
-            <input type="number" min="1" value={value} onChange={(e) => onValueChange(e.target.value)} style={inputStyle} />
+            <NumericInput min="1" value={value} onChange={(e) => onValueChange(e.target.value)} style={inputStyle} />
             <select value={unit} onChange={(e) => onUnitChange(e.target.value)} style={inputStyle}>
               <option value="">Unit…</option>
               {INTERVAL_UNITS.map((u) => (
@@ -527,7 +528,7 @@ function NumberUnitField({
   return (
     <FormField label={label} errors={errors[errorKey]}>
       <div style={{ display: 'flex', gap: 6 }}>
-        <input type="number" min="0" value={value} onChange={(e) => onValueChange(e.target.value)} style={inputStyle} />
+        <NumericInput min="0" value={value} onChange={(e) => onValueChange(e.target.value)} style={inputStyle} />
         <select value={unit} onChange={(e) => onUnitChange(e.target.value)} style={inputStyle}>
           <option value="">Unit…</option>
           {INTERVAL_UNITS.map((u) => (
@@ -567,8 +568,8 @@ function CompatibilityRows({
             onChange={(brandId, modelId) => updateCompatRow(i, { vehicle_brand_id: brandId, vehicle_model_id: modelId })}
           />
           <input placeholder="Variant" value={row.variant} onChange={(e) => updateCompatRow(i, { variant: e.target.value })} style={inputStyle} />
-          <input placeholder="Year From" type="number" value={row.year_from} onChange={(e) => updateCompatRow(i, { year_from: e.target.value })} style={inputStyle} />
-          <input placeholder="Year To" type="number" value={row.year_to} onChange={(e) => updateCompatRow(i, { year_to: e.target.value })} style={inputStyle} />
+          <NumericInput placeholder="Year From" value={row.year_from} onChange={(e) => updateCompatRow(i, { year_from: e.target.value })} style={inputStyle} />
+          <NumericInput placeholder="Year To" value={row.year_to} onChange={(e) => updateCompatRow(i, { year_to: e.target.value })} style={inputStyle} />
           <input placeholder="Position" value={row.position} onChange={(e) => updateCompatRow(i, { position: e.target.value })} style={inputStyle} />
           <button className="btn-secondary" onClick={() => setCompatibilities(compatibilities.filter((_, idx) => idx !== i))} disabled={compatibilities.length === 1}>
             ×
@@ -666,7 +667,7 @@ export function SparepartFields({
         errors={errors}
       />
       <FormField label="Warranty Mileage (km)" errors={errors['spec.warranty_mileage_km']}>
-        <input type="number" min="0" value={(spec.warranty_mileage_km as string) ?? ''} onChange={(e) => setSpecField('warranty_mileage_km', e.target.value)} style={inputStyle} />
+        <NumericInput min="0" value={(spec.warranty_mileage_km as string) ?? ''} onChange={(e) => setSpecField('warranty_mileage_km', e.target.value)} style={inputStyle} />
       </FormField>
       <NumberUnitField
         label="Shelf Life"
@@ -722,8 +723,7 @@ export function ConsumableFields({
       </FormField>
       <FormField label="Package Size" errors={errors['spec.package_size_value']}>
         <div style={{ display: 'flex', gap: 6 }}>
-          <input
-            type="number"
+          <NumericInput
             step="0.001"
             placeholder="e.g. 20"
             value={(spec.package_size_value as string) ?? ''}
@@ -752,7 +752,7 @@ export function ConsumableFields({
       </FormField>
       {!!spec.purchase_uom_id && (
         <FormField label="Conversion to Base UOM" errors={errors['spec.conversion_to_base_uom']} required>
-          <input type="number" step="0.0001" value={(spec.conversion_to_base_uom as string) ?? ''} onChange={(e) => setSpecField('conversion_to_base_uom', e.target.value)} style={inputStyle} />
+          <NumericInput step="0.0001" value={(spec.conversion_to_base_uom as string) ?? ''} onChange={(e) => setSpecField('conversion_to_base_uom', e.target.value)} style={inputStyle} />
         </FormField>
       )}
       <FormField label="Issue UOM" errors={errors['spec.issue_uom_id']}>
@@ -773,7 +773,7 @@ export function ConsumableFields({
       {trackExpiry && (
         <FormField label="Shelf Life" errors={errors['spec.shelf_life_value']} required>
           <div style={{ display: 'flex', gap: 6 }}>
-            <input type="number" value={(spec.shelf_life_value as string) ?? ''} onChange={(e) => setSpecField('shelf_life_value', e.target.value)} style={inputStyle} />
+            <NumericInput value={(spec.shelf_life_value as string) ?? ''} onChange={(e) => setSpecField('shelf_life_value', e.target.value)} style={inputStyle} />
             <select value={(spec.shelf_life_unit as string) ?? ''} onChange={(e) => setSpecField('shelf_life_unit', e.target.value)} style={inputStyle}>
               <option value="">Unit…</option>
               {INTERVAL_UNITS.map((u) => (
@@ -843,28 +843,28 @@ export function RimFields({
         </select>
       </FormField>
       <FormField label="Diameter (inch)" errors={errors['spec.diameter_inch']} required>
-        <input type="number" step="0.01" value={(spec.diameter_inch as string) ?? ''} onChange={(e) => setSpecField('diameter_inch', e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={(spec.diameter_inch as string) ?? ''} onChange={(e) => setSpecField('diameter_inch', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Width (inch)" errors={errors['spec.width_inch']} required>
-        <input type="number" step="0.01" value={(spec.width_inch as string) ?? ''} onChange={(e) => setSpecField('width_inch', e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={(spec.width_inch as string) ?? ''} onChange={(e) => setSpecField('width_inch', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Bolt Holes" errors={errors['spec.bolt_holes']} required>
-        <input type="number" value={(spec.bolt_holes as string) ?? ''} onChange={(e) => setSpecField('bolt_holes', e.target.value)} style={inputStyle} />
+        <NumericInput value={(spec.bolt_holes as string) ?? ''} onChange={(e) => setSpecField('bolt_holes', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="PCD (mm)" errors={errors['spec.pcd_mm']} required>
-        <input type="number" step="0.01" value={(spec.pcd_mm as string) ?? ''} onChange={(e) => setSpecField('pcd_mm', e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={(spec.pcd_mm as string) ?? ''} onChange={(e) => setSpecField('pcd_mm', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Center Bore (mm)" errors={errors['spec.center_bore_mm']}>
-        <input type="number" step="0.01" value={(spec.center_bore_mm as string) ?? ''} onChange={(e) => setSpecField('center_bore_mm', e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={(spec.center_bore_mm as string) ?? ''} onChange={(e) => setSpecField('center_bore_mm', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Offset (mm)" errors={errors['spec.offset_mm']}>
-        <input type="number" step="0.01" value={(spec.offset_mm as string) ?? ''} onChange={(e) => setSpecField('offset_mm', e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={(spec.offset_mm as string) ?? ''} onChange={(e) => setSpecField('offset_mm', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Material" errors={errors['spec.material']}>
         <input value={(spec.material as string) ?? ''} onChange={(e) => setSpecField('material', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Maximum Load (kg)" errors={errors['spec.max_load_kg']}>
-        <input type="number" step="0.01" value={(spec.max_load_kg as string) ?? ''} onChange={(e) => setSpecField('max_load_kg', e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={(spec.max_load_kg as string) ?? ''} onChange={(e) => setSpecField('max_load_kg', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Compatible Tire Size" errors={errors['spec.compatible_tire_sizes']}>
         <input
@@ -921,10 +921,10 @@ export function TireFields({
         <input value={(spec.pattern_name as string) ?? ''} onChange={(e) => setSpecField('pattern_name', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Width (mm)" errors={errors['spec.width_mm']} required>
-        <input type="number" value={(spec.width_mm as string) ?? ''} onChange={(e) => setSpecField('width_mm', e.target.value)} style={inputStyle} />
+        <NumericInput value={(spec.width_mm as string) ?? ''} onChange={(e) => setSpecField('width_mm', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Aspect Ratio (%)" errors={errors['spec.aspect_ratio_percent']} required>
-        <input type="number" value={(spec.aspect_ratio_percent as string) ?? ''} onChange={(e) => setSpecField('aspect_ratio_percent', e.target.value)} style={inputStyle} />
+        <NumericInput value={(spec.aspect_ratio_percent as string) ?? ''} onChange={(e) => setSpecField('aspect_ratio_percent', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Construction Type" errors={errors['spec.construction_type']} required>
         <select value={(spec.construction_type as string) ?? ''} onChange={(e) => setSpecField('construction_type', e.target.value)} style={inputStyle}>
@@ -934,7 +934,7 @@ export function TireFields({
         </select>
       </FormField>
       <FormField label="Rim Diameter (inch)" errors={errors['spec.rim_diameter_inch']} required>
-        <input type="number" step="0.1" value={(spec.rim_diameter_inch as string) ?? ''} onChange={(e) => setSpecField('rim_diameter_inch', e.target.value)} style={inputStyle} />
+        <NumericInput step="0.1" value={(spec.rim_diameter_inch as string) ?? ''} onChange={(e) => setSpecField('rim_diameter_inch', e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Tire Type" errors={errors['spec.tire_type']} required>
         <select value={(spec.tire_type as string) ?? ''} onChange={(e) => setSpecField('tire_type', e.target.value)} style={inputStyle}>
@@ -964,8 +964,7 @@ export function TireFields({
         </select>
       </FormField>
       <FormField label="Reference Tread Depth (mm)" errors={errors.reference_tread_depth_mm}>
-        <input
-          type="number"
+        <NumericInput
           step="0.01"
           min="0.01"
           value={referenceTreadDepthMm}
@@ -1148,7 +1147,7 @@ export function EquipmentFields({
       </FormField>
       <FormField label="Capacity" errors={errors['spec.capacity_value']}>
         <div style={{ display: 'flex', gap: 6 }}>
-          <input type="number" step="0.01" value={(spec.capacity_value as string) ?? ''} onChange={(e) => setSpecField('capacity_value', e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={(spec.capacity_value as string) ?? ''} onChange={(e) => setSpecField('capacity_value', e.target.value)} style={inputStyle} />
           <select value={(spec.capacity_uom_id as string) ?? ''} onChange={(e) => setSpecField('capacity_uom_id', e.target.value || undefined)} style={inputStyle}>
             <option value="">UOM…</option>
             {uoms.map((u) => (
@@ -1171,7 +1170,7 @@ export function EquipmentFields({
       </FormField>
       <FormField label="Power Rating" errors={errors['spec.power_rating_value']}>
         <div style={{ display: 'flex', gap: 6 }}>
-          <input type="number" step="0.01" value={(spec.power_rating_value as string) ?? ''} onChange={(e) => setSpecField('power_rating_value', e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={(spec.power_rating_value as string) ?? ''} onChange={(e) => setSpecField('power_rating_value', e.target.value)} style={inputStyle} />
           <select value={(spec.power_rating_unit as string) ?? ''} onChange={(e) => setSpecField('power_rating_unit', e.target.value || undefined)} style={inputStyle}>
             <option value="">Unit…</option>
             <option value="KW">kW</option>
@@ -1180,7 +1179,7 @@ export function EquipmentFields({
         </div>
       </FormField>
       <FormField label="Voltage (V)" errors={errors['spec.voltage_v']}>
-        <input type="number" value={(spec.voltage_v as string) ?? ''} onChange={(e) => setSpecField('voltage_v', e.target.value)} style={inputStyle} />
+        <NumericInput value={(spec.voltage_v as string) ?? ''} onChange={(e) => setSpecField('voltage_v', e.target.value)} style={inputStyle} />
       </FormField>
       <IntervalPair
         label="Maintenance"

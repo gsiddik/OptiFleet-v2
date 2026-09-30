@@ -5,6 +5,7 @@ import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState } from '../../../components/States';
 import type { VendorQuotationItem, Warehouse } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 export function CreatePurchaseOrderFromQuotationPage() {
   const { quotationId } = useParams<{ quotationId: string }>();
@@ -46,7 +47,7 @@ export function CreatePurchaseOrderFromQuotationPage() {
       {quotation && (
         <div className="card" style={{ marginBottom: 16 }}>
           <p style={{ fontSize: 13 }}>
-            Vendor: <strong>{quotation.partner?.name}</strong> — Total: <strong>{quotation.total}</strong>
+            Vendor: <strong>{quotation.partner?.name}</strong> — Total: <strong>{formatMoney(quotation.total)}</strong>
           </p>
         </div>
       )}

@@ -79,8 +79,9 @@ class ProductReferenceDataSeeder extends Seeder
             ['code' => 'PCS', 'name' => 'Piece'],
             ['code' => 'SET', 'name' => 'Set'],
             ['code' => 'PAIR', 'name' => 'Pair'],
-            ['code' => 'LTR', 'name' => 'Liter'],
-            ['code' => 'KG', 'name' => 'Kilogram'],
+            // Measured units: quantities may be fractional (QuantityPolicy); counted units may not.
+            ['code' => 'LTR', 'name' => 'Liter', 'measure_type' => 'CAPACITY'],
+            ['code' => 'KG', 'name' => 'Kilogram', 'measure_type' => 'WEIGHT'],
         ];
 
         foreach ($uoms as $uom) {

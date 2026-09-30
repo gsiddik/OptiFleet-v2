@@ -8,6 +8,8 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PurchaseRequestItem, PurchaseRequestItemLine } from '../../../types';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 const LINE_STATUSES: PurchaseRequestItemLine['line_status'][] = ['PENDING', 'APPROVED', 'ON_HOLD', 'REJECTED'];
 
@@ -139,8 +141,8 @@ function ItemRow({
     <div style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>
-          {item.product?.name ?? item.product_id} — qty {item.requested_quantity}
-          {item.estimated_unit_price && ` @ est. ${item.estimated_unit_price}`}
+          {item.product?.name ?? item.product_id} — qty {formatQty(item.requested_quantity)}
+          {item.estimated_unit_price && ` @ est. ${formatMoney(item.estimated_unit_price)}`}
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <StatusBadge status={item.line_status} />

@@ -9,6 +9,7 @@ use App\Domain\Partner\Services\PartnerPerformanceService;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\Procurement\Models\VendorQuotation;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\Workflow\Models\WorkflowApprovalRequest;
 use App\Domain\Workflow\Services\WorkflowApprovalService;
 use App\Domain\Workflow\Services\WorkflowEngine;
@@ -95,7 +96,8 @@ class PurchaseOrderService
 
             $subtotal = BigDecimal::of('0');
             $taxTotal = BigDecimal::of('0');
-            foreach ($items as $line) {
+            foreach ($items as $i => $line) {
+                QuantityPolicy::assertValidForProductId($line['product_id'] ?? null, $line['quantity_ordered'] ?? null, "items.{$i}.quantity_ordered");
                 $qty = BigDecimal::of((string) $line['quantity_ordered']);
                 $unitPrice = BigDecimal::of((string) $line['unit_price']);
                 $discountPercent = BigDecimal::of((string) ($line['discount_percent'] ?? 0));

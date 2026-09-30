@@ -9,6 +9,8 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PartnerItem, VendorInvoiceReferenceItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 export function VendorInvoiceReferenceListPage() {
   const { hasPermission } = useAuth();
@@ -32,7 +34,7 @@ export function VendorInvoiceReferenceListPage() {
     { key: 'partner', header: 'Vendor', render: (v) => v.partner?.name ?? v.partner_id },
     { key: 'po', header: 'PO', render: (v) => v.purchase_order?.po_number ?? '—' },
     { key: 'date', header: 'Date', render: (v) => v.vendor_invoice_date ?? '—' },
-    { key: 'amount', header: 'Amount', render: (v) => v.amount ?? '—' },
+    { key: 'amount', header: 'Amount', render: (v) => formatMoney(v.amount) },
     { key: 'status', header: 'Status', render: (v) => <StatusBadge status={v.status} /> },
     {
       key: 'actions', header: '', render: (v) => hasPermission('goods_receipt.create') && v.status === 'RECEIVED' && (
@@ -125,7 +127,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
         <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Amount" errors={errors.amount} required>
-        <input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>

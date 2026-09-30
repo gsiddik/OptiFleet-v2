@@ -12,6 +12,7 @@ import { useApiList } from '../../hooks/useApiList';
 import { useAuth } from '../../auth/AuthContext';
 import type { ComponentGroup } from '../../types';
 import { abbreviationError, componentGroupLabel, normalizeAbbreviationInput } from '../../utils/componentGroup';
+import { NumericInput } from '../NumericInput';
 
 type View = 'active' | 'deleted' | 'all';
 
@@ -353,7 +354,7 @@ function ComponentGroupFormModal({
         </select>
       </FormField>
       <FormField label="Sequence" errors={errors.sequence}>
-        <input type="number" value={sequence} onChange={(e) => setSequence(e.target.value)} style={inputStyle} />
+        <NumericInput value={sequence} onChange={(e) => setSequence(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Description" errors={errors.description}>
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />

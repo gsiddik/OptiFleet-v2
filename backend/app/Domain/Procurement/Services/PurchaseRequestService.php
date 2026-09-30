@@ -6,6 +6,7 @@ use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Procurement\Models\PurchaseRequest;
 use App\Domain\Procurement\Models\PurchaseRequestItem;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
 
@@ -44,7 +45,8 @@ class PurchaseRequestService
                 'status' => 'DRAFT',
             ]));
 
-            foreach ($items as $line) {
+            foreach ($items as $i => $line) {
+                QuantityPolicy::assertValidForProductId($line['product_id'] ?? null, $line['requested_quantity'] ?? null, "items.{$i}.requested_quantity");
                 PurchaseRequestItem::query()->create([
                     'purchase_request_id' => $pr->id,
                     'product_id' => $line['product_id'],

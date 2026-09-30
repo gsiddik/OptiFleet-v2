@@ -9,6 +9,7 @@ import { Pagination } from '../../../components/Pagination';
 import { useApiList } from '../../../hooks/useApiList';
 import { formatQty } from '../../../utils/quantity';
 import type { WorkOrderPartReturnItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const STATUS_FILTERS = ['', 'PENDING_RETURN', 'PENDING_INSPECTION', 'INSPECTED', 'PENDING_APPROVAL', 'REJECTED', 'FINALIZED'];
 const DISPOSITIONS = ['REPAIR', 'REUSE', 'QUARANTINE', 'SCRAP', 'SELL_ELIGIBLE'] as const;
@@ -182,7 +183,7 @@ function RowCard({
 
       {item.disposition_status === 'PENDING_INSPECTION' && canInspect && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input type="number" step="0.01" placeholder="Accepted qty" value={acceptedQty} onChange={(e) => setAcceptedQty(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <NumericInput step="0.01" placeholder="Accepted qty" value={acceptedQty} onChange={(e) => setAcceptedQty(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <select value={inspectCondition} onChange={(e) => setInspectCondition(e.target.value as 'USED_GOOD' | 'USED_FAULTY')} style={{ ...inputStyle, width: 140 }}>
             <option value="USED_GOOD">Used — Good</option>
             <option value="USED_FAULTY">Used — Faulty</option>

@@ -9,6 +9,9 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WarehouseStockItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 const REORDER_STATUSES = ['', 'HEALTHY', 'LOW_STOCK', 'REORDER_REQUIRED', 'OUT_OF_STOCK'];
 
@@ -25,13 +28,13 @@ export function WarehouseStockListPage() {
   const columns: Column<WarehouseStockItem>[] = [
     { key: 'product', header: 'Product', render: (s) => s.product?.name ?? s.product_id },
     { key: 'warehouse', header: 'Warehouse', render: (s) => s.warehouse?.name ?? s.warehouse_id },
-    { key: 'on_hand', header: 'On Hand', render: (s) => s.quantity_on_hand },
-    { key: 'reserved', header: 'Reserved', render: (s) => s.quantity_reserved },
-    { key: 'available', header: 'Available', render: (s) => s.quantity_available },
-    { key: 'avg_cost', header: 'Avg Cost', render: (s) => s.average_unit_cost },
-    { key: 'min', header: 'Min', render: (s) => s.minimum_stock },
-    { key: 'reorder', header: 'Reorder Pt.', render: (s) => s.reorder_point },
-    { key: 'max', header: 'Max', render: (s) => s.maximum_stock ?? '—' },
+    { key: 'on_hand', header: 'On Hand', render: (s) => formatQty(s.quantity_on_hand) },
+    { key: 'reserved', header: 'Reserved', render: (s) => formatQty(s.quantity_reserved) },
+    { key: 'available', header: 'Available', render: (s) => formatQty(s.quantity_available) },
+    { key: 'avg_cost', header: 'Avg Cost', render: (s) => formatMoney(s.average_unit_cost) },
+    { key: 'min', header: 'Min', render: (s) => formatQty(s.minimum_stock) },
+    { key: 'reorder', header: 'Reorder Pt.', render: (s) => formatQty(s.reorder_point) },
+    { key: 'max', header: 'Max', render: (s) => formatQty(s.maximum_stock) },
     { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.reorder_status} /> },
     {
       key: 'actions', header: '', render: (s) => (
@@ -127,13 +130,13 @@ function ThresholdsModal({ target, onClose, onSaved }: { target: WarehouseStockI
         Applies only to this Warehouse ({target?.warehouse?.name ?? ''}). Leave a field blank for no threshold.
       </p>
       <FormField label="Minimum Stock" errors={errors.minimum_stock}>
-        <input type="number" step="0.0001" min="0" value={minimumStock} onChange={(e) => setMinimumStock(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.0001" min="0" value={minimumStock} onChange={(e) => setMinimumStock(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Reorder Point" errors={errors.reorder_point}>
-        <input type="number" step="0.0001" min="0" value={reorderPoint} onChange={(e) => setReorderPoint(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.0001" min="0" value={reorderPoint} onChange={(e) => setReorderPoint(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Maximum Stock" errors={errors.maximum_stock}>
-        <input type="number" step="0.0001" min="0" value={maximumStock} onChange={(e) => setMaximumStock(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.0001" min="0" value={maximumStock} onChange={(e) => setMaximumStock(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
@@ -183,7 +186,7 @@ function AdjustModal({ target, onClose, onAdjusted }: { target: WarehouseStockIt
         </select>
       </FormField>
       <FormField label="Quantity" errors={errors.quantity} required>
-        <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Reason (required, audited)" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
@@ -230,10 +233,10 @@ function ScrapModal({ target, onClose, onScrapped }: { target: WarehouseStockIte
   return (
     <Modal open={!!target} title={`Scrap Stock — ${target?.product?.name ?? ''}`} onClose={onClose}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
-        Permanently removes available on-hand stock (max {target?.quantity_available ?? 0}). This cannot be undone.
+        Permanently removes available on-hand stock (max {formatQty(target?.quantity_available ?? 0)}). This cannot be undone.
       </p>
       <FormField label="Quantity" errors={errors.quantity} required>
-        <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Reason (required, audited)" errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />

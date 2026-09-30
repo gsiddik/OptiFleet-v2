@@ -25,6 +25,8 @@ import type {
   WorkspaceItem,
   WorkspaceReservationItem,
 } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
@@ -1038,7 +1040,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <input placeholder="Service item" value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} style={{ ...inputStyle, width: 160 }} />
           <input placeholder="Job description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
-          <input placeholder="Est. hours" type="number" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <NumericInput placeholder="Est. hours" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <button className="btn-secondary" disabled={busy || !description} onClick={addJob}>
             Add Job
           </button>
@@ -1352,7 +1354,7 @@ function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChan
               </option>
             ))}
           </select>
-          <input type="number" step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <NumericInput step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !productId || !quantity} onClick={addEstimate}>
             Add
@@ -1550,7 +1552,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
             </span>
           </FormField>
           <FormField label="Qty" required>
-            <input aria-label="Quantity" type="number" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+            <NumericInput aria-label="Quantity" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
           </FormField>
           <FormField label="Notes">
             <input placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
@@ -1621,8 +1623,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                     Available to return: <strong>{formatQty(returnableQuantity(p))}</strong> (Issued {formatQty(p.issued_quantity)} − Used {formatQty(p.consumed_quantity)} − Returned {formatQty(p.returned_quantity)})
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-                    <input
-                      type="number"
+                    <NumericInput
                       step="0.01"
                       placeholder="Qty"
                       value={returnQty}
@@ -1695,8 +1696,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
               </label>
             </FormField>
             <FormField label="Installed Qty" required>
-              <input
-                type="number"
+              <NumericInput
                 step="0.01"
                 min="0"
                 max={outstandingIssued(consumingPart)}
@@ -1924,7 +1924,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
               </option>
             ))}
           </select>
-          <input type="number" step="0.01" placeholder="Qty" value={removeQty} onChange={(e) => setRemoveQty(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <NumericInput step="0.01" placeholder="Qty" value={removeQty} onChange={(e) => setRemoveQty(e.target.value)} style={{ ...inputStyle, width: 90 }} />
           <select value={condition} onChange={(e) => setCondition(e.target.value as 'GOOD' | 'FAULTY')} style={{ ...inputStyle, width: 110 }}>
             <option value="GOOD">Good</option>
             <option value="FAULTY">Faulty</option>
@@ -2242,7 +2242,7 @@ function RoadTestTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           <p style={{ fontSize: 13 }}>Released at {new Date(release.released_at).toLocaleString()}.</p>
         ) : wo.status === 'COMPLETED' && hasPermission('vehicle_release.perform') ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input placeholder="Release odometer (optional)" type="number" value={releaseOdometer} onChange={(e) => setReleaseOdometer(e.target.value)} style={{ ...inputStyle, width: 180 }} />
+            <NumericInput placeholder="Release odometer (optional)" value={releaseOdometer} onChange={(e) => setReleaseOdometer(e.target.value)} style={{ ...inputStyle, width: 180 }} />
             <button className="btn-primary" disabled={busy} onClick={releaseVehicle}>
               Release Vehicle
             </button>
@@ -2355,7 +2355,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
           <div style={{ color: '#374151' }}>{s.description}</div>
           <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
             {s.reference_number && <>Ref: {s.reference_number} &nbsp;</>}
-            {s.cost && <>Cost: {s.cost} &nbsp;</>}
+            {s.cost && <>Cost: {formatMoney(s.cost)} &nbsp;</>}
             {s.priority && <>Priority: {s.priority}</>}
           </div>
           {s.condition_notes && <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>Condition: {s.condition_notes}</div>}
@@ -2443,7 +2443,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
             <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} style={{ ...inputStyle, width: 120 }} />
           </FormField>
           <FormField label="Cost (optional)">
-            <input type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+            <NumericInput min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           </FormField>
           <button className="btn-secondary" disabled={busy || !partnerId || !description} onClick={request}>
             Request
@@ -2567,16 +2567,16 @@ function RecordWorkshopInvoiceModal({
           <input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Total Amount" errors={errors.total_amount} required>
-          <input type="number" step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Subtotal (optional)" errors={errors.subtotal}>
-          <input type="number" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Tax (optional)" errors={errors.tax_total}>
-          <input type="number" step="0.01" value={taxTotal} onChange={(e) => setTaxTotal(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={taxTotal} onChange={(e) => setTaxTotal(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Discount (optional)" errors={errors.discount_total}>
-          <input type="number" step="0.01" value={discountTotal} onChange={(e) => setDiscountTotal(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={discountTotal} onChange={(e) => setDiscountTotal(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <FormField label="Returned Maintenance Memo attachment URL (optional)" errors={errors.returned_memo_attachment_url}>

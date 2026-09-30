@@ -10,6 +10,7 @@ use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Procurement\Models\RfqItem;
 use App\Domain\Procurement\Models\VendorQuotation;
 use App\Domain\Procurement\Models\VendorQuotationItem;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,8 @@ class RfqService
                 'status' => 'DRAFT',
             ]));
 
-            foreach ($items as $line) {
+            foreach ($items as $i => $line) {
+                QuantityPolicy::assertValidForProductId($line['product_id'] ?? null, $line['quantity'] ?? null, "items.{$i}.quantity");
                 RfqItem::query()->create(['rfq_id' => $rfq->id, 'product_id' => $line['product_id'], 'quantity' => $line['quantity']]);
             }
 
@@ -108,7 +110,8 @@ class RfqService
 
             $subtotal = BigDecimal::of('0');
             $taxTotal = BigDecimal::of('0');
-            foreach ($items as $line) {
+            foreach ($items as $i => $line) {
+                QuantityPolicy::assertValidForProductId($line['product_id'] ?? null, $line['quantity'] ?? null, "items.{$i}.quantity");
                 $qty = BigDecimal::of((string) $line['quantity']);
                 $unitPrice = BigDecimal::of((string) $line['unit_price']);
                 $discountPercent = BigDecimal::of((string) ($line['discount_percent'] ?? 0));

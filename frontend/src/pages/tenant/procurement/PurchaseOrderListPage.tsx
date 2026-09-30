@@ -6,6 +6,7 @@ import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import type { PurchaseOrderItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 const STATUSES = ['', 'DRAFT', 'SUBMITTED', 'APPROVED', 'ISSUED', 'PARTIALLY_RECEIVED', 'RECEIVED', 'CLOSED', 'REJECTED', 'CANCELLED'];
 
@@ -17,7 +18,7 @@ export function PurchaseOrderListPage() {
     { key: 'number', header: 'PO #', render: (p) => <Link to={`/app/purchase-orders/${p.id}`}>{p.po_number}</Link> },
     { key: 'partner', header: 'Vendor', render: (p) => p.partner?.name ?? p.partner_id },
     { key: 'warehouse', header: 'Delivery Warehouse', render: (p) => p.delivery_warehouse?.name ?? p.delivery_warehouse_id },
-    { key: 'total', header: 'Total', render: (p) => p.total },
+    { key: 'total', header: 'Total', render: (p) => formatMoney(p.total) },
     { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
   ];
 

@@ -5,6 +5,7 @@ namespace App\Domain\WorkOrder\Services;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponent;
@@ -44,6 +45,8 @@ class WorkOrderRemovedComponentService
         if (! in_array($attributes['condition'], WorkOrderRemovedComponent::CONDITIONS, true)) {
             throw new WorkOrderException('Condition must be one of: '.implode(', ', WorkOrderRemovedComponent::CONDITIONS).'.');
         }
+
+        QuantityPolicy::assertValidForProductId($attributes['product_id'] ?? null, $attributes['quantity']);
 
         return DB::transaction(function () use ($workOrder, $attributes, $userId) {
             $component = WorkOrderRemovedComponent::query()->create([

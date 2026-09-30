@@ -8,6 +8,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem, WheelConfigurationItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 type CycleItem = TireRetreadItem | TireRepairItem;
 
@@ -56,7 +57,7 @@ function CycleGovernancePanel({
             </select>
           </FormField>
           <FormField label="Cost">
-            <input type="number" value={sendState.cost} onChange={(e) => sendState.setCost(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+            <NumericInput value={sendState.cost} onChange={(e) => sendState.setCost(e.target.value)} style={{ ...inputStyle, width: 120 }} />
           </FormField>
           <FormField label="Notes">
             <input value={sendState.notes} onChange={(e) => sendState.setNotes(e.target.value)} style={{ ...inputStyle, width: 220 }} />
@@ -581,7 +582,7 @@ export function TireDetailPage() {
               )}
             </FormField>
             <FormField label="Odometer">
-              <input type="number" value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+              <NumericInput value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
             </FormField>
             <button className="btn-primary" disabled={busy || !vehicleId || !wheelPosition} onClick={install} style={{ marginBottom: 14 }}>
               Install
@@ -606,7 +607,7 @@ export function TireDetailPage() {
                 </select>
               </FormField>
               <FormField label="Baseline Tread Depth (mm)">
-                <input type="number" step="0.1" value={baselineTreadDepth} onChange={(e) => setBaselineTreadDepth(e.target.value)} style={{ ...inputStyle, width: 150 }} />
+                <NumericInput step="0.1" value={baselineTreadDepth} onChange={(e) => setBaselineTreadDepth(e.target.value)} style={{ ...inputStyle, width: 150 }} />
               </FormField>
               <FormField label="Baseline Condition">
                 <input value={baselineCondition} onChange={(e) => setBaselineCondition(e.target.value)} style={{ ...inputStyle, width: 150 }} />
@@ -636,7 +637,7 @@ export function TireDetailPage() {
                 )}
               </FormField>
               <FormField label="Odometer">
-                <input type="number" value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+                <NumericInput value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
               </FormField>
               <button className="btn-secondary" disabled={busy || !toPosition} onClick={rotate} style={{ marginBottom: 14 }}>
                 Rotate
@@ -663,10 +664,10 @@ export function TireDetailPage() {
           {canInspect && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
               <FormField label="Tread Depth (mm)">
-                <input type="number" step="0.1" value={treadDepth} onChange={(e) => setTreadDepth(e.target.value)} style={{ ...inputStyle, width: 130 }} />
+                <NumericInput step="0.1" value={treadDepth} onChange={(e) => setTreadDepth(e.target.value)} style={{ ...inputStyle, width: 130 }} />
               </FormField>
               <FormField label="Pressure (psi)">
-                <input type="number" step="0.1" value={pressure} onChange={(e) => setPressure(e.target.value)} style={{ ...inputStyle, width: 130 }} />
+                <NumericInput step="0.1" value={pressure} onChange={(e) => setPressure(e.target.value)} style={{ ...inputStyle, width: 130 }} />
               </FormField>
               <FormField label="Recommendation">
                 <input value={recommendation} onChange={(e) => setRecommendation(e.target.value)} style={{ ...inputStyle, width: 220 }} />
@@ -725,7 +726,7 @@ export function TireDetailPage() {
               </select>
             </FormField>
             <FormField label="Odometer">
-              <input type="number" value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+              <NumericInput value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
             </FormField>
             <button className="btn-secondary" disabled={busy || !replaceTireId || !replaceReason} onClick={replace} style={{ marginBottom: 14 }}>
               Replace
@@ -813,7 +814,7 @@ export function TireDetailPage() {
               </select>
             </FormField>
             <FormField label="KA Score">
-              <input type="number" step="0.01" value={kaScore} onChange={(e) => setKaScore(e.target.value)} style={{ ...inputStyle, width: 110 }} />
+              <NumericInput step="0.01" value={kaScore} onChange={(e) => setKaScore(e.target.value)} style={{ ...inputStyle, width: 110 }} />
             </FormField>
           </div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, marginBottom: 10 }}>

@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ProductCategoryItem, ProductItem, PurchaseRequestItem, WorkOrderItem, Warehouse } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const STATUSES = ['', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'PROCUREMENT', 'REJECTED', 'CANCELLED'];
 
@@ -212,7 +213,7 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
         </select>
       </FormField>
       <FormField label="Requested Quantity" errors={errors['items.0.requested_quantity']} required>
-        <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Priority" errors={errors.priority}>
         <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>

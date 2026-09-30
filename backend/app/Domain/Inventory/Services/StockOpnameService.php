@@ -7,6 +7,7 @@ use App\Domain\Inventory\Models\StockOpnameItem;
 use App\Domain\Invoice\Services\NumberSequenceService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -57,6 +58,9 @@ class StockOpnameService
 
     public function recordCount(StockOpnameItem $item, float $physicalQuantity, ?string $notes = null): StockOpnameItem
     {
+        // A physical count of counted items is a whole number; the posted variance may still be
+        // fractional when it corrects historical fractional stock, so only the count is checked.
+        QuantityPolicy::assertValidForProductId($item->product_id, $physicalQuantity, 'physical_quantity');
         $item->update(['physical_quantity' => $physicalQuantity, 'notes' => $notes]);
 
         return $item->fresh();

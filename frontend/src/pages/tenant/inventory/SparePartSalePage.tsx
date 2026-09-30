@@ -7,6 +7,9 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { Pagination } from '../../../components/Pagination';
 import { useApiList } from '../../../hooks/useApiList';
 import type { SparePartSaleItem, WorkOrderPartReturnItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 const inputStyle: React.CSSProperties = { padding: '6px 8px', fontSize: 12, border: '1px solid #d1d5db', borderRadius: 4 };
 const STATUS_FILTERS = ['', 'DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CANCELLED'];
@@ -74,7 +77,7 @@ export function SparePartSalePage() {
         <div key={sale.id} className="card" style={{ marginBottom: 10, fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <span>
-              {sale.product?.name ?? sale.product_id} — qty {sale.quantity} × {sale.unit_price} = {sale.total_amount} ({sale.sale_type})
+              {sale.product?.name ?? sale.product_id} — qty {formatQty(sale.quantity)} × {formatMoney(sale.unit_price)} = {formatMoney(sale.total_amount)} ({sale.sale_type})
               <br />
               <span style={{ color: '#6b7280', fontSize: 12 }}>
                 Buyer: {sale.buyer_type === 'PARTNER' ? sale.partner?.name : sale.buyer_name}
@@ -162,17 +165,17 @@ function NewSaleForm({
             <option value="">Select eligible item…</option>
             {eligibleReturns.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.product?.name ?? r.product_id} (remaining {r.remaining_eligible_quantity})
+                {r.product?.name ?? r.product_id} (remaining {formatQty(r.remaining_eligible_quantity)})
               </option>
             ))}
           </select>
-          <input type="number" step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 80 }} max={selected?.remaining_eligible_quantity} />
+          <NumericInput step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 80 }} max={selected?.remaining_eligible_quantity} />
           <select value={saleType} onChange={(e) => setSaleType(e.target.value as 'OPERATIONAL_REUSE' | 'SCRAP_MATERIAL')} style={{ ...inputStyle, width: 160 }}>
             <option value="OPERATIONAL_REUSE" disabled={selected?.condition === 'USED_FAULTY'}>Operational Reuse</option>
             <option value="SCRAP_MATERIAL">Scrap Material</option>
           </select>
           <input placeholder="Buyer name" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} style={{ ...inputStyle, width: 160 }} />
-          <input type="number" step="0.01" placeholder="Unit price" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <NumericInput step="0.01" placeholder="Unit price" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <button className="btn-primary" disabled={submitting || !returnId || !quantity || !buyerName || !unitPrice} onClick={submit}>
             Create Sale (Draft)
           </button>

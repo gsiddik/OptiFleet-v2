@@ -3,6 +3,8 @@ import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import type { ContractItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 export function AccountContractPage() {
   const [contracts, setContracts] = useState<ContractItem[] | null>(null);
@@ -33,7 +35,7 @@ export function AccountContractPage() {
             <div>End: {c.end_date}</div>
             <div>Billing Cycle: {c.billing_cycle}</div>
             <div>
-              Total: {c.currency} {Number(c.total).toLocaleString()}
+              Total: {c.currency} {formatMoney(c.total)}
             </div>
           </div>
           {c.items && c.items.length > 0 && (
@@ -49,8 +51,8 @@ export function AccountContractPage() {
                 {c.items.map((it) => (
                   <tr key={it.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                     <td style={{ padding: '6px 8px' }}>{it.description}</td>
-                    <td style={{ padding: '6px 8px' }}>{it.quantity}</td>
-                    <td style={{ padding: '6px 8px' }}>{Number(it.final_amount).toLocaleString()}</td>
+                    <td style={{ padding: '6px 8px' }}>{formatQty(it.quantity)}</td>
+                    <td style={{ padding: '6px 8px' }}>{formatMoney(it.final_amount)}</td>
                   </tr>
                 ))}
               </tbody>

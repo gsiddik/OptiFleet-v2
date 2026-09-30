@@ -1,7 +1,8 @@
 /**
- * Display a quantity without meaningless trailing decimals: "5.0000" -> "5", "2.5000" -> "2.5".
- * Presentation only — values are still sent to and stored by the backend as decimals, since
- * some Items (litres, kilograms) legitimately use fractions.
+ * Quantity presentation standard: never shows meaningless decimals ("50.0000" -> "50").
+ * Counted items are whole numbers (enforced by the backend QuantityPolicy), so they always
+ * display as integers; only products in a measured unit (Liter, Kg…) can show a fraction
+ * ("2.5000" -> "2.5").
  */
 export function formatQty(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === '') return '—';

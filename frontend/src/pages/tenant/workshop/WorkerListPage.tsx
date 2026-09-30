@@ -11,6 +11,8 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WorkerItem, WorkerTypeItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 export function WorkerListPage() {
   const { hasPermission } = useAuth();
@@ -250,10 +252,10 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Monthly Rate (optional)" errors={errors.monthly_rate}>
-          <input type="number" step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Hourly Rate (optional)" errors={errors.hourly_rate}>
-          <input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <FormField label="Address (optional)" errors={errors.address}>
@@ -401,20 +403,18 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
         </div>
         {!editingContact ? (
           <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>
-            Phone: {worker.phone ?? '—'} &nbsp; Email: {worker.email ?? '—'} &nbsp; Monthly Rate: {worker.monthly_rate ?? '—'} &nbsp; Hourly
-            Rate: {worker.hourly_rate ?? '—'}
+            Phone: {worker.phone ?? '—'} &nbsp; Email: {worker.email ?? '—'} &nbsp; Monthly Rate: {formatMoney(worker.monthly_rate)} &nbsp; Hourly
+            Rate: {formatMoney(worker.hourly_rate)}
             {worker.address && <div>Address: {worker.address}</div>}
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
             <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ ...inputStyle, width: 130 }} />
             <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, width: 160 }} />
-            <input
-              type="number" placeholder="Monthly Rate" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)}
+            <NumericInput placeholder="Monthly Rate" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)}
               style={{ ...inputStyle, width: 130 }}
             />
-            <input
-              type="number" placeholder="Hourly Rate" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)}
+            <NumericInput placeholder="Hourly Rate" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)}
               style={{ ...inputStyle, width: 130 }}
             />
             <input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, width: '100%' }} />

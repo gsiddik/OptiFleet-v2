@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Branch, Workshop } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 export function WorkshopsPage() {
   const { hasPermission } = useAuth();
@@ -183,10 +184,10 @@ function WorkshopFormModal({
         </select>
       </FormField>
       <FormField label="Capacity" errors={errors.capacity}>
-        <input type="number" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
+        <NumericInput value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Service Bays" errors={errors.number_of_service_bays}>
-        <input type="number" value={bays} onChange={(e) => setBays(e.target.value)} style={inputStyle} />
+        <NumericInput value={bays} onChange={(e) => setBays(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>

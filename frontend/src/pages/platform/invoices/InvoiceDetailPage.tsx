@@ -9,6 +9,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InvoiceItem } from '../../../types';
+import { formatQty } from '../../../utils/quantity';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -93,7 +94,7 @@ export function InvoiceDetailPage() {
             {(invoice.items ?? []).map((it) => (
               <tr key={it.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: '6px 8px' }}>{it.description}</td>
-                <td style={{ padding: '6px 8px' }}>{it.quantity}</td>
+                <td style={{ padding: '6px 8px' }}>{formatQty(it.quantity)}</td>
                 <td style={{ padding: '6px 8px' }}>{Number(it.unit_price).toLocaleString()}</td>
                 <td style={{ padding: '6px 8px' }}>{Number(it.discount).toLocaleString()}</td>
                 <td style={{ padding: '6px 8px' }}>{Number(it.tax).toLocaleString()}</td>
