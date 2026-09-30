@@ -800,11 +800,16 @@ export interface WorkOrderPlannedPartItem {
   consumed_quantity: string;
   returned_quantity: string;
   unit_cost_at_issue: string | null;
+  /** Issue-time cost snapshot of everything issued (analytics); NOT the line's Total Cost. */
   total_cost: string | null;
+  /** Issue cost averaged over the issued quantity (backend-computed). */
+  average_unit_cost?: string | null;
+  /** Total Cost = consumed quantity × unit cost, 2 decimals (backend-computed; returns never count). */
+  consumed_total_cost?: string | null;
   /** issued − consumed − returned; 0 once CONSUMED (backend-computed). */
   returnable_quantity?: string | number;
   /** The Product master is the line's identity; description is its name snapshot (or legacy free text). */
-  product?: { id: string; name: string; sku?: string | null; code?: string | null } | null;
+  product?: { id: string; name: string; sku?: string | null; code?: string | null; uom?: UomItem | null } | null;
   warehouse?: { id: string; name: string } | null;
 }
 
@@ -1231,6 +1236,8 @@ export interface UomItem {
   code: string;
   name: string;
   measure_type: 'LENGTH' | 'PACKAGING' | 'CAPACITY' | 'WEIGHT' | 'PRESSURE' | null;
+  /** Measured unit (Liter, Kg…): fractional quantities allowed; counted units take whole numbers. */
+  allows_fractional_quantity?: boolean;
   description: string | null;
   is_system: boolean;
   status: string;

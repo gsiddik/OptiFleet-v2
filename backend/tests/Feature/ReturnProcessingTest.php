@@ -7,6 +7,7 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponent;
+use App\Domain\WorkOrder\Services\WorkOrderPartService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -63,6 +64,7 @@ class ReturnProcessingTest extends TestCase
         [, , $product, $wo, $part, $headers] = $this->setUpIssued();
         $first = $this->returnPart($wo, $part, 1, 'UNUSED_NEW', $headers);
         $second = $this->returnPart($wo, $part, 2, 'UNUSED_FAULTY', $headers);
+        app(WorkOrderPartService::class)->consume($part, 1); // installed, so its old counterpart can be removed
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", ['product_id' => $product->id, 'quantity' => 1, 'condition' => 'GOOD'], $headers)->assertStatus(201);
 
         $this->assertMatchesRegularExpression('#^RTN/\d{4}/000001$#', $first->return_number);
@@ -195,7 +197,8 @@ class ReturnProcessingTest extends TestCase
 
     public function test_removed_component_goes_to_used_sparepart_processing_and_never_to_return(): void
     {
-        [, $warehouse, $product, $wo, , $headers, $mechanic] = $this->setUpIssued();
+        [, $warehouse, $product, $wo, $part, $headers, $mechanic] = $this->setUpIssued();
+        app(WorkOrderPartService::class)->consume($part, 2);
         $componentId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
             'product_id' => $product->id, 'quantity' => 2, 'condition' => 'FAULTY',
         ], $headers)->assertStatus(201)->json('data.id');
@@ -225,7 +228,8 @@ class ReturnProcessingTest extends TestCase
 
     public function test_deleting_a_pending_removal_removes_its_processing_record(): void
     {
-        [, , $product, $wo, , $headers] = $this->setUpIssued();
+        [, , $product, $wo, $part, $headers] = $this->setUpIssued();
+        app(WorkOrderPartService::class)->consume($part, 1);
         $componentId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", ['product_id' => $product->id, 'quantity' => 1, 'condition' => 'GOOD'], $headers)->json('data.id');
 
         $this->deleteJson("/api/v1/app/work-orders/{$wo->id}/removed-components/{$componentId}", [], $headers)->assertOk();

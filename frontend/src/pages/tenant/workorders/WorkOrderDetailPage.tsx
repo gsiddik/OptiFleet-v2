@@ -1384,7 +1384,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
   const [notes, setNotes] = useState('');
   const [productId, setProductId] = useState('');
   const [productSearch, setProductSearch] = useState('');
-  const [products, setProducts] = useState<{ id: string; name: string; sku?: string | null }[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string; sku?: string | null; uom?: { allows_fractional_quantity?: boolean } | null }[]>([]);
   const [partRequests, setPartRequests] = useState<PartRequestItem[]>([]);
   const [requestsKey, setRequestsKey] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -1552,7 +1552,13 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
             </span>
           </FormField>
           <FormField label="Qty" required>
-            <NumericInput aria-label="Quantity" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+            <NumericInput
+              aria-label="Quantity"
+              integer={!products.find((prod) => prod.id === productId)?.uom?.allows_fractional_quantity}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              style={{ ...inputStyle, width: 90 }}
+            />
           </FormField>
           <FormField label="Notes">
             <input placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
@@ -1585,17 +1591,24 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
       {(wo.planned_parts ?? []).map((p) => (
         <div key={p.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <span>
-              <strong>{p.product?.name ?? p.description}</strong> — approved {formatQty(p.planned_quantity)} {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <StatusBadge status={p.status} />
+              <strong>{p.product?.name ?? p.description}</strong>
+              <span>— approved {formatQty(p.planned_quantity)}</span>
+              {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
             </span>
-            <StatusBadge status={p.status} />
           </div>
           {p.product_id && (
             <>
               <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
                 issued {formatQty(p.issued_quantity)} · used {formatQty(p.consumed_quantity)} · returned {formatQty(p.returned_quantity)}
                 {Number(p.reserved_quantity) > 0 && ` · reserved ${formatQty(p.reserved_quantity)}`}
-                {p.unit_cost_at_issue && ` · unit cost ${p.unit_cost_at_issue} · total cost ${p.total_cost}`}
+                {p.average_unit_cost && (
+                  <>
+                    {' · '}Unit Cost <strong>{formatMoney(p.average_unit_cost)}</strong>
+                    {' · '}Total Cost <strong title="Consumed quantity × Unit Cost — returned quantity is not charged">{formatMoney(p.consumed_total_cost)}</strong>
+                  </>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {canConsume && outstandingIssued(p) > 0 && (
@@ -1624,7 +1637,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
                     <NumericInput
-                      step="0.01"
+                      integer={!p.product?.uom?.allows_fractional_quantity}
                       placeholder="Qty"
                       value={returnQty}
                       onChange={(e) => setReturnQty(e.target.value)}
@@ -1697,9 +1710,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
             </FormField>
             <FormField label="Installed Qty" required>
               <NumericInput
-                step="0.01"
-                min="0"
-                max={outstandingIssued(consumingPart)}
+                integer={!consumingPart.product?.uom?.allows_fractional_quantity}
                 value={installedQty}
                 disabled={installAll}
                 onChange={(e) => setInstalledQty(e.target.value)}
@@ -1729,13 +1740,32 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
  * Return above (which only ever represents warehouse-issued stock, whether installed or not).
  * Presented as its own section so the two concepts are never conflated in the UI either.
  */
+function consumedRemovableProducts(wo: WorkOrderItem) {
+  const byProduct = new Map<string, { productId: string; name: string; consumed: number; remaining: number; allowsFraction: boolean }>();
+  for (const p of wo.planned_parts ?? []) {
+    if (!p.product_id || !(Number(p.consumed_quantity) > 0)) continue;
+    const entry = byProduct.get(p.product_id) ?? {
+      productId: p.product_id,
+      name: p.product?.name ?? p.description,
+      consumed: 0,
+      remaining: 0,
+      allowsFraction: Boolean(p.product?.uom?.allows_fractional_quantity),
+    };
+    entry.consumed += Number(p.consumed_quantity);
+    byProduct.set(p.product_id, entry);
+  }
+  for (const entry of byProduct.values()) {
+    const removed = (wo.removed_components ?? []).filter((rc) => rc.product_id === entry.productId).reduce((sum, rc) => sum + Number(rc.quantity), 0);
+    entry.remaining = Math.max(0, entry.consumed - removed);
+  }
+  return [...byProduct.values()];
+}
+
 function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [productId, setProductId] = useState('');
   const [jobId, setJobId] = useState('');
-  const [replacedByPlannedPartId, setReplacedByPlannedPartId] = useState('');
   const [removeQty, setRemoveQty] = useState('1');
   const [condition, setCondition] = useState<'GOOD' | 'FAULTY'>('GOOD');
   const [notes, setNotes] = useState('');
@@ -1755,10 +1785,14 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
   );
 
   const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+  // Only products CONSUMED on this Work Order can be recorded as removed (the old component the new
+  // part replaced), up to the consumed quantity. The backend enforces the same rule and derives the
+  // replacement link itself.
+  const removable = consumedRemovableProducts(wo);
+  const selectedRemovable = removable.find((r) => r.productId === productId);
   const canReturn = PART_ACTION_STATUSES.includes(wo.status) && hasPermission('inventory.return');
 
   useEffect(() => {
-    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
     apiClient.get('/app/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
   }, []);
 
@@ -1786,14 +1820,12 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
       await apiClient.post(`/app/work-orders/${wo.id}/removed-components`, {
         product_id: productId,
         maintenance_job_id: jobId || undefined,
-        replaced_by_planned_part_id: replacedByPlannedPartId || undefined,
         quantity: removeQty,
         condition,
         notes: notes || undefined,
       });
       setProductId('');
       setJobId('');
-      setReplacedByPlannedPartId('');
       setRemoveQty('1');
       setCondition('GOOD');
       setNotes('');
@@ -1852,7 +1884,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span>
               {rc.product?.name ?? rc.product_id} — qty {formatQty(rc.quantity)} — {rc.condition}
-              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaces a planned part)</span>}
+              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaced by the consumed new part)</span>}
             </span>
             <StatusBadge status={rc.status} />
           </div>
@@ -1900,11 +1932,19 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
       ))}
       {canManage && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-            <option value="">Old/removed product…</option>
-            {products.map((prod) => (
-              <option key={prod.id} value={prod.id}>
-                {prod.name}
+          <select
+            aria-label="Old/removed product"
+            value={productId}
+            onChange={(e) => {
+              setProductId(e.target.value);
+              setRemoveQty('1');
+            }}
+            style={{ ...inputStyle, width: 220 }}
+          >
+            <option value="">{removable.length === 0 ? 'No consumed parts yet' : 'Old/removed product…'}</option>
+            {removable.map((r) => (
+              <option key={r.productId} value={r.productId} disabled={r.remaining <= 0}>
+                {r.name} (consumed {formatQty(r.consumed)}, removable {formatQty(r.remaining)})
               </option>
             ))}
           </select>
@@ -1916,21 +1956,20 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
               </option>
             ))}
           </select>
-          <select value={replacedByPlannedPartId} onChange={(e) => setReplacedByPlannedPartId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-            <option value="">Replaces which new part? (optional)</option>
-            {(wo.planned_parts ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.description}
-              </option>
-            ))}
-          </select>
-          <NumericInput step="0.01" placeholder="Qty" value={removeQty} onChange={(e) => setRemoveQty(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <NumericInput
+            aria-label="Removed quantity"
+            integer={!selectedRemovable?.allowsFraction}
+            placeholder="Qty"
+            value={removeQty}
+            onChange={(e) => setRemoveQty(e.target.value)}
+            style={{ ...inputStyle, width: 90 }}
+          />
           <select value={condition} onChange={(e) => setCondition(e.target.value as 'GOOD' | 'FAULTY')} style={{ ...inputStyle, width: 110 }}>
             <option value="GOOD">Good</option>
             <option value="FAULTY">Faulty</option>
           </select>
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
-          <button className="btn-secondary" disabled={busy || !productId || !removeQty} onClick={submitRemoval}>
+          <button className="btn-secondary" disabled={busy || !productId || !(Number(removeQty) > 0) || Number(removeQty) > (selectedRemovable?.remaining ?? 0)} onClick={submitRemoval}>
             Record Removal
           </button>
         </div>

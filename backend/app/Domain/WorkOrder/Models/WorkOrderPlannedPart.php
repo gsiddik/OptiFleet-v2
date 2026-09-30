@@ -5,6 +5,8 @@ namespace App\Domain\WorkOrder\Models;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\Shared\Concerns\BelongsToTenant;
+use Brick\Math\BigDecimal;
+use Brick\Math\RoundingMode;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,8 +22,11 @@ class WorkOrderPlannedPart extends Model
         'returned_quantity', 'unit_cost_at_issue', 'total_cost', 'notes',
     ];
 
-    /** Exposed so Issuance & Return can offer Return only for genuinely returnable quantity. */
-    protected $appends = ['returnable_quantity'];
+    /**
+     * Exposed so Issuance & Return can offer Return only for genuinely returnable quantity, and
+     * show the cost of what was actually consumed (see consumedTotalCost()).
+     */
+    protected $appends = ['returnable_quantity', 'average_unit_cost', 'consumed_total_cost'];
 
     protected function casts(): array
     {
@@ -72,6 +77,42 @@ class WorkOrderPlannedPart extends Model
     protected function getReturnableQuantityAttribute(): float
     {
         return $this->returnableQuantity();
+    }
+
+    /**
+     * Unit cost of this line: the issue-time cost snapshot averaged over the issued quantity
+     * (several issues may have been posted at different average costs). Null until issued.
+     */
+    public function averageUnitCost(): ?string
+    {
+        if ($this->total_cost === null || ! BigDecimal::of((string) ($this->issued_quantity ?? 0))->isPositive()) {
+            return null;
+        }
+
+        return (string) BigDecimal::of((string) $this->total_cost)->dividedBy((string) $this->issued_quantity, 4, RoundingMode::HALF_UP);
+    }
+
+    /**
+     * Business rule: a Work Order line costs what was finally CONSUMED — Consumed Qty × Unit Cost,
+     * 2 decimals half-up. Returned (and still outstanding) quantity never counts. The stored
+     * `total_cost` stays the issue-time snapshot used by analytics (owner decision).
+     */
+    public function consumedTotalCost(): ?string
+    {
+        $unitCost = $this->averageUnitCost();
+
+        return $unitCost === null ? null : (string) BigDecimal::of((string) ($this->consumed_quantity ?? 0))
+            ->multipliedBy($unitCost)->toScale(2, RoundingMode::HALF_UP);
+    }
+
+    protected function getAverageUnitCostAttribute(): ?string
+    {
+        return $this->averageUnitCost();
+    }
+
+    protected function getConsumedTotalCostAttribute(): ?string
+    {
+        return $this->consumedTotalCost();
     }
 
     public function outstandingIssued(): float

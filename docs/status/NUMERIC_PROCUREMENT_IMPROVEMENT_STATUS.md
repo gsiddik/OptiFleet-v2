@@ -74,3 +74,17 @@ Decisions taken from existing evidence (no owner input needed):
   `products.product_type` (SPARE_PART, CONSUMABLE, RIM, TIRE / TOOL, EQUIPMENT); invalid value
   422. Warehouse Stock page: two tabs, search and reorder filters inside the tab, pagination.
 - Legacy `OTHER` products (no longer creatable) appear in neither tab.
+
+## Phase 3 — Work Order Issuance & Return, Removed Components (DONE)
+
+- Issued Parts: status badge left of the product name; Unit Cost and Total Cost shown with 2
+  decimals. `WorkOrderPlannedPart` exposes `average_unit_cost` (issue cost ÷ issued qty) and
+  `consumed_total_cost` = consumed qty × unit cost (exact decimal, 2 dp, half-up). Returned and
+  outstanding quantity never counts. Stored `total_cost` (analytics snapshot) unchanged.
+- Removed Components: product must be CONSUMED on the same Work Order; total removed per product
+  capped at its consumed quantity (Work Order row locked while checking). The "Replaces which new
+  part" input is gone: `replaced_by_planned_part_id` is derived from the consumed line of the same
+  product (client value ignored). Historical links untouched.
+- Frontend: removed-product dropdown lists only consumed products with consumed / removable
+  quantities; quantity inputs use whole-number mode unless the product's UOM is measured.
+- Tests updated to the new rule (fixtures now consume the new part before recording the old one).

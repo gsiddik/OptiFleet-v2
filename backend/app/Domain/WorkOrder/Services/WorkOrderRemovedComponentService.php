@@ -8,6 +8,7 @@ use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
+use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponent;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponentEvidence;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponentReturn;
@@ -49,11 +50,15 @@ class WorkOrderRemovedComponentService
         QuantityPolicy::assertValidForProductId($attributes['product_id'] ?? null, $attributes['quantity']);
 
         return DB::transaction(function () use ($workOrder, $attributes, $userId) {
+            // Serialize removals per Work Order so the consumed-quantity cap cannot be raced.
+            WorkOrder::query()->lockForUpdate()->findOrFail($workOrder->id);
+            $replacedBy = $this->replacementFor($workOrder, $attributes['product_id'], (float) $attributes['quantity']);
+
             $component = WorkOrderRemovedComponent::query()->create([
                 'tenant_id' => $workOrder->tenant_id,
                 'work_order_id' => $workOrder->id,
                 'maintenance_job_id' => $attributes['maintenance_job_id'] ?? null,
-                'replaced_by_planned_part_id' => $attributes['replaced_by_planned_part_id'] ?? null,
+                'replaced_by_planned_part_id' => $replacedBy->id,
                 'product_id' => $attributes['product_id'],
                 'quantity' => $attributes['quantity'],
                 'condition' => $attributes['condition'],
@@ -79,6 +84,31 @@ class WorkOrderRemovedComponentService
 
             return $component;
         });
+    }
+
+    /**
+     * A removed (old) component can only be recorded for a product CONSUMED on this Work Order —
+     * the new part installed in its place — and never for more than was consumed. The replacement
+     * link is derived here (the consumed line of the same product), never chosen by the user.
+     */
+    private function replacementFor(WorkOrder $workOrder, string $productId, float $quantity): WorkOrderPlannedPart
+    {
+        $consumedLines = WorkOrderPlannedPart::query()
+            ->where('work_order_id', $workOrder->id)->where('product_id', $productId)->where('consumed_quantity', '>', 0)
+            ->orderBy('created_at')->orderBy('id')->get();
+        if ($consumedLines->isEmpty()) {
+            throw new WorkOrderException('Only a part consumed on this Work Order can be recorded as a removed component.');
+        }
+
+        $consumed = (float) $consumedLines->sum('consumed_quantity');
+        $alreadyRemoved = (float) WorkOrderRemovedComponent::query()
+            ->where('work_order_id', $workOrder->id)->where('product_id', $productId)->sum('quantity');
+        if ($alreadyRemoved + $quantity > $consumed + 0.00001) {
+            $remaining = max(0, $consumed - $alreadyRemoved);
+            throw new WorkOrderException("Removed quantity cannot exceed the consumed quantity of this product on the Work Order (remaining: {$remaining}).");
+        }
+
+        return $consumedLines->first();
     }
 
     public function delete(WorkOrderRemovedComponent $removedComponent): void
