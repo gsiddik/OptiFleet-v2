@@ -90,6 +90,8 @@ class PermissionSeeder extends Seeder
             // from 'maintenance_job.manage' which gates Planned Parts (same pattern as
             // stock_transfer/workshop_invoice above).
             'part_request' => ['view', 'create', 'approve', 'reject', 'cancel', 'issue'],
+            // Returned (not used) new parts: the Return list and Returned Parts Processing.
+            'part_return' => ['view', 'process'],
             'work_order_external_service' => ['create', 'complete', 'cancel'],
             // R1 (Workshop Invoice and Settlement): "record" — never "create" or "issue" —
             // OptiFleet only records an externally-issued document. Correction/cancellation

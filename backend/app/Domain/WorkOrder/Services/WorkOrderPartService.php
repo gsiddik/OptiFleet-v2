@@ -2,7 +2,7 @@
 
 namespace App\Domain\WorkOrder\Services;
 
-use App\Domain\Inventory\Models\StockMovement;
+use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Inventory\Services\StockReservationService;
 use App\Domain\Organization\Models\Warehouse;
@@ -23,19 +23,20 @@ use Illuminate\Support\Facades\DB;
 class WorkOrderPartService
 {
     /**
-     * G-14: every return must declare a condition; only UNUSED_NEW ever reaches available
-     * stock. "Improvement OptiFleet - Maintenance Request dan Work Order": the Return popup's
-     * Condition dropdown offers "New Good"/"New Faulty" for a never-installed return and "Used
-     * Good"/"Used Faulty" for one that was — UNUSED_FAULTY added alongside UNUSED_NEW,
-     * following USED_FAULTY's own PENDING_INSPECTION (never-immediate-restock) handling below.
+     * Every return condition the domain knows (legacy rows keep the USED_* ones); Issuance &
+     * Return itself only accepts NEW_PART_CONDITIONS — see returnPart().
      */
     public const CONDITIONS = ['UNUSED_NEW', 'UNUSED_FAULTY', 'USED_GOOD', 'USED_FAULTY'];
+
+    /** Conditions of a new part returned unused (the only ones Issuance & Return accepts). */
+    public const NEW_PART_CONDITIONS = ['UNUSED_NEW', 'UNUSED_FAULTY'];
 
     public function __construct(
         private readonly StockReservationService $reservations,
         private readonly InventoryService $inventory,
         private readonly PreferredWarehouseResolver $resolver,
         private readonly WorkOrderExecutionService $execution,
+        private readonly DocumentNumberingService $numbers,
     ) {}
 
     public function reserve(WorkOrderPlannedPart $part, ?string $warehouseId, ?float $quantity, ?string $userId): WorkOrderPlannedPart
@@ -111,23 +112,25 @@ class WorkOrderPartService
     }
 
     /**
-     * G-14/G-18: condition is mandatory — a return with no condition
-     * decision can never reach this method's UNUSED_NEW branch, and
-     * therefore can never reach available stock. The planned-part row is
-     * locked for update *inside* the same transaction that checks
-     * outstandingIssued() and writes the increment, so two concurrent
-     * returns for the same part serialize on that lock instead of both
-     * reading a stale outstanding-issued snapshot and double-crediting
-     * stock (the TOCTOU race this closes).
+     * New-part return from Issuance & Return (an issued part that was NOT used). Only the
+     * never-installed conditions are accepted here; a component that was installed and later
+     * taken off the vehicle is recorded through Removed Components (Used Sparepart Processing).
+     *
+     * The return creates a NEW_PART record (server-generated Return Number) in
+     * PENDING_PROCESSING and posts NO stock: the part only becomes available again once
+     * Returned Parts Processing inspects and accepts it (ReturnProcessingService). The
+     * planned-part row is locked inside the transaction that checks the returnable quantity,
+     * so concurrent returns serialize instead of over-returning.
+     *
+     * @param  array<string>  $evidenceIds  Not-yet-linked WorkOrderPartReturnEvidence ids uploaded for this planned part.
      */
-    /** @param array<string> $evidenceIds Not-yet-linked WorkOrderPartReturnEvidence ids uploaded for this planned part. */
     public function returnPart(WorkOrderPlannedPart $part, float $quantity, string $condition, ?string $userId, ?string $reason = null, ?string $evidence = null, array $evidenceIds = []): WorkOrderPlannedPart
     {
         if ($quantity <= 0) {
             throw new WorkOrderException('Return quantity must be positive.');
         }
-        if (! in_array($condition, self::CONDITIONS, true)) {
-            throw new WorkOrderException('Return condition must be one of: '.implode(', ', self::CONDITIONS).'.');
+        if (! in_array($condition, self::NEW_PART_CONDITIONS, true)) {
+            throw new WorkOrderException('Only a part that was not used can be returned here (New Good / New Faulty). Record a component taken off the vehicle under Removed Components.');
         }
 
         return DB::transaction(function () use ($part, $quantity, $condition, $userId, $reason, $evidence, $evidenceIds) {
@@ -149,34 +152,19 @@ class WorkOrderPartService
             $warehouse = Warehouse::query()->findOrFail($locked->warehouse_id);
             $product = Product::query()->findOrFail($locked->product_id);
 
-            $stockMovementId = null;
-            $dispositionStatus = 'PENDING_INSPECTION';
-
-            if ($condition === 'UNUSED_NEW') {
-                // Only a UNUSED_NEW ("New Good") return ever restores available stock.
-                $this->inventory->returnStock($warehouse, $product, $quantity, WorkOrderPlannedPart::class, $locked->id, $userId, $reason);
-                $stockMovementId = StockMovement::query()
-                    ->where('reference_type', WorkOrderPlannedPart::class)
-                    ->where('reference_id', $locked->id)
-                    ->where('movement_type', 'RETURN')
-                    ->latest('occurred_at')
-                    ->value('id');
-                $dispositionStatus = 'RESTOCKED';
-            }
-            // UNUSED_FAULTY / USED_GOOD / USED_FAULTY: deliberately never call
-            // inventory->returnStock() here — the part leaves the Work Order, but the physical
-            // stock stays out of quantity_on_hand until the Used Sparepart Processing workflow
-            // inspects it.
+            $number = $this->numbers->generate('part_return', $locked->tenant_id, $workOrder->branch_id, $workOrder->workshop_id, $warehouse->id);
 
             $return = WorkOrderPartReturn::query()->create([
                 'tenant_id' => $locked->tenant_id,
+                'return_number' => $number['document_number'],
+                'return_source' => WorkOrderPartReturn::SOURCE_NEW_PART,
+                'work_order_id' => $workOrder->id,
                 'work_order_planned_part_id' => $locked->id,
                 'warehouse_id' => $warehouse->id,
                 'product_id' => $product->id,
                 'quantity' => $quantity,
                 'condition' => $condition,
-                'disposition_status' => $dispositionStatus,
-                'stock_movement_id' => $stockMovementId,
+                'disposition_status' => 'PENDING_PROCESSING',
                 'returned_by' => $userId,
                 'reason' => $reason,
                 'evidence' => $evidence,

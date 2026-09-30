@@ -49,6 +49,7 @@ use App\Http\Controllers\Api\Tenant\MasterDataMappingController;
 use App\Http\Controllers\Api\Tenant\NotificationRuleController;
 use App\Http\Controllers\Api\Tenant\PartnerController;
 use App\Http\Controllers\Api\Tenant\PartRequestController;
+use App\Http\Controllers\Api\Tenant\PartReturnController;
 use App\Http\Controllers\Api\Tenant\PermissionController;
 use App\Http\Controllers\Api\Tenant\ProductCategoryController;
 use App\Http\Controllers\Api\Tenant\ProductClassificationController;
@@ -536,8 +537,13 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
             Route::get('/stock-movements', [StockMovementController::class, 'index'])->middleware('permission:inventory.view');
 
+            // Return (new parts returned unused) + Returned Parts Processing.
+            Route::get('/part-returns', [PartReturnController::class, 'index'])->middleware('permission:part_return.view');
+            Route::get('/part-returns/{partReturn}', [PartReturnController::class, 'show'])->middleware('permission:part_return.view');
+            Route::post('/part-returns/{partReturn}/process', [PartReturnController::class, 'process'])->middleware('permission:part_return.process');
             Route::get('/used-part-returns', [UsedPartDispositionController::class, 'index'])->middleware('permission:used_part.view');
             Route::get('/used-part-returns/{usedPartReturn}', [UsedPartDispositionController::class, 'show'])->middleware('permission:used_part.view');
+            Route::post('/used-part-returns/{usedPartReturn}/receive', [UsedPartDispositionController::class, 'receive'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/inspect', [UsedPartDispositionController::class, 'inspect'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/propose-disposition', [UsedPartDispositionController::class, 'proposeDisposition'])->middleware('permission:used_part.dispose');
             Route::post('/used-part-returns/{usedPartReturn}/decide', [UsedPartDispositionController::class, 'decide'])->middleware('permission:used_part.approve');

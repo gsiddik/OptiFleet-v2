@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { useAuth } from '../../../auth/AuthContext';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -6,9 +7,10 @@ import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { Pagination } from '../../../components/Pagination';
 import { useApiList } from '../../../hooks/useApiList';
+import { formatQty } from '../../../utils/quantity';
 import type { WorkOrderPartReturnItem } from '../../../types';
 
-const STATUS_FILTERS = ['', 'PENDING_INSPECTION', 'INSPECTED', 'PENDING_APPROVAL', 'REJECTED', 'FINALIZED'];
+const STATUS_FILTERS = ['', 'PENDING_RETURN', 'PENDING_INSPECTION', 'INSPECTED', 'PENDING_APPROVAL', 'REJECTED', 'FINALIZED'];
 const DISPOSITIONS = ['REPAIR', 'REUSE', 'QUARANTINE', 'SCRAP', 'SELL_ELIGIBLE'] as const;
 
 const inputStyle: React.CSSProperties = { padding: '6px 8px', fontSize: 12, border: '1px solid #d1d5db', borderRadius: 4 };
@@ -29,7 +31,17 @@ export function UsedPartDispositionPage() {
   const canDispose = hasPermission('used_part.dispose');
   const canApprove = hasPermission('used_part.approve');
 
-  async function submit(id: string, action: 'inspect' | 'propose-disposition' | 'decide', body: Record<string, unknown>) {
+  // Warehouses for receiving a removed component (loaded only when the user can receive).
+  const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
+  useEffect(() => {
+    if (!canInspect) return;
+    apiClient
+      .get('/app/warehouses', { params: { per_page: 100 } })
+      .then((res) => setWarehouses(res.data.data))
+      .catch(() => setWarehouses([]));
+  }, [canInspect]);
+
+  async function submit(id: string, action: 'receive' | 'inspect' | 'propose-disposition' | 'decide', body: Record<string, unknown>) {
     setBusyId(id);
     setError(null);
     try {
@@ -46,7 +58,9 @@ export function UsedPartDispositionPage() {
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Used Sparepart Processing</h1>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0, marginBottom: 16 }}>
-        Every used-condition return is inspected, given a proposed disposition, and approved by someone other than the proposer before it can reach available stock.
+        Old components removed from a vehicle (Work Order → Issuance &amp; Return → Removed Components) are received into a warehouse, inspected, given a
+        proposed disposition, and approved by someone other than the proposer before they can reach available stock. New parts returned unused are
+        processed under Inventory → Return.
       </p>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUS_FILTERS.map((s) => (
@@ -68,6 +82,8 @@ export function UsedPartDispositionPage() {
           canInspect={canInspect}
           canDispose={canDispose}
           canApprove={canApprove}
+          warehouses={warehouses}
+          onReceive={(warehouseId) => submit(r.id, 'receive', { warehouse_id: warehouseId })}
           onInspect={(qty, cond, notes, evidence) => submit(r.id, 'inspect', { accepted_quantity: qty, condition: cond, notes: notes || undefined, evidence: evidence || undefined })}
           onPropose={(disposition, reason) => submit(r.id, 'propose-disposition', { disposition, reason: reason || undefined })}
           onDecide={(decision, note) => submit(r.id, 'decide', { decision, note: note || undefined })}
@@ -79,13 +95,15 @@ export function UsedPartDispositionPage() {
 }
 
 function RowCard({
-  item, busy, canInspect, canDispose, canApprove, onInspect, onPropose, onDecide,
+  item, busy, canInspect, canDispose, canApprove, warehouses, onReceive, onInspect, onPropose, onDecide,
 }: {
   item: WorkOrderPartReturnItem;
   busy: boolean;
   canInspect: boolean;
   canDispose: boolean;
   canApprove: boolean;
+  warehouses: { id: string; name: string }[];
+  onReceive: (warehouseId: string) => void;
   onInspect: (qty: string, condition: string, notes: string, evidence: string) => void;
   onPropose: (disposition: string, reason: string) => void;
   onDecide: (decision: 'APPROVE' | 'REJECT', note: string) => void;
@@ -97,16 +115,48 @@ function RowCard({
   const [disposition, setDisposition] = useState<string>(DISPOSITIONS[0]);
   const [reason, setReason] = useState('');
   const [decideNote, setDecideNote] = useState('');
+  const [receiveWarehouseId, setReceiveWarehouseId] = useState('');
+  const workOrder = item.work_order ?? item.planned_part?.work_order ?? null;
 
   return (
     <div className="card" style={{ marginBottom: 10, fontSize: 13 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span>
-          {item.product?.name ?? item.product_id} — qty {item.quantity} · {item.condition}
-          {item.planned_part?.work_order && <span style={{ color: '#6b7280' }}> · WO {item.planned_part.work_order.wo_number}</span>}
+          <strong>{item.product?.name ?? item.product_id}</strong> — qty {formatQty(item.quantity)} · {item.condition === 'USED_FAULTY' ? 'Faulty' : 'Good'}
+          {workOrder && (
+            <span style={{ color: '#6b7280' }}>
+              {' '}· WO <Link to={`/app/work-orders/${workOrder.id}`}>{workOrder.wo_number}</Link>
+            </span>
+          )}
+          {item.work_order?.vehicle && <span style={{ color: '#6b7280' }}> · {item.work_order.vehicle.registration_number}</span>}
         </span>
         <StatusBadge status={item.disposition_status} />
       </div>
+      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
+        {item.return_source === 'REMOVED_COMPONENT' ? 'Removed component' : 'Used-part return (legacy)'}
+        {item.removed_component && ` · removed ${new Date(item.removed_component.removed_at).toLocaleString()}`}
+        {item.returner && ` by ${item.returner.name}`}
+        {item.warehouse && ` · at ${item.warehouse.name}`}
+      </div>
+      {item.disposition_status === 'PENDING_RETURN' && (
+        canInspect ? (
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
+            <select aria-label="Receive into warehouse" value={receiveWarehouseId} onChange={(e) => setReceiveWarehouseId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+              <option value="">Receive into warehouse…</option>
+              {warehouses.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+            <button className="btn-primary" disabled={busy || !receiveWarehouseId} onClick={() => onReceive(receiveWarehouseId)}>
+              Receive to Warehouse
+            </button>
+          </div>
+        ) : (
+          <span style={{ fontSize: 12, color: '#6b7280' }}>Awaiting physical return to a warehouse.</span>
+        )
+      )}
       {(item.reason || item.evidence) && (
         <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
           {item.reason && <span>Reason: {item.reason}</span>}

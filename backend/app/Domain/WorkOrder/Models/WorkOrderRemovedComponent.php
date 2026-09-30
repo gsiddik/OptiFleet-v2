@@ -55,6 +55,12 @@ class WorkOrderRemovedComponent extends Model
         return $this->belongsTo(Product::class);
     }
 
+    /** Its Used Sparepart Processing record (one per removed component). */
+    public function processing(): HasOne
+    {
+        return $this->hasOne(WorkOrderPartReturn::class, 'work_order_removed_component_id');
+    }
+
     public function return(): HasOne
     {
         return $this->hasOne(WorkOrderRemovedComponentReturn::class);

@@ -1235,11 +1235,11 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   );
 }
 
-const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY' | 'USED_GOOD' | 'USED_FAULTY'; label: string }[] = [
+// Issuance & Return only returns a new part that was NOT used; a component taken off the
+// vehicle is recorded under Removed Components (Used Sparepart Processing) instead.
+const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY'; label: string }[] = [
   { value: 'UNUSED_NEW', label: 'New Good' },
   { value: 'UNUSED_FAULTY', label: 'New Faulty' },
-  { value: 'USED_GOOD', label: 'Used Good' },
-  { value: 'USED_FAULTY', label: 'Used Faulty' },
 ];
 
 /** Fetches a private-disk evidence image as a blob and returns an object URL for preview. */
@@ -1661,11 +1661,9 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                     <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
                       Cancel
                     </button>
-                    {returnCondition !== 'UNUSED_NEW' && (
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>
-                        Not New-Good returns go to inspection — they do not restock available inventory until processed.
-                      </span>
-                    )}
+                    <span style={{ fontSize: 11, color: '#6b7280' }}>
+                      Creates a numbered Return; the warehouse inspects it in Inventory → Return before anything goes back to stock.
+                    </span>
                   </div>
                 </div>
               )}

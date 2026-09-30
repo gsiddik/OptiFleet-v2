@@ -1534,15 +1534,32 @@ export interface StockMovementItem {
   product?: ProductItem;
 }
 
+/**
+ * One record per returned / removed part, in one of three explicit lifecycles (return_source):
+ * NEW_PART (Return + Returned Parts Processing), REMOVED_COMPONENT and legacy USED_PART
+ * (Used Sparepart Processing).
+ */
 export interface WorkOrderPartReturnItem {
   id: string;
-  work_order_planned_part_id: string;
-  warehouse_id: string;
+  return_number: string | null;
+  return_source: 'NEW_PART' | 'REMOVED_COMPONENT' | 'USED_PART';
+  work_order_id: string | null;
+  work_order_planned_part_id: string | null;
+  work_order_removed_component_id: string | null;
+  warehouse_id: string | null;
   product_id: string;
   quantity: string;
-  condition: 'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY';
-  disposition_status: 'RESTOCKED' | 'PENDING_INSPECTION' | 'INSPECTED' | 'PENDING_APPROVAL' | 'REJECTED' | 'FINALIZED';
+  /** Reported condition (as declared on the Work Order). */
+  condition: 'UNUSED_NEW' | 'UNUSED_FAULTY' | 'USED_GOOD' | 'USED_FAULTY';
+  /** Returned Parts Processing (NEW_PART): what the inspector found. */
+  actual_condition: 'UNUSED_NEW' | 'UNUSED_FAULTY' | null;
+  inspection_result: 'MATCH' | 'MISMATCH' | null;
+  disposition_status:
+    | 'PENDING_PROCESSING' | 'RESTOCKED' | 'QUARANTINED'
+    | 'PENDING_RETURN' | 'PENDING_INSPECTION' | 'INSPECTED' | 'PENDING_APPROVAL' | 'REJECTED' | 'FINALIZED';
   accepted_quantity: string | null;
+  returned_by: string | null;
+  inspected_by: string | null;
   inspected_at: string | null;
   inspection_notes: string | null;
   inspection_evidence: string | null;
@@ -1554,8 +1571,12 @@ export interface WorkOrderPartReturnItem {
   evidence: string | null;
   created_at: string;
   product?: ProductItem;
-  warehouse?: Warehouse;
+  warehouse?: { id: string; code?: string; name: string } | null;
+  work_order?: { id: string; wo_number: string; vehicle?: { id: string; registration_number: string } | null } | null;
   planned_part?: { id: string; description: string; work_order?: { id: string; wo_number: string } };
+  removed_component?: { id: string; removed_by: string | null; removed_at: string; condition: 'GOOD' | 'FAULTY'; notes: string | null; status: string } | null;
+  returner?: { id: string; name: string } | null;
+  inspector?: { id: string; name: string } | null;
   remaining_eligible_quantity?: number;
 }
 

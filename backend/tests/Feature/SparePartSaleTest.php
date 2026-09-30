@@ -56,12 +56,12 @@ class SparePartSaleTest extends TestCase
         $wo = app(WorkOrderService::class)->schedule($wo);
         $wo = app(WorkOrderService::class)->start($wo);
 
-        $part = $this->issueThroughPartRequest($wo, $product, $qty, $warehouse);
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
-            'quantity' => $qty, 'condition' => 'USED_GOOD',
-        ], $headers)->assertOk();
-
-        $return = WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->firstOrFail();
+        // A used component taken off the vehicle, received into the warehouse, then processed.
+        $componentId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
+            'product_id' => $product->id, 'quantity' => $qty, 'condition' => 'GOOD',
+        ], $headers)->assertStatus(201)->json('data.id');
+        $return = WorkOrderPartReturn::query()->where('work_order_removed_component_id', $componentId)->firstOrFail();
+        $this->postJson("/api/v1/app/used-part-returns/{$return->id}/receive", ['warehouse_id' => $warehouse->id], $headers)->assertOk();
 
         $this->postJson("/api/v1/app/used-part-returns/{$return->id}/inspect", [
             'accepted_quantity' => $qty, 'condition' => 'USED_GOOD',
@@ -209,7 +209,7 @@ class SparePartSaleTest extends TestCase
         $this->assertSame('SALE', $movement->movement_type);
 
         $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(45.0, (float) $stock->quantity_on_hand); // 50 - 5 issued, unaffected by the sale
+        $this->assertSame(50.0, (float) $stock->quantity_on_hand); // the used component never entered available stock; the sale does not touch it
     }
 
     public function test_scrap_route_requires_permission_and_decrements_on_hand_stock(): void

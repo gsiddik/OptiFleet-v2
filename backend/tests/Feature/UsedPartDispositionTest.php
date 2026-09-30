@@ -53,13 +53,15 @@ class UsedPartDispositionTest extends TestCase
         $wo = app(WorkOrderService::class)->schedule($wo);
         $wo = app(WorkOrderService::class)->start($wo);
 
-        $part = $this->issueThroughPartRequest($wo, $product, $qty, $warehouse);
-
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
-            'quantity' => $qty, 'condition' => $condition,
-        ], $headers)->assertOk();
-
-        $return = WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->firstOrFail();
+        // An old component taken off the vehicle (Removed Components) is the Used Sparepart
+        // Processing source; receiving it into a warehouse queues it for inspection.
+        $componentId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
+            'product_id' => $product->id, 'quantity' => $qty, 'condition' => $condition === 'USED_GOOD' ? 'GOOD' : 'FAULTY',
+        ], $headers)->assertStatus(201)->json('data.id');
+        $return = WorkOrderPartReturn::query()->where('work_order_removed_component_id', $componentId)->firstOrFail();
+        $this->postJson("/api/v1/app/used-part-returns/{$return->id}/receive", ['warehouse_id' => $warehouse->id], $headers)
+            ->assertOk()->assertJsonPath('data.disposition_status', 'PENDING_INSPECTION');
+        $return->refresh();
 
         return [$tenant, $warehouse, $product, $return, $headers];
     }
@@ -157,14 +159,14 @@ class UsedPartDispositionTest extends TestCase
 
         // Not yet restocked — approval is still pending.
         $stockBefore = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(45.0, (float) $stockBefore->quantity_on_hand); // 50 - 5 issued
+        $this->assertSame(50.0, (float) $stockBefore->quantity_on_hand); // receiving the old component never adds available stock
 
         $this->postJson("/api/v1/app/used-part-returns/{$return->id}/decide", [
             'decision' => 'APPROVE',
         ], $approverHeaders)->assertOk()->assertJsonPath('data.disposition_status', 'FINALIZED');
 
         $stockAfter = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(50.0, (float) $stockAfter->quantity_on_hand); // restocked now that it's approved
+        $this->assertSame(55.0, (float) $stockAfter->quantity_on_hand); // the accepted 5 become available only now that reuse is approved
     }
 
     public function test_approved_scrap_disposition_never_touches_inventory(): void
@@ -185,7 +187,7 @@ class UsedPartDispositionTest extends TestCase
         ], $approverHeaders)->assertOk()->assertJsonPath('data.disposition_status', 'FINALIZED');
 
         $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(47.0, (float) $stock->quantity_on_hand); // 50 - 3 issued, unchanged by scrap disposition
+        $this->assertSame(50.0, (float) $stock->quantity_on_hand); // unchanged by receiving and by the scrap disposition
     }
 
     public function test_rejected_disposition_can_be_reproposed(): void

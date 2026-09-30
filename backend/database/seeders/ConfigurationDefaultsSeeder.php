@@ -48,6 +48,8 @@ class ConfigurationDefaultsSeeder extends Seeder
             // [Item Type code]-[Component Group abbreviation]-[sequence]; the sequence runs per
             // prefix (DocumentNumberingService context partition) and never resets.
             'product_sku' => ['format' => '{ITEMTYPE}-{CG}-{SEQ:6}', 'doc_code' => 'SKU', 'reset_rule' => 'NEVER'],
+            // Return Number of a new part returned (not used) from a Work Order's Issuance & Return.
+            'part_return' => ['format' => 'RTN/{YYYY}/{SEQ:6}', 'doc_code' => 'RTN', 'reset_rule' => 'YEARLY'],
         ];
 
         foreach ($numbering as $code => $payload) {
