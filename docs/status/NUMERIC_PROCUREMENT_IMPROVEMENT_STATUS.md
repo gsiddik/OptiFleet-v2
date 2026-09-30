@@ -156,3 +156,18 @@ Decisions taken from existing evidence (no owner input needed):
   is eager-loaded (query count constant regardless of rows — covered by a test).
 - The list is now also limited to RFQs inside the user's warehouse data scope (detail endpoints
   already enforced it) and is paginated.
+
+## Phase 9 — Create Purchase Order, Order Date, Expected Receipt Date (DONE)
+
+- `POST /quotations/{id}/purchase-order` requires `order_date` (YYYY-MM-DD, real calendar date);
+  a client `expected_delivery_date` is no longer accepted there.
+- `PurchaseOrderService::createFromQuotation`: lines, quantities and vendor unit prices always
+  copied from the selected quotation; persists `order_date`; `expected_delivery_date` =
+  Order Date + quotation `lead_time_days` (calendar days; null when the vendor gave no lead
+  time) via `PurchaseOrderService::expectedReceiptDate`. No schema change (columns existed).
+- PO document: context already carries both dates; seeded default label now "Expected Receipt
+  Date" (existing published templates are never overwritten and show the derived value).
+- Frontend: Create Purchase Order shows the quotation lines (product, qty, vendor unit price,
+  line total, total), vendor lead time, delivery warehouse (defaults to the RFQ's), Order Date
+  datepicker, and a preview of the Expected Receipt Date; PO detail shows both dates.
+- Demo/functional seeders pass an Order Date (demo PO: 2026-09-30 → expected 2026-10-07).

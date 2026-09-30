@@ -101,7 +101,7 @@ class FunctionalTestInventorySeeder
         $quotation = $rfqService->selectVendor($quotation);
 
         $poService = app(PurchaseOrderService::class);
-        $po = $poService->createFromQuotation($quotation, $warehouse, [], $userId);
+        $po = $poService->createFromQuotation($quotation, $warehouse, ['order_date' => now()->toDateString()], $userId);
         $po = $poService->transition($po, 'SUBMITTED');
         $po = $poService->approve($po, $userId);
         $po = $poService->transition($po, 'ISSUED');

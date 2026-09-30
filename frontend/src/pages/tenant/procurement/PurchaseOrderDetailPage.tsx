@@ -139,6 +139,10 @@ export function PurchaseOrderDetailPage() {
           {po.delivery_warehouse?.name ?? po.delivery_warehouse_id}
         </p>
         <p style={{ fontSize: 13 }}>
+          <strong>Order Date:</strong> {po.order_date ? po.order_date.slice(0, 10) : '—'} &nbsp; <strong>Expected Receipt Date:</strong>{' '}
+          {po.expected_delivery_date ? po.expected_delivery_date.slice(0, 10) : '—'}
+        </p>
+        <p style={{ fontSize: 13 }}>
           <strong>Subtotal:</strong> {formatMoney(po.subtotal)} &nbsp; <strong>Tax:</strong> {formatMoney(po.tax_total)} &nbsp; <strong>Freight:</strong> {formatMoney(po.freight_cost)} &nbsp;
           <strong>Total:</strong> {formatMoney(po.total)}
         </p>

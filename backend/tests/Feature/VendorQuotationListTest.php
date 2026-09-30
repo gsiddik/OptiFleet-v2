@@ -39,12 +39,14 @@ class VendorQuotationListTest extends TestCase
         $this->assertSame($first->rfq_number, $row['rfq']['rfq_number']);
         $this->assertMatchesRegularExpression('#^RFQ/\d{4}/\d{6}$#', $row['rfq']['rfq_number']);
 
+        $this->getJson('/api/v1/app/quotations', $headers)->assertOk();
         DB::enableQueryLog();
         $this->getJson('/api/v1/app/quotations', $headers)->assertOk();
         $queriesForOne = count(DB::getQueryLog());
         foreach (range(2, 5) as $n) {
             $this->quote($tenant, $warehouse, $product, "Vendor {$n}");
         }
+        $this->getJson('/api/v1/app/quotations', $headers)->assertOk(); // warm the same caches as the first measurement
         DB::flushQueryLog();
         $rows = $this->getJson('/api/v1/app/quotations', $headers)->assertOk()->json('data');
         $this->assertCount(5, $rows);

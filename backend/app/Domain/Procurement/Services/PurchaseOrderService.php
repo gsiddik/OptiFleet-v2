@@ -15,8 +15,10 @@ use App\Domain\Workflow\Services\WorkflowApprovalService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Section 20: DRAFT -> SUBMITTED -> APPROVED -> ISSUED -> PARTIALLY_RECEIVED
@@ -42,10 +44,22 @@ class PurchaseOrderService
      * index on purchase_orders.vendor_quotation_id is the actual backstop if
      * they land in overlapping transactions anyway.
      */
+    /**
+     * PO from the selected quotation. The ordered goods, quantities and unit prices always come
+     * from the quotation (never from the client). The Order Date is mandatory and the Expected
+     * Receipt Date is derived here: Order Date + the quotation's Lead Days (calendar days — the
+     * same definition analytics uses for vendor lead time); none when the vendor gave no lead time.
+     */
     public function createFromQuotation(VendorQuotation $quotation, Warehouse $deliveryWarehouse, array $attributes, ?string $userId): PurchaseOrder
     {
+        $orderDate = $attributes['order_date'] ?? null;
+        $parsed = is_string($orderDate) ? CarbonImmutable::createFromFormat('!Y-m-d', $orderDate) : false;
+        if (! $parsed || $parsed->toDateString() !== $orderDate) {
+            throw ValidationException::withMessages(['order_date' => 'The Order Date is required (YYYY-MM-DD).']);
+        }
+
         try {
-            return DB::transaction(function () use ($quotation, $deliveryWarehouse, $attributes, $userId) {
+            return DB::transaction(function () use ($quotation, $deliveryWarehouse, $attributes, $userId, $orderDate) {
                 $locked = VendorQuotation::query()->lockForUpdate()->findOrFail($quotation->id);
                 if ($locked->status !== 'SELECTED') {
                     throw new ProcurementException('Only a selected quotation can be converted to a Purchase Order.');
@@ -66,11 +80,19 @@ class PurchaseOrderService
                     'purchase_request_id' => $locked->rfq->purchase_request_id,
                     'vendor_quotation_id' => $locked->id,
                     'freight_cost' => $attributes['freight_cost'] ?? $locked->freight_cost,
+                    'order_date' => $orderDate,
+                    'expected_delivery_date' => self::expectedReceiptDate($orderDate, $locked->lead_time_days),
                 ]), $items, $userId);
             });
         } catch (QueryException $e) {
             throw new ProcurementException('This quotation has already been converted to a Purchase Order.');
         }
+    }
+
+    /** Expected Receipt Date = Order Date + Lead Days (calendar days); null without a lead time. */
+    public static function expectedReceiptDate(string $orderDate, ?int $leadDays): ?string
+    {
+        return $leadDays === null ? null : CarbonImmutable::createFromFormat('!Y-m-d', $orderDate)->addDays($leadDays)->toDateString();
     }
 
     public function create(Partner $partner, Warehouse $deliveryWarehouse, array $attributes, array $items, ?string $userId): PurchaseOrder

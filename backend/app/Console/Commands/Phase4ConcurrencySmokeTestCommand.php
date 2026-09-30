@@ -191,7 +191,7 @@ class Phase4ConcurrencySmokeTestCommand extends Command
         $this->info("\n[4/4] Racing 10 workers each converting the SAME selected quotation to a Purchase Order");
         $poService = app(PurchaseOrderService::class);
         $this->fork(10, function () use ($poService, $quotation, $warehouse) {
-            $poService->createFromQuotation($quotation, $warehouse, [], null);
+            $poService->createFromQuotation($quotation, $warehouse, ['order_date' => now()->toDateString()], null);
         });
 
         $count = PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count();

@@ -265,7 +265,7 @@ class ProcurementTest extends TestCase
 
         $quotation = $this->createSelectedQuotation($scenario, $requesterToken);
         $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $requesterHeaders)->assertStatus(201);
         $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
 
@@ -324,7 +324,7 @@ class ProcurementTest extends TestCase
 
         $quotation = $this->createSelectedQuotation($scenario, $requesterToken);
         $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $requesterHeaders)->assertStatus(201);
         $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
         $this->postJson("/api/v1/app/purchase-orders/{$po->id}/submit", [], $requesterHeaders)->assertOk();
@@ -344,7 +344,7 @@ class ProcurementTest extends TestCase
         $quotation = $this->createSelectedQuotation($scenario, $token);
 
         $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $headers)->assertStatus(201);
         $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
         $this->assertSame(80.0, (float) $po->total);
@@ -391,11 +391,11 @@ class ProcurementTest extends TestCase
         $quotation = $this->createSelectedQuotation($scenario, $token);
 
         $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $headers)->assertStatus(201);
 
         $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $headers)->assertStatus(422);
 
         $this->assertSame(1, PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count());

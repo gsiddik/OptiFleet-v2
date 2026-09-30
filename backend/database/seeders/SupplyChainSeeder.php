@@ -217,7 +217,7 @@ class SupplyChainSeeder extends Seeder
             $quotation = $rfqService->selectVendor($quotation);
 
             $poService = app(PurchaseOrderService::class);
-            $po = $poService->createFromQuotation($quotation, $jktWarehouse, [], $warehouseManager->id);
+            $po = $poService->createFromQuotation($quotation, $jktWarehouse, ['order_date' => now()->toDateString()], $warehouseManager->id);
             $po = $poService->transition($po, 'SUBMITTED');
             $po = $poService->approve($po, $warehouseManager->id);
             $po = $poService->transition($po, 'ISSUED');

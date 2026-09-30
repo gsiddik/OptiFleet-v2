@@ -208,7 +208,7 @@ class ConfigurationDefaultsSeeder extends Seeder
             'purchase_order' => $wrap('Purchase Order', <<<'HTML'
                 <p>Vendor: {{partner.name}}, {{partner.address}}<br>Contact: {{partner.contact_name}} ({{partner.contact_phone}})<br>
                 Delivery Warehouse: {{delivery_warehouse.name}}<br>
-                Order Date: {{purchase_order.order_date}} | Expected: {{purchase_order.expected_delivery_date}} | Status: {{purchase_order.status}}</p>
+                Order Date: {{purchase_order.order_date}} | Expected Receipt Date: {{purchase_order.expected_delivery_date}} | Status: {{purchase_order.status}}</p>
                 <table border="1" cellpadding="4" style="width:100%;border-collapse:collapse;">
                   <tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Disc%</th><th>Tax%</th><th>Line Total</th></tr>
                   {{#items}}<tr><td>{{product_name}}</td><td>{{quantity_ordered}}</td><td>{{unit_price}}</td><td>{{discount_percent}}</td><td>{{tax_percent}}</td><td>{{line_total}}</td></tr>{{/items}}
