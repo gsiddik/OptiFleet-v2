@@ -45,13 +45,8 @@ class InventoryReturnClassificationTest extends TestCase
         $wo = app(WorkOrderService::class)->schedule($wo);
         $wo = app(WorkOrderService::class)->start($wo);
 
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Brake pad', 'quantity' => $plannedQty,
-        ], $headers)->assertStatus(201);
-        $part = WorkOrderPlannedPart::query()->findOrFail($addResponse->json('data.id'));
-
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", ['quantity' => $issueQty], $headers)->assertOk();
+        // Part Requests issue the whole approved quantity; $plannedQty is kept for the callers' signature.
+        $part = $this->issueThroughPartRequest($wo, $product, $issueQty, $warehouse);
 
         return [$tenant, $warehouse, $product, $wo, $part->fresh(), $headers];
     }

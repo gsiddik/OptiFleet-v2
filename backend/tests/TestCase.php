@@ -439,6 +439,20 @@ abstract class TestCase extends BaseTestCase
         return ['vehicle_brand_id' => $brandRow->id, 'vehicle_model_id' => $modelRow->id];
     }
 
+    /**
+     * Puts a part on a Work Order the only way the product allows: Part Request
+     * (request -> approve -> issue from $warehouse). Returns the issued planned-part line.
+     */
+    protected function issueThroughPartRequest(\App\Domain\WorkOrder\Models\WorkOrder $workOrder, \App\Domain\ProductMaster\Models\Product $product, float $quantity, \App\Domain\Organization\Models\Warehouse $warehouse): \App\Domain\WorkOrder\Models\WorkOrderPlannedPart
+    {
+        $service = app(\App\Domain\WorkOrder\Services\WorkOrderPartRequestService::class);
+        $request = $service->request($workOrder->fresh(), [['product_id' => $product->id, 'quantity_requested' => $quantity]], null, null);
+        $request = $service->approve($request, null, null, null);
+        $request = $service->issue($request, $warehouse, null);
+
+        return \App\Domain\WorkOrder\Models\WorkOrderPlannedPart::query()->findOrFail($request->items->first()->planned_part_id);
+    }
+
     protected function makePartner(Tenant $tenant, array $overrides = []): \App\Domain\Partner\Models\Partner
     {
         return \App\Domain\Partner\Models\Partner::query()->create(array_merge([

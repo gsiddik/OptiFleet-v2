@@ -2,26 +2,35 @@
 
 namespace App\Domain\WorkOrder\Services;
 
+use App\Domain\Inventory\Services\InventoryException;
+use App\Domain\Organization\Models\Warehouse;
+use App\Domain\ProductMaster\Models\Product;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequestItem;
+use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Phase 5: Request Parts is a mechanic-initiated request/approval
- * document, deliberately kept separate from WorkOrderPlannedPart's own
- * Reserve -> Issue -> Consume/Return lifecycle (see WorkOrderPartService).
- * Approving a line here never touches warehouse_stocks directly — it
- * creates a WorkOrderPlannedPart via WorkOrderExecutionService, so every
- * stock mutation for an approved request still happens inside the one,
- * already-tested Planned Parts lifecycle.
+ * Part Requests are the only issuing path for Work Order parts:
+ *
+ *   Work Order "Reserve" -> REQUESTED -> APPROVED | REJECTED | CANCELLED
+ *                                        APPROVED -> ISSUED
+ *
+ * Approving a line creates its WorkOrderPlannedPart (the per-line Issue -> Consume/Return
+ * bookkeeping); issuing posts the stock movement through WorkOrderPartService::issue() ->
+ * InventoryService::issue() — the existing, tested inventory engine, never a parallel one.
+ * Every transition locks the request row and is checked against
+ * WorkOrderPartRequest::TRANSITIONS, so double approve/issue is rejected, never repeated.
  */
 class WorkOrderPartRequestService
 {
     public function __construct(
         private readonly WorkOrderExecutionService $execution,
+        private readonly WorkOrderPartService $parts,
     ) {}
 
+    /** @param array<int, array{product_id: string, quantity_requested: float|string}> $items */
     public function request(WorkOrder $workOrder, array $items, ?string $notes, ?string $userId): WorkOrderPartRequest
     {
         $this->execution->assertExecutable($workOrder);
@@ -46,17 +55,25 @@ class WorkOrderPartRequestService
                     throw new WorkOrderException('Each part request line must have a quantity greater than zero.');
                 }
 
+                // The Product master is the item's identity; the description is only its name snapshot.
+                $product = Product::query()->where('status', 'ACTIVE')
+                    ->where(fn ($q) => $q->whereNull('tenant_id')->orWhere('tenant_id', $workOrder->tenant_id))
+                    ->find($item['product_id'] ?? null);
+                if (! $product) {
+                    throw new WorkOrderException('Each part request line must reference an active Product.');
+                }
+
                 WorkOrderPartRequestItem::query()->create([
                     'tenant_id' => $workOrder->tenant_id,
                     'part_request_id' => $request->id,
-                    'product_id' => $item['product_id'] ?? null,
-                    'product_reference' => $item['product_reference'] ?? null,
-                    'description' => $item['description'],
+                    'product_id' => $product->id,
+                    'product_reference' => $product->sku,
+                    'description' => $product->name,
                     'quantity_requested' => $quantity,
                 ]);
             }
 
-            return $request->fresh('items');
+            return $request->fresh('items.product');
         });
     }
 
@@ -67,11 +84,7 @@ class WorkOrderPartRequestService
     public function approve(WorkOrderPartRequest $request, ?array $approvedQuantities, ?string $userId, ?string $note): WorkOrderPartRequest
     {
         return DB::transaction(function () use ($request, $approvedQuantities, $userId, $note) {
-            $locked = WorkOrderPartRequest::query()->lockForUpdate()->with('items')->findOrFail($request->id);
-
-            if ($locked->status !== 'REQUESTED') {
-                throw new WorkOrderException('Only a requested part request can be approved.');
-            }
+            $locked = $this->lockFor($request, 'APPROVED');
 
             $workOrder = WorkOrder::query()->findOrFail($locked->work_order_id);
             $anyApproved = false;
@@ -121,12 +134,7 @@ class WorkOrderPartRequestService
         }
 
         return DB::transaction(function () use ($request, $reason, $userId) {
-            $locked = WorkOrderPartRequest::query()->lockForUpdate()->findOrFail($request->id);
-
-            if ($locked->status !== 'REQUESTED') {
-                throw new WorkOrderException('Only a requested part request can be rejected.');
-            }
-
+            $locked = $this->lockFor($request, 'REJECTED');
             $locked->update([
                 'status' => 'REJECTED',
                 'decided_by' => $userId,
@@ -141,12 +149,7 @@ class WorkOrderPartRequestService
     public function cancel(WorkOrderPartRequest $request, ?string $userId): WorkOrderPartRequest
     {
         return DB::transaction(function () use ($request, $userId) {
-            $locked = WorkOrderPartRequest::query()->lockForUpdate()->findOrFail($request->id);
-
-            if ($locked->status !== 'REQUESTED') {
-                throw new WorkOrderException('Only a requested part request can be cancelled.');
-            }
-
+            $locked = $this->lockFor($request, 'CANCELLED');
             $locked->update([
                 'status' => 'CANCELLED',
                 'decided_by' => $userId,
@@ -155,5 +158,67 @@ class WorkOrderPartRequestService
 
             return $locked->fresh();
         });
+    }
+
+    /**
+     * Issues every approved line from one warehouse, all-or-nothing: if any line lacks
+     * stock the whole issue rolls back and nothing is deducted. The request row lock plus
+     * the APPROVED -> ISSUED check make a second (double-click / concurrent) issue fail
+     * instead of deducting stock twice.
+     */
+    public function issue(WorkOrderPartRequest $request, Warehouse $warehouse, ?string $userId): WorkOrderPartRequest
+    {
+        return DB::transaction(function () use ($request, $warehouse, $userId) {
+            $locked = $this->lockFor($request, 'ISSUED');
+            abort_unless($warehouse->tenant_id === $locked->tenant_id, 404);
+
+            foreach ($locked->items as $item) {
+                if (! $item->planned_part_id) {
+                    continue; // a line approved with quantity 0
+                }
+                $part = WorkOrderPlannedPart::query()->lockForUpdate()->findOrFail($item->planned_part_id);
+                $remaining = (float) $part->planned_quantity - (float) $part->issued_quantity;
+                if ($remaining <= 0) {
+                    continue;
+                }
+                if ($part->warehouse_id !== null && $part->warehouse_id !== $warehouse->id && (float) $part->reserved_quantity > 0) {
+                    throw new WorkOrderException("Line \"{$item->description}\" is reserved in another warehouse — issue it from that warehouse.");
+                }
+                $part->update(['warehouse_id' => $warehouse->id]);
+
+                try {
+                    $this->parts->issue($part->fresh(), $remaining, $userId);
+                } catch (InventoryException $e) {
+                    throw new WorkOrderException("Line \"{$item->description}\": {$e->getMessage()}");
+                }
+            }
+
+            $locked->update([
+                'status' => 'ISSUED',
+                'warehouse_id' => $warehouse->id,
+                'issued_by' => $userId,
+                'issued_at' => now(),
+            ]);
+
+            return $locked->fresh(['items.plannedPart', 'items.product']);
+        });
+    }
+
+    /** Row-locks the request and rejects a transition its current status does not allow. */
+    private function lockFor(WorkOrderPartRequest $request, string $target): WorkOrderPartRequest
+    {
+        $locked = WorkOrderPartRequest::query()->lockForUpdate()->with('items')->findOrFail($request->id);
+
+        if (! $locked->canTransitionTo($target)) {
+            $message = match (true) {
+                $target === 'ISSUED' && $locked->status === 'REQUESTED' => 'This part request must be approved before it can be issued.',
+                $target === 'ISSUED' && $locked->status === 'ISSUED' => 'This part request has already been issued.',
+                $target === 'ISSUED' => "A {$locked->status} part request cannot be issued.",
+                default => 'Only a requested part request can be '.strtolower($target === 'CANCELLED' ? 'cancelled' : $target).'.',
+            };
+            throw new WorkOrderException($message);
+        }
+
+        return $locked;
     }
 }

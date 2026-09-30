@@ -53,12 +53,7 @@ class UsedPartDispositionTest extends TestCase
         $wo = app(WorkOrderService::class)->schedule($wo);
         $wo = app(WorkOrderService::class)->start($wo);
 
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Alternator', 'quantity' => $qty,
-        ], $headers)->assertStatus(201);
-        $part = WorkOrderPlannedPart::query()->findOrFail($addResponse->json('data.id'));
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", ['quantity' => $qty], $headers)->assertOk();
+        $part = $this->issueThroughPartRequest($wo, $product, $qty, $warehouse);
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
             'quantity' => $qty, 'condition' => $condition,

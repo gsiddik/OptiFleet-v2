@@ -803,6 +803,9 @@ export interface WorkOrderPlannedPartItem {
   total_cost: string | null;
   /** issued − consumed − returned; 0 once CONSUMED (backend-computed). */
   returnable_quantity?: string | number;
+  /** The Product master is the line's identity; description is its name snapshot (or legacy free text). */
+  product?: { id: string; name: string; sku?: string | null; code?: string | null } | null;
+  warehouse?: { id: string; name: string } | null;
 }
 
 /** Doc's true "Planned Parts" tab — pure budgeting, never touches warehouse stock. */
@@ -871,14 +874,20 @@ export interface PartRequestItem {
   id: string;
   work_order_id: string;
   notes: string | null;
-  status: 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  /** REQUESTED -> APPROVED | REJECTED | CANCELLED; APPROVED -> ISSUED (backend state machine). */
+  status: 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'ISSUED';
   requested_by: string | null;
   requested_at: string | null;
   decided_by: string | null;
   decided_at: string | null;
   decision_note: string | null;
+  warehouse_id?: string | null;
+  issued_by?: string | null;
+  issued_at?: string | null;
+  warehouse?: { id: string; code: string; name: string } | null;
   items?: PartRequestLineItem[];
   work_order?: WorkOrderItem;
+  created_at?: string;
 }
 
 export type ExternalWorkOrderInvoiceAction =

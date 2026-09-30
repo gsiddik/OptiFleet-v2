@@ -29,7 +29,7 @@ class WorkOrderPartRequestItem extends Model
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed(); // history stays readable
     }
 
     public function plannedPart(): BelongsTo

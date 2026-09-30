@@ -39,11 +39,7 @@ class WorkOrderConsumedReturnTest extends TestCase
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
         )))));
 
-        $partId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Brake pad', 'quantity' => $issueQty,
-        ], $headers)->assertCreated()->json('data.id');
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/issue", ['quantity' => $issueQty], $headers)->assertOk();
+        $partId = $this->issueThroughPartRequest($wo, $product, $issueQty, $warehouse)->id;
 
         return [$wo, WorkOrderPlannedPart::query()->findOrFail($partId), $headers];
     }

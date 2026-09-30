@@ -89,7 +89,9 @@ class WorkOrderPartService
                 throw new WorkOrderException('Nothing left to issue for this planned part.');
             }
 
-            $result = $this->inventory->issue($warehouse, $product, $toIssue, WorkOrderPlannedPart::class, $part->id, $userId);
+            // Only this line's own reservation may be consumed; the rest must be unreserved stock.
+            $ownReserved = min($toIssue, (float) $part->reserved_quantity);
+            $result = $this->inventory->issue($warehouse, $product, $toIssue, WorkOrderPlannedPart::class, $part->id, $userId, null, $ownReserved);
 
             $newIssuedTotal = (float) $part->issued_quantity + $toIssue;
             $newReservedTotal = max(0, (float) $part->reserved_quantity - $toIssue);

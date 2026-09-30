@@ -51,11 +51,7 @@ class WorkOrderRemovedComponentTest extends TestCase
         $wo = app(WorkOrderService::class)->start($wo);
 
         // New part: issued and consumed — the replacement installation.
-        $partId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $newProduct->id, 'description' => 'New Brake Pad', 'quantity' => 4,
-        ], $headers)->assertStatus(201)->json('data.id');
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/issue", ['quantity' => 4], $headers)->assertOk();
+        $partId = $this->issueThroughPartRequest($wo, $newProduct, 4, $warehouse)->id;
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/consume", ['quantity' => 4], $headers)->assertOk();
 
         return [$tenant, $warehouse, $newProduct, $oldProduct, $wo, $partId, $headers];

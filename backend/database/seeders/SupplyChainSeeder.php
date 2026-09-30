@@ -37,7 +37,6 @@ use App\Domain\Tire\Services\TireService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Warranty\Models\Warranty;
 use App\Domain\Warranty\Services\WarrantyClaimService;
-use App\Domain\WorkOrder\Services\WorkOrderExecutionService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use App\Models\User;
 use App\Support\TenantContext;
@@ -174,11 +173,13 @@ class SupplyChainSeeder extends Seeder
             $wo = $workOrders->schedule($wo);
             $wo = $workOrders->start($wo);
 
-            $execution = app(WorkOrderExecutionService::class);
-            $plannedPart = $execution->addPlannedPart($wo, [
-                'product_id' => $brakePad->id, 'description' => 'Brake Pad Set (Front)', 'quantity' => 2,
-            ]);
-            app(\App\Domain\WorkOrder\Services\WorkOrderPartService::class)->reserve($plannedPart, $jktWarehouse->id, null, $warehouseManager->id);
+            // Work Order "Reserve" = a Part Request: one issued (request -> approve -> issue from
+            // Jakarta), one still REQUESTED in the approval queue.
+            $partRequests = app(\App\Domain\WorkOrder\Services\WorkOrderPartRequestService::class);
+            $issued = $partRequests->request($wo, [['product_id' => $brakePad->id, 'quantity_requested' => 2]], null, $warehouseManager->id);
+            $issued = $partRequests->approve($issued, null, $warehouseManager->id, null);
+            $partRequests->issue($issued, $jktWarehouse, $warehouseManager->id);
+            $partRequests->request($wo, [['product_id' => $oilFilter->id, 'quantity_requested' => 1]], 'Oil filter for the same visit.', $warehouseManager->id);
         }
 
         // --- Vendors ---

@@ -139,41 +139,9 @@ class WorkOrderExecutionController extends Controller
         return $this->ok($this->execution->updateJobStatus($job, $request->input('status')));
     }
 
-    public function addPlannedPart(Request $request, WorkOrder $workOrder)
-    {
-        $this->authorizeScope($workOrder);
-        $validated = $request->validate([
-            'maintenance_job_id' => ['nullable', 'uuid', 'exists:maintenance_jobs,id'],
-            'product_id' => ['nullable', 'uuid', 'exists:products,id'],
-            'product_reference' => ['nullable', 'string', 'max:255'],
-            'description' => ['required', 'string', 'max:255'],
-            'quantity' => ['nullable', 'numeric', 'min:0.01'],
-            'notes' => ['nullable', 'string'],
-        ]);
-
-        return $this->ok($this->execution->addPlannedPart($workOrder, $validated), 201);
-    }
-
-    public function reservePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
-    {
-        $this->authorizeScope($workOrder);
-        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
-        $validated = $request->validate([
-            'warehouse_id' => ['nullable', 'uuid', 'exists:warehouses,id'],
-            'quantity' => ['nullable', 'numeric', 'gt:0'],
-        ]);
-
-        return $this->ok($this->parts->reserve($plannedPart, $validated['warehouse_id'] ?? null, isset($validated['quantity']) ? (float) $validated['quantity'] : null, $this->context->user()->id));
-    }
-
-    public function issuePlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
-    {
-        $this->authorizeScope($workOrder);
-        abort_unless($plannedPart->work_order_id === $workOrder->id, 404);
-        $validated = $request->validate(['quantity' => ['nullable', 'numeric', 'gt:0']]);
-
-        return $this->ok($this->parts->issue($plannedPart, isset($validated['quantity']) ? (float) $validated['quantity'] : null, $this->context->user()->id));
-    }
+    // Planned-part lines are created only by approving a Part Request and issued only through
+    // Part Requests (PartRequestController::approve/issue) — there is no direct add/reserve/issue
+    // endpoint here any more. Consume and Return stay part of Work Order execution.
 
     public function returnPlannedPart(Request $request, WorkOrder $workOrder, WorkOrderPlannedPart $plannedPart)
     {

@@ -366,7 +366,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::delete('/work-orders/{workOrder}/corrective-actions/{correctiveAction}', [WorkOrderExecutionController::class, 'deleteCorrectiveAction'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/jobs', [WorkOrderExecutionController::class, 'addJob'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/jobs/{job}/status', [WorkOrderExecutionController::class, 'updateJobStatus'])->middleware('permission:maintenance_job.manage');
-            Route::post('/work-orders/{workOrder}/planned-parts', [WorkOrderExecutionController::class, 'addPlannedPart'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works', [WorkOrderExecutionController::class, 'requestAdditionalWork'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works/{additionalWork}/decide', [WorkOrderExecutionController::class, 'decideAdditionalWork'])->middleware('permission:work_order.approve');
 
@@ -380,6 +379,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/part-requests/{partRequest}/approve', [PartRequestController::class, 'approve'])->middleware('permission:part_request.approve');
             Route::post('/part-requests/{partRequest}/reject', [PartRequestController::class, 'reject'])->middleware('permission:part_request.reject');
             Route::post('/part-requests/{partRequest}/cancel', [PartRequestController::class, 'cancel'])->middleware('permission:part_request.cancel');
+            Route::post('/part-requests/{partRequest}/issue', [PartRequestController::class, 'issue'])->middleware('permission:part_request.issue');
 
             Route::post('/work-orders/{workOrder}/external-services', [WorkOrderExternalServiceController::class, 'store'])->middleware('permission:work_order_external_service.create');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/complete', [WorkOrderExternalServiceController::class, 'complete'])->middleware('permission:work_order_external_service.complete');
@@ -574,8 +574,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/stock-transfers/{stockTransfer}/reject', [StockTransferController::class, 'reject'])->middleware('permission:stock_transfer.approve');
             Route::post('/stock-transfers/{stockTransfer}/cancel', [StockTransferController::class, 'cancel'])->middleware('permission:stock_transfer.create');
 
-            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/reserve', [WorkOrderExecutionController::class, 'reservePlannedPart'])->middleware('permission:inventory.reserve');
-            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/issue', [WorkOrderExecutionController::class, 'issuePlannedPart'])->middleware('permission:inventory.issue');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return', [WorkOrderExecutionController::class, 'returnPlannedPart'])->middleware('permission:inventory.return');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/consume', [WorkOrderExecutionController::class, 'consumePlannedPart'])->middleware('permission:inventory.issue');
             Route::get('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence', [WorkOrderExecutionController::class, 'listReturnEvidence'])->middleware('permission:inventory.return');

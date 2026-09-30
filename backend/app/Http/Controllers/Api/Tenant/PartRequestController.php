@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Organization\Models\Warehouse;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Services\WorkOrderPartRequestService;
@@ -23,7 +24,7 @@ class PartRequestController extends Controller
         $user = $this->context->user();
         $tenantId = $this->context->tenantId();
 
-        $query = WorkOrderPartRequest::query()->with(['workOrder.vehicle', 'items.product', 'items.plannedPart']);
+        $query = WorkOrderPartRequest::query()->with(['workOrder.vehicle', 'items.product', 'items.plannedPart', 'warehouse:id,code,name']);
         $allowedWorkshopIds = $this->scope->allowedWorkshopIds($user, $tenantId);
         if ($allowedWorkshopIds !== null) {
             $query->whereHas('workOrder', fn ($q) => $q->whereIn('workshop_id', $allowedWorkshopIds));
@@ -42,7 +43,7 @@ class PartRequestController extends Controller
     public function show(WorkOrderPartRequest $partRequest)
     {
         $this->authorizeScope($partRequest);
-        $partRequest->load(['workOrder.vehicle', 'items.product', 'items.plannedPart']);
+        $partRequest->load(['workOrder.vehicle', 'items.product', 'items.plannedPart', 'warehouse:id,code,name']);
 
         return $this->ok($partRequest);
     }
@@ -59,9 +60,8 @@ class PartRequestController extends Controller
         $validated = $request->validate([
             'notes' => ['nullable', 'string'],
             'items' => ['required', 'array', 'min:1'],
-            'items.*.product_id' => ['nullable', 'uuid', 'exists:products,id'],
-            'items.*.product_reference' => ['nullable', 'string', 'max:255'],
-            'items.*.description' => ['required', 'string', 'max:255'],
+            // The Product master identifies the item; name/SKU are snapshotted server-side.
+            'items.*.product_id' => ['required', 'uuid'],
             'items.*.quantity_requested' => ['required', 'numeric', 'min:0.01'],
         ]);
 
@@ -79,7 +79,7 @@ class PartRequestController extends Controller
             'This Work Order is outside your assigned data scope.'
         );
 
-        return $this->ok($workOrder->partRequests()->with(['items.product', 'items.plannedPart'])->latest('created_at')->get());
+        return $this->ok($workOrder->partRequests()->with(['items.product', 'items.plannedPart', 'warehouse:id,code,name'])->latest('created_at')->get());
     }
 
     public function approve(Request $request, WorkOrderPartRequest $partRequest)
@@ -109,6 +109,22 @@ class PartRequestController extends Controller
         $this->authorizeScope($partRequest);
 
         return $this->ok($this->partRequests->cancel($partRequest, $this->context->user()->id));
+    }
+
+    public function issue(Request $request, WorkOrderPartRequest $partRequest)
+    {
+        $this->authorizeScope($partRequest);
+        $validated = $request->validate(['warehouse_id' => ['required', 'uuid']]);
+
+        $warehouse = Warehouse::query()->where('tenant_id', $this->context->tenantId())->find($validated['warehouse_id']);
+        abort_unless($warehouse !== null, 422, 'Select a warehouse of this tenant.');
+        abort_unless(
+            $this->scope->canAccessWarehouse($this->context->user(), $this->context->tenantId(), $warehouse->id),
+            403,
+            'This warehouse is outside your assigned data scope.'
+        );
+
+        return $this->ok($this->partRequests->issue($partRequest, $warehouse, $this->context->user()->id));
     }
 
     private function authorizeScope(WorkOrderPartRequest $partRequest): void
