@@ -12,6 +12,9 @@ import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
 
+/** Only these partner types supply purchased goods and can be invited (backend enforces the same). */
+const RFQ_VENDOR_TYPES = ['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER'];
+
 interface ComparisonRow {
   quotation_id: string;
   partner: { id: string; name: string; code: string };
@@ -34,6 +37,7 @@ export function RfqDetailPage() {
   const [quotePartnerId, setQuotePartnerId] = useState('');
   const [quoteUnitPrice, setQuoteUnitPrice] = useState('');
   const [quoteLeadTime, setQuoteLeadTime] = useState('');
+  const [printingVendorId, setPrintingVendorId] = useState<string | null>(null);
 
   function load() {
     apiClient.get(`/app/rfqs/${id}`).then((res) => setRfq(res.data.data)).catch((err) => setError(extractApiError(err).message));
@@ -42,7 +46,10 @@ export function RfqDetailPage() {
 
   useEffect(load, [id]);
   useEffect(() => {
-    apiClient.get('/app/partners', { params: { per_page: 100 } }).then((res) => setPartners(res.data.data)).catch(() => setPartners([]));
+    apiClient
+      .get('/app/partners', { params: { partner_type: RFQ_VENDOR_TYPES, status: 'ACTIVE', per_page: 100 } })
+      .then((res) => setPartners(res.data.data))
+      .catch(() => setPartners([]));
   }, []);
 
   useBreadcrumbLabel(rfq?.id, rfq?.rfq_number);
@@ -58,6 +65,20 @@ export function RfqDetailPage() {
       setError(extractApiError(err).message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** Vendor-specific RFQ document (PDF), addressed to the selected invited vendor. */
+  async function printForVendor(vendorId: string) {
+    setPrintingVendorId(vendorId);
+    setError(null);
+    try {
+      const res = await apiClient.get(`/app/rfqs/${id}/vendors/${vendorId}/print`, { responseType: 'blob' });
+      window.open(URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' })), '_blank');
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setPrintingVendorId(null);
     }
   }
 
@@ -132,19 +153,26 @@ export function RfqDetailPage() {
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Invited Vendors</h3>
         {(rfq.vendors ?? []).length === 0 && <EmptyState label="No vendors invited yet." />}
         {(rfq.vendors ?? []).map((v) => (
-          <div key={v.id} style={{ fontSize: 13, padding: '4px 0' }}>
-            {v.name} ({v.code})
+          <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
+            <span>
+              {v.name} ({v.code})
+            </span>
+            <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} disabled={printingVendorId === v.id} onClick={() => printForVendor(v.id)}>
+              {printingVendorId === v.id ? 'Loading…' : 'Print'}
+            </button>
           </div>
         ))}
         {hasPermission('rfq.manage') && rfq.status !== 'CLOSED' && rfq.status !== 'CANCELLED' && (
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <select value={invitePartnerId} onChange={(e) => setInvitePartnerId(e.target.value)} style={{ ...inputStyle, width: 240 }}>
               <option value="">Select vendor…</option>
-              {partners.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+              {partners
+                .filter((p) => !(rfq.vendors ?? []).some((v) => v.id === p.id))
+                .map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
             </select>
             <button className="btn-secondary" disabled={busy || !invitePartnerId} onClick={inviteVendor}>
               Invite

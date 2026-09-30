@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Domain\Configuration\Services\ConfigurationService;
 use App\Domain\Configuration\Services\TemplateValidator;
+use App\Domain\Procurement\Support\RfqDocumentTemplate;
 use Illuminate\Database\Seeder;
 
 /**
@@ -215,6 +216,8 @@ class ConfigurationDefaultsSeeder extends Seeder
                 <p style="text-align:right;">Subtotal: {{purchase_order.subtotal}} | Tax: {{purchase_order.tax_total}} | Freight: {{purchase_order.freight_cost}}<br>
                 <strong>Total: {{purchase_order.total}}</strong></p>
                 HTML),
+            // Printed per invited vendor from RFQ Detail (see RfqDocumentTemplate).
+            'rfq' => RfqDocumentTemplate::html(),
             'goods_receipt' => $wrap('Goods Receipt', <<<'HTML'
                 <p>Warehouse: {{warehouse.name}} | Vendor: {{partner.name}}<br>
                 Status: {{goods_receipt.status}} | Received: {{goods_receipt.received_at}}</p>

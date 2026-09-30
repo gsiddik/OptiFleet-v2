@@ -3,7 +3,9 @@
 namespace App\Domain\Configuration\Services;
 
 use App\Domain\Identity\Models\Tenant;
+use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseOrder;
+use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Shared\Support\DisplayFormat;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
@@ -135,6 +137,46 @@ class DocumentTemplateContextBuilder
                 'discount_percent' => (string) $item->discount_percent,
                 'tax_percent' => (string) $item->tax_percent,
                 'line_total' => DisplayFormat::money($item->line_total),
+            ])->all(),
+        ];
+    }
+
+    /**
+     * RFQ printed for ONE invited vendor: the document names that vendor and asks for unit prices
+     * and the delivery lead time after the Purchase Order is received.
+     */
+    public static function forRfqVendor(Rfq $rfq, Partner $vendor, ?string $printedByName): array
+    {
+        $rfq->loadMissing(['warehouse', 'items.product.uom']);
+        $tenant = Tenant::query()->find($rfq->tenant_id);
+
+        return [
+            'company' => self::company(),
+            'tenant' => ['name' => $tenant?->name, 'code' => $tenant?->code],
+            'document_number' => $rfq->rfq_number,
+            'configuration_version' => $rfq->numbering_configuration_version_id,
+            'rfq' => [
+                'number' => $rfq->rfq_number,
+                'status' => $rfq->status,
+                'issue_date' => optional($rfq->issue_date)->toDateString() ?? now()->toDateString(),
+                'response_deadline' => optional($rfq->response_deadline)->toDateString(),
+            ],
+            'vendor' => [
+                'name' => $vendor->name,
+                'address' => $vendor->address,
+                'contact_name' => $vendor->contact_name,
+                'contact_phone' => $vendor->contact_phone,
+                'contact_email' => $vendor->contact_email,
+            ],
+            'warehouse' => ['name' => $rfq->warehouse?->name, 'address' => $rfq->warehouse?->address],
+            'printed_by' => ['name' => $printedByName],
+            'printed_at' => now()->toDateTimeString(),
+            'items' => $rfq->items->values()->map(fn ($item, $i) => [
+                'line_no' => (string) ($i + 1),
+                'product_code' => $item->product?->sku ?? $item->product?->code,
+                'product_name' => $item->product?->name,
+                'quantity' => DisplayFormat::quantity($item->quantity),
+                'uom' => $item->product?->uom?->code,
             ])->all(),
         ];
     }

@@ -3,13 +3,21 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Configuration\Services\DocumentPdfService;
+use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
+use App\Domain\Configuration\Services\DocumentTemplateRenderService;
+use App\Domain\Configuration\Services\TemplateRenderer;
+use App\Domain\Configuration\Services\TemplateValidationException;
 use App\Domain\Organization\Models\Warehouse;
+use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseRequest;
 use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Procurement\Services\RfqService;
+use App\Domain\Procurement\Support\RfqDocumentTemplate;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class RfqController extends Controller
 {
@@ -74,6 +82,27 @@ class RfqController extends Controller
         $validated = $request->validate(['partner_ids' => ['required', 'array', 'min:1'], 'partner_ids.*' => ['uuid', 'exists:partners,id']]);
 
         return $this->ok($this->rfqs->inviteVendors($rfq, $validated['partner_ids']));
+    }
+
+    /** RFQ document addressed to one invited vendor (PDF, template-driven like every print). */
+    public function printForVendor(Rfq $rfq, Partner $partner, DocumentTemplateRenderService $templates, TemplateRenderer $renderer, DocumentPdfService $pdf)
+    {
+        $this->authorizeScope($rfq);
+        abort_unless($partner->tenant_id === $rfq->tenant_id && $rfq->vendors()->whereKey($partner->id)->exists(), 404);
+
+        $context = DocumentTemplateContextBuilder::forRfqVendor($rfq, $partner, $this->context->user()->name);
+        try {
+            $html = $templates->render('rfq', $context, $rfq->tenant_id, null, null, $rfq->warehouse_id)['html'];
+        } catch (TemplateValidationException) {
+            // Not re-seeded yet: fall back to the platform default body.
+            $html = $renderer->render(RfqDocumentTemplate::html(), $context + ['template_version' => 'default', 'generated_at' => now()->toDateTimeString()]);
+        }
+        $filename = Str::slug($rfq->rfq_number.'-'.$partner->name).'.pdf';
+
+        return response($pdf->fromHtml($html), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="'.$filename.'"',
+        ]);
     }
 
     public function close(Rfq $rfq)

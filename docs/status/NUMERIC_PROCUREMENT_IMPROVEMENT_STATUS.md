@@ -117,3 +117,17 @@ Decisions taken from existing evidence (no owner input needed):
   brand). `RfqService::create` now rejects inactive / other-tenant products, duplicated products,
   non-positive and fractional counted quantities (field-level 422); warehouse must be the tenant's
   and inside the user's data scope (existing check).
+
+## Phase 6 — RFQ Invited Vendors & vendor-specific print (DONE)
+
+- `Partner::RFQ_VENDOR_TYPES` = SUPPLIER, SPARE_PART_SUPPLIER, TIRE_SUPPLIER (canonical enum
+  values). `RfqService::inviteVendors` rejects other types, inactive partners, other tenants'
+  partners (previously accepted) and CLOSED/CANCELLED RFQs. The invite dropdown lists only
+  eligible, not-yet-invited vendors.
+- Print per invited vendor: `GET /app/rfqs/{rfq}/vendors/{partner}/print` (`rfq.view`, data
+  scope, vendor must be invited) → PDF. New `rfq` document type in TemplateVariableRegistry +
+  `DocumentTemplateContextBuilder::forRfqVendor`; default body `RfqDocumentTemplate` (RFQ No,
+  RFQ date, addressed vendor, destination warehouse, item code/name/qty/UOM, request for unit
+  price and lead time after PO, "Issued by" signature block with the printing user). Seeded as
+  the platform default; the print falls back to the same body until a database is re-seeded.
+- K3 (remove invited vendor): replaced by owner decision 4 (no invitation removal; see Phase 7).

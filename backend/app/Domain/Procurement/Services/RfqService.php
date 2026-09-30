@@ -78,8 +78,22 @@ class RfqService
         }
     }
 
+    /**
+     * Only ACTIVE partners of the RFQ's tenant whose type supplies goods (Supplier, Spare Part
+     * Supplier, Tire Supplier) can be invited, and only while the RFQ is still open.
+     */
     public function inviteVendors(Rfq $rfq, array $partnerIds): Rfq
     {
+        if (in_array($rfq->status, ['CLOSED', 'CANCELLED'], true)) {
+            throw new ProcurementException("Vendors cannot be invited to an RFQ that is {$rfq->status}.");
+        }
+        foreach (array_values($partnerIds) as $i => $partnerId) {
+            $partner = Partner::query()->withoutGlobalScopes()->find($partnerId);
+            if (! $partner || $partner->tenant_id !== $rfq->tenant_id || $partner->status !== 'ACTIVE' || ! in_array($partner->partner_type, Partner::RFQ_VENDOR_TYPES, true)) {
+                throw ValidationException::withMessages(["partner_ids.{$i}" => 'Only an active Supplier, Spare Part Supplier or Tire Supplier can be invited.']);
+            }
+        }
+
         return DB::transaction(function () use ($rfq, $partnerIds) {
             foreach ($partnerIds as $partnerId) {
                 $rfq->vendors()->syncWithoutDetaching([$partnerId => ['invited_at' => now()]]);

@@ -625,6 +625,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/rfqs', [RfqController::class, 'store'])->middleware('permission:rfq.manage');
             Route::get('/rfqs/{rfq}', [RfqController::class, 'show'])->middleware('permission:rfq.view');
             Route::post('/rfqs/{rfq}/vendors', [RfqController::class, 'inviteVendors'])->middleware('permission:rfq.manage');
+            Route::get('/rfqs/{rfq}/vendors/{partner}/print', [RfqController::class, 'printForVendor'])->middleware('permission:rfq.view');
             Route::post('/rfqs/{rfq}/close', [RfqController::class, 'close'])->middleware('permission:rfq.manage');
             Route::post('/rfqs/{rfq}/cancel', [RfqController::class, 'cancel'])->middleware('permission:rfq.manage');
             Route::get('/rfqs/{rfq}/compare', [RfqController::class, 'compare'])->middleware('permission:quotation.view');
