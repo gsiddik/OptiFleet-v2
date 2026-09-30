@@ -88,3 +88,18 @@ Decisions taken from existing evidence (no owner input needed):
 - Frontend: removed-product dropdown lists only consumed products with consumed / removable
   quantities; quantity inputs use whole-number mode unless the product's UOM is measured.
 - Tests updated to the new rule (fixtures now consume the new part before recording the old one).
+
+## Phase 4 — Used Sparepart Processing evidence photo upload (DONE)
+
+- Migration `2026_10_01_000006` (additive): `used_part_inspection_evidence` (tenant, return FK,
+  private disk/path, original name, mime, size, uploader).
+- `UsedPartEvidenceService`: JPG/PNG only — MIME checked from file content, extension must agree —
+  max 3 MB; stored on the private `local` disk under a server-generated UUID name (client name is
+  display metadata only, basename-sanitised). Add/remove only while PENDING_INSPECTION.
+- Endpoints: `GET|POST /used-part-returns/{id}/evidence`, `GET|DELETE …/evidence/{evidence}`
+  (view: `used_part.view`; upload/delete: `used_part.inspect`); tenant + workshop scope; storage
+  path never serialised. Payload relation `evidence_photos` (named to avoid colliding with the
+  legacy `inspection_evidence` URL column, which is kept read-only for history).
+- Frontend: Evidence Photo "Upload" button opens the OS file picker (accept .jpg/.jpeg/.png),
+  client-side type/size check with clear messages, authorized previews, remove while pending.
+  The free-text evidence URL field is gone.

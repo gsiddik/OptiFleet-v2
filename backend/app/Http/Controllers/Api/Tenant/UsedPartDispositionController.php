@@ -3,12 +3,15 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\WorkOrder\Models\UsedPartInspectionEvidence;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Services\UsedPartDispositionService;
+use App\Domain\WorkOrder\Services\UsedPartEvidenceService;
 use App\Domain\WorkOrder\Services\WorkOrderRemovedComponentService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * G-15: Used Sparepart Processing queue — old components removed from a vehicle
@@ -21,13 +24,14 @@ class UsedPartDispositionController extends Controller
 {
     /** Traceability: Work Order + vehicle, removed component (removed by / at), product, warehouse. */
     private const RELATIONS = [
-        'product', 'warehouse:id,code,name', 'plannedPart.workOrder', 'workOrder:id,wo_number,vehicle_id,workshop_id',
-        'workOrder.vehicle:id,registration_number', 'removedComponent', 'returner:id,name', 'inspector:id,name',
+        'product.uom', 'warehouse:id,code,name', 'plannedPart.workOrder', 'workOrder:id,wo_number,vehicle_id,workshop_id',
+        'workOrder.vehicle:id,registration_number', 'removedComponent', 'returner:id,name', 'inspector:id,name', 'evidencePhotos',
     ];
 
     public function __construct(
         private readonly UsedPartDispositionService $dispositions,
         private readonly WorkOrderRemovedComponentService $removedComponents,
+        private readonly UsedPartEvidenceService $evidence,
         private readonly DataScopeService $scope,
         private readonly TenantContext $context,
     ) {}
@@ -140,6 +144,43 @@ class UsedPartDispositionController extends Controller
     }
 
     /** Tenant, source (new-part returns are processed elsewhere) and workshop data scope. */
+    public function listEvidence(WorkOrderPartReturn $usedPartReturn)
+    {
+        $this->authorizeScope($usedPartReturn);
+
+        return $this->ok($usedPartReturn->evidencePhotos()->get());
+    }
+
+    /** Evidence Photo "Upload": JPG/PNG only, max 3 MB (re-checked from file content by the service). */
+    public function uploadEvidence(Request $request, WorkOrderPartReturn $usedPartReturn)
+    {
+        $this->authorizeScope($usedPartReturn);
+        $request->validate(['file' => ['required', 'file', 'max:3072', 'mimes:jpg,jpeg,png', 'mimetypes:image/jpeg,image/png']], [
+            'file.max' => 'The evidence photo may not be larger than 3 MB.',
+            'file.mimes' => 'Only JPG or PNG images are accepted.',
+            'file.mimetypes' => 'Only JPG or PNG images are accepted.',
+        ]);
+
+        return $this->ok($this->evidence->upload($usedPartReturn, $request->file('file'), $this->context->user()->id), 201);
+    }
+
+    public function showEvidence(WorkOrderPartReturn $usedPartReturn, UsedPartInspectionEvidence $evidence)
+    {
+        $this->authorizeScope($usedPartReturn);
+        abort_unless($evidence->work_order_part_return_id === $usedPartReturn->id, 404);
+
+        return Storage::disk($evidence->disk)->response($evidence->path, $evidence->original_filename, ['Content-Type' => $evidence->mime_type]);
+    }
+
+    public function destroyEvidence(WorkOrderPartReturn $usedPartReturn, UsedPartInspectionEvidence $evidence)
+    {
+        $this->authorizeScope($usedPartReturn);
+        abort_unless($evidence->work_order_part_return_id === $usedPartReturn->id, 404);
+        $this->evidence->delete($evidence);
+
+        return $this->message('Evidence photo removed.');
+    }
+
     private function authorizeScope(WorkOrderPartReturn $return): void
     {
         abort_unless($return->tenant_id === $this->context->tenantId(), 404);

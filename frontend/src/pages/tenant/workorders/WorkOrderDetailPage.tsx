@@ -27,6 +27,7 @@ import type {
 } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
+import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
@@ -1244,33 +1245,6 @@ const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY'; label: string 
   { value: 'UNUSED_FAULTY', label: 'New Faulty' },
 ];
 
-/** Fetches a private-disk evidence image as a blob and returns an object URL for preview. */
-function useEvidencePreviews(showUrl: (id: string) => string, ids: string[]) {
-  const [previews, setPreviews] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    const urls: string[] = [];
-    Promise.all(
-      ids
-        .filter((id) => !previews[id])
-        .map((id) =>
-          apiClient.get(showUrl(id), { responseType: 'blob' }).then((res) => {
-            const url = URL.createObjectURL(res.data);
-            urls.push(url);
-            if (!cancelled) setPreviews((prev) => ({ ...prev, [id]: url }));
-          }),
-        ),
-    ).catch(() => {});
-    return () => {
-      cancelled = true;
-      urls.forEach((u) => URL.revokeObjectURL(u));
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ids.join(',')]);
-
-  return previews;
-}
 
 const PLANNED_PART_PRODUCT_TYPES = ['SPARE_PART', 'TIRE', 'CONSUMABLE'];
 
@@ -1402,7 +1376,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
   const [returnCondition, setReturnCondition] = useState<(typeof RETURN_CONDITIONS)[number]['value']>('UNUSED_NEW');
   const [returnReason, setReturnReason] = useState('');
   const [returnEvidenceIds, setReturnEvidenceIds] = useState<string[]>([]);
-  const returnEvidencePreviews = useEvidencePreviews(
+  const returnEvidencePreviews = useAuthorizedPreviews(
     (id) => `/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence/${id}`,
     returnEvidenceIds,
   );
@@ -1776,7 +1750,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
   const [returnReason, setReturnReason] = useState('');
   const [evidenceByComponent, setEvidenceByComponent] = useState<Record<string, string[]>>({});
   const allEvidenceIds = Object.values(evidenceByComponent).flat();
-  const evidencePreviews = useEvidencePreviews(
+  const evidencePreviews = useAuthorizedPreviews(
     (id) => {
       const componentId = Object.keys(evidenceByComponent).find((cid) => evidenceByComponent[cid].includes(id));
       return `/app/work-orders/${wo.id}/removed-components/${componentId}/evidence/${id}`;

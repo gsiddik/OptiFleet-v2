@@ -545,6 +545,10 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/used-part-returns', [UsedPartDispositionController::class, 'index'])->middleware('permission:used_part.view');
             Route::get('/used-part-returns/{usedPartReturn}', [UsedPartDispositionController::class, 'show'])->middleware('permission:used_part.view');
             Route::post('/used-part-returns/{usedPartReturn}/receive', [UsedPartDispositionController::class, 'receive'])->middleware('permission:used_part.inspect');
+            Route::get('/used-part-returns/{usedPartReturn}/evidence', [UsedPartDispositionController::class, 'listEvidence'])->middleware('permission:used_part.view');
+            Route::post('/used-part-returns/{usedPartReturn}/evidence', [UsedPartDispositionController::class, 'uploadEvidence'])->middleware('permission:used_part.inspect');
+            Route::get('/used-part-returns/{usedPartReturn}/evidence/{evidence}', [UsedPartDispositionController::class, 'showEvidence'])->middleware('permission:used_part.view');
+            Route::delete('/used-part-returns/{usedPartReturn}/evidence/{evidence}', [UsedPartDispositionController::class, 'destroyEvidence'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/inspect', [UsedPartDispositionController::class, 'inspect'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/propose-disposition', [UsedPartDispositionController::class, 'proposeDisposition'])->middleware('permission:used_part.dispose');
             Route::post('/used-part-returns/{usedPartReturn}/decide', [UsedPartDispositionController::class, 'decide'])->middleware('permission:used_part.approve');
