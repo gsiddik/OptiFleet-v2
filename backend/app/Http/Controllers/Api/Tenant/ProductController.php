@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\MasterData\Models\VehicleModel;
 use App\Domain\MasterData\Services\ComponentClassificationService;
 use App\Domain\MasterData\Services\VehicleMasterResolver;
 use App\Domain\ProductMaster\Models\Product;
@@ -61,6 +62,19 @@ class ProductController extends Controller
             if ($value = $request->string($filter)->value()) {
                 $query->where($filter, $value);
             }
+        }
+        $request->validate(['category_id' => ['nullable', 'uuid'], 'vehicle_model_id' => ['nullable', 'uuid']]);
+        // Product Category filter including its direct subcategories (New RFQ product picker).
+        if ($categoryId = $request->string('category_id')->value()) {
+            $query->where(fn ($q) => $q->where('product_category_id', $categoryId)
+                ->orWhereIn('product_category_id', ProductCategory::query()->where('parent_id', $categoryId)->select('id')));
+        }
+        // Vehicle Model filter through the compatibility masters: rules for that model, plus
+        // brand-wide rules ("any model") of the model's brand.
+        if ($modelId = $request->string('vehicle_model_id')->value()) {
+            $model = VehicleModel::query()->find($modelId);
+            $query->whereHas('compatibilities', fn ($c) => $c->where(fn ($w) => $w->where('vehicle_model_id', $modelId)
+                ->when($model, fn ($brandWide) => $brandWide->orWhere(fn ($any) => $any->where('vehicle_brand_id', $model->vehicle_brand_id)->whereNull('vehicle_model_id')))));
         }
 
         return $this->paginated($query->orderBy('name')->paginate($request->integer('per_page', 20)));

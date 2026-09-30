@@ -10,10 +10,12 @@ use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Procurement\Models\RfqItem;
 use App\Domain\Procurement\Models\VendorQuotation;
 use App\Domain\Procurement\Models\VendorQuotationItem;
+use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Section 17/18/19: an RFQ may go to several vendors; each vendor's
@@ -31,6 +33,7 @@ class RfqService
         if (empty($items)) {
             throw new ProcurementException('An RFQ needs at least one item.');
         }
+        $this->assertOrderableLines($warehouse->tenant_id, $items);
 
         return DB::transaction(function () use ($warehouse, $attributes, $items, $purchaseRequest) {
             $number = $this->numbers->generate('rfq', $warehouse->tenant_id, null, null, $warehouse->id);
@@ -44,13 +47,35 @@ class RfqService
                 'status' => 'DRAFT',
             ]));
 
-            foreach ($items as $i => $line) {
-                QuantityPolicy::assertValidForProductId($line['product_id'] ?? null, $line['quantity'] ?? null, "items.{$i}.quantity");
+            foreach ($items as $line) {
                 RfqItem::query()->create(['rfq_id' => $rfq->id, 'product_id' => $line['product_id'], 'quantity' => $line['quantity']]);
             }
 
             return $rfq->fresh('items');
         });
+    }
+
+    /**
+     * Every RFQ line must be an ACTIVE product of the RFQ's tenant (or a platform product), listed
+     * once, with a positive quantity (whole number unless the product's UOM is measured).
+     */
+    private function assertOrderableLines(string $tenantId, array $items): void
+    {
+        $seen = [];
+        foreach (array_values($items) as $i => $line) {
+            $product = Product::query()->withoutGlobalScopes()->find($line['product_id'] ?? null);
+            if (! $product || ($product->tenant_id !== null && $product->tenant_id !== $tenantId) || $product->status !== 'ACTIVE') {
+                throw ValidationException::withMessages(["items.{$i}.product_id" => 'Select an active product of this tenant.']);
+            }
+            if (isset($seen[$product->id])) {
+                throw ValidationException::withMessages(["items.{$i}.product_id" => "\"{$product->name}\" is listed more than once."]);
+            }
+            $seen[$product->id] = true;
+            if (! is_numeric($line['quantity'] ?? null) || (float) $line['quantity'] <= 0) {
+                throw ValidationException::withMessages(["items.{$i}.quantity" => 'Quantity must be greater than zero.']);
+            }
+            QuantityPolicy::assertValid($product, $line['quantity'], "items.{$i}.quantity");
+        }
     }
 
     public function inviteVendors(Rfq $rfq, array $partnerIds): Rfq

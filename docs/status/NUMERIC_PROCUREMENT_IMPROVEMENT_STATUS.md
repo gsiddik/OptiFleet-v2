@@ -103,3 +103,17 @@ Decisions taken from existing evidence (no owner input needed):
 - Frontend: Evidence Photo "Upload" button opens the OS file picker (accept .jpg/.jpeg/.png),
   client-side type/size check with clear messages, authorized previews, remove while pending.
   The free-text evidence URL field is gone.
+
+## Phase 5 — New RFQ page (DONE)
+
+- "+ New RFQ" navigates to `/app/rfqs/new` (permission `rfq.manage`); the modal is removed.
+- Page: destination warehouse (scope-filtered list), server-side paginated product table
+  (checkbox, code, name, Product Category, vehicle compatibility), name search, Product Category
+  filter (includes subcategories), Vehicle Brand → Model filter, per-line quantity (whole numbers
+  unless the UOM is measured), selected-products summary kept across pages/filters; "Save as
+  Draft" creates a DRAFT RFQ and opens it.
+- Backend: `GET /app/products` gains `category_id` (category + direct subcategories) and
+  `vehicle_model_id` (compatibility rules for the model, plus brand-wide "any model" rules of its
+  brand). `RfqService::create` now rejects inactive / other-tenant products, duplicated products,
+  non-positive and fractional counted quantities (field-level 422); warehouse must be the tenant's
+  and inside the user's data scope (existing check).
