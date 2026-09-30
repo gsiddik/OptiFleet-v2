@@ -53,6 +53,11 @@ class FunctionalTestInventorySeeder
             'TEST-CS-003' => [20, 55000],
             'TEST-CS-004' => [15, 38000],
             'TEST-TIRE-CAR-001' => [8, 850000],
+            // Rim, Tool and Equipment stock so both Warehouse Stock tabs
+            // (Parts & Supplies / Tools & Equipment) have functional-test data.
+            'TEST-RIM-001' => [4, 650000],
+            'TEST-TOOL-001' => [3, 450000],
+            'TEST-EQP-001' => [1, 12500000],
         ] as $sku => [$qty, $cost]) {
             $product = $bySku[$sku];
             if (! StockMovement::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->exists()) {

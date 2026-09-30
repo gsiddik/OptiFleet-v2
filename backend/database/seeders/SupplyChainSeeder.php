@@ -187,6 +187,12 @@ class SupplyChainSeeder extends Seeder
             ['tenant_id' => $tenant->id, 'code' => 'VND-SINAR'],
             ['name' => 'PT Sinar Suku Cadang', 'partner_type' => 'SPARE_PART_SUPPLIER', 'contact_name' => 'Hendra Wijaya', 'contact_phone' => '021-5551234', 'payment_terms' => 'NET_30', 'status' => 'ACTIVE']
         );
+        // A general Supplier so every RFQ-eligible vendor type (Supplier, Spare Part Supplier,
+        // Tire Supplier) exists in the demo.
+        Partner::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'VND-MITRA'],
+            ['name' => 'PT Mitra Umum Supply', 'partner_type' => 'SUPPLIER', 'contact_name' => 'Dewi Lestari', 'contact_phone' => '021-5559012', 'payment_terms' => 'NET_30', 'status' => 'ACTIVE']
+        );
         Partner::query()->updateOrCreate(
             ['tenant_id' => $tenant->id, 'code' => 'VND-BANPRIMA'],
             ['name' => 'PT Ban Prima', 'partner_type' => 'TIRE_SUPPLIER', 'contact_name' => 'Rudi Hartono', 'contact_phone' => '021-5555678', 'payment_terms' => 'NET_14', 'status' => 'ACTIVE']

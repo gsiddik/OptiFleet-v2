@@ -1,6 +1,6 @@
 # Numeric Standards, Work Order Parts, Warehouse Stock & Procurement — Improvement Status
 
-Status: **IN PROGRESS**. Branch `claude/magical-volta-tv4xwl`, baseline `main` @ `93d67df`.
+Status: **COMPLETE** (all phases pushed). Branch `claude/magical-volta-tv4xwl`, baseline `main` @ `93d67df`.
 
 ## Impact analysis (baseline audit)
 
@@ -171,3 +171,54 @@ Decisions taken from existing evidence (no owner input needed):
   line total, total), vendor lead time, delivery warehouse (defaults to the RFQ's), Order Date
   datepicker, and a preview of the Expected Receipt Date; PO detail shows both dates.
 - Demo/functional seeders pass an Order Date (demo PO: 2026-09-30 → expected 2026-10-07).
+
+## Phase 10 — Seeders, regression, end-to-end verification (DONE)
+
+- Seeders: production `DatabaseSeeder` still calls baseline seeders only (adds only the `rfq`
+  template default and LTR/KG Type of Measure). Demo/functional seeders: plain SUPPLIER vendor
+  (demo), opening stock for a Rim, a Tool and an Equipment item (functional), quotation document
+  placeholder, PO order date. All seeded quantities are whole numbers for counted products.
+  `migrate:fresh --seed` + DevDemoSeeder + FunctionalTestingSeeder twice → identical counts.
+- Full backend regression (non-Mongo): 926 passed, 0 failed. MongoDB tests NOT RUN (`ext-mongodb`
+  unavailable). Frontend: build/typecheck PASS, oxlint no new warnings vs baseline.
+- Browser E2E (seeded demo data): Work Order issue 10 / consume 7 / return 3 → Total Cost
+  7 × unit, status badge left of product, removed-product dropdown lists only the consumed
+  product, removal recorded; numeric inputs have no spinner and reject letters; Warehouse Stock
+  tabs; no tenant Product Categories menu (direct URL → dashboard); evidence Upload (PDF and
+  >3 MB rejected, PNG uploaded); New RFQ page (search, category, Hino Ranger FG filter,
+  multi-select, qty validation, no horizontal overflow at 390 px) → DRAFT; vendor dropdown with
+  eligible types; vendor PDF; Record Quotation with document, vendor then removed from the
+  dropdown; View document; Vendor Quotations shows RFQ number; Create PO (lines, prices, Order
+  Date 2026-10-01 → Expected 2026-10-08); PO detail and PO PDF show both dates.
+
+## Final audit
+
+- [x] No numeric spinner (NumericInput + CSS fallback) · [x] counted quantities shown and accepted
+  as whole numbers; backend rejects fractions (measured UOMs excepted by owner decision)
+- [x] Money 2 decimals, exact decimal arithmetic · [x] tenant Product Categories menu removed,
+  master still used by forms / platform
+- [x] Issued Parts status position, consumed-based Total Cost, returns excluded
+- [x] Removed product only from consumed parts (capped), replacement derived
+- [x] Evidence Photo JPG/PNG ≤ 3 MB · [x] Warehouse Stock tabs by Item Type
+- [x] New RFQ page (warehouse, search, category, vehicle model, multi-select, qty, Draft)
+- [x] Eligible vendor types · [x] per-vendor RFQ print
+- [x] Quotation document required, secure view/download · [x] quoted vendor excluded (backend too)
+- [x] RFQ number in Vendor Quotations · [x] Create PO lines/qty/vendor prices, Order Date persisted,
+  Expected = Order Date + Lead Days
+- [x] Permissions, tenant isolation and data scope enforced server-side; seeders aligned;
+  production seeding production-safe
+
+## Known limitations / follow-ups
+
+- Invited-vendor removal (K3 as written) not built — replaced by owner decision 4.
+- Quotation document limit 10 MB follows the platform document convention — owner may set a
+  procurement-specific limit.
+- Existing databases get the `rfq` template on the next `ConfigurationDefaultsSeeder` run; until
+  then printing uses the identical built-in default. Existing PO templates keep their label
+  ("Expected:"), showing the now-derived date.
+- A planned part fully consumed/returned in a mix (e.g. 7 consumed + 3 returned of 10) keeps
+  status ISSUED — pre-existing status rule, unchanged (not in scope).
+- Legacy `OTHER` item-type products appear in neither Warehouse Stock tab (type no longer
+  creatable).
+- API quantity/money fields stay decimal strings (backward compatible); formatting is applied
+  in the UI and printed documents.
