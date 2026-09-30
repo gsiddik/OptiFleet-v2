@@ -120,6 +120,61 @@ class ReturnProcessingTest extends TestCase
         $this->postJson("/api/v1/app/part-returns/{$short->id}/process", ['actual_condition' => 'USED_GOOD', 'received_quantity' => 1], $headers)->assertStatus(422);
     }
 
+    public function test_quarantined_return_is_routed_to_a_follow_up_disposition_without_touching_stock(): void
+    {
+        [$tenant, $warehouse, $product, $wo, $part, $headers, $user] = $this->setUpIssued(5);
+        $routed = [];
+        foreach (WorkOrderPartReturn::FAULTY_DISPOSITIONS as $disposition) {
+            $return = $this->returnPart($wo, $part, 1, 'UNUSED_FAULTY', $headers);
+            $this->postJson("/api/v1/app/part-returns/{$return->id}/route", ['disposition' => $disposition], $headers)
+                ->assertStatus(422)->assertJsonPath('message', 'Only a quarantined return can be routed to a disposition (current status: PENDING_PROCESSING).');
+            $this->postJson("/api/v1/app/part-returns/{$return->id}/process", ['actual_condition' => 'UNUSED_FAULTY', 'received_quantity' => 1], $headers)
+                ->assertOk()->assertJsonPath('data.disposition_status', 'QUARANTINED');
+
+            $this->postJson("/api/v1/app/part-returns/{$return->id}/route", ['disposition' => $disposition, 'reason' => "Send to {$disposition}"], $headers)
+                ->assertOk()->assertJsonPath('data.disposition_status', $disposition)
+                ->assertJsonPath('data.disposition_reason', "Send to {$disposition}")->assertJsonPath('data.router.name', $user->name);
+            $this->assertNotNull($return->fresh()->routed_at);
+            $routed[] = $return;
+        }
+
+        // Routing never returns a faulty part to available stock, and a routed return is not re-routed.
+        $this->assertSame(15.0, $this->onHand($warehouse, $product));
+        $this->assertSame(0, StockMovement::query()->where('reference_type', WorkOrderPartReturn::class)->whereIn('reference_id', collect($routed)->pluck('id'))->count());
+        $this->postJson("/api/v1/app/part-returns/{$routed[0]->id}/route", ['disposition' => 'SCRAP'], $headers)
+            ->assertStatus(422)->assertJsonPath('message', 'Only a quarantined return can be routed to a disposition (current status: WARRANTY_CLAIM).');
+        $this->postJson("/api/v1/app/part-returns/{$routed[0]->id}/process", ['actual_condition' => 'UNUSED_NEW', 'received_quantity' => 1], $headers)->assertStatus(422);
+        $this->assertSame(15.0, $this->onHand($warehouse, $product));
+
+        $this->getJson('/api/v1/app/part-returns?status=REPAIR', $headers)->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.id', $routed[1]->id);
+    }
+
+    public function test_routing_rejects_restocked_returns_invalid_dispositions_and_unpermitted_users(): void
+    {
+        [$tenant, $warehouse, $product, $wo, $part, $headers] = $this->setUpIssued(5);
+        $good = $this->returnPart($wo, $part, 1, 'UNUSED_NEW', $headers);
+        $this->postJson("/api/v1/app/part-returns/{$good->id}/process", ['actual_condition' => 'UNUSED_NEW', 'received_quantity' => 1], $headers)->assertOk();
+        $this->postJson("/api/v1/app/part-returns/{$good->id}/route", ['disposition' => 'SCRAP'], $headers)->assertStatus(422);
+        $this->assertSame('RESTOCKED', $good->fresh()->disposition_status);
+
+        $faulty = $this->returnPart($wo, $part, 1, 'UNUSED_FAULTY', $headers);
+        $this->postJson("/api/v1/app/part-returns/{$faulty->id}/process", ['actual_condition' => 'UNUSED_FAULTY', 'received_quantity' => 1], $headers)->assertOk();
+        foreach (['RESTOCKED', 'REUSE', 'SELL_ELIGIBLE', ''] as $invalid) {
+            $this->postJson("/api/v1/app/part-returns/{$faulty->id}/route", ['disposition' => $invalid], $headers)->assertStatus(422)->assertJsonValidationErrors('disposition');
+        }
+
+        [, $viewer] = $this->makeTenantUser($tenant, ['part_return.view']);
+        $this->postJson("/api/v1/app/part-returns/{$faulty->id}/route", ['disposition' => 'SCRAP'], $this->authHeaders($viewer))->assertForbidden();
+        $this->assertSame('QUARANTINED', $faulty->fresh()->disposition_status);
+        $this->assertSame(16.0, $this->onHand($warehouse, $product), 'Only the good return was restocked.');
+
+        $other = $this->makeTenant(['code' => 'RTNR-'.Str::random(4)]);
+        $this->grantModule($other, 'INVENTORY');
+        [, $foreign] = $this->makeTenantUser($other, self::PERMISSIONS);
+        $this->postJson("/api/v1/app/part-returns/{$faulty->id}/route", ['disposition' => 'SCRAP'], $this->authHeaders($foreign))->assertNotFound();
+        $this->assertSame('QUARANTINED', WorkOrderPartReturn::withoutGlobalScopes()->findOrFail($faulty->id)->disposition_status);
+    }
+
     public function test_return_permissions_and_tenant_isolation(): void
     {
         [$tenant, , , $wo, $part, $headers] = $this->setUpIssued();

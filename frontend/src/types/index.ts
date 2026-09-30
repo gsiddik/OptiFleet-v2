@@ -1555,7 +1555,7 @@ export interface WorkOrderPartReturnItem {
   actual_condition: 'UNUSED_NEW' | 'UNUSED_FAULTY' | null;
   inspection_result: 'MATCH' | 'MISMATCH' | null;
   disposition_status:
-    | 'PENDING_PROCESSING' | 'RESTOCKED' | 'QUARANTINED'
+    | 'PENDING_PROCESSING' | 'RESTOCKED' | 'QUARANTINED' | 'WARRANTY_CLAIM' | 'REPAIR' | 'SCRAP'
     | 'PENDING_RETURN' | 'PENDING_INSPECTION' | 'INSPECTED' | 'PENDING_APPROVAL' | 'REJECTED' | 'FINALIZED';
   accepted_quantity: string | null;
   returned_by: string | null;
@@ -1577,6 +1577,10 @@ export interface WorkOrderPartReturnItem {
   removed_component?: { id: string; removed_by: string | null; removed_at: string; condition: 'GOOD' | 'FAULTY'; notes: string | null; status: string } | null;
   returner?: { id: string; name: string } | null;
   inspector?: { id: string; name: string } | null;
+  /** Faulty (QUARANTINED) new-part return routed to its follow-up disposition. */
+  routed_by?: string | null;
+  routed_at?: string | null;
+  router?: { id: string; name: string } | null;
   remaining_eligible_quantity?: number;
 }
 

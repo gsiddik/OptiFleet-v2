@@ -34,11 +34,24 @@ class WorkOrderPartReturn extends Model
     /** Sources handled by Used Sparepart Processing. */
     public const USED_SOURCES = [self::SOURCE_REMOVED_COMPONENT, self::SOURCE_USED_PART];
 
-    /** NEW_PART: stock is posted only when Returned Parts Processing accepts the part as good. */
+    /**
+     * Follow-up dispositions for a faulty (QUARANTINED) returned new part. Each is an open
+     * status awaiting its own processing (later scope); none of them ever puts the part back
+     * into available stock.
+     */
+    public const FAULTY_DISPOSITIONS = ['WARRANTY_CLAIM', 'REPAIR', 'SCRAP'];
+
+    /**
+     * NEW_PART: stock is posted only when Returned Parts Processing accepts the part as good.
+     * A faulty part is QUARANTINED (out of available stock) until routed to a follow-up disposition.
+     */
     public const NEW_PART_TRANSITIONS = [
         'PENDING_PROCESSING' => ['RESTOCKED', 'QUARANTINED'],
         'RESTOCKED' => [],
-        'QUARANTINED' => [],
+        'QUARANTINED' => self::FAULTY_DISPOSITIONS,
+        'WARRANTY_CLAIM' => [],
+        'REPAIR' => [],
+        'SCRAP' => [],
     ];
 
     protected $fillable = [
@@ -47,7 +60,7 @@ class WorkOrderPartReturn extends Model
         'condition', 'disposition_status', 'stock_movement_id', 'returned_by', 'reason', 'evidence',
         'workflow_configuration_version_id', 'accepted_quantity', 'inspected_by', 'inspected_at',
         'inspection_notes', 'inspection_evidence', 'disposition', 'disposition_reason', 'proposed_by',
-        'workflow_approval_request_id', 'finalized_at',
+        'workflow_approval_request_id', 'finalized_at', 'routed_by', 'routed_at',
     ];
 
     protected function casts(): array
@@ -57,6 +70,7 @@ class WorkOrderPartReturn extends Model
             'accepted_quantity' => 'decimal:4',
             'inspected_at' => 'datetime',
             'finalized_at' => 'datetime',
+            'routed_at' => 'datetime',
         ];
     }
 
@@ -83,6 +97,11 @@ class WorkOrderPartReturn extends Model
     public function inspector(): BelongsTo
     {
         return $this->belongsTo(\App\Models\User::class, 'inspected_by');
+    }
+
+    public function router(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'routed_by');
     }
 
     public function warehouse(): BelongsTo

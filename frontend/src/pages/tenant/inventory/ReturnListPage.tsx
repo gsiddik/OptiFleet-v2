@@ -17,8 +17,20 @@ const STATUSES = [
   { value: 'PENDING_PROCESSING', label: 'Pending Processing' },
   { value: 'RESTOCKED', label: 'Accepted to Stock' },
   { value: 'QUARANTINED', label: 'Quarantined' },
+  { value: 'WARRANTY_CLAIM', label: 'Warranty Claim' },
+  { value: 'REPAIR', label: 'Repair' },
+  { value: 'SCRAP', label: 'Scrap' },
   { value: '', label: 'All' },
 ];
+
+/** Follow-up for a faulty (quarantined) return. None of them puts the part back into available stock. */
+const FAULTY_DISPOSITIONS = [
+  { value: 'WARRANTY_CLAIM', label: 'Warranty Claim' },
+  { value: 'REPAIR', label: 'Repair' },
+  { value: 'SCRAP', label: 'Scrap' },
+] as const;
+type FaultyDisposition = (typeof FAULTY_DISPOSITIONS)[number]['value'];
+const DISPOSITION_LABEL: Record<string, string> = Object.fromEntries(FAULTY_DISPOSITIONS.map((d) => [d.value, d.label]));
 
 const CONDITION_LABEL: Record<string, string> = { UNUSED_NEW: 'New Good', UNUSED_FAULTY: 'New Faulty' };
 
@@ -64,7 +76,8 @@ export function ReturnListPage() {
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Return</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 14 }}>
-        New parts returned unused from a Work Order. Click a Return Number to inspect it; only an accepted (New Good) return goes back to stock.
+        New parts returned unused from a Work Order. Click a Return Number to inspect it; only an accepted (New Good) return goes back to stock. Faulty
+        returns stay quarantined until routed to Warranty Claim, Repair or Scrap.
       </p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
         {STATUSES.map((s) => (
@@ -123,6 +136,10 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
   }, [listed.id]);
   const pending = item.disposition_status === 'PENDING_PROCESSING';
   const canProcess = pending && hasPermission('part_return.process');
+  const canRoute = item.disposition_status === 'QUARANTINED' && hasPermission('part_return.process');
+  const [disposition, setDisposition] = useState<FaultyDisposition | ''>('');
+  const [routeReason, setRouteReason] = useState('');
+  const [confirmingRoute, setConfirmingRoute] = useState(false);
   const [actualCondition, setActualCondition] = useState<'UNUSED_NEW' | 'UNUSED_FAULTY'>(item.condition === 'UNUSED_FAULTY' ? 'UNUSED_FAULTY' : 'UNUSED_NEW');
   const [receivedQty, setReceivedQty] = useState(String(Number(item.quantity)));
   const [notes, setNotes] = useState('');
@@ -138,6 +155,21 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
     setError(null);
     try {
       await apiClient.post(`/app/part-returns/${item.id}/process`, { actual_condition: actualCondition, received_quantity: receivedQty, notes: notes || undefined });
+      onProcessed();
+    } catch (err) {
+      const e = extractApiError(err);
+      setError(e.errors ? Object.values(e.errors).flat()[0] ?? e.message : e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function route() {
+    setConfirmingRoute(false);
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/part-returns/${item.id}/route`, { disposition, reason: routeReason || undefined });
       onProcessed();
     } catch (err) {
       const e = extractApiError(err);
@@ -204,10 +236,41 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
           {row('Actual Condition', item.actual_condition ? CONDITION_LABEL[item.actual_condition] : '—')}
           {row('Received Quantity', formatQty(item.accepted_quantity))}
           {row('Inspection Result', item.inspection_result ?? '—')}
-          {row('Outcome', item.disposition_status === 'RESTOCKED' ? `Accepted — ${formatQty(item.accepted_quantity)} back in stock` : item.disposition_status === 'QUARANTINED' ? 'Quarantined — not added to available stock' : item.disposition_status)}
+          {row(
+            'Outcome',
+            item.disposition_status === 'RESTOCKED'
+              ? `Accepted — ${formatQty(item.accepted_quantity)} back in stock`
+              : item.disposition_status === 'QUARANTINED'
+                ? 'Quarantined — not added to available stock; awaiting disposition'
+                : DISPOSITION_LABEL[item.disposition_status]
+                  ? `Faulty — routed to ${DISPOSITION_LABEL[item.disposition_status]}; not added to available stock`
+                  : item.disposition_status,
+          )}
           {row('Inspected By / At', `${item.inspector?.name ?? '—'} · ${item.inspected_at ? new Date(item.inspected_at).toLocaleString() : '—'}`)}
           {item.inspection_notes && row('Notes', item.inspection_notes)}
+          {item.routed_at && row('Routed By / At', `${item.router?.name ?? '—'} · ${new Date(item.routed_at).toLocaleString()}`)}
+          {item.routed_at && item.disposition_reason && row('Disposition Reason', item.disposition_reason)}
         </div>
+      )}
+
+      {canRoute && (
+        <>
+          <h4 style={{ margin: '16px 0 8px', fontSize: 13 }}>Faulty Part Disposition</h4>
+          <FormField label="Disposition" required>
+            <select aria-label="Disposition" value={disposition} onChange={(e) => setDisposition(e.target.value as FaultyDisposition | '')} style={inputStyle}>
+              <option value="">Select disposition…</option>
+              {FAULTY_DISPOSITIONS.map((d) => (
+                <option key={d.value} value={d.value}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Reason">
+            <textarea value={routeReason} onChange={(e) => setRouteReason(e.target.value)} maxLength={2000} style={{ ...inputStyle, minHeight: 50 }} />
+          </FormField>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>The part stays out of available stock whichever disposition is chosen.</p>
+        </>
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
@@ -217,6 +280,11 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
         {canProcess && (
           <button className="btn-primary" disabled={busy || !(Number(receivedQty) > 0)} onClick={() => setConfirming(true)}>
             {busy ? 'Processing…' : 'Complete Processing'}
+          </button>
+        )}
+        {canRoute && (
+          <button className="btn-primary" disabled={busy || !disposition} onClick={() => setConfirmingRoute(true)}>
+            {busy ? 'Routing…' : 'Route Disposition'}
           </button>
         )}
       </div>
@@ -231,6 +299,14 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
         confirmLabel="Complete"
         onCancel={() => setConfirming(false)}
         onConfirm={submit}
+      />
+      <ConfirmDialog
+        open={confirmingRoute}
+        title="Route Faulty Return"
+        message={`Route ${item.return_number} to ${disposition ? DISPOSITION_LABEL[disposition] : ''}? It stays out of available stock.`}
+        confirmLabel="Route"
+        onCancel={() => setConfirmingRoute(false)}
+        onConfirm={route}
       />
     </Modal>
   );

@@ -17,9 +17,10 @@ use Illuminate\Support\Facades\DB;
  *   PENDING_PROCESSING -> RESTOCKED    actual condition New Good: the received quantity is posted
  *                                      back to available stock (one RETURN movement)
  *                      -> QUARANTINED  actual condition New Faulty: never added to available stock
+ *   QUARANTINED        -> WARRANTY_CLAIM | REPAIR | SCRAP  (route(): follow-up disposition, no stock)
  *
  * The row is locked and its status checked against NEW_PART_TRANSITIONS, so a return can be
- * processed (and restocked) only once.
+ * processed (and restocked) only once, and a quarantined return routed only once.
  */
 class ReturnProcessingService
 {
@@ -71,6 +72,37 @@ class ReturnProcessingService
                 'inspected_at' => now(),
                 'disposition_status' => $target,
                 'stock_movement_id' => $stockMovementId,
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * Route a quarantined (faulty) return to its follow-up disposition. Status only: the part
+     * stays out of available stock; warranty claim / repair / scrap processing is a later scope.
+     */
+    public function route(WorkOrderPartReturn $return, string $disposition, ?string $reason, string $userId): WorkOrderPartReturn
+    {
+        if (! in_array($disposition, WorkOrderPartReturn::FAULTY_DISPOSITIONS, true)) {
+            throw new WorkOrderException('Disposition must be Warranty Claim, Repair or Scrap.');
+        }
+
+        return DB::transaction(function () use ($return, $disposition, $reason, $userId) {
+            $locked = WorkOrderPartReturn::query()->lockForUpdate()->findOrFail($return->id);
+
+            if ($locked->return_source !== WorkOrderPartReturn::SOURCE_NEW_PART) {
+                throw new WorkOrderException('Only a returned new part is routed here; removed components go through Used Sparepart Processing.');
+            }
+            if (! in_array($disposition, WorkOrderPartReturn::NEW_PART_TRANSITIONS[$locked->disposition_status] ?? [], true)) {
+                throw new WorkOrderException("Only a quarantined return can be routed to a disposition (current status: {$locked->disposition_status}).");
+            }
+
+            $locked->update([
+                'disposition_status' => $disposition,
+                'disposition_reason' => $reason,
+                'routed_by' => $userId,
+                'routed_at' => now(),
             ]);
 
             return $locked->fresh();
