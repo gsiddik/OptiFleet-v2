@@ -16,6 +16,7 @@ use App\Domain\Tire\Models\TirePlyRating;
 use App\Domain\Tire\Models\TireSpeedRating;
 use App\Domain\Tire\Models\TireTraCode;
 use App\Domain\Tire\Models\TireTraStarRating;
+use App\Domain\MasterData\Services\VehicleMasterResolver;
 use App\Support\TenantContext;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -102,7 +103,7 @@ class ProductSpecificationService
     {
         $tenantId = $this->context->tenantId();
 
-        return Validator::make($input, [
+        $validated = Validator::make($input, [
             'part_number' => ['required', 'string', 'max:100'],
             'part_type' => ['required', 'in:GENUINE,OEM,OES,AFTERMARKET'],
             'oem_part_number' => ['nullable', 'string', 'max:100'],
@@ -122,8 +123,9 @@ class ProductSpecificationService
             // dynamic form never touches Vehicle Compatibility (it has its own dedicated
             // add/remove endpoints on the Product detail page), so this key is skipped/absent.
             'compatibilities' => [$includeCompatibilities ? 'required' : 'nullable', 'array', $includeCompatibilities ? 'min:1' : 'sometimes'],
-            'compatibilities.*.vehicle_brand' => ['required', 'string', 'max:100'],
-            'compatibilities.*.vehicle_model' => ['required', 'string', 'max:100'],
+            // Brand / Model come from the Vehicle Brand / Vehicle Model masters (by id), never free text.
+            'compatibilities.*.vehicle_brand_id' => ['required', 'uuid'],
+            'compatibilities.*.vehicle_model_id' => ['required', 'uuid'],
             'compatibilities.*.variant' => ['nullable', 'string', 'max:100'],
             'compatibilities.*.year_from' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
             'compatibilities.*.year_to' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
@@ -131,6 +133,8 @@ class ProductSpecificationService
             'compatibilities.*.vehicle_category_id' => ['nullable', 'uuid', Rule::exists('vehicle_categories', 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'))],
             'compatibilities.*.component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
         ])->validate();
+
+        return $this->resolveCompatibilityVehicles($validated, true);
     }
 
     private function persistSparepart(Product $product, array $v, bool $includeCompatibilities = true): void
@@ -237,7 +241,7 @@ class ProductSpecificationService
 
     private function validateRim(array $input): array
     {
-        return Validator::make($input, [
+        $validated = Validator::make($input, [
             'model' => ['nullable', 'string', 'max:100'],
             'rim_type' => ['required', 'in:STEEL,ALLOY,FORGED'],
             'diameter_inch' => ['required', 'numeric', 'min:0'],
@@ -252,13 +256,15 @@ class ProductSpecificationService
             'compatible_tire_sizes.*' => ['string', 'max:50'],
             // Vehicle Compatibility is Optional for Rim.
             'compatibilities' => ['nullable', 'array'],
-            'compatibilities.*.vehicle_brand' => ['required_with:compatibilities', 'string', 'max:100'],
-            'compatibilities.*.vehicle_model' => ['required_with:compatibilities', 'string', 'max:100'],
+            'compatibilities.*.vehicle_brand_id' => ['required_with:compatibilities', 'uuid'],
+            'compatibilities.*.vehicle_model_id' => ['required_with:compatibilities', 'uuid'],
             'compatibilities.*.variant' => ['nullable', 'string', 'max:100'],
             'compatibilities.*.year_from' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
             'compatibilities.*.year_to' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
             'compatibilities.*.position' => ['nullable', 'string', 'max:50'],
         ])->validate();
+
+        return $this->resolveCompatibilityVehicles($validated, true);
     }
 
     private function persistRim(Product $product, array $v, bool $includeCompatibilities = true): void
@@ -485,6 +491,23 @@ class ProductSpecificationService
 
     // --- Shared helpers ---
 
+    /** Resolves each compatibility row's Brand / Model ids into the reference + name snapshot. */
+    private function resolveCompatibilityVehicles(array $validated, bool $required): array
+    {
+        if (empty($validated['compatibilities'])) {
+            return $validated;
+        }
+
+        $resolver = app(VehicleMasterResolver::class);
+        foreach ($validated['compatibilities'] as $i => $row) {
+            $validated['compatibilities'][$i] = array_merge($row, $resolver->resolve(
+                $row['vehicle_brand_id'] ?? null, $row['vehicle_model_id'] ?? null, $this->context->tenantId(), "compatibilities.{$i}.", $required,
+            ));
+        }
+
+        return $validated;
+    }
+
     private function persistCompatibilities(Product $product, array $rows): void
     {
         foreach ($rows as $row) {
@@ -493,8 +516,10 @@ class ProductSpecificationService
                 'product_id' => $product->id,
                 'component_group_id' => $row['component_group_id'] ?? null,
                 'vehicle_category_id' => $row['vehicle_category_id'] ?? null,
-                'vehicle_brand' => $row['vehicle_brand'],
-                'vehicle_model' => $row['vehicle_model'],
+                'vehicle_brand_id' => $row['vehicle_brand_id'] ?? null,
+                'vehicle_brand' => $row['vehicle_brand'] ?? null,
+                'vehicle_model_id' => $row['vehicle_model_id'] ?? null,
+                'vehicle_model' => $row['vehicle_model'] ?? null,
                 'variant' => $row['variant'] ?? null,
                 'year_from' => $row['year_from'] ?? null,
                 'year_to' => $row['year_to'] ?? null,

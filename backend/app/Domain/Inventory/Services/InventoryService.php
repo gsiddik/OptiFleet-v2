@@ -71,22 +71,34 @@ class InventoryService
      * on the caller's own record (Section 45 — historical WO cost must
      * never move when the average cost later changes).
      */
-    public function issue(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): array
+    /**
+     * @param  float|null  $ownReserved  how much of $quantity comes out of the caller's own
+     *                                   reservation. When given, only that much reservation is consumed
+     *                                   and the rest must come from unreserved stock, so stock reserved
+     *                                   for someone else is never taken. Null keeps the original
+     *                                   behaviour (reservation-first against the whole row).
+     */
+    public function issue(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null, ?float $ownReserved = null): array
     {
         if ($quantity <= 0) {
             throw new InventoryException('Issue quantity must be positive.');
         }
 
-        return DB::transaction(function () use ($warehouse, $product, $quantity, $referenceType, $referenceId, $userId, $reason) {
+        return DB::transaction(function () use ($warehouse, $product, $quantity, $referenceType, $referenceId, $userId, $reason, $ownReserved) {
             $stock = $this->lockOrCreateStock($warehouse, $product);
 
-            $available = (float) $stock->quantity_on_hand;
+            if ($ownReserved !== null) {
+                $ownReserved = max(0.0, min($ownReserved, $quantity, (float) $stock->quantity_reserved));
+                $available = (float) $stock->quantity_on_hand - (float) $stock->quantity_reserved + $ownReserved;
+            } else {
+                $available = (float) $stock->quantity_on_hand;
+            }
             if ($quantity > $available) {
                 throw new InventoryException("Insufficient stock: requested {$quantity}, available {$available}.");
             }
 
             $unitCost = (float) $stock->average_unit_cost;
-            $reservedConsumed = min($quantity, (float) $stock->quantity_reserved);
+            $reservedConsumed = $ownReserved ?? min($quantity, (float) $stock->quantity_reserved);
 
             $stock->decrement('quantity_on_hand', $quantity);
             if ($reservedConsumed > 0) {

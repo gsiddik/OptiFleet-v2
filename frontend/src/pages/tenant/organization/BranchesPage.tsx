@@ -93,7 +93,16 @@ export function BranchesPage() {
         </>
       )}
 
-      <BranchFormModal open={showCreate} onClose={() => setShowCreate(false)} onSaved={() => setReloadKey((k) => k + 1)} />
+      {showCreate && (
+        <BranchFormModal
+          open
+          onClose={() => setShowCreate(false)}
+          onSaved={() => {
+            setShowCreate(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
       {editing && (
         <BranchFormModal
           open

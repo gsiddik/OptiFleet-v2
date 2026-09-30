@@ -41,6 +41,8 @@ class FunctionalTestWorkOrderSeeder
         $laborTimer = app(LaborTimerService::class);
         $qc = app(QualityControlService::class);
         $partService = app(WorkOrderPartService::class);
+        // Parts reach a Work Order only through Part Requests (request -> approve -> issue).
+        $partRequests = app(\App\Domain\WorkOrder\Services\WorkOrderPartRequestService::class);
 
         $leadMechanic = $ops->workers['LEAD_MECHANIC'];
         $qcInspector = $ops->workers['QC'];
@@ -120,7 +122,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-WAITING_PART: in progress, blocked on a part with no stock at this warehouse.
-        $this->scenario('FT-WO-WAITING_PART', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $execution, $ops, $bay1, $referenceDate, $products) {
+        $this->scenario('FT-WO-WAITING_PART', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $partRequests, $ops, $bay1, $referenceDate, $products) {
             $wo = $workOrders->create($ops->vehicles['CAR_1'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
                 'complaint' => '[FT-WO-WAITING_PART] Hydraulic lift arm requires replacement part not in stock.',
@@ -130,7 +132,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->assign($wo);
             $wo = $workOrders->schedule($wo, $bay1->id, $referenceDate->copy()->setTime(8, 0), $referenceDate->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
-            $execution->addPlannedPart($wo, ['product_id' => $products->bySku['TEST-EQP-002']->id, 'description' => 'Replacement lift arm assembly', 'quantity' => 1]);
+            // Requested, awaiting approval: the part is not in stock yet.
+            $partRequests->request($wo, [['product_id' => $products->bySku['TEST-EQP-002']->id, 'quantity_requested' => 1]], 'Replacement lift arm assembly', null);
 
             return $workOrders->waitForPart($wo);
         }, null);
@@ -157,7 +160,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-COMPLETED: full flow through QC pass + road test + complete (yesterday).
-        $this->scenario('FT-WO-COMPLETED', $ops->vehicles['CAR_3'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $qc, $ops, $bay1, $referenceDate, $brakeGroupId, $leadMechanic, $qcInspector, $partService, $products) {
+        $this->scenario('FT-WO-COMPLETED', $ops->vehicles['CAR_3'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $qc, $ops, $bay1, $referenceDate, $brakeGroupId, $leadMechanic, $qcInspector, $partService, $partRequests, $products) {
             $yesterday = $referenceDate->copy()->subDay();
             $wo = $workOrders->create($ops->vehicles['CAR_3'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'HIGH',
@@ -183,10 +186,10 @@ class FunctionalTestWorkOrderSeeder
             $laborTimer->finish($log);
             $execution->updateJobStatus($job->fresh(), 'COMPLETED');
 
-            $part = $execution->addPlannedPart($wo, ['product_id' => $products->bySku['TEST-SP-001']->id, 'description' => 'Brake Pad Set (Front)', 'quantity' => 1]);
-            $part = $partService->reserve($part, null, null, null);
-            $part = $partService->issue($part, null, null);
-            $partService->consume($part, null, null);
+            $request = $partRequests->request($wo, [['product_id' => $products->bySku['TEST-SP-001']->id, 'quantity_requested' => 1]], null, null);
+            $request = $partRequests->approve($request, null, null, null);
+            $request = $partRequests->issue($request, app(\App\Domain\WorkOrder\Services\PreferredWarehouseResolver::class)->resolve($wo), null);
+            $partService->consume($request->items->first()->plannedPart, null, null);
             $execution->resolveFinding($finding, 'Brake pads replaced.', $leadMechanic->id);
 
             $wo = $workOrders->submitToQc($wo);

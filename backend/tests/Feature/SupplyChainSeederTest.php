@@ -19,6 +19,7 @@ use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use Database\Seeders\DemoDataSeeder;
 use Database\Seeders\MasterDataSeeder;
 use Database\Seeders\OperationsSeeder;
+use Database\Seeders\ProductReferenceDataSeeder;
 use Database\Seeders\SupplyChainSeeder;
 use Tests\TestCase;
 
@@ -38,6 +39,8 @@ class SupplyChainSeederTest extends TestCase
     private function seedChain(): Tenant
     {
         $this->seed(MasterDataSeeder::class);
+        // Production baseline the demo chain builds on (UOMs, Item Type categories) — DevDemoSeeder runs it via DatabaseSeeder.
+        $this->seed(ProductReferenceDataSeeder::class);
         $this->seed(DemoDataSeeder::class);
         $this->seed(OperationsSeeder::class);
         $this->seed(SupplyChainSeeder::class);
@@ -50,19 +53,19 @@ class SupplyChainSeederTest extends TestCase
         $tenant = $this->seedChain();
 
         $codesBefore = Product::query()->where('tenant_id', $tenant->id)
-            ->whereIn('sku', ['SKU-BRK-PAD', 'SKU-OIL-FLT', 'SKU-BATTERY', 'SKU-TR-29580', 'SKU-IMPACT-WR'])
-            ->pluck('code', 'sku')->all();
+            ->whereIn('name', ['Brake Pad Set (Front)', 'Engine Oil Filter', 'Truck Battery 12V 100Ah', 'Truck Tire 295/80R22.5', 'Impact Wrench'])
+            ->pluck('code', 'name')->all();
         $countBefore = Product::query()->where('tenant_id', $tenant->id)->count();
 
         // A second run of SupplyChainSeeder alone must not consume a fresh
-        // Item Code or create a duplicate Product for any of its SKUs —
-        // the sku lookup happens before the numbering sequence is ever
+        // Item Code or create a duplicate Product for any of its Products —
+        // the tenant + name lookup happens before the numbering sequence is ever
         // touched (Section 14).
         $this->seed(SupplyChainSeeder::class);
 
         $codesAfter = Product::query()->where('tenant_id', $tenant->id)
-            ->whereIn('sku', ['SKU-BRK-PAD', 'SKU-OIL-FLT', 'SKU-BATTERY', 'SKU-TR-29580', 'SKU-IMPACT-WR'])
-            ->pluck('code', 'sku')->all();
+            ->whereIn('name', ['Brake Pad Set (Front)', 'Engine Oil Filter', 'Truck Battery 12V 100Ah', 'Truck Tire 295/80R22.5', 'Impact Wrench'])
+            ->pluck('code', 'name')->all();
         $countAfter = Product::query()->where('tenant_id', $tenant->id)->count();
 
         $this->assertSame($codesBefore, $codesAfter, 'Rerunning SupplyChainSeeder must not regenerate any Product Code.');
@@ -73,8 +76,8 @@ class SupplyChainSeederTest extends TestCase
     {
         $tenant = $this->seedChain();
 
-        foreach (['SKU-BRK-PAD', 'SKU-OIL-FLT', 'SKU-BATTERY', 'SKU-TR-29580', 'SKU-IMPACT-WR'] as $sku) {
-            $product = Product::query()->where('tenant_id', $tenant->id)->where('sku', $sku)->firstOrFail();
+        foreach (['Brake Pad Set (Front)', 'Engine Oil Filter', 'Truck Battery 12V 100Ah', 'Truck Tire 295/80R22.5', 'Impact Wrench'] as $sku) {
+            $product = Product::query()->where('tenant_id', $tenant->id)->where('name', $sku)->firstOrFail();
             $this->assertNotNull($product->numbering_configuration_version_id, "{$sku} must have a numbering configuration version.");
             $this->assertMatchesRegularExpression('/^ITM\/\d{4}\/\d{6}$/', $product->code, "{$sku}'s code must come from the numbering sequence, not be hardcoded.");
         }
@@ -91,8 +94,8 @@ class SupplyChainSeederTest extends TestCase
         $this->assertSame($tenant->id, $rack->tenant_id);
         $this->assertSame($tenant->id, $zone->tenant_id);
 
-        foreach (['SKU-BRK-PAD', 'SKU-OIL-FLT', 'SKU-BATTERY', 'SKU-TR-29580', 'SKU-IMPACT-WR'] as $sku) {
-            $product = Product::query()->where('tenant_id', $tenant->id)->where('sku', $sku)->firstOrFail();
+        foreach (['Brake Pad Set (Front)', 'Engine Oil Filter', 'Truck Battery 12V 100Ah', 'Truck Tire 295/80R22.5', 'Impact Wrench'] as $sku) {
+            $product = Product::query()->where('tenant_id', $tenant->id)->where('name', $sku)->firstOrFail();
             $this->assertSame($bin->id, $product->default_storage_bin_id, "{$sku} must have a Default Storage Location in ALPHA's own hierarchy.");
         }
     }
@@ -102,10 +105,10 @@ class SupplyChainSeederTest extends TestCase
         $tenant = $this->seedChain();
 
         foreach ([
-            'SKU-BRK-PAD' => 'SPARE_PART', 'SKU-OIL-FLT' => 'SPARE_PART', 'SKU-BATTERY' => 'SPARE_PART',
-            'SKU-TR-29580' => 'TIRE', 'SKU-IMPACT-WR' => 'TOOL',
+            'Brake Pad Set (Front)' => 'SPARE_PART', 'Engine Oil Filter' => 'SPARE_PART', 'Truck Battery 12V 100Ah' => 'SPARE_PART',
+            'Truck Tire 295/80R22.5' => 'TIRE', 'Impact Wrench' => 'TOOL',
         ] as $sku => $expectedType) {
-            $product = Product::query()->where('tenant_id', $tenant->id)->where('sku', $sku)->firstOrFail();
+            $product = Product::query()->where('tenant_id', $tenant->id)->where('name', $sku)->firstOrFail();
             $category = ProductCategory::query()->findOrFail($product->product_category_id);
             $this->assertSame($expectedType, $product->product_type);
             $this->assertSame($expectedType, $category->item_type, "Category for {$sku} must be scoped to {$expectedType}.");
@@ -116,8 +119,8 @@ class SupplyChainSeederTest extends TestCase
     {
         $tenant = $this->seedChain();
 
-        foreach (['SKU-BRK-PAD', 'SKU-OIL-FLT', 'SKU-BATTERY'] as $sku) {
-            $product = Product::query()->where('tenant_id', $tenant->id)->where('sku', $sku)->firstOrFail();
+        foreach (['Brake Pad Set (Front)', 'Engine Oil Filter', 'Truck Battery 12V 100Ah'] as $sku) {
+            $product = Product::query()->where('tenant_id', $tenant->id)->where('name', $sku)->firstOrFail();
             $spec = $product->sparepartSpec;
             $this->assertNotNull($spec, "{$sku} must have a ProductSparepartSpec row.");
             $this->assertNotEmpty($spec->part_number);
@@ -126,7 +129,7 @@ class SupplyChainSeederTest extends TestCase
             $this->assertGreaterThanOrEqual(1, $product->compatibilities()->count(), "{$sku} must have at least one Vehicle Compatibility.");
         }
 
-        $battery = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'SKU-BATTERY')->firstOrFail();
+        $battery = Product::query()->where('tenant_id', $tenant->id)->where('name', 'Truck Battery 12V 100Ah')->firstOrFail();
         $this->assertTrue((bool) $battery->track_serial_number);
     }
 
@@ -134,7 +137,7 @@ class SupplyChainSeederTest extends TestCase
     {
         $tenant = $this->seedChain();
 
-        $tireProduct = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'SKU-TR-29580')->firstOrFail();
+        $tireProduct = Product::query()->where('tenant_id', $tenant->id)->where('name', 'Truck Tire 295/80R22.5')->firstOrFail();
         $spec = $tireProduct->tireSpec;
 
         $this->assertNotNull($spec);
@@ -150,7 +153,7 @@ class SupplyChainSeederTest extends TestCase
     {
         $tenant = $this->seedChain();
 
-        $toolProduct = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'SKU-IMPACT-WR')->firstOrFail();
+        $toolProduct = Product::query()->where('tenant_id', $tenant->id)->where('name', 'Impact Wrench')->firstOrFail();
         $spec = $toolProduct->toolSpec;
 
         $this->assertNotNull($spec);
@@ -163,10 +166,10 @@ class SupplyChainSeederTest extends TestCase
     {
         $tenant = $this->seedChain();
 
-        $brakePad = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'SKU-BRK-PAD')->firstOrFail();
-        $oilFilter = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'SKU-OIL-FLT')->firstOrFail();
-        $tireProduct = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'SKU-TR-29580')->firstOrFail();
-        $battery = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'SKU-BATTERY')->firstOrFail();
+        $brakePad = Product::query()->where('tenant_id', $tenant->id)->where('name', 'Brake Pad Set (Front)')->firstOrFail();
+        $oilFilter = Product::query()->where('tenant_id', $tenant->id)->where('name', 'Engine Oil Filter')->firstOrFail();
+        $tireProduct = Product::query()->where('tenant_id', $tenant->id)->where('name', 'Truck Tire 295/80R22.5')->firstOrFail();
+        $battery = Product::query()->where('tenant_id', $tenant->id)->where('name', 'Truck Battery 12V 100Ah')->firstOrFail();
 
         $this->assertGreaterThan(0, StockMovement::query()->where('product_id', $brakePad->id)->count(), 'Inventory stock movements must reference the corrected brake pad.');
         $this->assertGreaterThan(0, WorkOrderPlannedPart::query()->where('product_id', $brakePad->id)->count(), 'Work Order planned part must reference the corrected brake pad.');
@@ -177,5 +180,35 @@ class SupplyChainSeederTest extends TestCase
         $asset = ComponentAsset::query()->where('product_id', $battery->id)->firstOrFail();
         $this->assertTrue(Warranty::query()->where('component_asset_id', $asset->id)->exists());
         $this->assertTrue(WarrantyClaim::query()->where('tenant_id', $tenant->id)->exists());
+    }
+
+    public function test_seeded_products_follow_the_current_product_rules(): void
+    {
+        $tenant = $this->seedChain();
+
+        $expected = [
+            'Brake Pad Set (Front)' => ['SPR-BRK-', 'CG-BRAKE'],
+            'Engine Oil Filter' => ['SPR-LUB-', 'CG-ENGINE-LUBE'],
+            'Truck Battery 12V 100Ah' => ['SPR-ELC-', 'CG-ELEC'],
+            'Truck Tire 295/80R22.5' => ['TIR-WTY-', 'CG-TYRE'],
+        ];
+        foreach ($expected as $name => [$skuPrefix, $groupCode]) {
+            $product = Product::query()->where('tenant_id', $tenant->id)->where('name', $name)->with(['componentGroup', 'category'])->firstOrFail();
+            $this->assertStringStartsWith($skuPrefix, $product->sku, "{$name}: SKU must be server-generated.");
+            $this->assertSame($groupCode, $product->componentGroup->code);
+            $this->assertNotNull($product->component_category_id, "{$name}: Category is mandatory for this Item Type.");
+            $this->assertNotSame('PC-SPARE', $product->category->code);
+        }
+        $this->assertStringStartsWith('TOL-', Product::query()->where('tenant_id', $tenant->id)->where('name', 'Impact Wrench')->value('sku'));
+
+        $this->assertFalse(ProductCategory::query()->where('code', 'PC-SPARE')->exists(), 'The seeded baseline no longer creates PC-SPARE.');
+        foreach (Product::query()->where('tenant_id', $tenant->id)->where('product_type', 'SPARE_PART')->get() as $sparepart) {
+            foreach ($sparepart->compatibilities()->get() as $rule) {
+                $this->assertNotNull($rule->vehicle_brand_id, 'Compatibility Brand references the Vehicle Brand master.');
+                $this->assertNotNull($rule->vehicle_model_id, 'Compatibility Model references the Vehicle Model master.');
+                $this->assertSame('Hino', $rule->vehicle_brand);
+                $this->assertSame('Ranger FG', $rule->vehicle_model);
+            }
+        }
     }
 }

@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
-use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\MasterData\Services\ComponentClassificationService;
+use App\Domain\MasterData\Services\VehicleMasterResolver;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\ProductCompatibility;
 use App\Domain\ProductMaster\Services\ProductCompatibilityService;
 use App\Domain\ProductMaster\Services\ProductConsumableSdsService;
+use App\Domain\ProductMaster\Services\ProductCreationService;
 use App\Domain\ProductMaster\Services\ProductImageService;
-use App\Domain\ProductMaster\Services\ProductSkuService;
 use App\Domain\ProductMaster\Services\ProductSpecificationService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
@@ -41,12 +41,12 @@ class ProductController extends Controller
 
     public function __construct(
         private readonly ProductCompatibilityService $compatibility,
-        private readonly DocumentNumberingService $numbers,
         private readonly ProductSpecificationService $specs,
         private readonly ProductConsumableSdsService $sds,
         private readonly ProductImageService $images,
         private readonly ComponentClassificationService $classification,
-        private readonly ProductSkuService $skus,
+        private readonly ProductCreationService $creation,
+        private readonly VehicleMasterResolver $vehicles,
         private readonly TenantContext $context,
     ) {}
 
@@ -68,58 +68,16 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request)
     {
-        $tenantId = $this->context->tenantId();
-        $validated = $request->validated();
-        $productType = $validated['product_type'];
+        $product = $this->creation->create($this->context->tenantId(), $request->validated(), (array) $request->input('spec', []));
 
-        if (! empty($validated['product_category_id'])) {
-            $category = ProductCategory::query()->find($validated['product_category_id']);
-            if ($category && $category->item_type && $category->item_type !== $productType) {
-                throw ValidationException::withMessages(['product_category_id' => 'The selected category does not apply to this Item Type.']);
-            }
-        }
-
-        // Component Group -> Category -> Subcategory: hierarchy, effective availability and
-        // Item Type applicability (Category mandatory for Sparepart/Consumable/Tire/Rim).
-        $validated = array_merge($validated, $this->classification->resolveProductClassification($productType, $validated));
-
-        // Validated BEFORE the numbering sequence is touched, so an invalid
-        // spec submission never burns an Item Code.
-        ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate(
-            $productType,
-            $request->only(['brand', 'track_serial_number', 'track_batch', 'product_category_id']),
-            (array) $request->input('spec', [])
-        );
-
-        $product = DB::transaction(function () use ($tenantId, $validated, $generalOverrides, $validatedSpec) {
-            $number = $this->numbers->generate('product_item', $tenantId);
-
-            // Issued exactly once, here; later classification/master-data changes never touch it.
-            $validated['sku'] = $this->skus->generate($tenantId, $validated['product_type'], $validated['component_group_id']);
-
-            $product = Product::query()->create(array_merge($validated, $generalOverrides) + [
-                'tenant_id' => $tenantId,
-                'code' => $number['document_number'],
-                'numbering_configuration_version_id' => $number['configuration_version_id'],
-                'is_system' => false,
-                'status' => 'ACTIVE',
-            ]);
-
-            $this->specs->persist($product, $validatedSpec);
-
-            return $product;
-        });
-
-        $relation = self::SPEC_RELATIONS[$productType] ?? null;
-
-        return $this->ok($relation ? $product->load($relation) : $product, 201);
+        return $this->ok($product, 201);
     }
 
     public function show(Product $product)
     {
         $this->authorizeVisible($product);
 
-        $relations = ['category', 'uom', 'defaultStorageBin', 'componentGroups', 'compatibilities.componentGroup', 'compatibilities.vehicleCategory', ...self::CLASSIFICATION_RELATIONS];
+        $relations = ['category', 'uom', 'defaultStorageBin', 'componentGroups', 'compatibilities.componentGroup', 'compatibilities.vehicleCategory', 'compatibilities.brandMaster:id,name,status,deleted_at', 'compatibilities.modelMaster:id,vehicle_brand_id,name,status,deleted_at', ...self::CLASSIFICATION_RELATIONS];
         if ($relation = self::SPEC_RELATIONS[$product->product_type] ?? null) {
             $relations[] = $relation;
         }
@@ -232,15 +190,19 @@ class ProductController extends Controller
 
     public function addCompatibility(Request $request, Product $product)
     {
-        $this->authorizeVisible($product);
+        $this->authorizeOwned($product);
 
         $validated = $request->validate([
             'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
             'vehicle_category_id' => ['nullable', 'uuid', 'exists:vehicle_categories,id'],
-            'vehicle_brand' => ['nullable', 'string', 'max:100'],
-            'vehicle_model' => ['nullable', 'string', 'max:100'],
+            // Brand / Model come from the Vehicle Brand / Vehicle Model masters; empty = any.
+            'vehicle_brand_id' => ['nullable', 'uuid'],
+            'vehicle_model_id' => ['nullable', 'uuid'],
             'notes' => ['nullable', 'string'],
         ]);
+        $validated = array_merge($validated, $this->vehicles->resolve(
+            $validated['vehicle_brand_id'] ?? null, $validated['vehicle_model_id'] ?? null, $this->context->tenantId(),
+        ));
 
         $rule = ProductCompatibility::query()->create($validated + [
             'tenant_id' => $product->tenant_id,
@@ -250,9 +212,32 @@ class ProductController extends Controller
         return $this->ok($rule, 201);
     }
 
+    /** Edit an existing rule; a Brand/Model it already holds stays accepted even if since retired. */
+    public function updateCompatibility(Request $request, Product $product, ProductCompatibility $compatibility)
+    {
+        $this->authorizeOwned($product);
+        abort_unless($compatibility->product_id === $product->id, 404);
+
+        $validated = $request->validate([
+            'component_group_id' => ['nullable', 'uuid', \App\Domain\MasterData\Models\ComponentGroup::selectableRule()],
+            'vehicle_category_id' => ['nullable', 'uuid', 'exists:vehicle_categories,id'],
+            'vehicle_brand_id' => ['nullable', 'uuid'],
+            'vehicle_model_id' => ['nullable', 'uuid'],
+            'notes' => ['nullable', 'string'],
+        ]);
+        $validated = array_merge($validated, $this->vehicles->resolve(
+            $validated['vehicle_brand_id'] ?? null, $validated['vehicle_model_id'] ?? null, $this->context->tenantId(),
+            current: $compatibility->only(['vehicle_brand_id', 'vehicle_model_id']),
+        ));
+
+        $compatibility->update($validated);
+
+        return $this->ok($compatibility->fresh(['brandMaster:id,name,status,deleted_at', 'modelMaster:id,vehicle_brand_id,name,status,deleted_at']));
+    }
+
     public function destroyCompatibility(Product $product, ProductCompatibility $compatibility)
     {
-        $this->authorizeVisible($product);
+        $this->authorizeOwned($product);
         abort_unless($compatibility->product_id === $product->id, 404);
 
         $compatibility->delete();
@@ -333,6 +318,13 @@ class ProductController extends Controller
         abort_unless($vehicle->tenant_id === $tenantId, 404);
 
         return $this->ok($this->compatibility->compatibleProducts($vehicle, $request->input('component_group_id')));
+    }
+
+    /** Writes to a Product's compatibility rules: the tenant's own Products only (never a platform/system one). */
+    private function authorizeOwned(Product $product): void
+    {
+        $this->authorizeVisible($product);
+        abort_if($product->tenant_id === null || $product->is_system, 403, 'System products cannot be modified by a tenant.');
     }
 
     private function authorizeVisible(Product $product): void

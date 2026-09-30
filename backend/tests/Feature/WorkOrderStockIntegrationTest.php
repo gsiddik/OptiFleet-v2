@@ -42,29 +42,25 @@ class WorkOrderStockIntegrationTest extends TestCase
         return [$tenant, $warehouse, $product, $wo];
     }
 
-    public function test_planned_part_reserve_issue_consume_flow_uses_preferred_warehouse(): void
+    public function test_part_request_issue_then_consume_flow(): void
     {
         [$tenant, $warehouse, $product, $wo] = $this->setUpWorkOrder();
-        [, $token] = $this->makeTenantUser($tenant, ['maintenance_job.manage', 'inventory.reserve', 'inventory.issue', 'inventory.return']);
+        [, $token] = $this->makeTenantUser($tenant, ['part_request.create', 'part_request.approve', 'part_request.issue', 'inventory.issue']);
         $headers = $this->authHeaders($token);
 
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Brake pad set', 'quantity' => 4,
-        ], $headers)->assertStatus(201);
-        $part = WorkOrderPlannedPart::query()->findOrFail($addResponse->json('data.id'));
-        $this->assertSame(4.0, (float) $part->planned_quantity);
+        $requestId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/part-requests", ['items' => [['product_id' => $product->id, 'quantity_requested' => 4]]], $headers)
+            ->assertStatus(201)->assertJsonPath('data.status', 'REQUESTED')->json('data.id');
+        $this->postJson("/api/v1/app/part-requests/{$requestId}/approve", [], $headers)->assertOk()->assertJsonPath('data.status', 'APPROVED');
+        $issued = $this->postJson("/api/v1/app/part-requests/{$requestId}/issue", ['warehouse_id' => $warehouse->id], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'ISSUED');
 
-        $reserveResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $headers)->assertOk();
-        $this->assertSame($warehouse->id, $reserveResponse->json('data.warehouse_id'));
-        $this->assertSame('RESERVED', $reserveResponse->json('data.status'));
-
+        $part = WorkOrderPlannedPart::query()->findOrFail($issued->json('data.items.0.planned_part_id'));
+        $this->assertSame('ISSUED', $part->status);
+        $this->assertSame($warehouse->id, $part->warehouse_id);
+        $this->assertSame(15.0, (float) $part->unit_cost_at_issue);
+        $this->assertSame(60.0, (float) $part->total_cost);
         $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(4.0, (float) $stock->quantity_reserved);
-
-        $issueResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", [], $headers)->assertOk();
-        $this->assertSame('ISSUED', $issueResponse->json('data.status'));
-        $this->assertSame(15.0, (float) $issueResponse->json('data.unit_cost_at_issue'));
-        $this->assertSame(60.0, (float) $issueResponse->json('data.total_cost'));
+        $this->assertSame(16.0, (float) $stock->quantity_on_hand);
 
         $consumeResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/consume", [], $headers)->assertOk();
         $this->assertSame('CONSUMED', $consumeResponse->json('data.status'));
@@ -74,16 +70,9 @@ class WorkOrderStockIntegrationTest extends TestCase
     public function test_returning_more_than_issued_is_rejected(): void
     {
         [$tenant, $warehouse, $product, $wo] = $this->setUpWorkOrder();
-        [, $token] = $this->makeTenantUser($tenant, ['maintenance_job.manage', 'inventory.reserve', 'inventory.issue', 'inventory.return']);
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.return']);
         $headers = $this->authHeaders($token);
-
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Air filter', 'quantity' => 2,
-        ], $headers)->assertStatus(201);
-        $part = WorkOrderPlannedPart::query()->findOrFail($addResponse->json('data.id'));
-
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", [], $headers)->assertOk();
+        $part = $this->issueThroughPartRequest($wo, $product, 2, $warehouse);
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
             'quantity' => 5, 'condition' => 'UNUSED_NEW', 'reason' => 'Too many',
@@ -92,24 +81,12 @@ class WorkOrderStockIntegrationTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
             'quantity' => 1, 'condition' => 'UNUSED_NEW', 'reason' => 'Wrong part ordered',
         ], $headers)->assertOk()->assertJsonPath('data.returned_quantity', '1.0000');
-
-        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(19.0, (float) $stock->quantity_on_hand);
     }
 
     public function test_part_cost_snapshot_is_immune_to_later_average_cost_drift(): void
     {
-        [$tenant, $warehouse, $product, $wo] = $this->setUpWorkOrder();
-        [, $token] = $this->makeTenantUser($tenant, ['maintenance_job.manage', 'inventory.reserve', 'inventory.issue']);
-        $headers = $this->authHeaders($token);
-
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Oil filter', 'quantity' => 2,
-        ], $headers)->assertStatus(201);
-        $part = WorkOrderPlannedPart::query()->findOrFail($addResponse->json('data.id'));
-
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", [], $headers)->assertOk();
+        [, $warehouse, $product, $wo] = $this->setUpWorkOrder();
+        $part = $this->issueThroughPartRequest($wo, $product, 2, $warehouse);
 
         // Drive the average cost up with a new, more expensive receipt after the issue.
         app(InventoryService::class)->receive($warehouse, $product, 10, 100, 'RECEIPT', null, null, null);
@@ -119,18 +96,16 @@ class WorkOrderStockIntegrationTest extends TestCase
         $this->assertSame(30.0, (float) $part->total_cost);
     }
 
-    public function test_stock_actions_are_only_visible_when_permitted(): void
+    public function test_direct_planned_part_add_reserve_and_issue_endpoints_are_gone(): void
     {
-        [$tenant, , $product, $wo] = $this->setUpWorkOrder();
-        [, $unprivilegedToken] = $this->makeTenantUser($tenant, ['maintenance_job.manage']); // no inventory.reserve
+        [$tenant, $warehouse, $product, $wo] = $this->setUpWorkOrder();
+        [, $token] = $this->makeTenantUser($tenant, ['maintenance_job.manage', 'inventory.reserve', 'inventory.issue']);
+        $headers = $this->authHeaders($token);
+        $part = $this->issueThroughPartRequest($wo, $product, 1, $warehouse);
 
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Spark plug', 'quantity' => 1,
-        ], $this->authHeaders($unprivilegedToken))->assertStatus(201);
-        $part = WorkOrderPlannedPart::query()->findOrFail($addResponse->json('data.id'));
-
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $this->authHeaders($unprivilegedToken))
-            ->assertStatus(403);
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", ['product_id' => $product->id, 'description' => 'x', 'quantity' => 1], $headers)->assertNotFound();
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $headers)->assertNotFound();
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", [], $headers)->assertNotFound();
     }
 
     /**
@@ -143,12 +118,7 @@ class WorkOrderStockIntegrationTest extends TestCase
     public function test_planned_part_is_tenant_scoped_and_rejects_cross_tenant_access(): void
     {
         [$tenant, , $product, $wo] = $this->setUpWorkOrder();
-        [, $token] = $this->makeTenantUser($tenant, ['maintenance_job.manage']);
-
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Fuel filter', 'quantity' => 1,
-        ], $this->authHeaders($token))->assertStatus(201);
-        $partId = $addResponse->json('data.id');
+        $partId = $this->issueThroughPartRequest($wo, $product, 1, WarehouseStock::query()->where('product_id', $product->id)->firstOrFail()->warehouse)->id;
 
         $part = WorkOrderPlannedPart::query()->findOrFail($partId);
         $this->assertSame($tenant->id, $part->tenant_id);

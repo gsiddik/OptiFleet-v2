@@ -93,7 +93,16 @@ export function VehicleCategoriesPage() {
         </>
       )}
 
-      <CategoryFormModal open={showCreate} onClose={() => setShowCreate(false)} onSaved={() => setReloadKey((k) => k + 1)} />
+      {showCreate && (
+        <CategoryFormModal
+          open
+          onClose={() => setShowCreate(false)}
+          onSaved={() => {
+            setShowCreate(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
       {editing && (
         <CategoryFormModal
           open
@@ -199,6 +208,7 @@ function ComponentGroupMappingModal({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -219,13 +229,27 @@ function ComponentGroupMappingModal({
     setSelected(next);
   }
 
+  // "Select All" is a UI helper over the groups shown here (only active ones can be newly
+  // mapped); it is never stored. Unchecking clears the whole (unsaved) selection.
+  const selectable = allGroups.filter((g) => g.status === 'ACTIVE' || selected.has(g.id));
+  const selectedCount = selectable.filter((g) => selected.has(g.id)).length;
+  const allSelected = selectable.length > 0 && selectedCount === selectable.length;
+  const someSelected = selectedCount > 0 && !allSelected;
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(selectable.map((g) => g.id)));
+  }
+
   async function submit() {
     setSubmitting(true);
+    setError(null);
     try {
       await apiClient.post(`/app/vehicle-categories/${category.id}/component-groups`, {
         component_group_ids: Array.from(selected),
       });
       onSaved();
+    } catch (err) {
+      setError(extractApiError(err).message);
     } finally {
       setSubmitting(false);
     }
@@ -237,10 +261,24 @@ function ComponentGroupMappingModal({
         <LoadingState />
       ) : (
         <div style={{ maxHeight: 340, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 10 }}>
+          {error && <ErrorState message={error} />}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0 6px', fontWeight: 600, borderBottom: '1px solid #f3f4f6', marginBottom: 4 }}>
+            <input
+              type="checkbox"
+              checked={allSelected}
+              ref={(el) => {
+                if (el) el.indeterminate = someSelected;
+              }}
+              disabled={selectable.length === 0}
+              onChange={toggleAll}
+            />
+            Select All ({selectedCount}/{selectable.length})
+          </label>
           {allGroups.map((g) => (
             <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0' }}>
-              <input type="checkbox" checked={selected.has(g.id)} onChange={() => toggle(g.id)} />
+              <input type="checkbox" checked={selected.has(g.id)} disabled={g.status !== 'ACTIVE' && !selected.has(g.id)} onChange={() => toggle(g.id)} />
               {componentGroupLabel(g)}
+              {g.status !== 'ACTIVE' && <span style={{ fontSize: 11, color: '#9ca3af' }}>(inactive)</span>}
             </label>
           ))}
         </div>

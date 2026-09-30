@@ -70,7 +70,7 @@ class ProductDynamicSpecificationTest extends TestCase
 
         $this->postJson('/api/v1/app/products', $this->base('SPARE_PART', [
             'track_serial_number' => false,
-            'spec' => ['part_number' => 'PN-1', 'part_type' => 'GENUINE', 'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']]],
+            'spec' => ['part_number' => 'PN-1', 'part_type' => 'GENUINE', 'compatibilities' => [$this->vehicleFit()]],
         ]), $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['brand']);
     }
 
@@ -85,7 +85,7 @@ class ProductDynamicSpecificationTest extends TestCase
                 'alternate_part_numbers' => ['ALT-1', 'ALT-2'], 'applicable_position' => ['FRONT', 'LEFT'],
                 'critical_part' => true, 'warranty_period_value' => 12, 'warranty_period_unit' => 'MONTHS',
                 'compatibilities' => [[
-                    'vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza', 'variant' => 'G',
+                    ...$this->vehicleFit(), 'variant' => 'G',
                     'year_from' => 2018, 'year_to' => 2022, 'position' => 'FRONT',
                 ]],
             ],
@@ -615,7 +615,7 @@ class ProductDynamicSpecificationTest extends TestCase
 
         $this->postJson('/api/v1/app/products', $this->base('SPARE_PART', [
             'product_category_id' => $category->id, 'brand' => 'Bosch', 'track_serial_number' => false,
-            'spec' => ['part_number' => 'PN-1', 'part_type' => 'GENUINE', 'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']]],
+            'spec' => ['part_number' => 'PN-1', 'part_type' => 'GENUINE', 'compatibilities' => [$this->vehicleFit()]],
         ]), $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['product_category_id']);
     }
 

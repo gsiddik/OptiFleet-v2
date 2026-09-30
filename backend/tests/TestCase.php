@@ -419,6 +419,40 @@ abstract class TestCase extends BaseTestCase
         ], $overrides));
     }
 
+    /**
+     * A (platform) Vehicle Brand + Model pair for Product compatibility rows, which reference
+     * the masters by id. Idempotent per name.
+     *
+     * @return array{vehicle_brand_id: string, vehicle_model_id: string}
+     */
+    protected function vehicleFit(string $brand = 'Toyota', string $model = 'Avanza'): array
+    {
+        $brandRow = \App\Domain\MasterData\Models\VehicleBrand::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => null, 'code' => 'VB-'.Str::upper(Str::slug($brand))],
+            ['name' => $brand, 'is_system' => true, 'status' => 'ACTIVE']
+        );
+        $modelRow = \App\Domain\MasterData\Models\VehicleModel::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => null, 'vehicle_brand_id' => $brandRow->id, 'code' => 'VM-'.Str::upper(Str::slug($model))],
+            ['name' => $model, 'is_system' => true, 'status' => 'ACTIVE']
+        );
+
+        return ['vehicle_brand_id' => $brandRow->id, 'vehicle_model_id' => $modelRow->id];
+    }
+
+    /**
+     * Puts a part on a Work Order the only way the product allows: Part Request
+     * (request -> approve -> issue from $warehouse). Returns the issued planned-part line.
+     */
+    protected function issueThroughPartRequest(\App\Domain\WorkOrder\Models\WorkOrder $workOrder, \App\Domain\ProductMaster\Models\Product $product, float $quantity, \App\Domain\Organization\Models\Warehouse $warehouse): \App\Domain\WorkOrder\Models\WorkOrderPlannedPart
+    {
+        $service = app(\App\Domain\WorkOrder\Services\WorkOrderPartRequestService::class);
+        $request = $service->request($workOrder->fresh(), [['product_id' => $product->id, 'quantity_requested' => $quantity]], null, null);
+        $request = $service->approve($request, null, null, null);
+        $request = $service->issue($request, $warehouse, null);
+
+        return \App\Domain\WorkOrder\Models\WorkOrderPlannedPart::query()->findOrFail($request->items->first()->planned_part_id);
+    }
+
     protected function makePartner(Tenant $tenant, array $overrides = []): \App\Domain\Partner\Models\Partner
     {
         return \App\Domain\Partner\Models\Partner::query()->create(array_merge([

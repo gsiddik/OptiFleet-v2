@@ -49,9 +49,11 @@ use App\Http\Controllers\Api\Tenant\MasterDataMappingController;
 use App\Http\Controllers\Api\Tenant\NotificationRuleController;
 use App\Http\Controllers\Api\Tenant\PartnerController;
 use App\Http\Controllers\Api\Tenant\PartRequestController;
+use App\Http\Controllers\Api\Tenant\PartReturnController;
 use App\Http\Controllers\Api\Tenant\PermissionController;
 use App\Http\Controllers\Api\Tenant\ProductCategoryController;
 use App\Http\Controllers\Api\Tenant\ProductClassificationController;
+use App\Http\Controllers\Api\Tenant\ProductVehicleLookupController;
 use App\Http\Controllers\Api\Tenant\ProductController;
 use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
 use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
@@ -185,6 +187,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::delete('/vehicle-categories/{vehicleCategory}', [VehicleCategoryController::class, 'destroy'])->middleware('permission:vehicle_category.update');
             Route::post('/vehicle-categories/{vehicleCategory}/component-groups', [MasterDataMappingController::class, 'syncComponentGroups'])->middleware('permission:component_group.map');
             Route::get('/vehicle-brands', [VehicleBrandController::class, 'index'])->middleware('permission:vehicle_brand.view');
+            Route::get('/vehicle-brands/category-options', [VehicleBrandController::class, 'categoryOptions'])->middleware('permission:vehicle_brand.view');
             Route::post('/vehicle-brands', [VehicleBrandController::class, 'store'])->middleware('permission:vehicle_brand.create');
             Route::put('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'update'])->middleware('permission:vehicle_brand.update');
             Route::delete('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'destroy'])->middleware('permission:vehicle_brand.update');
@@ -364,7 +367,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::delete('/work-orders/{workOrder}/corrective-actions/{correctiveAction}', [WorkOrderExecutionController::class, 'deleteCorrectiveAction'])->middleware('permission:diagnosis.manage');
             Route::post('/work-orders/{workOrder}/jobs', [WorkOrderExecutionController::class, 'addJob'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/jobs/{job}/status', [WorkOrderExecutionController::class, 'updateJobStatus'])->middleware('permission:maintenance_job.manage');
-            Route::post('/work-orders/{workOrder}/planned-parts', [WorkOrderExecutionController::class, 'addPlannedPart'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works', [WorkOrderExecutionController::class, 'requestAdditionalWork'])->middleware('permission:maintenance_job.manage');
             Route::post('/work-orders/{workOrder}/additional-works/{additionalWork}/decide', [WorkOrderExecutionController::class, 'decideAdditionalWork'])->middleware('permission:work_order.approve');
 
@@ -378,6 +380,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/part-requests/{partRequest}/approve', [PartRequestController::class, 'approve'])->middleware('permission:part_request.approve');
             Route::post('/part-requests/{partRequest}/reject', [PartRequestController::class, 'reject'])->middleware('permission:part_request.reject');
             Route::post('/part-requests/{partRequest}/cancel', [PartRequestController::class, 'cancel'])->middleware('permission:part_request.cancel');
+            Route::post('/part-requests/{partRequest}/issue', [PartRequestController::class, 'issue'])->middleware('permission:part_request.issue');
 
             Route::post('/work-orders/{workOrder}/external-services', [WorkOrderExternalServiceController::class, 'store'])->middleware('permission:work_order_external_service.create');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/complete', [WorkOrderExternalServiceController::class, 'complete'])->middleware('permission:work_order_external_service.complete');
@@ -508,6 +511,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/product-classification/component-groups', [ProductClassificationController::class, 'groups'])->middleware('permission:product.view');
             Route::get('/product-classification/categories', [ProductClassificationController::class, 'categories'])->middleware('permission:product.view');
             Route::get('/product-classification/subcategories', [ProductClassificationController::class, 'subcategories'])->middleware('permission:product.view');
+            Route::get('/product-classification/vehicle-brands', [ProductVehicleLookupController::class, 'brands'])->middleware('permission:product.view');
+            Route::get('/product-classification/vehicle-models', [ProductVehicleLookupController::class, 'models'])->middleware('permission:product.view');
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
             Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');
             Route::get('/products/compatible', [ProductController::class, 'compatibleFor'])->middleware('permission:product.view');
@@ -515,6 +520,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:product.update');
             Route::post('/products/{product}/component-groups', [ProductController::class, 'syncComponentGroups'])->middleware('permission:product.update');
             Route::post('/products/{product}/compatibilities', [ProductController::class, 'addCompatibility'])->middleware('permission:product.update');
+            Route::put('/products/{product}/compatibilities/{compatibility}', [ProductController::class, 'updateCompatibility'])->middleware('permission:product.update');
             Route::delete('/products/{product}/compatibilities/{compatibility}', [ProductController::class, 'destroyCompatibility'])->middleware('permission:product.update');
             Route::post('/products/{product}/sds', [ProductController::class, 'uploadSds'])->middleware('permission:product.update');
             Route::get('/products/{product}/sds', [ProductController::class, 'showSds'])->middleware('permission:product.view');
@@ -531,8 +537,13 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
             Route::get('/stock-movements', [StockMovementController::class, 'index'])->middleware('permission:inventory.view');
 
+            // Return (new parts returned unused) + Returned Parts Processing.
+            Route::get('/part-returns', [PartReturnController::class, 'index'])->middleware('permission:part_return.view');
+            Route::get('/part-returns/{partReturn}', [PartReturnController::class, 'show'])->middleware('permission:part_return.view');
+            Route::post('/part-returns/{partReturn}/process', [PartReturnController::class, 'process'])->middleware('permission:part_return.process');
             Route::get('/used-part-returns', [UsedPartDispositionController::class, 'index'])->middleware('permission:used_part.view');
             Route::get('/used-part-returns/{usedPartReturn}', [UsedPartDispositionController::class, 'show'])->middleware('permission:used_part.view');
+            Route::post('/used-part-returns/{usedPartReturn}/receive', [UsedPartDispositionController::class, 'receive'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/inspect', [UsedPartDispositionController::class, 'inspect'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/propose-disposition', [UsedPartDispositionController::class, 'proposeDisposition'])->middleware('permission:used_part.dispose');
             Route::post('/used-part-returns/{usedPartReturn}/decide', [UsedPartDispositionController::class, 'decide'])->middleware('permission:used_part.approve');
@@ -569,8 +580,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/stock-transfers/{stockTransfer}/reject', [StockTransferController::class, 'reject'])->middleware('permission:stock_transfer.approve');
             Route::post('/stock-transfers/{stockTransfer}/cancel', [StockTransferController::class, 'cancel'])->middleware('permission:stock_transfer.create');
 
-            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/reserve', [WorkOrderExecutionController::class, 'reservePlannedPart'])->middleware('permission:inventory.reserve');
-            Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/issue', [WorkOrderExecutionController::class, 'issuePlannedPart'])->middleware('permission:inventory.issue');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/return', [WorkOrderExecutionController::class, 'returnPlannedPart'])->middleware('permission:inventory.return');
             Route::post('/work-orders/{workOrder}/planned-parts/{plannedPart}/consume', [WorkOrderExecutionController::class, 'consumePlannedPart'])->middleware('permission:inventory.issue');
             Route::get('/work-orders/{workOrder}/planned-parts/{plannedPart}/return-evidence', [WorkOrderExecutionController::class, 'listReturnEvidence'])->middleware('permission:inventory.return');

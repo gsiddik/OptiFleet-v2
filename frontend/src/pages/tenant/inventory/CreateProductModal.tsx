@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { VehicleBrandModelSelect } from './VehicleBrandModelSelect';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
@@ -35,10 +36,11 @@ export const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE
 const INTERVAL_UNITS = ['DAYS', 'WEEKS', 'MONTHS', 'YEARS'];
 
 export type Spec = Record<string, unknown>;
-export type CompatRow = { vehicle_brand: string; vehicle_model: string; variant: string; year_from: string; year_to: string; position: string };
+// Brand / Model are Vehicle Brand / Vehicle Model master ids (dependent dropdowns), never free text.
+export type CompatRow = { vehicle_brand_id: string; vehicle_model_id: string; variant: string; year_from: string; year_to: string; position: string };
 
 export function emptyCompatRow(): CompatRow {
-  return { vehicle_brand: '', vehicle_model: '', variant: '', year_from: '', year_to: '', position: '' };
+  return { vehicle_brand_id: '', vehicle_model_id: '', variant: '', year_from: '', year_to: '', position: '' };
 }
 
 export function splitCommaList(value: string): string[] {
@@ -242,10 +244,10 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
       const specPayload: Spec = { ...spec };
       if (itemType === 'SPARE_PART' || itemType === 'RIM') {
         specPayload.compatibilities = compatibilities
-          .filter((r) => r.vehicle_brand || r.vehicle_model)
+          .filter((r) => r.vehicle_brand_id || r.vehicle_model_id)
           .map((r) => ({
-            vehicle_brand: r.vehicle_brand,
-            vehicle_model: r.vehicle_model,
+            vehicle_brand_id: r.vehicle_brand_id,
+            vehicle_model_id: r.vehicle_model_id,
             variant: r.variant || undefined,
             year_from: r.year_from || undefined,
             year_to: r.year_to || undefined,
@@ -559,8 +561,11 @@ function CompatibilityRows({
       {compatibilities.map((row, i) => (
         <div key={i}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr) auto', gap: 4, marginBottom: 6 }}>
-          <input placeholder="Make" value={row.vehicle_brand} onChange={(e) => updateCompatRow(i, { vehicle_brand: e.target.value })} style={inputStyle} />
-          <input placeholder="Model" value={row.vehicle_model} onChange={(e) => updateCompatRow(i, { vehicle_model: e.target.value })} style={inputStyle} />
+          <VehicleBrandModelSelect
+            brandId={row.vehicle_brand_id}
+            modelId={row.vehicle_model_id}
+            onChange={(brandId, modelId) => updateCompatRow(i, { vehicle_brand_id: brandId, vehicle_model_id: modelId })}
+          />
           <input placeholder="Variant" value={row.variant} onChange={(e) => updateCompatRow(i, { variant: e.target.value })} style={inputStyle} />
           <input placeholder="Year From" type="number" value={row.year_from} onChange={(e) => updateCompatRow(i, { year_from: e.target.value })} style={inputStyle} />
           <input placeholder="Year To" type="number" value={row.year_to} onChange={(e) => updateCompatRow(i, { year_to: e.target.value })} style={inputStyle} />

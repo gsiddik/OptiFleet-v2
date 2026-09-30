@@ -126,6 +126,8 @@ export interface VehicleBrandItem {
   logo_available: boolean;
   usage_type: 'CAR' | 'TRUCK' | 'BUS' | 'HEAVY_EQUIPMENT' | null;
   usage_types: ('CAR' | 'TRUCK' | 'BUS' | 'HEAVY_EQUIPMENT')[] | null;
+  /** "Brand Of": linked Vehicle Categories (usage_type / usage_types are legacy, read-only). */
+  vehicle_categories?: { id: string; code: string; name: string; status: string }[];
   is_system: boolean;
   status: 'ACTIVE' | 'INACTIVE';
 }
@@ -801,6 +803,9 @@ export interface WorkOrderPlannedPartItem {
   total_cost: string | null;
   /** issued − consumed − returned; 0 once CONSUMED (backend-computed). */
   returnable_quantity?: string | number;
+  /** The Product master is the line's identity; description is its name snapshot (or legacy free text). */
+  product?: { id: string; name: string; sku?: string | null; code?: string | null } | null;
+  warehouse?: { id: string; name: string } | null;
 }
 
 /** Doc's true "Planned Parts" tab — pure budgeting, never touches warehouse stock. */
@@ -869,14 +874,20 @@ export interface PartRequestItem {
   id: string;
   work_order_id: string;
   notes: string | null;
-  status: 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
+  /** REQUESTED -> APPROVED | REJECTED | CANCELLED; APPROVED -> ISSUED (backend state machine). */
+  status: 'REQUESTED' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'ISSUED';
   requested_by: string | null;
   requested_at: string | null;
   decided_by: string | null;
   decided_at: string | null;
   decision_note: string | null;
+  warehouse_id?: string | null;
+  issued_by?: string | null;
+  issued_at?: string | null;
+  warehouse?: { id: string; code: string; name: string } | null;
   items?: PartRequestLineItem[];
   work_order?: WorkOrderItem;
+  created_at?: string;
 }
 
 export type ExternalWorkOrderInvoiceAction =
@@ -1230,6 +1241,9 @@ export interface ProductCompatibilityItem {
   product_id: string;
   component_group_id: string | null;
   vehicle_category_id: string | null;
+  /** Vehicle Brand / Model master ids; vehicle_brand / vehicle_model keep the name snapshot (or legacy text). */
+  vehicle_brand_id?: string | null;
+  vehicle_model_id?: string | null;
   vehicle_brand: string | null;
   vehicle_model: string | null;
   variant: string | null;
@@ -1238,6 +1252,8 @@ export interface ProductCompatibilityItem {
   position: string | null;
   component_group?: ComponentGroup;
   vehicle_category?: VehicleCategory;
+  brand_master?: { id: string; name: string; status: string; deleted_at: string | null } | null;
+  model_master?: { id: string; vehicle_brand_id: string; name: string; status: string; deleted_at: string | null } | null;
 }
 
 export interface WarehouseZoneItem {
@@ -1518,15 +1534,32 @@ export interface StockMovementItem {
   product?: ProductItem;
 }
 
+/**
+ * One record per returned / removed part, in one of three explicit lifecycles (return_source):
+ * NEW_PART (Return + Returned Parts Processing), REMOVED_COMPONENT and legacy USED_PART
+ * (Used Sparepart Processing).
+ */
 export interface WorkOrderPartReturnItem {
   id: string;
-  work_order_planned_part_id: string;
-  warehouse_id: string;
+  return_number: string | null;
+  return_source: 'NEW_PART' | 'REMOVED_COMPONENT' | 'USED_PART';
+  work_order_id: string | null;
+  work_order_planned_part_id: string | null;
+  work_order_removed_component_id: string | null;
+  warehouse_id: string | null;
   product_id: string;
   quantity: string;
-  condition: 'UNUSED_NEW' | 'USED_GOOD' | 'USED_FAULTY';
-  disposition_status: 'RESTOCKED' | 'PENDING_INSPECTION' | 'INSPECTED' | 'PENDING_APPROVAL' | 'REJECTED' | 'FINALIZED';
+  /** Reported condition (as declared on the Work Order). */
+  condition: 'UNUSED_NEW' | 'UNUSED_FAULTY' | 'USED_GOOD' | 'USED_FAULTY';
+  /** Returned Parts Processing (NEW_PART): what the inspector found. */
+  actual_condition: 'UNUSED_NEW' | 'UNUSED_FAULTY' | null;
+  inspection_result: 'MATCH' | 'MISMATCH' | null;
+  disposition_status:
+    | 'PENDING_PROCESSING' | 'RESTOCKED' | 'QUARANTINED'
+    | 'PENDING_RETURN' | 'PENDING_INSPECTION' | 'INSPECTED' | 'PENDING_APPROVAL' | 'REJECTED' | 'FINALIZED';
   accepted_quantity: string | null;
+  returned_by: string | null;
+  inspected_by: string | null;
   inspected_at: string | null;
   inspection_notes: string | null;
   inspection_evidence: string | null;
@@ -1538,8 +1571,12 @@ export interface WorkOrderPartReturnItem {
   evidence: string | null;
   created_at: string;
   product?: ProductItem;
-  warehouse?: Warehouse;
+  warehouse?: { id: string; code?: string; name: string } | null;
+  work_order?: { id: string; wo_number: string; vehicle?: { id: string; registration_number: string } | null } | null;
   planned_part?: { id: string; description: string; work_order?: { id: string; wo_number: string } };
+  removed_component?: { id: string; removed_by: string | null; removed_at: string; condition: 'GOOD' | 'FAULTY'; notes: string | null; status: string } | null;
+  returner?: { id: string; name: string } | null;
+  inspector?: { id: string; name: string } | null;
   remaining_eligible_quantity?: number;
 }
 

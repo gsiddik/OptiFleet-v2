@@ -19,7 +19,30 @@ class WorkOrderPartReturn extends Model
     /** G-15: disposition outcomes a FINALIZED row can land on. */
     public const DISPOSITIONS = ['REPAIR', 'REUSE', 'QUARANTINE', 'SCRAP', 'SELL_ELIGIBLE'];
 
+    /**
+     * Three separate lifecycles, never mixed:
+     *  NEW_PART           issued, not used, returned from Issuance & Return -> Return / Returned Parts Processing
+     *  REMOVED_COMPONENT  old component taken off the vehicle -> Used Sparepart Processing
+     *  USED_PART          legacy used-condition returns already in Used Sparepart Processing
+     */
+    public const SOURCE_NEW_PART = 'NEW_PART';
+
+    public const SOURCE_REMOVED_COMPONENT = 'REMOVED_COMPONENT';
+
+    public const SOURCE_USED_PART = 'USED_PART';
+
+    /** Sources handled by Used Sparepart Processing. */
+    public const USED_SOURCES = [self::SOURCE_REMOVED_COMPONENT, self::SOURCE_USED_PART];
+
+    /** NEW_PART: stock is posted only when Returned Parts Processing accepts the part as good. */
+    public const NEW_PART_TRANSITIONS = [
+        'PENDING_PROCESSING' => ['RESTOCKED', 'QUARANTINED'],
+        'RESTOCKED' => [],
+        'QUARANTINED' => [],
+    ];
+
     protected $fillable = [
+        'return_number', 'return_source', 'work_order_id', 'work_order_removed_component_id', 'actual_condition', 'inspection_result',
         'tenant_id', 'work_order_planned_part_id', 'warehouse_id', 'product_id', 'quantity',
         'condition', 'disposition_status', 'stock_movement_id', 'returned_by', 'reason', 'evidence',
         'workflow_configuration_version_id', 'accepted_quantity', 'inspected_by', 'inspected_at',
@@ -42,6 +65,26 @@ class WorkOrderPartReturn extends Model
         return $this->belongsTo(WorkOrderPlannedPart::class, 'work_order_planned_part_id');
     }
 
+    public function workOrder(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrder::class);
+    }
+
+    public function removedComponent(): BelongsTo
+    {
+        return $this->belongsTo(WorkOrderRemovedComponent::class, 'work_order_removed_component_id');
+    }
+
+    public function returner(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'returned_by');
+    }
+
+    public function inspector(): BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'inspected_by');
+    }
+
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class);
@@ -49,7 +92,7 @@ class WorkOrderPartReturn extends Model
 
     public function product(): BelongsTo
     {
-        return $this->belongsTo(Product::class);
+        return $this->belongsTo(Product::class)->withTrashed(); // history stays readable
     }
 
     public function stockMovement(): BelongsTo

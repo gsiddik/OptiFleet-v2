@@ -18,6 +18,13 @@ const COLORS: Record<string, string> = {
   REJECTED: '#b91c1c',
   CANCELLED: '#6b7280',
   NEED_INFORMATION: '#a16207',
+  // Part Requests / Return / Used Sparepart Processing
+  REQUESTED: '#1d4ed8',
+  ISSUED: '#0f766e',
+  PENDING_PROCESSING: '#a16207',
+  RESTOCKED: '#15803d',
+  PENDING_RETURN: '#a16207',
+  PENDING_INSPECTION: '#7c3aed',
 };
 
 export function StatusBadge({ status }: { status: string }) {

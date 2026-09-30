@@ -25,7 +25,7 @@ class ProductTest extends TestCase
             'brand' => 'Bosch', 'track_serial_number' => false,
             'spec' => [
                 'part_number' => 'BRK-PAD-01', 'part_type' => 'GENUINE',
-                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+                'compatibilities' => [$this->vehicleFit()],
             ],
         ], $headers)->assertStatus(201);
         $productId = $create->json('data.id');
@@ -57,7 +57,7 @@ class ProductTest extends TestCase
             'manufacturer' => 'Bosch', 'material' => 'Ceramic', 'production_year' => 2024,
             'spec' => [
                 'part_number' => 'BRK-PAD-02', 'part_type' => 'GENUINE',
-                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+                'compatibilities' => [$this->vehicleFit()],
             ],
         ], $headers)->assertStatus(201);
 
@@ -92,7 +92,7 @@ class ProductTest extends TestCase
             'brand' => 'Bosch', 'track_serial_number' => false,
             'spec' => [
                 'part_number' => 'PN-NOBIN', 'part_type' => 'GENUINE',
-                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+                'compatibilities' => [$this->vehicleFit()],
             ],
         ], $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors(['default_storage_bin_id']);
     }
@@ -162,7 +162,7 @@ class ProductTest extends TestCase
         ]);
         ProductCompatibility::query()->create([
             'tenant_id' => $tenant->id, 'product_id' => $specificProduct->id, 'component_group_id' => $componentGroup->id,
-            'vehicle_category_id' => $category->id, 'vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger',
+            'vehicle_category_id' => $category->id, 'vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger', ...$this->vehicleFit('Hino', 'Ranger'),
         ]);
 
         [, $token] = $this->makeTenantUser($tenant, ['product.view', 'vehicle.view']);
@@ -186,7 +186,7 @@ class ProductTest extends TestCase
 
         ProductCompatibility::query()->create([
             'tenant_id' => $tenant->id, 'product_id' => $product->id, 'component_group_id' => $componentGroup->id,
-            'vehicle_category_id' => $category->id, 'vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger',
+            'vehicle_category_id' => $category->id, 'vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger', ...$this->vehicleFit('Hino', 'Ranger'),
         ]);
 
         [, $token] = $this->makeTenantUser($tenant, ['product.view']);

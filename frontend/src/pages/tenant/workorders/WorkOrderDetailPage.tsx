@@ -9,6 +9,7 @@ import { ErrorState, LoadingState, EmptyState } from '../../../components/States
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
+import { formatQty } from '../../../utils/quantity';
 import { AssessmentSection, InspectionSourceSection } from '../maintenance/MaintenanceRequestDetailPage';
 import type {
   AuditLogEntry,
@@ -27,11 +28,11 @@ import type {
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Issuance & Return', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
+  'Planned Parts', 'Issuance & Return', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
 ] as const;
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
-// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Request
-// Parts, Part Requests, Workspace, QC, Road Test) is hidden, not just its actions. "External
+// as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Issuance
+// & Return, Workspace, QC, Road Test) is hidden, not just its actions. "External
 // Services" here is the separate towing/3rd-party-invoicing sub-resource
 // (WorkOrderExternalService) and stays available either way.
 const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'External Services', 'Documents', 'History', 'Audit'] as const;
@@ -345,7 +346,6 @@ export function WorkOrderDetailPage() {
       {tab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
       {tab === 'Planned Parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
       {tab === 'Issuance & Return' && <IssuanceReturnTab wo={wo} onChanged={load} />}
-      {tab === 'Part Requests' && <PartRequestsTab wo={wo} onChanged={load} />}
       {tab === 'Workspace' && <WorkspaceTab wo={wo} onChanged={load} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
       {tab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
@@ -1235,11 +1235,11 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   );
 }
 
-const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY' | 'USED_GOOD' | 'USED_FAULTY'; label: string }[] = [
+// Issuance & Return only returns a new part that was NOT used; a component taken off the
+// vehicle is recorded under Removed Components (Used Sparepart Processing) instead.
+const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY'; label: string }[] = [
   { value: 'UNUSED_NEW', label: 'New Good' },
   { value: 'UNUSED_FAULTY', label: 'New Faulty' },
-  { value: 'USED_GOOD', label: 'Used Good' },
-  { value: 'USED_FAULTY', label: 'Used Faulty' },
 ];
 
 /** Fetches a private-disk evidence image as a blob and returns an object URL for preview. */
@@ -1333,7 +1333,7 @@ function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChan
       {(wo.planned_part_estimates ?? []).map((e) => (
         <div key={e.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>
-            {e.product?.name ?? e.product_id} — qty {e.quantity} {e.notes && <span style={{ color: '#6b7280' }}>({e.notes})</span>}
+            {e.product?.name ?? e.product_id} — qty {formatQty(e.quantity)} {e.notes && <span style={{ color: '#6b7280' }}>({e.notes})</span>}
           </span>
           {canManage && (
             <button className="btn-secondary" disabled={busy} onClick={() => deleteEstimate(e.id)}>
@@ -1377,13 +1377,17 @@ function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChan
  */
 function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
-  const [description, setDescription] = useState('');
+  // "Reserve" = a Part Request (REQUESTED); approval and issuing happen in Part Requests.
   const [quantity, setQuantity] = useState('1');
   const [notes, setNotes] = useState('');
   const [productId, setProductId] = useState('');
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [products, setProducts] = useState<{ id: string; name: string; sku?: string | null }[]>([]);
+  const [partRequests, setPartRequests] = useState<PartRequestItem[]>([]);
+  const [requestsKey, setRequestsKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   // Consume popup state — "Install All" / "Installed Qty" (doc: only shown when Issued Qty > 1).
   const [consumingPart, setConsumingPart] = useState<WorkOrderPlannedPartItem | null>(null);
@@ -1401,30 +1405,55 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
     returnEvidenceIds,
   );
 
-  const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
   const partActionsAvailable = PART_ACTION_STATUSES.includes(wo.status);
-  const canReserve = partActionsAvailable && hasPermission('inventory.reserve');
-  const canIssue = partActionsAvailable && hasPermission('inventory.issue');
+  const canReserve = partActionsAvailable && hasPermission('part_request.create');
+  const canViewRequests = hasPermission('part_request.view');
+  const canConsume = partActionsAvailable && hasPermission('inventory.issue');
   const canReturn = partActionsAvailable && hasPermission('inventory.return');
 
+  // Searchable Product picker (active Products only; the list can be large).
   useEffect(() => {
-    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
-  }, []);
+    if (!canReserve) return;
+    const handle = setTimeout(() => {
+      apiClient
+        .get('/app/products', { params: { status: 'ACTIVE', search: productSearch || undefined, per_page: 50 } })
+        .then((res) => setProducts(res.data.data))
+        .catch(() => setProducts([]));
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [canReserve, productSearch]);
 
-  async function addPart() {
+  useEffect(() => {
+    if (!canViewRequests) return;
+    apiClient
+      .get(`/app/work-orders/${wo.id}/part-requests`)
+      .then((res) => setPartRequests(res.data.data))
+      .catch(() => setPartRequests([]));
+  }, [canViewRequests, wo.id, requestsKey]);
+
+  async function reservePart() {
     setBusy(true);
+    setError(null);
+    setNotice(null);
     try {
-      await apiClient.post(`/app/work-orders/${wo.id}/planned-parts`, { description, quantity, notes: notes || undefined, product_id: productId || undefined });
-      setDescription('');
-      setNotes('');
+      await apiClient.post(`/app/work-orders/${wo.id}/part-requests`, {
+        notes: notes || undefined,
+        items: [{ product_id: productId, quantity_requested: quantity }],
+      });
       setProductId('');
-      onChanged();
+      setQuantity('1');
+      setNotes('');
+      setNotice('Part Request created (REQUESTED). It is approved and issued from Part Requests.');
+      setRequestsKey((k) => k + 1);
+    } catch (err) {
+      const e = extractApiError(err);
+      setError(e.errors ? Object.values(e.errors).flat()[0] ?? e.message : e.message);
     } finally {
       setBusy(false);
     }
   }
 
-  async function partAction(partId: string, action: 'reserve' | 'issue' | 'return' | 'consume', body?: Record<string, unknown>) {
+  async function partAction(partId: string, action: 'return' | 'consume', body?: Record<string, unknown>) {
     setBusy(true);
     setError(null);
     try {
@@ -1502,33 +1531,72 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
     <div className="card">
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Issuance &amp; Return</h3>
       {error && <ErrorState message={error} />}
-      {(wo.planned_parts ?? []).length === 0 && <EmptyState label="No planned parts." />}
+      {notice && <div style={{ color: '#047857', fontSize: 13, marginBottom: 8 }}>{notice}</div>}
+
+      {canReserve && (
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end', background: '#f9fafb', padding: 10, borderRadius: 6 }}>
+          <FormField label="Product" required>
+            <span style={{ display: 'flex', gap: 6 }}>
+              <input aria-label="Search product" placeholder="Search product…" value={productSearch} onChange={(e) => setProductSearch(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+              <select aria-label="Product" value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 240 }}>
+                <option value="">Select product…</option>
+                {products.map((prod) => (
+                  <option key={prod.id} value={prod.id}>
+                    {prod.name}
+                    {prod.sku ? ` (${prod.sku})` : ''}
+                  </option>
+                ))}
+              </select>
+            </span>
+          </FormField>
+          <FormField label="Qty" required>
+            <input aria-label="Quantity" type="number" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          </FormField>
+          <FormField label="Notes">
+            <input placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+          </FormField>
+          <button className="btn-primary" disabled={busy || !productId || !(Number(quantity) > 0)} onClick={reservePart} style={{ marginBottom: 14 }}>
+            Reserve
+          </button>
+        </div>
+      )}
+
+      {canViewRequests && partRequests.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
+            Part Requests <Link to={`/app/part-requests?work_order_id=${wo.id}`} style={{ fontWeight: 400, fontSize: 12 }}>open in Part Requests →</Link>
+          </div>
+          {partRequests.map((r) => (
+            <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
+              <span>
+                {(r.items ?? []).map((i) => `${i.product?.name ?? i.description} × ${formatQty(i.quantity_approved ?? i.quantity_requested)}`).join(', ')}
+                {r.requested_at && <span style={{ color: '#9ca3af', fontSize: 12 }}> · {new Date(r.requested_at).toLocaleString()}</span>}
+              </span>
+              <StatusBadge status={r.status} />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Issued parts</div>
+      {(wo.planned_parts ?? []).length === 0 && <EmptyState label="No parts issued to this Work Order yet." />}
       {(wo.planned_parts ?? []).map((p) => (
         <div key={p.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span>
-              {p.description} — planned {p.planned_quantity} {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
+              <strong>{p.product?.name ?? p.description}</strong> — approved {formatQty(p.planned_quantity)} {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
             </span>
             <StatusBadge status={p.status} />
           </div>
           {p.product_id && (
             <>
               <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-                reserved {p.reserved_quantity} · issued {p.issued_quantity} · consumed {p.consumed_quantity} · returned {p.returned_quantity}
+                issued {formatQty(p.issued_quantity)} · used {formatQty(p.consumed_quantity)} · returned {formatQty(p.returned_quantity)}
+                {Number(p.reserved_quantity) > 0 && ` · reserved ${formatQty(p.reserved_quantity)}`}
                 {p.unit_cost_at_issue && ` · unit cost ${p.unit_cost_at_issue} · total cost ${p.total_cost}`}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                {canReserve && Number(p.reserved_quantity) < Number(p.planned_quantity) && !['CONSUMED', 'RETURNED', 'CANCELLED'].includes(p.status) && (
-                  <button className="btn-secondary" disabled={busy} onClick={() => partAction(p.id, 'reserve')}>
-                    Reserve
-                  </button>
-                )}
-                {canIssue && Number(p.reserved_quantity) > 0 && (
-                  <button className="btn-secondary" disabled={busy} onClick={() => partAction(p.id, 'issue')}>
-                    Issue
-                  </button>
-                )}
-                {canIssue && outstandingIssued(p) > 0 && (
+                {canConsume && outstandingIssued(p) > 0 && (
                   <button className="btn-secondary" disabled={busy} onClick={() => startConsume(p)}>
                     Consume
                   </button>
@@ -1550,7 +1618,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                 <div style={{ marginTop: 8, background: '#f9fafb', padding: 10, borderRadius: 6 }}>
                   {/* SYSTEM_INFORMATION — the ceiling the user is returning against, never re-entered. */}
                   <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
-                    Available to return: <strong>{returnableQuantity(p)}</strong> (Issued {p.issued_quantity} − Consumed {p.consumed_quantity} − Returned {p.returned_quantity})
+                    Available to return: <strong>{formatQty(returnableQuantity(p))}</strong> (Issued {formatQty(p.issued_quantity)} − Used {formatQty(p.consumed_quantity)} − Returned {formatQty(p.returned_quantity)})
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
                     <input
@@ -1593,11 +1661,9 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                     <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
                       Cancel
                     </button>
-                    {returnCondition !== 'UNUSED_NEW' && (
-                      <span style={{ fontSize: 11, color: '#6b7280' }}>
-                        Not New-Good returns go to inspection — they do not restock available inventory until processed.
-                      </span>
-                    )}
+                    <span style={{ fontSize: 11, color: '#6b7280' }}>
+                      Creates a numbered Return; the warehouse inspects it in Inventory → Return before anything goes back to stock.
+                    </span>
                   </div>
                 </div>
               )}
@@ -1605,34 +1671,15 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
           )}
         </div>
       ))}
-      {canManage && (
-        <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <input placeholder="Description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
-          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-            <option value="">No catalog product</option>
-            {products.map((prod) => (
-              <option key={prod.id} value={prod.id}>
-                {prod.name}
-              </option>
-            ))}
-          </select>
-          <input type="number" step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
-          <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
-          <button className="btn-secondary" disabled={busy || !description} onClick={addPart}>
-            Add
-          </button>
-        </div>
-      )}
-
       <Modal open={!!consumingPart} title="Consumed Parts" onClose={() => setConsumingPart(null)}>
         {consumingPart && (
           <>
             {/* SYSTEM_INFORMATION */}
             <div style={{ fontSize: 13, marginBottom: 12 }}>
               <div>
-                <strong>{consumingPart.description}</strong>
+                <strong>{consumingPart.product?.name ?? consumingPart.description}</strong>
               </div>
-              <div style={{ color: '#6b7280' }}>Issued Qty: {consumingPart.issued_quantity}</div>
+              <div style={{ color: '#6b7280' }}>Issued Qty: {formatQty(consumingPart.issued_quantity)}</div>
             </div>
             <FormField label="">
               <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1796,7 +1843,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Removed Components</h3>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: -8 }}>
         Old/used components taken off the vehicle when a replacement part is installed — separate from the Unused Return above,
-        and never a reversal of the new part's consumption.
+        and never a reversal of the new part's consumption. Each recorded removal is processed in Inventory → Used Sparepart Processing.
       </p>
       {error && <ErrorState message={error} />}
       {(wo.removed_components ?? []).length === 0 && <EmptyState label="No components removed." />}
@@ -1804,7 +1851,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
         <div key={rc.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span>
-              {rc.product?.name ?? rc.product_id} — qty {rc.quantity} — {rc.condition}
+              {rc.product?.name ?? rc.product_id} — qty {formatQty(rc.quantity)} — {rc.condition}
               {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaces a planned part)</span>}
             </span>
             <StatusBadge status={rc.status} />
@@ -1886,211 +1933,6 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
           <button className="btn-secondary" disabled={busy || !productId || !removeQty} onClick={submitRemoval}>
             Record Removal
           </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-type DraftLine = { description: string; product_id: string; quantity_requested: string };
-
-function PartRequestsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
-  const { hasPermission } = useAuth();
-  const [requests, setRequests] = useState<PartRequestItem[]>([]);
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
-  const [notes, setNotes] = useState('');
-  const [lines, setLines] = useState<DraftLine[]>([{ description: '', product_id: '', quantity_requested: '1' }]);
-  const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const canCreate = hasPermission('part_request.create');
-  const canApprove = hasPermission('part_request.approve');
-  const canReject = hasPermission('part_request.reject');
-  const canCancel = hasPermission('part_request.cancel');
-
-  function loadRequests() {
-    apiClient
-      .get(`/app/work-orders/${wo.id}/part-requests`)
-      .then((res) => setRequests(res.data.data))
-      .catch(() => setRequests([]));
-  }
-
-  useEffect(loadRequests, [wo.id]);
-  useEffect(() => {
-    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
-  }, []);
-
-  function updateLine(index: number, patch: Partial<DraftLine>) {
-    setLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
-  }
-
-  function addLine() {
-    setLines((prev) => [...prev, { description: '', product_id: '', quantity_requested: '1' }]);
-  }
-
-  function removeLine(index: number) {
-    setLines((prev) => prev.filter((_, i) => i !== index));
-  }
-
-  async function submitRequest() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/work-orders/${wo.id}/part-requests`, {
-        notes: notes || undefined,
-        items: lines
-          .filter((line) => line.description)
-          .map((line) => ({ description: line.description, product_id: line.product_id || undefined, quantity_requested: line.quantity_requested })),
-      });
-      setNotes('');
-      setLines([{ description: '', product_id: '', quantity_requested: '1' }]);
-      loadRequests();
-      onChanged();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function approve(id: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/part-requests/${id}/approve`, {});
-      loadRequests();
-      onChanged();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function submitReject(id: string) {
-    if (!rejectReason) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/part-requests/${id}/reject`, { reason: rejectReason });
-      setRejectingId(null);
-      setRejectReason('');
-      loadRequests();
-      onChanged();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function cancel(id: string) {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/part-requests/${id}/cancel`, {});
-      loadRequests();
-      onChanged();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Part Requests</h3>
-      <p style={{ fontSize: 12, color: '#6b7280', marginTop: -8 }}>
-        A mechanic-initiated request for parts, separate from Planned Parts — an approval here creates a Planned Part for fulfillment.
-      </p>
-      {error && <ErrorState message={error} />}
-      {requests.length === 0 && <EmptyState label="No part requests yet." />}
-      {requests.map((r) => (
-        <div key={r.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <span>{r.notes || <em style={{ color: '#9ca3af' }}>No notes</em>}</span>
-            <StatusBadge status={r.status} />
-          </div>
-          <ul style={{ margin: '4px 0 6px', paddingLeft: 18, color: '#374151' }}>
-            {(r.items ?? []).map((item) => (
-              <li key={item.id}>
-                {item.description} — requested {item.quantity_requested}
-                {item.quantity_approved !== null && ` · approved ${item.quantity_approved}`}
-              </li>
-            ))}
-          </ul>
-          {r.decision_note && <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>Decision note: {r.decision_note}</div>}
-          {r.status === 'REQUESTED' && (
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-              {canApprove && (
-                <button className="btn-secondary" disabled={busy} onClick={() => approve(r.id)}>
-                  Approve
-                </button>
-              )}
-              {canReject && rejectingId !== r.id && (
-                <button className="btn-secondary" disabled={busy} onClick={() => setRejectingId(r.id)}>
-                  Reject
-                </button>
-              )}
-              {canCancel && (
-                <button className="btn-secondary" disabled={busy} onClick={() => cancel(r.id)}>
-                  Cancel
-                </button>
-              )}
-              {rejectingId === r.id && (
-                <>
-                  <input placeholder="Reason (required)" value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
-                  <button className="btn-secondary" disabled={busy || !rejectReason} onClick={() => submitReject(r.id)}>
-                    Confirm reject
-                  </button>
-                  <button className="btn-secondary" disabled={busy} onClick={() => setRejectingId(null)}>
-                    Back
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-      {canCreate && (
-        <div style={{ marginTop: 12, background: '#f9fafb', padding: 10, borderRadius: 6 }}>
-          {lines.map((line, i) => (
-            <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-              <input placeholder="Description" value={line.description} onChange={(e) => updateLine(i, { description: e.target.value })} style={inputStyle} />
-              <select value={line.product_id} onChange={(e) => updateLine(i, { product_id: e.target.value })} style={{ ...inputStyle, width: 200 }}>
-                <option value="">No catalog product</option>
-                {products.map((prod) => (
-                  <option key={prod.id} value={prod.id}>
-                    {prod.name}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="number"
-                step="0.01"
-                placeholder="Qty"
-                value={line.quantity_requested}
-                onChange={(e) => updateLine(i, { quantity_requested: e.target.value })}
-                style={{ ...inputStyle, width: 90 }}
-              />
-              {lines.length > 1 && (
-                <button className="btn-secondary" disabled={busy} onClick={() => removeLine(i)}>
-                  Remove
-                </button>
-              )}
-            </div>
-          ))}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <button className="btn-secondary" disabled={busy} onClick={addLine}>
-              + Add line
-            </button>
-            <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
-            <button className="btn-secondary" disabled={busy || !lines.some((l) => l.description)} onClick={submitRequest}>
-              Submit request
-            </button>
-          </div>
         </div>
       )}
     </div>

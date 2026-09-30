@@ -6,6 +6,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponent;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponentEvidence;
 use App\Domain\WorkOrder\Models\WorkOrderRemovedComponentReturn;
@@ -44,19 +45,37 @@ class WorkOrderRemovedComponentService
             throw new WorkOrderException('Condition must be one of: '.implode(', ', WorkOrderRemovedComponent::CONDITIONS).'.');
         }
 
-        return WorkOrderRemovedComponent::query()->create([
-            'tenant_id' => $workOrder->tenant_id,
-            'work_order_id' => $workOrder->id,
-            'maintenance_job_id' => $attributes['maintenance_job_id'] ?? null,
-            'replaced_by_planned_part_id' => $attributes['replaced_by_planned_part_id'] ?? null,
-            'product_id' => $attributes['product_id'],
-            'quantity' => $attributes['quantity'],
-            'condition' => $attributes['condition'],
-            'notes' => $attributes['notes'] ?? null,
-            'status' => 'PENDING_RETURN',
-            'removed_by' => $userId,
-            'removed_at' => now(),
-        ]);
+        return DB::transaction(function () use ($workOrder, $attributes, $userId) {
+            $component = WorkOrderRemovedComponent::query()->create([
+                'tenant_id' => $workOrder->tenant_id,
+                'work_order_id' => $workOrder->id,
+                'maintenance_job_id' => $attributes['maintenance_job_id'] ?? null,
+                'replaced_by_planned_part_id' => $attributes['replaced_by_planned_part_id'] ?? null,
+                'product_id' => $attributes['product_id'],
+                'quantity' => $attributes['quantity'],
+                'condition' => $attributes['condition'],
+                'notes' => $attributes['notes'] ?? null,
+                'status' => 'PENDING_RETURN',
+                'removed_by' => $userId,
+                'removed_at' => now(),
+            ]);
+
+            // Every removed component is a Used Sparepart Processing item from the moment it is
+            // recorded (unique per component, so it can never be queued twice).
+            WorkOrderPartReturn::query()->create([
+                'tenant_id' => $workOrder->tenant_id,
+                'return_source' => WorkOrderPartReturn::SOURCE_REMOVED_COMPONENT,
+                'work_order_id' => $workOrder->id,
+                'work_order_removed_component_id' => $component->id,
+                'product_id' => $component->product_id,
+                'quantity' => $component->quantity,
+                'condition' => $component->condition === 'GOOD' ? 'USED_GOOD' : 'USED_FAULTY',
+                'disposition_status' => 'PENDING_RETURN',
+                'returned_by' => $userId,
+            ]);
+
+            return $component;
+        });
     }
 
     public function delete(WorkOrderRemovedComponent $removedComponent): void
@@ -66,6 +85,7 @@ class WorkOrderRemovedComponentService
             throw new WorkOrderException('A returned removed-component record cannot be deleted.');
         }
 
+        // Its (still PENDING_RETURN) processing record is removed with it (FK cascade).
         $removedComponent->delete();
     }
 
@@ -76,16 +96,24 @@ class WorkOrderRemovedComponentService
      * `work_order_removed_component_id` is unambiguous from the moment it's uploaded, so no
      * separate linking step is needed here.
      */
-    public function returnToWarehouse(WorkOrderRemovedComponent $removedComponent, string $warehouseId, ?string $reason, ?string $userId): WorkOrderRemovedComponent
+    /**
+     * The old component physically reaches a warehouse (zero-balance ledger entry only) and
+     * its Used Sparepart Processing record moves to PENDING_INSPECTION. From the Work Order
+     * this is part of execution ($fromWorkOrder); from Used Sparepart Processing the
+     * warehouse can receive it after the Work Order has moved on.
+     */
+    public function returnToWarehouse(WorkOrderRemovedComponent $removedComponent, string $warehouseId, ?string $reason, ?string $userId, bool $fromWorkOrder = true): WorkOrderRemovedComponent
     {
-        return DB::transaction(function () use ($removedComponent, $warehouseId, $reason, $userId) {
+        return DB::transaction(function () use ($removedComponent, $warehouseId, $reason, $userId, $fromWorkOrder) {
             $locked = WorkOrderRemovedComponent::query()->lockForUpdate()->findOrFail($removedComponent->id);
             if ($locked->status !== 'PENDING_RETURN') {
                 throw new WorkOrderException('This removed component has already been returned.');
             }
 
             $workOrder = WorkOrder::query()->findOrFail($locked->work_order_id);
-            $this->execution->assertExecutable($workOrder);
+            if ($fromWorkOrder) {
+                $this->execution->assertExecutable($workOrder);
+            }
             $warehouse = Warehouse::query()->findOrFail($warehouseId);
             abort_unless($warehouse->tenant_id === $locked->tenant_id, 404);
             $product = Product::query()->findOrFail($locked->product_id);
@@ -108,6 +136,9 @@ class WorkOrderRemovedComponentService
             ]);
 
             $locked->update(['status' => 'RETURNED']);
+
+            WorkOrderPartReturn::query()->where('work_order_removed_component_id', $locked->id)->lockForUpdate()->first()
+                ?->update(['warehouse_id' => $warehouse->id, 'disposition_status' => 'PENDING_INSPECTION']);
 
             return $locked->fresh(['return']);
         });

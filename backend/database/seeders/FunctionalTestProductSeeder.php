@@ -2,27 +2,23 @@
 
 namespace Database\Seeders;
 
-use App\Domain\Configuration\Services\DocumentNumberingService;
+use App\Domain\MasterData\Models\ComponentCategory;
+use App\Domain\MasterData\Models\ComponentGroup;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Organization\Models\WarehouseBin;
 use App\Domain\ProductMaster\Models\Product;
-use App\Domain\ProductMaster\Services\ProductSpecificationService;
+use App\Domain\ProductMaster\Services\ProductCreationService;
 use App\Support\TenantContext;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Products for all six Item Types (Sections 18-25), each created through
- * `ProductSpecificationService::validate()`+`persist()` and
- * `DocumentNumberingService::generate()` — replicating
- * `ProductController::store()`'s own body exactly (see PROD-1 investigation)
- * — rather than a raw `Product::create()`, so every conditional-mandatory
- * rule and every Tire derived-value computation runs for real. `sku` is the
- * stable, deterministic identifier (Section 12: Item Code stays
- * server-generated via the real numbering sequence; a rerun is idempotent
- * because it looks up by `sku` BEFORE ever calling the numbering service,
- * so a rerun never burns a fresh Item Code or duplicates a spec row).
+ * ProductCreationService — the exact path POST /app/products uses — so every
+ * conditional-mandatory rule, the mandatory Component Group + Category, the
+ * Tire derived values and the server-generated Item Code and SKU all run for
+ * real. Idempotent on tenant + product name: a rerun finds the existing row
+ * before the numbering sequence is touched.
  *
- * @return object{bySku: array<string, Product>}
+ * @return object{bySku: array<string, Product>} keyed by this seeder's fixture key (e.g. TEST-SP-001), not the generated SKU
  */
 class FunctionalTestProductSeeder
 {
@@ -51,34 +47,34 @@ class FunctionalTestProductSeeder
             ['brand' => 'Akebono', 'track_serial_number' => false],
             [
                 'part_number' => 'BRK-PAD-STD-01', 'part_type' => 'GENUINE',
-                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza', 'vehicle_category_id' => $carCategoryId]],
+                'compatibilities' => [['vehicle_brand_id' => $avanza->vehicle_brand_id, 'vehicle_model_id' => $avanza->id, 'vehicle_category_id' => $carCategoryId]],
             ]);
         $products['TEST-SP-002'] = $this->make($tenant, 'TEST-SP-002', '[TEST] Alternator (Serialized)', $cat['SPARE_PART']->id, 'SPARE_PART', $uom['PCS']->id, $binA1_01,
             ['brand' => 'Denso', 'track_serial_number' => true],
             [
                 'part_number' => 'ALT-SER-01', 'part_type' => 'OEM',
-                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza', 'vehicle_category_id' => $carCategoryId]],
+                'compatibilities' => [['vehicle_brand_id' => $avanza->vehicle_brand_id, 'vehicle_model_id' => $avanza->id, 'vehicle_category_id' => $carCategoryId]],
             ]);
         $products['TEST-SP-003'] = $this->make($tenant, 'TEST-SP-003', '[TEST] ABS Sensor (Critical Part)', $cat['SPARE_PART']->id, 'SPARE_PART', $uom['PCS']->id, $binA1_02,
             ['brand' => 'Bosch', 'track_serial_number' => false],
             [
                 'part_number' => 'ABS-SNS-01', 'part_type' => 'OES', 'critical_part' => true,
-                'compatibilities' => [['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger FG', 'vehicle_category_id' => $truckCategoryId]],
+                'compatibilities' => [['vehicle_brand_id' => $rangerFg->vehicle_brand_id, 'vehicle_model_id' => $rangerFg->id, 'vehicle_category_id' => $truckCategoryId]],
             ]);
         $products['TEST-SP-004'] = $this->make($tenant, 'TEST-SP-004', '[TEST] Clutch Kit (Warranty)', $cat['SPARE_PART']->id, 'SPARE_PART', $uom['PCS']->id, $binA1_02,
             ['brand' => 'Exedy', 'track_serial_number' => false],
             [
                 'part_number' => 'CLT-KIT-01', 'part_type' => 'AFTERMARKET',
                 'warranty_period_value' => 12, 'warranty_period_unit' => 'MONTHS', 'warranty_mileage_km' => 20000,
-                'compatibilities' => [['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger FG', 'vehicle_category_id' => $truckCategoryId]],
+                'compatibilities' => [['vehicle_brand_id' => $rangerFg->vehicle_brand_id, 'vehicle_model_id' => $rangerFg->id, 'vehicle_category_id' => $truckCategoryId]],
             ]);
         $products['TEST-SP-005'] = $this->make($tenant, 'TEST-SP-005', '[TEST] Wiper Blade (Multi-Vehicle Compatibility)', $cat['SPARE_PART']->id, 'SPARE_PART', $uom['PCS']->id, $binA2_01,
             ['brand' => 'Bosch', 'track_serial_number' => false],
             [
                 'part_number' => 'WPR-UNI-01', 'part_type' => 'AFTERMARKET',
                 'compatibilities' => [
-                    ['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza', 'vehicle_category_id' => $carCategoryId],
-                    ['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger FG', 'vehicle_category_id' => $truckCategoryId],
+                    ['vehicle_brand_id' => $avanza->vehicle_brand_id, 'vehicle_model_id' => $avanza->id, 'vehicle_category_id' => $carCategoryId],
+                    ['vehicle_brand_id' => $rangerFg->vehicle_brand_id, 'vehicle_model_id' => $rangerFg->id, 'vehicle_category_id' => $truckCategoryId],
                 ],
             ]);
 
@@ -114,7 +110,7 @@ class FunctionalTestProductSeeder
             [
                 'rim_type' => 'STEEL', 'diameter_inch' => 16, 'width_inch' => 7, 'bolt_holes' => 6, 'pcd_mm' => 139.7,
                 'compatible_tire_sizes' => ['205/70R16'],
-                'compatibilities' => [['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger FG', 'vehicle_category_id' => $truckCategoryId]],
+                'compatibilities' => [['vehicle_brand_id' => $rangerFg->vehicle_brand_id, 'vehicle_model_id' => $rangerFg->id, 'vehicle_category_id' => $truckCategoryId]],
             ]);
 
         // --- Tire: Car & Truck/Bus (Sections 22-23) ---
@@ -181,38 +177,49 @@ class FunctionalTestProductSeeder
         return (object) ['bySku' => $products];
     }
 
-    private function make(Tenant $tenant, string $sku, string $name, string $categoryId, string $productType, string $uomId, string $binId, array $general, array $spec): Product
+    /**
+     * Baseline taxonomy (Component Group code, Category code) per fixture — Category is
+     * mandatory for Sparepart/Consumable/Tire/Rim; Tools/Equipment stay unclassified.
+     */
+    private const CLASSIFICATION = [
+        'TEST-SP-001' => ['CG-BRAKE', 'DISC_BRAKE'],
+        'TEST-SP-002' => ['CG-ELEC', 'CHARGING'],
+        'TEST-SP-003' => ['CG-BRAKE', 'ABS'],
+        'TEST-SP-004' => ['CG-CLUTCH', 'CLUTCH_DISC_ASSEMBLY'],
+        'TEST-SP-005' => ['CG-ELEC', 'WIPER'],
+        'TEST-CS-001' => ['CG-ENGINE-LUBE', 'ENGINE_LUBRICANT'],
+        'TEST-CS-002' => ['CG-ENGINE-LUBE', 'ENGINE_LUBRICANT'],
+        'TEST-CS-003' => ['CG-ENGINE-COOL', 'COOLANT'],
+        'TEST-CS-004' => ['CG-BRAKE', 'CHEMICAL'],
+        'TEST-CS-005' => ['CG-ENGINE-LUBE', 'GREASE'],
+        'TEST-RIM-001' => ['CG-TYRE', 'ALLOY_RIM'],
+        'TEST-RIM-002' => ['CG-TYRE', 'STEEL_RIM'],
+        'TEST-TIRE-CAR-001' => ['CG-TYRE', 'PASSENGER_TIRE'],
+        'TEST-TIRE-TRUCK-001' => ['CG-TYRE', 'TRUCK_TIRE'],
+    ];
+
+    /**
+     * $key is this seeder's own fixture key (callers reference products by it); the SKU itself
+     * is server-generated. Idempotent on tenant + name; otherwise exactly the API creation path
+     * (ProductCreationService), so every fixture is a valid, user-creatable Product.
+     */
+    private function make(Tenant $tenant, string $key, string $name, string $categoryId, string $productType, string $uomId, string $binId, array $general, array $spec): Product
     {
-        $existing = Product::query()->where('tenant_id', $tenant->id)->where('sku', $sku)->first();
+        $existing = Product::query()->where('tenant_id', $tenant->id)->where('name', $name)->first();
         if ($existing) {
             return $existing;
         }
 
-        $specs = app(ProductSpecificationService::class);
-        $numbers = app(DocumentNumberingService::class);
+        $classification = [];
+        if ($codes = self::CLASSIFICATION[$key] ?? null) {
+            $group = ComponentGroup::query()->whereNull('tenant_id')->where('code', $codes[0])->firstOrFail();
+            $category = ComponentCategory::query()->whereNull('tenant_id')->where('component_group_id', $group->id)->where('code', $codes[1])->firstOrFail();
+            $classification = ['component_group_id' => $group->id, 'component_category_id' => $category->id];
+        }
 
-        ['general' => $generalOverrides, 'spec' => $validatedSpec] = $specs->validate($productType, $general, $spec);
-
-        return DB::transaction(function () use ($tenant, $sku, $name, $categoryId, $productType, $uomId, $binId, $generalOverrides, $validatedSpec, $numbers, $specs) {
-            $number = $numbers->generate('product_item', $tenant->id);
-
-            $product = Product::query()->create(array_merge($generalOverrides, [
-                'tenant_id' => $tenant->id,
-                'code' => $number['document_number'],
-                'numbering_configuration_version_id' => $number['configuration_version_id'],
-                'sku' => $sku,
-                'name' => $name,
-                'product_category_id' => $categoryId,
-                'product_type' => $productType,
-                'uom_id' => $uomId,
-                'default_storage_bin_id' => $binId,
-                'is_system' => false,
-                'status' => 'ACTIVE',
-            ]));
-
-            $specs->persist($product, $validatedSpec);
-
-            return $product;
-        });
+        return app(ProductCreationService::class)->createFromInput($tenant->id, [
+            'name' => $name, 'product_category_id' => $categoryId, 'product_type' => $productType,
+            'uom_id' => $uomId, 'default_storage_bin_id' => $binId, 'spec' => $spec,
+        ] + $general + $classification);
     }
 }

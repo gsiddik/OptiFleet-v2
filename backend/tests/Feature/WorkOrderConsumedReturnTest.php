@@ -39,11 +39,7 @@ class WorkOrderConsumedReturnTest extends TestCase
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
         )))));
 
-        $partId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Brake pad', 'quantity' => $issueQty,
-        ], $headers)->assertCreated()->json('data.id');
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/issue", ['quantity' => $issueQty], $headers)->assertOk();
+        $partId = $this->issueThroughPartRequest($wo, $product, $issueQty, $warehouse)->id;
 
         return [$wo, WorkOrderPlannedPart::query()->findOrFail($partId), $headers];
     }
@@ -59,7 +55,7 @@ class WorkOrderConsumedReturnTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/consume", [], $headers)
             ->assertOk()->assertJsonPath('data.status', 'CONSUMED')->assertJsonPath('data.returnable_quantity', 0);
 
-        foreach (['UNUSED_NEW', 'USED_GOOD'] as $condition) {
+        foreach (['UNUSED_NEW', 'UNUSED_FAULTY'] as $condition) {
             $response = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
                 'quantity' => 1, 'condition' => $condition,
             ], $headers)->assertStatus(422);
@@ -84,10 +80,12 @@ class WorkOrderConsumedReturnTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", ['quantity' => 4, 'condition' => 'UNUSED_NEW'], $headers)
             ->assertOk()->assertJsonPath('data.returnable_quantity', 0);
 
-        $this->assertSame(1, $this->returnMovements($part->id));
+        // The return is recorded for Returned Parts Processing; stock moves only once it is accepted there.
+        $this->assertSame(0, $this->returnMovements($part->id));
+        $this->assertSame(1, WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->where('disposition_status', 'PENDING_PROCESSING')->count());
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", ['quantity' => 1, 'condition' => 'UNUSED_NEW'], $headers)
             ->assertStatus(422);
-        $this->assertSame(1, $this->returnMovements($part->id), 'No duplicate return movement.');
+        $this->assertSame(1, WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->count(), 'No duplicate return.');
     }
 
     public function test_return_requires_inventory_return_permission(): void

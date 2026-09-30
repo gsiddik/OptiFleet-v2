@@ -51,12 +51,15 @@ class FunctionalTestMasterDataSeeder
 
         $toyota = VehicleBrand::query()->updateOrCreate(
             ['tenant_id' => $tenant->id, 'code' => 'TEST-TOYOTA'],
-            ['name' => '[TEST] Toyota', 'usage_type' => 'PASSENGER', 'is_system' => false, 'status' => 'ACTIVE']
+            ['name' => '[TEST] Toyota', 'is_system' => false, 'status' => 'ACTIVE']
         );
         $hino = VehicleBrand::query()->updateOrCreate(
             ['tenant_id' => $tenant->id, 'code' => 'TEST-HINO'],
-            ['name' => '[TEST] Hino', 'usage_type' => 'COMMERCIAL', 'is_system' => false, 'status' => 'ACTIVE']
+            ['name' => '[TEST] Hino', 'is_system' => false, 'status' => 'ACTIVE']
         );
+        // "Brand Of" links to the Vehicle Category master (syncWithoutDetaching: never drops a link added in the UI).
+        $toyota->vehicleCategories()->syncWithoutDetaching([$vehicleCategories['CAR']->id]);
+        $hino->vehicleCategories()->syncWithoutDetaching([$vehicleCategories['TRUCK']->id, $vehicleCategories['BUS']->id]);
 
         $vehicleModels = [
             'AVANZA' => VehicleModelMaster::query()->updateOrCreate(

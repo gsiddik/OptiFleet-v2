@@ -6,6 +6,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Services\TireService;
 use Illuminate\Support\Str;
+use App\Domain\WorkOrder\Models\WorkOrder;
 use Tests\TestCase;
 
 /**
@@ -78,7 +79,7 @@ class WorkOrderClosureGuardTest extends TestCase
 
     public function test_closure_is_blocked_while_a_planned_part_is_still_issued(): void
     {
-        [, , $workshop, , $vehicle, $product, $headers] = $this->setUp2();
+        [, , $workshop, $warehouse, $vehicle, $product, $headers] = $this->setUp2();
 
         $create = $this->postJson('/api/v1/app/work-orders', [
             'vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
@@ -87,12 +88,7 @@ class WorkOrderClosureGuardTest extends TestCase
 
         $this->driveToInProgress($id, $headers);
 
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Oil filter', 'quantity' => 2,
-        ], $headers)->assertStatus(201);
-        $partId = $addResponse->json('data.id');
-        $this->postJson("/api/v1/app/work-orders/{$id}/planned-parts/{$partId}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$id}/planned-parts/{$partId}/issue", [], $headers)->assertOk();
+        $partId = $this->issueThroughPartRequest(WorkOrder::query()->findOrFail($id), $product, 2, $warehouse)->id;
 
         $this->postJson("/api/v1/app/work-orders/{$id}/submit-to-qc", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/complete", [], $headers)->assertStatus(422);

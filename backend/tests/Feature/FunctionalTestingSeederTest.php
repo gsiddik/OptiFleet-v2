@@ -67,13 +67,18 @@ class FunctionalTestingSeederTest extends TestCase
     {
         $tenant = $this->seedTwice();
 
-        $brakePad = Product::query()->where('tenant_id', $tenant->id)->where('sku', 'TEST-SP-001')->firstOrFail();
+        $brakePad = Product::query()->where('tenant_id', $tenant->id)->where('name', '[TEST] Brake Pad Set (Standard)')->firstOrFail();
 
         $this->assertNotNull($brakePad->default_storage_bin_id);
         $this->assertNotNull($brakePad->defaultStorageBin);
         $this->assertNotNull($brakePad->sparepartSpec);
         $this->assertSame('BRK-PAD-STD-01', $brakePad->sparepartSpec->part_number);
         $this->assertGreaterThanOrEqual(1, $brakePad->compatibilities()->count());
+        $this->assertStringStartsWith('SPR-BRK-', $brakePad->sku, 'SKU is server-generated, never a literal fixture code.');
+        $this->assertNotNull($brakePad->component_category_id, 'Category is mandatory for a Sparepart.');
+        $rule = $brakePad->compatibilities()->firstOrFail();
+        $this->assertSame('[TEST] Toyota', $rule->brandMaster->name);
+        $this->assertSame('[TEST] Avanza', $rule->modelMaster->name);
     }
 
     public function test_all_functional_test_records_belong_to_the_functional_test_tenant(): void
@@ -81,7 +86,7 @@ class FunctionalTestingSeederTest extends TestCase
         $tenant = $this->seedTwice();
 
         $this->assertSame(0, Vehicle::query()->where('registration_number', 'like', '% TST')->where('tenant_id', '!=', $tenant->id)->count());
-        $this->assertSame(0, Product::query()->where('sku', 'like', 'TEST-%')->where('tenant_id', '!=', $tenant->id)->count());
+        $this->assertSame(0, Product::query()->where('name', 'like', '[TEST]%')->where('tenant_id', '!=', $tenant->id)->count());
     }
 
     public function test_scheduler_coverage_around_reference_date(): void

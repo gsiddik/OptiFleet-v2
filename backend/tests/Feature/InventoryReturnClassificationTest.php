@@ -45,34 +45,29 @@ class InventoryReturnClassificationTest extends TestCase
         $wo = app(WorkOrderService::class)->schedule($wo);
         $wo = app(WorkOrderService::class)->start($wo);
 
-        $addResponse = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts", [
-            'product_id' => $product->id, 'description' => 'Brake pad', 'quantity' => $plannedQty,
-        ], $headers)->assertStatus(201);
-        $part = WorkOrderPlannedPart::query()->findOrFail($addResponse->json('data.id'));
-
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/reserve", [], $headers)->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/issue", ['quantity' => $issueQty], $headers)->assertOk();
+        // Part Requests issue the whole approved quantity; $plannedQty is kept for the callers' signature.
+        $part = $this->issueThroughPartRequest($wo, $product, $issueQty, $warehouse);
 
         return [$tenant, $warehouse, $product, $wo, $part->fresh(), $headers];
     }
 
-    public function test_unused_new_return_restocks_available_inventory(): void
+    public function test_new_part_return_creates_a_numbered_return_pending_processing_and_posts_no_stock(): void
     {
         [, $warehouse, $product, $wo, $part, $headers] = $this->setUpWorkOrderWithIssuedPart();
 
         $response = $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
             'quantity' => 4, 'condition' => 'UNUSED_NEW', 'reason' => 'Not needed',
         ], $headers)->assertOk();
-
         $this->assertSame('4.0000', $response->json('data.returned_quantity'));
 
         $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(94.0, (float) $stock->quantity_on_hand); // 100 - 10 issued + 4 restocked
+        $this->assertSame(90.0, (float) $stock->quantity_on_hand, 'Nothing is restocked until Returned Parts Processing accepts it.');
 
         $return = WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->firstOrFail();
-        $this->assertSame('UNUSED_NEW', $return->condition);
-        $this->assertSame('RESTOCKED', $return->disposition_status);
-        $this->assertNotNull($return->stock_movement_id);
+        $this->assertSame(['NEW_PART', 'UNUSED_NEW', 'PENDING_PROCESSING'], [$return->return_source, $return->condition, $return->disposition_status]);
+        $this->assertSame($wo->id, $return->work_order_id);
+        $this->assertMatchesRegularExpression('#^RTN/\d{4}/000001$#', $return->return_number);
+        $this->assertNull($return->stock_movement_id);
     }
 
     public function test_return_evidence_is_optional_and_stored_when_provided(): void
@@ -80,44 +75,25 @@ class InventoryReturnClassificationTest extends TestCase
         [, , , $wo, $part, $headers] = $this->setUpWorkOrderWithIssuedPart();
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
-            'quantity' => 2, 'condition' => 'USED_FAULTY', 'evidence' => 'https://files.example/evidence/photo-1.jpg',
+            'quantity' => 2, 'condition' => 'UNUSED_FAULTY', 'evidence' => 'https://files.example/evidence/photo-1.jpg',
         ], $headers)->assertOk();
 
         $return = WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->firstOrFail();
         $this->assertSame('https://files.example/evidence/photo-1.jpg', $return->evidence);
     }
 
-    public function test_used_good_return_does_not_reach_available_stock(): void
+    public function test_used_conditions_are_redirected_to_removed_components(): void
     {
         [, $warehouse, $product, $wo, $part, $headers] = $this->setUpWorkOrderWithIssuedPart();
 
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
-            'quantity' => 3, 'condition' => 'USED_GOOD',
-        ], $headers)->assertOk();
+        foreach (['USED_GOOD', 'USED_FAULTY'] as $condition) {
+            $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", ['quantity' => 2, 'condition' => $condition], $headers)
+                ->assertStatus(422)->assertJsonFragment(['message' => 'Only a part that was not used can be returned here (New Good / New Faulty). Record a component taken off the vehicle under Removed Components.']);
+        }
 
-        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(90.0, (float) $stock->quantity_on_hand); // unchanged by the return — only the ISSUE deducted it
-
-        $return = WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->firstOrFail();
-        $this->assertSame('USED_GOOD', $return->condition);
-        $this->assertSame('PENDING_INSPECTION', $return->disposition_status);
-        $this->assertNull($return->stock_movement_id);
-    }
-
-    public function test_used_faulty_return_does_not_reach_available_stock(): void
-    {
-        [, $warehouse, $product, $wo, $part, $headers] = $this->setUpWorkOrderWithIssuedPart();
-
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part->id}/return", [
-            'quantity' => 2, 'condition' => 'USED_FAULTY',
-        ], $headers)->assertOk();
-
-        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(90.0, (float) $stock->quantity_on_hand);
-
-        $return = WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->firstOrFail();
-        $this->assertSame('USED_FAULTY', $return->condition);
-        $this->assertSame('PENDING_INSPECTION', $return->disposition_status);
+        $this->assertSame(0.0, (float) $part->fresh()->returned_quantity);
+        $this->assertSame(0, WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->count());
+        $this->assertSame(90.0, (float) WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->value('quantity_on_hand'));
     }
 
     public function test_return_without_condition_is_rejected(): void
@@ -171,8 +147,7 @@ class InventoryReturnClassificationTest extends TestCase
             'quantity' => 5, 'condition' => 'UNUSED_NEW',
         ], $headers)->assertStatus(422);
 
-        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(100.0, (float) $stock->quantity_on_hand); // 100 - 5 issued + 5 returned once, never twice
+        $this->assertSame(1, WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->count(), 'Returned once, never twice.');
     }
 
     /**
@@ -214,8 +189,7 @@ class InventoryReturnClassificationTest extends TestCase
             'quantity' => 5, 'condition' => 'UNUSED_NEW',
         ], $headers)->assertStatus(422);
 
-        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(100.0, (float) $stock->quantity_on_hand);
+        $this->assertSame(1, WorkOrderPartReturn::query()->where('work_order_planned_part_id', $part->id)->count());
     }
 
     public function test_consume_writes_an_immutable_consume_ledger_entry(): void

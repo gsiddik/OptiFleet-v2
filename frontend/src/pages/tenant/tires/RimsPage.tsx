@@ -91,7 +91,16 @@ export function RimsPage() {
         </>
       )}
 
-      <RimFormModal open={showCreate} onClose={() => setShowCreate(false)} onSaved={() => setReloadKey((k) => k + 1)} />
+      {showCreate && (
+        <RimFormModal
+          open
+          onClose={() => setShowCreate(false)}
+          onSaved={() => {
+            setShowCreate(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
       {editing && (
         <RimFormModal
           open
