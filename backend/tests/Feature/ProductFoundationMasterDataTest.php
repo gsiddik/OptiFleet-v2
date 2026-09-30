@@ -34,7 +34,7 @@ class ProductFoundationMasterDataTest extends TestCase
 
         $sparepartSpec = [
             'part_number' => 'PN-'.Str::random(4), 'part_type' => 'GENUINE',
-            'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+            'compatibilities' => [$this->vehicleFit()],
         ];
 
         $first = $this->postJson('/api/v1/app/products', [
@@ -50,7 +50,7 @@ class ProductFoundationMasterDataTest extends TestCase
             'product_category_id' => $category->id, 'product_type' => 'SPARE_PART', 'uom_id' => $uom->id,
             'default_storage_bin_id' => $bin->id,
             'brand' => 'Bosch', 'track_serial_number' => false,
-            'spec' => ['part_number' => 'PN-'.Str::random(4), 'part_type' => 'GENUINE', 'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']]],
+            'spec' => ['part_number' => 'PN-'.Str::random(4), 'part_type' => 'GENUINE', 'compatibilities' => [$this->vehicleFit()]],
         ], $headers)->assertStatus(201);
 
         $firstCode = $first->json('data.code');

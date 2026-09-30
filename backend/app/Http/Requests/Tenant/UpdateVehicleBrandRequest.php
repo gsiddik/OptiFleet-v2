@@ -19,6 +19,9 @@ class UpdateVehicleBrandRequest extends FormRequest
             'usage_type' => ['nullable', 'in:CAR,TRUCK,BUS,HEAVY_EQUIPMENT'],
             'usage_types' => ['nullable', 'array'],
             'usage_types.*' => ['in:CAR,TRUCK,BUS,HEAVY_EQUIPMENT'],
+            // "Brand Of": Vehicle Category master ids (active ones; checked in the controller).
+            'vehicle_category_ids' => ['nullable', 'array'],
+            'vehicle_category_ids.*' => ['uuid', 'distinct'],
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
         ];
     }

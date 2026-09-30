@@ -13,13 +13,6 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleBrandItem } from '../../../types';
 
-const USAGE_TYPES = [
-  { value: 'CAR', label: 'Car' },
-  { value: 'TRUCK', label: 'Truck' },
-  { value: 'BUS', label: 'Bus' },
-  { value: 'HEAVY_EQUIPMENT', label: 'Heavy Equipment' },
-];
-
 export function VehicleBrandsPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
@@ -51,7 +44,7 @@ export function VehicleBrandsPage() {
   const columns: Column<VehicleBrandItem>[] = [
     { key: 'code', header: 'Code', render: (b) => b.code },
     { key: 'name', header: 'Name', render: (b) => b.name },
-    { key: 'usage_types', header: 'Brand Of', render: (b) => (b.usage_types && b.usage_types.length > 0 ? b.usage_types.join(', ') : b.usage_type ?? '—') },
+    { key: 'vehicle_categories', header: 'Brand Of', render: (b) => (b.vehicle_categories ?? []).map((c) => c.name).join(', ') || '—' },
     { key: 'is_system', header: 'Source', render: (b) => (b.is_system ? 'System' : 'Tenant') },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
     {
@@ -149,7 +142,9 @@ function BrandFormModal({
 }) {
   const [code, setCode] = useState(brand?.code ?? '');
   const [name, setName] = useState(brand?.name ?? '');
-  const [usageTypes, setUsageTypes] = useState<string[]>(brand?.usage_types ?? (brand?.usage_type ? [brand.usage_type] : []));
+  // "Brand Of" = Vehicle Category master ids (active categories, never a hardcoded list).
+  const [categoryIds, setCategoryIds] = useState<string[]>((brand?.vehicle_categories ?? []).map((c) => c.id));
+  const [categoryOptions, setCategoryOptions] = useState<{ id: string; name: string }[] | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -180,8 +175,22 @@ function BrandFormModal({
     };
   }, [brand, logoFile]);
 
-  function toggleUsageType(value: string) {
-    setUsageTypes((types) => (types.includes(value) ? types.filter((t) => t !== value) : [...types, value]));
+  useEffect(() => {
+    if (!open) return;
+    apiClient
+      .get('/app/vehicle-brands/category-options')
+      .then((res) => setCategoryOptions(res.data.data))
+      .catch(() => setCategoryOptions([]));
+  }, [open]);
+
+  // A category the brand already has but that was deactivated since stays listed (checked).
+  const shownCategories = [
+    ...(categoryOptions ?? []),
+    ...(brand?.vehicle_categories ?? []).filter((c) => !(categoryOptions ?? []).some((o) => o.id === c.id)).map((c) => ({ id: c.id, name: `${c.name} (inactive)` })),
+  ];
+
+  function toggleCategory(value: string) {
+    setCategoryIds((ids) => (ids.includes(value) ? ids.filter((t) => t !== value) : [...ids, value]));
   }
 
   function handleFileChange(file: File | undefined) {
@@ -198,7 +207,7 @@ function BrandFormModal({
     setSubmitting(true);
     setErrors({});
     try {
-      const payload = { name, usage_types: usageTypes };
+      const payload = { name, vehicle_category_ids: categoryIds };
       let brandId = brand?.id;
       if (brand) {
         await apiClient.put(`/app/vehicle-brands/${brand.id}`, payload);
@@ -228,11 +237,15 @@ function BrandFormModal({
       <FormField label="Name" errors={errors.name} required={!brand}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Brand Of" errors={errors.usage_types}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {USAGE_TYPES.map((t) => (
-            <label key={t.value} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-              <input type="checkbox" checked={usageTypes.includes(t.value)} onChange={() => toggleUsageType(t.value)} /> {t.label}
+      <FormField label="Brand Of" errors={errors.vehicle_category_ids}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
+          {categoryOptions === null && <span style={{ fontSize: 12, color: '#9ca3af' }}>Loading vehicle categories…</span>}
+          {categoryOptions !== null && shownCategories.length === 0 && (
+            <span style={{ fontSize: 12, color: '#9ca3af' }}>No active Vehicle Categories — add them under Master Data → Vehicle Categories.</span>
+          )}
+          {shownCategories.map((c) => (
+            <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <input type="checkbox" checked={categoryIds.includes(c.id)} onChange={() => toggleCategory(c.id)} /> {c.name}
             </label>
           ))}
         </div>

@@ -16,7 +16,9 @@ use App\Domain\MaintenancePolicy\Models\VehicleMaintenanceProfile;
 use App\Domain\MaintenancePolicy\Services\MaintenanceScheduleService;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\MasterData\Models\ComponentGroup;
+use App\Domain\MasterData\Models\VehicleBrand;
 use App\Domain\MasterData\Models\VehicleCategory;
+use App\Domain\MasterData\Models\VehicleModel as VehicleModelMaster;
 use App\Domain\Organization\Models\Branch;
 use App\Domain\Organization\Models\Workshop;
 use App\Domain\QualityControl\Services\QualityControlService;
@@ -80,7 +82,9 @@ class OperationsSeeder extends Seeder
             'user_id' => $wsManager->id, 'tenant_id' => $tenant->id, 'scope_type' => 'WORKSHOP', 'scope_resource_id' => $jktWs->id,
         ]);
 
-        // Vehicles
+        // Vehicles — linked to the tenant's Vehicle Brand / Model masters (the Product
+        // compatibility of the demo Spareparts references the same masters).
+        [$hinoId, $rangerFgId] = $this->vehicleMaster($tenant, 'HINO', 'Hino', 'RANGER-FG', 'Ranger FG', $truck);
         $vehicles = [];
         foreach ([
             ['reg' => 'B 1001 ALP', 'branch' => $jkt, 'ws' => $jktWs, 'odo' => 48500],
@@ -94,7 +98,7 @@ class OperationsSeeder extends Seeder
                     'branch_id' => $def['branch']->id,
                     'default_workshop_id' => $def['ws']->id,
                     'vehicle_category_id' => $truck->id,
-                    'brand' => 'Hino', 'model' => 'Ranger FG', 'vehicle_type' => 'Truck',
+                    'brand' => 'Hino', 'vehicle_brand_id' => $hinoId, 'model' => 'Ranger FG', 'vehicle_model_id' => $rangerFgId, 'vehicle_type' => 'Truck',
                     'vin' => 'VIN'.str_pad((string) $i, 14, '0', STR_PAD_LEFT).$tenant->code,
                     'chassis_number' => 'CHS'.$tenant->code.$i,
                     'year' => 2022, 'fuel_type' => 'DIESEL', 'transmission_type' => 'MANUAL',
@@ -175,6 +179,13 @@ class OperationsSeeder extends Seeder
             ['tenant_id' => $tenant->id, 'status' => 'ACTIVE', 'effective_from' => now()->subMonths(5)->toDateString()]
         );
         app(MaintenanceScheduleService::class)->generateForProfile($profile->load(['vehicle', 'package.intervals']));
+
+        // Transactional operational history below is created once: master/setup data above is
+        // updateOrCreate-idempotent, but these are real documents (numbered Work Orders,
+        // inspections, breakdowns, reservations) that a rerun must never duplicate.
+        if (\App\Domain\Inspection\Models\Inspection::query()->where('tenant_id', $tenant->id)->where('inspection_template_id', $template->id)->exists()) {
+            return;
+        }
 
         // Inspection on vehicle 1 that fails and raises a maintenance request
         $inspectionService = app(InspectionService::class);
@@ -277,6 +288,7 @@ class OperationsSeeder extends Seeder
     private function seedBeta(Tenant $tenant, VehicleCategory $truck): void
     {
         $branch = Branch::query()->where('tenant_id', $tenant->id)->firstOrFail();
+        [$mitsubishiId, $fusoId] = $this->vehicleMaster($tenant, 'MITSUBISHI', 'Mitsubishi', 'FUSO', 'Fuso', $truck);
 
         foreach ([
             ['reg' => 'L 3001 BET', 'odo' => 22000],
@@ -286,12 +298,33 @@ class OperationsSeeder extends Seeder
                 ['tenant_id' => $tenant->id, 'registration_number' => $def['reg']],
                 [
                     'branch_id' => $branch->id, 'vehicle_category_id' => $truck->id,
-                    'brand' => 'Mitsubishi', 'model' => 'Fuso', 'vehicle_type' => 'Truck',
+                    'brand' => 'Mitsubishi', 'vehicle_brand_id' => $mitsubishiId, 'model' => 'Fuso', 'vehicle_model_id' => $fusoId, 'vehicle_type' => 'Truck',
                     'vin' => 'VINBETA'.str_pad((string) $i, 8, '0', STR_PAD_LEFT),
                     'year' => 2021, 'fuel_type' => 'DIESEL', 'transmission_type' => 'MANUAL',
                     'current_odometer' => $def['odo'], 'status' => 'ACTIVE', 'operational_status' => 'AVAILABLE',
                 ]
             );
         }
+    }
+
+    /**
+     * The tenant's Vehicle Brand + Model master for its demo vehicles (idempotent by code;
+     * an existing row is never renamed). "Brand Of" includes the vehicles' category.
+     *
+     * @return array{0: string, 1: string} [vehicle_brand_id, vehicle_model_id]
+     */
+    private function vehicleMaster(Tenant $tenant, string $brandCode, string $brandName, string $modelCode, string $modelName, VehicleCategory $category): array
+    {
+        $brand = VehicleBrand::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => $brandCode],
+            ['name' => $brandName, 'is_system' => false, 'status' => 'ACTIVE']
+        );
+        $brand->vehicleCategories()->syncWithoutDetaching([$category->id]);
+        $model = VehicleModelMaster::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => $tenant->id, 'vehicle_brand_id' => $brand->id, 'code' => $modelCode],
+            ['name' => $modelName, 'is_system' => false, 'status' => 'ACTIVE']
+        );
+
+        return [$brand->id, $model->id];
     }
 }

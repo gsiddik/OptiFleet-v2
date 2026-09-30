@@ -419,6 +419,26 @@ abstract class TestCase extends BaseTestCase
         ], $overrides));
     }
 
+    /**
+     * A (platform) Vehicle Brand + Model pair for Product compatibility rows, which reference
+     * the masters by id. Idempotent per name.
+     *
+     * @return array{vehicle_brand_id: string, vehicle_model_id: string}
+     */
+    protected function vehicleFit(string $brand = 'Toyota', string $model = 'Avanza'): array
+    {
+        $brandRow = \App\Domain\MasterData\Models\VehicleBrand::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => null, 'code' => 'VB-'.Str::upper(Str::slug($brand))],
+            ['name' => $brand, 'is_system' => true, 'status' => 'ACTIVE']
+        );
+        $modelRow = \App\Domain\MasterData\Models\VehicleModel::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => null, 'vehicle_brand_id' => $brandRow->id, 'code' => 'VM-'.Str::upper(Str::slug($model))],
+            ['name' => $model, 'is_system' => true, 'status' => 'ACTIVE']
+        );
+
+        return ['vehicle_brand_id' => $brandRow->id, 'vehicle_model_id' => $modelRow->id];
+    }
+
     protected function makePartner(Tenant $tenant, array $overrides = []): \App\Domain\Partner\Models\Partner
     {
         return \App\Domain\Partner\Models\Partner::query()->create(array_merge([

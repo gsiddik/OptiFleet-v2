@@ -51,7 +51,7 @@ class ProductSkuGenerationTest extends TestCase
             'uom_id' => $this->makeUom()->id,
             'default_storage_bin_id' => $this->makeWarehouseBin($tenant)->id,
             'brand' => 'Bosch', 'track_serial_number' => false,
-            'spec' => ['part_number' => 'PN-'.Str::random(5), 'part_type' => 'GENUINE', 'compatibilities' => [['vehicle_brand' => 'Hino', 'vehicle_model' => 'Ranger']]],
+            'spec' => ['part_number' => 'PN-'.Str::random(5), 'part_type' => 'GENUINE', 'compatibilities' => [$this->vehicleFit('Hino', 'Ranger')]],
         ], $overrides);
     }
 

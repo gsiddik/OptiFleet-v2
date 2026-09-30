@@ -91,7 +91,7 @@ class ProductConsumableSdsTest extends TestCase
             'brand' => 'Bosch', 'track_serial_number' => false,
             'spec' => [
                 'part_number' => 'PN-1', 'part_type' => 'GENUINE',
-                'compatibilities' => [['vehicle_brand' => 'Toyota', 'vehicle_model' => 'Avanza']],
+                'compatibilities' => [$this->vehicleFit()],
             ],
         ], $this->authHeaders($token))->json('data.id');
 

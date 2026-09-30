@@ -3,7 +3,9 @@
 namespace App\Domain\ProductMaster\Models;
 
 use App\Domain\MasterData\Models\ComponentGroup;
+use App\Domain\MasterData\Models\VehicleBrand;
 use App\Domain\MasterData\Models\VehicleCategory;
+use App\Domain\MasterData\Models\VehicleModel;
 use App\Domain\Shared\Concerns\BelongsToTenantOrPlatform;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -14,7 +16,8 @@ class ProductCompatibility extends Model
     use BelongsToTenantOrPlatform, HasUuids;
 
     protected $fillable = [
-        'tenant_id', 'product_id', 'component_group_id', 'vehicle_category_id', 'vehicle_brand', 'vehicle_model',
+        'tenant_id', 'product_id', 'component_group_id', 'vehicle_category_id',
+        'vehicle_brand_id', 'vehicle_brand', 'vehicle_model_id', 'vehicle_model',
         'variant', 'year_from', 'year_to', 'position', 'notes',
     ];
 
@@ -31,6 +34,20 @@ class ProductCompatibility extends Model
     public function vehicleCategory(): BelongsTo
     {
         return $this->belongsTo(VehicleCategory::class);
+    }
+
+    /**
+     * Vehicle Brand / Model masters. Named *Master so they never collide with the
+     * vehicle_brand / vehicle_model name-snapshot columns in the JSON contract.
+     */
+    public function brandMaster(): BelongsTo
+    {
+        return $this->belongsTo(VehicleBrand::class, 'vehicle_brand_id')->withoutGlobalScopes();
+    }
+
+    public function modelMaster(): BelongsTo
+    {
+        return $this->belongsTo(VehicleModel::class, 'vehicle_model_id')->withoutGlobalScopes();
     }
 
     /** Number of non-null dimensions this rule constrains — higher wins. */

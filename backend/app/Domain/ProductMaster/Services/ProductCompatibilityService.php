@@ -23,11 +23,17 @@ class ProductCompatibilityService
             ->where(function ($q) use ($vehicle) {
                 $q->whereNull('vehicle_category_id')->orWhere('vehicle_category_id', $vehicle->vehicle_category_id);
             })
+            // Match by master id when the vehicle has one; the name snapshot keeps legacy text-only
+            // rules and vehicles without a linked master matching exactly as before.
             ->where(function ($q) use ($vehicle) {
-                $q->whereNull('vehicle_brand')->orWhere('vehicle_brand', $vehicle->brand);
+                $q->where(fn ($any) => $any->whereNull('vehicle_brand_id')->whereNull('vehicle_brand'))
+                    ->when($vehicle->vehicle_brand_id, fn ($q2) => $q2->orWhere('vehicle_brand_id', $vehicle->vehicle_brand_id))
+                    ->orWhere('vehicle_brand', $vehicle->brand);
             })
             ->where(function ($q) use ($vehicle) {
-                $q->whereNull('vehicle_model')->orWhere('vehicle_model', $vehicle->model);
+                $q->where(fn ($any) => $any->whereNull('vehicle_model_id')->whereNull('vehicle_model'))
+                    ->when($vehicle->vehicle_model_id, fn ($q2) => $q2->orWhere('vehicle_model_id', $vehicle->vehicle_model_id))
+                    ->orWhere('vehicle_model', $vehicle->model);
             })
             ->when($componentGroupId, fn ($q) => $q->where(function ($q2) use ($componentGroupId) {
                 $q2->whereNull('component_group_id')->orWhere('component_group_id', $componentGroupId);

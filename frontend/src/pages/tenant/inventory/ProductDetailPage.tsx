@@ -9,6 +9,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { EditProductModal } from './EditProductModal';
+import { VehicleBrandModelSelect } from './VehicleBrandModelSelect';
 import type { ProductItem, VehicleCategory } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
 
@@ -20,8 +21,10 @@ export function ProductDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [vehicleCategoryId, setVehicleCategoryId] = useState('');
-  const [vehicleBrand, setVehicleBrand] = useState('');
-  const [vehicleModel, setVehicleModel] = useState('');
+  const [vehicleBrandId, setVehicleBrandId] = useState('');
+  const [vehicleModelId, setVehicleModelId] = useState('');
+  // Inline edit of an existing compatibility rule (Brand / Model restored from the stored ids).
+  const [editingRule, setEditingRule] = useState<{ id: string; brandId: string; modelId: string; brandName: string | null; modelName: string | null } | null>(null);
   const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
   const [editingSpecs, setEditingSpecs] = useState(false);
   const [sdsBusy, setSdsBusy] = useState(false);
@@ -109,12 +112,33 @@ export function ProductDetailPage() {
     try {
       await apiClient.post(`/app/products/${id}/compatibilities`, {
         vehicle_category_id: vehicleCategoryId || undefined,
-        vehicle_brand: vehicleBrand || undefined,
-        vehicle_model: vehicleModel || undefined,
+        vehicle_brand_id: vehicleBrandId || undefined,
+        vehicle_model_id: vehicleModelId || undefined,
       });
       setVehicleCategoryId('');
-      setVehicleBrand('');
-      setVehicleModel('');
+      setVehicleBrandId('');
+      setVehicleModelId('');
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function saveRule() {
+    if (!editingRule) return;
+    const rule = product?.compatibilities?.find((c) => c.id === editingRule.id);
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.put(`/app/products/${id}/compatibilities/${editingRule.id}`, {
+        component_group_id: rule?.component_group_id ?? null,
+        vehicle_category_id: rule?.vehicle_category_id ?? null,
+        vehicle_brand_id: editingRule.brandId || null,
+        vehicle_model_id: editingRule.modelId || null,
+      });
+      setEditingRule(null);
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -306,14 +330,51 @@ export function ProductDetailPage() {
         {(product.compatibilities ?? []).length === 0 && <EmptyState label="No compatibility rules — treated as universally compatible." />}
         {(product.compatibilities ?? []).map((c) => (
           <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            <span>
-              {c.component_group ? componentGroupLabel(c.component_group) : 'Any component'} — {c.vehicle_category?.name ?? 'Any category'}
-              {c.vehicle_brand && ` — ${c.vehicle_brand}`} {c.vehicle_model && ` ${c.vehicle_model}`}
-            </span>
-            {hasPermission('product.update') && !product.is_system && (
-              <button className="btn-link" disabled={busy} onClick={() => removeCompatibility(c.id)}>
-                Remove
-              </button>
+            {editingRule?.id === c.id ? (
+              <span style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+                <VehicleBrandModelSelect
+                  brandId={editingRule.brandId}
+                  modelId={editingRule.modelId}
+                  onChange={(brandId, modelId) => setEditingRule({ ...editingRule, brandId, modelId })}
+                  anyLabel="Any"
+                  current={{ brandName: editingRule.brandName, modelName: editingRule.modelName }}
+                  width={150}
+                />
+                <button className="btn-secondary" disabled={busy} onClick={saveRule}>
+                  Save
+                </button>
+                <button className="btn-link" disabled={busy} onClick={() => setEditingRule(null)}>
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <span>
+                {c.component_group ? componentGroupLabel(c.component_group) : 'Any component'} — {c.vehicle_category?.name ?? 'Any category'}
+                {c.vehicle_brand && ` — ${c.brand_master?.name ?? c.vehicle_brand}`} {c.vehicle_model && ` ${c.model_master?.name ?? c.vehicle_model}`}
+                {c.vehicle_brand && !c.vehicle_brand_id && <span style={{ color: '#9ca3af', fontSize: 11 }}> (legacy text — not linked to the Vehicle Brand master)</span>}
+              </span>
+            )}
+            {hasPermission('product.update') && !product.is_system && editingRule?.id !== c.id && (
+              <span style={{ display: 'flex', gap: 8 }}>
+                <button
+                  className="btn-link"
+                  disabled={busy}
+                  onClick={() =>
+                    setEditingRule({
+                      id: c.id,
+                      brandId: c.vehicle_brand_id ?? '',
+                      modelId: c.vehicle_model_id ?? '',
+                      brandName: c.brand_master?.name ?? c.vehicle_brand,
+                      modelName: c.model_master?.name ?? c.vehicle_model,
+                    })
+                  }
+                >
+                  Edit
+                </button>
+                <button className="btn-link" disabled={busy} onClick={() => removeCompatibility(c.id)}>
+                  Remove
+                </button>
+              </span>
             )}
           </div>
         ))}
@@ -329,11 +390,19 @@ export function ProductDetailPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Brand">
-              <input value={vehicleBrand} onChange={(e) => setVehicleBrand(e.target.value)} style={{ ...inputStyle, width: 130 }} />
-            </FormField>
-            <FormField label="Model">
-              <input value={vehicleModel} onChange={(e) => setVehicleModel(e.target.value)} style={{ ...inputStyle, width: 130 }} />
+            <FormField label="Brand / Model">
+              <span style={{ display: 'flex', gap: 6 }}>
+                <VehicleBrandModelSelect
+                  brandId={vehicleBrandId}
+                  modelId={vehicleModelId}
+                  onChange={(brandId, modelId) => {
+                    setVehicleBrandId(brandId);
+                    setVehicleModelId(modelId);
+                  }}
+                  anyLabel="Any"
+                  width={150}
+                />
+              </span>
             </FormField>
             <button className="btn-secondary" disabled={busy} onClick={addCompatibility} style={{ marginBottom: 14 }}>
               Add Rule

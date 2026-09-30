@@ -126,6 +126,8 @@ export interface VehicleBrandItem {
   logo_available: boolean;
   usage_type: 'CAR' | 'TRUCK' | 'BUS' | 'HEAVY_EQUIPMENT' | null;
   usage_types: ('CAR' | 'TRUCK' | 'BUS' | 'HEAVY_EQUIPMENT')[] | null;
+  /** "Brand Of": linked Vehicle Categories (usage_type / usage_types are legacy, read-only). */
+  vehicle_categories?: { id: string; code: string; name: string; status: string }[];
   is_system: boolean;
   status: 'ACTIVE' | 'INACTIVE';
 }
@@ -1230,6 +1232,9 @@ export interface ProductCompatibilityItem {
   product_id: string;
   component_group_id: string | null;
   vehicle_category_id: string | null;
+  /** Vehicle Brand / Model master ids; vehicle_brand / vehicle_model keep the name snapshot (or legacy text). */
+  vehicle_brand_id?: string | null;
+  vehicle_model_id?: string | null;
   vehicle_brand: string | null;
   vehicle_model: string | null;
   variant: string | null;
@@ -1238,6 +1243,8 @@ export interface ProductCompatibilityItem {
   position: string | null;
   component_group?: ComponentGroup;
   vehicle_category?: VehicleCategory;
+  brand_master?: { id: string; name: string; status: string; deleted_at: string | null } | null;
+  model_master?: { id: string; vehicle_brand_id: string; name: string; status: string; deleted_at: string | null } | null;
 }
 
 export interface WarehouseZoneItem {

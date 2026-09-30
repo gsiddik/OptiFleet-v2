@@ -52,6 +52,7 @@ use App\Http\Controllers\Api\Tenant\PartRequestController;
 use App\Http\Controllers\Api\Tenant\PermissionController;
 use App\Http\Controllers\Api\Tenant\ProductCategoryController;
 use App\Http\Controllers\Api\Tenant\ProductClassificationController;
+use App\Http\Controllers\Api\Tenant\ProductVehicleLookupController;
 use App\Http\Controllers\Api\Tenant\ProductController;
 use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
 use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
@@ -185,6 +186,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::delete('/vehicle-categories/{vehicleCategory}', [VehicleCategoryController::class, 'destroy'])->middleware('permission:vehicle_category.update');
             Route::post('/vehicle-categories/{vehicleCategory}/component-groups', [MasterDataMappingController::class, 'syncComponentGroups'])->middleware('permission:component_group.map');
             Route::get('/vehicle-brands', [VehicleBrandController::class, 'index'])->middleware('permission:vehicle_brand.view');
+            Route::get('/vehicle-brands/category-options', [VehicleBrandController::class, 'categoryOptions'])->middleware('permission:vehicle_brand.view');
             Route::post('/vehicle-brands', [VehicleBrandController::class, 'store'])->middleware('permission:vehicle_brand.create');
             Route::put('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'update'])->middleware('permission:vehicle_brand.update');
             Route::delete('/vehicle-brands/{vehicleBrand}', [VehicleBrandController::class, 'destroy'])->middleware('permission:vehicle_brand.update');
@@ -508,6 +510,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/product-classification/component-groups', [ProductClassificationController::class, 'groups'])->middleware('permission:product.view');
             Route::get('/product-classification/categories', [ProductClassificationController::class, 'categories'])->middleware('permission:product.view');
             Route::get('/product-classification/subcategories', [ProductClassificationController::class, 'subcategories'])->middleware('permission:product.view');
+            Route::get('/product-classification/vehicle-brands', [ProductVehicleLookupController::class, 'brands'])->middleware('permission:product.view');
+            Route::get('/product-classification/vehicle-models', [ProductVehicleLookupController::class, 'models'])->middleware('permission:product.view');
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
             Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');
             Route::get('/products/compatible', [ProductController::class, 'compatibleFor'])->middleware('permission:product.view');
@@ -515,6 +519,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:product.update');
             Route::post('/products/{product}/component-groups', [ProductController::class, 'syncComponentGroups'])->middleware('permission:product.update');
             Route::post('/products/{product}/compatibilities', [ProductController::class, 'addCompatibility'])->middleware('permission:product.update');
+            Route::put('/products/{product}/compatibilities/{compatibility}', [ProductController::class, 'updateCompatibility'])->middleware('permission:product.update');
             Route::delete('/products/{product}/compatibilities/{compatibility}', [ProductController::class, 'destroyCompatibility'])->middleware('permission:product.update');
             Route::post('/products/{product}/sds', [ProductController::class, 'uploadSds'])->middleware('permission:product.update');
             Route::get('/products/{product}/sds', [ProductController::class, 'showSds'])->middleware('permission:product.view');
