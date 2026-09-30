@@ -117,6 +117,31 @@ class InspectionService
         });
     }
 
+    public const SUBMITTED_STATUSES = ['PASSED', 'WARNING', 'FAILED'];
+
+    /** Records the supervisor review of a submitted inspection; its result is left as submitted. */
+    public function review(Inspection $inspection, string $reviewerUserId, ?string $notes = null): Inspection
+    {
+        return DB::transaction(function () use ($inspection, $reviewerUserId, $notes) {
+            $inspection = Inspection::query()->lockForUpdate()->findOrFail($inspection->id);
+
+            if (! in_array($inspection->status, self::SUBMITTED_STATUSES, true)) {
+                throw new InspectionException('Only a submitted inspection can be reviewed.');
+            }
+            if ($inspection->reviewed_at !== null) {
+                throw new InspectionException('This inspection has already been reviewed.');
+            }
+
+            $inspection->update([
+                'reviewed_by' => $reviewerUserId,
+                'reviewed_at' => now(),
+                'review_notes' => $notes,
+            ]);
+
+            return $inspection->fresh(['results', 'findings']);
+        });
+    }
+
     private function maxSeverity(?string $current, string $candidate): string
     {
         $rank = ['INFO' => 0, 'LOW' => 1, 'MEDIUM' => 2, 'HIGH' => 3, 'CRITICAL' => 4];

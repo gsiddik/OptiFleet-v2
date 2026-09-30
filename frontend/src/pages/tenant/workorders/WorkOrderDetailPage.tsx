@@ -27,7 +27,7 @@ import type {
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Request Parts', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
+  'Planned Parts', 'Issuance & Return', 'Part Requests', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
 ] as const;
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
 // as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Request
@@ -42,7 +42,7 @@ type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
 // addable through the whole active-planning window.
 const FINDING_SCOPE_STATUSES = ['DRAFT'];
 const PLANNING_STATUSES = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
-// Doc: "Request Parts" (the old Planned Parts tab, renamed) only appears from IN_PROGRESS
+// Doc: "Issuance & Return" (formerly "Request Parts", the old Planned Parts tab) only appears from IN_PROGRESS
 // onward — before that, only the new budgeting-only "Planned Parts" tab is shown.
 const REQUEST_PARTS_VISIBLE_STATUSES = ['IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'QC_PENDING', 'REWORK', 'COMPLETED', 'CLOSED', 'REJECTED', 'CANCELLED'];
 // Reserve/Issue/Consume/Return only apply once real execution has started — Draft's Planned
@@ -55,7 +55,7 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'work_order.submit', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   SUBMITTED: [
     { action: 'approve', label: 'Approve', permission: 'work_order.approve', primary: true },
-    { action: 'reject', label: 'Reject', permission: 'work_order.approve' },
+    { action: 'reject', label: 'Reject', permission: 'work_order.reject' },
     { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
   ],
   APPROVED: [{ action: 'assign', label: 'Assign', permission: 'work_order.assign', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
@@ -208,7 +208,7 @@ export function WorkOrderDetailPage() {
 
   const isExternalMode = wo.execution_mode === 'EXTERNAL';
   const visibleTabs: readonly Tab[] = (isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS).filter(
-    (t) => t !== 'Request Parts' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status),
+    (t) => t !== 'Issuance & Return' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status),
   );
   const actions = isExternalMode ? [] : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission));
 
@@ -344,7 +344,7 @@ export function WorkOrderDetailPage() {
       {tab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
       {tab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
       {tab === 'Planned Parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
-      {tab === 'Request Parts' && <RequestPartsTab wo={wo} onChanged={load} />}
+      {tab === 'Issuance & Return' && <IssuanceReturnTab wo={wo} onChanged={load} />}
       {tab === 'Part Requests' && <PartRequestsTab wo={wo} onChanged={load} />}
       {tab === 'Workspace' && <WorkspaceTab wo={wo} onChanged={load} />}
       {tab === 'QC' && <QcTab wo={wo} onChanged={load} />}
@@ -485,7 +485,10 @@ function MaintenanceRequestSourceSection({ maintenanceRequestId }: { maintenance
   return <AssessmentSection maintenanceRequestId={maintenanceRequestId} editable={false} />;
 }
 
-function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
+function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+  const { hasPermission } = useAuth();
+  const [editing, setEditing] = useState(false);
+  const canEdit = wo.status === 'DRAFT' && hasPermission('work_order.update');
   const laborCost = wo.estimated_labor_cost_computed ?? null;
   const partsCost = wo.estimated_parts_cost_computed ?? null;
   const totalCost =
@@ -514,6 +517,13 @@ function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
   return (
     <div>
       <div className="card">
+        {canEdit && (
+          <div style={{ textAlign: 'right', marginBottom: 8 }}>
+            <button className="btn-secondary" onClick={() => setEditing(true)}>
+              Edit Details
+            </button>
+          </div>
+        )}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           {rows.map(([label, value]) => (
             <div key={label}>
@@ -538,7 +548,67 @@ function OverviewTab({ wo }: { wo: WorkOrderItem; onChanged: () => void }) {
           <MaintenanceRequestSourceSection maintenanceRequestId={wo.maintenance_request_id} />
         </div>
       )}
+      {editing && (
+        <EditWorkOrderModal
+          wo={wo}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onChanged();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** DRAFT-only header edit (`work_order.update`): priority, and the complaint of a directly created WO. */
+function EditWorkOrderModal({ wo, onClose, onSaved }: { wo: WorkOrderItem; onClose: () => void; onSaved: () => void }) {
+  const [priority, setPriority] = useState<string>(wo.priority ?? 'MEDIUM');
+  const [complaint, setComplaint] = useState(wo.complaint ?? '');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.put(`/app/work-orders/${wo.id}`, wo.maintenance_request_id ? { priority } : { priority, complaint: complaint || null });
+      onSaved();
+    } catch (err) {
+      const e = extractApiError(err);
+      setError(e.errors ? Object.values(e.errors).flat()[0] ?? e.message : e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open title={`Edit ${wo.wo_number}`} onClose={onClose}>
+      {error && <ErrorState message={error} />}
+      <FormField label="Priority" required>
+        <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>
+          {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
+            <option key={p} value={p}>
+              {p}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      {!wo.maintenance_request_id && (
+        <FormField label="Complaint">
+          <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
+        </FormField>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button className="btn-secondary" onClick={onClose} disabled={busy}>
+          Cancel
+        </button>
+        <button className="btn-primary" onClick={save} disabled={busy}>
+          {busy ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -1205,7 +1275,7 @@ const PLANNED_PART_PRODUCT_TYPES = ['SPARE_PART', 'TIRE', 'CONSUMABLE'];
 /**
  * Doc: the TRUE "Planned Parts" tab — a pure budgeting line item (Product + Qty only), never
  * Reserve/Issue/Consume/Return ("jangan tampilkan tombol Reserve, tombol Issue, Consume atau
- * Return"). Feeds Estimated Parts Cost and nothing else. Distinct from "Request Parts" below
+ * Return"). Feeds Estimated Parts Cost and nothing else. Distinct from "Issuance & Return" below
  * (the OLD Planned Parts tab, renamed, with its full warehouse lifecycle intact).
  */
 function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
@@ -1298,11 +1368,14 @@ function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChan
 }
 
 /**
+ * "Issuance & Return" (previously labelled "Request Parts", before that "Planned Parts" — the
+ * warehouse Reserve/Issue/Consume/Return lifecycle). Consumed quantity is never returnable here;
+ * returns of components removed from the unit go through Removed Components.
  * Doc: "Request Parts" — "sebelumnya adalah Tab Planned Parts yang berubah nama" (this IS the
  * old "Planned Parts" tab, renamed — its full Reserve/Issue/Consume/Return lifecycle is
  * unchanged). Only visible from IN_PROGRESS onward; see REQUEST_PARTS_VISIBLE_STATUSES.
  */
-function RequestPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
+function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
   const [description, setDescription] = useState('');
   const [quantity, setQuantity] = useState('1');
@@ -1368,6 +1441,12 @@ function RequestPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
     return Number(p.issued_quantity) - Number(p.consumed_quantity) - Number(p.returned_quantity);
   }
 
+  // Consumed quantity is never returnable; the backend's returnable_quantity is authoritative.
+  function returnableQuantity(p: WorkOrderPlannedPartItem): number {
+    if (p.status === 'CONSUMED') return 0;
+    return p.returnable_quantity !== undefined ? Number(p.returnable_quantity) : Math.max(0, outstandingIssued(p));
+  }
+
   // Doc: Consume popup only appears when Issued Qty > 1 — a single outstanding unit has
   // nothing to choose, so it's consumed directly with no dialog.
   function startConsume(p: WorkOrderPlannedPartItem) {
@@ -1421,7 +1500,7 @@ function RequestPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Request Parts</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Issuance &amp; Return</h3>
       {error && <ErrorState message={error} />}
       {(wo.planned_parts ?? []).length === 0 && <EmptyState label="No planned parts." />}
       {(wo.planned_parts ?? []).map((p) => (
@@ -1454,8 +1533,15 @@ function RequestPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                     Consume
                   </button>
                 )}
-                {canReturn && Number(p.issued_quantity) - Number(p.returned_quantity) > 0 && returningPartId !== p.id && (
+                {canReturn && returnableQuantity(p) > 0 && returningPartId !== p.id && (
                   <button className="btn-secondary" disabled={busy} onClick={() => startReturn(p.id)}>
+                    Return
+                  </button>
+                )}
+                {/* Business rule: Consumed material can never be returned here (backend enforces it too);
+                    components physically removed from the unit are returned via Removed Components. */}
+                {canReturn && p.status === 'CONSUMED' && (
+                  <button className="btn-secondary" disabled title="Consumed items cannot be returned. Use Removed Components for components removed from the unit.">
                     Return
                   </button>
                 )}
@@ -1464,7 +1550,7 @@ function RequestPartsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () =
                 <div style={{ marginTop: 8, background: '#f9fafb', padding: 10, borderRadius: 6 }}>
                   {/* SYSTEM_INFORMATION — the ceiling the user is returning against, never re-entered. */}
                   <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
-                    Available to return: <strong>{Number(p.issued_quantity) - Number(p.returned_quantity)}</strong> (Issued {p.issued_quantity} − Returned {p.returned_quantity})
+                    Available to return: <strong>{returnableQuantity(p)}</strong> (Issued {p.issued_quantity} − Consumed {p.consumed_quantity} − Returned {p.returned_quantity})
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
                     <input

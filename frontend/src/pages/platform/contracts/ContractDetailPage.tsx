@@ -9,6 +9,7 @@ import { BackButton } from '../../../components/BackButton';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ContractAmendmentItem, ContractItem } from '../../../types';
+import { ContractForm } from './ContractForm';
 
 const PRODUCT_TYPES = ['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY', 'SETUP_FEE', 'OTHER'];
 const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'CUSTOM'];
@@ -23,6 +24,7 @@ export function ContractDetailPage() {
   const [noteModal, setNoteModal] = useState<'approve' | 'reject' | 'terminate' | null>(null);
   const [showAmendModal, setShowAmendModal] = useState(false);
   const [showRenewModal, setShowRenewModal] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   // Reached from a Tenant Detail page's Contract tab -> Back must return
   // there (to the Contract tab specifically), not to Contract Management.
@@ -58,6 +60,7 @@ export function ContractDetailPage() {
   if (!contract) return <LoadingState />;
 
   const canSubmit = contract.status === 'DRAFT' && hasPermission('contract.submit');
+  const canEdit = contract.status === 'DRAFT' && hasPermission('contract.update');
   const canApprove = contract.status === 'PENDING_APPROVAL' && hasPermission('contract.approve');
   const canTerminate = ['ACTIVE', 'EXPIRING'].includes(contract.status) && hasPermission('contract.terminate');
   const canAmend = contract.status === 'ACTIVE' && hasPermission('contract.amend');
@@ -72,6 +75,11 @@ export function ContractDetailPage() {
         </h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <StatusBadge status={contract.status} />
+          {canEdit && (
+            <button className="btn-secondary" disabled={busy} onClick={() => setShowEdit(true)}>
+              Edit Draft
+            </button>
+          )}
           {canSubmit && (
             <button className="btn-primary" disabled={busy} onClick={() => action('/submit')}>
               Submit for Approval
@@ -193,6 +201,7 @@ export function ContractDetailPage() {
         />
       )}
 
+      {showEdit && <ContractForm open contract={contract} onClose={() => setShowEdit(false)} onCreated={load} />}
       {showRenewModal && (
         <RenewModal
           contract={contract}

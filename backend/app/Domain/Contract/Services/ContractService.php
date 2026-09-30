@@ -43,6 +43,29 @@ class ContractService
         });
     }
 
+    /**
+     * Replaces the terms and items of a DRAFT contract. Items are re-priced exactly as on
+     * creation (current Active Price, never below it); nothing references a draft's items yet.
+     */
+    public function updateDraft(Contract $contract, array $attributes, array $items): Contract
+    {
+        return DB::transaction(function () use ($contract, $attributes, $items) {
+            $contract = Contract::query()->lockForUpdate()->findOrFail($contract->id);
+            if (! $contract->isEditable()) {
+                throw new ContractException('Only a DRAFT contract can be edited.');
+            }
+
+            $contract->update($attributes);
+            $contract->items()->delete();
+            foreach ($items as $item) {
+                $this->addItem($contract, $item);
+            }
+            $this->recalculateTotals($contract);
+
+            return $contract->fresh('items');
+        });
+    }
+
     private const PRICED_TYPES = ['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY'];
     private const MANUAL_PRICE_TYPES = ['SETUP_FEE', 'OTHER'];
 

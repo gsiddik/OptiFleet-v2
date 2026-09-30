@@ -9,6 +9,7 @@ use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
 use App\Domain\Configuration\Services\DocumentTemplateRenderService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
+use App\Domain\WorkOrder\Services\ExternalWorkOrderService;
 use App\Domain\WorkOrder\Services\WorkOrderExternalInvoiceService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
@@ -22,10 +23,11 @@ use Illuminate\Support\Facades\Storage;
  * Deliberately its own controller/route namespace, separate from
  * WorkshopInvoiceController (the pre-existing, unrelated R1 feature).
  *
- * Cancel is not duplicated here — it stays on ExternalWorkOrderController
- * (POST /work-orders/{workOrder}/external/cancel), which already
- * synchronizes this Invoice's own status in the same transaction (see
- * ExternalWorkOrderService::cancel()).
+ * Cancel from this page (`external_work_order_invoice.cancel`) runs the very
+ * same ExternalWorkOrderService::cancel() as POST
+ * /work-orders/{workOrder}/external/cancel — it cancels the Work Order and
+ * this Invoice together in one transaction, so the route also requires
+ * `work_order.cancel_external`.
  */
 class ExternalWorkOrderInvoiceController extends Controller
 {
@@ -77,6 +79,17 @@ class ExternalWorkOrderInvoiceController extends Controller
         $validated = $request->validate(['partner_id' => ['required', 'uuid', 'exists:partners,id']]);
 
         return $this->ok($this->invoices->generateAuthorization($externalInvoice, $validated['partner_id'], $this->context->user()->id));
+    }
+
+    public function cancel(Request $request, ExternalWorkOrderService $external, WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        $validated = $request->validate(['reason' => ['required', 'string', 'max:2000']]);
+        $externalInvoice->assertActionAllowed('cancel');
+
+        $external->cancel($externalInvoice->workOrder, $validated['reason'], $this->context->user()->id);
+
+        return $this->ok($externalInvoice->fresh());
     }
 
     public function viewAuthorization(WorkOrderExternalInvoice $externalInvoice, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)

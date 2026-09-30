@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers\Api\Platform;
 
-use App\Domain\AccessControl\Models\Permission;
 use App\Domain\AccessControl\Models\Role;
-use App\Domain\AccessControl\Services\PermissionService;
+use App\Domain\AccessControl\Services\RolePermissionService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AccessControl\AssignPermissionsRequest;
 use App\Http\Requests\AccessControl\StoreRoleRequest;
 use App\Http\Requests\AccessControl\UpdateRoleRequest;
+use App\Support\TenantContext;
+use Illuminate\Support\Facades\DB;
 
 class RoleController extends Controller
 {
-    public function __construct(private readonly PermissionService $permissions) {}
+    public function __construct(
+        private readonly RolePermissionService $rolePermissions,
+        private readonly TenantContext $context,
+    ) {}
 
     public function index()
     {
@@ -27,15 +31,18 @@ class RoleController extends Controller
 
     public function store(StoreRoleRequest $request)
     {
-        $role = Role::query()->create([
-            'tenant_id' => null,
-            'scope' => 'platform',
-            'name' => $request->input('name'),
-            'description' => $request->input('description'),
-            'is_system' => false,
-        ]);
+        $role = DB::transaction(function () use ($request) {
+            $role = Role::query()->create([
+                'tenant_id' => null,
+                'scope' => 'platform',
+                'name' => $request->input('name'),
+                'description' => $request->input('description'),
+                'is_system' => false,
+            ]);
+            $this->rolePermissions->sync($role, $request->input('permission_ids', []), null, null);
 
-        $this->syncPermissions($role, $request->input('permission_ids', []));
+            return $role;
+        });
 
         return $this->ok($this->present($role->fresh('permissions')), 201);
     }
@@ -43,9 +50,15 @@ class RoleController extends Controller
     public function update(UpdateRoleRequest $request, Role $role)
     {
         abort_unless($role->scope === 'platform', 404);
-        abort_if($role->is_system, 422, 'System roles cannot be modified.');
+        $this->rolePermissions->assertEditable($role);
+        $validated = $request->validated();
+        // Seeded (system) roles keep their name — seeders and provisioning address them by it —
+        // but their description and permission set are managed like any other role.
+        if ($role->is_system && array_key_exists('name', $validated) && $validated['name'] !== $role->name) {
+            abort(422, 'The name of a system role cannot be changed.');
+        }
 
-        $role->update($request->validated());
+        $role->update($validated);
 
         return $this->ok($this->present($role->fresh('permissions')));
     }
@@ -54,20 +67,9 @@ class RoleController extends Controller
     {
         abort_unless($role->scope === 'platform', 404);
 
-        $this->syncPermissions($role, $request->input('permission_ids'));
+        $this->rolePermissions->sync($role, $request->input('permission_ids', []), $this->context->user(), null);
 
         return $this->ok($this->present($role->fresh('permissions')));
-    }
-
-    private function syncPermissions(Role $role, array $permissionIds): void
-    {
-        $validIds = Permission::query()
-            ->where('scope', 'platform')
-            ->whereIn('id', $permissionIds)
-            ->pluck('id');
-
-        $role->permissions()->sync($validIds);
-        $this->permissions->flushAll();
     }
 
     private function present(Role $role): array
@@ -79,6 +81,8 @@ class RoleController extends Controller
             'is_system' => $role->is_system,
             'description' => $role->description,
             'permissions' => $role->permissions->pluck('name'),
+            'permission_ids' => $role->permissions->pluck('id'),
+            'editable' => ! ($role->scope === 'platform' && $role->is_system),
         ];
     }
 }

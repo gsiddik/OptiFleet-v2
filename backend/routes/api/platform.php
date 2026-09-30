@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Platform\Analytics\EtlAdminController;
 use App\Http\Controllers\Api\Platform\Analytics\ReconciliationController;
 use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceModelController;
 use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceMonitoringController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceRunController;
 use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceTrainingController;
 use App\Http\Controllers\Api\Platform\AuditLogController;
 use App\Http\Controllers\Api\Platform\BillingController;
@@ -133,6 +134,7 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::post('/contracts', [ContractController::class, 'store'])->middleware('permission:contract.create');
     Route::post('/tenants/{tenant}/contracts', [ContractController::class, 'storeForTenant'])->middleware('permission:contract.create');
     Route::get('/contracts/{contract}', [ContractController::class, 'show'])->middleware('permission:contract.view');
+    Route::put('/contracts/{contract}', [ContractController::class, 'update'])->middleware('permission:contract.update');
     Route::post('/contracts/{contract}/submit', [ContractController::class, 'submitForApproval'])->middleware('permission:contract.submit');
     Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->middleware('permission:contract.approve');
     Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->middleware('permission:contract.approve');
@@ -150,11 +152,14 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::get('/subscriptions', [SubscriptionController::class, 'index'])->middleware('permission:subscription.view');
     Route::get('/subscriptions/{subscription}', [SubscriptionController::class, 'show'])->middleware('permission:subscription.view');
     Route::post('/subscriptions/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->middleware('permission:subscription.suspend');
+    Route::post('/subscriptions/{subscription}/activate', [SubscriptionController::class, 'activate'])->middleware('permission:subscription.activate');
     Route::post('/subscriptions/{subscription}/reactivate', [SubscriptionController::class, 'reactivate'])->middleware('permission:subscription.reactivate');
 
     Route::get('/billings', [BillingController::class, 'index'])->middleware('permission:billing.view');
     Route::get('/billings/{billing}', [BillingController::class, 'show'])->middleware('permission:billing.view');
-    Route::post('/subscriptions/{subscription}/generate-billing', [BillingController::class, 'generate'])->middleware('permission:billing.generate');
+    // Generating a billing also generates and issues its invoice, so all three actions are required.
+    Route::post('/subscriptions/{subscription}/generate-billing', [BillingController::class, 'generate'])->middleware(['permission:billing.generate', 'permission:invoice.generate', 'permission:invoice.issue']);
+    Route::post('/subscriptions/{subscription}/adjustment-invoices', [SubscriptionController::class, 'raiseAdjustment'])->middleware('permission:billing.adjust');
 
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:invoice.view');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoice.view');
@@ -189,6 +194,8 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
         Route::post('/models/{model}/activate', [IntelligenceModelController::class, 'activate'])->middleware('permission:intelligence.model.activate');
         Route::post('/models/{model}/retire', [IntelligenceModelController::class, 'retire'])->middleware('permission:intelligence.model.retire');
         Route::post('/training', [IntelligenceTrainingController::class, 'train'])->middleware('permission:intelligence.model.train');
+        Route::post('/predictions/run', [IntelligenceRunController::class, 'predict'])->middleware('permission:intelligence.prediction.run');
+        Route::post('/evaluations/run', [IntelligenceRunController::class, 'evaluate'])->middleware('permission:intelligence.model.evaluate');
         Route::get('/monitoring', [IntelligenceMonitoringController::class, 'models'])->middleware('permission:intelligence.monitoring.view');
         Route::get('/monitoring/drift', [IntelligenceMonitoringController::class, 'drift'])->middleware('permission:intelligence.monitoring.view');
     });

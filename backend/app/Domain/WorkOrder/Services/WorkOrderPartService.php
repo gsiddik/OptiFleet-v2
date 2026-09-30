@@ -131,8 +131,15 @@ class WorkOrderPartService
         return DB::transaction(function () use ($part, $quantity, $condition, $userId, $reason, $evidence, $evidenceIds) {
             $locked = WorkOrderPlannedPart::query()->lockForUpdate()->findOrFail($part->id);
 
-            if ($quantity > $locked->outstandingIssued()) {
-                throw new WorkOrderException('Cannot return more than the outstanding issued quantity.');
+            // Business rule: a Consumed line is material already used in the Work Order —
+            // it can never be returned through Issuance & Return (only the still-unconsumed
+            // remainder of a partially consumed line is returnable). Components physically
+            // removed from the unit are returned through Removed Components instead.
+            if ($locked->status === 'CONSUMED' || $locked->returnableQuantity() <= 0) {
+                throw new WorkOrderException('Consumed parts cannot be returned through Issuance & Return. Use Removed Components to return components removed from the unit.');
+            }
+            if ($quantity > $locked->returnableQuantity()) {
+                throw new WorkOrderException('Cannot return more than the returnable quantity ('.$locked->returnableQuantity().'): consumed quantity is never returnable.');
             }
 
             $workOrder = WorkOrder::query()->findOrFail($locked->work_order_id);

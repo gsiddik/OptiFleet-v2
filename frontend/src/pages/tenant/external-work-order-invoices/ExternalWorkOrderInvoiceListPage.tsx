@@ -59,6 +59,10 @@ export function ExternalWorkOrderInvoiceListPage() {
   const [partners, setPartners] = useState<PartnerItem[]>([]);
   const [selectedPartnerId, setSelectedPartnerId] = useState('');
   const [deliveringFor, setDeliveringFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
+  const [cancellingFor, setCancellingFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  // Cancelling here cancels the External Work Order too, so the backend requires both permissions.
+  const canCancel = hasPermission('external_work_order_invoice.cancel') && hasPermission('work_order.cancel_external');
   const [acknowledgingFor, setAcknowledgingFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
   const [ackFile, setAckFile] = useState<File | null>(null);
   const [completingFor, setCompletingFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
@@ -123,6 +127,21 @@ export function ExternalWorkOrderInvoiceListPage() {
     try {
       await apiClient.post(`/app/external-work-order-invoices/${deliveringFor.id}/deliver`, {});
       setDeliveringFor(null);
+      reload();
+    } catch (err) {
+      setActionError(extractApiError(err).message);
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function submitCancel() {
+    if (!cancellingFor || !cancelReason.trim()) return;
+    setBusyId(cancellingFor.id);
+    setActionError(null);
+    try {
+      await apiClient.post(`/app/external-work-order-invoices/${cancellingFor.id}/cancel`, { reason: cancelReason });
+      setCancellingFor(null);
       reload();
     } catch (err) {
       setActionError(extractApiError(err).message);
@@ -273,10 +292,18 @@ export function ExternalWorkOrderInvoiceListPage() {
               View Settlement
             </button>
           )}
-          {r.allowed_actions.includes('cancel') && (
-            <Link to={`/app/work-orders/${r.work_order_id}`} className="btn-secondary" style={{ textDecoration: 'none', display: 'inline-block' }}>
+          {r.allowed_actions.includes('cancel') && canCancel && (
+            <button
+              className="btn-secondary"
+              disabled={busyId === r.id}
+              onClick={() => {
+                setActionError(null);
+                setCancelReason('');
+                setCancellingFor(r);
+              }}
+            >
               Cancel
-            </Link>
+            </button>
           )}
           {r.allowed_actions.includes('view_history') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setHistoryFor(r)}>
@@ -322,6 +349,26 @@ export function ExternalWorkOrderInvoiceListPage() {
           </button>
           <button className="btn-primary" onClick={submitGenerate} disabled={busyId !== null || !selectedPartnerId}>
             Generate
+          </button>
+        </div>
+      </Modal>
+
+      <Modal open={cancellingFor !== null} title="Cancel External Work Order" onClose={() => setCancellingFor(null)}>
+        <p style={{ fontSize: 13 }}>This cancels the External Work Order and its Workshop Invoice. It cannot be undone.</p>
+        <textarea
+          aria-label="Cancellation reason"
+          placeholder="Reason (required)"
+          value={cancelReason}
+          maxLength={2000}
+          onChange={(e) => setCancelReason(e.target.value)}
+          style={{ ...inputStyle, minHeight: 70 }}
+        />
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+          <button className="btn-secondary" onClick={() => setCancellingFor(null)} disabled={busyId !== null}>
+            Back
+          </button>
+          <button className="btn-primary" onClick={submitCancel} disabled={busyId !== null || !cancelReason.trim()}>
+            Confirm Cancel
           </button>
         </div>
       </Modal>

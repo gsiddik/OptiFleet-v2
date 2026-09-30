@@ -8,6 +8,7 @@ use App\Domain\Identity\Models\Tenant;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Platform\ContractApprovalRequest;
 use App\Http\Requests\Platform\StoreContractRequest;
+use App\Http\Requests\Platform\UpdateContractRequest;
 use Illuminate\Http\Request;
 
 class ContractController extends Controller
@@ -62,6 +63,17 @@ class ContractController extends Controller
         );
 
         return $this->ok($contract->load('items'), 201);
+    }
+
+    public function update(UpdateContractRequest $request, Contract $contract)
+    {
+        $contract = $this->contracts->updateDraft(
+            $contract,
+            $request->safe()->except(['items']),
+            $request->input('items')
+        );
+
+        return $this->ok($contract->load('items'));
     }
 
     public function show(Contract $contract)

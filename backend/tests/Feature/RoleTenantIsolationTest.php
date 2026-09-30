@@ -81,7 +81,8 @@ class RoleTenantIsolationTest extends TestCase
         $this->assertFalse($names->contains('Tenant B Only Role'));
     }
 
-    public function test_assigning_only_tenant_scoped_permissions_ignores_platform_scoped_ids(): void
+    /** Invalid (wrong-scope) permission IDs are rejected outright, never silently dropped. */
+    public function test_assigning_platform_scoped_permission_ids_to_a_tenant_role_is_rejected(): void
     {
         $tenant = $this->makeTenant(['code' => 'ROLG-'.Str::random(4)]);
         $this->grantModule($tenant, 'ACCESS_MANAGEMENT');
@@ -91,11 +92,15 @@ class RoleTenantIsolationTest extends TestCase
         $platformPermissionId = Permission::query()->where('scope', 'platform')->value('id');
         $tenantPermissionId = Permission::query()->where('scope', 'tenant')->where('name', 'role.view')->value('id');
 
-        $response = $this->postJson("/api/v1/app/roles/{$roleId}/permissions", [
+        $this->postJson("/api/v1/app/roles/{$roleId}/permissions", [
             'permission_ids' => [$platformPermissionId, $tenantPermissionId],
-        ], $this->authHeaders($token))->assertOk();
+        ], $this->authHeaders($token))->assertStatus(422)->assertJsonValidationErrors('permission_ids');
 
+        $this->assertSame(0, Role::query()->findOrFail($roleId)->permissions()->count());
+
+        $response = $this->postJson("/api/v1/app/roles/{$roleId}/permissions", [
+            'permission_ids' => [$tenantPermissionId],
+        ], $this->authHeaders($token))->assertOk();
         $this->assertTrue(collect($response->json('data.permissions'))->contains('role.view'));
-        $this->assertSame(1, Role::query()->findOrFail($roleId)->permissions()->count());
     }
 }

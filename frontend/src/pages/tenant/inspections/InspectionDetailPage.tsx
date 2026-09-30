@@ -18,6 +18,7 @@ export function InspectionDetailPage() {
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<Record<string, { passed?: boolean; value_text?: string; value_number?: string }>>({});
   const [findings, setFindings] = useState<{ severity: string; description: string }[]>([]);
+  const [reviewNotes, setReviewNotes] = useState('');
 
   function load() {
     apiClient
@@ -54,6 +55,20 @@ export function InspectionDetailPage() {
         value_number: r.value_number,
       }));
       await apiClient.post(`/app/inspections/${id}/submit`, { results: payload, findings });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function review() {
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.post(`/app/inspections/${id}/review`, { review_notes: reviewNotes || null });
+      setReviewNotes('');
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -111,6 +126,32 @@ export function InspectionDetailPage() {
       </div>
 
       {error && <ErrorState message={error} />}
+
+      {['PASSED', 'WARNING', 'FAILED'].includes(inspection.status) && (inspection.reviewed_at || hasPermission('inspection.review')) && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>Supervisor Review</h3>
+          {inspection.reviewed_at ? (
+            <p style={{ fontSize: 13, margin: 0 }}>
+              Reviewed on {new Date(inspection.reviewed_at).toLocaleString()}
+              {inspection.review_notes ? <> — {inspection.review_notes}</> : null}
+            </p>
+          ) : (
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+              <textarea
+                aria-label="Review notes"
+                placeholder="Review notes (optional)"
+                value={reviewNotes}
+                maxLength={2000}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                style={{ ...inputStyle, flex: 1, minWidth: 240, minHeight: 50 }}
+              />
+              <button className="btn-primary" disabled={busy} onClick={review}>
+                Mark Reviewed
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Checklist</h3>
@@ -240,6 +281,8 @@ function InspectionLog({ inspectionId }: { inspectionId: string }) {
                   </>
                 )}
               </>
+            ) : typeof log.new_values?.reviewed_at === 'string' ? (
+              <>Inspection reviewed</>
             ) : log.action === 'created' && typeof log.new_values?.status === 'string' ? (
               <>Inspection created (status: {log.new_values.status})</>
             ) : typeof log.old_values?.status === 'string' && typeof log.new_values?.status === 'string' ? (
