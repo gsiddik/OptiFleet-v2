@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
+import { Pagination } from '../../../components/Pagination';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
@@ -15,15 +16,27 @@ import { formatQty } from '../../../utils/quantity';
 
 const REORDER_STATUSES = ['', 'HEALTHY', 'LOW_STOCK', 'REORDER_REQUIRED', 'OUT_OF_STOCK'];
 
+/** Tabs follow the canonical Item Type (classified server-side via `item_group`). */
+const ITEM_GROUPS = [
+  { value: 'PARTS_SUPPLIES', label: 'Parts & Supplies', hint: 'Spare Parts, Consumables, Rims, Tires' },
+  { value: 'TOOLS_EQUIPMENT', label: 'Tools & Equipment', hint: 'Tools, Equipment' },
+] as const;
+
 export function WarehouseStockListPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
   const [reorderStatus, setReorderStatus] = useState('');
+  const [itemGroup, setItemGroup] = useState<(typeof ITEM_GROUPS)[number]['value']>('PARTS_SUPPLIES');
+  const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [adjustTarget, setAdjustTarget] = useState<WarehouseStockItem | null>(null);
   const [scrapTarget, setScrapTarget] = useState<WarehouseStockItem | null>(null);
   const [thresholdsTarget, setThresholdsTarget] = useState<WarehouseStockItem | null>(null);
-  const { data, loading, error } = useApiList<WarehouseStockItem>('/app/inventory', { search: search || undefined, reorder_status: reorderStatus || undefined }, reloadKey);
+  const { data, meta, loading, error } = useApiList<WarehouseStockItem>(
+    '/app/inventory',
+    { item_group: itemGroup, search: search || undefined, reorder_status: reorderStatus || undefined, page },
+    reloadKey,
+  );
 
   const columns: Column<WarehouseStockItem>[] = [
     { key: 'product', header: 'Product', render: (s) => s.product?.name ?? s.product_id },
@@ -62,18 +75,59 @@ export function WarehouseStockListPage() {
   return (
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>Warehouse Stock</h1>
+      <div role="tablist" aria-label="Item group" style={{ display: 'flex', gap: 0, marginBottom: 14, borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
+        {ITEM_GROUPS.map((g) => (
+          <button
+            key={g.value}
+            role="tab"
+            aria-selected={itemGroup === g.value}
+            title={g.hint}
+            onClick={() => {
+              setItemGroup(g.value);
+              setPage(1);
+            }}
+            style={{
+              padding: '8px 16px',
+              fontSize: 14,
+              fontWeight: 600,
+              background: 'none',
+              border: 'none',
+              borderBottom: itemGroup === g.value ? '2px solid #1d4ed8' : '2px solid transparent',
+              color: itemGroup === g.value ? '#1d4ed8' : '#6b7280',
+              cursor: 'pointer',
+            }}
+          >
+            {g.label}
+          </button>
+        ))}
+      </div>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {REORDER_STATUSES.map((s) => (
-          <button key={s} onClick={() => setReorderStatus(s)} className={reorderStatus === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
+          <button
+            key={s}
+            onClick={() => {
+              setReorderStatus(s);
+              setPage(1);
+            }}
+            className={reorderStatus === s ? 'btn-primary' : 'btn-secondary'}
+            style={{ padding: '4px 10px', fontSize: 12 }}
+          >
             {s || 'All'}
           </button>
         ))}
       </div>
-      <Toolbar search={search} onSearchChange={setSearch} />
+      <Toolbar
+        search={search}
+        onSearchChange={(v) => {
+          setSearch(v);
+          setPage(1);
+        }}
+      />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && <EmptyState label="No stock records found." />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
+      {meta && <Pagination meta={meta} onPageChange={setPage} />}
 
       <AdjustModal target={adjustTarget} onClose={() => setAdjustTarget(null)} onAdjusted={() => setReloadKey((k) => k + 1)} />
       <ScrapModal target={scrapTarget} onClose={() => setScrapTarget(null)} onScrapped={() => setReloadKey((k) => k + 1)} />

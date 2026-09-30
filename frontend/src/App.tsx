@@ -39,7 +39,6 @@ import { VehicleCategoriesPage } from './pages/tenant/masterdata/VehicleCategori
 import { ComponentGroupsPage } from './pages/tenant/masterdata/ComponentGroupsPage';
 import { ComponentCategoriesPage } from './pages/tenant/masterdata/ComponentCategoriesPage';
 import { ComponentSubcategoriesPage } from './pages/tenant/masterdata/ComponentSubcategoriesPage';
-import { ProductCategoriesPage } from './pages/tenant/masterdata/ProductCategoriesPage';
 import { UomsPage } from './pages/tenant/masterdata/UomsPage';
 import { VehicleBrandsPage } from './pages/tenant/masterdata/VehicleBrandsPage';
 import { VehicleModelsPage } from './pages/tenant/masterdata/VehicleModelsPage';
@@ -608,14 +607,6 @@ export default function App() {
               element={
                 <RequirePermission permission="component_subcategory.view">
                   <ComponentSubcategoriesPage />
-                </RequirePermission>
-              }
-            />
-            <Route
-              path="master-data/product-categories"
-              element={
-                <RequirePermission permission="product.view">
-                  <ProductCategoriesPage />
                 </RequirePermission>
               }
             />

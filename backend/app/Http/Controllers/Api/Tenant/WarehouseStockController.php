@@ -13,6 +13,12 @@ use Illuminate\Http\Request;
 
 class WarehouseStockController extends Controller
 {
+    /** Warehouse Stock tabs, classified by the canonical Item Type (products.product_type). */
+    public const ITEM_GROUPS = [
+        'PARTS_SUPPLIES' => ['SPARE_PART', 'CONSUMABLE', 'RIM', 'TIRE'],
+        'TOOLS_EQUIPMENT' => ['TOOL', 'EQUIPMENT'],
+    ];
+
     public function __construct(
         private readonly InventoryService $inventory,
         private readonly DataScopeService $scope,
@@ -33,6 +39,10 @@ class WarehouseStockController extends Controller
         }
         if ($search = $request->string('search')->trim()->value()) {
             $query->whereHas('product', fn ($q) => $q->where('name', 'ilike', "%{$search}%")->orWhere('sku', 'ilike', "%{$search}%"));
+        }
+        $request->validate(['item_group' => ['nullable', 'string', 'in:'.implode(',', array_keys(self::ITEM_GROUPS))]]);
+        if ($group = $request->string('item_group')->value()) {
+            $query->whereHas('product', fn ($q) => $q->withTrashed()->whereIn('product_type', self::ITEM_GROUPS[$group]));
         }
 
         $paginator = $query->paginate($request->integer('per_page', 20));

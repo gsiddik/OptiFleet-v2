@@ -64,3 +64,13 @@ Decisions taken from existing evidence (no owner input needed):
   all 144 native number inputs; CSS fallback hides spinners on any native number input;
   `formatMoney` (string arithmetic, half-up) and `formatQty` applied to money/quantity displays.
 - API contracts unchanged (decimal strings kept for backward compatibility).
+
+## Phase 2 — tenant Product Categories menu & Warehouse Stock tabs (DONE)
+
+- Tenant menu entry, tenant route and the read-only tenant page for Product Categories removed.
+  `GET /app/product-categories` stays (product forms depend on it); tenants have no write route;
+  platform CRUD unchanged.
+- `GET /app/inventory?item_group=PARTS_SUPPLIES|TOOLS_EQUIPMENT` classifies by
+  `products.product_type` (SPARE_PART, CONSUMABLE, RIM, TIRE / TOOL, EQUIPMENT); invalid value
+  422. Warehouse Stock page: two tabs, search and reorder filters inside the tab, pagination.
+- Legacy `OTHER` products (no longer creatable) appear in neither tab.
