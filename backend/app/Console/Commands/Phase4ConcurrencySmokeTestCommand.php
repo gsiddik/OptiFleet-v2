@@ -185,7 +185,7 @@ class Phase4ConcurrencySmokeTestCommand extends Command
         $rfq = $rfqService->inviteVendors($rfq, [$partner->id]);
         $quotation = $rfqService->submitQuotation($rfq, $partner, [], [
             ['product_id' => $product->id, 'quantity' => 5, 'unit_price' => 20],
-        ]);
+        ], \Database\Seeders\DemoQuotationDocument::make('Smoke Vendor 2'), null);
         $quotation = $rfqService->selectVendor($quotation);
 
         $this->info("\n[4/4] Racing 10 workers each converting the SAME selected quotation to a Purchase Order");

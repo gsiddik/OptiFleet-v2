@@ -213,7 +213,7 @@ class SupplyChainSeeder extends Seeder
                 'lead_time_days' => 7, 'payment_terms' => 'NET_30',
             ], [
                 ['product_id' => $oilFilter->id, 'quantity' => 50, 'unit_price' => 85000, 'tax_percent' => 11],
-            ]);
+            ], DemoQuotationDocument::make('PT Sinar Suku Cadang'), $warehouseManager->id);
             $quotation = $rfqService->selectVendor($quotation);
 
             $poService = app(PurchaseOrderService::class);

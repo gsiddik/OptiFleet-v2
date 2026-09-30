@@ -131,3 +131,21 @@ Decisions taken from existing evidence (no owner input needed):
   price and lead time after PO, "Issued by" signature block with the printing user). Seeded as
   the platform default; the print falls back to the same body until a database is re-seeded.
 - K3 (remove invited vendor): replaced by owner decision 4 (no invitation removal; see Phase 7).
+
+## Phase 7 — Quotation document & Quotation Comparison (DONE)
+
+- Migration `2026_10_01_000007` (additive, nullable): `vendor_quotations.attachment_*` columns.
+- Record Quotation (`POST /rfqs/{rfq}/quotations`, multipart) now requires the vendor's quotation
+  document: PDF / DOC / DOCX, type decided from file content (DOCX must be a real Word package),
+  max 10 MB (platform document convention — owner decision still open), private disk, UUID name.
+  Stored only after all business checks pass; removed again if saving fails.
+- Business rules (RfqService): RFQ must be ISSUED; vendor must be invited; ONE quotation per
+  vendor per RFQ — a vendor already in Quotation Comparison is rejected (previously silently
+  overwrote the first quotation); each line must be a distinct item of the RFQ.
+- `GET /quotations/{id}/attachment[?download=1]` (`quotation.view`, tenant + warehouse scope,
+  `nosniff`) views inline or downloads; storage path never serialised (`has_attachment` flag).
+- Frontend: Record Quotation form with vendor dropdown excluding vendors already in the
+  comparison, unit price per RFQ line, lead time, quotation no., file picker (selected name,
+  replace/remove, type/size validation); comparison rows show the document with View / Download.
+- Demo/functional seeders attach a generated placeholder PDF (`DemoQuotationDocument`); seeding
+  twice gives identical counts.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
@@ -22,6 +22,20 @@ interface ComparisonRow {
   lead_time_days: number | null;
   payment_terms: string | null;
   status: string;
+  submitted_at?: string | null;
+  has_attachment?: boolean;
+  attachment_original_filename?: string | null;
+}
+
+/** Quotation document rules (the backend re-checks the file content). */
+const QUOTATION_DOC_EXTENSIONS = ['pdf', 'doc', 'docx'];
+const QUOTATION_DOC_MAX_BYTES = 10 * 1024 * 1024;
+
+function quotationDocError(file: File): string | null {
+  const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
+  if (!QUOTATION_DOC_EXTENSIONS.includes(ext)) return 'The quotation document must be a PDF or Word (DOC/DOCX) file.';
+  if (file.size > QUOTATION_DOC_MAX_BYTES) return 'The quotation document may not be larger than 10 MB.';
+  return null;
 }
 
 export function RfqDetailPage() {
@@ -35,8 +49,13 @@ export function RfqDetailPage() {
   const [busy, setBusy] = useState(false);
   const [invitePartnerId, setInvitePartnerId] = useState('');
   const [quotePartnerId, setQuotePartnerId] = useState('');
-  const [quoteUnitPrice, setQuoteUnitPrice] = useState('');
+  const [quotePrices, setQuotePrices] = useState<Record<string, string>>({});
   const [quoteLeadTime, setQuoteLeadTime] = useState('');
+  const [quoteNumber, setQuoteNumber] = useState('');
+  const [quoteFile, setQuoteFile] = useState<File | null>(null);
+  const [quoteFileError, setQuoteFileError] = useState<string | null>(null);
+  const [quoteErrors, setQuoteErrors] = useState<Record<string, string[]>>({});
+  const quoteFileInput = useRef<HTMLInputElement>(null);
   const [printingVendorId, setPrintingVendorId] = useState<string | null>(null);
 
   function load() {
@@ -82,23 +101,62 @@ export function RfqDetailPage() {
     }
   }
 
+  function pickQuoteFile(file: File | null) {
+    setQuoteFileError(file ? quotationDocError(file) : null);
+    setQuoteFile(file && !quotationDocError(file) ? file : null);
+    if (quoteFileInput.current) quoteFileInput.current.value = '';
+  }
+
+  /** Record Quotation: multipart request carrying the mandatory vendor quotation document. */
   async function submitQuotation() {
-    if (!rfq) return;
+    if (!rfq || !quoteFile) return;
     setBusy(true);
     setError(null);
+    setQuoteErrors({});
+    const form = new FormData();
+    form.append('partner_id', quotePartnerId);
+    if (quoteLeadTime) form.append('lead_time_days', quoteLeadTime);
+    if (quoteNumber) form.append('quotation_number', quoteNumber);
+    form.append('attachment', quoteFile);
+    (rfq.items ?? []).forEach((item, i) => {
+      form.append(`items[${i}][rfq_item_id]`, item.id);
+      form.append(`items[${i}][product_id]`, item.product_id);
+      form.append(`items[${i}][quantity]`, item.quantity);
+      form.append(`items[${i}][unit_price]`, quotePrices[item.id] ?? '');
+    });
     try {
-      await apiClient.post(`/app/rfqs/${id}/quotations`, {
-        partner_id: quotePartnerId,
-        lead_time_days: quoteLeadTime || undefined,
-        items: (rfq.items ?? []).map((item) => ({ rfq_item_id: item.id, product_id: item.product_id, quantity: item.quantity, unit_price: quoteUnitPrice })),
-      });
-      setQuoteUnitPrice('');
+      await apiClient.post(`/app/rfqs/${id}/quotations`, form);
+      setQuotePartnerId('');
+      setQuotePrices({});
       setQuoteLeadTime('');
+      setQuoteNumber('');
+      setQuoteFile(null);
       load();
     } catch (err) {
-      setError(extractApiError(err).message);
+      const apiError = extractApiError(err);
+      setError(apiError.message);
+      setQuoteErrors(apiError.errors ?? {});
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function openQuotationDocument(row: ComparisonRow, download: boolean) {
+    setError(null);
+    try {
+      const res = await apiClient.get(`/app/quotations/${row.quotation_id}/attachment`, { params: download ? { download: 1 } : undefined, responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      if (download) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = row.attachment_original_filename ?? 'quotation';
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch (err) {
+      setError(extractApiError(err).message);
     }
   }
 
@@ -123,6 +181,9 @@ export function RfqDetailPage() {
   if (!rfq) return <LoadingState />;
 
   const selected = comparison.find((c) => c.status === 'SELECTED');
+  // A vendor already in Quotation Comparison can never be recorded again (backend rejects it too).
+  const quotableVendors = (rfq.vendors ?? []).filter((v) => !comparison.some((c) => c.partner.id === v.id));
+  const pricesComplete = (rfq.items ?? []).every((item) => (quotePrices[item.id] ?? '') !== '' && Number(quotePrices[item.id]) >= 0);
 
   return (
     <div>
@@ -188,6 +249,19 @@ export function RfqDetailPage() {
           <div key={c.quotation_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             <span>
               {c.partner.name} — total {formatMoney(c.total)} — lead time {c.lead_time_days ?? '—'}d — <StatusBadge status={c.status} />
+              {c.has_attachment ? (
+                <span style={{ marginLeft: 8, fontSize: 12 }}>
+                  📎 {c.attachment_original_filename}{' '}
+                  <button className="btn-link" onClick={() => openQuotationDocument(c, false)}>
+                    View
+                  </button>{' '}
+                  <button className="btn-link" onClick={() => openQuotationDocument(c, true)}>
+                    Download
+                  </button>
+                </span>
+              ) : (
+                <span style={{ marginLeft: 8, fontSize: 12, color: '#9ca3af' }}>No document</span>
+              )}
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               {c.status === 'SUBMITTED' && hasPermission('quotation.select') && (
@@ -204,26 +278,86 @@ export function RfqDetailPage() {
           </div>
         ))}
         {!selected && hasPermission('quotation.manage') && rfq.status === 'ISSUED' && (rfq.vendors ?? []).length > 0 && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Vendor" required>
-              <select value={quotePartnerId} onChange={(e) => setQuotePartnerId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-                <option value="">Select…</option>
-                {(rfq.vendors ?? []).map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.name}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Unit Price (applies to all lines)" required>
-              <NumericInput step="0.01" value={quoteUnitPrice} onChange={(e) => setQuoteUnitPrice(e.target.value)} style={{ ...inputStyle, width: 130 }} />
-            </FormField>
-            <FormField label="Lead Time (days)">
-              <NumericInput value={quoteLeadTime} onChange={(e) => setQuoteLeadTime(e.target.value)} style={{ ...inputStyle, width: 110 }} />
-            </FormField>
-            <button className="btn-secondary" disabled={busy || !quotePartnerId || !quoteUnitPrice} onClick={submitQuotation} style={{ marginBottom: 14 }}>
-              Record Quotation
-            </button>
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
+            <h4 style={{ margin: '0 0 8px', fontSize: 13 }}>Record Quotation</h4>
+            {quotableVendors.length === 0 ? (
+              <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Every invited vendor has already submitted a quotation.</p>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <FormField label="Vendor" errors={quoteErrors.partner_id} required>
+                    <select aria-label="Quotation vendor" value={quotePartnerId} onChange={(e) => setQuotePartnerId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+                      <option value="">Select…</option>
+                      {quotableVendors.map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <FormField label="Quotation No." errors={quoteErrors.quotation_number}>
+                    <input value={quoteNumber} onChange={(e) => setQuoteNumber(e.target.value)} maxLength={100} style={{ ...inputStyle, width: 150 }} />
+                  </FormField>
+                  <FormField label="Lead Time (days after PO)" errors={quoteErrors.lead_time_days}>
+                    <NumericInput integer value={quoteLeadTime} onChange={(e) => setQuoteLeadTime(e.target.value)} style={{ ...inputStyle, width: 120 }} />
+                  </FormField>
+                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 10 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', color: '#6b7280' }}>
+                      <th style={{ padding: 4 }}>Item</th>
+                      <th style={{ padding: 4 }}>Qty</th>
+                      <th style={{ padding: 4, width: 160 }}>Unit Price</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(rfq.items ?? []).map((item, i) => (
+                      <tr key={item.id} style={{ borderTop: '1px solid #f3f4f6' }}>
+                        <td style={{ padding: 4 }}>{item.product?.name ?? item.product_id}</td>
+                        <td style={{ padding: 4 }}>{formatQty(item.quantity)}</td>
+                        <td style={{ padding: 4 }}>
+                          <NumericInput
+                            aria-label={`Unit price for ${item.product?.name ?? 'item'}`}
+                            value={quotePrices[item.id] ?? ''}
+                            onChange={(e) => setQuotePrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                            style={{ ...inputStyle, width: 140 }}
+                          />
+                          {quoteErrors[`items.${i}.unit_price`] && <div style={{ color: '#b91c1c', fontSize: 11 }}>{quoteErrors[`items.${i}.unit_price`][0]}</div>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <FormField label="Quotation Document (PDF, DOC, DOCX — max 10 MB)" errors={quoteErrors.attachment ?? (quoteFileError ? [quoteFileError] : undefined)} required>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <button type="button" className="btn-secondary" onClick={() => quoteFileInput.current?.click()} disabled={busy}>
+                      {quoteFile ? 'Replace file' : 'Choose file'}
+                    </button>
+                    {quoteFile ? (
+                      <>
+                        <span style={{ fontSize: 13 }}>📎 {quoteFile.name}</span>
+                        <button type="button" className="btn-link" onClick={() => pickQuoteFile(null)} disabled={busy}>
+                          Remove
+                        </button>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>No file selected — required before recording.</span>
+                    )}
+                    <input
+                      ref={quoteFileInput}
+                      type="file"
+                      aria-label="Quotation document"
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      style={{ display: 'none' }}
+                      onChange={(e) => pickQuoteFile(e.target.files?.[0] ?? null)}
+                    />
+                  </div>
+                </FormField>
+                <button className="btn-primary" disabled={busy || !quotePartnerId || !pricesComplete || !quoteFile} onClick={submitQuotation}>
+                  {busy ? 'Uploading…' : 'Record Quotation'}
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>

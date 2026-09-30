@@ -633,6 +633,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
             Route::get('/quotations', [VendorQuotationController::class, 'index'])->middleware('permission:quotation.view');
             Route::get('/quotations/{quotation}', [VendorQuotationController::class, 'show'])->middleware('permission:quotation.view');
+            Route::get('/quotations/{quotation}/attachment', [VendorQuotationController::class, 'attachment'])->middleware('permission:quotation.view');
             Route::post('/quotations/{quotation}/select', [VendorQuotationController::class, 'select'])->middleware('permission:quotation.select');
             Route::post('/quotations/{quotation}/purchase-order', [PurchaseOrderController::class, 'storeFromQuotation'])->middleware('permission:purchase_order.create');
 

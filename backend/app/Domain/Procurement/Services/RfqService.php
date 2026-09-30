@@ -14,7 +14,9 @@ use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -127,25 +129,65 @@ class RfqService
     }
 
     /**
+     * Record Quotation. Business rules (owner decision 4 + quotation document requirement):
+     * the RFQ must be ISSUED, the vendor must be invited, a vendor records ONE quotation per RFQ
+     * (a vendor already in Quotation Comparison can never be entered again), every line must be an
+     * item of this RFQ, and the vendor's quotation document is mandatory. Totals are always
+     * recalculated here, never taken from the client.
+     *
      * @param  array<array{rfq_item_id?:string,product_id:string,quantity:float,unit_price:float,discount_percent?:float,tax_percent?:float}>  $items
      */
-    public function submitQuotation(Rfq $rfq, Partner $partner, array $attributes, array $items): VendorQuotation
+    public function submitQuotation(Rfq $rfq, Partner $partner, array $attributes, array $items, ?UploadedFile $attachment = null, ?string $userId = null): VendorQuotation
     {
         if (empty($items)) {
             throw new ProcurementException('A quotation needs at least one item.');
         }
+        if ($rfq->status !== 'ISSUED') {
+            throw new ProcurementException('Quotations can only be recorded while the RFQ is issued.');
+        }
+        if (! $rfq->vendors()->whereKey($partner->id)->exists()) {
+            throw ValidationException::withMessages(['partner_id' => 'Only a vendor invited to this RFQ can submit a quotation.']);
+        }
+        if (VendorQuotation::query()->where('rfq_id', $rfq->id)->where('partner_id', $partner->id)->exists()) {
+            throw ValidationException::withMessages(['partner_id' => "{$partner->name} has already submitted a quotation for this RFQ."]);
+        }
+        if (! $attachment) {
+            throw ValidationException::withMessages(['attachment' => 'Upload the vendor\'s quotation document (PDF, DOC or DOCX) before recording the quotation.']);
+        }
+        $rfqItems = $rfq->items()->get()->keyBy('id');
+        $quoted = [];
+        foreach (array_values($items) as $i => $line) {
+            $rfqItem = isset($line['rfq_item_id']) ? $rfqItems->get($line['rfq_item_id']) : $rfqItems->firstWhere('product_id', $line['product_id']);
+            if (! $rfqItem || $rfqItem->product_id !== $line['product_id'] || isset($quoted[$rfqItem->id])) {
+                throw ValidationException::withMessages(["items.{$i}.product_id" => 'Each quotation line must be a distinct item of this RFQ.']);
+            }
+            $quoted[$rfqItem->id] = true;
+        }
 
+        $stored = app(QuotationAttachmentService::class)->store($attachment, $rfq->tenant_id, $userId);
+
+        try {
+            return $this->recordQuotation($rfq, $partner, array_merge($attributes, $stored), $items);
+        } catch (\Throwable $e) {
+            Storage::disk($stored['attachment_disk'])->delete($stored['attachment_path']);
+            throw $e;
+        }
+    }
+
+    private function recordQuotation(Rfq $rfq, Partner $partner, array $attributes, array $items): VendorQuotation
+    {
         return DB::transaction(function () use ($rfq, $partner, $attributes, $items) {
-            $quotation = VendorQuotation::query()->updateOrCreate(
-                ['rfq_id' => $rfq->id, 'partner_id' => $partner->id],
-                array_merge($attributes, [
+            Rfq::query()->lockForUpdate()->findOrFail($rfq->id);
+            $quotation = VendorQuotation::query()->create(array_merge(
+                array_intersect_key($attributes, array_flip((new VendorQuotation)->getFillable())),
+                [
                     'tenant_id' => $rfq->tenant_id,
+                    'rfq_id' => $rfq->id,
+                    'partner_id' => $partner->id,
                     'status' => 'SUBMITTED',
                     'submitted_at' => now(),
-                ])
-            );
-
-            $quotation->items()->delete();
+                ],
+            ));
 
             $subtotal = BigDecimal::of('0');
             $taxTotal = BigDecimal::of('0');
@@ -200,6 +242,9 @@ class RfqService
             'validity_date' => $q->validity_date,
             'item_count' => $q->items->count(),
             'status' => $q->status,
+            'submitted_at' => optional($q->submitted_at)->toDateTimeString(),
+            'has_attachment' => $q->has_attachment,
+            'attachment_original_filename' => $q->attachment_original_filename,
         ])->sortBy('total')->values()->all();
     }
 

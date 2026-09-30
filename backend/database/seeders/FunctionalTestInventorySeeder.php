@@ -97,7 +97,7 @@ class FunctionalTestInventorySeeder
         $rfq = $rfqService->inviteVendors($rfq, [$vendor->id]);
         $quotation = $rfqService->submitQuotation($rfq, $vendor, [
             'lead_time_days' => 7, 'payment_terms' => 'NET_30',
-        ], array_map(fn ($l) => ['product_id' => $l['product']->id, 'quantity' => $l['qty'], 'unit_price' => $l['price'], 'tax_percent' => 11], $lines));
+        ], array_map(fn ($l) => ['product_id' => $l['product']->id, 'quantity' => $l['qty'], 'unit_price' => $l['price'], 'tax_percent' => 11], $lines), DemoQuotationDocument::make('[TEST] Sparepart Supplier'), $userId);
         $quotation = $rfqService->selectVendor($quotation);
 
         $poService = app(PurchaseOrderService::class);
