@@ -1771,6 +1771,7 @@ export interface VendorQuotationItemLine {
 export interface VendorQuotationItem {
   id: string;
   rfq_id: string;
+  rfq?: { id: string; rfq_number: string; warehouse_id?: string; status?: string } | null;
   partner_id: string;
   status: 'SUBMITTED' | 'SELECTED' | 'REJECTED';
   lead_time_days: number | null;

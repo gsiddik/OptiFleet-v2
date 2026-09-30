@@ -23,7 +23,13 @@ class VendorQuotationController extends Controller
     public function index(Request $request)
     {
         $tenantId = $this->context->tenantId();
-        $query = VendorQuotation::query()->where('tenant_id', $tenantId)->with(['partner', 'rfq', 'items.product']);
+        // RFQ number shown in the list comes from one eager-loaded query (no N+1), and the list only
+        // shows quotations of RFQs whose warehouse is inside the user's data scope.
+        $query = VendorQuotation::query()->where('tenant_id', $tenantId)
+            ->with(['partner', 'rfq:id,rfq_number,warehouse_id,status', 'items.product']);
+        $allowedRfqs = Rfq::query()->where('tenant_id', $tenantId)->select('id');
+        $this->scope->applyWarehouseScope($allowedRfqs, $this->context->user(), $tenantId, 'warehouse_id');
+        $query->whereIn('rfq_id', $allowedRfqs);
 
         if ($rfqId = $request->string('rfq_id')->value()) {
             $query->where('rfq_id', $rfqId);

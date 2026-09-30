@@ -149,3 +149,10 @@ Decisions taken from existing evidence (no owner input needed):
   replace/remove, type/size validation); comparison rows show the document with View / Download.
 - Demo/functional seeders attach a generated placeholder PDF (`DemoQuotationDocument`); seeding
   twice gives identical counts.
+
+## Phase 8 — Vendor Quotations list (DONE)
+
+- RFQ column shows the RFQ Number (e.g. `RFQ/2026/000123`), never the id; `rfq:id,rfq_number,…`
+  is eager-loaded (query count constant regardless of rows — covered by a test).
+- The list is now also limited to RFQs inside the user's warehouse data scope (detail endpoints
+  already enforced it) and is paginated.
