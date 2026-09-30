@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
@@ -111,8 +111,16 @@ export function ReturnListPage() {
   );
 }
 
-function ReturnedPartsProcessingModal({ item, onClose, onProcessed }: { item: WorkOrderPartReturnItem; onClose: () => void; onProcessed: () => void }) {
+function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { item: WorkOrderPartReturnItem; onClose: () => void; onProcessed: () => void }) {
   const { hasPermission } = useAuth();
+  // Always act on the current state (someone else may have processed it since the list loaded).
+  const [item, setItem] = useState(listed);
+  useEffect(() => {
+    apiClient
+      .get(`/app/part-returns/${listed.id}`)
+      .then((res) => setItem(res.data.data))
+      .catch(() => undefined);
+  }, [listed.id]);
   const pending = item.disposition_status === 'PENDING_PROCESSING';
   const canProcess = pending && hasPermission('part_return.process');
   const [actualCondition, setActualCondition] = useState<'UNUSED_NEW' | 'UNUSED_FAULTY'>(item.condition === 'UNUSED_FAULTY' ? 'UNUSED_FAULTY' : 'UNUSED_NEW');

@@ -93,7 +93,16 @@ export function VehicleCategoriesPage() {
         </>
       )}
 
-      <CategoryFormModal open={showCreate} onClose={() => setShowCreate(false)} onSaved={() => setReloadKey((k) => k + 1)} />
+      {showCreate && (
+        <CategoryFormModal
+          open
+          onClose={() => setShowCreate(false)}
+          onSaved={() => {
+            setShowCreate(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
       {editing && (
         <CategoryFormModal
           open

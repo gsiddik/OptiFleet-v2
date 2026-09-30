@@ -93,7 +93,16 @@ export function UomsPage() {
         </>
       )}
 
-      <UomFormModal open={showCreate} onClose={() => setShowCreate(false)} onSaved={() => setReloadKey((k) => k + 1)} />
+      {showCreate && (
+        <UomFormModal
+          open
+          onClose={() => setShowCreate(false)}
+          onSaved={() => {
+            setShowCreate(false);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
       {editing && (
         <UomFormModal
           open

@@ -1843,7 +1843,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Removed Components</h3>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: -8 }}>
         Old/used components taken off the vehicle when a replacement part is installed — separate from the Unused Return above,
-        and never a reversal of the new part's consumption.
+        and never a reversal of the new part's consumption. Each recorded removal is processed in Inventory → Used Sparepart Processing.
       </p>
       {error && <ErrorState message={error} />}
       {(wo.removed_components ?? []).length === 0 && <EmptyState label="No components removed." />}
