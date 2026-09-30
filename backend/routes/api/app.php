@@ -541,6 +541,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/part-returns', [PartReturnController::class, 'index'])->middleware('permission:part_return.view');
             Route::get('/part-returns/{partReturn}', [PartReturnController::class, 'show'])->middleware('permission:part_return.view');
             Route::post('/part-returns/{partReturn}/process', [PartReturnController::class, 'process'])->middleware('permission:part_return.process');
+            Route::post('/part-returns/{partReturn}/route', [PartReturnController::class, 'route'])->middleware('permission:part_return.process');
             Route::get('/used-part-returns', [UsedPartDispositionController::class, 'index'])->middleware('permission:used_part.view');
             Route::get('/used-part-returns/{usedPartReturn}', [UsedPartDispositionController::class, 'show'])->middleware('permission:used_part.view');
             Route::post('/used-part-returns/{usedPartReturn}/receive', [UsedPartDispositionController::class, 'receive'])->middleware('permission:used_part.inspect');

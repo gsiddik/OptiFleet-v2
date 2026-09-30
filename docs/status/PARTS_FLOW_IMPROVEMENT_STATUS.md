@@ -59,6 +59,11 @@ The three part lifecycles are explicit (`work_order_part_returns.return_source` 
 - Returned Parts Processing (`part_return.process`): actual condition, received quantity,
   MATCH/MISMATCH, inspector. New Good → RESTOCKED (one RETURN movement); New Faulty →
   QUARANTINED (never available stock). Processing twice is rejected.
+- QUARANTINED is not final: the same popup routes it (`POST /part-returns/{id}/route`,
+  `part_return.process`) to `WARRANTY_CLAIM`, `REPAIR` or `SCRAP` with an optional reason,
+  recording `routed_by`/`routed_at`. Routing is status-only (no stock movement), row-locked and
+  allowed once. The routed statuses are open for their follow-up processing (later scope); none
+  of them returns the part to available stock.
 - Removed Components always create a Used Sparepart Processing record (PENDING_RETURN →
   Receive to Warehouse → PENDING_INSPECTION → existing inspect/propose/approve workflow).
 
@@ -67,7 +72,8 @@ The three part lifecycles are explicit (`work_order_part_returns.return_source` 
 `2026_10_01_000001` compatibility → masters · `000002` vehicle_brand_categories ·
 `000003` part request issuing (ISSUED, warehouse/issued_by/issued_at, unique line,
 part_request.issue grant, legacy line wrap) · `000004` return processing (source, number,
-inspection result, removed-component link, new states, backfill, part_return.* grants).
+inspection result, removed-component link, new states, backfill, part_return.* grants) ·
+`000005` faulty-return routing (WARRANTY_CLAIM/REPAIR/SCRAP statuses, routed_by/routed_at).
 All additive; no historical row is deleted or rewritten destructively.
 
 ## Validation
@@ -75,13 +81,21 @@ All additive; no historical row is deleted or rewritten destructively.
 Backend tests: see the final report. Browser E2E Scenarios 1–14 executed against seeded demo
 data (all pass). MongoDB tests NOT RUN (`ext-mongodb` unavailable in this environment).
 
-## Decisions required
+Owner-decision follow-up (faulty-return routing): full non-Mongo backend regression 890 passed,
+0 failed; frontend build/typecheck pass, lint unchanged from baseline; seeders run twice with
+identical counts; migration `000005` rollback + re-migrate clean; browser check of routing a
+quarantined return to Warranty Claim (stock unchanged) passes. MongoDB tests NOT RUN (as above).
 
-1. Returned new parts found faulty (QUARANTINED): next step (supplier warranty claim, repair,
-   scrap) is not defined — they stay out of available stock.
-2. Approval does not hold stock; availability is checked at Issue. Reserving at approval is
-   possible if preferred.
-3. Legacy compatibility rows whose brand/model text matched no master (or several) stay
-   text-only until cleaned up.
-4. Demo seeders now contain Vehicle Brand/Model masters (needed for valid Sparepart
-   compatibility), narrowing the earlier "no brands in demo data" answer.
+## Owner decisions (applied)
+
+1. Faulty returned new parts: QUARANTINED is a holding state, routed to WARRANTY_CLAIM /
+   REPAIR / SCRAP (status structure + routing only). Never auto-returned to available stock.
+   Follow-up: warranty claim, repair and scrap processing for the routed statuses.
+2. Approval does not reserve or hold stock; availability is validated at Issue
+   (REQUESTED → APPROVED → ISSUE). Insufficient stock rejects the whole Issue with
+   `Line "X": Insufficient stock: requested N, available M.` No reservation ledger.
+3. Legacy compatibility text is preserved as-is; it is linked to a Vehicle Brand/Model only on
+   an exact, unambiguous match. Unmatched text stays text-only; cleanup is a separate
+   data-cleansing task.
+4. Demo seeders create only the Vehicle Brand/Model masters their demo vehicles and product
+   compatibility depend on (Hino Ranger FG, Mitsubishi Fuso); no extra catalog data.

@@ -17,7 +17,7 @@ class PartReturnController extends Controller
 {
     private const RELATIONS = [
         'product', 'warehouse:id,code,name', 'workOrder:id,wo_number,vehicle_id,workshop_id', 'workOrder.vehicle:id,registration_number',
-        'returner:id,name', 'inspector:id,name',
+        'returner:id,name', 'inspector:id,name', 'router:id,name',
     ];
 
     public function __construct(
@@ -69,6 +69,19 @@ class PartReturnController extends Controller
         );
 
         return $this->ok($processed->load(self::RELATIONS));
+    }
+
+    public function route(Request $request, WorkOrderPartReturn $partReturn)
+    {
+        $this->authorizeScope($partReturn);
+        $validated = $request->validate([
+            'disposition' => ['required', 'string', 'in:'.implode(',', WorkOrderPartReturn::FAULTY_DISPOSITIONS)],
+            'reason' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $routed = $this->processing->route($partReturn, $validated['disposition'], $validated['reason'] ?? null, $this->context->user()->id);
+
+        return $this->ok($routed->load(self::RELATIONS));
     }
 
     private function authorizeScope(WorkOrderPartReturn $return): void

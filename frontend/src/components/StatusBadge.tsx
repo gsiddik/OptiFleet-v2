@@ -25,6 +25,8 @@ const COLORS: Record<string, string> = {
   RESTOCKED: '#15803d',
   PENDING_RETURN: '#a16207',
   PENDING_INSPECTION: '#7c3aed',
+  WARRANTY_CLAIM: '#1d4ed8',
+  SCRAP: '#6b7280',
 };
 
 export function StatusBadge({ status }: { status: string }) {

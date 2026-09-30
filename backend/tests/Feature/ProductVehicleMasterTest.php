@@ -179,6 +179,8 @@ class ProductVehicleMasterTest extends TestCase
         $this->assertNull($c->fresh()->vehicle_brand_id, 'Ambiguous names are never guessed.');
         $this->assertNull($d->fresh()->vehicle_brand_id);
         $this->assertSame(' toyota', $a->fresh()->vehicle_brand, 'Legacy text is kept.');
+        $this->assertSame(['Nobody', 'X'], [$d->fresh()->vehicle_brand, $d->fresh()->vehicle_model], 'Unmatched legacy text is retained as-is.');
+        $this->assertSame(['Isuzu', null], [$c->fresh()->vehicle_brand, $c->fresh()->vehicle_model]);
     }
 
     public function test_brand_of_uses_active_vehicle_categories_and_persists(): void
