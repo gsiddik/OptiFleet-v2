@@ -107,9 +107,9 @@ export function RfqDetailPage() {
     if (quoteFileInput.current) quoteFileInput.current.value = '';
   }
 
-  /** Record Quotation: multipart request carrying the mandatory vendor quotation document. */
+  /** Record Quotation: multipart request; the vendor quotation document is optional. */
   async function submitQuotation() {
-    if (!rfq || !quoteFile) return;
+    if (!rfq) return;
     setBusy(true);
     setError(null);
     setQuoteErrors({});
@@ -117,7 +117,7 @@ export function RfqDetailPage() {
     form.append('partner_id', quotePartnerId);
     if (quoteLeadTime) form.append('lead_time_days', quoteLeadTime);
     if (quoteNumber) form.append('quotation_number', quoteNumber);
-    form.append('attachment', quoteFile);
+    if (quoteFile) form.append('attachment', quoteFile);
     (rfq.items ?? []).forEach((item, i) => {
       form.append(`items[${i}][rfq_item_id]`, item.id);
       form.append(`items[${i}][product_id]`, item.product_id);
@@ -251,7 +251,7 @@ export function RfqDetailPage() {
               {c.partner.name} — total {formatMoney(c.total)} — lead time {c.lead_time_days ?? '—'}d — <StatusBadge status={c.status} />
               {c.has_attachment ? (
                 <span style={{ marginLeft: 8, fontSize: 12 }}>
-                  📎 {c.attachment_original_filename}{' '}
+                  📎 Document available: {c.attachment_original_filename}{' '}
                   <button className="btn-link" onClick={() => openQuotationDocument(c, false)}>
                     View
                   </button>{' '}
@@ -260,7 +260,7 @@ export function RfqDetailPage() {
                   </button>
                 </span>
               ) : (
-                <span style={{ marginLeft: 8, fontSize: 12, color: '#9ca3af' }}>No document</span>
+                <span style={{ marginLeft: 8, fontSize: 12, color: '#9ca3af' }}>No document uploaded</span>
               )}
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
@@ -328,7 +328,7 @@ export function RfqDetailPage() {
                     ))}
                   </tbody>
                 </table>
-                <FormField label="Quotation Document (PDF, DOC, DOCX — max 10 MB)" errors={quoteErrors.attachment ?? (quoteFileError ? [quoteFileError] : undefined)} required>
+                <FormField label="Quotation Document (optional — PDF, DOC, DOCX, max 10 MB)" errors={quoteErrors.attachment ?? (quoteFileError ? [quoteFileError] : undefined)}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <button type="button" className="btn-secondary" onClick={() => quoteFileInput.current?.click()} disabled={busy}>
                       {quoteFile ? 'Replace file' : 'Choose file'}
@@ -341,7 +341,7 @@ export function RfqDetailPage() {
                         </button>
                       </>
                     ) : (
-                      <span style={{ fontSize: 12, color: '#6b7280' }}>No file selected — required before recording.</span>
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>No file selected — the quotation can be recorded without a document.</span>
                     )}
                     <input
                       ref={quoteFileInput}
@@ -353,8 +353,8 @@ export function RfqDetailPage() {
                     />
                   </div>
                 </FormField>
-                <button className="btn-primary" disabled={busy || !quotePartnerId || !pricesComplete || !quoteFile} onClick={submitQuotation}>
-                  {busy ? 'Uploading…' : 'Record Quotation'}
+                <button className="btn-primary" disabled={busy || !quotePartnerId || !pricesComplete || Boolean(quoteFileError)} onClick={submitQuotation}>
+                  {busy ? (quoteFile ? 'Uploading…' : 'Saving…') : 'Record Quotation'}
                 </button>
               </>
             )}
