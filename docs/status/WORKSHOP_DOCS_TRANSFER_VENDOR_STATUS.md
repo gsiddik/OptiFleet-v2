@@ -98,3 +98,22 @@ Invoice reconciliation and payable amount, correction / settlement pre-fills).
 - Tests: `WorkOrderDocumentsTest` (3, incl. exposed header) + WorkshopInvoice /
   ExternalWorkOrderInvoice suites — 42 passed. Frontend build PASS; lint identical to baseline.
   Browser crawl of 50 tenant/platform pages: 0 amounts rendered with 3–4 decimals.
+
+## Phase 4 — Stock Transfer traceability (DONE)
+
+- IN_TRANSIT receive form: every input has a visible label — **Received Qty** (hint: good units
+  into stock), **Damaged Qty**, **Lost Qty**, **Discrepancy Reason** (hint: required if received
+  is less than sent). The received pre-fill no longer shows `4.0000`.
+- `GET /stock-transfers/{id}` adds `status_history` (`status`, `at`, `by` = user name) built from
+  the transfer's audit trail (`audit_logs`, tenant-scoped; the actor of each create/update), not
+  from `updated_at`, so Draft / Requested / Approved / Prepared / Dispatched / In Transit /
+  Received each keep their own time and user. Same-second steps are ordered by lifecycle
+  position. Also `dispatched_by_name` / `received_by_name`; the page shows names, never user
+  IDs. Existing fields (`dispatched_by`, `received_by` IDs) kept for backward compatibility.
+- RECEIVED / COMPLETED transfers show an items table: Sent, Received, Damaged, Lost,
+  Discrepancy Reason.
+- Quantity semantics unchanged (received = good units into stock; received + damaged + lost ≤
+  sent; shortfall needs a reason — enforced in `StockTransferService::receive`).
+- Tests: `StockTransferTest` 7 passed (new: history statuses + two distinct actor names,
+  dispatched/received names, damaged/lost/reason in the detail payload). Browser: labels,
+  history and receipt table verified on an Alpha transfer; no UUIDs visible.

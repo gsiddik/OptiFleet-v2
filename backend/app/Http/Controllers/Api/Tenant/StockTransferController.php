@@ -7,6 +7,7 @@ use App\Domain\Inventory\Models\StockTransfer;
 use App\Domain\Inventory\Services\StockTransferService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 
@@ -60,7 +61,14 @@ class StockTransferController extends Controller
     {
         $this->authorizeScope($stockTransfer);
 
-        return $this->ok($stockTransfer->load(['fromWarehouse', 'toWarehouse', 'items.product']));
+        $stockTransfer->load(['fromWarehouse', 'toWarehouse', 'items.product']);
+        $names = User::query()->whereIn('id', array_filter([$stockTransfer->dispatched_by, $stockTransfer->received_by]))->pluck('name', 'id');
+
+        return $this->ok($stockTransfer->toArray() + [
+            'dispatched_by_name' => $names[$stockTransfer->dispatched_by] ?? null,
+            'received_by_name' => $names[$stockTransfer->received_by] ?? null,
+            'status_history' => $this->transfers->statusHistory($stockTransfer),
+        ]);
     }
 
     public function submit(StockTransfer $stockTransfer)
