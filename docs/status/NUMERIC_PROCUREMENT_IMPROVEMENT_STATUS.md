@@ -46,8 +46,10 @@ Decisions taken from existing evidence (no owner input needed):
 - **Lead days = calendar days**: analytics already measures vendor lead time as calendar days
   (`received_at − order_date`), so Expected Receipt Date = Order Date + Lead Days (calendar).
 - **Quotation attachment max size = 10 MB**: the platform's existing document-upload convention
-  (vehicle documents, product documents). Flagged for owner review; no procurement-specific
-  limit existed.
+  (vehicle documents, product documents). Confirmed by the owner (2026-10-01): procurement uses
+  the same limit.
+- **Planned-part status** for a line fully split between consumed and returned (e.g. 7 + 3 of 10)
+  stays ISSUED under the existing status rule — confirmed by the owner (2026-10-01): unchanged.
 
 ## Phase 1 — numeric input, quantity & money standards (DONE)
 
@@ -211,13 +213,11 @@ Decisions taken from existing evidence (no owner input needed):
 ## Known limitations / follow-ups
 
 - Invited-vendor removal (K3 as written) not built — replaced by owner decision 4.
-- Quotation document limit 10 MB follows the platform document convention — owner may set a
-  procurement-specific limit.
 - Existing databases get the `rfq` template on the next `ConfigurationDefaultsSeeder` run; until
   then printing uses the identical built-in default. Existing PO templates keep their label
   ("Expected:"), showing the now-derived date.
 - A planned part fully consumed/returned in a mix (e.g. 7 consumed + 3 returned of 10) keeps
-  status ISSUED — pre-existing status rule, unchanged (not in scope).
+  status ISSUED — pre-existing status rule, kept by owner decision.
 - Legacy `OTHER` item-type products appear in neither Warehouse Stock tab (type no longer
   creatable).
 - API quantity/money fields stay decimal strings (backward compatible); formatting is applied
