@@ -9,6 +9,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 export function PartnerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -30,8 +31,6 @@ export function PartnerDetailPage() {
 
   if (error && !partner) return <ErrorState message={error} />;
   if (!partner) return <LoadingState />;
-
-  const perf = partner.performance;
 
   return (
     <div>
@@ -81,26 +80,135 @@ export function PartnerDetailPage() {
         />
       )}
 
-      {perf && (
-        <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Performance</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
-            {[
-              { label: 'POs Issued', value: perf.purchase_orders_issued },
-              { label: 'On-Time Rate', value: perf.on_time_rate !== null ? `${perf.on_time_rate}%` : '—' },
-              { label: 'On-Time Deliveries', value: perf.deliveries_on_time },
-              { label: 'Late Deliveries', value: perf.deliveries_late },
-              { label: 'Qty Accepted', value: perf.quantity_accepted },
-              { label: 'Qty Rejected', value: perf.quantity_rejected },
-              { label: 'Total Purchase Value', value: perf.total_purchase_value },
-              { label: 'Returns', value: perf.returns },
-            ].map((s) => (
-              <div key={s.label}>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>{s.label}</div>
-                <div style={{ fontSize: 20, fontWeight: 700 }}>{s.value}</div>
-              </div>
-            ))}
-          </div>
+      <VendorPerformanceCard partnerId={partner.id} />
+    </div>
+  );
+}
+
+interface VendorPerformance {
+  category: 'EXTERNAL_WORKSHOP' | 'SUPPLIER' | 'SERVICE_PROVIDER';
+  period: { from: string; to: string; basis: string };
+  kpis: Record<string, number | string | null>;
+}
+
+type Kpi = { key: string; label: string; kind?: 'rate' | 'money' | 'hours' | 'days' };
+
+/** Which KPIs apply depends on what the vendor does — an External Workshop is not judged on PO deliveries. */
+const KPI_LAYOUT: Record<VendorPerformance['category'], Kpi[]> = {
+  EXTERNAL_WORKSHOP: [
+    { key: 'work_orders_assigned', label: 'Work Orders Assigned' },
+    { key: 'acknowledged', label: 'Acknowledged' },
+    { key: 'completed', label: 'Completed' },
+    { key: 'cancelled', label: 'Cancelled' },
+    { key: 'rejected', label: 'Rejected' },
+    { key: 'acknowledgement_rate', label: 'Acknowledgement Rate', kind: 'rate' },
+    { key: 'completion_rate', label: 'Completion Rate', kind: 'rate' },
+    { key: 'cancellation_rate', label: 'Cancellation Rate', kind: 'rate' },
+    { key: 'avg_acknowledgement_hours', label: 'Avg. Acknowledgement Time', kind: 'hours' },
+    { key: 'avg_completion_hours', label: 'Avg. Completion Time', kind: 'hours' },
+    { key: 'invoice_amount', label: 'Invoice Amount', kind: 'money' },
+    { key: 'paid_amount', label: 'Paid Amount', kind: 'money' },
+    { key: 'outstanding_amount', label: 'Outstanding Amount', kind: 'money' },
+  ],
+  SUPPLIER: [
+    { key: 'purchase_orders_issued', label: 'POs Issued' },
+    { key: 'purchase_orders_fully_received', label: 'POs Fully Received' },
+    { key: 'purchase_orders_cancelled', label: 'POs Cancelled' },
+    { key: 'purchase_order_value', label: 'PO Value', kind: 'money' },
+    { key: 'deliveries', label: 'Deliveries' },
+    { key: 'deliveries_on_time', label: 'On-Time Deliveries' },
+    { key: 'deliveries_late', label: 'Late Deliveries' },
+    { key: 'on_time_rate', label: 'On-Time Rate', kind: 'rate' },
+    { key: 'avg_lead_time_days', label: 'Avg. Lead Time', kind: 'days' },
+    { key: 'quantity_accepted', label: 'Qty Accepted' },
+    { key: 'quantity_rejected', label: 'Qty Rejected' },
+    { key: 'quantity_damaged', label: 'Qty Damaged' },
+    { key: 'rejection_rate', label: 'Rejection Rate', kind: 'rate' },
+    { key: 'invoice_amount', label: 'Invoice Amount', kind: 'money' },
+    { key: 'paid_amount', label: 'Paid Amount', kind: 'money' },
+    { key: 'outstanding_amount', label: 'Outstanding Amount', kind: 'money' },
+  ],
+  SERVICE_PROVIDER: [
+    { key: 'services_requested', label: 'Services Requested' },
+    { key: 'services_completed', label: 'Completed' },
+    { key: 'services_cancelled', label: 'Cancelled' },
+    { key: 'completion_rate', label: 'Completion Rate', kind: 'rate' },
+    { key: 'cancellation_rate', label: 'Cancellation Rate', kind: 'rate' },
+    { key: 'avg_completion_hours', label: 'Avg. Completion Time', kind: 'hours' },
+    { key: 'estimated_cost', label: 'Estimated Cost', kind: 'money' },
+    { key: 'invoice_amount', label: 'Invoice Amount', kind: 'money' },
+    { key: 'paid_amount', label: 'Paid Amount', kind: 'money' },
+    { key: 'outstanding_amount', label: 'Outstanding Amount', kind: 'money' },
+  ],
+};
+
+function formatKpi(value: number | string | null | undefined, kind?: Kpi['kind']): string {
+  if (value === null || value === undefined) return '—';
+  if (kind === 'money') return formatMoney(value);
+  if (kind === 'rate') return `${value}%`;
+  if (kind === 'hours') return `${value} h`;
+  if (kind === 'days') return `${value} days`;
+  return String(value);
+}
+
+function VendorPerformanceCard({ partnerId }: { partnerId: string }) {
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const [data, setData] = useState<VendorPerformance | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .get(`/app/partners/${partnerId}/performance`, { params: { from: from || undefined, to: to || undefined } })
+      .then((res) => {
+        if (cancelled) return;
+        setData(res.data.data);
+        setError(null);
+      })
+      .catch((err) => !cancelled && setError(extractApiError(err).message));
+    return () => {
+      cancelled = true;
+    };
+  }, [partnerId, from, to]);
+
+  return (
+    <div className="card">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+        <div>
+          <h3 style={{ margin: 0, fontSize: 15 }}>Performance</h3>
+          {data && (
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              {data.period.from} – {data.period.to} · {data.period.basis}
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
+          <label style={{ fontSize: 12, color: '#374151' }}>
+            From
+            <input type="date" aria-label="Performance from" value={from} max={to || undefined} onChange={(e) => setFrom(e.target.value)} style={{ ...inputStyle, display: 'block', width: 150 }} />
+          </label>
+          <label style={{ fontSize: 12, color: '#374151' }}>
+            To
+            <input type="date" aria-label="Performance to" value={to} min={from || undefined} onChange={(e) => setTo(e.target.value)} style={{ ...inputStyle, display: 'block', width: 150 }} />
+          </label>
+        </div>
+      </div>
+      {error && <ErrorState message={error} />}
+      {!error && !data && <LoadingState />}
+      {data && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 16 }}>
+          {KPI_LAYOUT[data.category].map((k) => (
+            <div key={k.key}>
+              <div style={{ fontSize: 12, color: '#6b7280' }}>{k.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 700 }}>{formatKpi(data.kpis[k.key], k.kind)}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {data?.category === 'EXTERNAL_WORKSHOP' && (
+        <div style={{ fontSize: 12, color: '#6b7280', marginTop: 12 }}>
+          Rejected: the External Workshop workflow has no rejection step — a declined Work Authorization is cancelled and counted as Cancelled.
         </div>
       )}
     </div>

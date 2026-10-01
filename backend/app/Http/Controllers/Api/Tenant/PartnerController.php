@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Partner\Services\PartnerPerformanceService;
+use App\Domain\Partner\Services\VendorPerformanceService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StorePartnerRequest;
 use App\Support\TenantContext;
@@ -13,6 +14,7 @@ class PartnerController extends Controller
 {
     public function __construct(
         private readonly PartnerPerformanceService $performance,
+        private readonly VendorPerformanceService $vendorPerformance,
         private readonly TenantContext $context,
     ) {}
 
@@ -47,6 +49,18 @@ class PartnerController extends Controller
         $this->authorizeScope($partner);
 
         return $this->ok(array_merge($partner->toArray(), ['performance' => $this->performance->summary($partner)]));
+    }
+
+    /** Type-aware KPIs (External Workshop / Supplier / Service Provider) from real transactions, for a period. */
+    public function performance(Request $request, Partner $partner)
+    {
+        $this->authorizeScope($partner);
+        $validated = $request->validate([
+            'from' => ['nullable', 'date_format:Y-m-d'],
+            'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+
+        return $this->ok($this->vendorPerformance->summary($partner, $validated['from'] ?? null, $validated['to'] ?? null));
     }
 
     public function update(Request $request, Partner $partner)

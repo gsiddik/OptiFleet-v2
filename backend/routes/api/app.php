@@ -662,6 +662,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/partners', [PartnerController::class, 'index'])->middleware('permission:partner.view');
             Route::post('/partners', [PartnerController::class, 'store'])->middleware('permission:partner.manage');
             Route::get('/partners/{partner}', [PartnerController::class, 'show'])->middleware('permission:partner.view');
+            Route::get('/partners/{partner}/performance', [PartnerController::class, 'performance'])->middleware('permission:partner.view');
             Route::put('/partners/{partner}', [PartnerController::class, 'update'])->middleware('permission:partner.manage');
         });
 

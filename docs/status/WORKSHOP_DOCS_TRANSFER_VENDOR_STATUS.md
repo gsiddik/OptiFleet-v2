@@ -139,3 +139,30 @@ results, "invoice" → External Work Order Invoices + Vendor Invoice Reference; 
 → supplier types only; EXTERNAL_WORKSHOP and All filters correct; `/app/workshop-invoices` →
 Work Orders; Workshop Invoice detail opens with "Back to Work Order"; Warehouse Stock adjust
 actions present.
+
+## Phase 6 — Type-aware Vendor Performance (DONE)
+
+`GET /partners/{id}/performance?from=YYYY-MM-DD&to=YYYY-MM-DD` (`partner.view`, tenant-scoped,
+`to ≥ from`; default = last 12 months to today). `VendorPerformanceService` computes KPIs from the
+operational tables with one aggregate query per block (no N+1); money summed as SQL `numeric` and
+returned as 2-decimal strings. The period selects a cohort by its start event and is returned
+with its basis:
+
+| Category (partner types) | Cohort | KPIs |
+|---|---|---|
+| EXTERNAL_WORKSHOP | WOs whose WAL was issued to the workshop in the period | assigned, acknowledged, completed, cancelled, rejected (*), ack / completion / cancellation rate, avg ack time (delivered → acknowledged), avg completion time (acknowledged → completed), invoice / paid / outstanding amount |
+| SUPPLIER, SPARE_PART_SUPPLIER, TIRE_SUPPLIER | POs ordered in the period | POs issued / fully received / cancelled, PO value, deliveries, on-time vs late (first posted GR vs expected date), on-time rate, avg lead time, qty accepted / rejected / damaged, rejection rate, invoice / paid / outstanding |
+| TOWING_PROVIDER, OTHER_SERVICE_PROVIDER | External services requested in the period | requested, completed, cancelled, rates, avg completion time, estimated cost, workshop invoice / paid / outstanding |
+
+(*) The External Workshop workflow has no "rejected by workshop" state (WAL statuses
+NOT_GENERATED / GENERATED / ACKNOWLEDGED; a declined job is cancelled), so `rejected` is `null`
+and shown as "—" with an explanation — not invented.
+
+The legacy `performance` block on `GET /partners/{id}` (event-log based) is kept for backward
+compatibility; Vendor Detail now shows the type-aware card with a From / To period selector.
+
+Tests: `VendorPerformanceTest` (4: exact counts / rates / durations / amounts per category with
+noise from another partner, another tenant and outside the period; default period, zero state,
+422 on inverted period, 404 cross-tenant, 403 without `partner.view`) + Partner / Rewired
+permissions suites — 19 passed. Browser: FT external workshop, spare-part supplier and towing
+provider each show their own KPI set; a 2020 period shows zeros.
