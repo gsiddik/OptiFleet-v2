@@ -5,9 +5,14 @@ import { apiClient } from '../api/client';
  * plain <a href> cannot open them. These fetch the file through the API client and hand the
  * browser a short-lived object URL.
  */
-export async function fetchBlobUrl(path: string): Promise<string> {
+/** The file as a Blob whose type is the Content-Type the backend served (the stored file's real MIME). */
+export async function fetchProtectedFile(path: string): Promise<Blob> {
   const res = await apiClient.get(path, { responseType: 'blob' });
-  return URL.createObjectURL(res.data as Blob);
+  return res.data as Blob;
+}
+
+export async function fetchBlobUrl(path: string): Promise<string> {
+  return URL.createObjectURL(await fetchProtectedFile(path));
 }
 
 /** Opens the document in a new tab (PDF viewer / image preview). */
