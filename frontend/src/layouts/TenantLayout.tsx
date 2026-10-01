@@ -1,193 +1,34 @@
-import { useEffect, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Outlet } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Breadcrumb } from '../components/Breadcrumb';
-import { Logo } from '../components/Logo';
 import { NavDropdown } from '../components/NavDropdown';
+import { NAV_GROUPS } from './tenantNav';
+import { TenantSidebar } from './TenantSidebar';
 
-interface NavItem {
-  to: string;
-  label: string;
-  permission: string | null;
-  module: string | null;
-}
-interface NavGroup {
-  label: string | null;
-  items: NavItem[];
+const MINIMIZED_KEY = 'optifleet_sidebar_minimized';
+
+function readMinimized(): boolean {
+  try {
+    return localStorage.getItem(MINIMIZED_KEY) === '1';
+  } catch {
+    return false;
+  }
 }
 
-const NAV_GROUPS: NavGroup[] = [
-  { label: null, items: [{ to: '/app/dashboard', label: 'Dashboard', permission: null, module: null }] },
-  {
-    label: 'Vehicle',
-    items: [
-      { to: '/app/vehicles', label: 'List', permission: 'vehicle.view', module: 'VEHICLE' },
-      { to: '/app/vehicle-transfers', label: 'Transfer', permission: 'vehicle.transfer', module: 'VEHICLE' },
-      { to: '/app/vehicle-history', label: 'History', permission: 'maintenance_history.view', module: 'VEHICLE' },
-    ],
-  },
-  {
-    label: 'Inspection',
-    items: [
-      { to: '/app/inspections', label: 'Inspections', permission: 'inspection.view', module: 'INSPECTION' },
-      { to: '/app/inspection-templates', label: 'Templates', permission: 'inspection.view', module: 'INSPECTION' },
-    ],
-  },
-  {
-    label: 'Maintenance',
-    items: [
-      { to: '/app/maintenance-policies', label: 'Maintenance Packages', permission: 'maintenance_policy.view', module: 'MAINTENANCE' },
-      { to: '/app/maintenance-schedules', label: 'Planning & Schedule', permission: 'maintenance_schedule.view', module: 'MAINTENANCE' },
-      { to: '/app/maintenance-requests', label: 'Maintenance Request', permission: 'maintenance_request.view', module: 'MAINTENANCE' },
-      { to: '/app/work-orders', label: 'Work Order', permission: 'work_order.view', module: 'WORK_ORDER' },
-      { to: '/app/part-requests', label: 'Part Requests', permission: 'part_request.view', module: 'WORK_ORDER' },
-      { to: '/app/workshop-invoices', label: 'Workshop Invoices', permission: 'workshop_invoice.view', module: 'WORK_ORDER' },
-      { to: '/app/external-work-order-invoices', label: 'External Work Order Invoices', permission: 'external_work_order_invoice.view', module: 'WORK_ORDER' },
-      { to: '/app/breakdowns', label: 'Breakdown', permission: 'breakdown.view', module: 'MAINTENANCE' },
-      { to: '/app/work-orders?status=QC_PENDING', label: 'Quality Control', permission: 'qc.view', module: 'WORK_ORDER' },
-    ],
-  },
-  {
-    label: 'Workshop Operations',
-    items: [
-      { to: '/app/workspaces', label: 'Workspace', permission: 'workspace.view', module: 'WORKSHOP' },
-      { to: '/app/workshop-scheduler', label: 'Scheduler', permission: 'workspace.view', module: 'WORKSHOP' },
-      { to: '/app/workers', label: 'Mechanic', permission: 'worker.view', module: 'WORKSHOP' },
-      { to: '/app/workspace-reservations', label: 'Assignment', permission: 'workspace.view', module: 'WORKSHOP' },
-      { to: '/app/workers/workload', label: 'Workload', permission: 'worker.view', module: 'WORKSHOP' },
-    ],
-  },
-  {
-    label: 'History',
-    items: [{ to: '/app/vehicle-history', label: 'Maintenance History', permission: 'maintenance_history.view', module: null }],
-  },
-  {
-    label: 'Inventory',
-    items: [
-      { to: '/app/products', label: 'Product', permission: 'product.view', module: 'INVENTORY' },
-      { to: '/app/inventory', label: 'Warehouse Stock', permission: 'inventory.view', module: 'INVENTORY' },
-      { to: '/app/returns', label: 'Return', permission: 'part_return.view', module: 'INVENTORY' },
-      { to: '/app/stock-transfers', label: 'Transfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
-      { to: '/app/goods-receipts', label: 'Receiving', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
-      { to: '/app/inventory', label: 'Adjustment', permission: 'inventory.adjust', module: 'INVENTORY' },
-      { to: '/app/stock-opnames', label: 'Stock Opname', permission: 'inventory.stock_opname', module: 'INVENTORY' },
-      { to: '/app/stock-movements', label: 'Stock Movement', permission: 'inventory.view', module: 'INVENTORY' },
-      { to: '/app/used-part-returns', label: 'Used Sparepart Processing', permission: 'used_part.view', module: 'INVENTORY' },
-      { to: '/app/sparepart-sales', label: 'Sell Sparepart', permission: 'sparepart_sale.view', module: 'INVENTORY' },
-    ],
-  },
-  {
-    label: 'Procurement',
-    items: [
-      { to: '/app/purchase-requests', label: 'Purchase Request', permission: 'purchase_request.view', module: 'PROCUREMENT' },
-      { to: '/app/rfqs', label: 'RFQ', permission: 'rfq.view', module: 'PROCUREMENT' },
-      { to: '/app/quotations', label: 'Quotation', permission: 'quotation.view', module: 'PROCUREMENT' },
-      { to: '/app/purchase-orders', label: 'Purchase Order', permission: 'purchase_order.view', module: 'PROCUREMENT' },
-      { to: '/app/goods-receipts', label: 'Goods Receipt', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
-      { to: '/app/vendor-invoice-references', label: 'Vendor Invoice Reference', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
-    ],
-  },
-  {
-    label: 'Partner',
-    items: [
-      { to: '/app/partners', label: 'Vendor', permission: 'partner.view', module: 'PARTNER' },
-      { to: '/app/partners', label: 'Vendor Performance', permission: 'partner.view', module: 'PARTNER' },
-      { to: '/app/suppliers', label: 'Suppliers', permission: 'partner.view', module: 'PARTNER' },
-    ],
-  },
-  {
-    label: 'Tire Management',
-    items: [
-      { to: '/app/rims', label: 'Rim', permission: 'rim.view', module: 'TIRE' },
-      { to: '/app/tires', label: 'Tire List', permission: 'tire.view', module: 'TIRE' },
-      { to: '/app/tires', label: 'Inventory', permission: 'tire.view', module: 'TIRE' },
-      { to: '/app/wheel-configurations', label: 'Wheel Configuration', permission: 'tire.view', module: 'TIRE' },
-      { to: '/app/tires', label: 'Installation', permission: 'tire.install', module: 'TIRE' },
-      { to: '/app/tires', label: 'Rotation', permission: 'tire.rotate', module: 'TIRE' },
-      { to: '/app/tires', label: 'Inspection', permission: 'tire.inspect', module: 'TIRE' },
-      { to: '/app/tires', label: 'Retread', permission: 'tire.manage', module: 'TIRE' },
-      { to: '/app/tires', label: 'Scrap', permission: 'tire.scrap', module: 'TIRE' },
-      { to: '/app/tires', label: 'History', permission: 'tire.view', module: 'TIRE' },
-    ],
-  },
-  {
-    label: 'Component Management',
-    items: [
-      { to: '/app/component-assets', label: 'Component Assets', permission: 'component_asset.view', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Installation', permission: 'component_asset.install', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Removal', permission: 'component_asset.remove', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Replacement', permission: 'component_asset.replace', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Repair / Recondition', permission: 'component_asset.manage', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'History', permission: 'component_asset.view', module: 'COMPONENT' },
-    ],
-  },
-  {
-    label: 'Warranty',
-    items: [
-      { to: '/app/warranties', label: 'Warranty', permission: 'warranty.view', module: 'WARRANTY' },
-      { to: '/app/warranties', label: 'Eligibility', permission: 'warranty.view', module: 'WARRANTY' },
-      { to: '/app/warranty-claims', label: 'Claims', permission: 'warranty.view', module: 'WARRANTY' },
-    ],
-  },
-  {
-    label: 'Analytics',
-    items: [
-      { to: '/app/analytics/overview', label: 'Overview', permission: 'analytics.overview.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/fleet', label: 'Fleet', permission: 'analytics.fleet.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/maintenance', label: 'Maintenance', permission: 'analytics.maintenance.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/work-orders', label: 'Work Order', permission: 'analytics.work_order.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/breakdowns', label: 'Breakdown', permission: 'analytics.breakdown.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/downtime', label: 'Downtime (MTTR/MTBF)', permission: 'analytics.breakdown.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/workshops', label: 'Workshop', permission: 'analytics.workshop.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/mechanics', label: 'Mechanic', permission: 'analytics.mechanic.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/inventory', label: 'Inventory', permission: 'analytics.inventory.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/procurement', label: 'Procurement', permission: 'analytics.procurement.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/vendors', label: 'Vendor', permission: 'analytics.vendor.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/cost', label: 'Cost', permission: 'analytics.cost.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/tires', label: 'Tire', permission: 'analytics.tire.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/components', label: 'Component Reliability', permission: 'analytics.component.view', module: 'ANALYTICS' },
-      { to: '/app/analytics/warranty', label: 'Warranty', permission: 'analytics.warranty.view', module: 'ANALYTICS' },
-    ],
-  },
-  {
-    label: 'Maintenance Intelligence',
-    items: [
-      { to: '/app/intelligence/overview', label: 'Overview', permission: 'intelligence.overview.view', module: 'MAINTENANCE_INTELLIGENCE' },
-      { to: '/app/intelligence/vehicles', label: 'Vehicle Health & Risk', permission: 'intelligence.vehicle.view', module: 'MAINTENANCE_INTELLIGENCE' },
-      { to: '/app/intelligence/components', label: 'Component Reliability', permission: 'intelligence.component.view', module: 'MAINTENANCE_INTELLIGENCE' },
-      { to: '/app/intelligence/tires', label: 'Tire Intelligence', permission: 'intelligence.tire.view', module: 'MAINTENANCE_INTELLIGENCE' },
-      { to: '/app/intelligence/recommendations', label: 'Recommendations', permission: 'intelligence.recommendation.view', module: 'MAINTENANCE_INTELLIGENCE' },
-    ],
-  },
-  {
-    label: 'Master Data',
-    items: [
-      { to: '/app/master-data/vehicle-categories', label: 'Vehicle Categories', permission: 'vehicle_category.view', module: 'CORE' },
-      { to: '/app/master-data/component-groups', label: 'Component Groups', permission: 'component_group.view', module: 'CORE' },
-      { to: '/app/master-data/component-categories', label: 'Component Categories', permission: 'component_category.view', module: 'CORE' },
-      { to: '/app/master-data/component-subcategories', label: 'Component Subcategories', permission: 'component_subcategory.view', module: 'CORE' },
-      { to: '/app/master-data/uoms', label: 'Units of Measure', permission: 'product.view', module: 'INVENTORY' },
-      { to: '/app/master-data/vehicle-brands', label: 'Vehicle Brands', permission: 'vehicle_brand.view', module: 'CORE' },
-      { to: '/app/master-data/vehicle-models', label: 'Vehicle Models', permission: 'vehicle_brand.view', module: 'CORE' },
-    ],
-  },
-  {
-    label: 'Configuration',
-    items: [
-      { to: '/app/configuration/numbering', label: 'Document Numbering', permission: 'configuration.view', module: null },
-      { to: '/app/configuration/document-templates', label: 'Document Template', permission: 'configuration.view', module: null },
-      { to: '/app/configuration/workflows', label: 'Workflow', permission: 'configuration.view', module: null },
-      { to: '/app/configuration/notifications', label: 'Notification', permission: 'configuration.view', module: null },
-      { to: '/app/configuration/tire-scoring', label: 'Tire Scoring', permission: 'configuration.view', module: 'TIRE' },
-      { to: '/app/configuration/history', label: 'Configuration History', permission: 'configuration_history.view', module: null },
-    ],
-  },
-  // Section 5.6: Audit Log now sits after Configuration History with a
-  // visual gap (marginTop below), rather than immediately following Access
-  // as it did before Account/Organization/Access moved to the navbar.
-  { label: null, items: [{ to: '/app/audit-logs', label: 'Audit Log', permission: 'audit.view', module: null }] },
-];
+/** Mobile uses the off-canvas drawer, which is always shown expanded. */
+function useIsMobile(): boolean {
+  const query = '(max-width: 768px)';
+  const [mobile, setMobile] = useState(() => window.matchMedia(query).matches);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    const onChange = (e: MediaQueryListEvent) => setMobile(e.matches);
+    media.addEventListener('change', onChange);
+    return () => media.removeEventListener('change', onChange);
+  }, []);
+  return mobile;
+}
 
 // Section 5.2/5.3/5.4: these three groups now render as navbar hover/click
 // dropdowns (see the header below) instead of sidebar entries — same
@@ -216,6 +57,32 @@ export function TenantLayout() {
   const [activeModules, setActiveModules] = useState<string[] | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [minimizedPref, setMinimizedPref] = useState(readMinimized);
+  const isMobile = useIsMobile();
+  const minimized = minimizedPref && !isMobile;
+
+  function toggleMinimized() {
+    setMinimizedPref((prev) => {
+      try {
+        localStorage.setItem(MINIMIZED_KEY, prev ? '0' : '1');
+      } catch {
+        // storage unavailable — the preference just isn't remembered
+      }
+      return !prev;
+    });
+  }
+
+  // Permission + active-module filtering first; search and minimize only work on what remains.
+  const navGroups = useMemo(
+    () =>
+      NAV_GROUPS.map((group) => ({
+        ...group,
+        items: group.items
+          .filter((item) => !item.permission || hasPermission(item.permission))
+          .filter((item) => !item.module || activeModules === null || activeModules.includes(item.module)),
+      })).filter((group) => group.items.length > 0),
+    [hasPermission, activeModules],
+  );
 
   useEffect(() => {
     apiClient
@@ -255,60 +122,14 @@ export function TenantLayout() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <div className={`tenant-sidebar-overlay${sidebarOpen ? ' open' : ''}`} onClick={() => setSidebarOpen(false)} />
-      <aside
-        className={`tenant-sidebar${sidebarOpen ? ' open' : ''}`}
-        style={{ width: 230, background: '#111827', color: '#fff', padding: '20px 0', flexShrink: 0 }}
-        onClick={(e) => {
-          if ((e.target as HTMLElement).tagName === 'A') setSidebarOpen(false);
-        }}
-      >
-        <div style={{ padding: '16px 20px 20px' }}>
-          {/* Section 4a: the source logo's wordmark/tagline are dark text designed for a
-              light background, so a white card keeps it legible on this dark sidebar
-              without altering the logo asset itself. */}
-          <div style={{ display: 'inline-block', background: '#fff', borderRadius: 8, padding: '10px 14px' }}>
-            <Logo height={40} src={tenantLogoUrl ?? undefined} />
-          </div>
-        </div>
-        <div style={{ padding: '0 20px 16px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>
-          Tenant Portal
-        </div>
-        <nav>
-          {NAV_GROUPS.map((group) => {
-            const items = group.items
-              .filter((item) => !item.permission || hasPermission(item.permission))
-              .filter((item) => !item.module || activeModules === null || activeModules.includes(item.module));
-            if (items.length === 0) return null;
-            const isAuditLogGroup = items[0].to === '/app/audit-logs';
-            return (
-              <div key={group.label ?? items[0].to} style={isAuditLogGroup ? { marginTop: 24 } : undefined}>
-                {group.label && (
-                  <div style={{ padding: '14px 20px 4px', fontSize: 11, textTransform: 'uppercase', color: '#6b7280', letterSpacing: 1 }}>
-                    {group.label}
-                  </div>
-                )}
-                {items.map((item) => (
-                  <NavLink
-                    key={`${group.label ?? ''}:${item.label}`}
-                    to={item.to}
-                    style={({ isActive }) => ({
-                      display: 'block',
-                      padding: '8px 20px',
-                      paddingLeft: group.label ? 28 : 20,
-                      color: isActive ? '#fff' : '#cbd5e1',
-                      background: isActive ? '#1d4ed8' : 'transparent',
-                      textDecoration: 'none',
-                      fontSize: 14,
-                    })}
-                  >
-                    {item.label}
-                  </NavLink>
-                ))}
-              </div>
-            );
-          })}
-        </nav>
-      </aside>
+      <TenantSidebar
+        groups={navGroups}
+        minimized={minimized}
+        onToggleMinimized={toggleMinimized}
+        mobileOpen={sidebarOpen}
+        onNavigate={() => setSidebarOpen(false)}
+        logoSrc={tenantLogoUrl}
+      />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <header
           style={{

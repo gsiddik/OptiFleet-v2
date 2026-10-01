@@ -139,6 +139,149 @@ button {
   }
 }
 
+/* Tenant sidebar: sticky full-height column; header + search stay put, the menu scrolls
+   inside it, so the last item is always reachable and the page never grows with the menu. */
+.tenant-sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 240px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  background: #111827;
+  color: #fff;
+  transition: width 0.15s ease;
+}
+.tenant-sidebar.minimized {
+  width: 64px;
+}
+.tenant-sidebar-head {
+  padding: 14px 12px 10px;
+  flex-shrink: 0;
+}
+.tenant-sidebar.minimized .tenant-sidebar-head {
+  padding: 12px 10px 6px;
+}
+.tenant-sidebar-logo {
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tenant-sidebar.minimized .tenant-sidebar-logo {
+  padding: 4px;
+}
+.tenant-sidebar-collapse {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  padding: 12px 22px;
+  border: none;
+  border-top: 1px solid #1f2937;
+  background: transparent;
+  color: #9ca3af;
+  font-size: 13px;
+  cursor: pointer;
+}
+.tenant-sidebar.minimized .tenant-sidebar-collapse {
+  justify-content: center;
+  padding: 12px 0;
+}
+.tenant-sidebar-collapse:hover {
+  background: #1f2937;
+  color: #fff;
+}
+.tenant-sidebar-iconbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 6px;
+}
+.tenant-sidebar-iconbtn,
+.tenant-sidebar-iconlink {
+  width: 44px;
+  height: 40px;
+  margin: 2px auto;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #cbd5e1;
+}
+.tenant-sidebar-iconbtn:hover,
+.tenant-sidebar-iconlink:hover,
+.tenant-sidebar-group:hover:not(:disabled) {
+  background: #1f2937;
+  color: #fff;
+}
+.tenant-sidebar-search {
+  position: relative;
+  padding: 2px 12px 10px;
+  flex-shrink: 0;
+}
+.tenant-sidebar-search input {
+  width: 100%;
+  padding: 7px 10px 7px 32px;
+  border-radius: 6px;
+  border: 1px solid #374151;
+  background: #1f2937;
+  color: #fff;
+  font-size: 13px;
+}
+.tenant-sidebar-search input::placeholder {
+  color: #9ca3af;
+}
+.tenant-sidebar-nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.tenant-sidebar.minimized .tenant-sidebar-nav {
+  align-items: center;
+}
+.tenant-sidebar-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 16px);
+  margin: 2px 8px 0;
+  padding: 8px 8px 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.tenant-sidebar-group:disabled {
+  cursor: default;
+}
+.tenant-sidebar-flyout {
+  position: fixed;
+  left: 64px;
+  z-index: 50;
+  min-width: 220px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 6px 0;
+  background: #111827;
+  border-radius: 0 8px 8px 0;
+  box-shadow: 4px 6px 20px rgba(0, 0, 0, 0.3);
+}
+
 .tenant-mobile-toggle {
   display: none;
 }
@@ -154,9 +297,9 @@ button {
     bottom: 0;
     left: 0;
     z-index: 40;
+    height: auto;
     transform: translateX(-100%);
     transition: transform 0.2s ease;
-    overflow-y: auto;
     max-width: 85vw;
   }
   .tenant-sidebar.open {
