@@ -17,3 +17,6 @@ export function fileRuleError(file: File, rule: FileRule): string | null {
   if (file.size > rule.maxBytes) return `The file must not be larger than ${formatFileSize(rule.maxBytes)}.`;
   return null;
 }
+
+/** Vendor invoice document: PDF only, 10 MB (validated again on the server). */
+export const INVOICE_PDF_RULE: FileRule = { extensions: ['pdf'], maxBytes: 10 * 1024 * 1024, label: 'PDF' };

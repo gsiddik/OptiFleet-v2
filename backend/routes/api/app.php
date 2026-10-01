@@ -651,7 +651,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('permission:goods_receipt.view');
 
             Route::get('/vendor-invoice-references', [VendorInvoiceReferenceController::class, 'index'])->middleware('permission:goods_receipt.view');
-            Route::post('/vendor-invoice-references', [VendorInvoiceReferenceController::class, 'store'])->middleware('permission:goods_receipt.create');
             Route::get('/vendor-invoice-references/{vendorInvoiceReference}', [VendorInvoiceReferenceController::class, 'show'])->middleware('permission:goods_receipt.view');
             Route::get('/vendor-invoice-references/{vendorInvoiceReference}/download', [VendorInvoiceReferenceController::class, 'download'])->middleware('permission:goods_receipt.view');
             Route::post('/vendor-invoice-references/{vendorInvoiceReference}/status', [VendorInvoiceReferenceController::class, 'updateStatus'])->middleware('permission:goods_receipt.create');

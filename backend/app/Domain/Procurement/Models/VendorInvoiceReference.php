@@ -8,6 +8,7 @@ use App\Domain\Shared\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class VendorInvoiceReference extends Model
 {
@@ -15,15 +16,23 @@ class VendorInvoiceReference extends Model
 
     protected $fillable = [
         'tenant_id', 'partner_id', 'purchase_order_id', 'goods_receipt_id', 'vendor_invoice_number',
-        'vendor_invoice_date', 'amount', 'attachment_path', 'attachment_disk', 'status', 'notes',
+        'vendor_invoice_date', 'amount', 'terms_of_payment_days', 'due_date', 'attachment_path', 'attachment_disk',
+        'attachment_original_name', 'attachment_mime_type', 'attachment_size', 'status', 'origin', 'notes', 'created_by',
     ];
 
     protected function casts(): array
     {
-        return ['vendor_invoice_date' => 'date', 'amount' => 'decimal:4'];
+        return ['vendor_invoice_date' => 'date', 'due_date' => 'date', 'amount' => 'decimal:4', 'terms_of_payment_days' => 'integer'];
     }
 
     protected $hidden = ['attachment_path', 'attachment_disk'];
+
+    protected $appends = ['has_document'];
+
+    public function getHasDocumentAttribute(): bool
+    {
+        return $this->attachment_path !== null;
+    }
 
     public function partner(): BelongsTo
     {
@@ -35,8 +44,15 @@ class VendorInvoiceReference extends Model
         return $this->belongsTo(PurchaseOrder::class);
     }
 
+    /** Legacy single link (pre Goods-Receipt capture). New links live on goods_receipts. */
     public function goodsReceipt(): BelongsTo
     {
         return $this->belongsTo(GoodsReceipt::class);
+    }
+
+    /** Every Goods Receipt received against this invoice (one invoice may cover several). */
+    public function goodsReceipts(): HasMany
+    {
+        return $this->hasMany(GoodsReceipt::class);
     }
 }

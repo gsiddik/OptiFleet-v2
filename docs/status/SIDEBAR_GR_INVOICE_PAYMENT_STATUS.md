@@ -91,3 +91,34 @@ vendor-payment permissions (the invoice page reuses `goods_receipt.view/create`)
 - Tests: `DocumentUploadPersistenceTest` (4) + Payment/Brand/Billing related — 22 passed.
   Browser: bad proof → 422 and no payment; corrected retry → one payment with `valid.png`;
   bad brand logo → error, retry → single brand with logo.
+
+## Phase 4 — Goods Receipt + Vendor Invoice Reference (DONE)
+
+- Migration `2026_10_02_000001` (additive): `goods_receipts.vendor_invoice_reference_id` (FK,
+  restrict, indexed; many GRs → one invoice); `vendor_invoice_references` + `origin`
+  (MANUAL | GOODS_RECEIPT, check), `terms_of_payment_days`, `due_date`, document metadata,
+  `created_by`; partial unique index `(tenant_id, partner_id, UPPER(vendor_invoice_number))
+  WHERE origin = 'GOODS_RECEIPT'`. Backfill: a legacy invoice that pointed at a GR is linked
+  from that GR. Legacy rows keep origin MANUAL and are not constrained or deleted.
+- `POST /purchase-orders/{po}/goods-receipts` (multipart) now requires the invoice:
+  `invoice_mode` NEW (number trimmed, date, amount `^\d+(\.\d{1,2})?$` > 0, terms whole working
+  days 0–3650, optional `invoice_document` PDF ≤ 10 MB, content-checked) or EXISTING
+  (`vendor_invoice_reference_id` of an earlier receipt of the same PO — no new row, no new
+  file). Vendor = the PO's vendor. Receipt, stock, PO status, invoice and file are one
+  transaction (PDF removed if it fails). Duplicate vendor + number (case-insensitive) → 422
+  (app check + DB index for races).
+- Due date = invoice date + N working days (Mon–Fri) via `WorkingDayService::addBusinessDays`
+  (existing working-day service extended); public holidays not counted (no holiday calendar).
+- Standalone `POST /vendor-invoice-references` removed (GR is the only entry point); invoice
+  document download now also checks the PO warehouse data scope and serves the original name.
+- PO show returns the receipt history: every GR oldest first with items, receiver and invoice.
+- Frontend: Post Goods Receipt → `RecordVendorInvoiceModal` (vendor read-only, number, date,
+  Amount / Terms as text numeric inputs, PDF upload with replace/remove, "Use the same invoice
+  as the previous Goods Receipt" showing the previous invoice + its document); one multipart
+  request; double-submit guard. `GoodsReceiptHistory`: GR#, receipt date (`received_at`),
+  received quantity, invoice number, View / Download, received by; RECEIVED shows "Goods
+  received: <date> (completed in N receipts)". List page lost its "Record Invoice Reference".
+- Tests: `GoodsReceiptVendorInvoiceTest` (7) + updated `ProcurementTest`; related regression
+  108 passed. Browser: ISSUED PO → GR1 new invoice + PDF (jpg rejected client-side; replace /
+  remove work) → PARTIALLY_RECEIVED → GR2 same invoice (previous PDF shown) → GR3 new invoice
+  → RECEIVED; history 3 rows; download returns the original PDF.

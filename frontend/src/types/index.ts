@@ -1838,10 +1838,13 @@ export interface GoodsReceiptItem {
   status: 'DRAFT' | 'POSTED';
   received_at: string | null;
   notes: string | null;
+  vendor_invoice_reference_id: string | null;
   warehouse?: Warehouse;
   partner?: PartnerItem;
   purchase_order?: PurchaseOrderItem;
   items?: GoodsReceiptItemLine[];
+  receiver?: { id: string; name: string } | null;
+  vendor_invoice_reference?: VendorInvoiceReferenceItem | null;
 }
 
 export interface VendorInvoiceReferenceItem {
@@ -1852,9 +1855,14 @@ export interface VendorInvoiceReferenceItem {
   vendor_invoice_number: string;
   vendor_invoice_date: string | null;
   amount: string | null;
+  /** Working days. */
+  terms_of_payment_days: number | null;
+  due_date: string | null;
+  origin: 'MANUAL' | 'GOODS_RECEIPT';
   status: 'RECEIVED' | 'VERIFIED' | 'DISPUTED';
   notes: string | null;
-  attachment_path: string | null;
+  has_document: boolean;
+  attachment_original_name: string | null;
   partner?: PartnerItem;
   purchase_order?: PurchaseOrderItem;
 }

@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
-use App\Domain\Partner\Models\Partner;
+use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Procurement\Models\VendorInvoiceReference;
-use App\Domain\Procurement\Services\VendorInvoiceReferenceService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\Storage;
 class VendorInvoiceReferenceController extends Controller
 {
     public function __construct(
-        private readonly VendorInvoiceReferenceService $invoices,
+        private readonly DataScopeService $scope,
         private readonly TenantContext $context,
     ) {}
 
@@ -31,35 +30,6 @@ class VendorInvoiceReferenceController extends Controller
         return $this->paginated($query->latest('created_at')->paginate($request->integer('per_page', 20)));
     }
 
-    public function store(Request $request)
-    {
-        $tenantId = $this->context->tenantId();
-        $validated = $request->validate([
-            'partner_id' => ['required', 'uuid', 'exists:partners,id'],
-            'purchase_order_id' => ['nullable', 'uuid', 'exists:purchase_orders,id'],
-            'goods_receipt_id' => ['nullable', 'uuid', 'exists:goods_receipts,id'],
-            'vendor_invoice_number' => ['required', 'string', 'max:100'],
-            'vendor_invoice_date' => ['required', 'date'],
-            'amount' => ['required', 'numeric', 'min:0'],
-            'notes' => ['nullable', 'string'],
-            'attachment' => ['nullable', 'file', 'max:10240', 'mimes:jpg,jpeg,png,webp,pdf'],
-        ]);
-
-        $partner = Partner::query()->findOrFail($validated['partner_id']);
-        abort_unless($partner->tenant_id === $tenantId, 404);
-
-        $reference = $this->invoices->create($partner, [
-            'purchase_order_id' => $validated['purchase_order_id'] ?? null,
-            'goods_receipt_id' => $validated['goods_receipt_id'] ?? null,
-            'vendor_invoice_number' => $validated['vendor_invoice_number'],
-            'vendor_invoice_date' => $validated['vendor_invoice_date'],
-            'amount' => $validated['amount'],
-            'notes' => $validated['notes'] ?? null,
-        ], $request->file('attachment'));
-
-        return $this->ok($reference, 201);
-    }
-
     public function show(VendorInvoiceReference $vendorInvoiceReference)
     {
         $this->authorizeScope($vendorInvoiceReference);
@@ -71,8 +41,10 @@ class VendorInvoiceReferenceController extends Controller
     {
         $this->authorizeScope($vendorInvoiceReference);
         abort_unless($vendorInvoiceReference->attachment_path, 404);
+        $name = $vendorInvoiceReference->attachment_original_name ?: 'invoice-'.$vendorInvoiceReference->vendor_invoice_number.'.pdf';
 
-        return Storage::disk($vendorInvoiceReference->attachment_disk)->response($vendorInvoiceReference->attachment_path);
+        // inline: opens in the browser's PDF viewer; the client can still save it under $name.
+        return Storage::disk($vendorInvoiceReference->attachment_disk)->response($vendorInvoiceReference->attachment_path, $name);
     }
 
     public function updateStatus(Request $request, VendorInvoiceReference $vendorInvoiceReference)
@@ -84,8 +56,16 @@ class VendorInvoiceReferenceController extends Controller
         return $this->ok($vendorInvoiceReference->fresh());
     }
 
+    /** Tenant isolation, plus the warehouse data scope of the Purchase Order it belongs to. */
     private function authorizeScope(VendorInvoiceReference $reference): void
     {
-        abort_unless($reference->tenant_id === $this->context->tenantId(), 404);
+        $tenantId = $this->context->tenantId();
+        abort_unless($reference->tenant_id === $tenantId, 404);
+        $warehouseId = $reference->purchaseOrder?->delivery_warehouse_id;
+        abort_unless(
+            $warehouseId === null || $this->scope->canAccessWarehouse($this->context->user(), $tenantId, $warehouseId),
+            403,
+            'This warehouse is outside your assigned data scope.'
+        );
     }
 }

@@ -13,6 +13,8 @@ use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Shared\Services\PrivateDocumentStorage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -22,6 +24,11 @@ use Illuminate\Support\Facades\DB;
  * Section 22: over-receipt beyond the PO's remaining quantity is rejected
  * outright by default (no tolerance in Phase 4); only the accepted quantity
  * ever reaches warehouse stock, rejected/damaged quantities never do.
+ *
+ * The vendor invoice the goods were received against is recorded in the same transaction
+ * (new invoice + its PDF, or the invoice of an earlier receipt of this PO): receipt, stock,
+ * PO status and invoice link are all saved, or none of them — and a stored PDF is removed
+ * again if the transaction fails.
  */
 class GoodsReceiptService
 {
@@ -29,12 +36,16 @@ class GoodsReceiptService
         private readonly InventoryService $inventory,
         private readonly DocumentNumberingService $numbers,
         private readonly PartnerPerformanceService $performance,
+        private readonly VendorInvoiceReferenceService $invoices,
+        private readonly PrivateDocumentStorage $storage,
     ) {}
 
     /**
      * @param array<array{purchase_order_item_id:string, quantity_accepted:float, quantity_rejected?:float, quantity_damaged?:float, batch_number?:string, serial_numbers?:array}> $lines
+     * @param ?array{mode: string, vendor_invoice_reference_id?: ?string, vendor_invoice_number?: ?string, vendor_invoice_date?: ?string, amount?: ?string, terms_of_payment_days?: int|string|null, document?: ?UploadedFile} $invoice
+     *        null only for internal callers (seeders / smoke tests); the API always sends one.
      */
-    public function post(PurchaseOrder $po, Warehouse $warehouse, array $lines, ?string $userId, ?string $notes = null): GoodsReceipt
+    public function post(PurchaseOrder $po, Warehouse $warehouse, array $lines, ?string $userId, ?string $notes = null, ?array $invoice = null): GoodsReceipt
     {
         if (! in_array($po->status, ['ISSUED', 'PARTIALLY_RECEIVED'], true)) {
             throw new ProcurementException('Only an issued (or partially received) Purchase Order can receive goods.');
@@ -43,7 +54,16 @@ class GoodsReceiptService
             throw new ProcurementException('A goods receipt needs at least one line.');
         }
 
-        return DB::transaction(function () use ($po, $warehouse, $lines, $userId, $notes) {
+        $document = $invoice !== null && $invoice['mode'] === 'NEW' ? ($invoice['document'] ?? null) : null;
+        $upload = [
+            'file' => $document,
+            'directory' => "vendor-invoices/{$po->tenant_id}",
+            'mimes' => VendorInvoiceReferenceService::DOCUMENT_MIMES,
+            'max_bytes' => VendorInvoiceReferenceService::DOCUMENT_MAX_BYTES,
+            'label' => 'invoice document',
+        ];
+
+        return $this->storage->persist(['invoice_document' => $upload], fn (array $stored) => DB::transaction(function () use ($po, $warehouse, $lines, $userId, $notes, $invoice, $stored) {
             $lockedPo = PurchaseOrder::query()->lockForUpdate()->findOrFail($po->id);
 
             $number = $this->numbers->generate('goods_receipt', $lockedPo->tenant_id, null, null, $warehouse->id);
@@ -105,6 +125,11 @@ class GoodsReceiptService
 
             $receipt->update(['status' => 'POSTED']);
 
+            if ($invoice !== null) {
+                $reference = $this->invoices->resolveForReceipt($lockedPo, $receipt, $invoice, $stored['invoice_document'], $userId);
+                $receipt->update(['vendor_invoice_reference_id' => $reference->id]);
+            }
+
             $stillOpen = $lockedPo->items()->get()->contains(fn (PurchaseOrderItem $i) => $i->remainingQuantity() > 0.0001);
             $lockedPo->update(['status' => $stillOpen ? 'PARTIALLY_RECEIVED' : 'RECEIVED']);
 
@@ -120,7 +145,7 @@ class GoodsReceiptService
                 $this->performance->record($partner, $onTime ? 'DELIVERY_ON_TIME' : 'DELIVERY_LATE', GoodsReceipt::class, $receipt->id);
             }
 
-            return $receipt->fresh('items');
-        });
+            return $receipt->fresh(['items', 'vendorInvoiceReference']);
+        }));
     }
 }

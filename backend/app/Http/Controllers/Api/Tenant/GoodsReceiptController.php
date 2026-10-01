@@ -48,12 +48,35 @@ class GoodsReceiptController extends Controller
             'lines.*.quantity_damaged' => ['nullable', 'numeric', 'min:0'],
             'lines.*.batch_number' => ['nullable', 'string', 'max:100'],
             'lines.*.serial_numbers' => ['nullable', 'array'],
+            // Record Vendor Invoice Reference: every receipt is posted against a vendor invoice —
+            // a NEW one, or the invoice of an EXISTING earlier receipt of this PO.
+            'invoice_mode' => ['required', 'in:NEW,EXISTING'],
+            'vendor_invoice_reference_id' => ['required_if:invoice_mode,EXISTING', 'nullable', 'uuid'],
+            'vendor_invoice_number' => ['required_if:invoice_mode,NEW', 'nullable', 'string', 'max:100'],
+            'vendor_invoice_date' => ['required_if:invoice_mode,NEW', 'nullable', 'date'],
+            'amount' => ['required_if:invoice_mode,NEW', 'nullable', 'regex:/^\d{1,14}(\.\d{1,2})?$/', 'numeric', 'gt:0'],
+            'terms_of_payment_days' => ['required_if:invoice_mode,NEW', 'nullable', 'regex:/^\d+$/', 'integer', 'min:0', 'max:3650'],
+            'invoice_document' => ['nullable', 'file', 'mimes:pdf', 'max:10240'],
+        ], [
+            'amount.regex' => 'The amount must be a number with up to 2 decimals.',
+            'terms_of_payment_days.regex' => 'Terms of payment must be a whole number of working days.',
+            'invoice_document.mimes' => 'The invoice document must be a PDF file.',
         ]);
 
         $warehouse = Warehouse::query()->findOrFail($validated['warehouse_id'] ?? $purchaseOrder->delivery_warehouse_id);
         abort_unless($warehouse->tenant_id === $tenantId, 404);
 
-        $receipt = $this->receipts->post($purchaseOrder, $warehouse, $validated['lines'], $this->context->user()->id, $validated['notes'] ?? null);
+        $invoice = [
+            'mode' => $validated['invoice_mode'],
+            'vendor_invoice_reference_id' => $validated['vendor_invoice_reference_id'] ?? null,
+            'vendor_invoice_number' => $validated['vendor_invoice_number'] ?? null,
+            'vendor_invoice_date' => $validated['vendor_invoice_date'] ?? null,
+            'amount' => $validated['amount'] ?? null,
+            'terms_of_payment_days' => $validated['terms_of_payment_days'] ?? null,
+            'document' => $request->file('invoice_document'),
+        ];
+
+        $receipt = $this->receipts->post($purchaseOrder, $warehouse, $validated['lines'], $this->context->user()->id, $validated['notes'] ?? null, $invoice);
 
         return $this->ok($receipt, 201);
     }
@@ -62,7 +85,7 @@ class GoodsReceiptController extends Controller
     {
         $this->authorizeScope($goodsReceipt);
 
-        return $this->ok($goodsReceipt->load(['warehouse', 'partner', 'purchaseOrder', 'items.product']));
+        return $this->ok($goodsReceipt->load(['warehouse', 'partner', 'purchaseOrder', 'items.product', 'vendorInvoiceReference']));
     }
 
     private function authorizeScope(GoodsReceipt $receipt): void

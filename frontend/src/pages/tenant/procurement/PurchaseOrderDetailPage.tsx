@@ -11,6 +11,8 @@ import type { PurchaseOrderItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { GoodsReceiptHistory } from './GoodsReceiptHistory';
+import { RecordVendorInvoiceModal, type ReceiptLine } from './RecordVendorInvoiceModal';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'purchase_order.create', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'purchase_order.create' }],
@@ -30,6 +32,7 @@ export function PurchaseOrderDetailPage() {
   const [busy, setBusy] = useState(false);
   const [accepted, setAccepted] = useState<Record<string, string>>({});
   const [printing, setPrinting] = useState(false);
+  const [receiptLines, setReceiptLines] = useState<ReceiptLine[] | null>(null);
 
   function load() {
     apiClient.get(`/app/purchase-orders/${id}`).then((res) => {
@@ -89,21 +92,18 @@ export function PurchaseOrderDetailPage() {
     }
   }
 
-  async function postReceipt() {
+  /** Post Goods Receipt: the receipt is posted only after its vendor invoice is recorded. */
+  function startReceipt() {
     if (!po) return;
-    setBusy(true);
     setError(null);
-    try {
-      const lines = (po.items ?? [])
-        .filter((item) => accepted[item.id] && Number(accepted[item.id]) > 0)
-        .map((item) => ({ purchase_order_item_id: item.id, quantity_accepted: accepted[item.id] }));
-      await apiClient.post(`/app/purchase-orders/${id}/goods-receipts`, { lines });
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
+    const lines = (po.items ?? [])
+      .filter((item) => accepted[item.id] && Number(accepted[item.id]) > 0)
+      .map((item) => ({ purchase_order_item_id: item.id, quantity_accepted: accepted[item.id] }));
+    if (lines.length === 0) {
+      setError('Enter the quantity received for at least one item.');
+      return;
     }
+    setReceiptLines(lines);
   }
 
   if (error && !po) return <ErrorState message={error} />;
@@ -111,6 +111,9 @@ export function PurchaseOrderDetailPage() {
 
   const actions = (LIFECYCLE[po.status] ?? []).filter((a) => hasPermission(a.permission));
   const canReceive = ['ISSUED', 'PARTIALLY_RECEIVED'].includes(po.status) && hasPermission('goods_receipt.post');
+  const receipts = po.goods_receipts ?? [];
+  // "Use the same invoice": the invoice of the most recent receipt that has one.
+  const previousInvoice = [...receipts].reverse().find((gr) => gr.vendor_invoice_reference)?.vendor_invoice_reference ?? null;
 
   return (
     <div>
@@ -194,11 +197,27 @@ export function PurchaseOrderDetailPage() {
           );
         })}
         {canReceive && (
-          <button className="btn-primary" disabled={busy} onClick={postReceipt} style={{ marginTop: 12 }}>
+          <button className="btn-primary" disabled={busy} onClick={startReceipt} style={{ marginTop: 12 }}>
             Post Goods Receipt
           </button>
         )}
       </div>
+
+      {receipts.length > 0 && <GoodsReceiptHistory receipts={receipts} receivedComplete={['RECEIVED', 'CLOSED'].includes(po.status)} />}
+
+      {receiptLines && (
+        <RecordVendorInvoiceModal
+          purchaseOrderId={po.id}
+          vendorName={po.partner?.name ?? '—'}
+          lines={receiptLines}
+          previousInvoice={previousInvoice}
+          onClose={() => setReceiptLines(null)}
+          onPosted={() => {
+            setReceiptLines(null);
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }
