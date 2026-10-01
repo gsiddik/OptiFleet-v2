@@ -108,3 +108,29 @@ Replaced by Part Requests (REQUESTED → APPROVED → ISSUED). Approval holds no
   permission gone; Part Request approve holds nothing, issue checks stock); related regression
   133 passed. Seeders twice on a fresh DB: identical counts, `inventory.reserve` absent.
 - Browser: Reservation menu gone, `/app/stock-reservations` falls back to the dashboard, API 404.
+
+## CHECKPOINT (2026-10-01) — paused by owner before Phase 6
+
+Branch `claude/magical-volta-tv4xwl` (baseline main @ 773c2cd). Pushed commits:
+
+| Phase | Commit | Message |
+|---|---|---|
+| 2 RFQ document optional | 6d9df1e | quotation document optional |
+| 3 WO product dropdown | 8c8cec6 | searchable product dropdown |
+| 4 Used Spareparts tab | 2b4bb3b | used spareparts availability + complete repair |
+| 5 Reservation retired | 23a658b | refactor: retire inventory reservation workflow in favor of part requests |
+
+Validation done so far (executed in-session): targeted backend tests per phase (R2 31, R4 84,
+R5 related regression 133 passed), Pint on touched files, frontend `npm run build` PASS and
+`npm run lint` (0 errors, warnings identical to baseline), seeders twice on a fresh DB, browser
+E2E for Phases 3–5. Mongo-dependent tests: NOT RUN (no MongoDB in this environment).
+
+**Remaining — Phase 6 (not started / interrupted):**
+1. Full backend regression on `optifleet_test` (`php artisan test`, serial; ParaTest not
+   installed). Run was started and stopped by the owner's pause — no result, counts as NOT RUN.
+   Mongo-dependent migrations/tests (`2026_09_08_000002/000003/100001`, `tests/Feature/Analytics`,
+   `tests/Feature/Intelligence`) must be moved aside temporarily for it and restored afterwards
+   (never committed as deletions).
+2. Frontend `npm run lint` + `npm run build` re-check at final HEAD.
+3. Final report (baseline, per-phase changes, tests, commits, risks, decisions, final status).
+4. No PR unless the owner asks.
