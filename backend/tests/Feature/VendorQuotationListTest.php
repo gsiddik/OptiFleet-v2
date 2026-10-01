@@ -42,7 +42,7 @@ class VendorQuotationListTest extends TestCase
         $this->getJson('/api/v1/app/quotations', $headers)->assertOk();
         DB::enableQueryLog();
         $this->getJson('/api/v1/app/quotations', $headers)->assertOk();
-        $queriesForOne = count(DB::getQueryLog());
+        $queriesForOne = $this->dataQueries();
         foreach (range(2, 5) as $n) {
             $this->quote($tenant, $warehouse, $product, "Vendor {$n}");
         }
@@ -50,7 +50,7 @@ class VendorQuotationListTest extends TestCase
         DB::flushQueryLog();
         $rows = $this->getJson('/api/v1/app/quotations', $headers)->assertOk()->json('data');
         $this->assertCount(5, $rows);
-        $this->assertSame($queriesForOne, count(DB::getQueryLog()), 'RFQ numbers are eager-loaded, not queried per row.');
+        $this->assertSame($queriesForOne, $this->dataQueries(), 'RFQ numbers are eager-loaded, not queried per row.');
         $this->assertTrue(collect($rows)->every(fn ($r) => str_starts_with($r['rfq']['rfq_number'], 'RFQ/')));
     }
 
@@ -73,5 +73,11 @@ class VendorQuotationListTest extends TestCase
         $this->grantModule($other, 'PROCUREMENT');
         [, $foreign] = $this->makeTenantUser($other, ['quotation.view']);
         $this->getJson('/api/v1/app/quotations', $this->authHeaders($foreign))->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    /** Queries in the log, minus Sanctum's token `last_used_at` touch (only written when the clock second changes). */
+    private function dataQueries(): int
+    {
+        return collect(DB::getQueryLog())->reject(fn ($q) => str_contains($q['query'], 'personal_access_tokens') && str_starts_with(strtolower($q['query']), 'update'))->count();
     }
 }

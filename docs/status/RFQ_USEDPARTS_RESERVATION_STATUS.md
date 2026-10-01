@@ -125,12 +125,20 @@ R5 related regression 133 passed), Pint on touched files, frontend `npm run buil
 `npm run lint` (0 errors, warnings identical to baseline), seeders twice on a fresh DB, browser
 E2E for Phases 3–5. Mongo-dependent tests: NOT RUN (no MongoDB in this environment).
 
-**Remaining — Phase 6 (not started / interrupted):**
-1. Full backend regression on `optifleet_test` (`php artisan test`, serial; ParaTest not
-   installed). Run was started and stopped by the owner's pause — no result, counts as NOT RUN.
-   Mongo-dependent migrations/tests (`2026_09_08_000002/000003/100001`, `tests/Feature/Analytics`,
-   `tests/Feature/Intelligence`) must be moved aside temporarily for it and restored afterwards
-   (never committed as deletions).
-2. Frontend `npm run lint` + `npm run build` re-check at final HEAD.
-3. Final report (baseline, per-phase changes, tests, commits, risks, decisions, final status).
-4. No PR unless the owner asks.
+## Phase 6 — Final regression (DONE)
+
+- Full backend suite (`php artisan test`, serial, PostgreSQL, Mongo-dependent migrations/tests
+  temporarily set aside and restored afterwards): **932 passed, 2 failed** (4847 assertions).
+  - `VendorQuotationListTest` (query count): timing-sensitive, not a code regression. Sanctum's
+    `last_used_at` token touch is only written when the clock second changes, so a request that
+    crosses a second boundary issues one extra UPDATE. Reproduced deterministically with a forced
+    1 s delay (13 vs 12); the test now excludes that bookkeeping query and still detects N+1
+    (passes with and without the delay).
+  - `BillingAndInvoiceTest::proration_applied_when_module_added_mid_period`: date-dependent and
+    not related to this work (billing untouched). The test assumes a 30-day billing period
+    ("15 of 30 days"); for a contract starting 2026-10-01 the period is 31 days, so 16/31 of
+    300 000 = 154 838.71 ≠ 150 000.00. It fails on main on the same date. Not fixed here (out of
+    scope); proposed fix: derive the expected amount from the actual period length.
+- Frontend at final HEAD: `npm run build` PASS; `npm run lint` 0 errors, warnings identical to
+  baseline. No typecheck/test scripts exist.
+- Mongo-dependent tests (Analytics, Intelligence): NOT RUN — no MongoDB in this environment.
