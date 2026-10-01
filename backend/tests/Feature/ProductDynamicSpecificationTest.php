@@ -296,6 +296,51 @@ class ProductDynamicSpecificationTest extends TestCase
         $this->assertNull($response->json('data.tire_spec.dual_max_load_kg_computed'));
     }
 
+    /**
+     * Tire creation goes through Product: the Product (Item Type = Tire) holds the specification;
+     * a physical tire registered for it inherits that spec and only adds its own serial / DOT code.
+     */
+    public function test_tires_are_registered_from_a_tire_product_and_inherit_its_specification(): void
+    {
+        [$tenant] = $this->setUpTenant();
+        $this->grantModule($tenant, 'TIRE');
+        [, $token] = $this->makeTenantUser($tenant, ['product.view', 'product.create', 'tire.view', 'tire.manage']);
+        $headers = $this->authHeaders($token);
+        $refs = $this->tireRefs();
+        $refs['speed'] = TireSpeedRating::query()->firstOrCreate(['tenant_id' => null, 'code' => 'L'], ['max_speed_kmh' => 120, 'is_system' => true, 'status' => 'ACTIVE']);
+
+        $productId = $this->postJson('/api/v1/app/products', $this->base('TIRE', [
+            'brand' => 'Bridgestone',
+            'spec' => [
+                'vehicle_group' => 'TRUCK_BUS', 'pattern_name' => 'R150', 'width_mm' => 295, 'aspect_ratio_percent' => 80,
+                'construction_type' => 'RADIAL', 'rim_diameter_inch' => 22.5, 'tire_type' => 'TUBE_TYPE',
+                'single_load_index_id' => $refs['single']->id, 'dual_load_index_id' => $refs['dual']->id,
+                'speed_rating_id' => $refs['speed']->id, 'ply_rating_id' => $refs['ply']->id,
+            ],
+        ]), $headers)->assertStatus(201)->json('data.id');
+
+        $tire = $this->postJson('/api/v1/app/tires', ['product_id' => $productId, 'serial_number' => 'SN-PRODUCT-001', 'manufacture_date_code' => '2326'], $headers)
+            ->assertStatus(201)->json('data');
+        $this->assertSame(
+            ['SN-PRODUCT-001', '2326', '295/80 R22.5', 'R150', 'RADIAL', 'TUBE', 295, 80, '22.5', 92, 16, 'IN_STOCK'],
+            [$tire['serial_number'], $tire['manufacture_date_code'], $tire['tire_size'], $tire['pattern'], $tire['construction_type'], $tire['tube_type'],
+                $tire['section_width_mm'], $tire['aspect_ratio'], $tire['rim_diameter_inch'], $tire['load_index'], $tire['ply_rating'], $tire['current_status']],
+        );
+        $this->assertSame('L', $tire['speed_rating']);
+
+        // A value given for the physical tire wins over the product default.
+        $this->postJson('/api/v1/app/tires', ['product_id' => $productId, 'serial_number' => 'SN-PRODUCT-002', 'pattern' => 'R150 Retread'], $headers)
+            ->assertStatus(201)->assertJsonPath('data.pattern', 'R150 Retread');
+
+        // The Tire List shows the newly registered tires.
+        $this->assertEqualsCanonicalizing(['SN-PRODUCT-001', 'SN-PRODUCT-002'], array_column($this->getJson('/api/v1/app/tires', $headers)->assertOk()->json('data'), 'serial_number'));
+
+        // Only a Tire product can have tires.
+        $sparePartId = $this->makeProduct($tenant, null, null, ['product_type' => 'SPARE_PART'])->id;
+        $this->postJson('/api/v1/app/tires', ['product_id' => $sparePartId, 'serial_number' => 'SN-NOT-A-TIRE'], $headers)
+            ->assertStatus(422)->assertJsonValidationErrors(['product_id']);
+    }
+
     public function test_tire_truck_bus_requires_dual_load_index_and_ply_rating(): void
     {
         [, $token] = $this->setUpTenant();

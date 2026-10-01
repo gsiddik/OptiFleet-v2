@@ -1404,6 +1404,7 @@ Modul `TIRE` harus di-entitle. Untuk Tire Scoring: tenant harus sudah mempublika
 #### 7. Prosedur Penggunaan
 
 **Memasang Ban (Install):**
+0. **Registrasi ban baru** (tidak lagi lewat tombol "New Tire" di Tire List): buat Product dengan Item Type **Tire** (spesifikasi ban diisi di Product — sumber kebenaran), lalu di detail Product klik **"Register Tire"** dan isi Serial Number (+ kode tanggal produksi/DOT, tanggal beli). Spesifikasi ban (ukuran, pattern, konstruksi, tipe, load/speed/ply) diambil otomatis dari Product. Ban baru langsung muncul di Tire List berstatus `IN_STOCK`.
 1. `Tire List` → pilih ban berstatus `IN_STOCK`/`RESERVED` → buka detail → **"Install"** → pilih Vehicle & Posisi Roda.
 2. **Aturan:** bila kategori kendaraan sudah memiliki Wheel Configuration, posisi harus sesuai daftar yang terdaftar; bila belum ada konfigurasi sama sekali untuk kategori tersebut, sistem bersifat permisif (menerima posisi bebas) — sengaja demikian karena belum ada tata letak baku bawaan platform.
 3. **Hasil:** status ban `INSTALLED`, tertaut ke kendaraan & posisi tersebut. Satu posisi hanya dapat diisi satu ban aktif (dijaga di level database).

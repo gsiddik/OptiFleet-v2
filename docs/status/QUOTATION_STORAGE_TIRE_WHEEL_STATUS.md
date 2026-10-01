@@ -104,3 +104,30 @@ Reproduced on this host with the real Flysystem adapter and private visibility: 
 Audited, unchanged (own `storeAs` with tenant directories on the same disk/foundation):
 vehicle documents/photos, product images / SDS, removed components, part-return and used-part
 evidence, payment submissions (via PrivateDocumentStorage). They benefit from the deployment fix.
+
+## Phase A3 — Tire creation through Product (DONE)
+
+Audit:
+- Product (Item Type = Tire) creates the product master + `product_tires` specification only.
+- A **physical tire** (serial-numbered `tires` row — what Tire List, install, rotate, retread,
+  scoring work on) could only be created by the Tire List "+ New Tire" modal (`POST /app/tires`),
+  which re-entered size/construction/load/speed/ply by hand and accepted **any** product.
+- No standalone `/tires/new` or `/tires/create` route exists (only the modal) → no dead links.
+
+Removing the button alone would leave no way to register physical tires, so only the standalone
+entry point is removed and registration moves into the Product context:
+- Tire List: "+ New Tire" and its modal removed; hint "New tires are created from Products (Item
+  Type: Tire)" → `/app/products?product_type=TIRE` (Products list honours the filter param).
+- Product Detail (Item Type Tire, `tire.manage`): **Register Tire** → serial number, manufacture
+  date code (DOT), purchase date; shows the product's spec.
+- `POST /app/tires` → `TireRegistrationService`: product must be Item Type Tire (422 otherwise);
+  spec fields not sent are taken from the product spec (size, pattern, construction, tube type,
+  width, aspect, rim, load index, speed symbol, ply rating); explicit values still win.
+- Tire model, API, list, detail and all lifecycle actions unchanged.
+
+Tests: new `ProductDynamicSpecificationTest` case (create Tire product via product API → register
+with serial only → spec inherited, IN_STOCK, override wins, listed in Tire List, non-tire product
+422); Tire + Product suites 191 passed. Browser (Alpha): no New Tire button; hint opens Products
+filtered to TIRE; Register Tire on "Truck Tire 295/80R22.5" → tire created with 295/80 R22.5 ·
+Highway Rib · RADIAL · TUBELESS, opens in Tire Detail, appears in Tire List; existing tires and
+their detail pages unchanged.
