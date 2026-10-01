@@ -200,6 +200,24 @@ class GoodsReceiptVendorInvoiceTest extends TestCase
         $this->get("/api/v1/app/vendor-invoice-references/{$invoiceId}/download", $this->authHeaders($scoped))->assertForbidden();
     }
 
+    public function test_invoice_without_a_document_is_recorded_and_can_be_reused_while_unpaid(): void
+    {
+        [, , , , $po, $headers] = $this->scenario();
+        $noDoc = $this->newInvoice('INV-NODOC');
+        unset($noDoc['invoice_document']);
+
+        $gr1 = $this->receive($po, $headers, 4, $noDoc)->assertCreated()->json('data');
+        $invoice = VendorInvoiceReference::query()->findOrFail($gr1['vendor_invoice_reference_id']);
+        $this->assertSame([null, false], [$invoice->attachment_path, $invoice->has_document]);
+        $this->assertSame([], Storage::disk('local')->allFiles());
+        $this->app['auth']->forgetGuards();
+        $this->get("/api/v1/app/vendor-invoice-references/{$invoice->id}/download", $headers)->assertNotFound();
+
+        // Unpaid → the next receipt may reuse it.
+        $gr2 = $this->receive($po, $headers, 2, ['invoice_mode' => 'EXISTING', 'vendor_invoice_reference_id' => $invoice->id])->assertCreated()->json('data');
+        $this->assertSame($invoice->id, $gr2['vendor_invoice_reference_id']);
+    }
+
     public function test_working_day_calculation(): void
     {
         $days = app(WorkingDayService::class);

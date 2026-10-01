@@ -42,10 +42,10 @@ class GoodsReceiptService
 
     /**
      * @param array<array{purchase_order_item_id:string, quantity_accepted:float, quantity_rejected?:float, quantity_damaged?:float, batch_number?:string, serial_numbers?:array}> $lines
-     * @param ?array{mode: string, vendor_invoice_reference_id?: ?string, vendor_invoice_number?: ?string, vendor_invoice_date?: ?string, amount?: ?string, terms_of_payment_days?: int|string|null, document?: ?UploadedFile} $invoice
-     *        null only for internal callers (seeders / smoke tests); the API always sends one.
+     * @param array{mode: string, vendor_invoice_reference_id?: ?string, vendor_invoice_number?: ?string, vendor_invoice_date?: ?string, amount?: ?string, terms_of_payment_days?: int|string|null, document?: ?UploadedFile} $invoice
+     *        every receipt is posted against a vendor invoice (NEW, or an unpaid EXISTING one of this PO).
      */
-    public function post(PurchaseOrder $po, Warehouse $warehouse, array $lines, ?string $userId, ?string $notes = null, ?array $invoice = null): GoodsReceipt
+    public function post(PurchaseOrder $po, Warehouse $warehouse, array $lines, ?string $userId, ?string $notes, array $invoice): GoodsReceipt
     {
         if (! in_array($po->status, ['ISSUED', 'PARTIALLY_RECEIVED'], true)) {
             throw new ProcurementException('Only an issued (or partially received) Purchase Order can receive goods.');
@@ -54,7 +54,7 @@ class GoodsReceiptService
             throw new ProcurementException('A goods receipt needs at least one line.');
         }
 
-        $document = $invoice !== null && $invoice['mode'] === 'NEW' ? ($invoice['document'] ?? null) : null;
+        $document = $invoice['mode'] === 'NEW' ? ($invoice['document'] ?? null) : null;
         $upload = [
             'file' => $document,
             'directory' => "vendor-invoices/{$po->tenant_id}",
@@ -125,10 +125,8 @@ class GoodsReceiptService
 
             $receipt->update(['status' => 'POSTED']);
 
-            if ($invoice !== null) {
-                $reference = $this->invoices->resolveForReceipt($lockedPo, $receipt, $invoice, $stored['invoice_document'], $userId);
-                $receipt->update(['vendor_invoice_reference_id' => $reference->id]);
-            }
+            $reference = $this->invoices->resolveForReceipt($lockedPo, $receipt, $invoice, $stored['invoice_document'], $userId);
+            $receipt->update(['vendor_invoice_reference_id' => $reference->id]);
 
             $stillOpen = $lockedPo->items()->get()->contains(fn (PurchaseOrderItem $i) => $i->remainingQuantity() > 0.0001);
             $lockedPo->update(['status' => $stillOpen ? 'PARTIALLY_RECEIVED' : 'RECEIVED']);

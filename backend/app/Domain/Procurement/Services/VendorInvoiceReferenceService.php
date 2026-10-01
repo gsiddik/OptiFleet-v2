@@ -14,9 +14,13 @@ use Illuminate\Database\UniqueConstraintViolationException;
  * Procurement traceability only, separate from the tenant's SaaS billing invoices.
  *
  * A receipt either records a NEW invoice (vendor = the PO's vendor, number unique per vendor,
- * PDF stored privately) or reuses an invoice already received against an earlier receipt of
- * the same Purchase Order (no duplicate row, no duplicate file — the earlier receipt's
- * attachment is never touched).
+ * optional PDF stored privately) or reuses an invoice already received against an earlier
+ * receipt of the same Purchase Order and vendor that is NOT yet paid (no duplicate row, no
+ * duplicate file — the earlier receipt's attachment is never touched). A PAID invoice is
+ * closed: it can never be attached to a later receipt.
+ *
+ * The invoice amount is not matched against the receipt value — one invoice may cover several
+ * receipts; formal PO ↔ GR ↔ invoice three-way matching is a separate future improvement.
  *
  * Due date = invoice date + terms of payment in working days (Mon–Fri), computed once and
  * stored; the NEW / DUE_SOON / LATE status is derived from it at read time (never stored).
@@ -38,14 +42,22 @@ class VendorInvoiceReferenceService
     public function resolveForReceipt(PurchaseOrder $po, GoodsReceipt $receipt, array $invoice, ?array $document, ?string $userId): VendorInvoiceReference
     {
         if ($invoice['mode'] === 'EXISTING') {
+            // Locked: a concurrent payment of the same invoice waits for (or blocks) this receipt.
             $reference = VendorInvoiceReference::query()->where('tenant_id', $po->tenant_id)->lockForUpdate()->find($invoice['vendor_invoice_reference_id'] ?? null);
-            $usedOnThisPo = $reference && GoodsReceipt::query()
-                ->where('purchase_order_id', $po->id)
-                ->where('vendor_invoice_reference_id', $reference->id)
-                ->whereKeyNot($receipt->id)
-                ->exists();
+            $usedOnThisPo = $reference
+                && $reference->purchase_order_id === $po->id
+                && $reference->partner_id === $po->partner_id
+                && GoodsReceipt::query()
+                    ->where('purchase_order_id', $po->id)
+                    ->where('vendor_invoice_reference_id', $reference->id)
+                    ->whereKeyNot($receipt->id)
+                    ->exists();
             if (! $usedOnThisPo) {
                 throw new ProcurementException('The selected invoice was not received against an earlier Goods Receipt of this Purchase Order.');
+            }
+            // A paid invoice's financial lifecycle is complete: later receipts must not extend it.
+            if ($reference->payment()->exists()) {
+                throw new ProcurementException("Invoice {$reference->vendor_invoice_number} is already paid and cannot be used for another Goods Receipt. Record a new invoice instead.");
             }
 
             return $reference;

@@ -1865,6 +1865,8 @@ export interface VendorInvoiceReferenceItem {
   attachment_original_name: string | null;
   partner?: PartnerItem;
   purchase_order?: PurchaseOrderItem;
+  /** Present once the invoice is paid — a paid invoice can no longer be reused by a receipt. */
+  payment?: { id: string; payment_date: string } | null;
 }
 
 export type VendorInvoiceStatus = 'NEW' | 'DUE_SOON' | 'LATE' | 'PAID';

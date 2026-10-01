@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Procurement\Models\GoodsReceipt;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\Procurement\Models\VendorInvoicePayment;
@@ -180,6 +181,50 @@ class VendorInvoicePaymentTest extends TestCase
         $this->pay($invoiceId, $headers, $body())->assertCreated();
         $this->app['auth']->forgetGuards();
         $this->get("/api/v1/app/vendor-invoice-references/{$invoiceId}/payment-proof", $this->authHeaders($foreign))->assertNotFound();
+        $this->assertSame(1, VendorInvoicePayment::query()->withoutGlobalScopes()->count());
+    }
+
+    public function test_a_paid_invoice_cannot_be_reused_by_a_later_receipt_but_a_new_invoice_can(): void
+    {
+        [, , $po, $headers] = $this->scenario();
+        $gr1 = $this->receive($po, $headers, 4, $this->newInvoice('INV-A', '10000000'));
+        $this->pay($gr1['vendor_invoice_reference_id'], $headers, ['payment_date' => '2026-10-20', 'amount' => '10000000', 'payment_proof' => $this->realFile('a.png', self::PNG)])->assertCreated();
+
+        // Direct API attempt to reuse the paid invoice is rejected; nothing is received.
+        $this->app['auth']->forgetGuards();
+        $this->postJson("/api/v1/app/purchase-orders/{$po->id}/goods-receipts", [
+            'lines' => [['purchase_order_item_id' => $po->items()->first()->id, 'quantity_accepted' => 3]],
+            'invoice_mode' => 'EXISTING', 'vendor_invoice_reference_id' => $gr1['vendor_invoice_reference_id'],
+        ], $headers)->assertStatus(422)->assertJsonFragment(['message' => 'Invoice INV-A is already paid and cannot be used for another Goods Receipt. Record a new invoice instead.']);
+        $this->assertSame(1, GoodsReceipt::query()->withoutGlobalScopes()->where('purchase_order_id', $po->id)->count());
+        $this->assertSame('4.0000', $po->items()->first()->quantity_received);
+        $this->assertSame('PARTIALLY_RECEIVED', $po->fresh()->status);
+
+        // The PO detail exposes the paid state, so the UI does not offer it for reuse.
+        $this->app['auth']->forgetGuards();
+        $history = $this->getJson("/api/v1/app/purchase-orders/{$po->id}", $headers)->assertOk()->json('data.goods_receipts');
+        $this->assertSame('2026-10-20', substr($history[0]['vendor_invoice_reference']['payment']['payment_date'], 0, 10));
+
+        // A new invoice for the next receipt is fine.
+        $gr2 = $this->receive($po, $headers, 3, $this->newInvoice('INV-B', '3000000'));
+        $this->assertNotSame($gr1['vendor_invoice_reference_id'], $gr2['vendor_invoice_reference_id']);
+        $statuses = collect($this->rows($headers))->mapWithKeys(fn ($r) => [$r['invoice']['vendor_invoice_number'] => $r['invoice']['status']])->all();
+        $this->assertSame(['INV-B' => 'NEW', 'INV-A' => 'PAID'], $statuses);
+    }
+
+    public function test_full_settlement_amount_must_match_exactly(): void
+    {
+        [, , $po, $headers] = $this->scenario();
+        $invoiceId = $this->receive($po, $headers, 2, $this->newInvoice('INV-10M', '10000000'))['vendor_invoice_reference_id'];
+        $body = fn (string $amount, string $date = '2026-10-20') => ['payment_date' => $date, 'amount' => $amount, 'payment_proof' => $this->realFile('p.pdf', self::PDF)];
+
+        $this->pay($invoiceId, $headers, $body('9000000'))->assertStatus(422)->assertJsonFragment(['message' => 'The payment amount must equal the invoice amount (10000000.00); partial payments are not supported.']);
+        $this->pay($invoiceId, $headers, $body('11000000'))->assertStatus(422)->assertJsonFragment(['message' => 'The payment amount must equal the invoice amount (10000000.00); partial payments are not supported.']);
+        $this->pay($invoiceId, $headers, $body('10000000', '2026-10-21'))->assertStatus(422)->assertJsonFragment(['message' => 'The payment date cannot be in the future.']);
+        $this->assertSame(0, VendorInvoicePayment::query()->withoutGlobalScopes()->count());
+
+        $this->pay($invoiceId, $headers, $body('10000000'))->assertCreated();
+        $this->pay($invoiceId, $headers, $body('10000000'))->assertStatus(422);
         $this->assertSame(1, VendorInvoicePayment::query()->withoutGlobalScopes()->count());
     }
 

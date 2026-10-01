@@ -192,3 +192,54 @@ vendor-payment permissions (the invoice page reuses `goods_receipt.view/create`)
 - Note: commit 3df6356 accidentally deleted three Mongo migrations (set aside locally for
   testing); restored byte-identical in 3de74ac. Tests now run through a wrapper that always
   restores them, and commits stage explicit paths only.
+
+## Final owner decisions (applied)
+
+1. **Payment = full settlement only.** Amount must equal the invoice amount (lower and higher
+   both rejected, BigDecimal compare); second payment on a PAID invoice rejected (row lock +
+   unique key); payment date in the future rejected. Partial payments / outstanding balances /
+   multiple payments are out of scope (not built).
+2. **Invoice PDF optional.** An invoice saves without a document; when supplied it must be a PDF
+   (request `mimes:pdf` + server content check), is stored privately and stays viewable /
+   downloadable after reload; replace / remove happen before submit in the popup.
+3. **Due Soon** default 7 calendar days before the due date, single setting
+   `procurement.invoice_due_soon_days` (env `PROCUREMENT_INVOICE_DUE_SOON_DAYS`); the frontend
+   never computes status — the backend is the source of truth.
+4. **Working days = Monday–Friday**; Saturday and Sunday skipped. Public holidays are not
+   counted (OptiFleet has no holiday/business calendar; none hardcoded).
+5. **A PAID invoice can never be reused.** `EXISTING` reuse requires: same tenant, invoice
+   `purchase_order_id` = this PO, same vendor, already used by an earlier receipt of this PO,
+   and **no payment**. Enforced in `VendorInvoiceReferenceService` under the invoice row lock
+   (serialised with payment, which locks the same row); the PO detail exposes the invoice's
+   payment, so the popup only offers an unpaid previous invoice and explains when it is paid.
+6. **No invoice ↔ GR value matching.** Validations stay: amount numeric > 0 (≤ 2 decimals),
+   vendor = PO vendor, invoice belongs to the PO, reuse lifecycle rule above.
+7. **Goods Receipt contract** (accepted): every receipt carries invoice data —
+   `invoice_mode` NEW (`vendor_invoice_number`, `vendor_invoice_date`, `amount`,
+   `terms_of_payment_days`, optional `invoice_document`) or EXISTING
+   (`vendor_invoice_reference_id`, unpaid, same PO). `GoodsReceiptService::post()` now
+   requires the invoice argument (no internal "receipt without invoice" path).
+   `POST /vendor-invoice-references` stays removed (405). Dependency check (frontend API
+   clients, services, console commands, jobs/listeners, seeders, tests, docs): the only
+   callers are the PO popup, the controller, `SupplyChainSeeder`,
+   `FunctionalTestInventorySeeder`, `Phase4ConcurrencySmokeTestCommand` (updated to send a
+   per-worker invoice) and the tests (updated); no jobs/listeners/integrations use either
+   contract; the repository has no external API client documentation (user guide + feature
+   inventory updated).
+8. **MongoDB migrations** `2026_09_08_000002/000003/100001` are in the source tree unchanged
+   (`git diff origin/main -- <paths>` empty). Tests / seed checks set them aside only for the
+   duration of a run (wrapper with an always-restore trap; nothing staged from it). History of
+   3df6356 / 3de74ac left as is (squash merge expected).
+
+**Future improvement candidates:** holiday / business calendar for due dates; formal
+PO ↔ Goods Receipt ↔ Invoice three-way financial matching; partial payments.
+
+**Verification of the final decisions:** new tests — paid invoice reuse rejected via API (no GR,
+no stock, PO status unchanged) and a new invoice accepted afterwards; payment 10,000,000 vs
+9,000,000 / 11,000,000 / future date / second payment; invoice without PDF saved and reusable
+while unpaid. Receipt history order is now deterministic (`gr_number` tiebreak for receipts
+posted in the same second). Targeted regression 107 passed; full backend regression
+**959 passed, 0 failed**; `concurrency:smoke-test-phase4` ALL RACES SAFE (its cleanup now
+removes the invoice rows it creates); seeders twice on a fresh DB — identical; frontend build
+PASS, lint 0 errors (baseline warnings). Browser: unpaid previous invoice offered for reuse →
+after payment not offered (note shown), direct API reuse 422, new invoice without PDF posted.

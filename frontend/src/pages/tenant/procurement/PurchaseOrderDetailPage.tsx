@@ -112,8 +112,11 @@ export function PurchaseOrderDetailPage() {
   const actions = (LIFECYCLE[po.status] ?? []).filter((a) => hasPermission(a.permission));
   const canReceive = ['ISSUED', 'PARTIALLY_RECEIVED'].includes(po.status) && hasPermission('goods_receipt.post');
   const receipts = po.goods_receipts ?? [];
-  // "Use the same invoice": the invoice of the most recent receipt that has one.
-  const previousInvoice = [...receipts].reverse().find((gr) => gr.vendor_invoice_reference)?.vendor_invoice_reference ?? null;
+  // "Use the same invoice": the invoice of the most recent receipt that has one — offered only
+  // while it is unpaid (the backend enforces the same rule).
+  const latestInvoice = [...receipts].reverse().find((gr) => gr.vendor_invoice_reference)?.vendor_invoice_reference ?? null;
+  const previousInvoice = latestInvoice && !latestInvoice.payment ? latestInvoice : null;
+  const paidPreviousInvoice = latestInvoice?.payment ? latestInvoice : null;
 
   return (
     <div>
@@ -211,6 +214,7 @@ export function PurchaseOrderDetailPage() {
           vendorName={po.partner?.name ?? '—'}
           lines={receiptLines}
           previousInvoice={previousInvoice}
+          paidPreviousInvoice={paidPreviousInvoice}
           canViewDocuments={hasPermission('vendor_invoice.view')}
           onClose={() => setReceiptLines(null)}
           onPosted={() => {

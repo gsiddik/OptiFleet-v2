@@ -26,6 +26,7 @@ export function RecordVendorInvoiceModal({
   vendorName,
   lines,
   previousInvoice,
+  paidPreviousInvoice,
   canViewDocuments,
   onClose,
   onPosted,
@@ -34,6 +35,8 @@ export function RecordVendorInvoiceModal({
   vendorName: string;
   lines: ReceiptLine[];
   previousInvoice: VendorInvoiceReferenceItem | null;
+  /** The previous receipt's invoice when it is already paid — shown as a note, never reusable. */
+  paidPreviousInvoice: VendorInvoiceReferenceItem | null;
   canViewDocuments: boolean;
   onClose: () => void;
   onPosted: () => void;
@@ -96,6 +99,11 @@ export function RecordVendorInvoiceModal({
         <input value={vendorName} readOnly aria-label="Vendor Name" style={readOnly} />
       </FormField>
 
+      {paidPreviousInvoice && (
+        <p style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px', margin: '4px 0 12px' }}>
+          The previous invoice {paidPreviousInvoice.vendor_invoice_number} is already paid and cannot be reused — record the new invoice for this receipt.
+        </p>
+      )}
       {previousInvoice && (
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, margin: '4px 0 12px' }}>
           <input type="checkbox" checked={useSame} onChange={(e) => setUseSame(e.target.checked)} />

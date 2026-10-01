@@ -163,7 +163,11 @@ class Phase4ConcurrencySmokeTestCommand extends Command
         $this->fork(10, function () use ($po, $warehouse, $item) {
             app(GoodsReceiptService::class)->post(PurchaseOrder::find($po->id), $warehouse, [
                 ['purchase_order_item_id' => $item->id, 'quantity_accepted' => 10],
-            ], null);
+            ], null, null, [
+                // Every receipt is posted against a vendor invoice; one per worker.
+                'mode' => 'NEW', 'vendor_invoice_number' => 'SMK4-INV-'.getmypid(), 'vendor_invoice_date' => now()->toDateString(),
+                'amount' => '100', 'terms_of_payment_days' => 30,
+            ]);
         });
 
         $item->refresh();
@@ -211,6 +215,8 @@ class Phase4ConcurrencySmokeTestCommand extends Command
             $q->select('id')->from('goods_receipts')->where('tenant_id', $this->tenant->id);
         })->delete();
         DB::table('goods_receipts')->where('tenant_id', $this->tenant->id)->delete();
+        DB::table('vendor_invoice_payments')->where('tenant_id', $this->tenant->id)->delete();
+        DB::table('vendor_invoice_references')->where('tenant_id', $this->tenant->id)->delete();
         DB::table('purchase_order_items')->whereIn('purchase_order_id', function ($q) {
             $q->select('id')->from('purchase_orders')->where('tenant_id', $this->tenant->id);
         })->delete();

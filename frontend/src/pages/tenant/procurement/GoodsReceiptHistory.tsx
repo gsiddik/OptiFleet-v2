@@ -46,7 +46,10 @@ export function GoodsReceiptHistory({ receipts, receivedComplete, canViewDocumen
                       </div>
                     ))}
                   </td>
-                  <td style={cell}>{invoice?.vendor_invoice_number ?? '—'}</td>
+                  <td style={cell}>
+                    {invoice?.vendor_invoice_number ?? '—'}
+                    {invoice?.payment && <span style={{ marginLeft: 6, fontSize: 11, color: '#15803d', fontWeight: 600 }}>PAID</span>}
+                  </td>
                   <td style={cell}>
                     {invoice?.has_document && docPath && canViewDocuments ? (
                       <span style={{ display: 'inline-flex', gap: 10 }}>

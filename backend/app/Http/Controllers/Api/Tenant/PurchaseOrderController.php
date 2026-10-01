@@ -98,10 +98,10 @@ class PurchaseOrderController extends Controller
         // vendor invoice it was received against (several receipts may share one invoice).
         return $this->ok($purchaseOrder->load([
             'partner', 'deliveryWarehouse', 'items.product', 'workflowApprovalRequest.steps',
-            'goodsReceipts' => fn ($q) => $q->orderBy('received_at')->orderBy('created_at'),
+            'goodsReceipts' => fn ($q) => $q->orderBy('received_at')->orderBy('created_at')->orderBy('gr_number'),
             'goodsReceipts.items.product:id,name,sku',
             'goodsReceipts.receiver:id,name',
-            'goodsReceipts.vendorInvoiceReference',
+            'goodsReceipts.vendorInvoiceReference.payment:id,vendor_invoice_reference_id,payment_date',
         ]));
     }
 
