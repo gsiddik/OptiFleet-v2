@@ -34,3 +34,15 @@ Status: **IN PROGRESS**. Branch `claude/magical-volta-tv4xwl`, baseline `main` @
   10 MB). No schema change. Existing documents unchanged and still served.
 - Frontend: Quotation Document field optional (no required marker, submit not blocked); rows show
   "Document available: <name>" with View / Download, or "No document uploaded".
+
+## Phase 3 — Work Order searchable Product dropdown (DONE)
+
+- New reusable `components/SearchableSelect.tsx`: combobox button showing the selection
+  ("Name — SKU"); the search input sits inside the opened list (auto-focused), server-side search
+  with 250 ms debounce (`loadOptions`), keyboard (↑/↓/Enter/Esc), click-outside close; stores the
+  option value (Product id), never the display text.
+- Issuance & Return → Reserve uses it for Product (active products, `GET /app/products?search=`,
+  50 per query); the separate "Search product" input is gone. Quantity input still follows the
+  selected product's UOM. No backend/API change.
+- Verified in the browser: search inside dropdown, filtering, mouse and keyboard selection, Part
+  Request created with the selected Product id.
