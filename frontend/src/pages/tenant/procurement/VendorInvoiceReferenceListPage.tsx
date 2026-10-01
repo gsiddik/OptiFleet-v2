@@ -6,10 +6,12 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
-import type { VendorInvoiceReceiptRow } from '../../../types';
+import { useAuth } from '../../../auth/AuthContext';
+import type { VendorInvoiceReceiptRow, VendorInvoiceSummary } from '../../../types';
 import { formatDate } from '../../../utils/date';
 import { formatMoney } from '../../../utils/money';
 import { openProtectedFile } from '../../../utils/protectedFile';
+import { PaymentProofModal, VendorInvoicePaymentModal } from './VendorInvoicePaymentModal';
 
 const FILTERS = [
   { value: '', label: 'All' },
@@ -25,7 +27,11 @@ const FILTERS = [
  * their rows with the same data and status. Status comes from the backend.
  */
 export function VendorInvoiceReferenceListPage() {
+  const { hasPermission } = useAuth();
   const [status, setStatus] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
+  const [paying, setPaying] = useState<VendorInvoiceSummary | null>(null);
+  const [proofOf, setProofOf] = useState<VendorInvoiceSummary | null>(null);
   const [search, setSearch] = useState('');
   const [debounced, setDebounced] = useState('');
   const [page, setPage] = useState(1);
@@ -39,7 +45,7 @@ export function VendorInvoiceReferenceListPage() {
     status: status || undefined,
     search: debounced || undefined,
     page,
-  });
+  }, reloadKey);
 
   const columns: Column<VendorInvoiceReceiptRow>[] = [
     {
@@ -62,8 +68,32 @@ export function VendorInvoiceReferenceListPage() {
     { key: 'amount', header: 'Amount', render: (r) => <div style={{ textAlign: 'right' }}>{formatMoney(r.invoice.amount)}</div> },
     { key: 'top', header: 'Terms of Payment (Days)', render: (r) => <div style={{ textAlign: 'right' }}>{r.invoice.terms_of_payment_days ?? '—'}</div> },
     { key: 'date', header: 'Invoice Date', render: (r) => formatDate(r.invoice.vendor_invoice_date) },
-    { key: 'due', header: 'Due Date', render: (r) => formatDate(r.invoice.due_date) },
+    {
+      key: 'due',
+      header: 'Due Date / Payment Date',
+      render: (r) =>
+        r.invoice.payment ? (
+          <span>
+            {formatDate(r.invoice.due_date)} /{' '}
+            <button type="button" className="btn-link" style={{ padding: 0 }} title="View payment proof" onClick={() => setProofOf(r.invoice)}>
+              {formatDate(r.invoice.payment.payment_date)}
+            </button>
+          </span>
+        ) : (
+          formatDate(r.invoice.due_date)
+        ),
+    },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.invoice.status} /> },
+    {
+      key: 'action',
+      header: 'Action',
+      render: (r) =>
+        r.invoice.status !== 'PAID' && hasPermission('vendor_invoice.pay') ? (
+          <button className="btn-secondary" style={{ padding: '3px 10px', fontSize: 12 }} onClick={() => setPaying(r.invoice)}>
+            Payment
+          </button>
+        ) : null,
+    },
   ];
 
   return (
@@ -103,6 +133,18 @@ export function VendorInvoiceReferenceListPage() {
       {!error && !loading && data.length === 0 && <EmptyState label="No vendor invoices recorded at Goods Receipt yet." />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
+
+      {paying && (
+        <VendorInvoicePaymentModal
+          invoice={paying}
+          onClose={() => setPaying(null)}
+          onPaid={() => {
+            setPaying(null);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
+      {proofOf && <PaymentProofModal invoice={proofOf} onClose={() => setProofOf(null)} />}
     </div>
   );
 }

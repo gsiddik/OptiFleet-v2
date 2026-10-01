@@ -6,6 +6,7 @@ use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Procurement\Models\GoodsReceipt;
 use App\Domain\Procurement\Models\VendorInvoiceReference;
+use App\Domain\Procurement\Services\VendorInvoicePaymentService;
 use App\Domain\Procurement\Support\VendorInvoiceStatus;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
@@ -41,7 +42,7 @@ class VendorInvoiceReferenceController extends Controller
         $query = GoodsReceipt::query()
             ->where('tenant_id', $tenantId)
             ->whereNotNull('vendor_invoice_reference_id')
-            ->with(['purchaseOrder:id,po_number', 'vendorInvoiceReference.partner:id,name']);
+            ->with(['purchaseOrder:id,po_number', 'vendorInvoiceReference.partner:id,name', 'vendorInvoiceReference.payment.payer:id,name']);
         $this->scope->applyWarehouseScope($query, $this->context->user(), $tenantId, 'warehouse_id');
 
         if (! empty($validated['status'])) {
@@ -78,7 +79,7 @@ class VendorInvoiceReferenceController extends Controller
     {
         $this->authorizeScope($vendorInvoiceReference);
 
-        $vendorInvoiceReference->load(['partner', 'purchaseOrder', 'goodsReceipts:id,gr_number,received_at,vendor_invoice_reference_id']);
+        $vendorInvoiceReference->load(['partner', 'purchaseOrder', 'payment.payer:id,name', 'goodsReceipts:id,gr_number,received_at,vendor_invoice_reference_id']);
 
         return $this->ok($this->present($vendorInvoiceReference, $this->today($vendorInvoiceReference->tenant_id)) + [
             'purchase_order' => $vendorInvoiceReference->purchaseOrder,
@@ -96,14 +97,35 @@ class VendorInvoiceReferenceController extends Controller
         return Storage::disk($vendorInvoiceReference->attachment_disk)->response($vendorInvoiceReference->attachment_path, $name);
     }
 
-    /** Legacy verification flag (RECEIVED / VERIFIED / DISPUTED); no longer offered in the UI. */
-    public function updateStatus(Request $request, VendorInvoiceReference $vendorInvoiceReference)
+    /**
+     * Payment (full settlement) of the invoice — never of a single receipt row. Multipart:
+     * payment_date, amount, payment_proof (JPG/JPEG/PNG/PDF).
+     */
+    public function pay(Request $request, VendorInvoiceReference $vendorInvoiceReference, VendorInvoicePaymentService $payments)
     {
         $this->authorizeScope($vendorInvoiceReference);
-        $validated = $request->validate(['status' => ['required', 'in:RECEIVED,VERIFIED,DISPUTED']]);
-        $vendorInvoiceReference->update($validated);
+        $validated = $request->validate([
+            'payment_date' => ['required', 'date'],
+            'amount' => ['required', 'regex:/^\d{1,14}(\.\d{1,2})?$/', 'numeric', 'gt:0'],
+            'payment_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
+        ], [
+            'amount.regex' => 'The amount must be a number with up to 2 decimals.',
+            'payment_proof.mimes' => 'The payment proof must be a JPG, JPEG, PNG or PDF file.',
+        ]);
 
-        return $this->ok($vendorInvoiceReference->fresh());
+        $payment = $payments->pay($vendorInvoiceReference, $validated['payment_date'], $validated['amount'], $request->file('payment_proof'), $this->context->user()->id);
+
+        return $this->ok($payment, 201);
+    }
+
+    /** The payment proof, inline (image preview / PDF viewer) under its original name. */
+    public function paymentProof(VendorInvoiceReference $vendorInvoiceReference)
+    {
+        $this->authorizeScope($vendorInvoiceReference);
+        $payment = $vendorInvoiceReference->payment;
+        abort_unless($payment !== null, 404);
+
+        return Storage::disk($payment->proof_disk)->response($payment->proof_path, $payment->proof_original_name ?: 'payment-proof', ['Content-Type' => $payment->proof_mime_type ?: 'application/octet-stream']);
     }
 
     /** Invoice fields shown on every row that uses it, with its derived status. */
@@ -119,16 +141,21 @@ class VendorInvoiceReferenceController extends Controller
             'has_document' => $invoice->has_document,
             'attachment_original_name' => $invoice->attachment_original_name,
             'partner' => $invoice->partner ? ['id' => $invoice->partner->id, 'name' => $invoice->partner->name] : null,
-            'status' => VendorInvoiceStatus::resolve($invoice->due_date, false, $today),
+            'status' => VendorInvoiceStatus::resolve($invoice->due_date, $invoice->payment !== null, $today),
+            'payment' => $invoice->payment ? [
+                'payment_date' => $invoice->payment->payment_date->toDateString(),
+                'amount' => $invoice->payment->amount,
+                'proof_original_name' => $invoice->payment->proof_original_name,
+                'proof_mime_type' => $invoice->payment->proof_mime_type,
+                'paid_by' => $invoice->payment->payer?->name,
+                'recorded_at' => $invoice->payment->created_at,
+            ] : null,
         ];
     }
 
-    /** Payments arrive with the Payment action; until then no invoice is paid. */
     private function isPaid(Builder $query, bool $paid): void
     {
-        if ($paid) {
-            $query->whereRaw('1 = 0');
-        }
+        $paid ? $query->whereHas('payment') : $query->whereDoesntHave('payment');
     }
 
     private function today(string $tenantId): CarbonImmutable

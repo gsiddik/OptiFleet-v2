@@ -1881,6 +1881,17 @@ export interface VendorInvoiceSummary {
   attachment_original_name: string | null;
   partner: { id: string; name: string } | null;
   status: VendorInvoiceStatus;
+  payment: VendorInvoicePaymentInfo | null;
+}
+
+/** The single payment that settled an invoice (shared by every receipt row of that invoice). */
+export interface VendorInvoicePaymentInfo {
+  payment_date: string;
+  amount: string;
+  proof_original_name: string | null;
+  proof_mime_type: string | null;
+  paid_by: string | null;
+  recorded_at: string | null;
 }
 
 /** One Vendor Invoice References row = one Goods Receipt and the invoice it was received against. */

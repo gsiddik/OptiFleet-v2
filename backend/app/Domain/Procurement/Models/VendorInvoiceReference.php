@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class VendorInvoiceReference extends Model
 {
@@ -48,6 +49,12 @@ class VendorInvoiceReference extends Model
     public function goodsReceipt(): BelongsTo
     {
         return $this->belongsTo(GoodsReceipt::class);
+    }
+
+    /** The payment settling this invoice (paid once, whichever receipt row it is opened from). */
+    public function payment(): HasOne
+    {
+        return $this->hasOne(VendorInvoicePayment::class);
     }
 
     /** Every Goods Receipt received against this invoice (one invoice may cover several). */

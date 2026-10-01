@@ -144,3 +144,33 @@ vendor-payment permissions (the invoice page reuses `goods_receipt.view/create`)
   (the legacy `/status` endpoint is retired with Phase 6).
 - Tests: `VendorInvoiceReferenceListTest` (4) — related regression 72 passed. Browser: 3 GR
   rows (two sharing INV-E2E-A), filters, search, View Invoice.
+
+## Phase 6 — Vendor invoice Payment (DONE)
+
+- Table `vendor_invoice_payments` (migration `2026_10_02_000003`): tenant, invoice FK
+  (restrict), **unique `vendor_invoice_reference_id`** (zero or one payment per invoice — a DB
+  guarantee against double submit / races), payment_date, amount decimal(16,4), private proof
+  (disk/path/original name/mime/size), paid_by, timestamps.
+- Payment belongs to the invoice, not to a GR row: an invoice shared by several receipts is
+  paid once and every one of its rows shows PAID (status PAID = a payment exists).
+- `POST /vendor-invoice-references/{id}/payments` (`vendor_invoice.pay`, tenant + warehouse
+  scope; multipart `payment_date`, `amount`, `payment_proof`): full settlement only (no
+  partial-payment model exists) — amount must equal the invoice amount (BigDecimal compare),
+  payment date not in the future (tenant time zone), proof JPG/JPEG/PNG/PDF ≤ 10 MB
+  (content-checked). Invoice row lock + already-paid check + unique key; proof stored with
+  the payment in one transaction and removed if it fails. Second payment → 422.
+- `GET /vendor-invoice-references/{id}/payment-proof` (`vendor_invoice.view`): inline, original
+  name and content type.
+- Permissions: `vendor_invoice.pay` granted to every role that had `goods_receipt.create`
+  (the former invoice-reference managers); `goods_receipt.create` had no remaining route and
+  is retired (permission + grants removed, like `inventory.reserve`). The legacy
+  RECEIVED/VERIFIED/DISPUTED `/status` endpoint is removed (no UI since Phase 5; stored values
+  kept). Seeders updated.
+- Frontend: Action "Payment" for NEW / DUE_SOON / LATE (with `vendor_invoice.pay`); popup with
+  read-only Vendor Name + Invoice Number, Payment Date (≤ today), Amount (text numeric,
+  pre-filled with the invoice amount), Payment Proof (choose / replace / remove);
+  "Due Date / Payment Date" shows `due / paid` once paid, the payment date opens the proof
+  (image preview, PDF open, download).
+- Tests: `VendorInvoicePaymentTest` (6) — related regression 88 passed. Browser: shared
+  INV-E2E-A paid from one row → both GR rows PAID, single payment; image proof previews and
+  downloads; PDF proof opens; second payment via API → 422.

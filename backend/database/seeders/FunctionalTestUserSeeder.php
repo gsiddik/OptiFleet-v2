@@ -90,7 +90,7 @@ class FunctionalTestUserSeeder
                 'purchase_request.view', 'purchase_request.create', 'purchase_request.submit', 'purchase_request.approve',
                 'rfq.view', 'rfq.manage', 'quotation.view', 'quotation.manage', 'quotation.select',
                 'purchase_order.view', 'purchase_order.create', 'purchase_order.approve', 'purchase_order.issue',
-                'goods_receipt.view', 'goods_receipt.create', 'goods_receipt.post', 'vendor_invoice.view',
+                'goods_receipt.view', 'goods_receipt.post', 'vendor_invoice.view', 'vendor_invoice.pay',
                 'partner.view', 'partner.manage',
                 'part_request.view', 'part_request.create',
                 'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap',

@@ -20,3 +20,6 @@ export function fileRuleError(file: File, rule: FileRule): string | null {
 
 /** Vendor invoice document: PDF only, 10 MB (validated again on the server). */
 export const INVOICE_PDF_RULE: FileRule = { extensions: ['pdf'], maxBytes: 10 * 1024 * 1024, label: 'PDF' };
+
+/** Vendor invoice payment proof: image or PDF, 10 MB (validated again on the server). */
+export const PAYMENT_PROOF_RULE: FileRule = { extensions: ['jpg', 'jpeg', 'png', 'pdf'], maxBytes: 10 * 1024 * 1024, label: 'JPG, JPEG, PNG or PDF' };

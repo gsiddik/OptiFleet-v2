@@ -5,7 +5,7 @@ import { apiClient } from '../api/client';
  * plain <a href> cannot open them. These fetch the file through the API client and hand the
  * browser a short-lived object URL.
  */
-async function fetchBlobUrl(path: string): Promise<string> {
+export async function fetchBlobUrl(path: string): Promise<string> {
   const res = await apiClient.get(path, { responseType: 'blob' });
   return URL.createObjectURL(res.data as Blob);
 }
