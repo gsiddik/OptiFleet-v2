@@ -173,3 +173,15 @@ button {
     z-index: 30;
   }
 }
+
+/* Numeric input standard: no browser stepper/spinner anywhere (NumericInput is a text input;
+   this also covers any native number input that slips in). */
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

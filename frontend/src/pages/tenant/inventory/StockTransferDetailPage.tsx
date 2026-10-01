@@ -8,6 +8,8 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { StockTransferItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatQty } from '../../../utils/quantity';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'stock_transfer.create', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'stock_transfer.create' }],
@@ -119,23 +121,20 @@ export function StockTransferDetailPage() {
         {(transfer.items ?? []).map((item) => (
           <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
             <div style={{ fontSize: 13, marginBottom: 6 }}>
-              {item.product?.name ?? item.product_id} — sent {item.quantity_sent}
-              {item.quantity_received !== null && ` / received ${item.quantity_received}`}
+              {item.product?.name ?? item.product_id} — sent {formatQty(item.quantity_sent)}
+              {item.quantity_received !== null && ` / received ${formatQty(item.quantity_received)}`}
             </div>
             {transfer.status === 'IN_TRANSIT' && hasPermission('stock_transfer.receive') && (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <input
-                  type="number" step="0.0001" placeholder="Received" value={receipts[item.id]?.received ?? ''}
+                <NumericInput step="0.0001" placeholder="Received" value={receipts[item.id]?.received ?? ''}
                   onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], received: e.target.value } }))}
                   style={{ ...inputStyle, width: 100 }}
                 />
-                <input
-                  type="number" step="0.0001" placeholder="Damaged" value={receipts[item.id]?.damaged ?? ''}
+                <NumericInput step="0.0001" placeholder="Damaged" value={receipts[item.id]?.damaged ?? ''}
                   onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], damaged: e.target.value } }))}
                   style={{ ...inputStyle, width: 100 }}
                 />
-                <input
-                  type="number" step="0.0001" placeholder="Lost" value={receipts[item.id]?.lost ?? ''}
+                <NumericInput step="0.0001" placeholder="Lost" value={receipts[item.id]?.lost ?? ''}
                   onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], lost: e.target.value } }))}
                   style={{ ...inputStyle, width: 100 }}
                 />

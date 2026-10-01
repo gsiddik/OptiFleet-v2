@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleBrandItem, VehicleItem, VehicleModelItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const STATUSES = ['', 'ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'];
 
@@ -184,7 +185,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
           <input value={vin} onChange={(e) => setVin(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Current Odometer" errors={errors.current_odometer}>
-          <input type="number" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
+          <NumericInput value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Purchase Month" errors={errors.purchase_month}>
           <select value={purchaseMonth} onChange={(e) => setPurchaseMonth(e.target.value)} style={inputStyle}>
@@ -197,7 +198,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
           </select>
         </FormField>
         <FormField label="Purchase Year" errors={errors.purchase_year}>
-          <input type="number" min="1900" max={new Date().getFullYear() + 1} value={purchaseYear} onChange={(e) => setPurchaseYear(e.target.value)} style={inputStyle} />
+          <NumericInput min="1900" max={new Date().getFullYear() + 1} value={purchaseYear} onChange={(e) => setPurchaseYear(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { extractApiError } from '../api/client';
 
 export interface UploadedImage {
   id: string;
@@ -23,6 +24,8 @@ export function ImageUploadField({
   disabled = false,
   multiple = true,
   label = 'JPG or PNG',
+  maxSizeBytes,
+  uploadLabel = 'Upload Image',
 }: {
   images: UploadedImage[];
   onUpload: (file: File) => Promise<void>;
@@ -30,6 +33,9 @@ export function ImageUploadField({
   disabled?: boolean;
   multiple?: boolean;
   label?: string;
+  /** Client-side size limit (the backend enforces its own limit regardless). */
+  maxSizeBytes?: number;
+  uploadLabel?: string;
 }) {
   const [uploading, setUploading] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
@@ -42,14 +48,19 @@ export function ImageUploadField({
     setUploading(true);
     try {
       for (const file of Array.from(files)) {
-        if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        if (!['image/jpeg', 'image/png'].includes(file.type) || !/\.(jpe?g|png)$/i.test(file.name)) {
           setError('Only JPG or PNG images are accepted.');
+          continue;
+        }
+        if (maxSizeBytes && file.size > maxSizeBytes) {
+          setError(`"${file.name}" exceeds the ${Math.round(maxSizeBytes / 1024 / 1024)} MB maximum size.`);
           continue;
         }
         await onUpload(file);
       }
-    } catch {
-      setError('Upload failed. Please try again.');
+    } catch (err) {
+      const apiError = extractApiError(err);
+      setError(apiError.errors ? (Object.values(apiError.errors).flat()[0] ?? apiError.message) : apiError.message || 'Upload failed. Please try again.');
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -86,7 +97,7 @@ export function ImageUploadField({
           <div style={{ marginBottom: 8 }}>No image selected</div>
           {!disabled && (
             <button type="button" className="btn-secondary" disabled={uploading} onClick={() => inputRef.current?.click()}>
-              {uploading ? 'Uploading…' : 'Upload Image'}
+              {uploading ? 'Uploading…' : uploadLabel}
             </button>
           )}
           <div style={{ marginTop: 6, fontSize: 11 }}>{label}</div>
@@ -146,7 +157,7 @@ export function ImageUploadField({
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png"
+        accept=".jpg,.jpeg,.png,image/jpeg,image/png"
         multiple={multiple}
         style={{ display: 'none' }}
         onChange={(e) => handleFiles(e.target.files)}

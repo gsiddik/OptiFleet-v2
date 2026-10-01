@@ -7,6 +7,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Inventory\Services\StockReservationService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturnEvidence;
@@ -143,6 +144,7 @@ class WorkOrderPartService
             if ($locked->status === 'CONSUMED' || $locked->returnableQuantity() <= 0) {
                 throw new WorkOrderException('Consumed parts cannot be returned through Issuance & Return. Use Removed Components to return components removed from the unit.');
             }
+            QuantityPolicy::assertValidForProductId($locked->product_id, $quantity);
             if ($quantity > $locked->returnableQuantity()) {
                 throw new WorkOrderException('Cannot return more than the returnable quantity ('.$locked->returnableQuantity().'): consumed quantity is never returnable.');
             }

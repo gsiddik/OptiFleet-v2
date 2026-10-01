@@ -17,8 +17,8 @@ const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQU
 /**
  * "Next Improvement Tenant Portal - Products": "Fitur Product Categories
  * hanya dikelola oleh Superadmin" — Product Category management lives
- * only in the platform portal. Tenants get a read-only list
- * (tenant/masterdata/ProductCategoriesPage.tsx).
+ * only in the platform portal. Tenants have no Product Categories menu; they
+ * only read categories through the product forms (GET /app/product-categories).
  */
 export function ProductCategoriesPage() {
   const { hasPermission } = useAuth();

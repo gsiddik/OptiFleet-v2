@@ -7,6 +7,8 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InvoiceItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 export function AccountInvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -63,8 +65,8 @@ export function AccountInvoiceDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
         <SummaryCard label="Invoice Date" value={invoice.invoice_date} />
         <SummaryCard label="Due Date" value={invoice.due_date} />
-        <SummaryCard label="Total" value={`${invoice.currency} ${Number(invoice.total).toLocaleString()}`} />
-        <SummaryCard label="Outstanding" value={`${invoice.currency} ${Number(invoice.outstanding_amount).toLocaleString()}`} />
+        <SummaryCard label="Total" value={`${invoice.currency} ${formatMoney(invoice.total)}`} />
+        <SummaryCard label="Outstanding" value={`${invoice.currency} ${formatMoney(invoice.outstanding_amount)}`} />
       </div>
 
       <div className="card">
@@ -82,16 +84,16 @@ export function AccountInvoiceDetailPage() {
             {(invoice.items ?? []).map((it) => (
               <tr key={it.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: '6px 8px' }}>{it.description}</td>
-                <td style={{ padding: '6px 8px' }}>{it.quantity}</td>
-                <td style={{ padding: '6px 8px' }}>{Number(it.unit_price).toLocaleString()}</td>
-                <td style={{ padding: '6px 8px', fontWeight: 600 }}>{Number(it.amount).toLocaleString()}</td>
+                <td style={{ padding: '6px 8px' }}>{formatQty(it.quantity)}</td>
+                <td style={{ padding: '6px 8px' }}>{formatMoney(it.unit_price)}</td>
+                <td style={{ padding: '6px 8px', fontWeight: 600 }}>{formatMoney(it.amount)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div style={{ textAlign: 'right', marginTop: 10, fontSize: 13, color: '#374151' }}>
           <strong>
-            Total: {invoice.currency} {Number(invoice.total).toLocaleString()}
+            Total: {invoice.currency} {formatMoney(invoice.total)}
           </strong>
         </div>
       </div>

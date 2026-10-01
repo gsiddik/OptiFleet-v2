@@ -6,6 +6,7 @@ use App\Domain\Inventory\Models\StockMovement;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use Illuminate\Support\Facades\DB;
 
@@ -44,6 +45,7 @@ class ReturnProcessingService
             if (! in_array($target, WorkOrderPartReturn::NEW_PART_TRANSITIONS[$locked->disposition_status] ?? [], true)) {
                 throw new WorkOrderException("This return has already been processed ({$locked->disposition_status}).");
             }
+            QuantityPolicy::assertValidForProductId($locked->product_id, $receivedQuantity, 'received_quantity');
             if ($receivedQuantity <= 0 || $receivedQuantity > (float) $locked->quantity) {
                 throw new WorkOrderException('Received quantity must be greater than zero and cannot exceed the returned quantity ('.(float) $locked->quantity.').');
             }

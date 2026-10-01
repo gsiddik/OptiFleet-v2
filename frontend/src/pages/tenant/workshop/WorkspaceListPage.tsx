@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleCategory, WorkspaceItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const TYPES = ['GENERAL_SERVICE_BAY', 'HEAVY_VEHICLE_BAY', 'INSPECTION_BAY', 'ELECTRICAL_BAY', 'TIRE_BAY', 'QC_BAY', 'WASHING_BAY', 'PARKING_LOT', 'HOLDING_AREA', 'OTHER'];
 const STATUSES = ['', 'AVAILABLE', 'RESERVED', 'OCCUPIED', 'BLOCKED', 'UNDER_MAINTENANCE', 'INACTIVE'];
@@ -181,7 +182,7 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
         </select>
       </FormField>
       <FormField label="Capacity" errors={errors.capacity}>
-        <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
+        <NumericInput min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
       </FormField>
       <VehicleCategoryChecklist categories={categories} selected={categoryIds} onToggle={toggleCategory} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
@@ -255,7 +256,7 @@ function EditWorkspaceModal({ workspace, onClose, onSaved }: { workspace: Worksp
         </select>
       </FormField>
       <FormField label="Capacity" errors={errors.capacity}>
-        <input type="number" min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
+        <NumericInput min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
       </FormField>
       <VehicleCategoryChecklist categories={categories} selected={categoryIds} onToggle={toggleCategory} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

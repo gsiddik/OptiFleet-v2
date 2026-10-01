@@ -3,6 +3,7 @@ import { apiClient, extractApiError } from '../../../../api/client';
 import { ErrorState, LoadingState } from '../../../../components/States';
 import { inputStyle } from '../../../../components/FormField';
 import { useAuth } from '../../../../auth/AuthContext';
+import { NumericInput } from '../../../../components/NumericInput';
 
 interface CapacityRow {
   resource_type: string;
@@ -68,8 +69,7 @@ export function TenantCapacityTab({ tenantId }: { tenantId: string }) {
               <td style={{ padding: '8px 4px', textTransform: 'capitalize' }}>{r.resource_type}</td>
               <td style={{ padding: '8px 4px' }}>{r.current_count}</td>
               <td style={{ padding: '8px 4px' }}>
-                <input
-                  type="number"
+                <NumericInput
                   min={0}
                   value={drafts[r.resource_type] ?? ''}
                   onChange={(e) => setDrafts({ ...drafts, [r.resource_type]: e.target.value })}

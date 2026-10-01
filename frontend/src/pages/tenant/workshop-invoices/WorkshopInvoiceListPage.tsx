@@ -7,6 +7,7 @@ import { Pagination } from '../../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import type { WorkshopInvoiceItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 /**
  * R1: lists Workshop Invoices OptiFleet has RECORDED — every row is a
@@ -29,7 +30,7 @@ export function WorkshopInvoiceListPage() {
     { key: 'partner', header: 'Workshop Partner', render: (i) => i.partner?.name ?? i.partner_id },
     { key: 'work_order', header: 'Work Order', render: (i) => i.work_order?.wo_number ?? i.work_order_id },
     { key: 'invoice_date', header: 'Invoice Date', render: (i) => i.invoice_date },
-    { key: 'total_amount', header: 'Total', render: (i) => `${i.total_amount} ${i.currency}` },
+    { key: 'total_amount', header: 'Total', render: (i) => formatMoney(i.total_amount, i.currency) },
     { key: 'memo_status', header: 'Memo Status', render: (i) => <StatusBadge status={i.memo?.status ?? '—'} /> },
     { key: 'status', header: 'Invoice Status', render: (i) => <StatusBadge status={i.status} /> },
   ];

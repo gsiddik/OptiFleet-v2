@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WorkOrderItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const STATUSES = [
   '', 'DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS',
@@ -140,11 +141,11 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <FormField label="Current KM" required errors={errors.current_odometer}>
           <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Last Odometer: {selectedVehicle?.current_odometer ?? '—'}</div>
-          <input type="number" min="0" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
+          <NumericInput min="0" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Current HM (optional)" errors={errors.engine_hour}>
           <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Last HM: {selectedVehicle?.engine_hour ?? '—'}</div>
-          <input type="number" min="0" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
+          <NumericInput min="0" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

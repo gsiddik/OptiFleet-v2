@@ -5,6 +5,7 @@ namespace App\Domain\WorkOrder\Services;
 use App\Domain\Inventory\Services\InventoryException;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequestItem;
@@ -62,6 +63,7 @@ class WorkOrderPartRequestService
                 if (! $product) {
                     throw new WorkOrderException('Each part request line must reference an active Product.');
                 }
+                QuantityPolicy::assertValid($product, $item['quantity_requested'], 'quantity_requested');
 
                 WorkOrderPartRequestItem::query()->create([
                     'tenant_id' => $workOrder->tenant_id,
@@ -93,6 +95,7 @@ class WorkOrderPartRequestService
                 $requested = (float) $item->quantity_requested;
                 $approvedQty = array_key_exists($item->id, $approvedQuantities ?? []) ? (float) $approvedQuantities[$item->id] : $requested;
 
+                QuantityPolicy::assertValidForProductId($item->product_id, $approvedQty, 'quantity_approved');
                 if ($approvedQty < 0 || $approvedQty > $requested) {
                     throw new WorkOrderException("Approved quantity for line \"{$item->description}\" must be between 0 and the requested quantity.");
                 }

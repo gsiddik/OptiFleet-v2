@@ -12,6 +12,7 @@ use App\Domain\Procurement\Models\GoodsReceiptItem;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -71,6 +72,9 @@ class GoodsReceiptService
                 $rejected = (float) ($line['quantity_rejected'] ?? 0);
                 $damaged = (float) ($line['quantity_damaged'] ?? 0);
                 $remaining = $poItem->remainingQuantity();
+                foreach (['quantity_accepted' => $accepted, 'quantity_rejected' => $rejected, 'quantity_damaged' => $damaged] as $field => $value) {
+                    QuantityPolicy::assertValidForProductId($poItem->product_id, $value, $field);
+                }
 
                 // Section 22: over-receipt beyond the PO's remaining quantity is rejected by default.
                 if (($accepted + $rejected + $damaged) > $remaining + 0.0001) {

@@ -10,6 +10,9 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ContractAmendmentItem, ContractItem } from '../../../types';
 import { ContractForm } from './ContractForm';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
+import { formatQty } from '../../../utils/quantity';
 
 const PRODUCT_TYPES = ['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY', 'SETUP_FEE', 'OTHER'];
 const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'CUSTOM'];
@@ -143,7 +146,7 @@ export function ContractDetailPage() {
                   {it.product_type} {it.product_reference ? `(${it.product_reference})` : ''}
                 </td>
                 <td style={{ padding: '6px 8px' }}>{it.description}</td>
-                <td style={{ padding: '6px 8px' }}>{it.quantity}</td>
+                <td style={{ padding: '6px 8px' }}>{formatQty(it.quantity)}</td>
                 <td style={{ padding: '6px 8px' }}>{Number(it.unit_price).toLocaleString()}</td>
                 <td style={{ padding: '6px 8px' }}>{Number(it.discount).toLocaleString()}</td>
                 <td style={{ padding: '6px 8px' }}>{Number(it.tax).toLocaleString()}</td>
@@ -342,7 +345,7 @@ function AmendmentCard({
               <tr key={it.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: '4px 6px' }}>{it.action}</td>
                 <td style={{ padding: '4px 6px' }}>{it.description}</td>
-                <td style={{ padding: '4px 6px' }}>{it.final_amount}</td>
+                <td style={{ padding: '4px 6px' }}>{formatMoney(it.final_amount)}</td>
               </tr>
             ))}
           </tbody>
@@ -453,10 +456,10 @@ function AddAmendmentItemModal({
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <FormField label="Quantity" errors={errors.quantity} required>
-          <input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
+          <NumericInput value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Unit Price" errors={errors.unit_price} required>
-          <input type="number" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={inputStyle} />
+          <NumericInput value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
@@ -530,14 +533,12 @@ function RenewModal({ contract, onClose, onCreated }: { contract: ContractItem; 
       {items.map((it, idx) => (
         <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontSize: 13 }}>{it.description}</span>
-          <input
-            type="number"
+          <NumericInput
             value={it.quantity}
             onChange={(e) => setItems((prev) => prev.map((row, i) => (i === idx ? { ...row, quantity: e.target.value } : row)))}
             style={inputStyle}
           />
-          <input
-            type="number"
+          <NumericInput
             value={it.unit_price}
             onChange={(e) => setItems((prev) => prev.map((row, i) => (i === idx ? { ...row, unit_price: e.target.value } : row)))}
             style={inputStyle}

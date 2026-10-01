@@ -53,6 +53,10 @@ class UsedPartDispositionTest extends TestCase
         $wo = app(WorkOrderService::class)->schedule($wo);
         $wo = app(WorkOrderService::class)->start($wo);
 
+        // The new part installed on the vehicle (issued + consumed) — the old one it replaced is
+        // then recorded as a Removed Component.
+        $this->consumeOnWorkOrder($wo, $product, $qty, $warehouse);
+
         // An old component taken off the vehicle (Removed Components) is the Used Sparepart
         // Processing source; receiving it into a warehouse queues it for inspection.
         $componentId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
@@ -159,14 +163,14 @@ class UsedPartDispositionTest extends TestCase
 
         // Not yet restocked — approval is still pending.
         $stockBefore = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(50.0, (float) $stockBefore->quantity_on_hand); // receiving the old component never adds available stock
+        $this->assertSame(45.0, (float) $stockBefore->quantity_on_hand); // 50 − 5 issued for the new part; receiving the old component never adds available stock
 
         $this->postJson("/api/v1/app/used-part-returns/{$return->id}/decide", [
             'decision' => 'APPROVE',
         ], $approverHeaders)->assertOk()->assertJsonPath('data.disposition_status', 'FINALIZED');
 
         $stockAfter = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(55.0, (float) $stockAfter->quantity_on_hand); // the accepted 5 become available only now that reuse is approved
+        $this->assertSame(50.0, (float) $stockAfter->quantity_on_hand); // the accepted 5 become available only now that reuse is approved
     }
 
     public function test_approved_scrap_disposition_never_touches_inventory(): void
@@ -187,7 +191,7 @@ class UsedPartDispositionTest extends TestCase
         ], $approverHeaders)->assertOk()->assertJsonPath('data.disposition_status', 'FINALIZED');
 
         $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(50.0, (float) $stock->quantity_on_hand); // unchanged by receiving and by the scrap disposition
+        $this->assertSame(47.0, (float) $stock->quantity_on_hand); // 50 − 3 issued for the new part; unchanged by receiving and by the scrap disposition
     }
 
     public function test_rejected_disposition_can_be_reproposed(): void

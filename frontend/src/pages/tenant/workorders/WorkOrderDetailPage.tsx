@@ -25,6 +25,9 @@ import type {
   WorkspaceItem,
   WorkspaceReservationItem,
 } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
+import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
@@ -1038,7 +1041,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <input placeholder="Service item" value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} style={{ ...inputStyle, width: 160 }} />
           <input placeholder="Job description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
-          <input placeholder="Est. hours" type="number" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <NumericInput placeholder="Est. hours" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <button className="btn-secondary" disabled={busy || !description} onClick={addJob}>
             Add Job
           </button>
@@ -1242,33 +1245,6 @@ const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY'; label: string 
   { value: 'UNUSED_FAULTY', label: 'New Faulty' },
 ];
 
-/** Fetches a private-disk evidence image as a blob and returns an object URL for preview. */
-function useEvidencePreviews(showUrl: (id: string) => string, ids: string[]) {
-  const [previews, setPreviews] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    const urls: string[] = [];
-    Promise.all(
-      ids
-        .filter((id) => !previews[id])
-        .map((id) =>
-          apiClient.get(showUrl(id), { responseType: 'blob' }).then((res) => {
-            const url = URL.createObjectURL(res.data);
-            urls.push(url);
-            if (!cancelled) setPreviews((prev) => ({ ...prev, [id]: url }));
-          }),
-        ),
-    ).catch(() => {});
-    return () => {
-      cancelled = true;
-      urls.forEach((u) => URL.revokeObjectURL(u));
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ids.join(',')]);
-
-  return previews;
-}
 
 const PLANNED_PART_PRODUCT_TYPES = ['SPARE_PART', 'TIRE', 'CONSUMABLE'];
 
@@ -1352,7 +1328,7 @@ function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChan
               </option>
             ))}
           </select>
-          <input type="number" step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <NumericInput step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !productId || !quantity} onClick={addEstimate}>
             Add
@@ -1382,7 +1358,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
   const [notes, setNotes] = useState('');
   const [productId, setProductId] = useState('');
   const [productSearch, setProductSearch] = useState('');
-  const [products, setProducts] = useState<{ id: string; name: string; sku?: string | null }[]>([]);
+  const [products, setProducts] = useState<{ id: string; name: string; sku?: string | null; uom?: { allows_fractional_quantity?: boolean } | null }[]>([]);
   const [partRequests, setPartRequests] = useState<PartRequestItem[]>([]);
   const [requestsKey, setRequestsKey] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -1400,7 +1376,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
   const [returnCondition, setReturnCondition] = useState<(typeof RETURN_CONDITIONS)[number]['value']>('UNUSED_NEW');
   const [returnReason, setReturnReason] = useState('');
   const [returnEvidenceIds, setReturnEvidenceIds] = useState<string[]>([]);
-  const returnEvidencePreviews = useEvidencePreviews(
+  const returnEvidencePreviews = useAuthorizedPreviews(
     (id) => `/app/work-orders/${wo.id}/planned-parts/${returningPartId}/return-evidence/${id}`,
     returnEvidenceIds,
   );
@@ -1550,7 +1526,13 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
             </span>
           </FormField>
           <FormField label="Qty" required>
-            <input aria-label="Quantity" type="number" min="0" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+            <NumericInput
+              aria-label="Quantity"
+              integer={!products.find((prod) => prod.id === productId)?.uom?.allows_fractional_quantity}
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              style={{ ...inputStyle, width: 90 }}
+            />
           </FormField>
           <FormField label="Notes">
             <input placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
@@ -1583,17 +1565,24 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
       {(wo.planned_parts ?? []).map((p) => (
         <div key={p.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-            <span>
-              <strong>{p.product?.name ?? p.description}</strong> — approved {formatQty(p.planned_quantity)} {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <StatusBadge status={p.status} />
+              <strong>{p.product?.name ?? p.description}</strong>
+              <span>— approved {formatQty(p.planned_quantity)}</span>
+              {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
             </span>
-            <StatusBadge status={p.status} />
           </div>
           {p.product_id && (
             <>
               <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
                 issued {formatQty(p.issued_quantity)} · used {formatQty(p.consumed_quantity)} · returned {formatQty(p.returned_quantity)}
                 {Number(p.reserved_quantity) > 0 && ` · reserved ${formatQty(p.reserved_quantity)}`}
-                {p.unit_cost_at_issue && ` · unit cost ${p.unit_cost_at_issue} · total cost ${p.total_cost}`}
+                {p.average_unit_cost && (
+                  <>
+                    {' · '}Unit Cost <strong>{formatMoney(p.average_unit_cost)}</strong>
+                    {' · '}Total Cost <strong title="Consumed quantity × Unit Cost — returned quantity is not charged">{formatMoney(p.consumed_total_cost)}</strong>
+                  </>
+                )}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {canConsume && outstandingIssued(p) > 0 && (
@@ -1621,9 +1610,8 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                     Available to return: <strong>{formatQty(returnableQuantity(p))}</strong> (Issued {formatQty(p.issued_quantity)} − Used {formatQty(p.consumed_quantity)} − Returned {formatQty(p.returned_quantity)})
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
-                    <input
-                      type="number"
-                      step="0.01"
+                    <NumericInput
+                      integer={!p.product?.uom?.allows_fractional_quantity}
                       placeholder="Qty"
                       value={returnQty}
                       onChange={(e) => setReturnQty(e.target.value)}
@@ -1695,11 +1683,8 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
               </label>
             </FormField>
             <FormField label="Installed Qty" required>
-              <input
-                type="number"
-                step="0.01"
-                min="0"
-                max={outstandingIssued(consumingPart)}
+              <NumericInput
+                integer={!consumingPart.product?.uom?.allows_fractional_quantity}
                 value={installedQty}
                 disabled={installAll}
                 onChange={(e) => setInstalledQty(e.target.value)}
@@ -1729,13 +1714,32 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
  * Return above (which only ever represents warehouse-issued stock, whether installed or not).
  * Presented as its own section so the two concepts are never conflated in the UI either.
  */
+function consumedRemovableProducts(wo: WorkOrderItem) {
+  const byProduct = new Map<string, { productId: string; name: string; consumed: number; remaining: number; allowsFraction: boolean }>();
+  for (const p of wo.planned_parts ?? []) {
+    if (!p.product_id || !(Number(p.consumed_quantity) > 0)) continue;
+    const entry = byProduct.get(p.product_id) ?? {
+      productId: p.product_id,
+      name: p.product?.name ?? p.description,
+      consumed: 0,
+      remaining: 0,
+      allowsFraction: Boolean(p.product?.uom?.allows_fractional_quantity),
+    };
+    entry.consumed += Number(p.consumed_quantity);
+    byProduct.set(p.product_id, entry);
+  }
+  for (const entry of byProduct.values()) {
+    const removed = (wo.removed_components ?? []).filter((rc) => rc.product_id === entry.productId).reduce((sum, rc) => sum + Number(rc.quantity), 0);
+    entry.remaining = Math.max(0, entry.consumed - removed);
+  }
+  return [...byProduct.values()];
+}
+
 function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
-  const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [warehouses, setWarehouses] = useState<{ id: string; name: string }[]>([]);
   const [productId, setProductId] = useState('');
   const [jobId, setJobId] = useState('');
-  const [replacedByPlannedPartId, setReplacedByPlannedPartId] = useState('');
   const [removeQty, setRemoveQty] = useState('1');
   const [condition, setCondition] = useState<'GOOD' | 'FAULTY'>('GOOD');
   const [notes, setNotes] = useState('');
@@ -1746,7 +1750,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
   const [returnReason, setReturnReason] = useState('');
   const [evidenceByComponent, setEvidenceByComponent] = useState<Record<string, string[]>>({});
   const allEvidenceIds = Object.values(evidenceByComponent).flat();
-  const evidencePreviews = useEvidencePreviews(
+  const evidencePreviews = useAuthorizedPreviews(
     (id) => {
       const componentId = Object.keys(evidenceByComponent).find((cid) => evidenceByComponent[cid].includes(id));
       return `/app/work-orders/${wo.id}/removed-components/${componentId}/evidence/${id}`;
@@ -1755,10 +1759,14 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
   );
 
   const canManage = PLANNING_STATUSES.includes(wo.status) && hasPermission('maintenance_job.manage');
+  // Only products CONSUMED on this Work Order can be recorded as removed (the old component the new
+  // part replaced), up to the consumed quantity. The backend enforces the same rule and derives the
+  // replacement link itself.
+  const removable = consumedRemovableProducts(wo);
+  const selectedRemovable = removable.find((r) => r.productId === productId);
   const canReturn = PART_ACTION_STATUSES.includes(wo.status) && hasPermission('inventory.return');
 
   useEffect(() => {
-    apiClient.get('/app/products', { params: { per_page: 100 } }).then((res) => setProducts(res.data.data)).catch(() => setProducts([]));
     apiClient.get('/app/warehouses', { params: { per_page: 100 } }).then((res) => setWarehouses(res.data.data)).catch(() => setWarehouses([]));
   }, []);
 
@@ -1786,14 +1794,12 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
       await apiClient.post(`/app/work-orders/${wo.id}/removed-components`, {
         product_id: productId,
         maintenance_job_id: jobId || undefined,
-        replaced_by_planned_part_id: replacedByPlannedPartId || undefined,
         quantity: removeQty,
         condition,
         notes: notes || undefined,
       });
       setProductId('');
       setJobId('');
-      setReplacedByPlannedPartId('');
       setRemoveQty('1');
       setCondition('GOOD');
       setNotes('');
@@ -1852,7 +1858,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span>
               {rc.product?.name ?? rc.product_id} — qty {formatQty(rc.quantity)} — {rc.condition}
-              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaces a planned part)</span>}
+              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaced by the consumed new part)</span>}
             </span>
             <StatusBadge status={rc.status} />
           </div>
@@ -1900,11 +1906,19 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
       ))}
       {canManage && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-          <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-            <option value="">Old/removed product…</option>
-            {products.map((prod) => (
-              <option key={prod.id} value={prod.id}>
-                {prod.name}
+          <select
+            aria-label="Old/removed product"
+            value={productId}
+            onChange={(e) => {
+              setProductId(e.target.value);
+              setRemoveQty('1');
+            }}
+            style={{ ...inputStyle, width: 220 }}
+          >
+            <option value="">{removable.length === 0 ? 'No consumed parts yet' : 'Old/removed product…'}</option>
+            {removable.map((r) => (
+              <option key={r.productId} value={r.productId} disabled={r.remaining <= 0}>
+                {r.name} (consumed {formatQty(r.consumed)}, removable {formatQty(r.remaining)})
               </option>
             ))}
           </select>
@@ -1916,21 +1930,20 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
               </option>
             ))}
           </select>
-          <select value={replacedByPlannedPartId} onChange={(e) => setReplacedByPlannedPartId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-            <option value="">Replaces which new part? (optional)</option>
-            {(wo.planned_parts ?? []).map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.description}
-              </option>
-            ))}
-          </select>
-          <input type="number" step="0.01" placeholder="Qty" value={removeQty} onChange={(e) => setRemoveQty(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <NumericInput
+            aria-label="Removed quantity"
+            integer={!selectedRemovable?.allowsFraction}
+            placeholder="Qty"
+            value={removeQty}
+            onChange={(e) => setRemoveQty(e.target.value)}
+            style={{ ...inputStyle, width: 90 }}
+          />
           <select value={condition} onChange={(e) => setCondition(e.target.value as 'GOOD' | 'FAULTY')} style={{ ...inputStyle, width: 110 }}>
             <option value="GOOD">Good</option>
             <option value="FAULTY">Faulty</option>
           </select>
           <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
-          <button className="btn-secondary" disabled={busy || !productId || !removeQty} onClick={submitRemoval}>
+          <button className="btn-secondary" disabled={busy || !productId || !(Number(removeQty) > 0) || Number(removeQty) > (selectedRemovable?.remaining ?? 0)} onClick={submitRemoval}>
             Record Removal
           </button>
         </div>
@@ -2242,7 +2255,7 @@ function RoadTestTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           <p style={{ fontSize: 13 }}>Released at {new Date(release.released_at).toLocaleString()}.</p>
         ) : wo.status === 'COMPLETED' && hasPermission('vehicle_release.perform') ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <input placeholder="Release odometer (optional)" type="number" value={releaseOdometer} onChange={(e) => setReleaseOdometer(e.target.value)} style={{ ...inputStyle, width: 180 }} />
+            <NumericInput placeholder="Release odometer (optional)" value={releaseOdometer} onChange={(e) => setReleaseOdometer(e.target.value)} style={{ ...inputStyle, width: 180 }} />
             <button className="btn-primary" disabled={busy} onClick={releaseVehicle}>
               Release Vehicle
             </button>
@@ -2355,7 +2368,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
           <div style={{ color: '#374151' }}>{s.description}</div>
           <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
             {s.reference_number && <>Ref: {s.reference_number} &nbsp;</>}
-            {s.cost && <>Cost: {s.cost} &nbsp;</>}
+            {s.cost && <>Cost: {formatMoney(s.cost)} &nbsp;</>}
             {s.priority && <>Priority: {s.priority}</>}
           </div>
           {s.condition_notes && <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>Condition: {s.condition_notes}</div>}
@@ -2443,7 +2456,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
             <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} style={{ ...inputStyle, width: 120 }} />
           </FormField>
           <FormField label="Cost (optional)">
-            <input type="number" min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+            <NumericInput min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           </FormField>
           <button className="btn-secondary" disabled={busy || !partnerId || !description} onClick={request}>
             Request
@@ -2567,16 +2580,16 @@ function RecordWorkshopInvoiceModal({
           <input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Total Amount" errors={errors.total_amount} required>
-          <input type="number" step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Subtotal (optional)" errors={errors.subtotal}>
-          <input type="number" step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Tax (optional)" errors={errors.tax_total}>
-          <input type="number" step="0.01" value={taxTotal} onChange={(e) => setTaxTotal(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={taxTotal} onChange={(e) => setTaxTotal(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Discount (optional)" errors={errors.discount_total}>
-          <input type="number" step="0.01" value={discountTotal} onChange={(e) => setDiscountTotal(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={discountTotal} onChange={(e) => setDiscountTotal(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <FormField label="Returned Maintenance Memo attachment URL (optional)" errors={errors.returned_memo_attachment_url}>

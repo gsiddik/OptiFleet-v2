@@ -7,6 +7,7 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Notification\Services\NotificationDispatchService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -26,6 +27,8 @@ class InventoryService
 
     public function reserve(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): array
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Reservation quantity must be positive.');
         }
@@ -80,6 +83,8 @@ class InventoryService
      */
     public function issue(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null, ?float $ownReserved = null): array
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Issue quantity must be positive.');
         }
@@ -116,6 +121,8 @@ class InventoryService
 
     public function returnStock(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): WarehouseStock
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Return quantity must be positive.');
         }
@@ -138,6 +145,8 @@ class InventoryService
      */
     public function recordConsumption(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): StockMovement
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Consumption quantity must be positive.');
         }
@@ -155,6 +164,8 @@ class InventoryService
      */
     public function recordSale(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): StockMovement
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Sale quantity must be positive.');
         }
@@ -172,6 +183,8 @@ class InventoryService
      */
     public function recordRemovedComponentReturn(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): StockMovement
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Return quantity must be positive.');
         }
@@ -190,6 +203,8 @@ class InventoryService
 
     public function adjust(Warehouse $warehouse, Product $product, float $quantity, string $direction, ?string $userId, string $reason, ?string $referenceType = null, ?string $referenceId = null): WarehouseStock
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Adjustment quantity must be positive.');
         }
@@ -215,6 +230,8 @@ class InventoryService
     /** Receives purchased/transferred-in stock, updating the moving weighted average cost. */
     public function receive(Warehouse $warehouse, Product $product, float $quantity, float $unitCost, string $movementType, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): WarehouseStock
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Receipt quantity must be positive.');
         }
@@ -242,6 +259,8 @@ class InventoryService
 
     public function scrap(Warehouse $warehouse, Product $product, float $quantity, ?string $userId, string $reason, ?string $referenceType = null, ?string $referenceId = null): WarehouseStock
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         if ($quantity <= 0) {
             throw new InventoryException('Scrap quantity must be positive.');
         }
@@ -261,6 +280,8 @@ class InventoryService
 
     public function transferOut(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId): WarehouseStock
     {
+        QuantityPolicy::assertValid($product, $quantity);
+
         return DB::transaction(function () use ($warehouse, $product, $quantity, $referenceType, $referenceId, $userId) {
             $stock = $this->lockOrCreateStock($warehouse, $product);
             if ($quantity > (float) $stock->quantity_on_hand) {

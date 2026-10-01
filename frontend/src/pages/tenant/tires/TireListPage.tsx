@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ProductItem, TireItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const STATUSES = ['', 'IN_STOCK', 'RESERVED', 'INSTALLED', 'IN_USE', 'REMOVED', 'UNDER_INSPECTION', 'RETREAD', 'SCRAPPED', 'LOST'];
 
@@ -160,22 +161,22 @@ function CreateTireModal({ open, onClose, onCreated }: { open: boolean; onClose:
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
         <FormField label="Section Width (mm)" errors={errors.section_width_mm}>
-          <input type="number" min="1" value={sectionWidthMm} onChange={(e) => setSectionWidthMm(e.target.value)} style={inputStyle} />
+          <NumericInput min="1" value={sectionWidthMm} onChange={(e) => setSectionWidthMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Aspect Ratio (%)" errors={errors.aspect_ratio}>
-          <input type="number" min="1" max="100" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} style={inputStyle} />
+          <NumericInput min="1" max="100" value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Rim Diameter (in)" errors={errors.rim_diameter_inch}>
-          <input type="number" min="1" step="0.1" value={rimDiameterInch} onChange={(e) => setRimDiameterInch(e.target.value)} style={inputStyle} />
+          <NumericInput min="1" step="0.1" value={rimDiameterInch} onChange={(e) => setRimDiameterInch(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Load Index" errors={errors.load_index}>
-          <input type="number" min="1" value={loadIndex} onChange={(e) => setLoadIndex(e.target.value)} style={inputStyle} />
+          <NumericInput min="1" value={loadIndex} onChange={(e) => setLoadIndex(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Speed Rating" errors={errors.speed_rating}>
           <input maxLength={2} value={speedRating} onChange={(e) => setSpeedRating(e.target.value.toUpperCase())} style={inputStyle} />
         </FormField>
         <FormField label="Ply Rating" errors={errors.ply_rating}>
-          <input type="number" min="1" value={plyRating} onChange={(e) => setPlyRating(e.target.value)} style={inputStyle} />
+          <NumericInput min="1" value={plyRating} onChange={(e) => setPlyRating(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

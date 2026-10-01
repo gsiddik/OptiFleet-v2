@@ -8,6 +8,8 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { StockOpnameItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatQty } from '../../../utils/quantity';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'counting', label: 'Start Counting', permission: 'inventory.stock_opname', primary: true }],
@@ -86,13 +88,12 @@ export function StockOpnameDetailPage() {
         {(opname.items ?? []).map((item) => (
           <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             <span>
-              {item.product?.name ?? item.product_id} — system: {item.system_quantity}
-              {item.physical_quantity !== null && ` — counted: ${item.physical_quantity}`}
+              {item.product?.name ?? item.product_id} — system: {formatQty(item.system_quantity)}
+              {item.physical_quantity !== null && ` — counted: ${formatQty(item.physical_quantity)}`}
             </span>
             {opname.status === 'COUNTING' && hasPermission('inventory.stock_opname') && (
               <div style={{ display: 'flex', gap: 6 }}>
-                <input
-                  type="number" step="0.0001" placeholder="Physical qty" value={counts[item.id] ?? ''}
+                <NumericInput step="0.0001" placeholder="Physical qty" value={counts[item.id] ?? ''}
                   onChange={(e) => setCounts((c) => ({ ...c, [item.id]: e.target.value }))}
                   style={{ ...inputStyle, width: 110 }}
                 />

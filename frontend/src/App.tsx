@@ -39,7 +39,6 @@ import { VehicleCategoriesPage } from './pages/tenant/masterdata/VehicleCategori
 import { ComponentGroupsPage } from './pages/tenant/masterdata/ComponentGroupsPage';
 import { ComponentCategoriesPage } from './pages/tenant/masterdata/ComponentCategoriesPage';
 import { ComponentSubcategoriesPage } from './pages/tenant/masterdata/ComponentSubcategoriesPage';
-import { ProductCategoriesPage } from './pages/tenant/masterdata/ProductCategoriesPage';
 import { UomsPage } from './pages/tenant/masterdata/UomsPage';
 import { VehicleBrandsPage } from './pages/tenant/masterdata/VehicleBrandsPage';
 import { VehicleModelsPage } from './pages/tenant/masterdata/VehicleModelsPage';
@@ -100,6 +99,7 @@ import { ReturnListPage } from './pages/tenant/inventory/ReturnListPage';
 import { SparePartSalePage } from './pages/tenant/inventory/SparePartSalePage';
 import { PurchaseRequestListPage } from './pages/tenant/procurement/PurchaseRequestListPage';
 import { PurchaseRequestDetailPage } from './pages/tenant/procurement/PurchaseRequestDetailPage';
+import { NewRfqPage } from './pages/tenant/procurement/NewRfqPage';
 import { RfqListPage } from './pages/tenant/procurement/RfqListPage';
 import { RfqDetailPage } from './pages/tenant/procurement/RfqDetailPage';
 import { VendorQuotationListPage } from './pages/tenant/procurement/VendorQuotationListPage';
@@ -612,14 +612,6 @@ export default function App() {
               }
             />
             <Route
-              path="master-data/product-categories"
-              element={
-                <RequirePermission permission="product.view">
-                  <ProductCategoriesPage />
-                </RequirePermission>
-              }
-            />
-            <Route
               path="master-data/uoms"
               element={
                 <RequirePermission permission="product.view">
@@ -788,6 +780,7 @@ export default function App() {
             <Route path="purchase-requests" element={<RequirePermission permission="purchase_request.view"><PurchaseRequestListPage /></RequirePermission>} />
             <Route path="purchase-requests/:id" element={<RequirePermission permission="purchase_request.view"><PurchaseRequestDetailPage /></RequirePermission>} />
             <Route path="rfqs" element={<RequirePermission permission="rfq.view"><RfqListPage /></RequirePermission>} />
+            <Route path="rfqs/new" element={<RequirePermission permission="rfq.manage"><NewRfqPage /></RequirePermission>} />
             <Route path="rfqs/:id" element={<RequirePermission permission="rfq.view"><RfqDetailPage /></RequirePermission>} />
             <Route path="quotations" element={<RequirePermission permission="quotation.view"><VendorQuotationListPage /></RequirePermission>} />
             <Route path="quotations/:quotationId/create-po" element={<RequirePermission permission="purchase_order.create"><CreatePurchaseOrderFromQuotationPage /></RequirePermission>} />

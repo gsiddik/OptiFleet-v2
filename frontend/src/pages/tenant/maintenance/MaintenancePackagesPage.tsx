@@ -13,6 +13,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ComponentGroup, MaintenancePackageItemType, VehicleItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
+import { NumericInput } from '../../../components/NumericInput';
 
 const ALL_MAINTENANCE_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECTION', 'CAMPAIGN', 'PERIODIC'];
 // Section 10: the new-package workflow only offers these two — legacy types
@@ -177,7 +178,7 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
       </FormField>
       {maintenanceType === 'PERIODIC' ? (
         <FormField label="Schedule Period" errors={errors.schedule_period} required>
-          <input type="number" min={1} value={schedulePeriod} onChange={(e) => setSchedulePeriod(e.target.value)} style={inputStyle} />
+          <NumericInput min={1} value={schedulePeriod} onChange={(e) => setSchedulePeriod(e.target.value)} style={inputStyle} />
           <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
             Gap between the schedule start and the next schedule, in {PERIOD_BY_OPTIONS.find((o) => o.value === periodBy)?.label.toLowerCase()}.
           </div>
@@ -185,7 +186,7 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
       ) : (
         <>
           <FormField label={`Primary Threshold (${PERIOD_BY_OPTIONS.find((o) => o.value === periodBy)?.label})`} errors={errors[primaryField]} required>
-            <input type="number" min={1} value={primaryThreshold} onChange={(e) => setPrimaryThreshold(e.target.value)} style={inputStyle} />
+            <NumericInput min={1} value={primaryThreshold} onChange={(e) => setPrimaryThreshold(e.target.value)} style={inputStyle} />
           </FormField>
           <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#374151' }}>Equivalent Threshold (optional)</div>
@@ -195,8 +196,7 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {equivalentFields.map((field) => (
                 <FormField key={field} label={PERIOD_BY_OPTIONS.find((o) => o.value === field)?.label ?? field}>
-                  <input
-                    type="number"
+                  <NumericInput
                     min={0}
                     value={equivalentThresholds[field] ?? ''}
                     onChange={(e) => setEquivalentThresholds((prev) => ({ ...prev, [field]: e.target.value }))}
@@ -209,7 +209,7 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
         </>
       )}
       <FormField label="Standard Labor Hours" errors={errors.standard_labor_hours}>
-        <input type="number" step="0.1" value={standardLaborHours} onChange={(e) => setStandardLaborHours(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.1" value={standardLaborHours} onChange={(e) => setStandardLaborHours(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Description" errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
@@ -559,7 +559,7 @@ function AddItemModal({
         <input value={recommendedPartReference} onChange={(e) => setRecommendedPartReference(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Standard Labor Hours" errors={errors.standard_labor_hours}>
-        <input type="number" step="0.1" value={standardLaborHours} onChange={(e) => setStandardLaborHours(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.1" value={standardLaborHours} onChange={(e) => setStandardLaborHours(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
@@ -619,22 +619,22 @@ function AddIntervalModal({ packageId, onClose, onSaved }: { packageId: string; 
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <FormField label="Odometer (km)" errors={errors.odometer_km}>
-          <input type="number" value={odometerKm} onChange={(e) => setOdometerKm(e.target.value)} style={inputStyle} />
+          <NumericInput value={odometerKm} onChange={(e) => setOdometerKm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Engine Hours" errors={errors.engine_hours}>
-          <input type="number" value={engineHours} onChange={(e) => setEngineHours(e.target.value)} style={inputStyle} />
+          <NumericInput value={engineHours} onChange={(e) => setEngineHours(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Calendar Days" errors={errors.calendar_days}>
-          <input type="number" value={calendarDays} onChange={(e) => setCalendarDays(e.target.value)} style={inputStyle} />
+          <NumericInput value={calendarDays} onChange={(e) => setCalendarDays(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Months" errors={errors.months}>
-          <input type="number" value={months} onChange={(e) => setMonths(e.target.value)} style={inputStyle} />
+          <NumericInput value={months} onChange={(e) => setMonths(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Tolerance (km)" errors={errors.tolerance_km}>
-          <input type="number" value={toleranceKm} onChange={(e) => setToleranceKm(e.target.value)} style={inputStyle} />
+          <NumericInput value={toleranceKm} onChange={(e) => setToleranceKm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Tolerance (days)" errors={errors.tolerance_days}>
-          <input type="number" value={toleranceDays} onChange={(e) => setToleranceDays(e.target.value)} style={inputStyle} />
+          <NumericInput value={toleranceDays} onChange={(e) => setToleranceDays(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

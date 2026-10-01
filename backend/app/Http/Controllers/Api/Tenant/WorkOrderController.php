@@ -99,7 +99,7 @@ class WorkOrderController extends Controller
 
         $workOrder->load([
             'vehicle', 'branch', 'workshop', 'findings', 'diagnoses', 'correctiveActions',
-            'jobs.laborLogs', 'jobs.primaryAssignment', 'plannedParts.product', 'plannedParts.warehouse', 'additionalWorks', 'mechanicAssignments.worker',
+            'jobs.laborLogs', 'jobs.primaryAssignment', 'plannedParts.product.uom', 'plannedParts.warehouse', 'additionalWorks', 'mechanicAssignments.worker',
             'roadTests', 'vehicleRelease', 'externalServices.partner', 'workspaceReservations.workspace',
             'removedComponents.product', 'removedComponents.maintenanceJob', 'removedComponents.return', 'removedComponents.evidence',
             'plannedPartEstimates.product',

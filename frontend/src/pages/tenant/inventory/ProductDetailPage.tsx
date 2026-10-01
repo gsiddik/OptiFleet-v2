@@ -12,6 +12,7 @@ import { EditProductModal } from './EditProductModal';
 import { VehicleBrandModelSelect } from './VehicleBrandModelSelect';
 import type { ProductItem, VehicleCategory } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
+import { NumericInput } from '../../../components/NumericInput';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -271,8 +272,7 @@ export function ProductDetailPage() {
           <div style={{ marginTop: 10 }}>
             <FormField label="Reference Tread Depth (mm) — required before this Tire product's tires can be scored">
               <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <input
-                  type="number" step="0.01" min="0.01" value={referenceTreadDepthMm}
+                <NumericInput step="0.01" min="0.01" value={referenceTreadDepthMm}
                   onChange={(e) => setReferenceTreadDepthMm(e.target.value)}
                   disabled={product.is_system || !hasPermission('product.update')}
                   style={{ ...inputStyle, width: 140 }}

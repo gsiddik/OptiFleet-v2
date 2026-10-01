@@ -3,6 +3,7 @@ import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/cli
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import type { BundleItem, ContractItem, PricingItem, Tenant } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const BILLING_CYCLES = [
   { value: 'MONTHLY', label: 'Monthly' },
@@ -290,10 +291,10 @@ export function ContractForm({
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Payment Terms (days)" errors={errors.payment_terms_days}>
-          <input type="number" min={0} value={paymentTermsDays} onChange={(e) => setPaymentTermsDays(e.target.value)} style={inputStyle} />
+          <NumericInput min={0} value={paymentTermsDays} onChange={(e) => setPaymentTermsDays(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Grace Period (days)" errors={errors.grace_period_days}>
-          <input type="number" min={0} value={gracePeriodDays} onChange={(e) => setGracePeriodDays(e.target.value)} style={inputStyle} />
+          <NumericInput min={0} value={gracePeriodDays} onChange={(e) => setGracePeriodDays(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 14 }}>
@@ -357,16 +358,16 @@ export function ContractForm({
             </FormField>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
               <FormField label="Qty" errors={itemErrors('quantity')} required>
-                <input type="number" min={0.01} step="0.01" value={it.quantity} onChange={(e) => updateItem(idx, { quantity: e.target.value })} style={inputStyle} />
+                <NumericInput min={0.01} step="0.01" value={it.quantity} onChange={(e) => updateItem(idx, { quantity: e.target.value })} style={inputStyle} />
               </FormField>
               <FormField label="Unit Price" errors={itemErrors('unit_price')} required>
-                <input type="number" min={0} value={it.unit_price} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} style={inputStyle} />
+                <NumericInput min={0} value={it.unit_price} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} style={inputStyle} />
               </FormField>
               <FormField label="Discount">
-                <input type="number" min={0} value={it.discount} onChange={(e) => updateItem(idx, { discount: e.target.value })} style={inputStyle} />
+                <NumericInput min={0} value={it.discount} onChange={(e) => updateItem(idx, { discount: e.target.value })} style={inputStyle} />
               </FormField>
               <FormField label="Tax %">
-                <input type="number" min={0} max={100} value={it.tax_rate_percent} onChange={(e) => updateItem(idx, { tax_rate_percent: e.target.value })} style={inputStyle} />
+                <NumericInput min={0} max={100} value={it.tax_rate_percent} onChange={(e) => updateItem(idx, { tax_rate_percent: e.target.value })} style={inputStyle} />
               </FormField>
             </div>
             {isPriced && it.priceStatus === 'loading' && <p style={{ fontSize: 12, color: '#6b7280' }}>Looking up Active Price…</p>}

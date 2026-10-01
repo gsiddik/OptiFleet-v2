@@ -9,6 +9,8 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { WorkshopInvoiceItem, WorkshopInvoiceReconciliation } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 /**
  * R1: full detail view for one recorded Workshop Invoice — reconciliation,
@@ -121,10 +123,10 @@ export function WorkshopInvoiceDetailPage() {
           <div><strong>Invoice Date:</strong> {invoice.invoice_date}</div>
           <div><strong>Due Date:</strong> {invoice.due_date ?? '—'}</div>
           <div><strong>Currency:</strong> {invoice.currency}</div>
-          <div><strong>Subtotal:</strong> {invoice.subtotal ?? '—'}</div>
-          <div><strong>Tax:</strong> {invoice.tax_total ?? '—'}</div>
-          <div><strong>Discount:</strong> {invoice.discount_total ?? '—'}</div>
-          <div style={{ gridColumn: '1 / -1', fontSize: 15 }}><strong>Total Amount: {invoice.total_amount} {invoice.currency}</strong></div>
+          <div><strong>Subtotal:</strong> {formatMoney(invoice.subtotal)}</div>
+          <div><strong>Tax:</strong> {formatMoney(invoice.tax_total)}</div>
+          <div><strong>Discount:</strong> {formatMoney(invoice.discount_total)}</div>
+          <div style={{ gridColumn: '1 / -1', fontSize: 15 }}><strong>Total Amount: {formatMoney(invoice.total_amount, invoice.currency)}</strong></div>
         </div>
         {invoice.notes && <p style={{ fontSize: 13, marginTop: 10 }}><strong>Notes:</strong> {invoice.notes}</p>}
         <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 12 }}>
@@ -173,7 +175,7 @@ export function WorkshopInvoiceDetailPage() {
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Payment</h3>
         {invoice.payment ? (
           <div style={{ fontSize: 13 }}>
-            <div><strong>Paid:</strong> {invoice.payment.paid_amount} on {invoice.payment.payment_date}</div>
+            <div><strong>Paid:</strong> {formatMoney(invoice.payment.paid_amount)} on {invoice.payment.payment_date}</div>
             <div><strong>Method:</strong> {invoice.payment.payment_method ?? '—'} | <strong>Reference:</strong> {invoice.payment.reference_number ?? '—'}</div>
             <div>
               <a href={invoice.payment.evidence_url} target="_blank" rel="noreferrer">Payment Evidence</a>
@@ -297,7 +299,7 @@ function PaymentModal({ invoiceId, payableAmount, onClose, onSaved }: { invoiceI
         <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Paid Amount" errors={errors.paid_amount} required>
-        <input type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Payment Method (optional)" errors={errors.payment_method}>
         <input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="e.g. Bank Transfer" style={inputStyle} />
@@ -348,7 +350,7 @@ function CorrectionModal({ invoice, onClose, onSaved }: { invoice: WorkshopInvoi
     <Modal open title="Request Invoice Correction" onClose={onClose}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Requires approval from a different user. The original values are preserved.</p>
       <FormField label="Corrected Total Amount">
-        <input type="number" step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Corrected Invoice Date">
         <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />

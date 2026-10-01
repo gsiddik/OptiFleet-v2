@@ -33,8 +33,7 @@ class WorkOrderRemovedComponentTest extends TestCase
         $warehouse = $this->makeWarehouse($tenant, $branch, $workshop);
         $category = $this->makeVehicleCategory();
         $vehicle = $this->makeVehicle($tenant, $branch, $category, ['default_workshop_id' => $workshop->id]);
-        $newProduct = $this->makeProduct($tenant, null, null, ['name' => 'New Brake Pad']);
-        $oldProduct = $this->makeProduct($tenant, null, null, ['name' => 'Old Brake Pad']);
+        $newProduct = $this->makeProduct($tenant, null, null, ['name' => 'Brake Pad']);
 
         app(InventoryService::class)->receive($warehouse, $newProduct, 100, 15, 'OPENING', null, null, null);
 
@@ -54,7 +53,11 @@ class WorkOrderRemovedComponentTest extends TestCase
         $partId = $this->issueThroughPartRequest($wo, $newProduct, 4, $warehouse)->id;
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$partId}/consume", ['quantity' => 4], $headers)->assertOk();
 
-        return [$tenant, $warehouse, $newProduct, $oldProduct, $wo, $partId, $headers];
+        // Business rule: the removed (old) component is the same Product as the consumed new part
+        // it was replaced by — only consumed products of this Work Order can be recorded as removed.
+        $removedProduct = $newProduct;
+
+        return [$tenant, $warehouse, $newProduct, $removedProduct, $wo, $partId, $headers];
     }
 
     public function test_removing_and_returning_an_old_component_does_not_reverse_the_new_parts_consumption(): void
@@ -62,9 +65,8 @@ class WorkOrderRemovedComponentTest extends TestCase
         [, $warehouse, $newProduct, $oldProduct, $wo, $newPartId, $headers] = $this->setUpWorkOrder();
 
         $removedId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
-            'replaced_by_planned_part_id' => $newPartId, 'product_id' => $oldProduct->id,
-            'quantity' => 4, 'condition' => 'GOOD', 'notes' => 'Worn but intact',
-        ], $headers)->assertStatus(201)->json('data.id');
+            'product_id' => $oldProduct->id, 'quantity' => 4, 'condition' => 'GOOD', 'notes' => 'Worn but intact',
+        ], $headers)->assertStatus(201)->assertJsonPath('data.replaced_by_planned_part_id', $newPartId)->json('data.id');
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components/{$removedId}/return", [
             'warehouse_id' => $warehouse->id,
@@ -76,18 +78,12 @@ class WorkOrderRemovedComponentTest extends TestCase
         $this->assertSame('CONSUMED', $newPart->status);
 
         // The removed component's return writes exactly one zero-balance-effect ledger entry —
-        // it must never silently become normal available stock (the same zero-effect posture
-        // CONSUME/SALE already use: a warehouse_stocks row is the ledger anchor, but
-        // quantity_on_hand itself is never incremented).
-        $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $oldProduct->id)->first();
-        $this->assertSame(0.0, (float) ($stock->quantity_on_hand ?? 0), 'The old/removed product must never gain available stock from this return.');
-
+        // the old component never silently becomes available stock, even though it is the same
+        // Product as the new part (quantity_on_hand is never incremented).
         $movement = StockMovement::query()->where('product_id', $oldProduct->id)->where('movement_type', 'REMOVED_COMPONENT_RETURN')->first();
         $this->assertNotNull($movement);
         $this->assertSame('4.0000', $movement->quantity);
 
-        // The NEW product's own stock (from the earlier issue) is unaffected by the old
-        // component's return — they are entirely separate products/movements.
         $newStock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $newProduct->id)->first();
         $this->assertSame(96.0, (float) $newStock->quantity_on_hand); // 100 - 4 issued, never restored
     }
@@ -97,36 +93,59 @@ class WorkOrderRemovedComponentTest extends TestCase
         [, $warehouse, , $oldProduct, $wo, $newPartId, $headers] = $this->setUpWorkOrder();
 
         $removedId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
-            'replaced_by_planned_part_id' => $newPartId, 'product_id' => $oldProduct->id,
-            'quantity' => 4, 'condition' => 'GOOD',
+            'product_id' => $oldProduct->id, 'quantity' => 4, 'condition' => 'GOOD',
         ], $headers)->assertStatus(201)->json('data.id');
 
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components/{$removedId}/return", ['warehouse_id' => $warehouse->id], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components/{$removedId}/return", ['warehouse_id' => $warehouse->id], $headers)->assertStatus(422);
     }
 
-    public function test_removed_component_old_product_can_differ_from_the_new_installed_product(): void
+    public function test_removed_product_must_be_a_part_consumed_on_this_work_order(): void
     {
-        [, , $newProduct, $oldProduct, $wo, $newPartId, $headers] = $this->setUpWorkOrder();
-        $this->assertNotSame($newProduct->id, $oldProduct->id);
+        [$tenant, $warehouse, $consumedProduct, , $wo, $consumedPartId, $headers] = $this->setUpWorkOrder();
+        $unrelated = $this->makeProduct($tenant, null, null, ['name' => 'Air Filter']);
+        $issuedOnly = $this->makeProduct($tenant, null, null, ['name' => 'Wiper Blade']);
+        app(InventoryService::class)->receive($warehouse, $issuedOnly, 10, 5, 'OPENING', null, null, null);
+        $this->issueThroughPartRequest($wo, $issuedOnly, 2, $warehouse); // issued, never consumed
 
-        $response = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
-            'replaced_by_planned_part_id' => $newPartId, 'product_id' => $oldProduct->id,
-            'quantity' => 1, 'condition' => 'FAULTY',
-        ], $headers)->assertStatus(201);
+        foreach ([$unrelated, $issuedOnly] as $product) {
+            $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
+                'product_id' => $product->id, 'quantity' => 1, 'condition' => 'FAULTY',
+            ], $headers)->assertStatus(422)->assertJsonPath('message', 'Only a part consumed on this Work Order can be recorded as a removed component.');
+        }
 
-        $this->assertSame($oldProduct->id, $response->json('data.product_id'));
-        $this->assertNotSame($newProduct->id, $response->json('data.product_id'));
+        // A product consumed on ANOTHER Work Order is not eligible on this one.
+        $branch = $this->makeBranch($tenant);
+        $workshop = $this->makeWorkshop($tenant, $branch);
+        $service = app(WorkOrderService::class);
+        $otherWo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+            $service->create($this->makeVehicle($tenant, $branch, $this->makeVehicleCategory(), ['default_workshop_id' => $workshop->id]), ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
+        )))));
+        $this->postJson("/api/v1/app/work-orders/{$otherWo->id}/removed-components", [
+            'product_id' => $consumedProduct->id, 'quantity' => 1, 'condition' => 'FAULTY',
+        ], $headers)->assertStatus(422);
+
+        // The consumed product is eligible, and the replacement link is derived, not chosen.
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
+            'product_id' => $consumedProduct->id, 'quantity' => 1, 'condition' => 'FAULTY',
+            'replaced_by_planned_part_id' => $this->issueThroughPartRequest($wo, $issuedOnly, 1, $warehouse)->id,
+        ], $headers)->assertStatus(201)->assertJsonPath('data.replaced_by_planned_part_id', $consumedPartId);
     }
 
-    public function test_removed_component_without_a_replacement_part_is_allowed(): void
+    public function test_removed_quantity_is_capped_at_the_consumed_quantity(): void
     {
-        [, , , $oldProduct, $wo, , $headers] = $this->setUpWorkOrder();
+        [, , $product, , $wo, , $headers] = $this->setUpWorkOrder(); // 4 consumed
 
-        // A straight removal/decommission with no like-for-like replacement.
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
-            'product_id' => $oldProduct->id, 'quantity' => 1, 'condition' => 'FAULTY',
-        ], $headers)->assertStatus(201)->assertJsonPath('data.replaced_by_planned_part_id', null);
+        $post = fn (float $qty) => $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
+            'product_id' => $product->id, 'quantity' => $qty, 'condition' => 'GOOD',
+        ], $headers);
+
+        $post(5)->assertStatus(422)->assertJsonPath('message', 'Removed quantity cannot exceed the consumed quantity of this product on the Work Order (remaining: 4).');
+        $post(3)->assertStatus(201);
+        $post(2)->assertStatus(422);
+        $post(1)->assertStatus(201);
+        $post(1)->assertStatus(422);
+        $post(0.5)->assertStatus(422)->assertJsonValidationErrors('quantity'); // counted item: whole numbers only
     }
 
     public function test_removed_component_requires_a_valid_condition(): void

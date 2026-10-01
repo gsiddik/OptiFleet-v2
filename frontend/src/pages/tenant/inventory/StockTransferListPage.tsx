@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ProductItem, StockTransferItem, Warehouse } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const STATUSES = ['', 'DRAFT', 'REQUESTED', 'APPROVED', 'PREPARED', 'DISPATCHED', 'IN_TRANSIT', 'RECEIVED', 'COMPLETED', 'REJECTED', 'CANCELLED'];
 
@@ -132,7 +133,7 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
         </select>
       </FormField>
       <FormField label="Quantity" errors={errors['items.0.quantity']} required>
-        <input type="number" step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
+        <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>

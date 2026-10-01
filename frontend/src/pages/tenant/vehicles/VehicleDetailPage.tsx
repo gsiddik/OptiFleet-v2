@@ -9,6 +9,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'History'] as const;
 type Tab = (typeof TABS)[number];
@@ -322,7 +323,7 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
           </select>
         </FormField>
         <FormField label="Year" errors={errors.year}>
-          <input type="number" value={year} onChange={(e) => setYear(e.target.value)} style={inputStyle} />
+          <NumericInput value={year} onChange={(e) => setYear(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Fuel Type" errors={errors.fuel_type}>
           <input value={fuelType} onChange={(e) => setFuelType(e.target.value)} style={inputStyle} />
@@ -331,46 +332,46 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
           <input value={transmissionType} onChange={(e) => setTransmissionType(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Engine Hour" errors={errors.engine_hour}>
-          <input type="number" step="0.01" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Color" errors={errors.color}>
           <input value={color} onChange={(e) => setColor(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Doors" errors={errors.doors}>
-          <input type="number" value={doors} onChange={(e) => setDoors(e.target.value)} style={inputStyle} />
+          <NumericInput value={doors} onChange={(e) => setDoors(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Seats" errors={errors.seats}>
-          <input type="number" value={seats} onChange={(e) => setSeats(e.target.value)} style={inputStyle} />
+          <NumericInput value={seats} onChange={(e) => setSeats(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Length (mm)" errors={errors.length_mm}>
-          <input type="number" value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
+          <NumericInput value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Width (mm)" errors={errors.width_mm}>
-          <input type="number" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
+          <NumericInput value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Height (mm)" errors={errors.height_mm}>
-          <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
+          <NumericInput value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Fuel Tank (L)" errors={errors.fuel_tank_capacity_liters}>
-          <input type="number" value={fuelTank} onChange={(e) => setFuelTank(e.target.value)} style={inputStyle} />
+          <NumericInput value={fuelTank} onChange={(e) => setFuelTank(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Engine Capacity (cc)" errors={errors.engine_capacity_cc}>
-          <input type="number" value={engineCapacity} onChange={(e) => setEngineCapacity(e.target.value)} style={inputStyle} />
+          <NumericInput value={engineCapacity} onChange={(e) => setEngineCapacity(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Suspension" errors={errors.suspension_type}>
           <input value={suspensionType} onChange={(e) => setSuspensionType(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Axles" errors={errors.axle_count}>
-          <input type="number" value={axleCount} onChange={(e) => setAxleCount(e.target.value)} style={inputStyle} />
+          <NumericInput value={axleCount} onChange={(e) => setAxleCount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Wheels" errors={errors.wheel_count}>
-          <input type="number" value={wheelCount} onChange={(e) => setWheelCount(e.target.value)} style={inputStyle} />
+          <NumericInput value={wheelCount} onChange={(e) => setWheelCount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Empty Weight (kg)" errors={errors.empty_weight_kg}>
-          <input type="number" value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} style={inputStyle} />
+          <NumericInput value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Load Weight (kg)" errors={errors.load_weight_kg}>
-          <input type="number" value={loadWeight} onChange={(e) => setLoadWeight(e.target.value)} style={inputStyle} />
+          <NumericInput value={loadWeight} onChange={(e) => setLoadWeight(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

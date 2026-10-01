@@ -56,6 +56,10 @@ class SparePartSaleTest extends TestCase
         $wo = app(WorkOrderService::class)->schedule($wo);
         $wo = app(WorkOrderService::class)->start($wo);
 
+        // The new part installed on the vehicle (issued + consumed) — the old one it replaced is
+        // then recorded as a Removed Component.
+        $this->consumeOnWorkOrder($wo, $product, $qty, $warehouse);
+
         // A used component taken off the vehicle, received into the warehouse, then processed.
         $componentId = $this->postJson("/api/v1/app/work-orders/{$wo->id}/removed-components", [
             'product_id' => $product->id, 'quantity' => $qty, 'condition' => 'GOOD',
@@ -209,7 +213,7 @@ class SparePartSaleTest extends TestCase
         $this->assertSame('SALE', $movement->movement_type);
 
         $stock = WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->first();
-        $this->assertSame(50.0, (float) $stock->quantity_on_hand); // the used component never entered available stock; the sale does not touch it
+        $this->assertSame(45.0, (float) $stock->quantity_on_hand); // 50 − 5 issued for the new part; the used component never entered available stock and the sale does not touch it
     }
 
     public function test_scrap_route_requires_permission_and_decrements_on_hand_stock(): void

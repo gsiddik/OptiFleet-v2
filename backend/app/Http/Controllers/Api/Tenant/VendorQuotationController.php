@@ -10,6 +10,7 @@ use App\Domain\Procurement\Services\RfqService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class VendorQuotationController extends Controller
 {
@@ -22,7 +23,13 @@ class VendorQuotationController extends Controller
     public function index(Request $request)
     {
         $tenantId = $this->context->tenantId();
-        $query = VendorQuotation::query()->where('tenant_id', $tenantId)->with(['partner', 'rfq', 'items.product']);
+        // RFQ number shown in the list comes from one eager-loaded query (no N+1), and the list only
+        // shows quotations of RFQs whose warehouse is inside the user's data scope.
+        $query = VendorQuotation::query()->where('tenant_id', $tenantId)
+            ->with(['partner', 'rfq:id,rfq_number,warehouse_id,status', 'items.product']);
+        $allowedRfqs = Rfq::query()->where('tenant_id', $tenantId)->select('id');
+        $this->scope->applyWarehouseScope($allowedRfqs, $this->context->user(), $tenantId, 'warehouse_id');
+        $query->whereIn('rfq_id', $allowedRfqs);
 
         if ($rfqId = $request->string('rfq_id')->value()) {
             $query->where('rfq_id', $rfqId);
@@ -53,12 +60,17 @@ class VendorQuotationController extends Controller
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items.*.tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            // Type is checked from the file content by QuotationAttachmentService (PDF/DOC/DOCX).
+            'attachment' => ['required', 'file', 'max:10240'],
+        ], [
+            'attachment.required' => 'Upload the vendor\'s quotation document (PDF, DOC or DOCX) before recording the quotation.',
+            'attachment.max' => 'The quotation document may not be larger than 10 MB.',
         ]);
 
         $partner = Partner::query()->findOrFail($validated['partner_id']);
         abort_unless($partner->tenant_id === $tenantId, 404);
 
-        $quotation = $this->rfqs->submitQuotation($rfq, $partner, $validated, $validated['items']);
+        $quotation = $this->rfqs->submitQuotation($rfq, $partner, $validated, $validated['items'], $request->file('attachment'), $this->context->user()->id);
 
         return $this->ok($quotation, 201);
     }
@@ -68,6 +80,21 @@ class VendorQuotationController extends Controller
         $this->authorizeScopeQuotation($quotation);
 
         return $this->ok($quotation->load(['partner', 'rfq', 'items.product']));
+    }
+
+    /** View (inline) or download the vendor's quotation document — authorized, never a public URL. */
+    public function attachment(Request $request, VendorQuotation $quotation)
+    {
+        $this->authorizeScopeQuotation($quotation);
+        abort_unless($quotation->attachment_path !== null, 404, 'This quotation has no document attached.');
+
+        $disposition = $request->boolean('download') ? 'attachment' : 'inline';
+        $filename = str_replace(['"', "\r", "\n"], '', $quotation->attachment_original_filename ?? 'quotation');
+
+        return Storage::disk($quotation->attachment_disk)->response($quotation->attachment_path, $filename, [
+            'Content-Type' => $quotation->attachment_mime_type,
+            'X-Content-Type-Options' => 'nosniff',
+        ], $disposition);
     }
 
     public function select(VendorQuotation $quotation)

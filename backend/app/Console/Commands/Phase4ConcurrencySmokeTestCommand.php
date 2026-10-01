@@ -185,13 +185,13 @@ class Phase4ConcurrencySmokeTestCommand extends Command
         $rfq = $rfqService->inviteVendors($rfq, [$partner->id]);
         $quotation = $rfqService->submitQuotation($rfq, $partner, [], [
             ['product_id' => $product->id, 'quantity' => 5, 'unit_price' => 20],
-        ]);
+        ], \Database\Seeders\DemoQuotationDocument::make('Smoke Vendor 2'), null);
         $quotation = $rfqService->selectVendor($quotation);
 
         $this->info("\n[4/4] Racing 10 workers each converting the SAME selected quotation to a Purchase Order");
         $poService = app(PurchaseOrderService::class);
         $this->fork(10, function () use ($poService, $quotation, $warehouse) {
-            $poService->createFromQuotation($quotation, $warehouse, [], null);
+            $poService->createFromQuotation($quotation, $warehouse, ['order_date' => now()->toDateString()], null);
         });
 
         $count = PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count();

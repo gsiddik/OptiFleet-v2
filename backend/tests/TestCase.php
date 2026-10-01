@@ -453,6 +453,17 @@ abstract class TestCase extends BaseTestCase
         return \App\Domain\WorkOrder\Models\WorkOrderPlannedPart::query()->findOrFail($request->items->first()->planned_part_id);
     }
 
+    /**
+     * Issue and consume a part on a Work Order (the new part installed on the vehicle) — the
+     * precondition for recording the old one under Removed Components.
+     */
+    protected function consumeOnWorkOrder(\App\Domain\WorkOrder\Models\WorkOrder $workOrder, \App\Domain\ProductMaster\Models\Product $product, float $quantity, \App\Domain\Organization\Models\Warehouse $warehouse): \App\Domain\WorkOrder\Models\WorkOrderPlannedPart
+    {
+        $part = $this->issueThroughPartRequest($workOrder, $product, $quantity, $warehouse);
+
+        return app(\App\Domain\WorkOrder\Services\WorkOrderPartService::class)->consume($part, $quantity);
+    }
+
     protected function makePartner(Tenant $tenant, array $overrides = []): \App\Domain\Partner\Models\Partner
     {
         return \App\Domain\Partner\Models\Partner::query()->create(array_merge([

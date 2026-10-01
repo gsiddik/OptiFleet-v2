@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WarrantyItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 export function WarrantyDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -82,7 +83,7 @@ export function WarrantyDetailPage() {
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Eligibility Check</h3>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
           <FormField label="Current Odometer (optional)">
-            <input type="number" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+            <NumericInput value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={{ ...inputStyle, width: 160 }} />
           </FormField>
           <button className="btn-secondary" disabled={busy} onClick={checkEligibility} style={{ marginBottom: 14 }}>
             Check Eligibility

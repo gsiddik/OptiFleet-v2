@@ -545,6 +545,10 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/used-part-returns', [UsedPartDispositionController::class, 'index'])->middleware('permission:used_part.view');
             Route::get('/used-part-returns/{usedPartReturn}', [UsedPartDispositionController::class, 'show'])->middleware('permission:used_part.view');
             Route::post('/used-part-returns/{usedPartReturn}/receive', [UsedPartDispositionController::class, 'receive'])->middleware('permission:used_part.inspect');
+            Route::get('/used-part-returns/{usedPartReturn}/evidence', [UsedPartDispositionController::class, 'listEvidence'])->middleware('permission:used_part.view');
+            Route::post('/used-part-returns/{usedPartReturn}/evidence', [UsedPartDispositionController::class, 'uploadEvidence'])->middleware('permission:used_part.inspect');
+            Route::get('/used-part-returns/{usedPartReturn}/evidence/{evidence}', [UsedPartDispositionController::class, 'showEvidence'])->middleware('permission:used_part.view');
+            Route::delete('/used-part-returns/{usedPartReturn}/evidence/{evidence}', [UsedPartDispositionController::class, 'destroyEvidence'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/inspect', [UsedPartDispositionController::class, 'inspect'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/propose-disposition', [UsedPartDispositionController::class, 'proposeDisposition'])->middleware('permission:used_part.dispose');
             Route::post('/used-part-returns/{usedPartReturn}/decide', [UsedPartDispositionController::class, 'decide'])->middleware('permission:used_part.approve');
@@ -621,6 +625,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/rfqs', [RfqController::class, 'store'])->middleware('permission:rfq.manage');
             Route::get('/rfqs/{rfq}', [RfqController::class, 'show'])->middleware('permission:rfq.view');
             Route::post('/rfqs/{rfq}/vendors', [RfqController::class, 'inviteVendors'])->middleware('permission:rfq.manage');
+            Route::get('/rfqs/{rfq}/vendors/{partner}/print', [RfqController::class, 'printForVendor'])->middleware('permission:rfq.view');
             Route::post('/rfqs/{rfq}/close', [RfqController::class, 'close'])->middleware('permission:rfq.manage');
             Route::post('/rfqs/{rfq}/cancel', [RfqController::class, 'cancel'])->middleware('permission:rfq.manage');
             Route::get('/rfqs/{rfq}/compare', [RfqController::class, 'compare'])->middleware('permission:quotation.view');
@@ -628,6 +633,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
             Route::get('/quotations', [VendorQuotationController::class, 'index'])->middleware('permission:quotation.view');
             Route::get('/quotations/{quotation}', [VendorQuotationController::class, 'show'])->middleware('permission:quotation.view');
+            Route::get('/quotations/{quotation}/attachment', [VendorQuotationController::class, 'attachment'])->middleware('permission:quotation.view');
             Route::post('/quotations/{quotation}/select', [VendorQuotationController::class, 'select'])->middleware('permission:quotation.select');
             Route::post('/quotations/{quotation}/purchase-order', [PurchaseOrderController::class, 'storeFromQuotation'])->middleware('permission:purchase_order.create');
 

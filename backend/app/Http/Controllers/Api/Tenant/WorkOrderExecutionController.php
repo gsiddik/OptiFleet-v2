@@ -216,7 +216,8 @@ class WorkOrderExecutionController extends Controller
         $this->authorizeScope($workOrder);
         $validated = $request->validate([
             'maintenance_job_id' => ['nullable', 'uuid', Rule::exists('maintenance_jobs', 'id')->where('work_order_id', $workOrder->id)],
-            'replaced_by_planned_part_id' => ['nullable', 'uuid', Rule::exists('work_order_planned_parts', 'id')->where('work_order_id', $workOrder->id)],
+            // The replacement (new) part is derived by the service from the consumed line of the
+            // same product; a client-supplied replaced_by_planned_part_id is ignored.
             'product_id' => ['required', 'uuid', Rule::exists('products', 'id')->where(fn ($q) => $q->where('tenant_id', $this->context->tenantId())->orWhereNull('tenant_id'))],
             'quantity' => ['required', 'numeric', 'gt:0'],
             'condition' => ['required', 'string', 'in:'.implode(',', WorkOrderRemovedComponent::CONDITIONS)],

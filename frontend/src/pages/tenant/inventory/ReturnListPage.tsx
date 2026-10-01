@@ -12,6 +12,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import { formatQty } from '../../../utils/quantity';
 import type { WorkOrderPartReturnItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const STATUSES = [
   { value: 'PENDING_PROCESSING', label: 'Pending Processing' },
@@ -214,7 +215,7 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
                 </select>
               </FormField>
               <FormField label="Received Quantity" required>
-                <input type="number" min="0" step="any" max={Number(item.quantity)} value={receivedQty} onChange={(e) => setReceivedQty(e.target.value)} style={inputStyle} />
+                <NumericInput min="0" step="any" max={Number(item.quantity)} value={receivedQty} onChange={(e) => setReceivedQty(e.target.value)} style={inputStyle} />
               </FormField>
             </div>
             <FormField label="Notes">

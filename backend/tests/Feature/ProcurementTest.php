@@ -10,11 +10,19 @@ use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Procurement\Models\VendorQuotation;
 use App\Domain\Workflow\Services\WorkflowDefinitionService;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class ProcurementTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Storage::fake('local'); // quotation documents never touch the real private disk in tests
+    }
+
     private function setUpScenario(): array
     {
         $tenant = $this->makeTenant(['code' => 'PROC-'.Str::random(4)]);
@@ -146,12 +154,14 @@ class ProcurementTest extends TestCase
 
         $quoteA = $this->postJson("/api/v1/app/rfqs/{$rfq->id}/quotations", [
             'partner_id' => $vendorA->id,
+            'attachment' => $this->quotationDocument(),
             'items' => [['product_id' => $product->id, 'quantity' => 10, 'unit_price' => 12, 'discount_percent' => 0, 'tax_percent' => 10]],
         ], $headers)->assertStatus(201);
         $this->assertSame(132.0, (float) $quoteA->json('data.total'));
 
         $quoteB = $this->postJson("/api/v1/app/rfqs/{$rfq->id}/quotations", [
             'partner_id' => $vendorB->id,
+            'attachment' => $this->quotationDocument(),
             'items' => [['product_id' => $product->id, 'quantity' => 10, 'unit_price' => 10, 'discount_percent' => 0, 'tax_percent' => 10]],
         ], $headers)->assertStatus(201);
         $this->assertSame(110.0, (float) $quoteB->json('data.total'));
@@ -173,15 +183,23 @@ class ProcurementTest extends TestCase
             'items' => [['product_id' => $product->id, 'quantity' => 5]],
         ], $headers)->assertStatus(201);
         $rfq = Rfq::query()->findOrFail($create->json('data.id'));
+        $this->postJson("/api/v1/app/rfqs/{$rfq->id}/vendors", ['partner_ids' => [$vendor->id]], $headers)->assertOk();
 
         $response = $this->postJson("/api/v1/app/rfqs/{$rfq->id}/quotations", [
             'partner_id' => $vendor->id,
+            'attachment' => $this->quotationDocument(),
             'total' => 1, // client-provided total must be ignored
             'items' => [['product_id' => $product->id, 'quantity' => 5, 'unit_price' => 20, 'discount_percent' => 10, 'tax_percent' => 0]],
         ], $headers)->assertStatus(201);
 
         // 5 * 20 = 100, less 10% discount = 90
         $this->assertSame(90.0, (float) $response->json('data.total'));
+    }
+
+    /** Recording a quotation requires the vendor's quotation document. */
+    private function quotationDocument(): UploadedFile
+    {
+        return UploadedFile::fake()->create('vendor-quotation.pdf', 40, 'application/pdf');
     }
 
     private function createSelectedQuotation(array $tenantAndDeps, string $token): VendorQuotation
@@ -198,6 +216,7 @@ class ProcurementTest extends TestCase
 
         $quoteResponse = $this->postJson("/api/v1/app/rfqs/{$rfq->id}/quotations", [
             'partner_id' => $vendor->id,
+            'attachment' => $this->quotationDocument(),
             'items' => [['product_id' => $product->id, 'quantity' => 10, 'unit_price' => 8, 'discount_percent' => 0, 'tax_percent' => 0]],
         ], $headers)->assertStatus(201);
         $quotation = VendorQuotation::query()->findOrFail($quoteResponse->json('data.id'));
@@ -246,7 +265,7 @@ class ProcurementTest extends TestCase
 
         $quotation = $this->createSelectedQuotation($scenario, $requesterToken);
         $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $requesterHeaders)->assertStatus(201);
         $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
 
@@ -305,7 +324,7 @@ class ProcurementTest extends TestCase
 
         $quotation = $this->createSelectedQuotation($scenario, $requesterToken);
         $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $requesterHeaders)->assertStatus(201);
         $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
         $this->postJson("/api/v1/app/purchase-orders/{$po->id}/submit", [], $requesterHeaders)->assertOk();
@@ -325,7 +344,7 @@ class ProcurementTest extends TestCase
         $quotation = $this->createSelectedQuotation($scenario, $token);
 
         $poResponse = $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $headers)->assertStatus(201);
         $po = PurchaseOrder::query()->findOrFail($poResponse->json('data.id'));
         $this->assertSame(80.0, (float) $po->total);
@@ -372,11 +391,11 @@ class ProcurementTest extends TestCase
         $quotation = $this->createSelectedQuotation($scenario, $token);
 
         $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $headers)->assertStatus(201);
 
         $this->postJson("/api/v1/app/quotations/{$quotation->id}/purchase-order", [
-            'delivery_warehouse_id' => $warehouse->id,
+            'delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01',
         ], $headers)->assertStatus(422);
 
         $this->assertSame(1, PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count());

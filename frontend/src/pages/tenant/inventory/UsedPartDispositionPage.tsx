@@ -9,6 +9,21 @@ import { Pagination } from '../../../components/Pagination';
 import { useApiList } from '../../../hooks/useApiList';
 import { formatQty } from '../../../utils/quantity';
 import type { WorkOrderPartReturnItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
+import { ImageUploadField } from '../../../components/ImageUploadField';
+import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
+
+/** Evidence Photo: JPG/PNG only, max 3 MB — validated here and again by the backend. */
+const EVIDENCE_MAX_BYTES = 3 * 1024 * 1024;
+
+interface EvidencePhoto {
+  id: string;
+  original_filename: string | null;
+  mime_type: string | null;
+  size: number | null;
+}
+
+type UsedPartItem = WorkOrderPartReturnItem & { evidence_photos?: EvidencePhoto[] };
 
 const STATUS_FILTERS = ['', 'PENDING_RETURN', 'PENDING_INSPECTION', 'INSPECTED', 'PENDING_APPROVAL', 'REJECTED', 'FINALIZED'];
 const DISPOSITIONS = ['REPAIR', 'REUSE', 'QUARANTINE', 'SCRAP', 'SELL_ELIGIBLE'] as const;
@@ -21,7 +36,7 @@ export function UsedPartDispositionPage() {
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const { data, meta, loading, error: listError, reload } = useApiList<WorkOrderPartReturnItem>(
+  const { data, meta, loading, error: listError, reload } = useApiList<UsedPartItem>(
     '/app/used-part-returns',
     { disposition_status: statusFilter || undefined, page },
     0,
@@ -84,7 +99,8 @@ export function UsedPartDispositionPage() {
           canApprove={canApprove}
           warehouses={warehouses}
           onReceive={(warehouseId) => submit(r.id, 'receive', { warehouse_id: warehouseId })}
-          onInspect={(qty, cond, notes, evidence) => submit(r.id, 'inspect', { accepted_quantity: qty, condition: cond, notes: notes || undefined, evidence: evidence || undefined })}
+          onInspect={(qty, cond, notes) => submit(r.id, 'inspect', { accepted_quantity: qty, condition: cond, notes: notes || undefined })}
+          onEvidenceChanged={reload}
           onPropose={(disposition, reason) => submit(r.id, 'propose-disposition', { disposition, reason: reason || undefined })}
           onDecide={(decision, note) => submit(r.id, 'decide', { decision, note: note || undefined })}
         />
@@ -95,23 +111,23 @@ export function UsedPartDispositionPage() {
 }
 
 function RowCard({
-  item, busy, canInspect, canDispose, canApprove, warehouses, onReceive, onInspect, onPropose, onDecide,
+  item, busy, canInspect, canDispose, canApprove, warehouses, onReceive, onInspect, onPropose, onDecide, onEvidenceChanged,
 }: {
-  item: WorkOrderPartReturnItem;
+  item: UsedPartItem;
   busy: boolean;
   canInspect: boolean;
   canDispose: boolean;
   canApprove: boolean;
   warehouses: { id: string; name: string }[];
   onReceive: (warehouseId: string) => void;
-  onInspect: (qty: string, condition: string, notes: string, evidence: string) => void;
+  onInspect: (qty: string, condition: string, notes: string) => void;
+  onEvidenceChanged: () => void;
   onPropose: (disposition: string, reason: string) => void;
   onDecide: (decision: 'APPROVE' | 'REJECT', note: string) => void;
 }) {
   const [acceptedQty, setAcceptedQty] = useState(item.quantity);
   const [inspectCondition, setInspectCondition] = useState<'USED_GOOD' | 'USED_FAULTY'>(item.condition === 'USED_FAULTY' ? 'USED_FAULTY' : 'USED_GOOD');
   const [notes, setNotes] = useState('');
-  const [inspectionEvidence, setInspectionEvidence] = useState('');
   const [disposition, setDisposition] = useState<string>(DISPOSITIONS[0]);
   const [reason, setReason] = useState('');
   const [decideNote, setDecideNote] = useState('');
@@ -171,9 +187,10 @@ function RowCard({
           )}
         </div>
       )}
+      <EvidencePhotos item={item} editable={item.disposition_status === 'PENDING_INSPECTION' && canInspect} onChanged={onEvidenceChanged} />
       {item.inspection_evidence && (
         <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-          Inspection evidence:{' '}
+          Inspection evidence (link):{' '}
           <a href={item.inspection_evidence} target="_blank" rel="noreferrer">
             {item.inspection_evidence}
           </a>
@@ -182,14 +199,13 @@ function RowCard({
 
       {item.disposition_status === 'PENDING_INSPECTION' && canInspect && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <input type="number" step="0.01" placeholder="Accepted qty" value={acceptedQty} onChange={(e) => setAcceptedQty(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <NumericInput integer={!item.product?.uom?.allows_fractional_quantity} placeholder="Accepted qty" value={acceptedQty} onChange={(e) => setAcceptedQty(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <select value={inspectCondition} onChange={(e) => setInspectCondition(e.target.value as 'USED_GOOD' | 'USED_FAULTY')} style={{ ...inputStyle, width: 140 }}>
             <option value="USED_GOOD">Used — Good</option>
             <option value="USED_FAULTY">Used — Faulty</option>
           </select>
           <input placeholder="Inspection notes" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
-          <input placeholder="Evidence photo URL (optional)" value={inspectionEvidence} onChange={(e) => setInspectionEvidence(e.target.value)} style={{ ...inputStyle, width: 220 }} />
-          <button className="btn-primary" disabled={busy || !acceptedQty} onClick={() => onInspect(acceptedQty, inspectCondition, notes, inspectionEvidence)}>
+          <button className="btn-primary" disabled={busy || !(Number(acceptedQty) > 0)} onClick={() => onInspect(acceptedQty, inspectCondition, notes)}>
             Record Inspection
           </button>
         </div>
@@ -238,6 +254,47 @@ function RowCard({
           {item.disposition && item.disposition !== 'REUSE' && ' — no inventory movement (was never in available stock).'}
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * Evidence Photo: an explicit Upload button opens the OS file picker (JPG/PNG, max 3 MB). Photos
+ * are private files shown through the authorized API; they can be added or removed only while the
+ * item awaits inspection.
+ */
+function EvidencePhotos({ item, editable, onChanged }: { item: UsedPartItem; editable: boolean; onChanged: () => void }) {
+  const photos = item.evidence_photos ?? [];
+  const previews = useAuthorizedPreviews(
+    (id) => `/app/used-part-returns/${item.id}/evidence/${id}`,
+    photos.map((p) => p.id),
+  );
+  if (!editable && photos.length === 0) return null;
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>Evidence Photo</div>
+      <ImageUploadField
+        images={photos.map((p) => ({ id: p.id, previewUrl: previews[p.id] ?? '', name: p.original_filename ?? undefined }))}
+        onUpload={async (file) => {
+          const form = new FormData();
+          form.append('file', file);
+          await apiClient.post(`/app/used-part-returns/${item.id}/evidence`, form);
+          onChanged();
+        }}
+        onRemove={
+          editable
+            ? async (id) => {
+                await apiClient.delete(`/app/used-part-returns/${item.id}/evidence/${id}`);
+                onChanged();
+              }
+            : undefined
+        }
+        disabled={!editable}
+        maxSizeBytes={EVIDENCE_MAX_BYTES}
+        uploadLabel="Upload"
+        label="JPG or PNG, max 3 MB"
+      />
     </div>
   );
 }

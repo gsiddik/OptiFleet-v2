@@ -124,6 +124,15 @@ class WorkOrderPartReturn extends Model
         return $this->hasMany(SparePartSale::class, 'work_order_part_return_id');
     }
 
+    /**
+     * Used Sparepart Processing evidence photos (private files). Named evidencePhotos so its JSON
+     * key never collides with the legacy `inspection_evidence` URL column.
+     */
+    public function evidencePhotos(): HasMany
+    {
+        return $this->hasMany(UsedPartInspectionEvidence::class, 'work_order_part_return_id')->orderBy('created_at');
+    }
+
     public function evidenceFiles(): HasMany
     {
         return $this->hasMany(WorkOrderPartReturnEvidence::class, 'work_order_part_return_id');

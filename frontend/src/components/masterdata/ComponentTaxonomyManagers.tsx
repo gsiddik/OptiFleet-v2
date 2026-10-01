@@ -12,6 +12,7 @@ import { useApiList } from '../../hooks/useApiList';
 import { useAuth } from '../../auth/AuthContext';
 import type { ComponentCategory, ComponentGroup, ComponentItemType, ComponentSubcategory } from '../../types';
 import { componentGroupLabel } from '../../utils/componentGroup';
+import { NumericInput } from '../NumericInput';
 
 /**
  * Category / Assembly and Subcategory / Component Family management, shared by
@@ -320,7 +321,7 @@ function CategoryFormModal({
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <FormField label="Sort Order" errors={errors.sequence}>
-        <input type="number" value={sequence} onChange={(e) => setSequence(e.target.value)} style={inputStyle} />
+        <NumericInput value={sequence} onChange={(e) => setSequence(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Status" errors={errors.status}>
         <select value={status} onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')} style={inputStyle}>
@@ -637,7 +638,7 @@ function SubcategoryFormModal({
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <FormField label="Sort Order" errors={errors.sequence}>
-        <input type="number" value={sequence} onChange={(e) => setSequence(e.target.value)} style={inputStyle} />
+        <NumericInput value={sequence} onChange={(e) => setSequence(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Status" errors={errors.status}>
         <select value={status} onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')} style={inputStyle}>

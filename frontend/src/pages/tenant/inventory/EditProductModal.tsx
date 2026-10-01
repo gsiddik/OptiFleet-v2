@@ -33,6 +33,7 @@ import type {
   WarehouseRackItem,
   WarehouseZoneItem,
 } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const SPEC_RELATION_KEY: Record<string, keyof ProductItem> = {
   SPARE_PART: 'sparepart_spec',
@@ -393,19 +394,19 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
             <input value={material} onChange={(e) => setMaterial(e.target.value)} style={inputStyle} />
           </FormField>
           <FormField label="Production Year" errors={errors.production_year}>
-            <input type="number" value={productionYear} onChange={(e) => setProductionYear(e.target.value)} style={inputStyle} />
+            <NumericInput value={productionYear} onChange={(e) => setProductionYear(e.target.value)} style={inputStyle} />
           </FormField>
           <FormField label="Weight (kg)" errors={errors.weight_kg}>
-            <input type="number" step="0.001" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} style={inputStyle} />
+            <NumericInput step="0.001" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} style={inputStyle} />
           </FormField>
           <FormField label="Length (mm)" errors={errors.length_mm}>
-            <input type="number" value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
+            <NumericInput value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
           </FormField>
           <FormField label="Width (mm)" errors={errors.width_mm}>
-            <input type="number" value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
+            <NumericInput value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
           </FormField>
           <FormField label="Height (mm)" errors={errors.height_mm}>
-            <input type="number" value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
+            <NumericInput value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
           </FormField>
         </div>
       </details>

@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleCategory, WheelConfigurationItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 interface ConfigSummary {
   id: string;
@@ -225,7 +226,7 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
         <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Front Left" style={inputStyle} />
       </FormField>
       <FormField label="Axle Number" errors={errors.axle_number}>
-        <input type="number" value={axleNumber} onChange={(e) => setAxleNumber(e.target.value)} style={inputStyle} />
+        <NumericInput value={axleNumber} onChange={(e) => setAxleNumber(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
@@ -271,7 +272,7 @@ function EditModal({ config, onClose, onSaved }: { config: WheelConfigurationIte
         <input value={label} onChange={(e) => setLabel(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Axle Number" errors={errors.axle_number}>
-        <input type="number" value={axleNumber} onChange={(e) => setAxleNumber(e.target.value)} style={inputStyle} />
+        <NumericInput value={axleNumber} onChange={(e) => setAxleNumber(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>

@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { RimItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 /** Final reconciliation — G-09: Rim observed as a real, working VMS master-data screen. */
 export function RimsPage() {
@@ -186,28 +187,28 @@ function RimFormModal({ open, rim, onClose, onSaved }: { open: boolean; rim?: Ri
           <input value={material ?? ''} onChange={(e) => setMaterial(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Width (in)" errors={errors.width_inch}>
-          <input type="number" step="0.1" value={widthInch ?? ''} onChange={(e) => setWidthInch(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.1" value={widthInch ?? ''} onChange={(e) => setWidthInch(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Diameter (in)" errors={errors.diameter_inch}>
-          <input type="number" step="0.1" value={diameterInch ?? ''} onChange={(e) => setDiameterInch(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.1" value={diameterInch ?? ''} onChange={(e) => setDiameterInch(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Disc Thickness (mm)" errors={errors.disc_thickness_mm}>
-          <input type="number" step="0.1" value={discThicknessMm ?? ''} onChange={(e) => setDiscThicknessMm(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.1" value={discThicknessMm ?? ''} onChange={(e) => setDiscThicknessMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Offset (mm)" errors={errors.offset_mm}>
-          <input type="number" step="0.1" value={offsetMm ?? ''} onChange={(e) => setOffsetMm(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.1" value={offsetMm ?? ''} onChange={(e) => setOffsetMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Bolt Holes" errors={errors.bolt_holes}>
-          <input type="number" step="1" value={boltHoles} onChange={(e) => setBoltHoles(e.target.value)} style={inputStyle} />
+          <NumericInput step="1" value={boltHoles} onChange={(e) => setBoltHoles(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Bolt Diameter (mm)" errors={errors.bolt_diameter_mm}>
-          <input type="number" step="0.1" value={boltDiameterMm ?? ''} onChange={(e) => setBoltDiameterMm(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.1" value={boltDiameterMm ?? ''} onChange={(e) => setBoltDiameterMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="PCD (mm)" errors={errors.pcd_mm}>
-          <input type="number" step="0.1" value={pcdMm ?? ''} onChange={(e) => setPcdMm(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.1" value={pcdMm ?? ''} onChange={(e) => setPcdMm(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Hub Hole Diameter (mm)" errors={errors.hub_hole_diameter_mm}>
-          <input type="number" step="0.1" value={hubHoleDiameterMm ?? ''} onChange={(e) => setHubHoleDiameterMm(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.1" value={hubHoleDiameterMm ?? ''} onChange={(e) => setHubHoleDiameterMm(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>

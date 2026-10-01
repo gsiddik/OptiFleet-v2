@@ -187,6 +187,12 @@ class SupplyChainSeeder extends Seeder
             ['tenant_id' => $tenant->id, 'code' => 'VND-SINAR'],
             ['name' => 'PT Sinar Suku Cadang', 'partner_type' => 'SPARE_PART_SUPPLIER', 'contact_name' => 'Hendra Wijaya', 'contact_phone' => '021-5551234', 'payment_terms' => 'NET_30', 'status' => 'ACTIVE']
         );
+        // A general Supplier so every RFQ-eligible vendor type (Supplier, Spare Part Supplier,
+        // Tire Supplier) exists in the demo.
+        Partner::query()->updateOrCreate(
+            ['tenant_id' => $tenant->id, 'code' => 'VND-MITRA'],
+            ['name' => 'PT Mitra Umum Supply', 'partner_type' => 'SUPPLIER', 'contact_name' => 'Dewi Lestari', 'contact_phone' => '021-5559012', 'payment_terms' => 'NET_30', 'status' => 'ACTIVE']
+        );
         Partner::query()->updateOrCreate(
             ['tenant_id' => $tenant->id, 'code' => 'VND-BANPRIMA'],
             ['name' => 'PT Ban Prima', 'partner_type' => 'TIRE_SUPPLIER', 'contact_name' => 'Rudi Hartono', 'contact_phone' => '021-5555678', 'payment_terms' => 'NET_14', 'status' => 'ACTIVE']
@@ -213,11 +219,11 @@ class SupplyChainSeeder extends Seeder
                 'lead_time_days' => 7, 'payment_terms' => 'NET_30',
             ], [
                 ['product_id' => $oilFilter->id, 'quantity' => 50, 'unit_price' => 85000, 'tax_percent' => 11],
-            ]);
+            ], DemoQuotationDocument::make('PT Sinar Suku Cadang'), $warehouseManager->id);
             $quotation = $rfqService->selectVendor($quotation);
 
             $poService = app(PurchaseOrderService::class);
-            $po = $poService->createFromQuotation($quotation, $jktWarehouse, [], $warehouseManager->id);
+            $po = $poService->createFromQuotation($quotation, $jktWarehouse, ['order_date' => now()->toDateString()], $warehouseManager->id);
             $po = $poService->transition($po, 'SUBMITTED');
             $po = $poService->approve($po, $warehouseManager->id);
             $po = $poService->transition($po, 'ISSUED');

@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PricingItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 const PRICING_METHODS = ['FLAT', 'PER_VEHICLE', 'PER_USER', 'PER_BRANCH', 'PER_WORKSHOP', 'PER_WAREHOUSE', 'TIERED', 'CUSTOM'];
 const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'CUSTOM'];
@@ -185,7 +186,7 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
         </select>
       </FormField>
       <FormField label="Amount (IDR)" errors={errors.amount} required>
-        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
+        <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Effective From" errors={errors.effective_from} required>
         <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={inputStyle} />
@@ -225,7 +226,7 @@ function VersionModal({ pricing, onClose, onCreated }: { pricing: PricingItem; o
   return (
     <Modal open title={`New Price Version — ${pricing.priceable_code}`} onClose={onClose}>
       <FormField label="Amount (IDR)" errors={errors.amount} required>
-        <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
+        <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Effective From" errors={errors.effective_from} required>
         <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={inputStyle} />

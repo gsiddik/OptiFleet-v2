@@ -75,7 +75,8 @@ class PurchaseOrderController extends Controller
         $tenantId = $this->context->tenantId();
         $validated = $request->validate([
             'delivery_warehouse_id' => ['required', 'uuid', 'exists:warehouses,id'],
-            'expected_delivery_date' => ['nullable', 'date'],
+            // Expected Receipt Date is derived by the service (Order Date + quotation Lead Days).
+            'order_date' => ['required', 'date_format:Y-m-d'],
             'notes' => ['nullable', 'string'],
         ]);
 

@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PartnerItem, ProductItem, WarrantyItem } from '../../../types';
+import { NumericInput } from '../../../components/NumericInput';
 
 export function WarrantyListPage() {
   const { hasPermission } = useAuth();
@@ -96,10 +97,10 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
         </select>
       </FormField>
       <FormField label="Duration (months)" errors={errors.duration_months}>
-        <input type="number" value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} style={inputStyle} />
+        <NumericInput value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Duration (km)" errors={errors.duration_km}>
-        <input type="number" value={durationKm} onChange={(e) => setDurationKm(e.target.value)} style={inputStyle} />
+        <NumericInput value={durationKm} onChange={(e) => setDurationKm(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Starts At" errors={errors.starts_at} required>
         <input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={inputStyle} />

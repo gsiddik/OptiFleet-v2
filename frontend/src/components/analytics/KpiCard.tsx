@@ -1,3 +1,5 @@
+import { formatMoney } from '../../utils/money';
+
 export interface KpiResult {
   code: string;
   label: string;
@@ -14,7 +16,7 @@ function formatValue(kpi: KpiResult): string {
   if (kpi.value === null || kpi.value === undefined) return '—';
   const rounded = Math.round(kpi.value * 100) / 100;
   if (kpi.unit === 'percentage') return `${rounded}%`;
-  if (kpi.unit === 'currency') return rounded.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (kpi.unit === 'currency') return formatMoney(kpi.value);
   return rounded.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 

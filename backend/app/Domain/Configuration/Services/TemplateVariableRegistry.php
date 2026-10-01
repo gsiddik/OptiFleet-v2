@@ -136,6 +136,16 @@ class TemplateVariableRegistry
                 'items' => ['product_name', 'quantity_ordered', 'unit_price', 'discount_percent', 'tax_percent', 'line_total'],
             ],
         ],
+        'rfq' => [
+            'scalars' => [
+                'rfq.number', 'rfq.issue_date', 'rfq.response_deadline', 'rfq.status',
+                'vendor.name', 'vendor.address', 'vendor.contact_name', 'vendor.contact_phone', 'vendor.contact_email',
+                'warehouse.name', 'warehouse.address', 'printed_by.name', 'printed_at',
+            ],
+            'sections' => [
+                'items' => ['line_no', 'product_code', 'product_name', 'quantity', 'uom'],
+            ],
+        ],
         'goods_receipt' => [
             'scalars' => [
                 'goods_receipt.number', 'goods_receipt.status', 'goods_receipt.received_at',

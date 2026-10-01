@@ -5,6 +5,7 @@ import { Table, type Column } from '../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import type { InvoiceItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 const TABS = ['', 'ISSUED', 'OUTSTANDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'VOID'];
 
@@ -16,8 +17,8 @@ export function AccountInvoiceListPage() {
     { key: 'invoice_number', header: 'Invoice #', render: (i) => <Link to={`/app/account/invoices/${i.id}`}>{i.invoice_number}</Link> },
     { key: 'invoice_date', header: 'Invoice Date', render: (i) => i.invoice_date },
     { key: 'due_date', header: 'Due Date', render: (i) => i.due_date },
-    { key: 'total', header: 'Total', render: (i) => `${i.currency} ${Number(i.total).toLocaleString()}` },
-    { key: 'outstanding', header: 'Outstanding', render: (i) => Number(i.outstanding_amount).toLocaleString() },
+    { key: 'total', header: 'Total', render: (i) => `${i.currency} ${formatMoney(i.total)}` },
+    { key: 'outstanding', header: 'Outstanding', render: (i) => formatMoney(i.outstanding_amount) },
     { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },
   ];
 

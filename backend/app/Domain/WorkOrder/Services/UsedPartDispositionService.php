@@ -5,6 +5,7 @@ namespace App\Domain\WorkOrder\Services;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\Workflow\Models\WorkflowApprovalRequest;
 use App\Domain\Workflow\Services\WorkflowApprovalService;
 use App\Domain\Workflow\Services\WorkflowEngine;
@@ -44,6 +45,7 @@ class UsedPartDispositionService
             if ($locked->disposition_status !== 'PENDING_INSPECTION') {
                 throw new WorkOrderException("Cannot inspect a return that is {$locked->disposition_status} (must be PENDING_INSPECTION).");
             }
+            QuantityPolicy::assertValidForProductId($locked->product_id, $acceptedQuantity, 'accepted_quantity');
             if ($acceptedQuantity <= 0 || $acceptedQuantity > (float) $locked->quantity) {
                 throw new WorkOrderException('Accepted quantity must be positive and cannot exceed the originally returned quantity.');
             }
