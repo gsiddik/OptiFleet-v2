@@ -174,3 +174,21 @@ vendor-payment permissions (the invoice page reuses `goods_receipt.view/create`)
 - Tests: `VendorInvoicePaymentTest` (6) — related regression 88 passed. Browser: shared
   INV-E2E-A paid from one row → both GR rows PAID, single payment; image proof previews and
   downloads; PDF proof opens; second payment via API → 422.
+
+## Phase 7 — Seeders + final regression (DONE)
+
+- `SupplyChainSeeder` (demo partial receipt 30/50) and `FunctionalTestInventorySeeder` (full
+  receipt) now post their Goods Receipts against a vendor invoice (INV-SSC-2026-0001, 30
+  working days; FT-INV-2026-0001, 14 working days) with a demo invoice PDF;
+  `DemoQuotationDocument::make()` takes an optional title/file name for that. Permission and
+  role seeders updated in Phases 5–6 (`vendor_invoice.view`, `vendor_invoice.pay`;
+  `goods_receipt.create` retired).
+- Seed check: fresh migrate + all seeders twice — identical counts, 2 GR-linked invoices with
+  documents, permissions as intended, no errors.
+- Full backend regression (PostgreSQL, Mongo-only migrations/tests set aside during the run):
+  **956 passed, 0 failed**. Frontend `npm run build` PASS, `npm run lint` 0 errors (warnings
+  identical to baseline); no typecheck/test scripts exist (`tsc -b` runs inside the build).
+  Mongo-dependent tests: NOT RUN (no MongoDB here).
+- Note: commit 3df6356 accidentally deleted three Mongo migrations (set aside locally for
+  testing); restored byte-identical in 3de74ac. Tests now run through a wrapper that always
+  restores them, and commits stage explicit paths only.

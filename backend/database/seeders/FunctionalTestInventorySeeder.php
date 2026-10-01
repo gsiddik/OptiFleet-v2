@@ -119,6 +119,10 @@ class FunctionalTestInventorySeeder
             ['purchase_order_item_id' => $items[$grease->id]->id, 'quantity_accepted' => 10, 'batch_number' => 'FT-BATCH-2026-01'],
             ['purchase_order_item_id' => $items[$truckTire->id]->id, 'quantity_accepted' => 4, 'serial_numbers' => ['FTTIRE-SN-001', 'FTTIRE-SN-002', 'FTTIRE-SN-003', 'FTTIRE-SN-004']],
         ];
-        app(GoodsReceiptService::class)->post($po, $warehouse, $receiptLines, $userId, '[FT-PROCUREMENT] Full receipt against issued PO.');
+        app(GoodsReceiptService::class)->post($po, $warehouse, $receiptLines, $userId, '[FT-PROCUREMENT] Full receipt against issued PO.', [
+            'mode' => 'NEW', 'vendor_invoice_number' => 'FT-INV-2026-0001', 'vendor_invoice_date' => now()->toDateString(),
+            'amount' => (string) $po->total, 'terms_of_payment_days' => 14,
+            'document' => DemoQuotationDocument::make('FT-INV-2026-0001', 'Demo vendor invoice', 'FT-INV-2026-0001.pdf'),
+        ]);
     }
 }
