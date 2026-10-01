@@ -7,7 +7,6 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
-use App\Domain\WorkOrder\Services\WorkOrderPartService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -210,7 +209,9 @@ class WorkOrderPartRequestTest extends TestCase
             'tenant_id' => $tenant->id, 'work_order_id' => $wo->id, 'product_id' => $product->id, 'description' => 'Legacy',
             'quantity' => 4, 'planned_quantity' => 4, 'status' => 'PLANNED',
         ]);
-        app(WorkOrderPartService::class)->reserve($legacyLine, $warehouse->id, null, null);
+        // Historical stock held by the retired Inventory Reservation feature.
+        app(InventoryService::class)->reserve($warehouse, $product, 4, null, null, null);
+        $legacyLine->update(['warehouse_id' => $warehouse->id, 'reserved_quantity' => 4, 'status' => 'RESERVED']);
         $headers = $this->authHeaders($this->makeTenantUser($tenant, self::ALL)[1]);
 
         $id = $this->reserve($wo, $product, 2, $headers);

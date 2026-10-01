@@ -12,8 +12,8 @@ use Tests\TestCase;
 use ZipArchive;
 
 /**
- * Record Quotation requires the vendor's quotation document (PDF / DOC / DOCX, type checked from
- * the file content), which authorized users can then view or download. A vendor already in
+ * Record Quotation accepts an OPTIONAL vendor quotation document (PDF / DOC / DOCX, type checked
+ * from the file content), which authorized users can then view or download. A vendor already in
  * Quotation Comparison cannot be recorded again (owner decision), and only invited vendors quote.
  */
 class QuotationAttachmentTest extends TestCase
@@ -68,12 +68,33 @@ class QuotationAttachmentTest extends TestCase
         return new UploadedFile($path, 'quotation.docx', null, null, true);
     }
 
-    public function test_quotation_document_is_required(): void
+    public function test_quotation_without_a_document_is_recorded(): void
     {
         [, , $rfq, $product, $vendorA, , $headers] = $this->setUpRfq();
 
-        $this->record($rfq, $vendorA->id, $product->id, null, $headers)->assertStatus(422)->assertJsonValidationErrors('attachment');
-        $this->assertSame(0, VendorQuotation::query()->count());
+        $response = $this->record($rfq, $vendorA->id, $product->id, null, $headers)->assertCreated()
+            ->assertJsonPath('data.status', 'SUBMITTED')->assertJsonPath('data.has_attachment', false)
+            ->assertJsonPath('data.attachment_original_filename', null);
+        $this->assertSame('120.0000', $response->json('data.total'));
+        $this->assertSame([], Storage::disk('local')->allFiles());
+
+        $row = collect($this->getJson("/api/v1/app/rfqs/{$rfq->id}/compare", $headers)->assertOk()->json('data'))->firstWhere('quotation_id', $response->json('data.id'));
+        $this->assertFalse($row['has_attachment'], 'Quotation Comparison shows "No document uploaded".');
+        $this->app['auth']->forgetGuards();
+        $this->get("/api/v1/app/quotations/{$response->json('data.id')}/attachment", $headers + ['Accept' => 'application/json'])->assertNotFound();
+    }
+
+    public function test_an_existing_document_stays_available_when_other_quotations_have_none(): void
+    {
+        [, , $rfq, $product, $vendorA, $vendorB, $headers] = $this->setUpRfq();
+        $withDoc = $this->record($rfq, $vendorA->id, $product->id, DemoQuotationDocument::make('Vendor A'), $headers)->assertCreated()->json('data.id');
+        $this->record($rfq, $vendorB->id, $product->id, null, $headers)->assertCreated();
+
+        $compare = collect($this->getJson("/api/v1/app/rfqs/{$rfq->id}/compare", $headers)->assertOk()->json('data'))->keyBy('quotation_id');
+        $this->assertTrue($compare[$withDoc]['has_attachment']);
+        $this->assertSame([true, false], $compare->sortByDesc('has_attachment')->pluck('has_attachment')->values()->all());
+        $this->app['auth']->forgetGuards();
+        $this->get("/api/v1/app/quotations/{$withDoc}/attachment", $headers)->assertOk()->assertHeader('Content-Type', 'application/pdf');
     }
 
     public function test_pdf_doc_and_docx_are_accepted_and_viewable_or_downloadable(): void

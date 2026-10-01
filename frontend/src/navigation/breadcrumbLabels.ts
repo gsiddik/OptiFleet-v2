@@ -87,7 +87,6 @@ export const SEGMENT_LABELS: Record<string, string> = {
   // Inventory / Procurement
   products: 'Products',
   inventory: 'Warehouse Stock',
-  'stock-reservations': 'Stock Reservations',
   'stock-transfers': 'Stock Transfers',
   'stock-opnames': 'Stock Opname',
   'stock-movements': 'Stock Movements',

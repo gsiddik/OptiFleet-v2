@@ -1574,6 +1574,9 @@ export interface WorkOrderPartReturnItem {
   disposition_reason: string | null;
   proposed_by: string | null;
   finalized_at: string | null;
+  /** Repair → Reuse: set when a finalized REPAIR was completed (item back to INSPECTED). */
+  repair_completed_at?: string | null;
+  repair_notes?: string | null;
   reason: string | null;
   evidence: string | null;
   created_at: string;
@@ -1611,26 +1614,6 @@ export interface SparePartSaleItem {
   product?: ProductItem;
   warehouse?: Warehouse;
   partner?: { id: string; name: string };
-}
-
-export interface StockReservationItemLine {
-  id: string;
-  product_id: string;
-  work_order_planned_part_id: string | null;
-  requested_quantity: string;
-  reserved_quantity: string;
-  product?: ProductItem;
-}
-
-export interface StockReservationItem {
-  id: string;
-  tenant_id: string;
-  work_order_id: string;
-  warehouse_id: string;
-  status: 'DRAFT' | 'RESERVED' | 'PARTIALLY_RESERVED' | 'RELEASED' | 'CONSUMED' | 'CANCELLED';
-  warehouse?: Warehouse;
-  work_order?: WorkOrderItem;
-  items?: StockReservationItemLine[];
 }
 
 export interface StockOpnameItemLine {

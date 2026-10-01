@@ -67,7 +67,6 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/app/products', label: 'Product', permission: 'product.view', module: 'INVENTORY' },
       { to: '/app/inventory', label: 'Warehouse Stock', permission: 'inventory.view', module: 'INVENTORY' },
-      { to: '/app/stock-reservations', label: 'Reservation', permission: 'inventory.view', module: 'INVENTORY' },
       { to: '/app/returns', label: 'Return', permission: 'part_return.view', module: 'INVENTORY' },
       { to: '/app/stock-transfers', label: 'Transfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
       { to: '/app/goods-receipts', label: 'Receiving', permission: 'goods_receipt.view', module: 'PROCUREMENT' },

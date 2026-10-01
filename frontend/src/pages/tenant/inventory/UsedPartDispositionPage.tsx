@@ -56,7 +56,7 @@ export function UsedPartDispositionPage() {
       .catch(() => setWarehouses([]));
   }, [canInspect]);
 
-  async function submit(id: string, action: 'receive' | 'inspect' | 'propose-disposition' | 'decide', body: Record<string, unknown>) {
+  async function submit(id: string, action: 'receive' | 'inspect' | 'propose-disposition' | 'decide' | 'complete-repair', body: Record<string, unknown>) {
     setBusyId(id);
     setError(null);
     try {
@@ -103,6 +103,7 @@ export function UsedPartDispositionPage() {
           onEvidenceChanged={reload}
           onPropose={(disposition, reason) => submit(r.id, 'propose-disposition', { disposition, reason: reason || undefined })}
           onDecide={(decision, note) => submit(r.id, 'decide', { decision, note: note || undefined })}
+          onCompleteRepair={(notes) => submit(r.id, 'complete-repair', { notes: notes || undefined })}
         />
       ))}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
@@ -111,7 +112,7 @@ export function UsedPartDispositionPage() {
 }
 
 function RowCard({
-  item, busy, canInspect, canDispose, canApprove, warehouses, onReceive, onInspect, onPropose, onDecide, onEvidenceChanged,
+  item, busy, canInspect, canDispose, canApprove, warehouses, onReceive, onInspect, onPropose, onDecide, onEvidenceChanged, onCompleteRepair,
 }: {
   item: UsedPartItem;
   busy: boolean;
@@ -124,6 +125,7 @@ function RowCard({
   onEvidenceChanged: () => void;
   onPropose: (disposition: string, reason: string) => void;
   onDecide: (decision: 'APPROVE' | 'REJECT', note: string) => void;
+  onCompleteRepair: (notes: string) => void;
 }) {
   const [acceptedQty, setAcceptedQty] = useState(item.quantity);
   const [inspectCondition, setInspectCondition] = useState<'USED_GOOD' | 'USED_FAULTY'>(item.condition === 'USED_FAULTY' ? 'USED_FAULTY' : 'USED_GOOD');
@@ -132,6 +134,7 @@ function RowCard({
   const [reason, setReason] = useState('');
   const [decideNote, setDecideNote] = useState('');
   const [receiveWarehouseId, setReceiveWarehouseId] = useState('');
+  const [repairNotes, setRepairNotes] = useState('');
   const workOrder = item.work_order ?? item.planned_part?.work_order ?? null;
 
   return (
@@ -247,12 +250,27 @@ function RowCard({
         </div>
       )}
 
+      {item.repair_completed_at && (
+        <div style={{ fontSize: 12, color: '#374151', marginBottom: 6 }}>
+          Repair completed {new Date(item.repair_completed_at).toLocaleString()}
+          {item.repair_notes && ` — ${item.repair_notes}`}
+        </div>
+      )}
       {item.disposition_status === 'FINALIZED' && (
         <span style={{ fontSize: 12, color: '#065f46' }}>
           Finalized as {item.disposition}
           {item.disposition === 'REUSE' && ' — restocked to available inventory.'}
-          {item.disposition && item.disposition !== 'REUSE' && ' — no inventory movement (was never in available stock).'}
+          {item.disposition === 'REPAIR' && !item.repair_completed_at && ' — repair pending (not available).'}
+          {item.disposition && !['REUSE', 'REPAIR'].includes(item.disposition) && ' — no inventory movement (was never in available stock).'}
         </span>
+      )}
+      {item.disposition_status === 'FINALIZED' && item.disposition === 'REPAIR' && !item.repair_completed_at && canInspect && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
+          <input placeholder="Repair notes (optional)" value={repairNotes} onChange={(e) => setRepairNotes(e.target.value)} style={{ ...inputStyle, width: 240 }} />
+          <button className="btn-primary" disabled={busy} onClick={() => onCompleteRepair(repairNotes)} title="The repaired part goes back to Inspected for a new disposition (e.g. Reuse), which needs approval.">
+            Complete Repair
+          </button>
+        </div>
       )}
     </div>
   );

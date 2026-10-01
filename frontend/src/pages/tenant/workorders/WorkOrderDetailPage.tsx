@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
@@ -28,6 +28,7 @@ import type {
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
+import { SearchableSelect, type SearchableOption } from '../../../components/SearchableSelect';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
@@ -1357,8 +1358,8 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
   const [quantity, setQuantity] = useState('1');
   const [notes, setNotes] = useState('');
   const [productId, setProductId] = useState('');
-  const [productSearch, setProductSearch] = useState('');
-  const [products, setProducts] = useState<{ id: string; name: string; sku?: string | null; uom?: { allows_fractional_quantity?: boolean } | null }[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<ReserveProduct | null>(null);
+  const loadedProducts = useRef(new Map<string, ReserveProduct>());
   const [partRequests, setPartRequests] = useState<PartRequestItem[]>([]);
   const [requestsKey, setRequestsKey] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -1387,17 +1388,14 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
   const canConsume = partActionsAvailable && hasPermission('inventory.issue');
   const canReturn = partActionsAvailable && hasPermission('inventory.return');
 
-  // Searchable Product picker (active Products only; the list can be large).
-  useEffect(() => {
-    if (!canReserve) return;
-    const handle = setTimeout(() => {
-      apiClient
-        .get('/app/products', { params: { status: 'ACTIVE', search: productSearch || undefined, per_page: 50 } })
-        .then((res) => setProducts(res.data.data))
-        .catch(() => setProducts([]));
-    }, 250);
-    return () => clearTimeout(handle);
-  }, [canReserve, productSearch]);
+  // Product dropdown with its search box inside the list: active Products only, searched on the
+  // server (the catalog can be large). The stored value is the Product id.
+  async function loadProductOptions(search: string): Promise<SearchableOption[]> {
+    const res = await apiClient.get('/app/products', { params: { status: 'ACTIVE', search: search || undefined, per_page: 50 } });
+    const rows: ReserveProduct[] = res.data.data;
+    rows.forEach((prod) => loadedProducts.current.set(prod.id, prod));
+    return rows.map((prod) => ({ value: prod.id, label: prod.name, hint: prod.sku }));
+  }
 
   useEffect(() => {
     if (!canViewRequests) return;
@@ -1417,6 +1415,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
         items: [{ product_id: productId, quantity_requested: quantity }],
       });
       setProductId('');
+      setSelectedProduct(null);
       setQuantity('1');
       setNotes('');
       setNotice('Part Request created (REQUESTED). It is approved and issued from Part Requests.');
@@ -1512,23 +1511,24 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
       {canReserve && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end', background: '#f9fafb', padding: 10, borderRadius: 6 }}>
           <FormField label="Product" required>
-            <span style={{ display: 'flex', gap: 6 }}>
-              <input aria-label="Search product" placeholder="Search product…" value={productSearch} onChange={(e) => setProductSearch(e.target.value)} style={{ ...inputStyle, width: 160 }} />
-              <select aria-label="Product" value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 240 }}>
-                <option value="">Select product…</option>
-                {products.map((prod) => (
-                  <option key={prod.id} value={prod.id}>
-                    {prod.name}
-                    {prod.sku ? ` (${prod.sku})` : ''}
-                  </option>
-                ))}
-              </select>
-            </span>
+            <SearchableSelect
+              ariaLabel="Product"
+              value={productId}
+              selectedLabel={selectedProduct ? `${selectedProduct.name}${selectedProduct.sku ? ` — ${selectedProduct.sku}` : ''}` : null}
+              placeholder="Select product…"
+              searchPlaceholder="Search product…"
+              loadOptions={loadProductOptions}
+              onChange={(id) => {
+                setProductId(id);
+                setSelectedProduct(loadedProducts.current.get(id) ?? null);
+              }}
+              width={300}
+            />
           </FormField>
           <FormField label="Qty" required>
             <NumericInput
               aria-label="Quantity"
-              integer={!products.find((prod) => prod.id === productId)?.uom?.allows_fractional_quantity}
+              integer={!selectedProduct?.uom?.allows_fractional_quantity}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               style={{ ...inputStyle, width: 90 }}
@@ -1714,6 +1714,13 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
  * Return above (which only ever represents warehouse-issued stock, whether installed or not).
  * Presented as its own section so the two concepts are never conflated in the UI either.
  */
+interface ReserveProduct {
+  id: string;
+  name: string;
+  sku?: string | null;
+  uom?: { allows_fractional_quantity?: boolean } | null;
+}
+
 function consumedRemovableProducts(wo: WorkOrderItem) {
   const byProduct = new Map<string, { productId: string; name: string; consumed: number; remaining: number; allowsFraction: boolean }>();
   for (const p of wo.planned_parts ?? []) {

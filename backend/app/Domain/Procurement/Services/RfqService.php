@@ -129,11 +129,11 @@ class RfqService
     }
 
     /**
-     * Record Quotation. Business rules (owner decision 4 + quotation document requirement):
-     * the RFQ must be ISSUED, the vendor must be invited, a vendor records ONE quotation per RFQ
-     * (a vendor already in Quotation Comparison can never be entered again), every line must be an
-     * item of this RFQ, and the vendor's quotation document is mandatory. Totals are always
-     * recalculated here, never taken from the client.
+     * Record Quotation. Business rules (owner decision 4): the RFQ must be ISSUED, the vendor must
+     * be invited, a vendor records ONE quotation per RFQ (a vendor already in Quotation Comparison
+     * can never be entered again) and every line must be an item of this RFQ. The vendor's
+     * quotation document is optional; when supplied it is validated and stored privately. Totals
+     * are always recalculated here, never taken from the client.
      *
      * @param  array<array{rfq_item_id?:string,product_id:string,quantity:float,unit_price:float,discount_percent?:float,tax_percent?:float}>  $items
      */
@@ -151,9 +151,6 @@ class RfqService
         if (VendorQuotation::query()->where('rfq_id', $rfq->id)->where('partner_id', $partner->id)->exists()) {
             throw ValidationException::withMessages(['partner_id' => "{$partner->name} has already submitted a quotation for this RFQ."]);
         }
-        if (! $attachment) {
-            throw ValidationException::withMessages(['attachment' => 'Upload the vendor\'s quotation document (PDF, DOC or DOCX) before recording the quotation.']);
-        }
         $rfqItems = $rfq->items()->get()->keyBy('id');
         $quoted = [];
         foreach (array_values($items) as $i => $line) {
@@ -162,6 +159,10 @@ class RfqService
                 throw ValidationException::withMessages(["items.{$i}.product_id" => 'Each quotation line must be a distinct item of this RFQ.']);
             }
             $quoted[$rfqItem->id] = true;
+        }
+
+        if (! $attachment) {
+            return $this->recordQuotation($rfq, $partner, $attributes, $items);
         }
 
         $stored = app(QuotationAttachmentService::class)->store($attachment, $rfq->tenant_id, $userId);

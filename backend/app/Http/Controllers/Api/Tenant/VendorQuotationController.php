@@ -60,10 +60,10 @@ class VendorQuotationController extends Controller
             'items.*.unit_price' => ['required', 'numeric', 'min:0'],
             'items.*.discount_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
             'items.*.tax_percent' => ['nullable', 'numeric', 'min:0', 'max:100'],
-            // Type is checked from the file content by QuotationAttachmentService (PDF/DOC/DOCX).
-            'attachment' => ['required', 'file', 'max:10240'],
+            // Optional; when present its type is checked from the file content by
+            // QuotationAttachmentService (PDF/DOC/DOCX).
+            'attachment' => ['nullable', 'file', 'max:10240'],
         ], [
-            'attachment.required' => 'Upload the vendor\'s quotation document (PDF, DOC or DOCX) before recording the quotation.',
             'attachment.max' => 'The quotation document may not be larger than 10 MB.',
         ]);
 
