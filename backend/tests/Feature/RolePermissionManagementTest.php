@@ -146,6 +146,10 @@ class RolePermissionManagementTest extends TestCase
         $this->assertSame(['WORK_ORDER', 'work_order', 'approve'], [$rows['work_order.approve']['module'], $rows['work_order.approve']['feature'], $rows['work_order.approve']['action']]);
         $this->assertSame('INVENTORY', $rows['product.create']['module']);
         $this->assertSame('Access Management', $rows['role.update']['module_name']);
+
+        // Third-party Service Invoice vs External Workshop Invoice: clearer labels, unchanged keys.
+        $this->assertSame(['workshop_invoice', 'Service Invoice'], [$rows['workshop_invoice.view']['feature'], $rows['workshop_invoice.view']['feature_name']]);
+        $this->assertSame('View External Workshop Invoice Reference', $rows['work_order.view_workshop_invoice_reference']['action_name']);
     }
 
     public function test_platform_superadmin_role_stays_locked_and_platform_roles_are_manageable(): void

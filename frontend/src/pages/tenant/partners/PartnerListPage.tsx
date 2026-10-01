@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
@@ -13,45 +13,33 @@ import type { PartnerItem } from '../../../types';
 
 const PARTNER_TYPES = ['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER', 'EXTERNAL_WORKSHOP', 'TOWING_PROVIDER', 'OTHER_SERVICE_PROVIDER'];
 
+const SUPPLIER_TYPES = ['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER'];
+
+/**
+ * Vendors / Partners. Supplier is a partner type, not a separate entity (G-17): the former
+ * Suppliers page is this list with the "All Suppliers" type filter (`/app/suppliers` redirects to
+ * `?type=SUPPLIERS`). The filter lives in the URL so it can be linked and survives refresh.
+ */
 export function PartnerListPage() {
-  return <PartnerListView title="Vendors / Partners" emptyLabel="No vendors found." newButtonLabel="+ New Vendor" />;
-}
-
-/** G-17: Supplier is a Partner sub-type, not a separate concept — this reuses the same list/create UI, filtered. */
-export function SupplierListPage() {
-  return (
-    <PartnerListView
-      title="Suppliers"
-      emptyLabel="No suppliers found."
-      newButtonLabel="+ New Supplier"
-      partnerTypes={['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER']}
-      defaultPartnerType="SPARE_PART_SUPPLIER"
-    />
-  );
-}
-
-function PartnerListView({
-  title,
-  emptyLabel,
-  newButtonLabel,
-  partnerTypes,
-  defaultPartnerType,
-}: {
-  title: string;
-  emptyLabel: string;
-  newButtonLabel: string;
-  partnerTypes?: string[];
-  defaultPartnerType?: string;
-}) {
   const { hasPermission } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const typeFilter = searchParams.get('type') ?? '';
   const [search, setSearch] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const partnerType = typeFilter === 'SUPPLIERS' ? SUPPLIER_TYPES : PARTNER_TYPES.includes(typeFilter) ? typeFilter : undefined;
   const { data, loading, error } = useApiList<PartnerItem>(
     '/app/partners',
-    { search: search || undefined, partner_type: partnerTypes },
+    { search: search || undefined, partner_type: partnerType },
     reloadKey,
   );
+
+  function changeType(value: string) {
+    const next = new URLSearchParams(searchParams);
+    if (value) next.set('type', value);
+    else next.delete('type');
+    setSearchParams(next, { replace: true });
+  }
 
   const columns: Column<PartnerItem>[] = [
     { key: 'code', header: 'Code', render: (p) => <Link to={`/app/partners/${p.id}`}>{p.code}</Link> },
@@ -63,29 +51,42 @@ function PartnerListView({
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{title}</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vendors / Partners</h1>
       <Toolbar
         search={search}
         onSearchChange={setSearch}
         actions={
           hasPermission('partner.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              {newButtonLabel}
+              + New Vendor
             </button>
           ) : null
         }
-      />
+      >
+        <select aria-label="Vendor type" value={typeFilter} onChange={(e) => changeType(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+          <option value="">All types</option>
+          <option value="SUPPLIERS">All Suppliers</option>
+          {PARTNER_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label={emptyLabel} />}
+      {!error && !loading && data.length === 0 && <EmptyState label={typeFilter === 'SUPPLIERS' ? 'No suppliers found.' : 'No vendors found.'} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
-      <CreatePartnerModal
-        open={showCreate}
-        defaultPartnerType={defaultPartnerType}
-        onClose={() => setShowCreate(false)}
-        onCreated={() => setReloadKey((k) => k + 1)}
-      />
+      {/* Mounted only while open so the default type follows the current filter. */}
+      {showCreate && (
+        <CreatePartnerModal
+          open
+          defaultPartnerType={typeof partnerType === 'string' ? partnerType : undefined}
+          onClose={() => setShowCreate(false)}
+          onCreated={() => setReloadKey((k) => k + 1)}
+        />
+      )}
     </div>
   );
 }

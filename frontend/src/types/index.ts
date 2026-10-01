@@ -1656,6 +1656,9 @@ export interface StockTransferItem {
   dispatched_by: string | null;
   received_at: string | null;
   received_by: string | null;
+  dispatched_by_name?: string | null;
+  received_by_name?: string | null;
+  status_history?: { status: string; at: string; by: string | null }[];
   from_warehouse?: Warehouse;
   to_warehouse?: Warehouse;
   items?: StockTransferItemLine[];

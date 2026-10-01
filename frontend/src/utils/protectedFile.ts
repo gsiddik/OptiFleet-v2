@@ -5,9 +5,32 @@ import { apiClient } from '../api/client';
  * plain <a href> cannot open them. These fetch the file through the API client and hand the
  * browser a short-lived object URL.
  */
-export async function fetchBlobUrl(path: string): Promise<string> {
+/** File name from a Content-Disposition header (RFC 5987 `filename*` preferred). */
+function fileNameFrom(disposition: string | undefined): string | null {
+  if (!disposition) return null;
+  const star = /filename\*=(?:UTF-8'')?([^;]+)/i.exec(disposition);
+  if (star) {
+    try {
+      return decodeURIComponent(star[1].trim().replace(/^"|"$/g, ''));
+    } catch {
+      // fall through to the plain filename parameter
+    }
+  }
+  const plain = /filename="?([^";]+)"?/i.exec(disposition);
+  return plain ? plain[1].trim() : null;
+}
+
+/**
+ * The file as a Blob whose type is the Content-Type the backend served (the stored file's real
+ * MIME), plus the file name the backend served it under.
+ */
+export async function fetchProtectedFile(path: string): Promise<{ blob: Blob; name: string | null }> {
   const res = await apiClient.get(path, { responseType: 'blob' });
-  return URL.createObjectURL(res.data as Blob);
+  return { blob: res.data as Blob, name: fileNameFrom(res.headers['content-disposition'] as string | undefined) };
+}
+
+export async function fetchBlobUrl(path: string): Promise<string> {
+  return URL.createObjectURL((await fetchProtectedFile(path)).blob);
 }
 
 /** Opens the document in a new tab (PDF viewer / image preview). */

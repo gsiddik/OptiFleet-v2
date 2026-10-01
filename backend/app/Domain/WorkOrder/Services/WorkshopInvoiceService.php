@@ -57,10 +57,10 @@ class WorkshopInvoiceService
             $lockedMemo = WorkOrderExternalService::query()->lockForUpdate()->findOrFail($memo->id);
 
             if ($lockedMemo->status !== 'COMPLETED') {
-                throw new WorkOrderException("Cannot record a Workshop Invoice against a memo that is {$lockedMemo->status} (must be COMPLETED).");
+                throw new WorkOrderException("Cannot record a Service Invoice against a memo that is {$lockedMemo->status} (must be COMPLETED).");
             }
             if ($lockedMemo->workshop_invoice_id !== null) {
-                throw new WorkOrderException('This Maintenance Memo already has a Workshop Invoice recorded against it.');
+                throw new WorkOrderException('This Maintenance Memo already has a Service Invoice recorded against it.');
             }
 
             $normalized = self::normalizeInvoiceNumber($attributes['external_invoice_number']);
@@ -71,7 +71,7 @@ class WorkshopInvoiceService
                 ->where('status', '!=', 'CANCELLED')
                 ->exists();
             if ($duplicate) {
-                throw new WorkOrderException("A Workshop Invoice numbered '{$attributes['external_invoice_number']}' is already recorded for this Workshop Partner.");
+                throw new WorkOrderException("A Service Invoice numbered '{$attributes['external_invoice_number']}' is already recorded for this service provider.");
             }
 
             $totalAmount = BigDecimal::of((string) $attributes['total_amount'])->toScale(4);
@@ -293,7 +293,7 @@ class WorkshopInvoiceService
             }
 
             if (WorkshopInvoicePayment::query()->where('workshop_invoice_id', $lockedInvoice->id)->exists()) {
-                throw new WorkOrderException('Payment has already been recorded for this Workshop Invoice.');
+                throw new WorkOrderException('Payment has already been recorded for this Service Invoice.');
             }
 
             $paidAmount = BigDecimal::of((string) $attributes['paid_amount'])->toScale(4);

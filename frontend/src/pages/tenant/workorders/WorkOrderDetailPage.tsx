@@ -26,7 +26,9 @@ import type {
   WorkspaceReservationItem,
 } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
-import { formatMoney } from '../../../utils/money';
+import { formatMoney, sumMoney } from '../../../utils/money';
+import { formatDate, formatDateTime } from '../../../utils/date';
+import { DocumentViewer } from '../../../components/DocumentViewer';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
 import { SearchableSelect, type SearchableOption } from '../../../components/SearchableSelect';
 
@@ -36,10 +38,11 @@ const INTERNAL_TABS = [
 ] as const;
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
 // as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Issuance
-// & Return, Workspace, QC, Road Test) is hidden, not just its actions. "External
-// Services" here is the separate towing/3rd-party-invoicing sub-resource
-// (WorkOrderExternalService) and stays available either way.
-const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'External Services', 'Documents', 'History', 'Audit'] as const;
+// & Return, Workspace, QC, Road Test) is hidden, not just its actions. "External Services"
+// (towing / 3rd-party memos) is hidden too, in every status: the External Workshop's own
+// documents (acknowledged WAL, invoice, payment proof) are under Documents instead. The
+// decision is by execution mode, never by status; internal Work Orders keep the tab.
+const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'Documents', 'History', 'Audit'] as const;
 type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
 
 // Mirrors backend WorkOrderExecutionService — Findings/Diagnosis/Corrective Actions are
@@ -355,7 +358,7 @@ export function WorkOrderDetailPage() {
       {tab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
       {tab === 'Findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
       {tab === 'External Services' && <ExternalServicesTab wo={wo} onChanged={load} />}
-      {tab === 'Documents' && <DocumentsTab />}
+      {tab === 'Documents' && <DocumentsTab workOrderId={wo.id} />}
       {tab === 'History' && <HistoryTab vehicleId={wo.vehicle_id} />}
       {tab === 'Audit' && <AuditTab workOrderId={wo.id} />}
 
@@ -496,7 +499,7 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   const laborCost = wo.estimated_labor_cost_computed ?? null;
   const partsCost = wo.estimated_parts_cost_computed ?? null;
   const totalCost =
-    laborCost !== null || partsCost !== null ? (Number(laborCost ?? 0) + Number(partsCost ?? 0)).toFixed(2) : null;
+    laborCost !== null || partsCost !== null ? sumMoney(laborCost, partsCost) : null;
 
   const rows: [string, string][] = [
     ['Vehicle', wo.vehicle?.registration_number ?? wo.vehicle_id],
@@ -507,9 +510,9 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Current Odometer', wo.current_odometer ?? '—'],
     ['Est. Number of Mechanic', wo.estimated_number_of_mechanics != null ? String(wo.estimated_number_of_mechanics) : '—'],
     ['Est. Total Hours', wo.estimated_total_hours ?? '—'],
-    ['Estimated Labor Cost', laborCost ?? '—'],
-    ['Estimated Parts Cost', partsCost ?? '—'],
-    ['Estimated Total Cost', totalCost ?? '—'],
+    ['Estimated Labor Cost', formatMoney(laborCost)],
+    ['Estimated Parts Cost', formatMoney(partsCost)],
+    ['Estimated Total Cost', formatMoney(totalCost)],
     ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
     ['Target Completion', wo.target_completion_at ? new Date(wo.target_completion_at).toLocaleString() : '—'],
     ['Started At', wo.started_at ? new Date(wo.started_at).toLocaleString() : '—'],
@@ -1011,7 +1014,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
               <strong>{j.service_item ?? 'Job'}</strong> — {j.description}
               <div style={{ color: '#6b7280' }}>
                 Est. {j.estimated_hours ?? '—'}h / Actual {j.actual_hours ?? '—'}h
-                {j.estimated_labor_cost_computed && ` · Est. Labor Cost: ${j.estimated_labor_cost_computed}`}
+                {j.estimated_labor_cost_computed && ` · Est. Labor Cost: ${formatMoney(j.estimated_labor_cost_computed)}`}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -2405,12 +2408,12 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
             )}
             {s.status === 'COMPLETED' && hasPermission('workshop_invoice.record') && (
               <button className="btn-primary" disabled={busy} onClick={() => setRecordingInvoiceFor(s.id)}>
-                Record Workshop Invoice
+                Record Service Invoice
               </button>
             )}
             {(s.status === 'BILLED' || s.status === 'PAID') && s.workshop_invoice_id && hasPermission('workshop_invoice.view') && (
               <Link className="btn-secondary" to={`/app/workshop-invoices/${s.workshop_invoice_id}`}>
-                View Workshop Invoice
+                View Service Invoice
               </Link>
             )}
           </div>
@@ -2474,11 +2477,87 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
   );
 }
 
-function DocumentsTab() {
+interface WorkOrderDocument {
+  type: 'WORK_AUTHORIZATION_LETTER' | 'EXTERNAL_WORKSHOP_INVOICE' | 'PAYMENT_PROOF';
+  title: string;
+  status: string;
+  reference?: string | null;
+  date: string | null;
+  date_kind: 'UPLOADED_AT' | 'INVOICE_DATE' | 'PAYMENT_DATE';
+  amount?: string | null;
+  file: { name: string; mime_type: string | null; size: number | null; uploaded_at: string | null } | null;
+  path: string;
+}
+
+const DOCUMENT_ACTION: Record<WorkOrderDocument['type'], string> = {
+  WORK_AUTHORIZATION_LETTER: 'View WAL',
+  EXTERNAL_WORKSHOP_INVOICE: 'View Invoice',
+  PAYMENT_PROOF: 'View Payment Proof',
+};
+
+/**
+ * Work Order documents. External Workshop Work Orders list the acknowledged Work Authorization
+ * Letter, the External Workshop Invoice and the Payment Proof; each file opens by its real
+ * type (image / PDF / download) through the backend's authorized file endpoints.
+ */
+function DocumentsTab({ workOrderId }: { workOrderId: string }) {
+  const { hasPermission } = useAuth();
+  const [docs, setDocs] = useState<WorkOrderDocument[] | null>(null);
+  const [mode, setMode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<WorkOrderDocument | null>(null);
+  const canOpen = hasPermission('external_work_order_invoice.view');
+
+  useEffect(() => {
+    apiClient
+      .get(`/app/work-orders/${workOrderId}/documents`)
+      .then((res) => {
+        setDocs(res.data.data.documents);
+        setMode(res.data.data.execution_mode);
+      })
+      .catch((err) => setError(extractApiError(err).message));
+  }, [workOrderId]);
+
+  if (error) return <ErrorState message={error} />;
+  if (!docs) return <LoadingState />;
+
+  const dateLabel = (d: WorkOrderDocument) =>
+    d.date_kind === 'UPLOADED_AT' ? `Uploaded: ${formatDateTime(d.date)}` : d.date_kind === 'INVOICE_DATE' ? `Invoice Date: ${formatDate(d.date)}` : `Payment Date: ${formatDate(d.date)}`;
+
   return (
     <div className="card">
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Documents</h3>
-      <EmptyState label="Work Order-level documents are not tracked in this phase — see the vehicle's Documents tab for vehicle-level records." />
+      {docs.length === 0 && (
+        <EmptyState
+          label={
+            mode === 'EXTERNAL'
+              ? 'No External Workshop documents yet — the acknowledged Work Authorization Letter, the workshop invoice and the payment proof appear here as the work progresses.'
+              : "Work Order-level documents are not tracked for internal Work Orders — see the vehicle's Documents tab for vehicle-level records."
+          }
+        />
+      )}
+      {docs.map((d) => (
+        <div key={d.type} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid #f3f4f6', flexWrap: 'wrap' }}>
+          <div style={{ fontSize: 13 }}>
+            <div style={{ fontWeight: 600 }}>
+              {d.title}
+              {d.reference && <span style={{ fontWeight: 400, color: '#6b7280' }}> · {d.reference}</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4, color: '#374151', flexWrap: 'wrap' }}>
+              {d.type === 'WORK_AUTHORIZATION_LETTER' && <StatusBadge status="ACKNOWLEDGED" />}
+              <span>{dateLabel(d)}</span>
+              {d.amount != null && <span>Amount: {formatMoney(d.amount)}</span>}
+              {d.file && <span style={{ color: '#6b7280' }}>{d.file.name}</span>}
+            </div>
+          </div>
+          {canOpen && d.file && (
+            <button className="btn-secondary" onClick={() => setViewing(d)}>
+              {DOCUMENT_ACTION[d.type]}
+            </button>
+          )}
+        </div>
+      ))}
+      {viewing && <DocumentViewer path={viewing.path} title={viewing.title} fileName={viewing.file?.name} mimeType={viewing.file?.mime_type} onClose={() => setViewing(null)} />}
     </div>
   );
 }
@@ -2511,7 +2590,7 @@ function HistoryTab({ vehicleId }: { vehicleId: string }) {
   );
 }
 
-/** R1: records an externally-issued Workshop Invoice against a COMPLETED Maintenance Memo — OptiFleet never issues one. */
+/** R1: records an externally-issued third-party Service Invoice (domain: WorkshopInvoice) against a COMPLETED Maintenance Memo — OptiFleet never issues one. */
 function RecordWorkshopInvoiceModal({
   workOrderId,
   externalServiceId,
@@ -2566,9 +2645,9 @@ function RecordWorkshopInvoiceModal({
   }
 
   return (
-    <Modal open title="Record Workshop Invoice" onClose={onClose} width={560}>
+    <Modal open title="Record Service Invoice" onClose={onClose} width={560}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
-        This records an invoice the Workshop Partner already issued externally — OptiFleet does not issue this invoice.
+        This records an invoice the service provider already issued externally — OptiFleet does not issue this invoice.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <FormField label="External Invoice Number" errors={errors.external_invoice_number} required>
@@ -2613,7 +2692,7 @@ function RecordWorkshopInvoiceModal({
           Cancel
         </button>
         <button className="btn-primary" disabled={submitting || !externalInvoiceNumber || !invoiceDate || !totalAmount} onClick={submit}>
-          {submitting ? 'Recording…' : 'Record Workshop Invoice'}
+          {submitting ? 'Recording…' : 'Record Service Invoice'}
         </button>
       </div>
     </Modal>

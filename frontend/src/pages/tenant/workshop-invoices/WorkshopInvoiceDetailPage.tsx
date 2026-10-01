@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -10,7 +10,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { WorkshopInvoiceItem, WorkshopInvoiceReconciliation } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
-import { formatMoney } from '../../../utils/money';
+import { formatMoney, toMoneyInput } from '../../../utils/money';
 
 /**
  * R1: full detail view for one recorded Workshop Invoice — reconciliation,
@@ -102,8 +102,8 @@ export function WorkshopInvoiceDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/workshop-invoices" label="← Back to Workshop Invoices" />
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Workshop Invoice — {invoice.external_invoice_number}</h1>
+      <BackButton fallbackTo={`/app/work-orders/${invoice.work_order_id}`} label="← Back to Work Order" />
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Service Invoice — {invoice.external_invoice_number}</h1>
       <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 0 }}>
         Recorded from an externally-issued document — OptiFleet did not issue this invoice.
       </p>
@@ -117,8 +117,8 @@ export function WorkshopInvoiceDetailPage() {
           </button>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13 }}>
-          <div><strong>Workshop Partner:</strong> {invoice.partner?.name ?? invoice.partner_id}</div>
-          <div><strong>Work Order:</strong> {invoice.work_order?.wo_number ?? invoice.work_order_id}</div>
+          <div><strong>Service Provider:</strong> {invoice.partner?.name ?? invoice.partner_id}</div>
+          <div><strong>Work Order:</strong> <Link to={`/app/work-orders/${invoice.work_order_id}`}>{invoice.work_order?.wo_number ?? 'Open Work Order'}</Link></div>
           <div><strong>Partner Reference:</strong> {invoice.partner_reference ?? '—'}</div>
           <div><strong>Invoice Date:</strong> {invoice.invoice_date}</div>
           <div><strong>Due Date:</strong> {invoice.due_date ?? '—'}</div>
@@ -143,10 +143,10 @@ export function WorkshopInvoiceDetailPage() {
         <div className="card" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Reconciliation</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13, marginBottom: 10 }}>
-            <div><strong>Expected:</strong> {reconciliation.expected_amount ?? '—'}</div>
-            <div><strong>Invoiced:</strong> {reconciliation.invoiced_amount}</div>
-            <div><strong>Variance:</strong> {reconciliation.variance_amount ?? '—'} {reconciliation.variance_percent ? `(${reconciliation.variance_percent}%)` : ''}</div>
-            <div><strong>Work Order Estimate:</strong> {reconciliation.work_order_estimated_total_cost ?? '—'}</div>
+            <div><strong>Expected:</strong> {formatMoney(reconciliation.expected_amount)}</div>
+            <div><strong>Invoiced:</strong> {formatMoney(reconciliation.invoiced_amount)}</div>
+            <div><strong>Variance:</strong> {formatMoney(reconciliation.variance_amount)} {reconciliation.variance_percent ? `(${reconciliation.variance_percent}%)` : ''}</div>
+            <div><strong>Work Order Estimate:</strong> {formatMoney(reconciliation.work_order_estimated_total_cost)}</div>
             <div><StatusBadge status={reconciliation.reconciliation_status} /></div>
           </div>
           {reconciliation.missing_source_records.length > 0 && (
@@ -268,7 +268,7 @@ export function WorkshopInvoiceDetailPage() {
 
 function PaymentModal({ invoiceId, payableAmount, onClose, onSaved }: { invoiceId: string; payableAmount: string; onClose: () => void; onSaved: () => void }) {
   const [paymentDate, setPaymentDate] = useState('');
-  const [paidAmount, setPaidAmount] = useState(payableAmount);
+  const [paidAmount, setPaidAmount] = useState(toMoneyInput(payableAmount));
   const [paymentMethod, setPaymentMethod] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [evidenceUrl, setEvidenceUrl] = useState('');
@@ -294,7 +294,7 @@ function PaymentModal({ invoiceId, payableAmount, onClose, onSaved }: { invoiceI
 
   return (
     <Modal open title="Upload Payment Evidence" onClose={onClose}>
-      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Payable amount: {payableAmount}. Partial payment is not supported — the paid amount must match exactly.</p>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Payable amount: {formatMoney(payableAmount)}. Partial payment is not supported — the paid amount must match exactly.</p>
       <FormField label="Payment Date" errors={errors.payment_date} required>
         <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
       </FormField>
@@ -324,7 +324,7 @@ function PaymentModal({ invoiceId, payableAmount, onClose, onSaved }: { invoiceI
 }
 
 function CorrectionModal({ invoice, onClose, onSaved }: { invoice: WorkshopInvoiceItem; onClose: () => void; onSaved: () => void }) {
-  const [totalAmount, setTotalAmount] = useState(invoice.total_amount);
+  const [totalAmount, setTotalAmount] = useState(toMoneyInput(invoice.total_amount));
   const [invoiceDate, setInvoiceDate] = useState(invoice.invoice_date);
   const [reason, setReason] = useState('');
   const [errors, setErrors] = useState<Record<string, string[]>>({});
@@ -335,7 +335,7 @@ function CorrectionModal({ invoice, onClose, onSaved }: { invoice: WorkshopInvoi
     setErrors({});
     try {
       const requestedValues: Record<string, unknown> = {};
-      if (totalAmount !== invoice.total_amount) requestedValues.total_amount = totalAmount;
+      if (totalAmount !== toMoneyInput(invoice.total_amount)) requestedValues.total_amount = totalAmount;
       if (invoiceDate !== invoice.invoice_date) requestedValues.invoice_date = invoiceDate;
       await apiClient.post(`/app/workshop-invoices/${invoice.id}/request-correction`, { requested_values: requestedValues, reason });
       onSaved();

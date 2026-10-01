@@ -316,6 +316,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/maintenance-requests/{maintenanceRequest}/work-order', [WorkOrderController::class, 'fromMaintenanceRequest'])->middleware('permission:maintenance_request.convert_work_order');
             Route::post('/maintenance-schedules/{maintenanceSchedule}/work-order', [WorkOrderController::class, 'fromMaintenanceSchedule'])->middleware('permission:maintenance_schedule.convert_work_order');
             Route::get('/work-orders/{workOrder}', [WorkOrderController::class, 'show'])->middleware('permission:work_order.view');
+            Route::get('/work-orders/{workOrder}/documents', [WorkOrderController::class, 'documents'])->middleware('permission:work_order.view');
             Route::put('/work-orders/{workOrder}', [WorkOrderController::class, 'update'])->middleware('permission:work_order.update');
             Route::get('/work-orders/{workOrder}/print', [WorkOrderController::class, 'print'])->middleware('permission:work_order.view');
             Route::post('/work-orders/{workOrder}/submit', [WorkOrderController::class, 'submit'])->middleware('permission:work_order.submit');
@@ -661,6 +662,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/partners', [PartnerController::class, 'index'])->middleware('permission:partner.view');
             Route::post('/partners', [PartnerController::class, 'store'])->middleware('permission:partner.manage');
             Route::get('/partners/{partner}', [PartnerController::class, 'show'])->middleware('permission:partner.view');
+            Route::get('/partners/{partner}/performance', [PartnerController::class, 'performance'])->middleware('permission:partner.view');
             Route::put('/partners/{partner}', [PartnerController::class, 'update'])->middleware('permission:partner.manage');
         });
 

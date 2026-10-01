@@ -33,3 +33,35 @@ export function formatMoney(value: string | number | null | undefined, currency?
   const amount = `${sign && !isZero ? '-' : ''}${grouped}.${digits.slice(-2)}`;
   return currency ? `${currency} ${amount}` : amount;
 }
+
+/**
+ * A stored decimal (e.g. "150000.0000") as an editable form value with at most two decimals
+ * ("150000.00"), without thousands separators and without floating-point arithmetic. Only
+ * trailing zero decimals are dropped — a value with significant 3rd/4th decimals is kept
+ * unchanged rather than silently altered.
+ */
+export function toMoneyInput(value: string | number | null | undefined): string {
+  if (value === null || value === undefined || value === '') return '';
+  const raw = String(value).trim();
+  const match = /^(-?\d+)(?:\.(\d*))?$/.exec(raw);
+  if (!match) return raw;
+  const [, int, frac = ''] = match;
+  if (frac.length <= 2) return frac ? `${int}.${frac}` : int;
+  return /^0*$/.test(frac.slice(2)) ? `${int}.${frac.slice(0, 2)}` : raw;
+}
+
+/** Exact sum of decimal money strings (up to 4 decimals, the storage scale) — no floating point. */
+export function sumMoney(...values: (string | number | null | undefined)[]): string {
+  const SCALE = 4;
+  let total = 0n;
+  for (const v of values) {
+    if (v === null || v === undefined || v === '') continue;
+    const m = /^(-?)(\d+)(?:\.(\d+))?$/.exec(String(v).trim());
+    if (!m) continue;
+    const units = BigInt(m[2] + (m[3] ?? '').padEnd(SCALE, '0').slice(0, SCALE));
+    total += m[1] ? -units : units;
+  }
+  const negative = total < 0n;
+  const digits = (negative ? -total : total).toString().padStart(SCALE + 1, '0');
+  return `${negative ? '-' : ''}${digits.slice(0, -SCALE)}.${digits.slice(-SCALE)}`;
+}

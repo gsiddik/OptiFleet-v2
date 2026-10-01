@@ -252,6 +252,52 @@ class WorkOrderController extends Controller
         return $this->ok($this->workOrders->{$method}($workOrder));
     }
 
+    /**
+     * Work Order → Documents. For a Work Order executed by an External Workshop: the
+     * acknowledged Work Authorization Letter (only once the workshop has acknowledged it), the
+     * External Workshop Invoice (with its own invoice date) and the Payment Proof (once paid).
+     * Metadata only — each file is opened through its existing, permission- and scope-checked
+     * External Work Order Invoice endpoint (`path`), never a storage URL.
+     */
+    public function documents(WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+        $invoice = $workOrder->execution_mode === 'EXTERNAL'
+            ? $workOrder->externalInvoice()->with(['acknowledgementFile', 'vendorInvoiceFile', 'paymentProofFile'])->first()
+            : null;
+        $file = fn ($f) => $f ? ['name' => $f->original_filename, 'mime_type' => $f->mime_type, 'size' => $f->size, 'uploaded_at' => $f->uploaded_at] : null;
+        $base = $invoice ? "/app/external-work-order-invoices/{$invoice->id}" : null;
+
+        $documents = [];
+        if ($invoice && $invoice->work_authorization_status === 'ACKNOWLEDGED' && $invoice->acknowledgementFile) {
+            $documents[] = [
+                'type' => 'WORK_AUTHORIZATION_LETTER', 'title' => 'Work Authorization Letter', 'status' => 'ACKNOWLEDGED',
+                'reference' => $invoice->wal_number, 'date' => $invoice->acknowledgementFile->uploaded_at, 'date_kind' => 'UPLOADED_AT',
+                'acknowledged_at' => $invoice->acknowledged_at, 'file' => $file($invoice->acknowledgementFile), 'path' => "{$base}/acknowledgement",
+            ];
+        }
+        if ($invoice && $invoice->vendorInvoiceFile) {
+            $documents[] = [
+                'type' => 'EXTERNAL_WORKSHOP_INVOICE', 'title' => 'External Workshop Invoice', 'status' => $invoice->status,
+                'date' => $invoice->vendor_invoice_date?->toDateString(), 'date_kind' => 'INVOICE_DATE',
+                'amount' => $invoice->vendor_invoice_amount, 'file' => $file($invoice->vendorInvoiceFile), 'path' => "{$base}/vendor-invoice",
+            ];
+        }
+        if ($invoice && $invoice->payment_date && $invoice->paymentProofFile) {
+            $documents[] = [
+                'type' => 'PAYMENT_PROOF', 'title' => 'Payment Proof', 'status' => 'PAID',
+                'date' => $invoice->payment_date->toDateString(), 'date_kind' => 'PAYMENT_DATE',
+                'amount' => $invoice->paid_amount, 'file' => $file($invoice->paymentProofFile), 'path' => "{$base}/payment-proof",
+            ];
+        }
+
+        return $this->ok([
+            'execution_mode' => $workOrder->execution_mode,
+            'external_invoice_id' => $invoice?->id,
+            'documents' => $documents,
+        ]);
+    }
+
     private function authorizeScope(WorkOrder $workOrder): void
     {
         abort_unless($workOrder->tenant_id === $this->context->tenantId(), 404);

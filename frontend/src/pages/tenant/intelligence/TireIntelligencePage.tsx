@@ -4,6 +4,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { FreshnessBanner, type Freshness } from '../../../components/analytics/FreshnessBanner';
 import { RiskBadge } from '../../../components/intelligence/RiskBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { formatMoney } from '../../../utils/money';
 
 interface TireRow {
   tire_id: string;
@@ -59,7 +60,7 @@ export function TireIntelligencePage() {
                 <tr key={p.product_id}>
                   <td style={{ padding: 4 }}>{p.product_id}</td>
                   <td style={{ padding: 4 }}>{p.tire_count}</td>
-                  <td style={{ padding: 4 }}>{p.avg_cost_per_km ?? '—'}</td>
+                  <td style={{ padding: 4 }}>{formatMoney(p.avg_cost_per_km)}</td>
                   <td style={{ padding: 4 }}>{p.avg_damage_count_90d}</td>
                 </tr>
               ))}

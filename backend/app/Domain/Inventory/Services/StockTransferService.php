@@ -9,6 +9,7 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\Workflow\Services\WorkflowEngine;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -27,6 +28,8 @@ use Illuminate\Support\Facades\DB;
 class StockTransferService
 {
     private const RESOURCE_TYPE = 'stock_transfer';
+
+    private const HISTORY_ORDER = ['DRAFT', 'REQUESTED', 'APPROVED', 'PREPARED', 'DISPATCHED', 'IN_TRANSIT', 'RECEIVED', 'COMPLETED', 'REJECTED', 'CANCELLED'];
 
     public function __construct(
         private readonly InventoryService $inventory,
@@ -158,5 +161,37 @@ class StockTransferService
 
             return $locked->fresh('items');
         });
+    }
+
+    /**
+     * Every status the transfer has passed through, oldest first, with when it happened and the
+     * name of the user who did it. Sourced from the transfer's audit trail (each create/update of
+     * an Auditable model is logged with its actor), not from `updated_at`, so intermediate steps
+     * (Requested, Approved, Prepared, In Transit) keep their own time and actor.
+     *
+     * @return list<array{status: string, at: string, by: string|null}>
+     */
+    public function statusHistory(StockTransfer $transfer): array
+    {
+        $order = array_flip(self::HISTORY_ORDER);
+
+        return DB::table('audit_logs')
+            ->leftJoin('users', 'users.id', '=', 'audit_logs.actor_user_id')
+            ->where('audit_logs.tenant_id', $transfer->tenant_id)
+            ->where('audit_logs.resource_type', class_basename(StockTransfer::class))
+            ->where('audit_logs.resource_id', $transfer->id)
+            ->whereNotNull('audit_logs.new_values->status')
+            ->get(['audit_logs.new_values', 'audit_logs.created_at', 'users.name'])
+            ->map(fn ($row) => [
+                'status' => (string) json_decode($row->new_values, true)['status'],
+                'at' => Carbon::parse($row->created_at),
+                'by' => $row->name,
+            ])
+            // Audit timestamps are second-precision: steps taken within the same second are
+            // ordered by their position in the lifecycle.
+            ->sort(fn ($a, $b) => [$a['at']->getTimestamp(), $order[$a['status']] ?? 99] <=> [$b['at']->getTimestamp(), $order[$b['status']] ?? 99])
+            ->map(fn ($entry) => ['status' => $entry['status'], 'at' => $entry['at']->toIso8601String(), 'by' => $entry['by']])
+            ->values()
+            ->all();
     }
 }

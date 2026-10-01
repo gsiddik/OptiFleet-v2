@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
@@ -10,6 +10,10 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { StockTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatQty } from '../../../utils/quantity';
+import { formatDateTime } from '../../../utils/date';
+
+const TH: CSSProperties = { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: 600 };
+const TD: CSSProperties = { padding: '6px 8px', borderBottom: '1px solid #f3f4f6' };
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'stock_transfer.create', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'stock_transfer.create' }],
@@ -35,7 +39,7 @@ export function StockTransferDetailPage() {
         setTransfer(res.data.data);
         const initial: typeof receipts = {};
         (res.data.data.items ?? []).forEach((item: { id: string; quantity_sent: string }) => {
-          initial[item.id] = { received: item.quantity_sent, damaged: '0', lost: '0', reason: '' };
+          initial[item.id] = { received: item.quantity_sent.includes('.') ? item.quantity_sent.replace(/\.?0+$/, '') : item.quantity_sent, damaged: '0', lost: '0', reason: '' };
         });
         setReceipts(initial);
       })
@@ -82,6 +86,8 @@ export function StockTransferDetailPage() {
   if (!transfer) return <LoadingState />;
 
   const actions = (LIFECYCLE[transfer.status] ?? []).filter((a) => hasPermission(a.permission));
+  const canReceive = transfer.status === 'IN_TRANSIT' && hasPermission('stock_transfer.receive');
+  const showReceipt = transfer.status === 'RECEIVED' || transfer.status === 'COMPLETED';
 
   return (
     <div>
@@ -106,53 +112,122 @@ export function StockTransferDetailPage() {
         </p>
         {transfer.dispatched_at && (
           <p style={{ fontSize: 13, color: '#6b7280' }}>
-            <strong>Dispatched:</strong> {new Date(transfer.dispatched_at).toLocaleString()} by {transfer.dispatched_by ?? '—'}
+            <strong>Dispatched:</strong> {formatDateTime(transfer.dispatched_at)} by {transfer.dispatched_by_name ?? '—'}
           </p>
         )}
         {transfer.received_at && (
           <p style={{ fontSize: 13, color: '#6b7280' }}>
-            <strong>Received:</strong> {new Date(transfer.received_at).toLocaleString()} by {transfer.received_by ?? '—'}
+            <strong>Received:</strong> {formatDateTime(transfer.received_at)} by {transfer.received_by_name ?? '—'}
           </p>
         )}
       </div>
 
-      <div className="card">
+      <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
-        {(transfer.items ?? []).map((item) => (
-          <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
-            <div style={{ fontSize: 13, marginBottom: 6 }}>
-              {item.product?.name ?? item.product_id} — sent {formatQty(item.quantity_sent)}
-              {item.quantity_received !== null && ` / received ${formatQty(item.quantity_received)}`}
-            </div>
-            {transfer.status === 'IN_TRANSIT' && hasPermission('stock_transfer.receive') && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <NumericInput step="0.0001" placeholder="Received" value={receipts[item.id]?.received ?? ''}
-                  onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], received: e.target.value } }))}
-                  style={{ ...inputStyle, width: 100 }}
-                />
-                <NumericInput step="0.0001" placeholder="Damaged" value={receipts[item.id]?.damaged ?? ''}
-                  onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], damaged: e.target.value } }))}
-                  style={{ ...inputStyle, width: 100 }}
-                />
-                <NumericInput step="0.0001" placeholder="Lost" value={receipts[item.id]?.lost ?? ''}
-                  onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], lost: e.target.value } }))}
-                  style={{ ...inputStyle, width: 100 }}
-                />
-                <input
-                  placeholder="Discrepancy reason (if short)" value={receipts[item.id]?.reason ?? ''}
-                  onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], reason: e.target.value } }))}
-                  style={{ ...inputStyle, width: 220 }}
-                />
+        {showReceipt ? (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={TH}>Product</th>
+                <th style={{ ...TH, textAlign: 'right' }}>Sent</th>
+                <th style={{ ...TH, textAlign: 'right' }}>Received</th>
+                <th style={{ ...TH, textAlign: 'right' }}>Damaged</th>
+                <th style={{ ...TH, textAlign: 'right' }}>Lost</th>
+                <th style={TH}>Discrepancy Reason</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(transfer.items ?? []).map((item) => (
+                <tr key={item.id}>
+                  <td style={TD}>{item.product?.name ?? item.product_id}</td>
+                  <td style={{ ...TD, textAlign: 'right' }}>{formatQty(item.quantity_sent)}</td>
+                  <td style={{ ...TD, textAlign: 'right' }}>{item.quantity_received !== null ? formatQty(item.quantity_received) : '—'}</td>
+                  <td style={{ ...TD, textAlign: 'right' }}>{formatQty(item.quantity_damaged ?? '0')}</td>
+                  <td style={{ ...TD, textAlign: 'right' }}>{formatQty(item.quantity_lost ?? '0')}</td>
+                  <td style={TD}>{item.discrepancy_reason || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          (transfer.items ?? []).map((item) => (
+            <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+              <div style={{ fontSize: 13, marginBottom: 6 }}>
+                {item.product?.name ?? item.product_id} — sent {formatQty(item.quantity_sent)}
               </div>
-            )}
-          </div>
-        ))}
-        {transfer.status === 'IN_TRANSIT' && hasPermission('stock_transfer.receive') && (
+              {canReceive && (
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+                  <ReceiptField label="Received Qty" hint="Good units into stock">
+                    <NumericInput step="0.0001" value={receipts[item.id]?.received ?? ''}
+                      onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], received: e.target.value } }))}
+                      style={{ ...inputStyle, width: 110 }}
+                    />
+                  </ReceiptField>
+                  <ReceiptField label="Damaged Qty">
+                    <NumericInput step="0.0001" value={receipts[item.id]?.damaged ?? ''}
+                      onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], damaged: e.target.value } }))}
+                      style={{ ...inputStyle, width: 110 }}
+                    />
+                  </ReceiptField>
+                  <ReceiptField label="Lost Qty">
+                    <NumericInput step="0.0001" value={receipts[item.id]?.lost ?? ''}
+                      onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], lost: e.target.value } }))}
+                      style={{ ...inputStyle, width: 110 }}
+                    />
+                  </ReceiptField>
+                  <ReceiptField label="Discrepancy Reason" hint="Required if received is less than sent">
+                    <input value={receipts[item.id]?.reason ?? ''}
+                      onChange={(e) => setReceipts((r) => ({ ...r, [item.id]: { ...r[item.id], reason: e.target.value } }))}
+                      style={{ ...inputStyle, width: 240 }}
+                    />
+                  </ReceiptField>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+        {canReceive && (
           <button className="btn-primary" disabled={busy} onClick={receive} style={{ marginTop: 12 }}>
             Post Receipt
           </button>
         )}
       </div>
+
+      <div className="card">
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>Status History</h3>
+        {(transfer.status_history ?? []).length === 0 ? (
+          <div style={{ fontSize: 13, color: '#6b7280' }}>No status changes recorded.</div>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr>
+                <th style={TH}>Status</th>
+                <th style={TH}>Date / Time</th>
+                <th style={TH}>By</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(transfer.status_history ?? []).map((entry, i) => (
+                <tr key={`${entry.status}-${i}`}>
+                  <td style={TD}><StatusBadge status={entry.status} /></td>
+                  <td style={TD}>{formatDateTime(entry.at)}</td>
+                  <td style={TD}>{entry.by ?? '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </div>
+  );
+}
+
+function ReceiptField({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <label style={{ display: 'flex', flexDirection: 'column', gap: 3, fontSize: 12, fontWeight: 600, color: '#374151' }}>
+      {label}
+      {children}
+      {hint && <span style={{ fontWeight: 400, color: '#6b7280', fontSize: 11 }}>{hint}</span>}
+    </label>
   );
 }

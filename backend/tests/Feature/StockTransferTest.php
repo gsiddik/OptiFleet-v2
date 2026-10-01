@@ -123,6 +123,46 @@ class StockTransferTest extends TestCase
         $this->assertSame(7.0, (float) $toStock->quantity_on_hand);
     }
 
+    public function test_detail_shows_status_history_with_actor_names_and_receipt_discrepancies(): void
+    {
+        [$tenant, $from, $to, $product] = $this->setUpTransferScenario();
+        $all = ['stock_transfer.view', 'stock_transfer.create', 'stock_transfer.approve', 'stock_transfer.dispatch', 'stock_transfer.receive'];
+        [$requester, $requesterToken] = $this->makeTenantUser($tenant, $all);
+        [$keeper, $keeperToken] = $this->makeTenantUser($tenant, $all);
+        $requester->update(['name' => 'Rina Requester']);
+        $keeper->update(['name' => 'Kevin Keeper']);
+
+        $id = $this->postJson('/api/v1/app/stock-transfers', [
+            'from_warehouse_id' => $from->id, 'to_warehouse_id' => $to->id,
+            'items' => [['product_id' => $product->id, 'quantity' => 10]],
+        ], $this->authHeaders($requesterToken))->assertStatus(201)->json('data.id');
+        $this->app['auth']->forgetGuards();
+        $this->postJson("/api/v1/app/stock-transfers/{$id}/submit", [], $this->authHeaders($requesterToken))->assertOk();
+
+        $this->app['auth']->forgetGuards();
+        $headers = $this->authHeaders($keeperToken);
+        foreach (['approve', 'prepare', 'dispatch', 'in-transit'] as $action) {
+            $this->postJson("/api/v1/app/stock-transfers/{$id}/{$action}", [], $headers)->assertOk();
+        }
+        $itemId = StockTransfer::query()->findOrFail($id)->items()->value('id');
+        $this->postJson("/api/v1/app/stock-transfers/{$id}/receive", [
+            'receipts' => [['item_id' => $itemId, 'quantity_received' => 7, 'quantity_damaged' => 2, 'quantity_lost' => 1, 'discrepancy_reason' => 'Crate crushed']],
+        ], $headers)->assertOk();
+
+        $data = $this->getJson("/api/v1/app/stock-transfers/{$id}", $headers)->assertOk()->json('data');
+
+        $history = $data['status_history'];
+        $this->assertSame(['DRAFT', 'REQUESTED', 'APPROVED', 'PREPARED', 'DISPATCHED', 'IN_TRANSIT', 'RECEIVED'], array_column($history, 'status'));
+        $this->assertSame(['Rina Requester', 'Rina Requester', 'Kevin Keeper', 'Kevin Keeper', 'Kevin Keeper', 'Kevin Keeper', 'Kevin Keeper'], array_column($history, 'by'));
+        foreach ($history as $entry) {
+            $this->assertNotFalse(strtotime($entry['at']));
+        }
+        $this->assertSame(['Kevin Keeper', 'Kevin Keeper'], [$data['dispatched_by_name'], $data['received_by_name']]);
+
+        $item = $data['items'][0];
+        $this->assertSame(['7.0000', '2.0000', '1.0000', 'Crate crushed'], [$item['quantity_received'], $item['quantity_damaged'], $item['quantity_lost'], $item['discrepancy_reason']]);
+    }
+
     public function test_over_receipt_beyond_quantity_sent_is_rejected(): void
     {
         [$tenant, $from, $to, $product] = $this->setUpTransferScenario();

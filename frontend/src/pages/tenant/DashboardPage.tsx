@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../../api/client';
 import { ErrorState, LoadingState } from '../../components/States';
+import { formatMoney } from '../../utils/money';
 
 interface DashboardData {
   branches_total: number;
@@ -147,7 +148,7 @@ export function TenantDashboardPage() {
           <h2 style={{ fontSize: 16, marginBottom: 12 }}>Supply Chain — Inventory</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              { label: 'Total Inventory Value', value: data.inventory_total_value },
+              { label: 'Total Inventory Value', value: formatMoney(data.inventory_total_value) },
               { label: 'Reserved Stock', value: data.inventory_reserved_stock },
               { label: 'Low Stock', value: data.inventory_low_stock },
               { label: 'Out of Stock', value: data.inventory_out_of_stock },
