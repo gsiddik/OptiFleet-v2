@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -43,6 +44,7 @@ function summarize(rows: WheelConfigurationItem[]): ConfigSummary[] {
 
 export function WheelConfigurationListPage() {
   const { hasPermission } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [categories, setCategories] = useState<VehicleCategory[]>([]);
@@ -114,9 +116,15 @@ export function WheelConfigurationListPage() {
         onSearchChange={setSearch}
         actions={
           hasPermission('tire.manage') ? (
-            <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + Add Position
-            </button>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {/* Single-position entry kept until the new configuration flow is approved and persisted. */}
+              <button className="btn-secondary" onClick={() => setShowCreate(true)}>
+                Add Single Position
+              </button>
+              <button className="btn-primary" onClick={() => navigate('/app/wheel-configurations/new')}>
+                New Wheels Configuration
+              </button>
+            </div>
           ) : null
         }
       >

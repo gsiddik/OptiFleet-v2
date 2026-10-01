@@ -111,6 +111,7 @@ import { PartnerDetailPage } from './pages/tenant/partners/PartnerDetailPage';
 import { TireListPage } from './pages/tenant/tires/TireListPage';
 import { TireDetailPage } from './pages/tenant/tires/TireDetailPage';
 import { WheelConfigurationListPage } from './pages/tenant/tires/WheelConfigurationListPage';
+import { AddWheelConfigurationPage } from './pages/tenant/tires/wheel-configuration/AddWheelConfigurationPage';
 import { RimsPage } from './pages/tenant/tires/RimsPage';
 import { ComponentAssetListPage } from './pages/tenant/components/ComponentAssetListPage';
 import { ComponentAssetDetailPage } from './pages/tenant/components/ComponentAssetDetailPage';
@@ -789,6 +790,8 @@ export default function App() {
             <Route path="tires" element={<RequirePermission permission="tire.view"><TireListPage /></RequirePermission>} />
             <Route path="tires/:id" element={<RequirePermission permission="tire.view"><TireDetailPage /></RequirePermission>} />
             <Route path="wheel-configurations" element={<RequirePermission permission="tire.view"><WheelConfigurationListPage /></RequirePermission>} />
+            {/* Prototype (owner review): Passenger Car wheel configuration builder — not persisted yet. */}
+            <Route path="wheel-configurations/new" element={<RequirePermission permission="tire.manage"><AddWheelConfigurationPage /></RequirePermission>} />
             <Route path="rims" element={<RequirePermission permission="rim.view"><RimsPage /></RequirePermission>} />
 
             <Route path="component-assets" element={<RequirePermission permission="component_asset.view"><ComponentAssetListPage /></RequirePermission>} />

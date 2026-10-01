@@ -148,3 +148,39 @@ their detail pages unchanged.
 | Backend Docker image build | NOT RUN — sandbox egress blocks Alpine packages (see A2) |
 
 Commits: 01edbd3 (quotation guard), e36089c (private storage), 591ee61 (tire creation).
+
+## Phase B — Wheel Configuration prototype (PROTOTYPE — awaiting owner review)
+
+Started only after the Phase A gate passed and was pushed. Separate commit. **Not a production
+feature**: nothing is persisted; existing wheel-configuration data and API are untouched.
+
+- Page: `/app/wheel-configurations/new` (Tire Management → Wheel Configuration →
+  **New Wheels Configuration**, permission `tire.manage`). The old "+ Add Position" is no longer
+  the primary action; the single-position modal stays as secondary "Add Single Position" until
+  the new flow is approved and persisted.
+- Vehicle Type (mandatory): Passenger Car, Truck, Bus, Forklift, Van, Heavy Equipment — one enum
+  (`vehicleTypes.ts`). Only Passenger Car has a form; the others show "Configuration form for
+  this vehicle type will be added after prototype approval." (no rules invented).
+- Passenger Car fields: Number of Front Axles → one "Front Axle n — Wheels / Side" row per axle;
+  Number of Rear Axles → "Rear Axle n — Wheels / Side" rows; Spare Tires. All mandatory
+  whole-number text inputs (no spinbox, no sign/decimals). Summary (read-only): Total Axles,
+  Total Wheels, Config Code — recalculated on every keystroke.
+- Calculations (`wheelLayout.ts`, pure, server-portable): Total Axles = front + rear;
+  Total Wheels = Σ(front wheels/side × 2) + Σ(rear wheels/side × 2) + spare;
+  Config Code = front digits "." rear digits (22.222, 12.221, 12.21); empty group written as "0"
+  (0.22 / 22.0). Position code `<axle in group><F|R><L|R><wheel from body>` (1FL1, 2RR2);
+  spares S1…Sn. Limits: wheels/side 1–4 (Config Code is one digit per axle), axles per group 0–6
+  with ≥1 axle in total, spare 0–4.
+- Preview (`wheelPreviewGeometry.ts` + `WheelConfigurationPreview.tsx`, SVG generated from the
+  data): top view, FRONT label + arrow, rounded nose, windshield behind the front axles, rear
+  window; small axle pitch inside a group, larger labelled wheelbase gap; wheels as rounded
+  rectangles, wheel 1 against the body and further wheels outwards, codes inside each tire;
+  axle lines drawn under body and wheels, ending at the centre of the outermost tire (never past
+  it); spare tires in a separate labelled column outside the body; dashed axle while wheels/side
+  is not entered.
+- Responsive: desktop form | preview side by side (preview sticky); tablet (820 px) stacked with
+  no horizontal scroll.
+- Verified: calculation/geometry checks (all scenarios incl. axle-line ends inside outer tire,
+  wheelbase gap 150 vs pitch 50, spare outside) and browser at 1440 / 820 px: §52 → 5 / 21 /
+  22.222 with 2 + 3 axle lines, 20 wheels, 1 spare, FRONT visible; §53 → 4 / 12 / 12.21 with
+  exact wheels per axle; validation (Required, range, 9 axles rejected), Save disabled.
