@@ -166,3 +166,47 @@ noise from another partner, another tenant and outside the period; default perio
 422 on inverted period, 404 cross-tenant, 403 without `partner.view`) + Partner / Rewired
 permissions suites — 19 passed. Browser: FT external workshop, spare-part supplier and towing
 provider each show their own KPI set; a 2020 period shows zeros.
+
+## Phase 7 — Seeders, regression, release gate (DONE)
+
+- Seeder: Alpha demo data adds one Jakarta → Bandung oil-filter transfer driven through
+  `StockTransferService` by the tenant admin (Draft → Requested → Approved) and the Bandung
+  warehouse manager (Prepared → Dispatched → In Transit → Received), spread over two days, received
+  2 / damaged 1 / lost 1 with a reason. Idempotent (notes marker).
+- Seed check (fresh migrate + DatabaseSeeder + DevDemoSeeder + FunctionalTestingSeeder, twice):
+  no errors, identical row counts on both passes, one demo transfer with a 7-step history and two
+  distinct user names.
+- Backend full regression (PostgreSQL): **967 passed (5170 assertions)**. MongoDB-dependent
+  Analytics / Intelligence suites: **NOT RUN** (no MongoDB in this environment); their migrations
+  and tests are untouched.
+- Frontend: build PASS; oxlint findings identical to the pre-change baseline (28, all pre-existing).
+
+## API contract changes (all additive)
+
+| Endpoint | Change |
+|---|---|
+| `GET /work-orders/{id}/documents` | new (`work_order.view`) |
+| `GET /stock-transfers/{id}` | adds `status_history`, `dispatched_by_name`, `received_by_name` |
+| `GET /partners/{id}/performance` | new (`partner.view`) |
+| CORS | exposes `Content-Disposition` |
+
+No endpoint, field or permission was removed or renamed; no migration was added.
+
+## DECISION REQUIRED — Workshop Invoice (R1) future
+
+- **Current architecture:** two invoice domains. R1 Workshop Invoice = vendor invoice for an
+  External Service / Maintenance Memo (towing, third-party job) on an internally executed WO,
+  with maker-checker correction / cancellation, payment and reconciliation. The External Workshop
+  invoice belongs to `WorkOrderExternalInvoice` (WO executed by an External Workshop).
+- **Dependency:** WO → External Services tab (internal WOs), memo status BILLED → PAID, workshop
+  invoice permissions, print template, integration outbox, service-provider vendor KPIs.
+- **Impact if deleted:** internal WOs could no longer record or pay third-party service invoices;
+  historical invoices and payments would become unreachable.
+- **Implemented option:** the standalone menu / list was removed; the domain is kept and reached
+  only from its Work Order (detail page with back link to the WO). Nothing deleted.
+- **Alternative:** fold R1 into the External Work Order Invoice list as a second "service
+  invoice" type — a behavioral and UX change needing product sign-off.
+- **Recommendation:** keep the implemented option; revisit only if third-party services on
+  internal WOs should move to the External Workshop flow.
+- **Risk:** low — users who used the old list now start from the Work Order; `/app/workshop-invoices`
+  redirects to Work Orders.
