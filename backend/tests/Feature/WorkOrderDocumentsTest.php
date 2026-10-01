@@ -145,4 +145,13 @@ class WorkOrderDocumentsTest extends TestCase
         [, $noView] = $this->makeTenantUser($tenant, ['external_work_order_invoice.view']);
         $this->send('getJson', "/api/v1/app/work-orders/{$externalId}/documents", $this->authHeaders($noView))->assertForbidden();
     }
+
+    public function test_cross_origin_clients_can_read_the_served_file_name(): void
+    {
+        [, , , $headers] = $this->scenario();
+        $this->app['auth']->forgetGuards();
+        $response = $this->getJson('/api/v1/app/work-orders', $headers + ['Origin' => 'http://localhost:5173']);
+
+        $this->assertStringContainsString('Content-Disposition', (string) $response->headers->get('Access-Control-Expose-Headers'));
+    }
 }

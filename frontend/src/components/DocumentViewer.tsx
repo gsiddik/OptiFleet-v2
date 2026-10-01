@@ -13,17 +13,17 @@ import { fetchProtectedFile } from '../utils/protectedFile';
  * Download is always available. Files are fetched through the authorized API only.
  */
 export function DocumentViewer({ path, title, fileName, mimeType, onClose }: { path: string; title: string; fileName?: string | null; mimeType?: string | null; onClose: () => void }) {
-  const [file, setFile] = useState<{ url: string; type: string } | null>(null);
+  const [file, setFile] = useState<{ url: string; type: string; name: string | null } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let url: string | null = null;
     let cancelled = false;
     fetchProtectedFile(path)
-      .then((blob) => {
+      .then(({ blob, name }) => {
         if (cancelled) return;
         url = URL.createObjectURL(blob);
-        setFile({ url, type: blob.type || mimeType || 'application/octet-stream' });
+        setFile({ url, type: blob.type || mimeType || 'application/octet-stream', name });
       })
       .catch((err) => !cancelled && setError(extractApiError(err).message));
     return () => {
@@ -32,7 +32,7 @@ export function DocumentViewer({ path, title, fileName, mimeType, onClose }: { p
     };
   }, [path, mimeType]);
 
-  const name = fileName ?? 'document';
+  const name = fileName ?? file?.name ?? 'document';
   const isImage = file?.type.startsWith('image/');
   const isPdf = file?.type === 'application/pdf';
 

@@ -80,3 +80,21 @@ Invoice reconciliation and payable amount, correction / settlement pre-fills).
   Browser: External WOs (NEW / DELIVERED / BILLED / CLOSED) have no External Services tab;
   documents appear per stage; PNG proof previews as image, PDF invoice in PDF viewer; internal
   WO still shows External Services.
+
+## Phase 3 — File handling & money formatting (DONE)
+
+- External Work Order Invoice list (incl. the Bill popup): removed `openPdf()`, which re-wrapped
+  every blob as `application/pdf`; all View/Open actions (WAL, acknowledgement, completed WO,
+  vendor invoice, payment proof) use `DocumentViewer` → PNG/JPG preview as image, PDF in the PDF
+  viewer, other types download. Content type is never faked.
+- `fetchProtectedFile()` returns blob + server filename (Content-Disposition); `config/cors.php`
+  published with `exposed_headers = [Content-Disposition]` so the browser can read it
+  cross-origin (download keeps the original filename).
+- Money display: shared `formatMoney` (max 2 decimals) now used for WO overview labor / parts /
+  total and job estimate, Workshop Invoice reconciliation + payable, Tire Intelligence cost/km,
+  Dashboard inventory value, platform invoice / billing / payment amounts. New helpers
+  `toMoneyInput` (form pre-fill without trailing `.0000`) and `sumMoney` (BigInt, no float).
+  Storage precision unchanged. Exception: the raw JSON in the audit-log diff view.
+- Tests: `WorkOrderDocumentsTest` (3, incl. exposed header) + WorkshopInvoice /
+  ExternalWorkOrderInvoice suites — 42 passed. Frontend build PASS; lint identical to baseline.
+  Browser crawl of 50 tenant/platform pages: 0 amounts rendered with 3–4 decimals.

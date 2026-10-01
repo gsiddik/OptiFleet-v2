@@ -26,7 +26,7 @@ import type {
   WorkspaceReservationItem,
 } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
-import { formatMoney } from '../../../utils/money';
+import { formatMoney, sumMoney } from '../../../utils/money';
 import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
@@ -499,7 +499,7 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
   const laborCost = wo.estimated_labor_cost_computed ?? null;
   const partsCost = wo.estimated_parts_cost_computed ?? null;
   const totalCost =
-    laborCost !== null || partsCost !== null ? (Number(laborCost ?? 0) + Number(partsCost ?? 0)).toFixed(2) : null;
+    laborCost !== null || partsCost !== null ? sumMoney(laborCost, partsCost) : null;
 
   const rows: [string, string][] = [
     ['Vehicle', wo.vehicle?.registration_number ?? wo.vehicle_id],
@@ -510,9 +510,9 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Current Odometer', wo.current_odometer ?? '—'],
     ['Est. Number of Mechanic', wo.estimated_number_of_mechanics != null ? String(wo.estimated_number_of_mechanics) : '—'],
     ['Est. Total Hours', wo.estimated_total_hours ?? '—'],
-    ['Estimated Labor Cost', laborCost ?? '—'],
-    ['Estimated Parts Cost', partsCost ?? '—'],
-    ['Estimated Total Cost', totalCost ?? '—'],
+    ['Estimated Labor Cost', formatMoney(laborCost)],
+    ['Estimated Parts Cost', formatMoney(partsCost)],
+    ['Estimated Total Cost', formatMoney(totalCost)],
     ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
     ['Target Completion', wo.target_completion_at ? new Date(wo.target_completion_at).toLocaleString() : '—'],
     ['Started At', wo.started_at ? new Date(wo.started_at).toLocaleString() : '—'],
@@ -1014,7 +1014,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
               <strong>{j.service_item ?? 'Job'}</strong> — {j.description}
               <div style={{ color: '#6b7280' }}>
                 Est. {j.estimated_hours ?? '—'}h / Actual {j.actual_hours ?? '—'}h
-                {j.estimated_labor_cost_computed && ` · Est. Labor Cost: ${j.estimated_labor_cost_computed}`}
+                {j.estimated_labor_cost_computed && ` · Est. Labor Cost: ${formatMoney(j.estimated_labor_cost_computed)}`}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

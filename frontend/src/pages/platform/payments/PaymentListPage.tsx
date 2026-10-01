@@ -5,6 +5,7 @@ import { Table, type Column } from '../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import type { PaymentItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 const TABS = ['', 'SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED', 'REVERSED'];
 
@@ -16,7 +17,7 @@ export function PaymentListPage() {
     { key: 'tenant', header: 'Tenant', render: (p) => p.tenant?.name ?? '—' },
     { key: 'invoice', header: 'Invoice #', render: (p) => (p.invoice ? <Link to={`/platform/invoices/${p.invoice_id}`}>{p.invoice.invoice_number}</Link> : '—') },
     { key: 'payment_date', header: 'Payment Date', render: (p) => p.payment_date },
-    { key: 'amount', header: 'Amount', render: (p) => Number(p.amount).toLocaleString() },
+    { key: 'amount', header: 'Amount', render: (p) => formatMoney(p.amount) },
     { key: 'method', header: 'Method', render: (p) => p.payment_method },
     { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
     { key: 'actions', header: '', render: (p) => <Link to={`/platform/payments/${p.id}`}>View</Link> },

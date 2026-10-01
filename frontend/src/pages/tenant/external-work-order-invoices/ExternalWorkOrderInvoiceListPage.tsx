@@ -10,7 +10,9 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ExternalWorkOrderInvoiceItem, InspectionLogEntry, PartnerItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
-import { formatMoney } from '../../../utils/money';
+import { formatMoney, toMoneyInput } from '../../../utils/money';
+import { formatDate } from '../../../utils/date';
+import { DocumentViewer } from '../../../components/DocumentViewer';
 
 const STATUSES = ['', 'NEW_EXTERNAL_WO', 'DELIVERED', 'IN_PROGRESS', 'CANCELLED', 'BILLED', 'PAID'];
 
@@ -29,16 +31,6 @@ const WAL_LABELS: Record<string, string> = {
   ACKNOWLEDGED: 'Acknowledged',
 };
 
-async function openPdf(path: string, setError: (m: string | null) => void) {
-  try {
-    const res = await apiClient.get(path, { responseType: 'blob' });
-    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-    window.open(url, '_blank');
-  } catch (err) {
-    setError(extractApiError(err).message);
-  }
-}
-
 /**
  * "Perbaikan Tenant Portal - Work Order Status External dan Workshop
  * Invoice": the tenant-facing "Workshop Invoice" list — Work Orders being
@@ -56,6 +48,8 @@ export function ExternalWorkOrderInvoiceListPage() {
   const { data, loading, error, reload } = useApiList<ExternalWorkOrderInvoiceItem>('/app/external-work-order-invoices', { status: status || undefined });
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Every attached/generated file opens by its real type (image preview / PDF viewer / download).
+  const [viewing, setViewing] = useState<{ path: string; title: string } | null>(null);
 
   const [generatingFor, setGeneratingFor] = useState<ExternalWorkOrderInvoiceItem | null>(null);
   const [partners, setPartners] = useState<PartnerItem[]>([]);
@@ -209,7 +203,7 @@ export function ExternalWorkOrderInvoiceListPage() {
     setActionError(null);
     setPaymentProofFile(null);
     setPaymentDate('');
-    setPaidAmount(row.vendor_invoice_amount ?? '');
+    setPaidAmount(toMoneyInput(row.vendor_invoice_amount));
     setSettlingFor(row);
   }
 
@@ -255,7 +249,7 @@ export function ExternalWorkOrderInvoiceListPage() {
             </button>
           )}
           {r.allowed_actions.includes('view_authorization') && (
-            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openPdf(`/app/external-work-order-invoices/${r.id}/authorization`, setActionError)}>
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setViewing({ path: `/app/external-work-order-invoices/${r.id}/authorization`, title: 'Work Authorization Letter' })}>
               View Work Authorization
             </button>
           )}
@@ -270,7 +264,7 @@ export function ExternalWorkOrderInvoiceListPage() {
             </button>
           )}
           {r.allowed_actions.includes('view_acknowledgement') && (
-            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openPdf(`/app/external-work-order-invoices/${r.id}/acknowledgement`, setActionError)}>
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setViewing({ path: `/app/external-work-order-invoices/${r.id}/acknowledgement`, title: 'Acknowledged Work Authorization' })}>
               View Acknowledgement
             </button>
           )}
@@ -457,14 +451,14 @@ export function ExternalWorkOrderInvoiceListPage() {
       <Modal open={billFor !== null} title="Bill" onClose={() => setBillFor(null)}>
         {billFor && (
           <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div>Invoice Date: {billFor.vendor_invoice_date ?? '—'}</div>
+            <div>Invoice Date: {formatDate(billFor.vendor_invoice_date)}</div>
             <div>Invoice Amount: {formatMoney(billFor.vendor_invoice_amount)}</div>
             <div>Payment Term: {billFor.payment_term ?? '—'}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${billFor.id}/completed-work-order`, setActionError)}>
+              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${billFor.id}/completed-work-order`, title: 'Completed Work Order' })}>
                 Open Completed Work Order
               </button>
-              <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${billFor.id}/vendor-invoice`, setActionError)}>
+              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${billFor.id}/vendor-invoice`, title: 'Vendor Invoice' })}>
                 Open Vendor Invoice
               </button>
             </div>
@@ -503,10 +497,10 @@ export function ExternalWorkOrderInvoiceListPage() {
       <Modal open={settlementFor !== null} title="Settlement Details" onClose={() => setSettlementFor(null)}>
         {settlementFor && (
           <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div>Payment Date: {settlementFor.payment_date ?? '—'}</div>
+            <div>Payment Date: {formatDate(settlementFor.payment_date)}</div>
             <div>Paid Amount: {formatMoney(settlementFor.paid_amount)}</div>
             <div style={{ marginTop: 8 }}>
-              <button className="btn-secondary" onClick={() => openPdf(`/app/external-work-order-invoices/${settlementFor.id}/payment-proof`, setActionError)}>
+              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${settlementFor.id}/payment-proof`, title: 'Payment Proof' })}>
                 Open Payment Proof
               </button>
             </div>
@@ -531,6 +525,7 @@ export function ExternalWorkOrderInvoiceListPage() {
           </div>
         )}
       </Modal>
+      {viewing && <DocumentViewer path={viewing.path} title={viewing.title} onClose={() => setViewing(null)} />}
     </div>
   );
 }

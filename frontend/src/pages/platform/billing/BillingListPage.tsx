@@ -4,6 +4,7 @@ import { Table, type Column } from '../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import type { BillingItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 const TABS = ['', 'DRAFT', 'GENERATED', 'INVOICED', 'PAID', 'PARTIALLY_PAID', 'PAST_DUE', 'CANCELLED'];
 
@@ -16,7 +17,7 @@ export function BillingListPage() {
     { key: 'contract', header: 'Contract #', render: (b) => b.contract?.contract_number ?? '—' },
     { key: 'period', header: 'Period', render: (b) => `${b.billing_period_start} → ${b.billing_period_end}` },
     { key: 'due_date', header: 'Due Date', render: (b) => b.due_date },
-    { key: 'total', header: 'Total', render: (b) => Number(b.total).toLocaleString() },
+    { key: 'total', header: 'Total', render: (b) => formatMoney(b.total) },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
   ];
 
