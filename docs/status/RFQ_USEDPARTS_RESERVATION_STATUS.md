@@ -137,7 +137,9 @@ E2E for Phases 3–5. Mongo-dependent tests: NOT RUN (no MongoDB in this environ
   - `BillingAndInvoiceTest::proration_applied_when_module_added_mid_period`: date-dependent and
     not related to this work (billing untouched). The test assumes a 30-day billing period
     ("15 of 30 days"); for a contract starting 2026-10-01 the period is 31 days, so 16/31 of
-    300 000 = 154 838.71 ≠ 150 000.00. It fails on main on the same date. Not fixed here (out of
+    300 000 = 154 838.71 ≠ 150 000.00. The test and all proration code (Billing, Contract,
+    Invoice, Pricing) are byte-identical to main; a run on main was not executed (an isolated
+    main checkout was not possible here). Not fixed here (out of
     scope); proposed fix: derive the expected amount from the actual period length.
 - Frontend at final HEAD: `npm run build` PASS; `npm run lint` 0 errors, warnings identical to
   baseline. No typecheck/test scripts exist.
