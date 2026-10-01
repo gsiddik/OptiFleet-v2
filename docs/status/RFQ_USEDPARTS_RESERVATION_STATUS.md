@@ -80,3 +80,31 @@ Status: **IN PROGRESS**. Branch `claude/magical-volta-tv4xwl`, baseline `main` @
   finalized REPAIR → condition Good, status INSPECTED; the next disposition (REUSE etc.) goes
   through the existing propose + maker-checker approval. Never moves stock by itself.
 - Used Sparepart Processing UI: "Complete Repair" (notes) on repair-pending items.
+
+## Phase 5 — Inventory Reservation retired (DONE)
+
+Replaced by Part Requests (REQUESTED → APPROVED → ISSUED). Approval holds no stock; availability
+(on hand − reserved) is checked at Issue, in the issue transaction.
+
+- Migration `2026_10_01_000009_retire_inventory_reservations` (idempotent, non-destructive):
+  every DRAFT / RESERVED / PARTIALLY_RESERVED reservation is released once through
+  `InventoryService::releaseReservation` (RELEASE_RESERVATION ledger entry, quantity back to
+  Available), item `reserved_quantity` → 0 (requested quantity kept), linked legacy planned-part
+  reserved quantity released (status back to PLANNED when nothing was issued), reservation marked
+  RELEASED with reason "Inventory Reservation retired — replaced by Part Requests". Then the
+  `inventory.reserve` permission and its role grants are deleted. `down()` re-creates the
+  permission row (no grants); released stock is not re-held.
+- Removed: `/stock-reservations` routes, `StockReservationController`, `StockReservationService`,
+  dead `WorkOrderPartService::reserve`, `inventory.reserve` from Permission / FunctionalTestUser /
+  DemoData seeders; frontend Inventory → Reservation page, route, menu entry, breadcrumb label,
+  `StockReservation*` TS types.
+- Kept (shared / history): `stock_reservations` + `stock_reservation_items` tables and models,
+  `InventoryService::reserve/releaseReservation` (generic primitives, used by the migration and
+  the Phase 4 concurrency smoke command), `warehouse_stocks.quantity_reserved`, dashboard
+  "reserved stock" metric, RESERVATION / RELEASE_RESERVATION movement types and labels, legacy
+  planned-part own-reservation consumption in `InventoryService::issue`. Workspace (bay)
+  reservations untouched.
+- Tests: `InventoryReservationRetirementTest` (release once + history kept; endpoints 404 +
+  permission gone; Part Request approve holds nothing, issue checks stock); related regression
+  133 passed. Seeders twice on a fresh DB: identical counts, `inventory.reserve` absent.
+- Browser: Reservation menu gone, `/app/stock-reservations` falls back to the dashboard, API 404.

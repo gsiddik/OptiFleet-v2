@@ -4,7 +4,6 @@ namespace App\Domain\WorkOrder\Services;
 
 use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Inventory\Services\InventoryService;
-use App\Domain\Inventory\Services\StockReservationService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
@@ -16,8 +15,9 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Section 7/8/9/18/45: extends Phase 3's planned-parts line with the
- * Reservation -> Issue -> Consumption/Return lifecycle. Every stock
- * mutation still happens inside InventoryService/StockReservationService —
+ * Issue -> Consumption/Return lifecycle (stock is requested through Part Requests; the
+ * standalone Inventory Reservation feature is retired). Every stock
+ * mutation still happens inside InventoryService —
  * this class only orchestrates the WorkOrderPlannedPart bookkeeping
  * (status, quantities, cost snapshot) around those calls.
  */
@@ -33,47 +33,10 @@ class WorkOrderPartService
     public const NEW_PART_CONDITIONS = ['UNUSED_NEW', 'UNUSED_FAULTY'];
 
     public function __construct(
-        private readonly StockReservationService $reservations,
         private readonly InventoryService $inventory,
-        private readonly PreferredWarehouseResolver $resolver,
         private readonly WorkOrderExecutionService $execution,
         private readonly DocumentNumberingService $numbers,
     ) {}
-
-    public function reserve(WorkOrderPlannedPart $part, ?string $warehouseId, ?float $quantity, ?string $userId): WorkOrderPlannedPart
-    {
-        if (! $part->product_id) {
-            throw new WorkOrderException('This planned part has no catalog product linked — cannot reserve stock for it.');
-        }
-
-        return DB::transaction(function () use ($part, $warehouseId, $quantity, $userId) {
-            $workOrder = WorkOrder::query()->findOrFail($part->work_order_id);
-            $this->execution->assertExecutable($workOrder);
-            $warehouse = $warehouseId
-                ? Warehouse::query()->findOrFail($warehouseId)
-                : ($part->warehouse_id ? Warehouse::query()->find($part->warehouse_id) : $this->resolver->resolve($workOrder));
-
-            if (! $warehouse) {
-                throw new WorkOrderException('No warehouse could be resolved for this reservation — specify one explicitly.');
-            }
-            abort_unless($warehouse->tenant_id === $workOrder->tenant_id, 404);
-
-            $product = Product::query()->findOrFail($part->product_id);
-            $toRequest = $quantity ?? ((float) $part->planned_quantity - (float) $part->reserved_quantity);
-            if ($toRequest <= 0) {
-                throw new WorkOrderException('Nothing left to reserve for this planned part.');
-            }
-
-            $item = $this->reservations->reserveItem($workOrder, $warehouse, $product, $toRequest, $part->id, $userId);
-
-            // reserved_quantity mirrors the reservation item's running total for this part.
-            $part->update(['warehouse_id' => $warehouse->id, 'reserved_quantity' => $item->reserved_quantity]);
-
-            $this->recomputeStatus($part->fresh());
-
-            return $part->fresh();
-        });
-    }
 
     public function issue(WorkOrderPlannedPart $part, ?float $quantity, ?string $userId): WorkOrderPlannedPart
     {

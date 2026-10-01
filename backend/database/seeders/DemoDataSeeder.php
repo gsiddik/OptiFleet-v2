@@ -114,7 +114,7 @@ class DemoDataSeeder extends Seeder
         $warehouseManagerRole = $this->makeTenantRole($tenant, 'Warehouse Manager', Permission::query()->where('scope', 'tenant')
             ->whereIn('name', [
                 'product.view',
-                'inventory.view', 'inventory.reserve', 'inventory.issue', 'inventory.return', 'inventory.adjust', 'inventory.stock_opname',
+                'inventory.view', 'inventory.issue', 'inventory.return', 'inventory.adjust', 'inventory.stock_opname',
                 // Part Requests are approved and issued by the warehouse; returned new parts are inspected there too.
                 'part_request.view', 'part_request.approve', 'part_request.reject', 'part_request.issue', 'part_return.view', 'part_return.process',
                 'stock_transfer.view', 'stock_transfer.create', 'stock_transfer.dispatch', 'stock_transfer.receive',

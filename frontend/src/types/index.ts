@@ -1616,26 +1616,6 @@ export interface SparePartSaleItem {
   partner?: { id: string; name: string };
 }
 
-export interface StockReservationItemLine {
-  id: string;
-  product_id: string;
-  work_order_planned_part_id: string | null;
-  requested_quantity: string;
-  reserved_quantity: string;
-  product?: ProductItem;
-}
-
-export interface StockReservationItem {
-  id: string;
-  tenant_id: string;
-  work_order_id: string;
-  warehouse_id: string;
-  status: 'DRAFT' | 'RESERVED' | 'PARTIALLY_RESERVED' | 'RELEASED' | 'CONSUMED' | 'CANCELLED';
-  warehouse?: Warehouse;
-  work_order?: WorkOrderItem;
-  items?: StockReservationItemLine[];
-}
-
 export interface StockOpnameItemLine {
   id: string;
   product_id: string;

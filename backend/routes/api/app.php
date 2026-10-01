@@ -64,7 +64,6 @@ use App\Http\Controllers\Api\Tenant\RoleController;
 use App\Http\Controllers\Api\Tenant\SparePartSaleController;
 use App\Http\Controllers\Api\Tenant\StockMovementController;
 use App\Http\Controllers\Api\Tenant\StockOpnameController;
-use App\Http\Controllers\Api\Tenant\StockReservationController;
 use App\Http\Controllers\Api\Tenant\StockTransferController;
 use App\Http\Controllers\Api\Tenant\TireController;
 use App\Http\Controllers\Api\Tenant\UomController;
@@ -560,10 +559,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/sparepart-sales', [SparePartSaleController::class, 'store'])->middleware('permission:sparepart_sale.create');
             Route::post('/sparepart-sales/{sparePartSale}/submit', [SparePartSaleController::class, 'submit'])->middleware('permission:sparepart_sale.create');
             Route::post('/sparepart-sales/{sparePartSale}/decide', [SparePartSaleController::class, 'decide'])->middleware('permission:sparepart_sale.approve');
-
-            Route::get('/stock-reservations', [StockReservationController::class, 'index'])->middleware('permission:inventory.view');
-            Route::get('/stock-reservations/{stockReservation}', [StockReservationController::class, 'show'])->middleware('permission:inventory.view');
-            Route::post('/stock-reservations/{stockReservation}/cancel', [StockReservationController::class, 'cancel'])->middleware('permission:inventory.reserve');
 
             Route::get('/stock-opnames', [StockOpnameController::class, 'index'])->middleware('permission:inventory.stock_opname');
             Route::post('/stock-opnames', [StockOpnameController::class, 'store'])->middleware('permission:inventory.stock_opname');

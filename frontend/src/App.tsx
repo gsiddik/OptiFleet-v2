@@ -88,7 +88,6 @@ import { WorkloadPage } from './pages/tenant/workshop/WorkloadPage';
 import { ProductListPage } from './pages/tenant/inventory/ProductListPage';
 import { ProductDetailPage } from './pages/tenant/inventory/ProductDetailPage';
 import { WarehouseStockListPage } from './pages/tenant/inventory/WarehouseStockListPage';
-import { StockReservationListPage } from './pages/tenant/inventory/StockReservationListPage';
 import { StockTransferListPage } from './pages/tenant/inventory/StockTransferListPage';
 import { StockTransferDetailPage } from './pages/tenant/inventory/StockTransferDetailPage';
 import { StockOpnameListPage } from './pages/tenant/inventory/StockOpnameListPage';
@@ -767,7 +766,6 @@ export default function App() {
             <Route path="products" element={<RequirePermission permission="product.view"><ProductListPage /></RequirePermission>} />
             <Route path="products/:id" element={<RequirePermission permission="product.view"><ProductDetailPage /></RequirePermission>} />
             <Route path="inventory" element={<RequirePermission permission="inventory.view"><WarehouseStockListPage /></RequirePermission>} />
-            <Route path="stock-reservations" element={<RequirePermission permission="inventory.view"><StockReservationListPage /></RequirePermission>} />
             <Route path="stock-transfers" element={<RequirePermission permission="stock_transfer.view"><StockTransferListPage /></RequirePermission>} />
             <Route path="stock-transfers/:id" element={<RequirePermission permission="stock_transfer.view"><StockTransferDetailPage /></RequirePermission>} />
             <Route path="stock-opnames" element={<RequirePermission permission="inventory.stock_opname"><StockOpnameListPage /></RequirePermission>} />
