@@ -127,8 +127,10 @@ class WorkshopInvoiceTest extends TestCase
             'partner_id' => $partner->id, 'description' => 'Still in progress',
         ], $headers)->assertStatus(201)->json('data.id');
 
-        $this->postJson("/api/v1/app/work-orders/{$woId}/external-services/{$serviceId}/workshop-invoice", $this->recordInvoicePayload(), $headers)
+        $response = $this->postJson("/api/v1/app/work-orders/{$woId}/external-services/{$serviceId}/workshop-invoice", $this->recordInvoicePayload(), $headers)
             ->assertStatus(422);
+        // User-facing term is "Service Invoice" (distinct from the External Workshop Invoice).
+        $this->assertStringContainsString('Service Invoice', (string) $response->json('message'));
     }
 
     public function test_duplicate_external_invoice_number_is_rejected_after_normalization(): void

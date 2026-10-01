@@ -210,3 +210,36 @@ No endpoint, field or permission was removed or renamed; no migration was added.
   internal WOs should move to the External Workshop flow.
 - **Risk:** low — users who used the old list now start from the Work Order; `/app/workshop-invoices`
   redirects to Work Orders.
+
+## Owner decision applied — Service Invoice terminology (DONE)
+
+Decision: keep the current architecture. The legacy Workshop Invoice (third-party services such
+as towing on an **internally executed** WO, with correction / cancellation / payment /
+reconciliation) is **not** merged into the External Work Order Invoice list (WOs executed by an
+External Workshop). Standalone menu / list stays removed; access only from the Work Order;
+`/app/workshop-invoices` keeps redirecting to Work Orders; tables, history, model / service / API
+retained. External Workshop WOs still never show External Services.
+
+User-facing terminology (no DB / domain / route / permission-key rename, no migration):
+
+| Where | Before | After |
+|---|---|---|
+| WO → External Services buttons, record modal | Record / View Workshop Invoice | Record / View **Service Invoice** |
+| Detail page title, partner label, breadcrumb | Workshop Invoice — …, Workshop Partner, Workshop Invoices | **Service Invoice** — …, **Service Provider**, **Service Invoices** |
+| External Work Order Invoices list title / cancel text | "Workshop Invoice" | "External Work Order Invoices" / "External Workshop Invoice" |
+| Backend validation / scope messages | "… Workshop Invoice …" | "… Service Invoice …" |
+| Role management labels (`PermissionCatalog`) | feature "Workshop Invoice"; action "View Workshop Invoice Reference" | "Service Invoice"; "View External Workshop Invoice Reference" (keys unchanged) |
+| User guide | Workshop Invoice | Service Invoice + terminology note; glossary keeps the old name |
+
+Not changed on purpose: the `workshop_invoice` print-template default ("Recorded Workshop
+Invoice") — published templates are versioned per tenant and never overwritten by the seeder, so
+changing only the seed default would make fresh installs differ from existing tenants; tenants can
+retitle it in Configuration → Document Templates.
+
+Validation: related backend suites (WorkOrder*, WorkshopInvoice*, ExternalWorkOrder*, Role /
+Permission / Rewired, Partner, VendorPerformance) — 196 passed (new assertions: catalog labels with
+unchanged keys; error message uses "Service Invoice"). Frontend build PASS, lint identical to
+baseline. Browser (FT tenant, rebuilt e2e data): internal WO → External Services → View Service
+Invoice opens the historical invoice with its payment, back returns to the WO; three External
+Workshop WOs (NEW / DELIVERED / BILLED) show no External Services tab; `/app/workshop-invoices` →
+`/app/work-orders`; no invoice menu in the sidebar.

@@ -20,6 +20,16 @@ use Illuminate\Support\Facades\DB;
  */
 class PermissionCatalog
 {
+    /**
+     * User-facing names that differ from the stored permission keys. The keys stay unchanged (they
+     * are referenced by routes, role assignments and history); only the label shown in role
+     * management is clarified. `workshop_invoice` is the third-party Service Invoice recorded on an
+     * internal Work Order — not the External Workshop invoice of an External Work Order.
+     */
+    private const FEATURE_NAMES = ['workshop_invoice' => 'Service Invoice'];
+
+    private const ACTION_NAMES = ['work_order.view_workshop_invoice_reference' => 'View External Workshop Invoice Reference'];
+
     public function __construct(private readonly Router $router) {}
 
     /** @return Collection<int, array<string, mixed>> */
@@ -44,9 +54,9 @@ class PermissionCatalog
                     'module' => $moduleCode ?? 'GENERAL',
                     'module_name' => $moduleCode ? ($moduleNames[$moduleCode] ?? $moduleCode) : $this->fallbackModule($permission->group),
                     'feature' => $permission->group,
-                    'feature_name' => ucwords(str_replace(['_', '.'], ' ', $permission->group)),
+                    'feature_name' => self::FEATURE_NAMES[$permission->group] ?? ucwords(str_replace(['_', '.'], ' ', $permission->group)),
                     'action' => $action,
-                    'action_name' => ucwords(str_replace(['_', '.'], ' ', $action)),
+                    'action_name' => self::ACTION_NAMES[$permission->name] ?? ucwords(str_replace(['_', '.'], ' ', $action)),
                 ];
             })
             ->values();
@@ -92,7 +102,7 @@ class PermissionCatalog
             in_array($group, ['analytics', 'analytics_etl'], true) => 'Analytics',
             in_array($group, ['intelligence', 'intelligence_admin'], true) => 'Maintenance Intelligence',
             in_array($group, ['product_category', 'component_group', 'component_category', 'component_subcategory'], true) => 'Master Data',
-            default => ucwords(str_replace('_', ' ', $group)),
+            default => self::FEATURE_NAMES[$group] ?? ucwords(str_replace('_', ' ', $group)),
         };
     }
 }

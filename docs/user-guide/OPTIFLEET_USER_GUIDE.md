@@ -12,7 +12,7 @@
 | Status Dokumen | Final — berdasarkan pemeriksaan langsung source code, siap distribusi |
 | Penulis | Tim analisis teknis (disusun dengan bantuan Claude, Anthropic) |
 | Target Pembaca | Pengguna operasional (Fleet Manager, Workshop Manager, Mechanic, Warehouse, Procurement), Administrator tenant, Superadmin platform, tim QA, Product, Technical Support |
-| Ruang Lingkup | Seluruh modul yang benar-benar ditemukan terimplementasi pada branch `Improvement`: Identity & Access, Organization & Master Data, Commercial SaaS Lifecycle, Vehicle, Inspection, Maintenance (Policy/Schedule/Request), Breakdown, Work Order, Workshop Invoice, Workshop Operations, Quality Control, Vehicle Release, Inventory, Procurement, Partner, Tire Management, Component Asset, Warranty, Configuration, Audit, Analytics, Maintenance Intelligence |
+| Ruang Lingkup | Seluruh modul yang benar-benar ditemukan terimplementasi pada branch `Improvement`: Identity & Access, Organization & Master Data, Commercial SaaS Lifecycle, Vehicle, Inspection, Maintenance (Policy/Schedule/Request), Breakdown, Work Order, Service Invoice, Workshop Operations, Quality Control, Vehicle Release, Inventory, Procurement, Partner, Tire Management, Component Asset, Warranty, Configuration, Audit, Analytics, Maintenance Intelligence |
 | Sumber Analisis | Pemeriksaan langsung backend (`backend/app/Domain/*`, routes, migrations, seeders), frontend (`frontend/src/*`), dokumentasi proyek (`README.md`, `docs/implementation/IMPROVEMENT_CONTEXT.md`, `docs/status/PHASE6_STATUS.md`, `docs/status/PHASE7_STATUS.md`, `docs/deployment/RELEASE_READINESS_R4.md`, `docs/implementation/VMS_RECONCILIATION_TRACEABILITY.md`) |
 
 ---
@@ -44,7 +44,7 @@
   6. Maintenance Request
   7. Breakdown
   8. Work Order
-  9. Workshop Invoice & Settlement
+  9. Service Invoice & Settlement
   10. Workshop Operations (Worker, Workspace, Reservasi)
   11. Quality Control & Vehicle Release
   12. Inventory
@@ -159,8 +159,8 @@ Bagian ini menjelaskan istilah dan konsep inti yang perlu dipahami sebelum mengi
 - **Inventory Transaction (Stock Movement)** — baris ledger append-only yang mencatat setiap mutasi stok; saldo stok selalu dapat direkonstruksi dari ledger ini.
 - **Tire Lifecycle** — rangkaian status ban bernomor seri: IN_STOCK → INSTALLED → (rotasi/pelepasan) → RETREAD/REPAIR/SCRAP/SOLD, dengan gerbang keselamatan (critical-fail) yang tidak dapat dilewati siapa pun.
 - **Warehouse** — lokasi fisik penyimpanan stok, dapat bertingkat: Central/Branch/Workshop/Tire/Consumable/Scrap/Quarantine.
-- **Partner** — mitra eksternal (vendor, bengkel eksternal, supplier ban) yang berinteraksi dengan proses Procurement, Tire Retread/Repair, dan Workshop Invoice.
-- **Approval (Persetujuan)** — pola umum "maker-checker": pengajuan oleh satu pihak, keputusan oleh pihak lain — pada banyak modul (Maintenance Request, Purchase Order, Used Part Disposition, Tire Retread/Repair, Workshop Invoice Correction/Cancellation), sistem **secara aktif menolak** bila pemohon dan penyetuju adalah orang yang sama.
+- **Partner** — mitra eksternal (vendor, bengkel eksternal, supplier ban) yang berinteraksi dengan proses Procurement, Tire Retread/Repair, dan Service Invoice.
+- **Approval (Persetujuan)** — pola umum "maker-checker": pengajuan oleh satu pihak, keputusan oleh pihak lain — pada banyak modul (Maintenance Request, Purchase Order, Used Part Disposition, Tire Retread/Repair, Service Invoice Correction/Cancellation), sistem **secara aktif menolak** bila pemohon dan penyetuju adalah orang yang sama.
 - **Status Proses** — setiap entitas transaksional (Work Order, Maintenance Request, Breakdown, dst.) memiliki mesin status sendiri dengan transisi yang divalidasi di backend; lihat Kamus Status pada `OPTIFLEET_DATA_DICTIONARY.md` §5.3.
 
 ---
@@ -197,7 +197,7 @@ Aplikasi terbagi menjadi dua portal terpisah dengan tampilan (layout) berbeda:
 
 ### Tab pada Halaman Detail
 
-Halaman detail entitas kompleks (Vehicle, Work Order, Tire, Contract, Workshop Invoice) menggunakan **tab** untuk memisahkan area informasi — misalnya Work Order Detail memiliki tab Overview, Complaint, Diagnosis, Jobs, Mechanic, Planned Parts, Workspace, QC, Road Test, External Services, Documents, History, Audit.
+Halaman detail entitas kompleks (Vehicle, Work Order, Tire, Contract, Service Invoice) menggunakan **tab** untuk memisahkan area informasi — misalnya Work Order Detail memiliki tab Overview, Complaint, Diagnosis, Jobs, Mechanic, Planned Parts, Workspace, QC, Road Test, External Services, Documents, History, Audit.
 
 ### Tombol Aksi
 
@@ -211,7 +211,7 @@ Halaman detail entitas kompleks (Vehicle, Work Order, Tire, Contract, Workshop I
 
 ### Unggah Berkas (Upload)
 
-Ditemukan pada: Dokumen Kendaraan, Bukti Pembayaran (Payment Proof), Bukti Penyelesaian Layanan Eksternal, lampiran Workshop Invoice. Seluruh unggahan dibatasi jenis berkas (umumnya JPG/PNG/WEBP/PDF) dan ukuran maksimum (5–10MB tergantung modul), disimpan privat, dan diunduh lewat tombol khusus (bukan tautan langsung).
+Ditemukan pada: Dokumen Kendaraan, Bukti Pembayaran (Payment Proof), Bukti Penyelesaian Layanan Eksternal, lampiran Service Invoice. Seluruh unggahan dibatasi jenis berkas (umumnya JPG/PNG/WEBP/PDF) dan ukuran maksimum (5–10MB tergantung modul), disimpan privat, dan diunduh lewat tombol khusus (bukan tautan langsung).
 
 ### Notifikasi & Pesan kepada Pengguna
 
@@ -255,8 +255,8 @@ Bagian ini menjelaskan gambaran kerja tiap peran **contoh** (bukan daftar tertut
 ### Workshop Manager
 
 - **Tujuan peran:** mengelola operasional bengkel dari penerimaan Work Order hingga penyelesaian.
-- **Tanggung jawab harian:** menyetujui & menugaskan Work Order, mengatur Worker & Workspace, memantau pekerjaan berjalan, menyetujui Additional Work, menjadi checker pada siklus Tire Retread/Repair dan Workshop Invoice, menyetujui/menolak hasil QC, merilis kendaraan.
-- **Modul yang diakses:** Work Order, Workshop Operations, Quality Control, Vehicle Release, Tire Management (approval), Workshop Invoice (verifikasi).
+- **Tanggung jawab harian:** menyetujui & menugaskan Work Order, mengatur Worker & Workspace, memantau pekerjaan berjalan, menyetujui Additional Work, menjadi checker pada siklus Tire Retread/Repair dan Service Invoice, menyetujui/menolak hasil QC, merilis kendaraan.
+- **Modul yang diakses:** Work Order, Workshop Operations, Quality Control, Vehicle Release, Tire Management (approval), Service Invoice (verifikasi).
 - **Batasan akses:** dibatasi Data Scope ke bengkel tertentu (WORKSHOP scope) pada seed demo.
 - **Hubungan kerja:** menerima pekerjaan dari Fleet Manager (via Maintenance Request) atau langsung dari Breakdown; berkoordinasi dengan Warehouse untuk kebutuhan part.
 
@@ -270,8 +270,8 @@ Bagian ini menjelaskan gambaran kerja tiap peran **contoh** (bukan daftar tertut
 ### Warehouse
 
 - **Tujuan peran:** mengendalikan stok fisik & administrasi gudang.
-- **Tanggung jawab harian:** memproses Reserve/Issue/Return part untuk Work Order, Stock Transfer, Stock Opname, inspeksi & disposisi part bekas, penjualan part bekas, penerimaan barang (Goods Receipt), pencatatan Workshop Invoice (sebagai maker).
-- **Modul yang diakses:** Inventory, sebagian Procurement (Goods Receipt), Workshop Invoice (record/upload), Tire Retread/Repair (send/receive sebagai maker).
+- **Tanggung jawab harian:** memproses Reserve/Issue/Return part untuk Work Order, Stock Transfer, Stock Opname, inspeksi & disposisi part bekas, penjualan part bekas, penerimaan barang (Goods Receipt), pencatatan Service Invoice (sebagai maker).
+- **Modul yang diakses:** Inventory, sebagian Procurement (Goods Receipt), Service Invoice (record/upload), Tire Retread/Repair (send/receive sebagai maker).
 - **Hubungan kerja:** menerima permintaan part dari Mechanic/Workshop Manager; mengirim barang ke bengkel; berkoordinasi dengan Procurement untuk kebutuhan pembelian.
 
 ### Procurement
@@ -913,7 +913,7 @@ Lihat tabel lengkap & diagram pada `OPTIFLEET_BUSINESS_FLOW.md` §8 dan `OPTIFLE
 - **Catatan teknis penting:** permission & rute `work_order.close`/`POST .../close` secara teknis independen dari Vehicle Release — pada beberapa kondisi, user berwenang dapat menutup WO tanpa melalui Rilis Kendaraan resmi (Findings F-07). Sebagai praktik terbaik, **selalu gunakan jalur Vehicle Release** (Bagian I.11) untuk menutup WO, bukan aksi Close terpisah, agar status kendaraan ikut diperbarui dengan benar.
 
 #### 11. Hubungan dengan Modul Lain
-Sumber: Maintenance Request, Maintenance Schedule, Breakdown (opsional langsung). Tujuan: Inventory (Planned Parts), Tire (pelepasan ban terkait WO), Workshop Invoice (Maintenance Memo), Quality Control, Vehicle Release, History, Analytics.
+Sumber: Maintenance Request, Maintenance Schedule, Breakdown (opsional langsung). Tujuan: Inventory (Planned Parts), Tire (pelepasan ban terkait WO), Service Invoice (Maintenance Memo), Quality Control, Vehicle Release, History, Analytics.
 
 #### 12. Hasil atau Output
 WO `CLOSED`; kendaraan kembali `ACTIVE` (via Vehicle Release); riwayat kendaraan bertambah; stok berkurang sesuai part yang dikonsumsi; dokumen WO dapat dicetak (`Print` — tersedia di seluruh status, permission `work_order.view`).
@@ -932,7 +932,9 @@ Dokumen level-WO (lampiran umum) secara eksplisit belum didukung pada fase ini (
 
 ---
 
-### I.9 Workshop Invoice & Settlement
+### I.9 Service Invoice & Settlement
+
+> **Istilah:** *Service Invoice* (sebelumnya disebut "Workshop Invoice") = invoice jasa pihak ketiga (mis. towing) yang dicatat pada Work Order **eksekusi internal**. Ini **berbeda** dari *External Workshop Invoice*, yaitu invoice bengkel eksternal untuk Work Order yang **seluruhnya dikerjakan External Workshop** (menu External Work Order Invoices / tab Documents). Nama teknis (`WorkshopInvoice`, `workshop_invoice.*`, `/app/workshop-invoices`) tidak berubah.
 
 #### 1. Kegunaan Modul
 Mencatat invoice yang **diterbitkan oleh Partner/bengkel eksternal** atas layanan yang dikerjakan di luar tenant, serta melacak proses pelunasannya — OptiFleet tidak pernah menerbitkan invoice atas nama dirinya sendiri untuk fitur ini.
@@ -957,11 +959,11 @@ Prasyarat: Maintenance Memo (External Service pada WO) yang sudah `COMPLETED`. D
 Ada Maintenance Memo berstatus `COMPLETED` pada Work Order terkait (dibuat dari tab External Services — Bagian I.8).
 
 #### 6. Cara Mengakses
-Dari detail Work Order (eksekusi internal) → tab **External Services** → tombol **"Record Workshop Invoice"** / **"Open Workshop Invoice"** (`/app/workshop-invoices/:id`). Menu terpisah "Workshop Invoices" sudah tidak ada; data dan histori invoice tetap tersimpan. Work Order dengan eksekusi External Workshop tidak memiliki tab External Services — dokumennya (WAL, invoice bengkel, bukti bayar) ada di tab **Documents**.
+Dari detail Work Order (eksekusi internal) → tab **External Services** → tombol **"Record Service Invoice"** / **"View Service Invoice"** (`/app/workshop-invoices/:id`). Menu terpisah lama "Workshop Invoices" sudah tidak ada (`/app/workshop-invoices` diarahkan ke daftar Work Order); data dan histori invoice serta pembayaran tetap tersimpan. Work Order dengan eksekusi External Workshop tidak memiliki tab External Services — dokumennya (WAL, External Workshop Invoice, bukti bayar) ada di tab **Documents**. Work Order dengan eksekusi External Workshop tidak memiliki tab External Services — dokumennya (WAL, invoice bengkel, bukti bayar) ada di tab **Documents**.
 
 #### 7. Prosedur Penggunaan
 
-1. Pada tab External Services WO yang Memo-nya sudah `COMPLETED`, klik **"Record Workshop Invoice"**.
+1. Pada tab External Services WO yang Memo-nya sudah `COMPLETED`, klik **"Record Service Invoice"**.
 2. Isi: **No. Invoice Eksternal** (wajib, sesuai dokumen fisik dari Partner), Referensi Partner, Tanggal Invoice (wajib), Tanggal Jatuh Tempo, Mata Uang (default IDR), **Total** (wajib), Subtotal, Pajak, Diskon, tautan lampiran memo yang dikembalikan, tautan lampiran invoice, catatan.
 3. Simpan → status `RECORDED`, Memo otomatis berubah ke `BILLED`.
 4. **Upload Payment:** buka detail invoice → **"Upload Payment Evidence"** (muncul saat status RECORDED & Memo BILLED & belum ada pembayaran) → isi tanggal bayar, **nominal (harus tepat sama dengan Total invoice — tidak mendukung pembayaran sebagian)**, metode, referensi, bukti (wajib) → Simpan → Memo berubah ke `PAID`.
@@ -973,7 +975,7 @@ Dari detail Work Order (eksekusi internal) → tab **External Services** → tom
 Lihat `OPTIFLEET_BUSINESS_FLOW.md` §9 dan `OPTIFLEET_DATA_DICTIONARY.md` §5.2.
 
 #### 9. Status dan Transisi Status
-Lihat `OPTIFLEET_DATA_DICTIONARY.md` §5.3 "Status Workshop Invoice" dan "Status Maintenance Memo".
+Lihat `OPTIFLEET_DATA_DICTIONARY.md` §5.3 "Status Service Invoice" dan "Status Maintenance Memo".
 
 #### 10. Aturan Bisnis
 - Nomor invoice yang diinput adalah nomor asli dari Partner, dicek duplikasi per tenant+partner (mengabaikan kapitalisasi/spasi berlebih), kecuali invoice yang sudah CANCELLED.
@@ -1351,7 +1353,7 @@ Status sederhana: `ACTIVE`/`INACTIVE`, diubah lewat form update biasa (tidak ada
 Kelayakan partner untuk pekerjaan Tire Retread/Repair diperiksa terhadap `partner_type` **dan** status `ACTIVE` — partner nonaktif otomatis tidak lolos pemeriksaan kelayakan tersebut meski tipe-nya sesuai.
 
 #### 11. Hubungan dengan Modul Lain
-Dipakai oleh Procurement (vendor PO/RFQ), Tire (partner retread/repair), Warranty (partner penjamin), Workshop Invoice (partner penerbit invoice eksternal).
+Dipakai oleh Procurement (vendor PO/RFQ), Tire (partner retread/repair), Warranty (partner penjamin), Service Invoice (partner penerbit invoice eksternal).
 
 #### 12. Hasil atau Output
 Data mitra siap dipakai di seluruh modul yang membutuhkan pihak eksternal.
@@ -1939,7 +1941,7 @@ Bagian ini merangkum langkah lintas-modul untuk pekerjaan yang sering dilakukan 
 **Tujuan:** memberi estimasi biaya sebelum/selama eksekusi. **Aktor:** Workshop Manager (`work_order.estimate`). **Langkah:** tab Overview WO (status DRAFT-SCHEDULED) → isi Estimasi Labor & Part → Simpan. **Hasil:** nilai estimasi tersimpan, dapat dibandingkan dengan biaya aktual kemudian. **Catatan:** ini bukan langkah persetujuan formal terpisah dari status WO.
 
 ### 4.6 Cara Melakukan Approval (Contoh: Maintenance Request)
-**Tujuan:** menyetujui permintaan sebelum dieksekusi. **Aktor:** Workshop Manager. **Prasyarat:** permintaan berstatus `UNDER_REVIEW`. **Langkah:** Bagian I.6 §7 langkah 4. **Hasil:** status `APPROVED`, siap dikonversi ke Work Order. **Pola serupa berlaku untuk:** Purchase Order, Used Part Disposition, Tire Retread/Repair, Workshop Invoice Correction/Cancellation — seluruhnya menerapkan aturan maker-checker (pemohon ≠ penyetuju).
+**Tujuan:** menyetujui permintaan sebelum dieksekusi. **Aktor:** Workshop Manager. **Prasyarat:** permintaan berstatus `UNDER_REVIEW`. **Langkah:** Bagian I.6 §7 langkah 4. **Hasil:** status `APPROVED`, siap dikonversi ke Work Order. **Pola serupa berlaku untuk:** Purchase Order, Used Part Disposition, Tire Retread/Repair, Service Invoice Correction/Cancellation — seluruhnya menerapkan aturan maker-checker (pemohon ≠ penyetuju).
 
 ### 4.7 Cara Menugaskan Mekanik
 **Tujuan:** menetapkan pelaksana pekerjaan pada WO. **Aktor:** Workshop Manager. **Prasyarat:** WO berstatus `ASSIGNED` atau lebih lanjut; Worker berasal dari bengkel yang sama dengan WO. **Langkah:** Bagian I.8 §7 langkah 3, tab Mechanic. **Hasil:** `WorkOrderMechanicAssignment` tercatat (PRIMARY/ASSISTANT). **Kondisi gagal:** mekanik dari bengkel berbeda ditolak sistem.
@@ -1999,7 +2001,7 @@ Bagian ini merangkum langkah lintas-modul untuk pekerjaan yang sering dilakukan 
 | Quality Control (QC) | — | Pemeriksaan mutu sebelum Work Order dinyatakan selesai | Quality Control |
 | Vehicle Release | — | Aksi merilis kendaraan kembali ke operasi & menutup Work Order | Vehicle Release |
 | Maker-Checker | — | Pola kendali dua pihak: pengusul tidak boleh menjadi penyetuju usulannya sendiri | Banyak modul (approval) |
-| Workshop Invoice | — | Pencatatan invoice yang diterbitkan pihak eksternal (Partner), bukan diterbitkan OptiFleet | Workshop Invoice |
+| Service Invoice | Workshop Invoice (nama lama; nama teknis: `WorkshopInvoice`, permission `workshop_invoice.*`) | Pencatatan invoice jasa pihak ketiga (towing/jasa lain) pada Work Order eksekusi internal, diterbitkan Partner — bukan diterbitkan OptiFleet. Berbeda dari External Workshop Invoice (WO yang dikerjakan bengkel eksternal) | Service Invoice |
 | Tire Scoring | — | Penilaian kelayakan ban berbasis kedalaman tapak & kondisi, memakai konfigurasi yang dipublikasikan tenant | Tire Management |
 | Critical-Fail Gate | — | Gerbang keselamatan mutlak pada Tire — tidak dapat dilewati/dikonfigurasi lebih lunak oleh siapa pun | Tire Management |
 | Rim | — | Master data pelek, berdiri sendiri, tidak tertaut ke Tire/Vehicle | Tire Management |
@@ -2011,7 +2013,7 @@ Bagian ini merangkum langkah lintas-modul untuk pekerjaan yang sering dilakukan 
 | Subscription | — | Representasi operasional dari kontrak yang aktif ditagih; menentukan modul mana yang aktif untuk tenant | Commercial |
 | Dunning | — | Proses otomatis penagihan berjenjang atas tagihan yang telat dibayar | Commercial |
 | Proration | — | Perhitungan biaya proporsional untuk periode yang tidak penuh (mis. penambahan modul di tengah periode tagihan) | Commercial |
-| Maintenance Memo | — | Dokumen internal pengiriman pekerjaan ke Partner eksternal (nama teknis: `WorkOrderExternalService`) | Work Order, Workshop Invoice |
+| Maintenance Memo | — | Dokumen internal pengiriman pekerjaan ke Partner eksternal (nama teknis: `WorkOrderExternalService`) | Work Order, Service Invoice |
 | Worker Type | — | Atribut deskriptif pekerja bengkel (mis. MECHANIC, QC) — bukan role/permission | Workshop Operations |
 | Reorder Point | — | Ambang batas stok yang memicu status "perlu dipesan ulang" | Inventory |
 

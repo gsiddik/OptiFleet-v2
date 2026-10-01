@@ -2408,12 +2408,12 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
             )}
             {s.status === 'COMPLETED' && hasPermission('workshop_invoice.record') && (
               <button className="btn-primary" disabled={busy} onClick={() => setRecordingInvoiceFor(s.id)}>
-                Record Workshop Invoice
+                Record Service Invoice
               </button>
             )}
             {(s.status === 'BILLED' || s.status === 'PAID') && s.workshop_invoice_id && hasPermission('workshop_invoice.view') && (
               <Link className="btn-secondary" to={`/app/workshop-invoices/${s.workshop_invoice_id}`}>
-                View Workshop Invoice
+                View Service Invoice
               </Link>
             )}
           </div>
@@ -2590,7 +2590,7 @@ function HistoryTab({ vehicleId }: { vehicleId: string }) {
   );
 }
 
-/** R1: records an externally-issued Workshop Invoice against a COMPLETED Maintenance Memo — OptiFleet never issues one. */
+/** R1: records an externally-issued third-party Service Invoice (domain: WorkshopInvoice) against a COMPLETED Maintenance Memo — OptiFleet never issues one. */
 function RecordWorkshopInvoiceModal({
   workOrderId,
   externalServiceId,
@@ -2645,9 +2645,9 @@ function RecordWorkshopInvoiceModal({
   }
 
   return (
-    <Modal open title="Record Workshop Invoice" onClose={onClose} width={560}>
+    <Modal open title="Record Service Invoice" onClose={onClose} width={560}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
-        This records an invoice the Workshop Partner already issued externally — OptiFleet does not issue this invoice.
+        This records an invoice the service provider already issued externally — OptiFleet does not issue this invoice.
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <FormField label="External Invoice Number" errors={errors.external_invoice_number} required>
@@ -2692,7 +2692,7 @@ function RecordWorkshopInvoiceModal({
           Cancel
         </button>
         <button className="btn-primary" disabled={submitting || !externalInvoiceNumber || !invoiceDate || !totalAmount} onClick={submit}>
-          {submitting ? 'Recording…' : 'Record Workshop Invoice'}
+          {submitting ? 'Recording…' : 'Record Service Invoice'}
         </button>
       </div>
     </Modal>

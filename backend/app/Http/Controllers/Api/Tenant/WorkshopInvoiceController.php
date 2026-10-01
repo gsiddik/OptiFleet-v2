@@ -214,7 +214,7 @@ class WorkshopInvoiceController extends Controller
         abort_unless(
             ! $workOrder || $this->scope->canAccessWorkshop($this->context->user(), $this->context->tenantId(), $workOrder->workshop_id),
             403,
-            'This Workshop Invoice is outside your assigned data scope.'
+            'This Service Invoice is outside your assigned data scope.'
         );
     }
 }

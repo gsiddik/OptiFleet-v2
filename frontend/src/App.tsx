@@ -489,7 +489,7 @@ export default function App() {
                 </RequirePermission>
               }
             />
-            {/* The standalone Workshop Invoices list was retired: workshop invoices are reached from their
+            {/* The standalone Workshop Invoices list was retired: third-party Service Invoices (domain: WorkshopInvoice) are reached from their
                 Work Order (External Services tab). Old links/bookmarks land on the Work Order list. */}
             <Route path="workshop-invoices" element={<Navigate to="/app/work-orders" replace />} />
             <Route

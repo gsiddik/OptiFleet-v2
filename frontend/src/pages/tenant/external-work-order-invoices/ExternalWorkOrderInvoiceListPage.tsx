@@ -38,7 +38,8 @@ const WAL_LABELS: Record<string, string> = {
  * full Section 5 action matrix (Generate/View Work Authorization,
  * Deliver, Acknowledge, Complete, View Bill, Settlement, View
  * Settlement). Deliberately its own page/route, separate from the
- * pre-existing, unrelated R1 Workshop Invoice (reached from its Work Order).
+ * pre-existing, unrelated R1 third-party Service Invoice (domain: WorkshopInvoice),
+ * reached from its Work Order.
  * Cancel reuses the existing Work Order detail page's Cancel action
  * rather than duplicating that logic here.
  */
@@ -313,7 +314,7 @@ export function ExternalWorkOrderInvoiceListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Workshop Invoice</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>External Work Order Invoices</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: -8, marginBottom: 16 }}>
         Work Orders being carried out by an External Workshop.
       </p>
@@ -350,7 +351,7 @@ export function ExternalWorkOrderInvoiceListPage() {
       </Modal>
 
       <Modal open={cancellingFor !== null} title="Cancel External Work Order" onClose={() => setCancellingFor(null)}>
-        <p style={{ fontSize: 13 }}>This cancels the External Work Order and its Workshop Invoice. It cannot be undone.</p>
+        <p style={{ fontSize: 13 }}>This cancels the External Work Order and its External Workshop Invoice. It cannot be undone.</p>
         <textarea
           aria-label="Cancellation reason"
           placeholder="Reason (required)"
