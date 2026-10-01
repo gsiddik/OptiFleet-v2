@@ -6,6 +6,7 @@ use App\Domain\Audit\Concerns\Auditable;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Shared\Concerns\BelongsToTenant;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +16,7 @@ class GoodsReceipt extends Model
 {
     use Auditable, BelongsToTenant, HasUuids;
 
-    protected $fillable = ['tenant_id', 'gr_number', 'numbering_configuration_version_id', 'purchase_order_id', 'warehouse_id', 'partner_id', 'status', 'received_by', 'received_at', 'notes'];
+    protected $fillable = ['tenant_id', 'gr_number', 'numbering_configuration_version_id', 'purchase_order_id', 'warehouse_id', 'partner_id', 'vendor_invoice_reference_id', 'status', 'received_by', 'received_at', 'notes'];
 
     protected function casts(): array
     {
@@ -35,6 +36,16 @@ class GoodsReceipt extends Model
     public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
+    }
+
+    public function receiver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
+    }
+
+    public function vendorInvoiceReference(): BelongsTo
+    {
+        return $this->belongsTo(VendorInvoiceReference::class);
     }
 
     public function items(): HasMany

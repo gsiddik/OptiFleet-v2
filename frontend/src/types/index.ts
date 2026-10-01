@@ -1838,10 +1838,13 @@ export interface GoodsReceiptItem {
   status: 'DRAFT' | 'POSTED';
   received_at: string | null;
   notes: string | null;
+  vendor_invoice_reference_id: string | null;
   warehouse?: Warehouse;
   partner?: PartnerItem;
   purchase_order?: PurchaseOrderItem;
   items?: GoodsReceiptItemLine[];
+  receiver?: { id: string; name: string } | null;
+  vendor_invoice_reference?: VendorInvoiceReferenceItem | null;
 }
 
 export interface VendorInvoiceReferenceItem {
@@ -1852,11 +1855,54 @@ export interface VendorInvoiceReferenceItem {
   vendor_invoice_number: string;
   vendor_invoice_date: string | null;
   amount: string | null;
+  /** Working days. */
+  terms_of_payment_days: number | null;
+  due_date: string | null;
+  origin: 'MANUAL' | 'GOODS_RECEIPT';
   status: 'RECEIVED' | 'VERIFIED' | 'DISPUTED';
   notes: string | null;
-  attachment_path: string | null;
+  has_document: boolean;
+  attachment_original_name: string | null;
   partner?: PartnerItem;
   purchase_order?: PurchaseOrderItem;
+  /** Present once the invoice is paid — a paid invoice can no longer be reused by a receipt. */
+  payment?: { id: string; payment_date: string } | null;
+}
+
+export type VendorInvoiceStatus = 'NEW' | 'DUE_SOON' | 'LATE' | 'PAID';
+
+/** An invoice as listed on Vendor Invoice References (status derived by the backend). */
+export interface VendorInvoiceSummary {
+  id: string;
+  vendor_invoice_number: string;
+  vendor_invoice_date: string | null;
+  amount: string | null;
+  terms_of_payment_days: number | null;
+  due_date: string | null;
+  has_document: boolean;
+  attachment_original_name: string | null;
+  partner: { id: string; name: string } | null;
+  status: VendorInvoiceStatus;
+  payment: VendorInvoicePaymentInfo | null;
+}
+
+/** The single payment that settled an invoice (shared by every receipt row of that invoice). */
+export interface VendorInvoicePaymentInfo {
+  payment_date: string;
+  amount: string;
+  proof_original_name: string | null;
+  proof_mime_type: string | null;
+  paid_by: string | null;
+  recorded_at: string | null;
+}
+
+/** One Vendor Invoice References row = one Goods Receipt and the invoice it was received against. */
+export interface VendorInvoiceReceiptRow {
+  id: string;
+  gr_number: string;
+  received_at: string | null;
+  purchase_order: { id: string; po_number: string } | null;
+  invoice: VendorInvoiceSummary;
 }
 
 export interface RimItem {

@@ -134,8 +134,8 @@
 | B8.10 | Procurement | Purchase Request | `/app/purchase-requests`, `/:id` | Permintaan pembelian; bisa ditautkan ke WO | Warehouse | `purchase_request.view/create/submit/approve` | Implemented | `PurchaseRequestService.php` |
 | B8.11 | Procurement | RFQ & Vendor Quotation | `/app/rfqs`, `/quotations` | Minta & bandingkan penawaran vendor | Procurement | `rfq.view/manage`, `quotation.view/manage/select` | Implemented | `RfqService.php` |
 | B8.12 | Procurement | Purchase Order | `/app/purchase-orders`, `/:id` | Order resmi ke vendor terpilih, opsional persetujuan berjenjang | Procurement | `purchase_order.view/create/approve/issue` | Implemented (persetujuan berjenjang: framework ada, tidak aktif default) | `PurchaseOrderService.php` |
-| B8.13 | Procurement | Goods Receipt | `/app/goods-receipts` | Penerimaan barang & update stok + harga rata-rata | Warehouse | `goods_receipt.view/create/post` | Implemented | `GoodsReceiptService.php` |
-| B8.14 | Procurement | Vendor Invoice Reference | `/app/vendor-invoice-references` | Catatan invoice vendor terkait PO | Procurement | `goods_receipt.view/create` | Implemented | `VendorInvoiceReference` model |
+| B8.13 | Procurement | Goods Receipt | `/app/goods-receipts` | Penerimaan barang & update stok + harga rata-rata; setiap GR wajib dicatat bersama Vendor Invoice Reference | Warehouse | `goods_receipt.view/post` | Implemented | `GoodsReceiptService.php` |
+| B8.14 | Procurement | Vendor Invoice Reference | `/app/vendor-invoice-references` | Invoice vendor per Goods Receipt, due date hari kerja, status NEW/DUE_SOON/LATE/PAID, pembayaran + bukti | Procurement / Finance | `vendor_invoice.view/pay` | Implemented | `VendorInvoiceReferenceService.php`, `VendorInvoicePaymentService.php` |
 | B8.15 | Partner | Vendor/Supplier/Workshop Partner | `/app/partners`, `/suppliers`, `/:id` | Master data mitra bisnis (vendor, bengkel eksternal, dsb.) | Procurement | `partner.view/manage` | Implemented (halaman "Suppliers" adalah tampilan terfilter dari data Partner yang sama, bukan entitas terpisah) | `Domain/Partner` |
 
 ### B9. Tire, Component Asset, Warranty

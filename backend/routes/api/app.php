@@ -650,11 +650,11 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('permission:goods_receipt.view');
             Route::get('/goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('permission:goods_receipt.view');
 
-            Route::get('/vendor-invoice-references', [VendorInvoiceReferenceController::class, 'index'])->middleware('permission:goods_receipt.view');
-            Route::post('/vendor-invoice-references', [VendorInvoiceReferenceController::class, 'store'])->middleware('permission:goods_receipt.create');
-            Route::get('/vendor-invoice-references/{vendorInvoiceReference}', [VendorInvoiceReferenceController::class, 'show'])->middleware('permission:goods_receipt.view');
-            Route::get('/vendor-invoice-references/{vendorInvoiceReference}/download', [VendorInvoiceReferenceController::class, 'download'])->middleware('permission:goods_receipt.view');
-            Route::post('/vendor-invoice-references/{vendorInvoiceReference}/status', [VendorInvoiceReferenceController::class, 'updateStatus'])->middleware('permission:goods_receipt.create');
+            Route::get('/vendor-invoice-references', [VendorInvoiceReferenceController::class, 'index'])->middleware('permission:vendor_invoice.view');
+            Route::get('/vendor-invoice-references/{vendorInvoiceReference}', [VendorInvoiceReferenceController::class, 'show'])->middleware('permission:vendor_invoice.view');
+            Route::get('/vendor-invoice-references/{vendorInvoiceReference}/download', [VendorInvoiceReferenceController::class, 'download'])->middleware('permission:vendor_invoice.view');
+            Route::post('/vendor-invoice-references/{vendorInvoiceReference}/payments', [VendorInvoiceReferenceController::class, 'pay'])->middleware('permission:vendor_invoice.pay');
+            Route::get('/vendor-invoice-references/{vendorInvoiceReference}/payment-proof', [VendorInvoiceReferenceController::class, 'paymentProof'])->middleware('permission:vendor_invoice.view');
         });
 
         Route::middleware('module:PARTNER')->group(function () {

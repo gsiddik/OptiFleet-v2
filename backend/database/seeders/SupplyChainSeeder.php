@@ -231,7 +231,12 @@ class SupplyChainSeeder extends Seeder
             $poItem = $po->items()->first();
             app(GoodsReceiptService::class)->post($po, $jktWarehouse, [
                 ['purchase_order_item_id' => $poItem->id, 'quantity_accepted' => 30],
-            ], $warehouseManager->id, 'Partial delivery — remaining 20 backordered by vendor.');
+            ], $warehouseManager->id, 'Partial delivery — remaining 20 backordered by vendor.', [
+                // Received against the vendor's invoice (30 × 85,000 + 11% tax), 30 working days.
+                'mode' => 'NEW', 'vendor_invoice_number' => 'INV-SSC-2026-0001', 'vendor_invoice_date' => now()->toDateString(),
+                'amount' => '2830500.00', 'terms_of_payment_days' => 30,
+                'document' => DemoQuotationDocument::make('INV-SSC-2026-0001', 'Demo vendor invoice', 'INV-SSC-2026-0001.pdf'),
+            ]);
         }
 
         // --- Tire lifecycle: spare in stock + one installed with rotation & inspection ---

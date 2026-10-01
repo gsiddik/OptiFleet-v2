@@ -27,6 +27,11 @@ const COLORS: Record<string, string> = {
   PENDING_INSPECTION: '#7c3aed',
   WARRANTY_CLAIM: '#1d4ed8',
   SCRAP: '#6b7280',
+  // Vendor invoices
+  NEW: '#1d4ed8',
+  DUE_SOON: '#b45309',
+  LATE: '#b91c1c',
+  PAID: '#15803d',
 };
 
 export function StatusBadge({ status }: { status: string }) {

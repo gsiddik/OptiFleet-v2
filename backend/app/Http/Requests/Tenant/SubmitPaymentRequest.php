@@ -22,6 +22,8 @@ class SubmitPaymentRequest extends FormRequest
             'account_name' => ['nullable', 'string', 'max:255'],
             'transaction_reference' => ['nullable', 'string', 'max:255'],
             'note' => ['nullable', 'string'],
+            // Optional proof sent with the submission; saved atomically with the payment.
+            'file' => ['nullable', 'file', 'max:5120', 'mimes:jpg,jpeg,png,webp,pdf'],
         ];
     }
 }

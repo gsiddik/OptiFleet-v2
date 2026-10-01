@@ -94,7 +94,15 @@ class PurchaseOrderController extends Controller
     {
         $this->authorizeScope($purchaseOrder);
 
-        return $this->ok($purchaseOrder->load(['partner', 'deliveryWarehouse', 'items.product', 'goodsReceipts', 'workflowApprovalRequest.steps']));
+        // Receipt history: every Goods Receipt (oldest first) with its received quantities and the
+        // vendor invoice it was received against (several receipts may share one invoice).
+        return $this->ok($purchaseOrder->load([
+            'partner', 'deliveryWarehouse', 'items.product', 'workflowApprovalRequest.steps',
+            'goodsReceipts' => fn ($q) => $q->orderBy('received_at')->orderBy('created_at')->orderBy('gr_number'),
+            'goodsReceipts.items.product:id,name,sku',
+            'goodsReceipts.receiver:id,name',
+            'goodsReceipts.vendorInvoiceReference.payment:id,vendor_invoice_reference_id,payment_date',
+        ]));
     }
 
     /**

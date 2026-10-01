@@ -355,10 +355,16 @@ class ProcurementTest extends TestCase
 
         $item = $po->items()->first();
 
-        // Partial receipt: 6 of 10.
+        // Every receipt is posted against a vendor invoice.
         $this->postJson("/api/v1/app/purchase-orders/{$po->id}/goods-receipts", [
             'lines' => [['purchase_order_item_id' => $item->id, 'quantity_accepted' => 6]],
-        ], $headers)->assertStatus(201);
+        ], $headers)->assertStatus(422)->assertJsonValidationErrors('invoice_mode');
+
+        // Partial receipt: 6 of 10.
+        $invoiceId = $this->postJson("/api/v1/app/purchase-orders/{$po->id}/goods-receipts", [
+            'lines' => [['purchase_order_item_id' => $item->id, 'quantity_accepted' => 6]],
+            'invoice_mode' => 'NEW', 'vendor_invoice_number' => 'INV-PT-1', 'vendor_invoice_date' => '2026-10-01', 'amount' => '1000000', 'terms_of_payment_days' => '30',
+        ], $headers)->assertStatus(201)->json('data.vendor_invoice_reference_id');
 
         $po->refresh();
         $this->assertSame('PARTIALLY_RECEIVED', $po->status);
@@ -368,11 +374,13 @@ class ProcurementTest extends TestCase
         // Over-receipt beyond remaining (4 left) must be rejected.
         $this->postJson("/api/v1/app/purchase-orders/{$po->id}/goods-receipts", [
             'lines' => [['purchase_order_item_id' => $item->id, 'quantity_accepted' => 5]],
+            'invoice_mode' => 'EXISTING', 'vendor_invoice_reference_id' => $invoiceId,
         ], $headers)->assertStatus(422);
 
         // Remaining 4 completes the PO.
         $this->postJson("/api/v1/app/purchase-orders/{$po->id}/goods-receipts", [
             'lines' => [['purchase_order_item_id' => $item->id, 'quantity_accepted' => 4]],
+            'invoice_mode' => 'EXISTING', 'vendor_invoice_reference_id' => $invoiceId,
         ], $headers)->assertStatus(201);
 
         $po->refresh();

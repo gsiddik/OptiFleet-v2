@@ -41,7 +41,7 @@ class AccountPaymentController extends Controller
     {
         $invoice = Invoice::query()->where('tenant_id', $this->context->tenantId())->findOrFail($request->input('invoice_id'));
 
-        $payment = $this->submission->submit($invoice, $request->safe()->except('invoice_id'), $request->user()->id);
+        $payment = $this->submission->submit($invoice, $request->safe()->except(['invoice_id', 'file']), $request->user()->id, $request->file('file'));
 
         return $this->ok($payment, 201);
     }
@@ -65,7 +65,7 @@ class AccountPaymentController extends Controller
     {
         $this->authorizeOwnership($payment);
 
-        $new = $this->submission->resubmit($payment, $request->safe()->except('invoice_id'), $request->user()->id);
+        $new = $this->submission->resubmit($payment, $request->safe()->except(['invoice_id', 'file']), $request->user()->id);
 
         return $this->ok($new, 201);
     }

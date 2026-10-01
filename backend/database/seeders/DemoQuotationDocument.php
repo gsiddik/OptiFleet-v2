@@ -5,15 +5,15 @@ namespace Database\Seeders;
 use Illuminate\Http\UploadedFile;
 
 /**
- * Demo/functional seeders only: a minimal, valid one-page PDF standing in for a vendor's
- * quotation document, since recording a quotation now requires one. Never used by the
- * production baseline seeders.
+ * Demo/functional seeders only: a minimal, valid one-page PDF standing in for a vendor
+ * document (quotation by default; also used for demo vendor invoices recorded at Goods
+ * Receipt). Never used by the production baseline seeders.
  */
 final class DemoQuotationDocument
 {
-    public static function make(string $label): UploadedFile
+    public static function make(string $label, string $title = 'Demo vendor quotation', string $filename = 'demo-quotation.pdf'): UploadedFile
     {
-        $text = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], "Demo vendor quotation - {$label}");
+        $text = str_replace(['\\', '(', ')'], ['\\\\', '\\(', '\\)'], "{$title} - {$label}");
         $stream = "BT /F1 12 Tf 72 720 Td ({$text}) Tj ET";
         $objects = [
             '<< /Type /Catalog /Pages 2 0 R >>',
@@ -38,6 +38,6 @@ final class DemoQuotationDocument
         $path = tempnam(sys_get_temp_dir(), 'quote');
         file_put_contents($path, $pdf);
 
-        return new UploadedFile($path, 'demo-quotation.pdf', 'application/pdf', null, true);
+        return new UploadedFile($path, $filename, 'application/pdf', null, true);
     }
 }

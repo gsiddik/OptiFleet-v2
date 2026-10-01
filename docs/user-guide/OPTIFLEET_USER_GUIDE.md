@@ -1248,7 +1248,7 @@ Saldo & ledger stok akurat; part bekas terkelola sesuai standar keselamatan; has
 Mengelola rantai pengadaan barang dari permintaan internal hingga penerimaan barang di gudang.
 
 #### 2. Pengguna yang Memiliki Akses
-Procurement staff (`purchase_request.*`, `rfq.*`, `quotation.*`, `purchase_order.*`, `goods_receipt.*`); Warehouse (`goods_receipt.create/post`).
+Procurement staff (`purchase_request.*`, `rfq.*`, `quotation.*`, `purchase_order.*`, `goods_receipt.*`); Warehouse (`goods_receipt.post`); Finance/Procurement (`vendor_invoice.view`, `vendor_invoice.pay`).
 
 #### 3. Fitur yang Tersedia
 
@@ -1260,7 +1260,7 @@ Procurement staff (`purchase_request.*`, `rfq.*`, `quotation.*`, `purchase_order
 | Compare & Select | Bandingkan & pilih vendor | Procurement | — | Quotation SELECTED, lainnya ditolak otomatis |
 | Purchase Order | Order resmi ke vendor terpilih | Procurement | Dari Quotation terpilih | PO baru |
 | Goods Receipt | Penerimaan barang | Warehouse | Kuantitas diterima per item | Stok bertambah |
-| Vendor Invoice Reference | Catatan invoice vendor | Procurement | No. invoice vendor | Rekaman referensi |
+| Vendor Invoice Reference | Invoice vendor yang dicatat saat Goods Receipt | Procurement / Finance | GR#, No. invoice vendor | Status NEW / DUE_SOON / LATE / PAID, pembayaran + bukti |
 
 #### 4. Data dan Informasi yang Digunakan
 Data transaksi: PurchaseRequest, Rfq, VendorQuotation, PurchaseOrder, GoodsReceipt, VendorInvoiceReference. Data referensi: Partner (vendor), Product.
@@ -1278,8 +1278,8 @@ Partner (vendor) dan Product harus sudah terdaftar.
 3. **Quotation:** vendor (atau staf Procurement atas nama vendor) mengirim penawaran per item → tersimpan sebagai `VendorQuotation` berstatus `SUBMITTED`. Satu vendor hanya boleh punya satu quotation aktif per RFQ (pengiriman ulang menimpa yang lama).
 4. **Compare & Select:** buka `Quotation` → gunakan tampilan **Compare** untuk membandingkan total tiap vendor → klik **Select** pada vendor terpilih. **Hasil:** quotation lain otomatis `REJECTED`, RFQ otomatis `CLOSED`.
 5. **Buat Purchase Order:** dari Quotation terpilih, klik **"Create Purchase Order"** → data harga/kuantitas tersalin sebagai catatan komersial permanen (tidak berubah lagi meski katalog harga produk berubah kemudian) → `DRAFT` → **Submit → Approve** (satu tingkat secara default, atau berjenjang bila tenant sudah mempublikasikan aturan Workflow untuk ini) **→ Issue** → status `ISSUED`.
-6. **Goods Receipt:** dari detail PO, klik **"Receive Goods"** → isi kuantitas diterima per item (tidak boleh melebihi sisa kuantitas PO) → **Post** → stok gudang bertambah otomatis, harga rata-rata tertimbang produk ikut diperbarui, dan PO otomatis berubah ke `PARTIALLY_RECEIVED` atau `RECEIVED`/`CLOSED` sesuai kelengkapan penerimaan.
-7. **Vendor Invoice Reference:** catat nomor invoice vendor terkait PO ini untuk kebutuhan rekonsiliasi keuangan internal Anda (di luar OptiFleet).
+6. **Goods Receipt:** dari detail PO (status `ISSUED`/`PARTIALLY_RECEIVED`), isi kuantitas diterima per item (tidak boleh melebihi sisa kuantitas PO) → klik **"Post Goods Receipt"** → muncul pop-up **Record Vendor Invoice Reference**: Vendor (otomatis dari PO, read-only), Invoice Number, Invoice Date, Amount, Terms of Payment (hari kerja), Invoice Document (PDF, opsional, maks. 10 MB). Pada penerimaan parsial berikutnya dapat dicentang **"Use the same invoice as the previous Goods Receipt"** — hanya selama invoice tersebut belum `PAID`. **Submit** → GR baru (GR# otomatis) diposting bersama invoice-nya dalam satu transaksi: stok bertambah, harga rata-rata tertimbang diperbarui, PO otomatis `PARTIALLY_RECEIVED`/`RECEIVED`. Riwayat setiap penerimaan (GR#, tanggal, kuantitas, invoice, dokumen) tampil di detail PO.
+7. **Vendor Invoice Reference:** daftar invoice yang dicatat saat Goods Receipt (satu baris per GR; tidak ada pembuatan manual). Due Date = Invoice Date + Terms of Payment dalam **hari kerja Senin–Jumat** (hari libur nasional belum diperhitungkan). Status dihitung sistem: `NEW`, `DUE_SOON` (≤ 7 hari kalender sebelum jatuh tempo, dapat dikonfigurasi), `LATE`, `PAID`. Aksi **Payment** (pelunasan penuh: jumlah harus sama dengan nilai invoice, tanggal tidak boleh di masa depan, bukti JPG/JPEG/PNG/PDF wajib) — invoice yang dipakai beberapa GR cukup dibayar sekali dan semua barisnya menjadi `PAID`. Klik tanggal pembayaran untuk melihat/mengunduh bukti bayar.
 
 #### 8. Penjelasan Field
 Lihat `OPTIFLEET_DATA_DICTIONARY.md` §5.2 dan §5.3 "Status Purchase Request/Purchase Order".

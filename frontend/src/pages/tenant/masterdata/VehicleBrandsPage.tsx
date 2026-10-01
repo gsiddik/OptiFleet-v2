@@ -155,6 +155,7 @@ function BrandFormModal({
   const [categoryIds, setCategoryIds] = useState<string[]>((brand?.vehicle_categories ?? []).map((c) => c.id));
   const [categoryOptions, setCategoryOptions] = useState<{ id: string; name: string }[] | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [createdBrandId, setCreatedBrandId] = useState<string | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -212,17 +213,23 @@ function BrandFormModal({
     setLogoFile(file);
   }
 
+  // Closing after a brand was created but its logo failed still refreshes the list.
+  const close = () => (createdBrandId ? onSaved() : onClose());
+
   async function submit() {
     setSubmitting(true);
     setErrors({});
     try {
       const payload = { name, vehicle_category_ids: categoryIds };
-      let brandId = brand?.id;
-      if (brand) {
-        await apiClient.put(`/app/vehicle-brands/${brand.id}`, payload);
+      // A brand created on an earlier attempt whose logo upload then failed is updated, not
+      // created again (the retry would otherwise fail on the duplicate code).
+      let brandId = brand?.id ?? createdBrandId;
+      if (brandId) {
+        await apiClient.put(`/app/vehicle-brands/${brandId}`, payload);
       } else {
         const res = await apiClient.post('/app/vehicle-brands', { code, ...payload });
-        brandId = res.data.data.id;
+        brandId = res.data.data.id as string;
+        setCreatedBrandId(brandId);
       }
       if (logoFile && brandId) {
         const form = new FormData();
@@ -239,7 +246,7 @@ function BrandFormModal({
   }
 
   return (
-    <Modal open={open} title={brand ? 'Edit Vehicle Brand' : 'New Vehicle Brand'} onClose={onClose}>
+    <Modal open={open} title={brand ? 'Edit Vehicle Brand' : 'New Vehicle Brand'} onClose={close}>
       <FormField label="Code" errors={errors.code} required={!brand}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!brand} />
       </FormField>
@@ -264,7 +271,7 @@ function BrandFormModal({
       </FormField>
       {logoPreview && <img src={logoPreview} alt={name} style={{ maxWidth: 100, marginBottom: 12, borderRadius: 4 }} />}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
+        <button className="btn-secondary" onClick={close}>
           Cancel
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
