@@ -7,7 +7,7 @@ import { formatQty } from '../../../utils/quantity';
  * Receipt history of a Purchase Order: one row per Goods Receipt (oldest first), never
  * overwritten by later receipts. Receipt Date is the receipt's own `received_at`.
  */
-export function GoodsReceiptHistory({ receipts, receivedComplete }: { receipts: GoodsReceiptItem[]; receivedComplete: boolean }) {
+export function GoodsReceiptHistory({ receipts, receivedComplete, canViewDocuments }: { receipts: GoodsReceiptItem[]; receivedComplete: boolean; canViewDocuments: boolean }) {
   const last = receipts[receipts.length - 1];
   const cell = { padding: '8px 10px', borderBottom: '1px solid #f3f4f6', fontSize: 13, verticalAlign: 'top' as const };
 
@@ -48,7 +48,7 @@ export function GoodsReceiptHistory({ receipts, receivedComplete }: { receipts: 
                   </td>
                   <td style={cell}>{invoice?.vendor_invoice_number ?? '—'}</td>
                   <td style={cell}>
-                    {invoice?.has_document && docPath ? (
+                    {invoice?.has_document && docPath && canViewDocuments ? (
                       <span style={{ display: 'inline-flex', gap: 10 }}>
                         <button type="button" className="btn-link" onClick={() => openProtectedFile(docPath)}>
                           View
@@ -57,6 +57,8 @@ export function GoodsReceiptHistory({ receipts, receivedComplete }: { receipts: 
                           Download
                         </button>
                       </span>
+                    ) : invoice?.has_document ? (
+                      invoice.attachment_original_name ?? 'Document uploaded'
                     ) : invoice ? (
                       'No document uploaded'
                     ) : (

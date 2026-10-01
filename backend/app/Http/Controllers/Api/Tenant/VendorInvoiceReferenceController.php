@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Identity\Models\Tenant;
+use App\Domain\Procurement\Models\GoodsReceipt;
 use App\Domain\Procurement\Models\VendorInvoiceReference;
+use App\Domain\Procurement\Support\VendorInvoiceStatus;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
@@ -16,25 +21,69 @@ class VendorInvoiceReferenceController extends Controller
         private readonly TenantContext $context,
     ) {}
 
+    /**
+     * Vendor Invoice References: one row per Goods Receipt that was received against an invoice
+     * (GR is the row granularity — an invoice shared by several receipts appears on each of
+     * their rows, always with the same invoice data and status). Legacy invoices never linked
+     * to a receipt are not listed (kept, still readable via show).
+     */
     public function index(Request $request)
     {
-        $query = VendorInvoiceReference::query()->where('tenant_id', $this->context->tenantId())->with(['partner', 'purchaseOrder', 'goodsReceipt']);
+        $tenantId = $this->context->tenantId();
+        $validated = $request->validate([
+            'status' => ['nullable', 'in:'.implode(',', VendorInvoiceStatus::STATUSES)],
+            'partner_id' => ['nullable', 'uuid'],
+            'purchase_order_id' => ['nullable', 'uuid'],
+            'search' => ['nullable', 'string', 'max:100'],
+        ]);
+        $today = $this->today($tenantId);
 
-        if ($partnerId = $request->string('partner_id')->value()) {
-            $query->where('partner_id', $partnerId);
+        $query = GoodsReceipt::query()
+            ->where('tenant_id', $tenantId)
+            ->whereNotNull('vendor_invoice_reference_id')
+            ->with(['purchaseOrder:id,po_number', 'vendorInvoiceReference.partner:id,name']);
+        $this->scope->applyWarehouseScope($query, $this->context->user(), $tenantId, 'warehouse_id');
+
+        if (! empty($validated['status'])) {
+            $query->whereHas('vendorInvoiceReference', fn ($q) => VendorInvoiceStatus::constrain($q, $validated['status'], $today, $this->isPaid(...)));
         }
-        if ($poId = $request->string('purchase_order_id')->value()) {
-            $query->where('purchase_order_id', $poId);
+        if (! empty($validated['partner_id'])) {
+            $query->where('partner_id', $validated['partner_id']);
+        }
+        if (! empty($validated['purchase_order_id'])) {
+            $query->where('purchase_order_id', $validated['purchase_order_id']);
+        }
+        if ($term = trim((string) ($validated['search'] ?? ''))) {
+            $like = '%'.mb_strtolower($term).'%';
+            $query->where(fn ($q) => $q
+                ->whereRaw('LOWER(gr_number) LIKE ?', [$like])
+                ->orWhereHas('purchaseOrder', fn ($po) => $po->whereRaw('LOWER(po_number) LIKE ?', [$like]))
+                ->orWhereHas('vendorInvoiceReference', fn ($inv) => $inv->whereRaw('LOWER(vendor_invoice_number) LIKE ?', [$like]))
+                ->orWhereHas('partner', fn ($p) => $p->whereRaw('LOWER(name) LIKE ?', [$like])));
         }
 
-        return $this->paginated($query->latest('created_at')->paginate($request->integer('per_page', 20)));
+        $page = $query->orderByDesc('received_at')->orderByDesc('created_at')->orderByDesc('gr_number')->paginate($request->integer('per_page', 20));
+        $page->through(fn (GoodsReceipt $gr) => [
+            'id' => $gr->id,
+            'gr_number' => $gr->gr_number,
+            'received_at' => $gr->received_at,
+            'purchase_order' => $gr->purchaseOrder ? ['id' => $gr->purchaseOrder->id, 'po_number' => $gr->purchaseOrder->po_number] : null,
+            'invoice' => $this->present($gr->vendorInvoiceReference, $today),
+        ]);
+
+        return $this->paginated($page);
     }
 
     public function show(VendorInvoiceReference $vendorInvoiceReference)
     {
         $this->authorizeScope($vendorInvoiceReference);
 
-        return $this->ok($vendorInvoiceReference->load(['partner', 'purchaseOrder', 'goodsReceipt']));
+        $vendorInvoiceReference->load(['partner', 'purchaseOrder', 'goodsReceipts:id,gr_number,received_at,vendor_invoice_reference_id']);
+
+        return $this->ok($this->present($vendorInvoiceReference, $this->today($vendorInvoiceReference->tenant_id)) + [
+            'purchase_order' => $vendorInvoiceReference->purchaseOrder,
+            'goods_receipts' => $vendorInvoiceReference->goodsReceipts,
+        ]);
     }
 
     public function download(VendorInvoiceReference $vendorInvoiceReference)
@@ -47,6 +96,7 @@ class VendorInvoiceReferenceController extends Controller
         return Storage::disk($vendorInvoiceReference->attachment_disk)->response($vendorInvoiceReference->attachment_path, $name);
     }
 
+    /** Legacy verification flag (RECEIVED / VERIFIED / DISPUTED); no longer offered in the UI. */
     public function updateStatus(Request $request, VendorInvoiceReference $vendorInvoiceReference)
     {
         $this->authorizeScope($vendorInvoiceReference);
@@ -54,6 +104,36 @@ class VendorInvoiceReferenceController extends Controller
         $vendorInvoiceReference->update($validated);
 
         return $this->ok($vendorInvoiceReference->fresh());
+    }
+
+    /** Invoice fields shown on every row that uses it, with its derived status. */
+    private function present(VendorInvoiceReference $invoice, CarbonImmutable $today): array
+    {
+        return [
+            'id' => $invoice->id,
+            'vendor_invoice_number' => $invoice->vendor_invoice_number,
+            'vendor_invoice_date' => $invoice->vendor_invoice_date?->toDateString(),
+            'amount' => $invoice->amount,
+            'terms_of_payment_days' => $invoice->terms_of_payment_days,
+            'due_date' => $invoice->due_date?->toDateString(),
+            'has_document' => $invoice->has_document,
+            'attachment_original_name' => $invoice->attachment_original_name,
+            'partner' => $invoice->partner ? ['id' => $invoice->partner->id, 'name' => $invoice->partner->name] : null,
+            'status' => VendorInvoiceStatus::resolve($invoice->due_date, false, $today),
+        ];
+    }
+
+    /** Payments arrive with the Payment action; until then no invoice is paid. */
+    private function isPaid(Builder $query, bool $paid): void
+    {
+        if ($paid) {
+            $query->whereRaw('1 = 0');
+        }
+    }
+
+    private function today(string $tenantId): CarbonImmutable
+    {
+        return VendorInvoiceStatus::today(Tenant::query()->whereKey($tenantId)->value('timezone'));
     }
 
     /** Tenant isolation, plus the warehouse data scope of the Purchase Order it belongs to. */

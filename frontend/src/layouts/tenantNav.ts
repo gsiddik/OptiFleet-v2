@@ -90,7 +90,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/quotations', label: 'Quotation', permission: 'quotation.view', module: 'PROCUREMENT' },
       { to: '/app/purchase-orders', label: 'Purchase Order', permission: 'purchase_order.view', module: 'PROCUREMENT' },
       { to: '/app/goods-receipts', label: 'Goods Receipt', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
-      { to: '/app/vendor-invoice-references', label: 'Vendor Invoice Reference', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
+      { to: '/app/vendor-invoice-references', label: 'Vendor Invoice Reference', permission: 'vendor_invoice.view', module: 'PROCUREMENT' },
     ],
   },
   {

@@ -1867,6 +1867,31 @@ export interface VendorInvoiceReferenceItem {
   purchase_order?: PurchaseOrderItem;
 }
 
+export type VendorInvoiceStatus = 'NEW' | 'DUE_SOON' | 'LATE' | 'PAID';
+
+/** An invoice as listed on Vendor Invoice References (status derived by the backend). */
+export interface VendorInvoiceSummary {
+  id: string;
+  vendor_invoice_number: string;
+  vendor_invoice_date: string | null;
+  amount: string | null;
+  terms_of_payment_days: number | null;
+  due_date: string | null;
+  has_document: boolean;
+  attachment_original_name: string | null;
+  partner: { id: string; name: string } | null;
+  status: VendorInvoiceStatus;
+}
+
+/** One Vendor Invoice References row = one Goods Receipt and the invoice it was received against. */
+export interface VendorInvoiceReceiptRow {
+  id: string;
+  gr_number: string;
+  received_at: string | null;
+  purchase_order: { id: string; po_number: string } | null;
+  invoice: VendorInvoiceSummary;
+}
+
 export interface RimItem {
   id: string;
   code: string;

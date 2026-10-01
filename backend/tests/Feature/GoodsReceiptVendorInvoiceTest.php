@@ -24,7 +24,7 @@ class GoodsReceiptVendorInvoiceTest extends TestCase
 {
     private const PDF = "%PDF-1.4\n1 0 obj<< /Type /Catalog >>endobj\ntrailer<< /Root 1 0 R >>\n%%EOF\n";
 
-    private const PERMISSIONS = ['purchase_order.view', 'goods_receipt.view', 'goods_receipt.post'];
+    private const PERMISSIONS = ['purchase_order.view', 'goods_receipt.view', 'goods_receipt.post', 'vendor_invoice.view'];
 
     protected function setUp(): void
     {

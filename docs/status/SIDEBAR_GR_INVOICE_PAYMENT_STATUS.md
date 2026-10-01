@@ -122,3 +122,25 @@ vendor-payment permissions (the invoice page reuses `goods_receipt.view/create`)
   108 passed. Browser: ISSUED PO → GR1 new invoice + PDF (jpg rejected client-side; replace /
   remove work) → PARTIALLY_RECEIVED → GR2 same invoice (previous PDF shown) → GR3 new invoice
   → RECEIVED; history 3 rows; download returns the original PDF.
+
+## Phase 5 — Vendor Invoice References list (DONE)
+
+- `GET /vendor-invoice-references` now lists **one row per Goods Receipt** received against an
+  invoice (newest first): `{id (GR), gr_number, received_at, purchase_order {id, po_number},
+  invoice {id, number, date, amount, terms_of_payment_days, due_date, has_document, partner,
+  status}}`; filters `status`, `partner_id`, `purchase_order_id`, `search` (GR#, PO#, invoice
+  number, vendor); tenant + warehouse data scope via the GR. A shared invoice shows the same
+  invoice id / data / status on each of its rows. Legacy invoices never linked to a GR are
+  kept (and readable via show) but not listed.
+- Status (`Procurement\Support\VendorInvoiceStatus`, backend only): PAID (persisted fact,
+  Phase 6) else LATE (today > due) / DUE_SOON (due within `procurement.invoice_due_soon_days`,
+  default 7 calendar days, env `PROCUREMENT_INVOICE_DUE_SOON_DAYS`) / NEW; derived at read time
+  in the tenant's time zone, so it never goes stale. Legacy invoices without a due date: NEW.
+- New permission `vendor_invoice.view` (list, show, document download); migration
+  `2026_10_02_000002` grants it to every role holding `goods_receipt.view`; seeders updated.
+- Frontend list: GR# (+ "View Invoice"), Purchase Order # (link), Invoice Number, Vendor,
+  Amount, Terms of Payment (Days, integer), Invoice Date, Due Date, Status badge; status
+  filters + search; no "Record Invoice Reference"; Verify/Dispute actions removed from the UI
+  (the legacy `/status` endpoint is retired with Phase 6).
+- Tests: `VendorInvoiceReferenceListTest` (4) — related regression 72 passed. Browser: 3 GR
+  rows (two sharing INV-E2E-A), filters, search, View Invoice.

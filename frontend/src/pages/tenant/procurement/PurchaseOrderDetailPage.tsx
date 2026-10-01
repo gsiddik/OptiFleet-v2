@@ -203,7 +203,7 @@ export function PurchaseOrderDetailPage() {
         )}
       </div>
 
-      {receipts.length > 0 && <GoodsReceiptHistory receipts={receipts} receivedComplete={['RECEIVED', 'CLOSED'].includes(po.status)} />}
+      {receipts.length > 0 && <GoodsReceiptHistory receipts={receipts} receivedComplete={['RECEIVED', 'CLOSED'].includes(po.status)} canViewDocuments={hasPermission('vendor_invoice.view')} />}
 
       {receiptLines && (
         <RecordVendorInvoiceModal
@@ -211,6 +211,7 @@ export function PurchaseOrderDetailPage() {
           vendorName={po.partner?.name ?? '—'}
           lines={receiptLines}
           previousInvoice={previousInvoice}
+          canViewDocuments={hasPermission('vendor_invoice.view')}
           onClose={() => setReceiptLines(null)}
           onPosted={() => {
             setReceiptLines(null);

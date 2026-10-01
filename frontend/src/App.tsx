@@ -785,7 +785,7 @@ export default function App() {
             <Route path="purchase-orders" element={<RequirePermission permission="purchase_order.view"><PurchaseOrderListPage /></RequirePermission>} />
             <Route path="purchase-orders/:id" element={<RequirePermission permission="purchase_order.view"><PurchaseOrderDetailPage /></RequirePermission>} />
             <Route path="goods-receipts" element={<RequirePermission permission="goods_receipt.view"><GoodsReceiptListPage /></RequirePermission>} />
-            <Route path="vendor-invoice-references" element={<RequirePermission permission="goods_receipt.view"><VendorInvoiceReferenceListPage /></RequirePermission>} />
+            <Route path="vendor-invoice-references" element={<RequirePermission permission="vendor_invoice.view"><VendorInvoiceReferenceListPage /></RequirePermission>} />
 
             <Route path="partners" element={<RequirePermission permission="partner.view"><PartnerListPage /></RequirePermission>} />
             <Route path="suppliers" element={<RequirePermission permission="partner.view"><SupplierListPage /></RequirePermission>} />

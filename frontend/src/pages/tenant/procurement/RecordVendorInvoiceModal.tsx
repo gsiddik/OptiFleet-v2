@@ -26,6 +26,7 @@ export function RecordVendorInvoiceModal({
   vendorName,
   lines,
   previousInvoice,
+  canViewDocuments,
   onClose,
   onPosted,
 }: {
@@ -33,6 +34,7 @@ export function RecordVendorInvoiceModal({
   vendorName: string;
   lines: ReceiptLine[];
   previousInvoice: VendorInvoiceReferenceItem | null;
+  canViewDocuments: boolean;
   onClose: () => void;
   onPosted: () => void;
 }) {
@@ -116,9 +118,11 @@ export function RecordVendorInvoiceModal({
             {previousInvoice.has_document ? (
               <>
                 📎 {previousInvoice.attachment_original_name ?? 'Invoice'} (previous invoice){' '}
+                {canViewDocuments && (
                 <button type="button" className="btn-link" onClick={() => openProtectedFile(`/app/vendor-invoice-references/${previousInvoice.id}/download`)}>
                   View
                 </button>
+                )}
               </>
             ) : (
               'No document uploaded'
