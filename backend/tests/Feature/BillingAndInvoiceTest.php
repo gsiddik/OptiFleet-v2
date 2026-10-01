@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Billing\Models\Billing;
 use App\Domain\Billing\Services\BillingGenerationService;
 use App\Domain\Invoice\Services\InvoiceService;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class BillingAndInvoiceTest extends TestCase
@@ -24,8 +25,8 @@ class BillingAndInvoiceTest extends TestCase
         $subscription = $contract->subscription;
 
         $service = app(BillingGenerationService::class);
-        $first = $service->generateForSubscription($subscription->fresh(), \Illuminate\Support\Carbon::parse($subscription->start_date));
-        $second = $service->generateForSubscription($subscription->fresh(), \Illuminate\Support\Carbon::parse($subscription->start_date));
+        $first = $service->generateForSubscription($subscription->fresh(), Carbon::parse($subscription->start_date));
+        $second = $service->generateForSubscription($subscription->fresh(), Carbon::parse($subscription->start_date));
 
         $this->assertSame($first->id, $second->id);
         $this->assertSame(1, Billing::query()->where('subscription_id', $subscription->id)->count());
@@ -61,13 +62,31 @@ class BillingAndInvoiceTest extends TestCase
 
     public function test_proration_applied_when_module_added_mid_period(): void
     {
+        // A 30-day billing period (June): added on day 16, 15 of 30 days remain => exactly half.
+        $this->assertSame('150000.00', $this->prorationForModuleAddedOnDay16('2027-06-01'));
+    }
+
+    public function test_proration_uses_the_actual_length_of_a_31_day_period(): void
+    {
+        // A 31-day billing period (July): added on day 16, 16 of 31 days remain.
+        $this->assertSame('154838.71', $this->prorationForModuleAddedOnDay16('2027-07-01'));
+    }
+
+    /**
+     * Contract starts on $startDate (the clock is pinned there so the billing period never depends
+     * on the day the suite runs); a 300 000 module is added 15 days later. Returns the total of the
+     * prorated adjustment invoice.
+     */
+    private function prorationForModuleAddedOnDay16(string $startDate): string
+    {
+        $this->travelTo(Carbon::parse($startDate));
         $this->makePricing('MODULE', 'HISTORY', '300000');
 
         $tenant = $this->makeTenant();
         $contract = $this->approveContract($this->makeContractDraft($tenant, 'BASIC', ['activation_requires_payment' => false]));
 
         [, $token] = $this->makePlatformUser(['contract.amend', 'contract.approve']);
-        $effectiveDate = \Illuminate\Support\Carbon::parse($contract->start_date)->addDays(15);
+        $effectiveDate = Carbon::parse($contract->start_date)->addDays(15);
 
         $amendResp = $this->postJson("/api/v1/platform/contracts/{$contract->id}/amendments", [
             'reason' => 'Mid-period add-on',
@@ -86,12 +105,11 @@ class BillingAndInvoiceTest extends TestCase
         $approveResponse = $this->postJson("/api/v1/platform/contracts/{$contract->id}/amendments/{$amendmentId}/approve", [], $this->authHeaders($token));
         $approveResponse->assertOk();
 
-        // A prorated adjustment invoice should have been raised for the
-        // partial remainder of the first billing period (15 of 30 days
-        // remaining => exactly half of the module's full price).
+        // A prorated adjustment invoice is raised for the remainder of the current billing period.
         $adjustmentInvoice = $contract->subscription->invoices()->latest('invoice_number')->first();
-        $this->assertSame('150000.00', (string) $adjustmentInvoice->total);
-        $this->assertGreaterThan(0, (float) $adjustmentInvoice->total);
+        $this->assertNotNull($adjustmentInvoice);
         $this->assertLessThan(300000, (float) $adjustmentInvoice->total); // prorated, less than full month
+
+        return (string) $adjustmentInvoice->total;
     }
 }
