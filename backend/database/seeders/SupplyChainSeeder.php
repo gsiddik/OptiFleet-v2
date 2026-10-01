@@ -41,6 +41,7 @@ use App\Domain\WorkOrder\Services\WorkOrderService;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
@@ -284,6 +285,51 @@ class SupplyChainSeeder extends Seeder
             ], $warehouseManager->id);
             $claim = $claimService->transition($claim, 'SUBMITTED');
             $claimService->transition($claim, 'UNDER_REVIEW');
+        }
+
+        $this->seedReceivedStockTransfer($tenant, $jktWarehouse, $bdgWarehouse, $oilFilter, $warehouseManager);
+    }
+
+    /**
+     * A Jakarta → Bandung oil-filter transfer driven through the real StockTransferService, received
+     * with damaged and lost units and a discrepancy reason, so Stock Transfer detail shows a full
+     * status history (each step with its own time and user) and the receipt discrepancy table.
+     * Steps are spread over two days in the past; the requester / approver is the tenant admin, the
+     * Bandung warehouse manager dispatches and receives. Idempotent via the transfer's notes.
+     */
+    private function seedReceivedStockTransfer(Tenant $tenant, Warehouse $from, Warehouse $to, Product $product, User $warehouseManager): void
+    {
+        $marker = 'DEMO: received with damage and loss';
+        if (\App\Domain\Inventory\Models\StockTransfer::query()->where('tenant_id', $tenant->id)->where('notes', $marker)->exists()) {
+            return;
+        }
+        $admin = User::query()->where('email', 'alpha.admin@optifleet.test')->first() ?? $warehouseManager;
+        $transfers = app(\App\Domain\Inventory\Services\StockTransferService::class);
+        $context = app(TenantContext::class);
+        $start = now()->subDays(3)->setTime(8, 30);
+        $step = function (User $actor, int $minutes, callable $action) use ($context, $start) {
+            Carbon::setTestNow($start->copy()->addMinutes($minutes));
+            $context->setUser($actor);
+
+            return $action();
+        };
+
+        try {
+            $transfer = $step($admin, 0, fn () => $transfers->create($from, $to, [['product_id' => $product->id, 'quantity' => 4]], $admin->id));
+            $step($admin, 1, fn () => $transfer->update(['notes' => $marker]));
+            $transfer = $step($admin, 15, fn () => $transfers->transition($transfer, 'REQUESTED'));
+            $transfer = $step($admin, 90, fn () => tap($transfers->transition($transfer, 'APPROVED'))->update(['approved_by' => $admin->id]));
+            $transfer = $step($warehouseManager, 240, fn () => $transfers->transition($transfer, 'PREPARED'));
+            $transfer = $step($warehouseManager, 300, fn () => $transfers->dispatch($transfer, $warehouseManager->id));
+            $transfer = $step($warehouseManager, 310, fn () => $transfers->transition($transfer, 'IN_TRANSIT'));
+            $item = $transfer->items()->firstOrFail();
+            $step($warehouseManager, 1560, fn () => $transfers->receive($transfer, [[
+                'item_id' => $item->id, 'quantity_received' => 2, 'quantity_damaged' => 1, 'quantity_lost' => 1,
+                'discrepancy_reason' => 'One filter crushed in transit, one missing from the carton.',
+            ]], $warehouseManager->id));
+        } finally {
+            Carbon::setTestNow();
+            $context->setUser(null);
         }
     }
 
