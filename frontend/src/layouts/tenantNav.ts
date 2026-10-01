@@ -43,10 +43,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/maintenance-requests', label: 'Maintenance Request', permission: 'maintenance_request.view', module: 'MAINTENANCE' },
       { to: '/app/work-orders', label: 'Work Order', permission: 'work_order.view', module: 'WORK_ORDER' },
       { to: '/app/part-requests', label: 'Part Requests', permission: 'part_request.view', module: 'WORK_ORDER' },
-      { to: '/app/workshop-invoices', label: 'Workshop Invoices', permission: 'workshop_invoice.view', module: 'WORK_ORDER' },
       { to: '/app/external-work-order-invoices', label: 'External Work Order Invoices', permission: 'external_work_order_invoice.view', module: 'WORK_ORDER' },
       { to: '/app/breakdowns', label: 'Breakdown', permission: 'breakdown.view', module: 'MAINTENANCE' },
-      { to: '/app/work-orders?status=QC_PENDING', label: 'Quality Control', permission: 'qc.view', module: 'WORK_ORDER' },
     ],
   },
   {
@@ -74,7 +72,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/returns', label: 'Return', permission: 'part_return.view', module: 'INVENTORY' },
       { to: '/app/stock-transfers', label: 'Transfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
       { to: '/app/goods-receipts', label: 'Receiving', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
-      { to: '/app/inventory', label: 'Adjustment', permission: 'inventory.adjust', module: 'INVENTORY' },
       { to: '/app/stock-opnames', label: 'Stock Opname', permission: 'inventory.stock_opname', module: 'INVENTORY' },
       { to: '/app/stock-movements', label: 'Stock Movement', permission: 'inventory.view', module: 'INVENTORY' },
       { to: '/app/used-part-returns', label: 'Used Sparepart Processing', permission: 'used_part.view', module: 'INVENTORY' },
@@ -98,8 +95,6 @@ export const NAV_GROUPS: NavGroup[] = [
     icon: 'partner',
     items: [
       { to: '/app/partners', label: 'Vendor', permission: 'partner.view', module: 'PARTNER' },
-      { to: '/app/partners', label: 'Vendor Performance', permission: 'partner.view', module: 'PARTNER' },
-      { to: '/app/suppliers', label: 'Suppliers', permission: 'partner.view', module: 'PARTNER' },
     ],
   },
   {

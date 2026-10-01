@@ -117,3 +117,25 @@ Invoice reconciliation and payable amount, correction / settlement pre-fills).
 - Tests: `StockTransferTest` 7 passed (new: history statuses + two distinct actor names,
   dispatched/received names, damaged/lost/reason in the detail payload). Browser: labels,
   history and receipt table verified on an Alpha transfer; no UUIDs visible.
+
+## Phase 5 — Menu consolidation (DONE)
+
+| Menu item | Result | What stays |
+|---|---|---|
+| Maintenance → Workshop Invoices | menu + list page removed; `/app/workshop-invoices` → `/app/work-orders` | detail page `/app/workshop-invoices/:id` (reached from WO → External Services; back / fallback → its Work Order, WO number links to it); all APIs, permissions, data |
+| Maintenance → Quality Control | menu removed | WO → QC tab, `qc.*` permissions and routes |
+| Inventory → Adjustment | menu removed | Warehouse Stock → Adjust action (`inventory.adjust`, backend-authorized) |
+| Partner → Vendor Performance | menu removed (duplicate link to Vendors) | performance on Vendor Detail |
+| Partner → Suppliers | menu removed; `/app/suppliers` → `/app/partners?type=SUPPLIERS` | Vendors page gains a **Type** filter (All types / All Suppliers / each type, kept in the URL); "+ New Vendor" defaults to the filtered type |
+
+No permission was removed (each was also a guard elsewhere: `qc.view` on `/qc-inspections`,
+`inventory.adjust` on the adjust action, `workshop_invoice.view` on the detail page and APIs). The
+removed QC / Adjustment links pointed at pages that already need `work_order.view` /
+`inventory.view`, so no user loses access. User guide navigation updated.
+
+Validation: frontend build PASS, lint identical to baseline. Browser (Alpha and FT admins): 58
+menu links, none of the removed items; sidebar search "supplier" / "adjust" / "quality" → no
+results, "invoice" → External Work Order Invoices + Vendor Invoice Reference; `/app/suppliers`
+→ supplier types only; EXTERNAL_WORKSHOP and All filters correct; `/app/workshop-invoices` →
+Work Orders; Workshop Invoice detail opens with "Back to Work Order"; Warehouse Stock adjust
+actions present.

@@ -957,7 +957,7 @@ Prasyarat: Maintenance Memo (External Service pada WO) yang sudah `COMPLETED`. D
 Ada Maintenance Memo berstatus `COMPLETED` pada Work Order terkait (dibuat dari tab External Services — Bagian I.8).
 
 #### 6. Cara Mengakses
-`Sidebar → Maintenance → Workshop Invoices` (`/app/workshop-invoices`); atau dari tab **External Services** pada detail WO → tombol **"Record Workshop Invoice"**.
+Dari detail Work Order (eksekusi internal) → tab **External Services** → tombol **"Record Workshop Invoice"** / **"Open Workshop Invoice"** (`/app/workshop-invoices/:id`). Menu terpisah "Workshop Invoices" sudah tidak ada; data dan histori invoice tetap tersimpan. Work Order dengan eksekusi External Workshop tidak memiliki tab External Services — dokumennya (WAL, invoice bengkel, bukti bayar) ada di tab **Documents**.
 
 #### 7. Prosedur Penggunaan
 
@@ -1180,7 +1180,7 @@ Data master: Product, ProductCategory, Uom. Data transaksi: WarehouseStock, Stoc
 Warehouse dan Product harus sudah tersedia; modul `INVENTORY` harus di-entitle.
 
 #### 6. Cara Mengakses
-`Sidebar → Inventory → Product/Warehouse Stock/Reservation/Transfer/Adjustment/Stock Opname/Stock Movement/Used Sparepart Processing/Sell Sparepart`.
+`Sidebar → Inventory → Product/Warehouse Stock/Return/Transfer/Receiving/Stock Opname/Stock Movement/Used Sparepart Processing/Sell Sparepart`. Adjustment tidak lagi menjadi menu sendiri — dilakukan dari **Warehouse Stock**.
 
 #### 7. Prosedur Penggunaan
 
@@ -1334,12 +1334,12 @@ Data transaksi: Partner, PartnerPerformanceEvent (skor performa terekam otomatis
 Tidak ada.
 
 #### 6. Cara Mengakses
-`Sidebar → Partner → Vendor` (`/app/partners`); `→ Suppliers` (`/app/suppliers`).
+`Sidebar → Partner → Vendor` (`/app/partners`). Filter **Type** di halaman Vendor (pilihan **All Suppliers** = SUPPLIER, SPARE_PART_SUPPLIER, TIRE_SUPPLIER); tautan lama `/app/suppliers` diarahkan ke `/app/partners?type=SUPPLIERS`. Kinerja vendor ada di **Vendor Detail**.
 
 #### 7. Prosedur Penggunaan
 1. `Partner → Vendor` → **"+ New Partner"** → isi Kode, Nama, **Partner Type**, kontak (nama/telepon/email), alamat, NPWP (tax_id), termin pembayaran, data bank (opsional).
 2. **Catatan penting:** `partner_type` bukan sekadar label — nilai ini menentukan **kelayakan** partner untuk menerima pekerjaan tertentu (misalnya hanya tipe `EXTERNAL_WORKSHOP` dan `TIRE_SUPPLIER` yang layak menerima pekerjaan Retread/Repair Ban).
-3. Halaman **"Suppliers"** menampilkan data Partner yang sama, hanya difilter untuk tipe supplier — **bukan tabel/entitas terpisah**.
+3. Supplier adalah **tipe** Partner — **bukan tabel/entitas terpisah**; gunakan filter Type "All Suppliers" di halaman Vendor.
 
 #### 8. Penjelasan Field
 Lihat `OPTIFLEET_DATA_DICTIONARY.md` §5.2.

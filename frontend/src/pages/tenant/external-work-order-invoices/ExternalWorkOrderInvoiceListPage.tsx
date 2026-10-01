@@ -37,8 +37,8 @@ const WAL_LABELS: Record<string, string> = {
  * carried out by an External Workshop, and the primary surface for the
  * full Section 5 action matrix (Generate/View Work Authorization,
  * Deliver, Acknowledge, Complete, View Bill, Settlement, View
- * Settlement). Deliberately its own page/route, separate from
- * WorkshopInvoiceListPage (the pre-existing, unrelated R1 feature).
+ * Settlement). Deliberately its own page/route, separate from the
+ * pre-existing, unrelated R1 Workshop Invoice (reached from its Work Order).
  * Cancel reuses the existing Work Order detail page's Cancel action
  * rather than duplicating that logic here.
  */

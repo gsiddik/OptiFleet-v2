@@ -77,7 +77,6 @@ import { PartRequestListPage } from './pages/tenant/workorders/PartRequestListPa
 import { WorkOrderListPage } from './pages/tenant/workorders/WorkOrderListPage';
 import { WorkOrderDetailPage } from './pages/tenant/workorders/WorkOrderDetailPage';
 import { ExternalWorkOrderInvoiceListPage } from './pages/tenant/external-work-order-invoices/ExternalWorkOrderInvoiceListPage';
-import { WorkshopInvoiceListPage } from './pages/tenant/workshop-invoices/WorkshopInvoiceListPage';
 import { WorkshopInvoiceDetailPage } from './pages/tenant/workshop-invoices/WorkshopInvoiceDetailPage';
 import { WorkspaceListPage } from './pages/tenant/workshop/WorkspaceListPage';
 import { WorkerListPage } from './pages/tenant/workshop/WorkerListPage';
@@ -107,7 +106,7 @@ import { PurchaseOrderListPage } from './pages/tenant/procurement/PurchaseOrderL
 import { PurchaseOrderDetailPage } from './pages/tenant/procurement/PurchaseOrderDetailPage';
 import { GoodsReceiptListPage } from './pages/tenant/procurement/GoodsReceiptListPage';
 import { VendorInvoiceReferenceListPage } from './pages/tenant/procurement/VendorInvoiceReferenceListPage';
-import { PartnerListPage, SupplierListPage } from './pages/tenant/partners/PartnerListPage';
+import { PartnerListPage } from './pages/tenant/partners/PartnerListPage';
 import { PartnerDetailPage } from './pages/tenant/partners/PartnerDetailPage';
 import { TireListPage } from './pages/tenant/tires/TireListPage';
 import { TireDetailPage } from './pages/tenant/tires/TireDetailPage';
@@ -490,14 +489,9 @@ export default function App() {
                 </RequirePermission>
               }
             />
-            <Route
-              path="workshop-invoices"
-              element={
-                <RequirePermission permission="workshop_invoice.view">
-                  <WorkshopInvoiceListPage />
-                </RequirePermission>
-              }
-            />
+            {/* The standalone Workshop Invoices list was retired: workshop invoices are reached from their
+                Work Order (External Services tab). Old links/bookmarks land on the Work Order list. */}
+            <Route path="workshop-invoices" element={<Navigate to="/app/work-orders" replace />} />
             <Route
               path="external-work-order-invoices"
               element={
@@ -788,7 +782,8 @@ export default function App() {
             <Route path="vendor-invoice-references" element={<RequirePermission permission="vendor_invoice.view"><VendorInvoiceReferenceListPage /></RequirePermission>} />
 
             <Route path="partners" element={<RequirePermission permission="partner.view"><PartnerListPage /></RequirePermission>} />
-            <Route path="suppliers" element={<RequirePermission permission="partner.view"><SupplierListPage /></RequirePermission>} />
+            {/* Supplier is a Vendor (partner) type, not a separate entity: the old Suppliers page is the Vendor list filtered to supplier types. */}
+            <Route path="suppliers" element={<Navigate to="/app/partners?type=SUPPLIERS" replace />} />
             <Route path="partners/:id" element={<RequirePermission permission="partner.view"><PartnerDetailPage /></RequirePermission>} />
 
             <Route path="tires" element={<RequirePermission permission="tire.view"><TireListPage /></RequirePermission>} />

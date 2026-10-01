@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -102,7 +102,7 @@ export function WorkshopInvoiceDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/workshop-invoices" label="← Back to Workshop Invoices" />
+      <BackButton fallbackTo={`/app/work-orders/${invoice.work_order_id}`} label="← Back to Work Order" />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Workshop Invoice — {invoice.external_invoice_number}</h1>
       <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 0 }}>
         Recorded from an externally-issued document — OptiFleet did not issue this invoice.
@@ -118,7 +118,7 @@ export function WorkshopInvoiceDetailPage() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13 }}>
           <div><strong>Workshop Partner:</strong> {invoice.partner?.name ?? invoice.partner_id}</div>
-          <div><strong>Work Order:</strong> {invoice.work_order?.wo_number ?? invoice.work_order_id}</div>
+          <div><strong>Work Order:</strong> <Link to={`/app/work-orders/${invoice.work_order_id}`}>{invoice.work_order?.wo_number ?? 'Open Work Order'}</Link></div>
           <div><strong>Partner Reference:</strong> {invoice.partner_reference ?? '—'}</div>
           <div><strong>Invoice Date:</strong> {invoice.invoice_date}</div>
           <div><strong>Due Date:</strong> {invoice.due_date ?? '—'}</div>
