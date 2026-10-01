@@ -95,22 +95,19 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
     setSubmitting(true);
     setErrors({});
     try {
-      const res = await apiClient.post('/app/account/payments', {
-        invoice_id: invoiceId,
-        payment_date: paymentDate,
-        amount,
-        payment_method: paymentMethod,
-        bank_name: bankName || null,
-        account_name: accountName || null,
-        transaction_reference: transactionReference || null,
-        note: note || null,
-      });
-      const paymentId = res.data.data.id;
-      if (file) {
-        const form = new FormData();
-        form.append('file', file);
-        await apiClient.post(`/app/account/payments/${paymentId}/proof`, form);
-      }
+      // One multipart request: the payment and its optional proof are saved together, so a
+      // rejected proof never leaves a payment behind that a retry would duplicate.
+      const form = new FormData();
+      form.append('invoice_id', invoiceId);
+      form.append('payment_date', paymentDate);
+      form.append('amount', amount);
+      form.append('payment_method', paymentMethod);
+      if (bankName) form.append('bank_name', bankName);
+      if (accountName) form.append('account_name', accountName);
+      if (transactionReference) form.append('transaction_reference', transactionReference);
+      if (note) form.append('note', note);
+      if (file) form.append('file', file);
+      await apiClient.post('/app/account/payments', form);
       onSubmitted();
     } catch (err) {
       const apiError: ApiErrorShape = extractApiError(err);

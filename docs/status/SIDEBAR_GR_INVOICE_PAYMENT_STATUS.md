@@ -72,3 +72,22 @@ vendor-payment permissions (the invoice page reuses `goods_receipt.view/create`)
   Invoices, External Work Order Invoices, Vendor Invoice Reference under their parents;
   expand/collapse; all groups expanded → nav scrolls, page height unchanged; minimize → main
   content shifts to x=64, flyout navigation works, state persists across reload.
+
+## Phase 3 — Upload foundation (DONE)
+
+- `Shared\Services\PrivateDocumentStorage`: content-sniffed type + size check (authoritative,
+  after the request `mimes`/`max` rules), private `local` disk, tenant directory, UUID name;
+  `persist()` stores the file(s) then runs the DB work in one transaction and deletes the
+  stored files if anything fails (no orphan file, no record pointing at a missing file).
+- Fixed — SaaS Submit Payment: `POST /app/account/payments` now accepts the optional proof
+  (`file`) in the same multipart request; payment + proof are saved atomically. A rejected
+  proof saves nothing, so correcting it and resubmitting creates exactly one payment.
+  `POST /payments/{id}/proof` unchanged (adding proofs later), now also orphan-safe.
+- Fixed — Vehicle Brand (new): a brand created on an attempt whose logo upload failed is
+  updated on retry (PUT + logo) instead of re-created; closing the dialog refreshes the list.
+- Frontend: reusable `components/FileUploadField` (choose / replace / remove before submit,
+  client pre-check, existing-document "View"), `utils/fileRules`, `utils/protectedFile`
+  (open/download via authorized API — documents are never public URLs).
+- Tests: `DocumentUploadPersistenceTest` (4) + Payment/Brand/Billing related — 22 passed.
+  Browser: bad proof → 422 and no payment; corrected retry → one payment with `valid.png`;
+  bad brand logo → error, retry → single brand with logo.

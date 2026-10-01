@@ -5,9 +5,8 @@ namespace App\Domain\Payment\Services;
 use App\Domain\Invoice\Models\Invoice;
 use App\Domain\Payment\Models\Payment;
 use App\Domain\Payment\Models\PaymentProof;
+use App\Domain\Shared\Services\PrivateDocumentStorage;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 /**
  * Tenant-facing payment submission and proof upload. File storage never
@@ -15,54 +14,61 @@ use Illuminate\Support\Str;
  * generated, the original name is kept only as display metadata, and files
  * are written to the private `local` disk — retrieval always goes through
  * an authenticated, ownership-checked controller action, never a public URL.
+ *
+ * A proof sent with the submission is saved in the same operation as the payment (one
+ * transaction, file removed again if it fails), so a rejected proof never leaves a payment
+ * behind that a retry would duplicate.
  */
 class PaymentSubmissionService
 {
+    public function __construct(private readonly PrivateDocumentStorage $storage) {}
+
     private const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
     private const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
 
-    public function submit(Invoice $invoice, array $attributes, string $submittedByUserId): Payment
+    public function submit(Invoice $invoice, array $attributes, string $submittedByUserId, ?UploadedFile $proof = null): Payment
     {
         if (in_array($invoice->status, ['VOID', 'PAID'], true)) {
             throw new PaymentException("Cannot submit a payment against an invoice with status {$invoice->status}.");
         }
 
-        return Payment::query()->create(array_merge($attributes, [
-            'tenant_id' => $invoice->tenant_id,
-            'invoice_id' => $invoice->id,
-            'status' => 'SUBMITTED',
-            'submitted_by' => $submittedByUserId,
-        ]));
+        return $this->storage->persist(['file' => $this->proofUpload($proof, $invoice->tenant_id)], function (array $stored) use ($invoice, $attributes, $submittedByUserId) {
+            $payment = Payment::query()->create(array_merge($attributes, [
+                'tenant_id' => $invoice->tenant_id,
+                'invoice_id' => $invoice->id,
+                'status' => 'SUBMITTED',
+                'submitted_by' => $submittedByUserId,
+            ]));
+            if ($stored['file']) {
+                $this->recordProof($payment, $stored['file'], $submittedByUserId);
+            }
+
+            return $payment;
+        });
     }
 
     public function attachProof(Payment $payment, UploadedFile $file, string $uploadedByUserId): PaymentProof
     {
-        if (! in_array($file->getMimeType(), self::ALLOWED_MIME_TYPES, true)) {
-            throw new PaymentException('Unsupported file type. Only JPEG, PNG, WEBP images or PDF are accepted.');
-        }
-        if ($file->getSize() > self::MAX_SIZE_BYTES) {
-            throw new PaymentException('File exceeds the 5MB maximum size.');
-        }
+        return $this->storage->persist(['file' => $this->proofUpload($file, $payment->tenant_id)], fn (array $stored) => $this->recordProof($payment, $stored['file'], $uploadedByUserId));
+    }
 
-        return DB::transaction(function () use ($payment, $file, $uploadedByUserId) {
-            $extension = $file->guessExtension() ?: 'bin';
-            $path = $file->storeAs(
-                "payment-proofs/{$payment->tenant_id}",
-                Str::uuid().'.'.$extension,
-                ['disk' => 'local']
-            );
+    private function proofUpload(?UploadedFile $file, string $tenantId): array
+    {
+        return ['file' => $file, 'directory' => "payment-proofs/{$tenantId}", 'mimes' => self::ALLOWED_MIME_TYPES, 'max_bytes' => self::MAX_SIZE_BYTES, 'label' => 'proof of payment'];
+    }
 
-            return PaymentProof::query()->create([
-                'payment_id' => $payment->id,
-                'disk' => 'local',
-                'path' => $path,
-                'original_filename' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType(),
-                'size' => $file->getSize(),
-                'uploaded_by' => $uploadedByUserId,
-            ]);
-        });
+    private function recordProof(Payment $payment, array $document, string $uploadedByUserId): PaymentProof
+    {
+        return PaymentProof::query()->create([
+            'payment_id' => $payment->id,
+            'disk' => $document['disk'],
+            'path' => $document['path'],
+            'original_filename' => $document['original_name'],
+            'mime_type' => $document['mime_type'],
+            'size' => $document['size'],
+            'uploaded_by' => $uploadedByUserId,
+        ]);
     }
 
     public function markUnderReview(Payment $payment): Payment
