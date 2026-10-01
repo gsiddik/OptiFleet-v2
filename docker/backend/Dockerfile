@@ -44,8 +44,20 @@ COPY backend/. .
 RUN composer dump-autoload --optimize --no-dev
 
 COPY docker/backend/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh \
+
+# Every PHP process of this image — php-fpm, the entrypoint's artisan steps, queue-worker,
+# scheduler and `docker compose exec backend php artisan …` — runs as www-data, the owner of
+# storage/. Mixing users was the root cause of "Unable to create a directory at
+# storage/app/private/<feature>/<tenant>": a root-run artisan command (e.g. seeding demo
+# documents) created 0700 root-owned folders that the www-data web process could not enter.
+# su-exec lets the entrypoint repair ownership and drop privileges when started as root.
+RUN apk add --no-cache su-exec \
+    && chmod +x /usr/local/bin/entrypoint.sh \
+    && mkdir -p storage/app/private storage/app/public storage/framework/cache/data \
+        storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
+
+USER www-data
 
 EXPOSE 9000
 

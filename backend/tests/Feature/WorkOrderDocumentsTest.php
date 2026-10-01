@@ -6,6 +6,7 @@ use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\Concerns\BreaksPrivateStorage;
 use Tests\TestCase;
 
 /**
@@ -15,6 +16,8 @@ use Tests\TestCase;
  */
 class WorkOrderDocumentsTest extends TestCase
 {
+    use BreaksPrivateStorage;
+
     private const PDF = "%PDF-1.4\n1 0 obj<< /Type /Catalog >>endobj\ntrailer<< /Root 1 0 R >>\n%%EOF\n";
 
     private const PNG = "\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x06\0\0\0\x1f\x15\xc4\x89\0\0\0\rIDATx\x9cc\xf8\xff\xff?\0\x05\xfe\x02\xfe\xa7\x35\x81\x84\0\0\0\0IEND\xaeB`\x82";
@@ -153,5 +156,20 @@ class WorkOrderDocumentsTest extends TestCase
         $response = $this->getJson('/api/v1/app/work-orders', $headers + ['Origin' => 'http://localhost:5173']);
 
         $this->assertStringContainsString('Content-Disposition', (string) $response->headers->get('Access-Control-Expose-Headers'));
+    }
+
+    public function test_a_storage_failure_on_the_signed_wal_changes_nothing_and_leaks_no_path(): void
+    {
+        [$tenant, $workshop, $vehicle, $headers] = $this->scenario();
+        [$woId, $invoiceId] = $this->externalWorkOrder($tenant, $workshop, $vehicle, $headers);
+        $this->send('postJson', "/api/v1/app/external-work-order-invoices/{$invoiceId}/deliver", $headers)->assertOk();
+        $this->breakPrivateStorage();
+
+        $this->assertStorageFailureResponse($this->send('post', "/api/v1/app/external-work-order-invoices/{$invoiceId}/acknowledge", $headers, ['file' => $this->realFile('signed-wal.pdf', self::PDF)]));
+
+        $invoice = WorkOrderExternalInvoice::query()->findOrFail($invoiceId);
+        $this->assertSame(['DELIVERED', 'GENERATED'], [$invoice->status, $invoice->work_authorization_status]);
+        $this->assertNull($invoice->acknowledgementFile);
+        $this->assertSame([], $this->documents($woId, $headers)['documents']);
     }
 }

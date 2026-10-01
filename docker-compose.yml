@@ -86,6 +86,10 @@ services:
       MONGO_PASSWORD: ${MONGO_PASSWORD:-}
       ANALYTICS_DEFAULT_TIMEZONE: ${ANALYTICS_DEFAULT_TIMEZONE:-UTC}
       ANALYTICS_SCHEDULE_TIME: ${ANALYTICS_SCHEDULE_TIME:-02:00}
+    # Uploaded documents (private disk) persist across container re-creation and are shared with
+    # queue-worker / scheduler. The image runs as www-data, which owns this volume.
+    volumes:
+      - optifleet_storage:/var/www/html/storage/app
 
   # Phase 5 Section 34: notifications are dispatched as queued jobs
   # (SendNotificationJob) so delivery never blocks the request that raised
@@ -135,6 +139,8 @@ services:
       MONGO_PASSWORD: ${MONGO_PASSWORD:-}
       ANALYTICS_DEFAULT_TIMEZONE: ${ANALYTICS_DEFAULT_TIMEZONE:-UTC}
       ANALYTICS_SCHEDULE_TIME: ${ANALYTICS_SCHEDULE_TIME:-02:00}
+    volumes:
+      - optifleet_storage:/var/www/html/storage/app
     command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600"]
 
   scheduler:
@@ -179,6 +185,8 @@ services:
       MONGO_PASSWORD: ${MONGO_PASSWORD:-}
       ANALYTICS_DEFAULT_TIMEZONE: ${ANALYTICS_DEFAULT_TIMEZONE:-UTC}
       ANALYTICS_SCHEDULE_TIME: ${ANALYTICS_SCHEDULE_TIME:-02:00}
+    volumes:
+      - optifleet_storage:/var/www/html/storage/app
     command: ["php", "artisan", "schedule:work"]
 
   nginx:
@@ -207,3 +215,4 @@ services:
 volumes:
   optifleet_postgres_data:
   optifleet_mongo_data:
+  optifleet_storage:

@@ -8,6 +8,7 @@ use Database\Seeders\DemoQuotationDocument;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\Concerns\BreaksPrivateStorage;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -18,6 +19,8 @@ use ZipArchive;
  */
 class QuotationAttachmentTest extends TestCase
 {
+    use BreaksPrivateStorage;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -190,5 +193,17 @@ class QuotationAttachmentTest extends TestCase
         $legacy = VendorQuotation::query()->withoutGlobalScopes()->findOrFail($id);
         $legacy->update(['attachment_path' => null]);
         $open($headers)->assertNotFound();
+    }
+
+    public function test_a_storage_failure_records_no_quotation_and_leaks_no_path(): void
+    {
+        [, , $rfq, $product, $vendorA, , $headers] = $this->setUpRfq();
+        $this->breakPrivateStorage();
+
+        $this->assertStorageFailureResponse($this->record($rfq, $vendorA->id, $product->id, DemoQuotationDocument::make('Vendor A'), $headers));
+        $this->assertSame(0, VendorQuotation::query()->withoutGlobalScopes()->where('rfq_id', $rfq->id)->count());
+
+        // Without a document the quotation is recorded (document optional).
+        $this->record($rfq, $vendorA->id, $product->id, null, $headers)->assertCreated();
     }
 }

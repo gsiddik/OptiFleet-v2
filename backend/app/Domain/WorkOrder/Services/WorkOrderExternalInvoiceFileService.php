@@ -2,6 +2,7 @@
 
 namespace App\Domain\WorkOrder\Services;
 
+use App\Domain\Shared\Services\PrivateDocumentStorage;
 use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use App\Domain\WorkOrder\Models\WorkOrderExternalInvoiceFile;
 use Illuminate\Http\UploadedFile;
@@ -47,11 +48,7 @@ class WorkOrderExternalInvoiceFileService
         }
 
         $extension = $file->guessExtension() ?: 'bin';
-        $path = $file->storeAs(
-            "external-work-order-invoices/{$invoice->tenant_id}/{$invoice->id}",
-            Str::uuid().'.'.$extension,
-            ['disk' => 'local']
-        );
+        $path = PrivateDocumentStorage::putFileAs($file, "external-work-order-invoices/{$invoice->tenant_id}/{$invoice->id}", Str::uuid().'.'.$extension);
 
         $existing = WorkOrderExternalInvoiceFile::query()
             ->where('external_invoice_id', $invoice->id)
