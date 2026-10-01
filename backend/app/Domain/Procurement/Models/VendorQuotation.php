@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class VendorQuotation extends Model
 {
@@ -25,6 +26,9 @@ class VendorQuotation extends Model
     protected $hidden = ['attachment_disk', 'attachment_path'];
 
     protected $appends = ['has_attachment'];
+
+    /** The only status from which a Purchase Order may be created (the vendor chosen on the RFQ). */
+    public const PURCHASE_ORDER_SOURCE_STATUS = 'SELECTED';
 
     protected function casts(): array
     {
@@ -57,5 +61,28 @@ class VendorQuotation extends Model
     public function items(): HasMany
     {
         return $this->hasMany(VendorQuotationItem::class);
+    }
+
+    /** The PO created from this quotation (purchase_orders.vendor_quotation_id, unique). */
+    public function purchaseOrder(): HasOne
+    {
+        return $this->hasOne(PurchaseOrder::class, 'vendor_quotation_id');
+    }
+
+    /**
+     * Whether "Create PO" is allowed: the quotation is the selected one and no Purchase Order has
+     * been created from it yet (SUBMITTED / REJECTED quotations, and the SUBMITTED quotations of an
+     * RFQ closed without a selection, are ineligible). Serialised as `can_create_purchase_order`
+     * (eager-load `purchaseOrder` first in lists); PurchaseOrderService::createFromQuotation()
+     * enforces the same rule under a row lock.
+     */
+    public function canCreatePurchaseOrder(): bool
+    {
+        return $this->status === self::PURCHASE_ORDER_SOURCE_STATUS && $this->purchaseOrder === null;
+    }
+
+    protected function getCanCreatePurchaseOrderAttribute(): bool
+    {
+        return $this->canCreatePurchaseOrder();
     }
 }

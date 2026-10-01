@@ -234,7 +234,7 @@ class RfqService
     /** Section 19: comparable metrics per quotation for a manual vendor-selection decision. */
     public function compare(Rfq $rfq): array
     {
-        return $rfq->quotations()->with(['partner', 'items'])->get()->map(fn (VendorQuotation $q) => [
+        return $rfq->quotations()->with(['partner', 'items', 'purchaseOrder:id,po_number,status,vendor_quotation_id'])->get()->map(fn (VendorQuotation $q) => [
             'quotation_id' => $q->id,
             'partner' => $q->partner->only(['id', 'name', 'code']),
             'total' => (float) $q->total,
@@ -246,6 +246,8 @@ class RfqService
             'submitted_at' => optional($q->submitted_at)->toDateTimeString(),
             'has_attachment' => $q->has_attachment,
             'attachment_original_filename' => $q->attachment_original_filename,
+            'purchase_order' => $q->purchaseOrder?->only(['id', 'po_number', 'status']),
+            'can_create_purchase_order' => $q->canCreatePurchaseOrder(),
         ])->sortBy('total')->values()->all();
     }
 
@@ -253,6 +255,16 @@ class RfqService
     {
         return DB::transaction(function () use ($selected) {
             $rfq = Rfq::query()->lockForUpdate()->findOrFail($selected->rfq_id);
+            // Selection is the decision of an open RFQ: a manually CLOSED or CANCELLED RFQ (or one
+            // whose vendor is already chosen) cannot select — otherwise a quotation of a closed RFQ
+            // could still become a Purchase Order.
+            if ($rfq->status !== 'ISSUED') {
+                throw new ProcurementException("This RFQ is {$rfq->status}: a vendor can only be selected while it is ISSUED.");
+            }
+            $selected = VendorQuotation::query()->lockForUpdate()->findOrFail($selected->id);
+            if ($selected->status !== 'SUBMITTED') {
+                throw new ProcurementException("This quotation is {$selected->status} and cannot be selected.");
+            }
 
             VendorQuotation::query()->where('rfq_id', $rfq->id)->where('id', '!=', $selected->id)->update(['status' => 'REJECTED']);
             $selected->update(['status' => 'SELECTED']);

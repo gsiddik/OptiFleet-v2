@@ -8,8 +8,10 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import type { VendorQuotationItem } from '../../../types';
 import { formatMoney } from '../../../utils/money';
+import { useAuth } from '../../../auth/AuthContext';
 
 export function VendorQuotationListPage() {
+  const { hasPermission } = useAuth();
   const [page, setPage] = useState(1);
   const { data, meta, loading, error } = useApiList<VendorQuotationItem>('/app/quotations', { page }, 0);
 
@@ -19,6 +21,18 @@ export function VendorQuotationListPage() {
     { key: 'total', header: 'Total', render: (q) => formatMoney(q.total) },
     { key: 'lead_time', header: 'Lead Time (days)', render: (q) => q.lead_time_days ?? '—' },
     { key: 'status', header: 'Status', render: (q) => <StatusBadge status={q.status} /> },
+    {
+      key: 'purchase_order',
+      header: 'Purchase Order',
+      render: (q) =>
+        q.purchase_order ? (
+          <Link to={`/app/purchase-orders/${q.purchase_order.id}`}>{q.purchase_order.po_number}</Link>
+        ) : q.can_create_purchase_order && hasPermission('purchase_order.create') ? (
+          <Link to={`/app/quotations/${q.id}/create-po`}>Create PO</Link>
+        ) : (
+          '—'
+        ),
+    },
   ];
 
   return (

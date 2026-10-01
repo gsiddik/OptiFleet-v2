@@ -26,7 +26,7 @@ class VendorQuotationController extends Controller
         // RFQ number shown in the list comes from one eager-loaded query (no N+1), and the list only
         // shows quotations of RFQs whose warehouse is inside the user's data scope.
         $query = VendorQuotation::query()->where('tenant_id', $tenantId)
-            ->with(['partner', 'rfq:id,rfq_number,warehouse_id,status', 'items.product']);
+            ->with(['partner', 'rfq:id,rfq_number,warehouse_id,status', 'items.product', 'purchaseOrder:id,po_number,status,vendor_quotation_id']);
         $allowedRfqs = Rfq::query()->where('tenant_id', $tenantId)->select('id');
         $this->scope->applyWarehouseScope($allowedRfqs, $this->context->user(), $tenantId, 'warehouse_id');
         $query->whereIn('rfq_id', $allowedRfqs);
@@ -38,7 +38,10 @@ class VendorQuotationController extends Controller
             $query->where('status', $status);
         }
 
-        return $this->paginated($query->latest('created_at')->paginate($request->integer('per_page', 20)));
+        $page = $query->latest('created_at')->paginate($request->integer('per_page', 20));
+        $page->getCollection()->each->append('can_create_purchase_order');
+
+        return $this->paginated($page);
     }
 
     public function store(Request $request, Rfq $rfq)
@@ -79,7 +82,7 @@ class VendorQuotationController extends Controller
     {
         $this->authorizeScopeQuotation($quotation);
 
-        return $this->ok($quotation->load(['partner', 'rfq', 'items.product']));
+        return $this->ok($quotation->load(['partner', 'rfq', 'items.product', 'purchaseOrder:id,po_number,status,vendor_quotation_id'])->append('can_create_purchase_order'));
     }
 
     /** View (inline) or download the vendor's quotation document — authorized, never a public URL. */

@@ -1769,6 +1769,10 @@ export interface VendorQuotationItem {
   validity_date: string | null;
   partner?: PartnerItem;
   items?: VendorQuotationItemLine[];
+  /** PO created from this quotation (server relation), if any. */
+  purchase_order?: { id: string; po_number: string; status: string } | null;
+  /** Server-computed: SELECTED and no PO yet. The backend enforces the same rule on create. */
+  can_create_purchase_order?: boolean;
 }
 
 export interface PurchaseOrderItemLine {
