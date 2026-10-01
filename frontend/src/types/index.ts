@@ -1574,6 +1574,9 @@ export interface WorkOrderPartReturnItem {
   disposition_reason: string | null;
   proposed_by: string | null;
   finalized_at: string | null;
+  /** Repair → Reuse: set when a finalized REPAIR was completed (item back to INSPECTED). */
+  repair_completed_at?: string | null;
+  repair_notes?: string | null;
   reason: string | null;
   evidence: string | null;
   created_at: string;

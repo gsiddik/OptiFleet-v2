@@ -61,6 +61,7 @@ class WorkOrderPartReturn extends Model
         'workflow_configuration_version_id', 'accepted_quantity', 'inspected_by', 'inspected_at',
         'inspection_notes', 'inspection_evidence', 'disposition', 'disposition_reason', 'proposed_by',
         'workflow_approval_request_id', 'finalized_at', 'routed_by', 'routed_at',
+        'repair_completed_at', 'repair_completed_by', 'repair_notes',
     ];
 
     protected function casts(): array
@@ -70,6 +71,7 @@ class WorkOrderPartReturn extends Model
             'accepted_quantity' => 'decimal:4',
             'inspected_at' => 'datetime',
             'finalized_at' => 'datetime',
+            'repair_completed_at' => 'datetime',
             'routed_at' => 'datetime',
         ];
     }

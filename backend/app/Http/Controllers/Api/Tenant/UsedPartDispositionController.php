@@ -144,6 +144,15 @@ class UsedPartDispositionController extends Controller
     }
 
     /** Tenant, source (new-part returns are processed elsewhere) and workshop data scope. */
+    /** Repair → Reuse: the repair is done; the item returns to INSPECTED for a new disposition. */
+    public function completeRepair(Request $request, WorkOrderPartReturn $usedPartReturn)
+    {
+        $this->authorizeScope($usedPartReturn);
+        $validated = $request->validate(['notes' => ['nullable', 'string', 'max:2000']]);
+
+        return $this->ok($this->dispositions->completeRepair($usedPartReturn, $validated['notes'] ?? null, $this->context->user()->id)->load(self::RELATIONS));
+    }
+
     public function listEvidence(WorkOrderPartReturn $usedPartReturn)
     {
         $this->authorizeScope($usedPartReturn);

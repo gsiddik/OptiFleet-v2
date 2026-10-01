@@ -532,6 +532,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/inventory', [WarehouseStockController::class, 'index'])->middleware('permission:inventory.view');
             Route::post('/inventory/adjust', [WarehouseStockController::class, 'adjust'])->middleware('permission:inventory.adjust');
             Route::post('/inventory/scrap', [WarehouseStockController::class, 'scrap'])->middleware('permission:inventory.scrap');
+            Route::get('/inventory/used-spareparts', [WarehouseStockController::class, 'usedSpareparts'])->middleware('permission:inventory.view');
             Route::get('/inventory/{warehouseStock}', [WarehouseStockController::class, 'show'])->middleware('permission:inventory.view');
             Route::put('/inventory/{warehouseStock}/thresholds', [WarehouseStockController::class, 'updateThresholds'])->middleware('permission:inventory.adjust');
 
@@ -552,6 +553,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/used-part-returns/{usedPartReturn}/inspect', [UsedPartDispositionController::class, 'inspect'])->middleware('permission:used_part.inspect');
             Route::post('/used-part-returns/{usedPartReturn}/propose-disposition', [UsedPartDispositionController::class, 'proposeDisposition'])->middleware('permission:used_part.dispose');
             Route::post('/used-part-returns/{usedPartReturn}/decide', [UsedPartDispositionController::class, 'decide'])->middleware('permission:used_part.approve');
+            Route::post('/used-part-returns/{usedPartReturn}/complete-repair', [UsedPartDispositionController::class, 'completeRepair'])->middleware('permission:used_part.inspect');
 
             Route::get('/sparepart-sales', [SparePartSaleController::class, 'index'])->middleware('permission:sparepart_sale.view');
             Route::get('/sparepart-sales/{sparePartSale}', [SparePartSaleController::class, 'show'])->middleware('permission:sparepart_sale.view');

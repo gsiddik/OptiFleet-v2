@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Tenant;
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Services\InventoryService;
+use App\Domain\Inventory\Services\UsedSparepartAvailabilityService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Http\Controllers\Controller;
@@ -63,6 +64,67 @@ class WarehouseStockController extends Controller
             'warehouse' => $s->warehouse,
             'product' => $s->product,
         ]));
+    }
+
+    /**
+     * Used Spareparts tab: used parts by availability — REUSABLE (already counted once in the
+     * product's on-hand), QUARANTINE and REPAIR_PENDING (physical, never available). Read-only,
+     * warehouse data scope applied; summary totals are kept per category, never added together.
+     */
+    public function usedSpareparts(Request $request, UsedSparepartAvailabilityService $usedParts)
+    {
+        $tenantId = $this->context->tenantId();
+        $request->validate([
+            'category' => ['nullable', 'string', 'in:'.implode(',', UsedSparepartAvailabilityService::CATEGORIES)],
+            'warehouse_id' => ['nullable', 'uuid'], 'product_id' => ['nullable', 'uuid'],
+            'work_order_id' => ['nullable', 'uuid'], 'vehicle_id' => ['nullable', 'uuid'],
+        ]);
+        $query = $usedParts->query()->where('tenant_id', $tenantId);
+        $this->scope->applyWarehouseScope($query, $this->context->user(), $tenantId, 'warehouse_id');
+
+        foreach (['warehouse_id', 'product_id', 'work_order_id'] as $filter) {
+            if ($value = $request->string($filter)->value()) {
+                $query->where($filter, $value);
+            }
+        }
+        if ($vehicleId = $request->string('vehicle_id')->value()) {
+            $query->whereHas('workOrder', fn ($w) => $w->where('vehicle_id', $vehicleId));
+        }
+        if ($search = $request->string('search')->trim()->value()) {
+            $query->where(fn ($q) => $q->whereHas('product', fn ($p) => $p->where('name', 'ilike', "%{$search}%")->orWhere('sku', 'ilike', "%{$search}%"))
+                ->orWhereHas('workOrder', fn ($w) => $w->where('wo_number', 'ilike', "%{$search}%")
+                    ->orWhereHas('vehicle', fn ($v) => $v->where('registration_number', 'ilike', "%{$search}%"))));
+        }
+        $summary = $usedParts->summary($query);
+        if ($category = $request->string('category')->value()) {
+            $usedParts->applyCategory($query, $category);
+        }
+
+        $paginator = $query->with([
+            'product:id,name,sku,default_storage_bin_id', 'product.defaultStorageBin:id,code,name', 'warehouse:id,code,name',
+            'workOrder:id,wo_number,vehicle_id', 'workOrder.vehicle:id,registration_number',
+        ])->latest('finalized_at')->paginate($request->integer('per_page', 20));
+
+        $response = $this->paginated($paginator, fn ($r) => [
+            'id' => $r->id,
+            'category' => UsedSparepartAvailabilityService::categoryOf($r),
+            'available_for_issue' => false, // reusable quantity is issued from the product's regular stock
+            'quantity' => (string) UsedSparepartAvailabilityService::quantityOf($r),
+            'condition' => $r->condition,
+            'disposition' => $r->disposition,
+            'disposition_status' => $r->disposition_status,
+            'repaired' => $r->repair_completed_at !== null,
+            'finalized_at' => optional($r->finalized_at)->toIso8601String(),
+            'product' => $r->product?->only(['id', 'name', 'sku']),
+            'storage_bin' => $r->product?->defaultStorageBin?->only(['id', 'code', 'name']),
+            'warehouse' => $r->warehouse?->only(['id', 'code', 'name']),
+            'work_order' => $r->workOrder ? ['id' => $r->workOrder->id, 'wo_number' => $r->workOrder->wo_number] : null,
+            'vehicle' => $r->workOrder?->vehicle?->only(['id', 'registration_number']),
+        ]);
+        $payload = $response->getData(true);
+        $payload['meta']['summary'] = $summary;
+
+        return response()->json($payload);
     }
 
     public function show(WarehouseStock $warehouseStock)

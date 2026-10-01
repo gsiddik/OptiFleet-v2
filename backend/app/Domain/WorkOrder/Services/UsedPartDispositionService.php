@@ -153,6 +153,33 @@ class UsedPartDispositionService
     }
 
     /**
+     * Repair → Reuse (owner decision): an approved REPAIR is "repair pending" until the repair is
+     * completed. Completing it records who/when, marks the part Good and sends it back to
+     * INSPECTED, so the next outcome (REUSE, SCRAP, …) goes through the normal propose + approve
+     * flow — stock only moves when a REUSE is approved. Never touches inventory itself.
+     */
+    public function completeRepair(WorkOrderPartReturn $return, ?string $notes, string $userId): WorkOrderPartReturn
+    {
+        return DB::transaction(function () use ($return, $notes, $userId) {
+            $locked = WorkOrderPartReturn::query()->lockForUpdate()->findOrFail($return->id);
+
+            if ($locked->disposition_status !== 'FINALIZED' || $locked->disposition !== 'REPAIR' || $locked->repair_completed_at !== null) {
+                throw new WorkOrderException('Only an approved REPAIR that is still pending can be completed.');
+            }
+
+            $locked->update([
+                'repair_completed_at' => now(),
+                'repair_completed_by' => $userId,
+                'repair_notes' => $notes,
+                'condition' => 'USED_GOOD',
+                'disposition_status' => 'INSPECTED',
+            ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
      * Executes the physical inventory consequence of an approved disposition.
      * Only REUSE ever touches warehouse_stocks: this is the first moment a
      * used-condition quantity is allowed to become available stock, and only

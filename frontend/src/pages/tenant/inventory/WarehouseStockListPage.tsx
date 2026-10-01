@@ -3,6 +3,7 @@ import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/cli
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { Pagination } from '../../../components/Pagination';
+import { UsedSparepartsTab } from './UsedSparepartsTab';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
@@ -20,6 +21,8 @@ const REORDER_STATUSES = ['', 'HEALTHY', 'LOW_STOCK', 'REORDER_REQUIRED', 'OUT_O
 const ITEM_GROUPS = [
   { value: 'PARTS_SUPPLIES', label: 'Parts & Supplies', hint: 'Spare Parts, Consumables, Rims, Tires' },
   { value: 'TOOLS_EQUIPMENT', label: 'Tools & Equipment', hint: 'Tools, Equipment' },
+  // Used parts from Used Sparepart Processing — kept apart so used and new stock never mix.
+  { value: 'USED_SPAREPARTS', label: 'Used Spareparts', hint: 'Reusable, Quarantine and Repair-pending used parts' },
 ] as const;
 
 export function WarehouseStockListPage() {
@@ -34,7 +37,7 @@ export function WarehouseStockListPage() {
   const [thresholdsTarget, setThresholdsTarget] = useState<WarehouseStockItem | null>(null);
   const { data, meta, loading, error } = useApiList<WarehouseStockItem>(
     '/app/inventory',
-    { item_group: itemGroup, search: search || undefined, reorder_status: reorderStatus || undefined, page },
+    { item_group: itemGroup === 'USED_SPAREPARTS' ? 'PARTS_SUPPLIES' : itemGroup, search: search || undefined, reorder_status: reorderStatus || undefined, page },
     reloadKey,
   );
 
@@ -101,33 +104,39 @@ export function WarehouseStockListPage() {
           </button>
         ))}
       </div>
-      <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
-        {REORDER_STATUSES.map((s) => (
-          <button
-            key={s}
-            onClick={() => {
-              setReorderStatus(s);
+      {itemGroup === 'USED_SPAREPARTS' ? (
+        <UsedSparepartsTab />
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
+            {REORDER_STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  setReorderStatus(s);
+                  setPage(1);
+                }}
+                className={reorderStatus === s ? 'btn-primary' : 'btn-secondary'}
+                style={{ padding: '4px 10px', fontSize: 12 }}
+              >
+                {s || 'All'}
+              </button>
+            ))}
+          </div>
+          <Toolbar
+            search={search}
+            onSearchChange={(v) => {
+              setSearch(v);
               setPage(1);
             }}
-            className={reorderStatus === s ? 'btn-primary' : 'btn-secondary'}
-            style={{ padding: '4px 10px', fontSize: 12 }}
-          >
-            {s || 'All'}
-          </button>
-        ))}
-      </div>
-      <Toolbar
-        search={search}
-        onSearchChange={(v) => {
-          setSearch(v);
-          setPage(1);
-        }}
-      />
-      {error && <ErrorState message={error} />}
-      {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No stock records found." />}
-      {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
-      {meta && <Pagination meta={meta} onPageChange={setPage} />}
+          />
+          {error && <ErrorState message={error} />}
+          {!error && loading && <LoadingState />}
+          {!error && !loading && data.length === 0 && <EmptyState label="No stock records found." />}
+          {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
+          {meta && <Pagination meta={meta} onPageChange={setPage} />}
+        </>
+      )}
 
       <AdjustModal target={adjustTarget} onClose={() => setAdjustTarget(null)} onAdjusted={() => setReloadKey((k) => k + 1)} />
       <ScrapModal target={scrapTarget} onClose={() => setScrapTarget(null)} onScrapped={() => setReloadKey((k) => k + 1)} />
