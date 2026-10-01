@@ -131,3 +131,20 @@ with serial only → spec inherited, IN_STOCK, override wins, listed in Tire Lis
 filtered to TIRE; Register Tire on "Truck Tire 295/80R22.5" → tire created with 295/80 R22.5 ·
 Highway Rib · RADIAL · TUBELESS, opens in Tire Detail, appears in Tire List; existing tires and
 their detail pages unchanged.
+
+## Phase A release gate (PASS)
+
+| Check | Result |
+|---|---|
+| Quotation Create PO | PASS |
+| Vendor Invoice Upload | PASS |
+| Vendor Quotation Upload | PASS |
+| Tire Creation Consolidation | PASS |
+| Frontend Build | PASS |
+| Frontend Lint | PASS (findings identical to baseline) |
+| Backend full regression (PostgreSQL) | PASS — 973 passed (5241 assertions) |
+| Seeders (fresh migrate + all seeders twice) | PASS — no errors, identical counts |
+| MongoDB Analytics / Intelligence tests | NOT RUN — no MongoDB in this environment |
+| Backend Docker image build | NOT RUN — sandbox egress blocks Alpine packages (see A2) |
+
+Commits: 01edbd3 (quotation guard), e36089c (private storage), 591ee61 (tire creation).
