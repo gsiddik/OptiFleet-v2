@@ -243,3 +243,23 @@ posted in the same second). Targeted regression 107 passed; full backend regress
 removes the invoice rows it creates); seeders twice on a fresh DB — identical; frontend build
 PASS, lint 0 errors (baseline warnings). Browser: unpaid previous invoice offered for reuse →
 after payment not offered (note shown), direct API reuse 422, new invoice without PDF posted.
+
+## CHECKPOINT (2026-10-01) — merged, no work in progress
+
+- **Merged:** PR #11 squash-merged into `main` as `4f50cd1`
+  ("feat: sidebar UX, upload reliability, goods receipt vendor invoices and payment (#11)").
+  Earlier this session: PR #9 (`000c8ee`, RFQ document optional / used spareparts / WO product
+  search / reservation retirement) and PR #10 (`586de40`, billing proration test clock).
+- **State of `main`:** all phases of this improvement (sidebar, upload foundation, GR → vendor
+  invoice, invoice list + working-day due dates + derived status, payment with proof, paid
+  invoices not reusable, seeders) are complete. Last validation on the merged content:
+  full non-Mongo backend regression 959 passed / 0 failed; frontend build PASS, lint 0 errors;
+  `concurrency:smoke-test-phase4` all races safe; seeders twice on a fresh DB identical.
+  Mongo-dependent tests NOT RUN (no MongoDB in this environment). The three Mongo migrations
+  (`2026_09_08_000002/000003/100001`) are present on `main`, unchanged.
+- **Open items / future candidates (not started; need owner instruction):** holiday /
+  business calendar for due dates; PO ↔ Goods Receipt ↔ Invoice three-way matching; partial
+  vendor payments.
+- **Resuming notes:** branch `claude/magical-volta-tv4xwl` is restarted from `main` for any
+  follow-up (new PR). Local test runs must set the Mongo-only migrations/tests aside only for
+  the run and restore them (never stage those paths); stage explicit file paths only.
