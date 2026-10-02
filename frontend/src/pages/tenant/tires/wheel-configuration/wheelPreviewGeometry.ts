@@ -1,24 +1,48 @@
 import { positionCode, spareCodes, type AxleGroupKey, type Side } from './wheelLayout';
+import type { BodyStyle } from './vehicleTypes';
 
 /**
- * Top-view geometry for the wheel configuration preview (SVG user units), derived only from the
- * form data — no static artwork. The vehicle faces up: FRONT is the top of the drawing.
+ * Top-view layout engine for the wheel configuration preview (SVG user units), derived only from
+ * the form data — no static artwork. The vehicle faces up: FRONT is the top of the drawing.
  *
- * Vertical rhythm: axles inside a group are AXLE_PITCH apart; the gap between the last front axle
- * and the first rear axle is the (larger) wheelbase, so the two groups read as front and rear.
- * Horizontally, wheel 1 of each side sits just outside the body and further wheels go outwards.
- * An axle line runs between the centres of its two outermost wheels and is drawn underneath the
- * body and the wheels, so it never shows beyond the outer tire.
+ * Shared by every vehicle type; only the proportions differ (BODY_PROFILES):
+ * - axles inside a group are `axlePitch` apart; the gap between the last front axle and the first
+ *   rear axle is the (larger) `wheelbase`, so the two groups read as front and rear;
+ * - wheel 1 of each side sits just outside the body edge, further wheels go outwards;
+ * - an axle line runs between the centres of its two outermost wheels and is drawn underneath the
+ *   body and the wheels, so it never shows beyond the outer tire (same for every type);
+ * - spare tires get their own column outside the body.
+ * The body itself is drawn by a per-type renderer (VehicleBodies.tsx) from this geometry.
  */
 
 export const WHEEL = { width: 16, length: 34, gapBetween: 3, gapToBody: 4, radius: 4 } as const;
-const BODY_WIDTH = 104;
-const AXLE_PITCH = WHEEL.length + 16;
-const WHEELBASE = 150;
-const NOSE = 64; // body length ahead of the first axle
-const TAIL = 52; // body length behind the last axle
 const MARGIN = { top: 44, bottom: 24, side: 34 };
 const SPARE_GAP = 46; // space between the outermost wheels and the spare tire column
+
+export interface BodyProfile {
+  bodyWidth: number;
+  /** body length ahead of the first front axle */
+  nose: number;
+  /** body length behind the last rear axle */
+  tail: number;
+  axlePitch: number;
+  /** distance between the last front axle and the first rear axle */
+  wheelbase: number;
+  /** space above the body for parts that stick out in front (forks, tow bar) */
+  frontExtension: number;
+}
+
+/** Proportions per body — prototype values for owner review. */
+export const BODY_PROFILES: Record<BodyStyle, BodyProfile> = {
+  PASSENGER_CAR: { bodyWidth: 104, nose: 64, tail: 52, axlePitch: 50, wheelbase: 150, frontExtension: 0 },
+  VAN: { bodyWidth: 108, nose: 56, tail: 70, axlePitch: 50, wheelbase: 190, frontExtension: 0 },
+  BUS: { bodyWidth: 120, nose: 52, tail: 96, axlePitch: 50, wheelbase: 280, frontExtension: 0 },
+  FORKLIFT: { bodyWidth: 96, nose: 34, tail: 64, axlePitch: 46, wheelbase: 110, frontExtension: 78 },
+  HEAVY_EQUIPMENT: { bodyWidth: 128, nose: 58, tail: 74, axlePitch: 52, wheelbase: 180, frontExtension: 0 },
+  TRUCK: { bodyWidth: 116, nose: 50, tail: 64, axlePitch: 50, wheelbase: 230, frontExtension: 0 },
+  TRAILER: { bodyWidth: 116, nose: 46, tail: 56, axlePitch: 50, wheelbase: 250, frontExtension: 58 },
+  SEMI_TRAILER: { bodyWidth: 116, nose: 50, tail: 56, axlePitch: 50, wheelbase: 300, frontExtension: 0 },
+};
 
 export interface PreviewInput {
   /** wheels per side per axle; null = not entered / invalid yet (axle drawn without wheels) */
@@ -44,11 +68,16 @@ export interface AxleLine {
 }
 
 export interface PreviewGeometry {
+  style: BodyStyle;
+  profile: BodyProfile;
   width: number;
   height: number;
   centerX: number;
+  /** top of the drawing area reserved for the FRONT marker */
+  frontMarkerY: number;
   body: { top: number; bottom: number; left: number; right: number };
-  windshield: { top: number; bottom: number };
+  frontYs: number[];
+  rearYs: number[];
   axles: AxleLine[];
   wheels: WheelRect[];
   spares: { code: string; x: number; y: number }[];
@@ -56,27 +85,26 @@ export interface PreviewGeometry {
   wheelbase: { y1: number; y2: number } | null;
 }
 
-export function buildPreviewGeometry(input: PreviewInput): PreviewGeometry {
+export function buildPreviewGeometry(input: PreviewInput, style: BodyStyle = 'PASSENGER_CAR'): PreviewGeometry {
+  const profile = BODY_PROFILES[style];
   const maxPerSide = Math.max(1, ...[...input.front, ...input.rear].map((n) => n ?? 0));
   const reach = WHEEL.gapToBody + maxPerSide * WHEEL.width + (maxPerSide - 1) * WHEEL.gapBetween;
   const spareColumn = input.spareTires > 0 ? SPARE_GAP + WHEEL.length : 0;
-  const centerX = MARGIN.side + reach + BODY_WIDTH / 2;
-  const width = centerX + BODY_WIDTH / 2 + reach + spareColumn + MARGIN.side;
+  const centerX = MARGIN.side + reach + profile.bodyWidth / 2;
+  const width = centerX + profile.bodyWidth / 2 + reach + spareColumn + MARGIN.side;
 
   // Axle centre lines, front to back.
-  const frontYs = input.front.map((_, i) => MARGIN.top + NOSE + i * AXLE_PITCH);
-  const frontEnd = frontYs.length ? frontYs[frontYs.length - 1] : MARGIN.top + NOSE - AXLE_PITCH;
-  const rearStart = frontYs.length ? frontEnd + WHEELBASE : MARGIN.top + NOSE;
-  const rearYs = input.rear.map((_, i) => rearStart + i * AXLE_PITCH);
+  const bodyTop = MARGIN.top + profile.frontExtension;
+  const firstAxle = bodyTop + profile.nose;
+  const frontYs = input.front.map((_, i) => firstAxle + i * profile.axlePitch);
+  const frontEnd = frontYs.length ? frontYs[frontYs.length - 1] : firstAxle - profile.axlePitch;
+  const rearStart = frontYs.length ? frontEnd + profile.wheelbase : firstAxle;
+  const rearYs = input.rear.map((_, i) => rearStart + i * profile.axlePitch);
   const lastY = rearYs.length ? rearYs[rearYs.length - 1] : frontEnd;
-  const bodyTop = MARGIN.top;
-  const bodyBottom = Math.max(lastY + TAIL, bodyTop + NOSE + TAIL);
+  const bodyBottom = Math.max(lastY + profile.tail, bodyTop + profile.nose + profile.tail);
   const height = bodyBottom + MARGIN.bottom;
-  const left = centerX - BODY_WIDTH / 2;
-  const right = centerX + BODY_WIDTH / 2;
-
-  // Windshield just behind the front axle group (or near the nose without one).
-  const windshieldTop = frontYs.length ? frontEnd + WHEEL.length / 2 + 14 : bodyTop + 26;
+  const left = centerX - profile.bodyWidth / 2;
+  const right = centerX + profile.bodyWidth / 2;
 
   const wheels: WheelRect[] = [];
   const axles: AxleLine[] = [];
@@ -98,14 +126,18 @@ export function buildPreviewGeometry(input: PreviewInput): PreviewGeometry {
 
   // Spare tires: their own column to the right of the vehicle, outside the body and the axles.
   const spareX = right + reach + SPARE_GAP;
-  const spares = spareCodes(input.spareTires).map((code, i) => ({ code, x: spareX, y: bodyBottom - TAIL - i * (WHEEL.width + 10) - WHEEL.width }));
+  const spares = spareCodes(input.spareTires).map((code, i) => ({ code, x: spareX, y: bodyBottom - profile.tail - i * (WHEEL.width + 10) - WHEEL.width }));
 
   return {
+    style,
+    profile,
     width,
     height,
     centerX,
+    frontMarkerY: 14,
     body: { top: bodyTop, bottom: bodyBottom, left, right },
-    windshield: { top: windshieldTop, bottom: windshieldTop + 22 },
+    frontYs,
+    rearYs,
     axles,
     wheels,
     spares,

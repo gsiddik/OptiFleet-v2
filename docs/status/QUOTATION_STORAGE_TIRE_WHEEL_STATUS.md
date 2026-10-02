@@ -220,3 +220,17 @@ validation, and the store API (backend tests, internal use; the future Save writ
 positions server-side). Existing historical positions untouched. Interim gap until Save ships:
 no new positions can be added from the UI — non-blocking, because a category without configured
 positions accepts free position codes at tire install.
+
+### C2 — Bus / Forklift / Van / Heavy Equipment prototypes (PROTOTYPE — awaiting review)
+Same form, validation, calculations, Config Code and position rules as Passenger Car (one shared
+`AxleConfigurationForm`). Preview architecture: layout engine `buildPreviewGeometry(input,
+bodyStyle)` with per-type proportions (`BODY_PROFILES`: body width, nose, tail, axle pitch,
+wheelbase, front extension) → shared axle-line / wheel / spare / label renderers → per-type body
+renderer (`VehicleBodies.tsx`). Bodies: Bus (long glazed box, roof AC + hatches, side window
+strips, rear grille); Van (short hood, windshield, roof rails, split rear doors); Forklift
+(mast + forks in front, overhead guard, rear counterweight); Heavy Equipment (generic chamfered
+chassis, front hazard bar, central cab, rear engine hood); Passenger Car unchanged.
+Checks (browser, every type, 22.222 and 12.221 with 3 spares): summary 5 / 21 / 22.222, wheels per
+axle exact, every axle line ends inside its outermost tires (measured on the rendered SVG), no
+shape outside the drawing; 1440 / 820 / 390 px: no page overflow, preview inside its card, no
+overlap with the form, all 4 spares visible (stacked below the form on tablet/phone).

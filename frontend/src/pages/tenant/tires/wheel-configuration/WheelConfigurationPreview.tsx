@@ -1,9 +1,8 @@
-import { WHEEL, buildPreviewGeometry, type PreviewInput } from './wheelPreviewGeometry';
+import { VehicleBody } from './VehicleBodies';
+import type { BodyStyle } from './vehicleTypes';
+import { WHEEL, buildPreviewGeometry, type PreviewGeometry, type PreviewInput } from './wheelPreviewGeometry';
 
 const COLORS = {
-  body: '#e5e7eb',
-  bodyStroke: '#6b7280',
-  glass: '#bfdbfe',
   tire: '#1f2937',
   tireText: '#f9fafb',
   axle: '#374151',
@@ -14,68 +13,90 @@ const COLORS = {
 };
 
 /**
- * Top view of the configured vehicle, generated from the form data (see wheelPreviewGeometry).
- * Drawing order matters: axle lines first, then the body, then the wheels — the body hides the
- * middle of each axle and the outermost wheel covers the axle's end.
+ * Top view of the configured vehicle, generated from the form data. One renderer for every
+ * vehicle type: layout engine (wheelPreviewGeometry) → axle lines → body (VehicleBodies, per type)
+ * → wheels with position codes → spare tires. Drawing order matters: the body hides the middle of
+ * each axle line and the outermost wheel covers its end, so no line ever shows past a tire.
  */
-export function WheelConfigurationPreview({ input }: { input: PreviewInput }) {
-  const g = buildPreviewGeometry(input);
-  const { top, bottom, left, right } = g.body;
-  const nose = 26; // depth of the rounded front
-  const bodyPath = [
-    `M ${left} ${top + nose}`,
-    `Q ${left} ${top} ${g.centerX} ${top}`,
-    `Q ${right} ${top} ${right} ${top + nose}`,
-    `L ${right} ${bottom - 10}`,
-    `Q ${right} ${bottom} ${right - 10} ${bottom}`,
-    `L ${left + 10} ${bottom}`,
-    `Q ${left} ${bottom} ${left} ${bottom - 10}`,
-    'Z',
-  ].join(' ');
-  const inset = 12;
+export function WheelConfigurationPreview({ input, bodyStyle = 'PASSENGER_CAR' }: { input: PreviewInput; bodyStyle?: BodyStyle }) {
+  const g = buildPreviewGeometry(input, bodyStyle);
 
   return (
     <svg
       viewBox={`0 0 ${g.width} ${g.height}`}
       role="img"
       aria-label="Vehicle wheel configuration preview, top view, front at the top"
+      data-body-style={g.style}
       style={{ width: '100%', maxWidth: g.width * 1.6, maxHeight: '72vh', display: 'block', margin: '0 auto' }}
     >
-      {/* Front direction */}
-      <text x={g.centerX} y={14} textAnchor="middle" fontSize={11} fontWeight={700} fill={COLORS.front} letterSpacing={1}>
+      <FrontMarker g={g} />
+      <AxleLines g={g} />
+      <VehicleBody g={g} />
+      <AxleLabels g={g} />
+      <Wheels g={g} />
+      <SpareTires g={g} />
+    </svg>
+  );
+}
+
+function FrontMarker({ g }: { g: PreviewGeometry }) {
+  return (
+    <g>
+      <text x={g.centerX} y={g.frontMarkerY} textAnchor="middle" fontSize={11} fontWeight={700} fill={COLORS.front} letterSpacing={1}>
         FRONT
       </text>
-      <path d={`M ${g.centerX - 7} ${30} L ${g.centerX} ${20} L ${g.centerX + 7} ${30} Z`} fill={COLORS.front} />
+      <path d={`M ${g.centerX - 7} ${g.frontMarkerY + 16} L ${g.centerX} ${g.frontMarkerY + 6} L ${g.centerX + 7} ${g.frontMarkerY + 16} Z`} fill={COLORS.front} />
+    </g>
+  );
+}
 
-      {/* Axle lines (under body and wheels) */}
+function AxleLines({ g }: { g: PreviewGeometry }) {
+  return (
+    <g>
       {g.axles.map((a) => (
-        <line key={a.label} x1={a.x1} x2={a.x2} y1={a.y} y2={a.y} stroke={a.complete ? COLORS.axle : COLORS.pending} strokeWidth={4} strokeDasharray={a.complete ? undefined : '6 4'} strokeLinecap="butt" />
+        <line
+          key={a.label}
+          data-axle={a.label}
+          x1={a.x1}
+          x2={a.x2}
+          y1={a.y}
+          y2={a.y}
+          stroke={a.complete ? COLORS.axle : COLORS.pending}
+          strokeWidth={4}
+          strokeDasharray={a.complete ? undefined : '6 4'}
+          strokeLinecap="butt"
+        />
       ))}
+    </g>
+  );
+}
 
-      {/* Body: rounded nose at the front, windshield, rear window */}
-      <path d={bodyPath} fill={COLORS.body} stroke={COLORS.bodyStroke} strokeWidth={1.5} />
-      <path
-        d={`M ${left + inset + 6} ${g.windshield.top} L ${right - inset - 6} ${g.windshield.top} L ${right - inset} ${g.windshield.bottom} L ${left + inset} ${g.windshield.bottom} Z`}
-        fill={COLORS.glass}
-        opacity={0.9}
-      />
-      <rect x={left + inset} y={bottom - 30} width={right - left - 2 * inset} height={12} rx={3} fill={COLORS.glass} opacity={0.6} />
-
-      {/* Axle labels (left margin) and wheelbase marker */}
+function AxleLabels({ g }: { g: PreviewGeometry }) {
+  return (
+    <g>
       {g.axles.map((a) => (
-        <text key={`l-${a.label}`} x={6} y={a.y + 3} fontSize={9} fill={COLORS.label}>
+        <text key={a.label} x={6} y={a.y + 3} fontSize={9} fill={COLORS.label}>
           {a.label}
         </text>
       ))}
       {g.wheelbase && (
-        <text x={g.centerX} y={(g.wheelbase.y1 + g.wheelbase.y2) / 2 + 3} textAnchor="middle" fontSize={9} fill={COLORS.label}>
-          wheelbase
-        </text>
+        // On a light pill so it stays readable on any body.
+        <g>
+          <rect x={g.centerX - 28} y={(g.wheelbase.y1 + g.wheelbase.y2) / 2 - 7} width={56} height={14} rx={7} fill="#ffffff" opacity={0.85} />
+          <text x={g.centerX} y={(g.wheelbase.y1 + g.wheelbase.y2) / 2 + 3} textAnchor="middle" fontSize={9} fill={COLORS.label}>
+            wheelbase
+          </text>
+        </g>
       )}
+    </g>
+  );
+}
 
-      {/* Wheels */}
+function Wheels({ g }: { g: PreviewGeometry }) {
+  return (
+    <g>
       {g.wheels.map((w) => (
-        <g key={w.code}>
+        <g key={w.code} data-wheel={w.code}>
           <title>{w.code}</title>
           <rect x={w.x} y={w.y} width={WHEEL.width} height={WHEEL.length} rx={WHEEL.radius} fill={COLORS.tire} />
           <text
@@ -92,15 +113,21 @@ export function WheelConfigurationPreview({ input }: { input: PreviewInput }) {
           </text>
         </g>
       ))}
+    </g>
+  );
+}
 
-      {/* Spare tires: separate, outside the body, not on an axle */}
+/** Spare tires: separate, outside the body, not on an axle. */
+function SpareTires({ g }: { g: PreviewGeometry }) {
+  return (
+    <g>
       {g.spareLabel && (
         <text x={g.spareLabel.x} y={g.spareLabel.y} textAnchor="middle" fontSize={9} fill={COLORS.label}>
           Spare Tires
         </text>
       )}
       {g.spares.map((s) => (
-        <g key={s.code}>
+        <g key={s.code} data-spare={s.code}>
           <title>{`Spare tire ${s.code}`}</title>
           <rect x={s.x} y={s.y} width={WHEEL.length} height={WHEEL.width} rx={WHEEL.radius} fill={COLORS.spare} />
           <text x={s.x + WHEEL.length / 2} y={s.y + WHEEL.width / 2} textAnchor="middle" dominantBaseline="central" fontSize={8} fontWeight={600} fill={COLORS.tireText}>
@@ -108,6 +135,6 @@ export function WheelConfigurationPreview({ input }: { input: PreviewInput }) {
           </text>
         </g>
       ))}
-    </svg>
+    </g>
   );
 }

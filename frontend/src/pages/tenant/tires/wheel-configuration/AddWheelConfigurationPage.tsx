@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { BackButton } from '../../../../components/BackButton';
 import { FormField, inputStyle } from '../../../../components/FormField';
 import { NumericInput } from '../../../../components/NumericInput';
-import { VEHICLE_TYPES, vehicleTypeOption } from './vehicleTypes';
+import { VEHICLE_TYPES, bodyStyleFor, vehicleTypeOption, type BodyStyle } from './vehicleTypes';
 import { LIMITS, configCode, parseCount, saveErrors, totalAxles, totalWheels, type AxleGroups, type Range } from './wheelLayout';
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
 
 /**
- * PROTOTYPE — Add New Wheels Configuration. Passenger Car only; nothing is saved yet. Form state
+ * PROTOTYPE — Add New Wheels Configuration (vehicle bodies awaiting owner review); nothing is
+ * saved yet. Form state
  * lives here, every number shown is derived from it on each render (no "Generate" step) through
  * wheelLayout (calculations) and WheelConfigurationPreview (drawing).
  */
@@ -37,18 +38,24 @@ export function AddWheelConfigurationPage() {
       </div>
 
       {!option && <p style={{ fontSize: 13, color: '#6b7280' }}>Select a vehicle type to configure its axles and wheels.</p>}
-      {option && option.value !== 'PASSENGER_CAR' && (
+      {option && option.value === 'TRUCK' && (
         <div className="card" style={{ fontSize: 13, color: '#6b7280' }}>
           Configuration form for this vehicle type will be added after prototype approval.
         </div>
       )}
-      {option?.value === 'PASSENGER_CAR' && <PassengerCarConfiguration />}
+      {/* Every vehicle type uses the same form and rules; only the preview body differs. Keyed by
+          type so switching type starts a fresh form. */}
+      {option && option.value !== 'TRUCK' && <AxleConfigurationForm key={option.value} bodyStyle={bodyStyleFor(option.value, null)} />}
     </div>
   );
 }
 
-/** Field values are kept as typed (strings) so partial/invalid input can be shown and explained. */
-function PassengerCarConfiguration() {
+/**
+ * The wheels configuration form shared by every vehicle type (owner decision: same inputs,
+ * validation, calculations and code rules). Field values are kept as typed (strings) so partial or
+ * invalid input can be shown and explained.
+ */
+function AxleConfigurationForm({ bodyStyle, codePrefix = '' }: { bodyStyle: BodyStyle; codePrefix?: string }) {
   const [frontAxles, setFrontAxles] = useState('');
   const [rearAxles, setRearAxles] = useState('');
   // One slot per possible axle; values survive when the axle count goes down and up again.
@@ -69,7 +76,7 @@ function PassengerCarConfiguration() {
   const rowsValid = [...frontRows, ...rearRows].every((r) => r.value !== null);
   const groups: AxleGroups | null = countsValid && rowsValid ? { front: frontRows.map((r) => r.value as number), rear: rearRows.map((r) => r.value as number) } : null;
   const groupErrors = groups ? saveErrors(groups) : [];
-  const code = groups ? configCode(groups) : null;
+  const code = groups ? configCode(groups, codePrefix) : null;
   const saveReady = groups !== null && spare.value !== null && groupErrors.length === 0;
 
   const setRow = (setter: typeof setFrontWheels, index: number, value: string) => setter((rows) => rows.map((r, i) => (i === index ? value : r)));
@@ -137,6 +144,7 @@ function PassengerCarConfiguration() {
       <div className="card" style={{ position: 'sticky', top: 12 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Preview</h3>
         <WheelConfigurationPreview
+          bodyStyle={bodyStyle}
           input={{
             front: frontWheels.slice(0, front.value ?? 0).map((raw) => parseCount(raw, LIMITS.wheelsPerSide).value),
             rear: rearWheels.slice(0, rear.value ?? 0).map((raw) => parseCount(raw, LIMITS.wheelsPerSide).value),
