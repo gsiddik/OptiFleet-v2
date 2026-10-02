@@ -111,3 +111,8 @@ export function wheelPositions(groups: AxleGroups): WheelPosition[] {
 export function spareCodes(spareTires: number): string[] {
   return Array.from({ length: spareTires }, (_, i) => `S${i + 1}`);
 }
+
+/** Plain-language description of a position, e.g. "Front axle 1 · Left · wheel 1 (closest to body)". */
+export function describePosition(p: { group: AxleGroupKey; axle: number; side: Side; index: number }): string {
+  return `${p.group === 'F' ? 'Front' : 'Rear'} axle ${p.axle} · ${p.side === 'L' ? 'Left' : 'Right'} · wheel ${p.index}${p.index === 1 ? ' (closest to body)' : ''}`;
+}

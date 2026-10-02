@@ -178,7 +178,7 @@ function AxleConfigurationForm({ bodyStyle, codePrefix = '' }: { bodyStyle: Body
           }}
         />
         <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 0 }}>
-          Position code = axle number in its group + F/R (front/rear) + L/R (side) + wheel number counted from the body outwards, e.g. 1FL1, 2RR2. Dashed axle = wheels per side not entered yet.
+          Position code = axle number in its group + F/R (front/rear) + L/R (side) + wheel number counted from the body outwards, e.g. 1FL1, 2RR2. Tap a tire to see its code. Dashed axle = wheels per side not entered yet.
         </p>
       </div>
     </div>

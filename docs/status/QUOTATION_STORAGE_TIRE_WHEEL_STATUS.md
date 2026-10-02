@@ -267,3 +267,28 @@ Trailer), Trailer tow triangle, Semi Trailer tractor/coupling layout, axle spaci
 usability. Then: Save (validate → generate → replace the category's position list with
 versioning / handling of positions in use), Config Code uniqueness (vehicle type + truck
 configuration type + code; `22.222`, `+22.222`, `-22.222` distinct).
+
+### C5 — Owner feedback round 1 applied (PROTOTYPE — awaiting review)
+Decisions: Semi Trailer front group = tractor axles, rear group = trailer axles; one reusable
+layout engine with type-specific proportions; Trailer = box + centered triangular tow bar;
+Semi Trailer = short cab + visible coupling/chassis gap + subtle kingpin; three spacing levels;
+phone width uses tap/popover instead of inline codes; no over-design.
+
+- Proportions (`BODY_PROFILES`): body width = per-type multiple of the tire width; length = front
+  overhang + front group + wheelbase + rear group + rear overhang (overhangs in tire lengths).
+  Spacing: intra-group 50 for every type < wheelbase (Forklift 96, Car 150, Van 170, HE 190,
+  Truck 220, Trailer 230, Bus 260) < Semi tractor–trailer 300. Body length (2+3 axles): Forklift
+  345 < Car 412 < Van 439 < Bus 553.
+- Trailer: framed box (edge rails, corner posts, cross members); A-frame tow bar centered, base ≈
+  64% of box width, length 20% of box length (measured 19.2–19.7% for 1+1 … 6+6 axles).
+- Semi Trailer: cab 53 vs trailer 470, 22-unit gap showing the chassis, small dashed kingpin
+  (r 6, opacity 0.7, no label) on the trailer over the last tractor axle.
+- Silhouettes simplified: Bus (no hatches/grille), Van (mirrors + cab/cargo line, merged rear
+  body), Heavy Equipment (heavier outline).
+- Position codes: printed on tires when the preview is ≥ 420 px wide (desktop/tablet); below that
+  (phone) hidden — every tire/spare is a button (tap / Enter) opening a popover with code and
+  meaning ("1RL2 · Rear axle 1 · Left · wheel 2"), selected tire highlighted, tap elsewhere /
+  Escape closes; collapsible "Position list" under the preview (per axle, mirrors the drawing).
+- Verified: all types × 22.222 / 12.221 / 1.2 axle lines inside outer tires; 8 types × 1440 / 820 /
+  390 px layout; spacing / tow bar / semi measurements above; popover above the tire inside the
+  viewport; rules parity; build PASS, lint = baseline.
