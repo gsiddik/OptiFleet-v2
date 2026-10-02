@@ -1,17 +1,14 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
+import { apiClient, extractApiError } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
-import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { WheelConfigurationItem } from '../../../types';
-import { NumericInput } from '../../../components/NumericInput';
 import { formatDateTime } from '../../../utils/date';
 import { VEHICLE_TYPES, truckConfigurationTypeOption, vehicleTypeOption } from './wheel-configuration/vehicleTypes';
 import { groupPositions, type ConfigurationMaster, type ConfigurationVersion } from './wheel-configuration/masterTypes';
@@ -100,7 +97,6 @@ export function WheelConfigurationListPage() {
 
       {viewing && <ConfigurationDetailModal masterId={viewing} onClose={() => setViewing(null)} />}
 
-      <LegacyCategoryPositions />
     </div>
   );
 }
@@ -171,137 +167,6 @@ function ConfigurationDetailModal({ masterId, onClose }: { masterId: string; onC
             )}
           </>
         )}
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * Pre-existing per-category wheel positions (created before Wheel Configuration masters existed;
- * tire installation still validates against them). Kept read/edit/delete-able, collapsed, until the
- * future vehicle → configuration assignment feature replaces them.
- */
-function LegacyCategoryPositions() {
-  const { hasPermission } = useAuth();
-  const [reloadKey, setReloadKey] = useState(0);
-  const [editing, setEditing] = useState<WheelConfigurationItem | null>(null);
-  const [deleting, setDeleting] = useState<WheelConfigurationItem | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const { data, loading, error } = useApiList<WheelConfigurationItem>('/app/wheel-configurations', {}, reloadKey);
-
-  async function confirmDelete() {
-    if (!deleting) return;
-    setDeleteError(null);
-    try {
-      await apiClient.delete(`/app/wheel-configurations/${deleting.id}`);
-      setDeleting(null);
-      setReloadKey((k) => k + 1);
-    } catch (err) {
-      setDeleteError(extractApiError(err).message);
-    }
-  }
-
-  const columns: Column<WheelConfigurationItem>[] = [
-    { key: 'category', header: 'Vehicle Category', render: (w) => w.vehicle_category?.name ?? w.vehicle_category_id },
-    { key: 'position', header: 'Position Code', render: (w) => w.position_code },
-    { key: 'label', header: 'Label', render: (w) => w.label },
-    { key: 'axle', header: 'Axle #', render: (w) => w.axle_number ?? '—' },
-    {
-      key: 'actions',
-      header: '',
-      render: (w) =>
-        w.tenant_id && hasPermission('tire.manage') ? (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn-link" onClick={() => setEditing(w)}>
-              Edit
-            </button>
-            <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(w)}>
-              Delete
-            </button>
-          </div>
-        ) : (
-          <span style={{ fontSize: 12, color: '#9ca3af' }}>{w.tenant_id ? '' : 'Platform default'}</span>
-        ),
-    },
-  ];
-
-  if (!loading && !error && data.length === 0) return null;
-
-  return (
-    <details data-legacy-positions style={{ marginTop: 24 }}>
-      <summary style={{ cursor: 'pointer', fontSize: 14, fontWeight: 600, color: '#374151' }}>Legacy category wheel positions ({data.length})</summary>
-      <p style={{ fontSize: 12, color: '#6b7280' }}>Positions created before Wheel Configuration templates. Tire installation still checks against them.</p>
-      {error && <ErrorState message={error} />}
-      {!error && loading && <LoadingState />}
-      {!error && !loading && <Table columns={columns} rows={data} />}
-
-      {editing && (
-        <EditModal
-          config={editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            setReloadKey((k) => k + 1);
-          }}
-        />
-      )}
-
-      <ConfirmDialog
-        open={!!deleting}
-        title="Delete Wheel Position"
-        message={deleteError ?? `Delete position "${deleting?.label}"? This cannot be undone.`}
-        confirmLabel="Delete"
-        onCancel={() => {
-          setDeleting(null);
-          setDeleteError(null);
-        }}
-        onConfirm={confirmDelete}
-      />
-    </details>
-  );
-}
-
-function EditModal({ config, onClose, onSaved }: { config: WheelConfigurationItem; onClose: () => void; onSaved: () => void }) {
-  const [positionCode, setPositionCode] = useState(config.position_code);
-  const [label, setLabel] = useState(config.label);
-  const [axleNumber, setAxleNumber] = useState(config.axle_number != null ? String(config.axle_number) : '');
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  async function submit() {
-    setSubmitting(true);
-    setErrors({});
-    try {
-      await apiClient.put(`/app/wheel-configurations/${config.id}`, {
-        position_code: positionCode, label, axle_number: axleNumber || null,
-      });
-      onSaved();
-    } catch (err) {
-      const apiError: ApiErrorShape = extractApiError(err);
-      setErrors(apiError.errors ?? {});
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal open title="Edit Wheel Position" onClose={onClose}>
-      <FormField label="Position Code" errors={errors.position_code}>
-        <input value={positionCode} onChange={(e) => setPositionCode(e.target.value)} style={inputStyle} />
-      </FormField>
-      <FormField label="Label" errors={errors.label}>
-        <input value={label} onChange={(e) => setLabel(e.target.value)} style={inputStyle} />
-      </FormField>
-      <FormField label="Axle Number" errors={errors.axle_number}>
-        <NumericInput value={axleNumber} onChange={(e) => setAxleNumber(e.target.value)} style={inputStyle} />
-      </FormField>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
-          Cancel
-        </button>
-        <button className="btn-primary" disabled={submitting || !positionCode || !label} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
-        </button>
       </div>
     </Modal>
   );

@@ -393,8 +393,7 @@ Final architecture — NO vehicle assignment in this feature:
   save dialog (Vehicle Type, Configuration Type, Config Code, totals, generated positions, diff on
   edit); list of masters (Vehicle Type, Truck Configuration Type, Config Code, Version, Total Axles,
   Total Wheels, Status, Updated At) with a version-history view. Pre-existing per-category position
-  rows stay available in a collapsed "Legacy category wheel positions" section (tire installation
-  still validates against them).
+  rows are hidden from the Wheel Configuration UI (owner decision, C9).
 
 Future scope (not implemented): Vehicle → Assign / Change Wheel Configuration — current vehicle
 configuration → new configuration → diff positions → check installed tires → block if removed
@@ -414,3 +413,16 @@ Validation (this session):
 - Typecheck PASS, build PASS, oxlint 28 warnings all pre-existing (none in changed files), Pint on
   new files PASS, seed check ×2 PASS.
 - NOT RUN: Mongo analytics/intelligence tests (MongoDB unavailable); Docker build (egress).
+
+### C9 — Owner decisions after C8 (DONE)
+1. Legacy per-category wheel positions are hidden entirely from the Wheel Configuration page (the
+   collapsed "Legacy category wheel positions" section and its edit/delete UI removed). Their data
+   and the `/app/wheel-configurations` API are kept unchanged: Tire Detail still reads them for the
+   install position dropdown and `TireService` still validates against them, until the future
+   Vehicle → Wheel Configuration assignment replaces that.
+2. Confirmed: once a configuration exists, its Vehicle Type and Truck Configuration Type cannot be
+   changed (already enforced in C8: disabled in the edit form, 422 from the API).
+
+Validation: typecheck PASS, oxlint on changed files clean, build PASS; browser check — list shows 5
+masters and no legacy section (API still returns the 11 legacy rows), Tire Detail loads without
+errors.
