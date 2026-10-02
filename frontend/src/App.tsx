@@ -791,6 +791,7 @@ export default function App() {
             <Route path="partners/:id" element={<RequirePermission permission="partner.view"><PartnerDetailPage /></RequirePermission>} />
 
             <Route path="tires" element={<RequirePermission permission="tire.view"><TireListPage /></RequirePermission>} />
+            <Route path="tires/products" element={<Navigate to="/app/tires" replace />} />
             <Route path="tires/products/:productId" element={<RequirePermission permission="tire.view"><TireProductDetailPage /></RequirePermission>} />
             <Route path="tires/:id" element={<RequirePermission permission="tire.view"><TireDetailPage /></RequirePermission>} />
             <Route path="wheel-configurations" element={<RequirePermission permission="tire.view"><WheelConfigurationListPage /></RequirePermission>} />

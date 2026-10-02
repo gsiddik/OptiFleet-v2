@@ -1,19 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
-import { ImageUploadField } from '../../../components/ImageUploadField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
-import { EditProductModal } from './EditProductModal';
 import { VehicleBrandModelSelect } from './VehicleBrandModelSelect';
+import { ProductDetailsSection } from './ProductDetailsSection';
 import type { ProductItem, VehicleCategory } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
-import { NumericInput } from '../../../components/NumericInput';
-import { RegisterTireModal } from '../tires/RegisterTireModal';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,12 +24,8 @@ export function ProductDetailPage() {
   const [vehicleModelId, setVehicleModelId] = useState('');
   // Inline edit of an existing compatibility rule (Brand / Model restored from the stored ids).
   const [editingRule, setEditingRule] = useState<{ id: string; brandId: string; modelId: string; brandName: string | null; modelName: string | null } | null>(null);
-  const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
-  const [editingSpecs, setEditingSpecs] = useState(false);
-  const [registeringTire, setRegisteringTire] = useState(false);
   const [sdsBusy, setSdsBusy] = useState(false);
   const sdsFileInputRef = useRef<HTMLInputElement>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
 
   function load() {
     apiClient
@@ -45,69 +38,6 @@ export function ProductDetailPage() {
   useEffect(() => {
     apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data)).catch(() => setCategories([]));
   }, []);
-  useEffect(() => {
-    setReferenceTreadDepthMm(product?.reference_tread_depth_mm ?? '');
-  }, [product?.reference_tread_depth_mm]);
-
-  /** Batch 14: the upload replacing "Image URL" lives on the private
-   * `local` disk, so its preview (unlike the legacy public `image_url`)
-   * needs an authenticated blob fetch — same pattern as Vehicle Brand's logo. */
-  useEffect(() => {
-    let objectUrl: string | null = null;
-    let cancelled = false;
-
-    if (product?.image_path) {
-      apiClient.get(`/app/products/${product.id}/image`, { responseType: 'blob' }).then((res) => {
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(res.data);
-        setImagePreviewUrl(objectUrl);
-      });
-    } else if (product?.image_url) {
-      setImagePreviewUrl(product.image_url);
-    } else {
-      setImagePreviewUrl(null);
-    }
-
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [product?.id, product?.image_path, product?.image_url]);
-
-  async function uploadImage(file: File) {
-    setError(null);
-    const form = new FormData();
-    form.append('file', file);
-    try {
-      await apiClient.post(`/app/products/${id}/image`, form, { headers: { 'Content-Type': 'multipart/form-data' } });
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    }
-  }
-
-  async function removeImage() {
-    setError(null);
-    try {
-      await apiClient.delete(`/app/products/${id}/image`);
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    }
-  }
-
-  async function saveReferenceTreadDepth() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.put(`/app/products/${id}`, { reference_tread_depth_mm: referenceTreadDepthMm || null });
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   async function addCompatibility() {
     setBusy(true);
@@ -221,83 +151,12 @@ export function ProductDetailPage() {
       </div>
       {error && <ErrorState message={error} />}
 
-      <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Details</h3>
-        <p style={{ fontSize: 13 }}>
-          <strong>SKU:</strong> {product.sku} &nbsp; <strong>Type:</strong> {product.product_type} &nbsp; <strong>Category:</strong>{' '}
-          {product.category?.name ?? '—'} &nbsp; <strong>UOM:</strong> {product.uom?.name ?? '—'}
-          {(product.component_groups ?? []).length > 0 && (
-            <>
-              {' '}
-              &nbsp; <strong>Component Groups:</strong>{' '}
-              {(product.component_groups ?? []).map((g) => componentGroupLabel(g) + (g.deleted_at ? ' (deleted)' : '')).join(', ')}
-            </>
-          )}
+      <ProductDetailsSection product={product} onChanged={load} />
+      {product.product_type === 'TIRE' && hasPermission('tire.view') && (
+        <p style={{ fontSize: 13, margin: '-6px 0 16px' }} data-tire-detail-link>
+          Physical tires of this product (New Stock, Installed, Used) and Register Tire are on its <Link to={`/app/tires/products/${product.id}`}>Tire Detail</Link>.
         </p>
-        <p style={{ fontSize: 13 }}>
-          <strong>Component Group:</strong> {product.component_group ? componentGroupLabel(product.component_group) + (product.component_group.deleted_at ? ' (deleted)' : '') : '—'}
-          &nbsp; <strong>Category:</strong> {product.component_category ? product.component_category.name + (product.component_category.deleted_at ? ' (deleted)' : '') : '—'}
-          &nbsp; <strong>Subcategory:</strong> {product.component_subcategory ? product.component_subcategory.name + (product.component_subcategory.deleted_at ? ' (deleted)' : '') : '—'}
-        </p>
-        {product.brand && (
-          <p style={{ fontSize: 13 }}>
-            <strong>Brand:</strong> {product.brand} &nbsp; <strong>Manufacturer Part #:</strong> {product.manufacturer_part_number ?? '—'}
-          </p>
-        )}
-        <p style={{ fontSize: 13 }}>
-          <strong>Manufacturer:</strong> {product.manufacturer ?? '—'} &nbsp; <strong>Material:</strong> {product.material ?? '—'} &nbsp;
-          <strong>Production Year:</strong> {product.production_year ?? '—'}
-        </p>
-        <p style={{ fontSize: 13 }}>
-          <strong>Dimensions (L×W×H mm):</strong>{' '}
-          {product.length_mm ? `${product.length_mm} × ${product.width_mm ?? '—'} × ${product.height_mm ?? '—'}` : '—'} &nbsp;
-          <strong>Weight (kg):</strong> {product.weight_kg ?? '—'}
-        </p>
-        <div style={{ marginTop: 8, maxWidth: 200 }}>
-          <ImageUploadField
-            images={imagePreviewUrl ? [{ id: 'product-image', previewUrl: imagePreviewUrl, name: product.name }] : []}
-            onUpload={uploadImage}
-            onRemove={!product.is_system && hasPermission('product.delete') ? removeImage : undefined}
-            disabled={product.is_system || !hasPermission('product.update')}
-            multiple={false}
-          />
-        </div>
-        {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>Platform system record — read-only.</p>}
-        {!product.is_system && hasPermission('product.update') && (
-          <div style={{ marginTop: 10 }}>
-            <button className="btn-secondary" onClick={() => setEditingSpecs(true)}>
-              Edit Product
-            </button>
-          </div>
-        )}
-        {product.product_type === 'TIRE' && hasPermission('tire.manage') && (
-          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <button className="btn-primary" onClick={() => setRegisteringTire(true)}>
-              Register Tire
-            </button>
-            <span style={{ fontSize: 12, color: '#6b7280' }}>Add a physical tire (serial number) of this product to Tire Management.</span>
-          </div>
-        )}
-        {registeringTire && <RegisterTireModal product={product} onClose={() => setRegisteringTire(false)} />}
-        {product.product_type === 'TIRE' && (
-          <div style={{ marginTop: 10 }}>
-            <FormField label="Reference Tread Depth (mm) — required before this Tire product's tires can be scored">
-              <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-                <NumericInput step="0.01" min="0.01" value={referenceTreadDepthMm}
-                  onChange={(e) => setReferenceTreadDepthMm(e.target.value)}
-                  disabled={product.is_system || !hasPermission('product.update')}
-                  style={{ ...inputStyle, width: 140 }}
-                />
-                {!product.is_system && hasPermission('product.update') && (
-                  <button className="btn-secondary" disabled={busy} onClick={saveReferenceTreadDepth}>
-                    Save
-                  </button>
-                )}
-              </div>
-            </FormField>
-          </div>
-        )}
-      </div>
+      )}
 
       {product.product_type === 'CONSUMABLE' && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -421,7 +280,6 @@ export function ProductDetailPage() {
           </div>
         )}
       </div>
-      {editingSpecs && <EditProductModal product={product} onClose={() => setEditingSpecs(false)} onSaved={() => { setEditingSpecs(false); load(); }} />}
     </div>
   );
 }
