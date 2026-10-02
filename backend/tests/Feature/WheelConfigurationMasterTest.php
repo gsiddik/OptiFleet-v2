@@ -98,6 +98,26 @@ class WheelConfigurationMasterTest extends TestCase
         $this->assertSame([5, 5, 5], array_column(array_column($list, 'current_version'), 'total_axles'));
     }
 
+    public function test_list_is_paginated_and_shows_each_configuration_separately(): void
+    {
+        [, $headers] = $this->scenario();
+        $this->postJson(self::URL, $this->payload([2, 2], [2, 2, 2], 1), $headers)->assertStatus(201);
+        foreach (['NON_TRAILER', 'TRAILER', 'SEMI_TRAILER'] as $type) {
+            $this->postJson(self::URL, $this->payload([2, 2], [2, 2, 2], 2, 'TRUCK', $type), $headers)->assertStatus(201);
+        }
+
+        $page = $this->getJson(self::URL.'?per_page=3', $headers)->assertOk();
+        $page->assertJsonPath('meta.total', 4)->assertJsonPath('meta.last_page', 2)->assertJsonCount(3, 'data');
+        $all = $this->getJson(self::URL, $headers)->assertOk()->json('data');
+        $rows = array_map(fn ($m) => [$m['vehicle_type'], $m['truck_configuration_type'], $m['config_code'], $m['current_version']['total_wheels'], $m['current_version']['spare_tires']], $all);
+        $this->assertEqualsCanonicalizing([
+            ['PASSENGER_CAR', null, '22.222', 21, 1],
+            ['TRUCK', 'NON_TRAILER', '22.222', 22, 2],
+            ['TRUCK', 'TRAILER', '+22.222', 22, 2],
+            ['TRUCK', 'SEMI_TRAILER', '-22.222', 22, 2],
+        ], $rows);
+    }
+
     public function test_the_same_identity_cannot_be_created_twice(): void
     {
         [, $headers] = $this->scenario();

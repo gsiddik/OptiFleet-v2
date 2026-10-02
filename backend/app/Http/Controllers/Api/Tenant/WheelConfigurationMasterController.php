@@ -43,7 +43,7 @@ class WheelConfigurationMasterController extends Controller
             $query->where('config_code', 'ilike', "%{$search}%");
         }
 
-        return $this->ok($query->orderBy('vehicle_type')->orderBy('truck_configuration_type')->orderBy('config_code')->get());
+        return $this->paginated($query->orderBy('vehicle_type')->orderBy('truck_configuration_type')->orderBy('config_code')->paginate($request->integer('per_page', 20)));
     }
 
     public function show(WheelConfigurationMaster $wheelConfigurationMaster)
