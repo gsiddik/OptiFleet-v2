@@ -261,7 +261,7 @@ drawing; 8 types × 1440 / 820 / 390 px → no page overflow, preview inside its
 with the form, 4 spares visible. Frontend rules = shared cases; backend wheel + tire suites 101
 passed; build PASS, lint = baseline.
 
-### Awaiting owner review (no persistence / migration until approved)
+### Awaiting owner review (superseded — prototype approved, see C6/C7)
 Body proportions and silhouettes (Bus, Van, Forklift, Heavy Equipment, Truck, Trailer, Semi
 Trailer), Trailer tow triangle, Semi Trailer tractor/coupling layout, axle spacing and overall
 usability. Then: Save (validate → generate → replace the category's position list with
@@ -292,3 +292,54 @@ phone width uses tap/popover instead of inline codes; no over-design.
 - Verified: all types × 22.222 / 12.221 / 1.2 axle lines inside outer tires; 8 types × 1440 / 820 /
   390 px layout; spacing / tow bar / semi measurements above; popover above the tire inside the
   viewport; rules parity; build PASS, lint = baseline.
+
+### C6 — Owner approval adjustments (DONE, `281abdd`)
+Prototype approved with minor adjustments: Trailer tow bar shortened (length 20% → 15% of the box,
+measured 14.0–14.6%; width unchanged); Semi Trailer tractor/trailer gap 22 → 32 units (kingpin
+unchanged). Phone-width code text not reduced further (tap/popover + Position list kept). Other
+silhouettes, spacing, wheel placement and responsive behavior approved as is.
+
+### C7 — Production Save: versioning + position-set diffing (DONE, `fb926c8`, `ea745e3`)
+Never delete-all-and-recreate. One transaction under an exclusive Postgres advisory lock per
+(tenant, vehicle category): Validate → Generate Positions → Diff → Check Active Tire Installations
+→ Create Version → Apply Position Changes → Activate → Commit.
+
+- Schema (migration `2026_10_02_000004`, additive): `wheel_configuration_versions` (version_number,
+  vehicle_type, explicit `truck_configuration_type`, server-generated `config_code`, axles JSON,
+  spare/totals, status ACTIVE/SUPERSEDED with one-ACTIVE partial unique index, `position_diff`,
+  created_by, activated/superseded_at; category FK RESTRICT so history survives).
+  `wheel_configurations` gains `status` ACTIVE/RETIRED (existing rows ACTIVE), `retired_at`,
+  `introduced_in_version_id`, `retired_in_version_id`, `position_group`, `axle_in_group`, `side`,
+  `wheel_index`.
+- Diff by position code against the positions currently applying (tenant rows; platform defaults
+  too until the tenant's first version): UNCHANGED keep their row, ADDED create a row or reactivate
+  the same RETIRED row, REMOVED are RETIRED (never hard-deleted). Platform rows are never modified;
+  once a tenant has a version they stop applying to that tenant only.
+- Blocking: any active tire installation on a vehicle of the category at a position the new
+  configuration lacks (REMOVED, or a legacy unconfigured position) → 422 naming position, tire
+  serial and vehicle registration; nothing changes; tires are never moved automatically.
+- Identical configuration → existing version returned (200, no new version). `22.222` / `+22.222`
+  / `-22.222` are distinct versions (same axles → all positions UNCHANGED).
+- Backend regenerates Config Code; a client `config_code` that differs → 422.
+- Tire install/rotate validate positions inside their transaction under a shared lock (a save
+  waits for/blocks them) and ignore RETIRED positions. Legacy position edit/create/delete refused
+  once a category is versioned; legacy delete retires a position referenced by history and refuses
+  an occupied one.
+- API (`module:TIRE`): `GET /app/wheel-configuration-versions` (tire.view),
+  `POST /app/wheel-configuration-versions/preview` (dry run) and `POST /app/wheel-configuration-versions`
+  (tire.manage). `GET /app/wheel-configurations` hides RETIRED unless `include_retired=1`.
+- UI: Vehicle Category select + current version; Save → dialog with Unchanged / Added / Removed
+  and a blocker table (position, tire link, vehicle); Confirm only when nothing blocks.
+
+Validation (this session):
+- `WheelConfigurationVersionTest` 17 tests PASS (creation, idempotency, versioning, unchanged /
+  added / removed, reactivation, installed-tire blocking + atomicity, history integrity, three
+  truck types, config code mismatch, invalid input, preview no-write, platform rows, legacy
+  unconfigured installs, tenant isolation, permissions, legacy endpoint guards).
+- Targeted regression: Tire* + WheelConfiguration* 118 tests PASS; WorkOrderClosureGuardTest PASS.
+- Browser e2e (`e2e_wc_save`): first save, identical save, blocked save (dialog + direct API 422),
+  save after tire removal (2RL2/2RR2/S1 retired, installation history intact), Trailer and Semi
+  Trailer versions, 390 px dialog fit — PASS. Prototype e2e (all types, truck, trailer/semi) PASS.
+- Lock contention smoke: install waited ~2.6 s while the exclusive lock was held — PASS.
+- Seed check twice (idempotent) PASS; frontend build PASS; oxlint on changed files clean.
+- NOT RUN: Mongo analytics/intelligence tests (MongoDB unavailable); Docker image build (egress).

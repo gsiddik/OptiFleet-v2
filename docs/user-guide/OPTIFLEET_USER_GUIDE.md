@@ -1382,7 +1382,7 @@ Mechanic (`tire.install/rotate/inspect/remove/scrap`); Workshop Manager (checker
 | Fitur | Kegunaan | Role | Input Utama | Output |
 |---|---|---|---|---|
 | Rim | Katalog referensi pelek (berdiri sendiri) | Warehouse | Kode, brand, dimensi | Data rim |
-| Wheel Configuration | Tata letak posisi roda per kategori kendaraan, dibuat lewat **New Wheels Configuration** (jumlah axle depan/belakang, roda per sisi, ban cadangan → Config Code & kode posisi otomatis seperti 1FL1, 1RR2, S1). Tidak ada lagi penambahan posisi satu per satu ("Add Position"); posisi lama tetap bisa diubah/dihapus. Penyimpanan konfigurasi (mengganti daftar posisi kategori) menyusul setelah prototipe disetujui. | Admin | Tipe kendaraan, axle, roda per sisi, ban cadangan | Konfigurasi posisi |
+| Wheel Configuration | Tata letak posisi roda per kategori kendaraan, dibuat lewat **New Wheels Configuration** (jumlah axle depan/belakang, roda per sisi, ban cadangan → Config Code & kode posisi otomatis seperti 1FL1, 1RR2, S1). Pilih **Vehicle Category** lalu **Save Configuration**: sistem menampilkan posisi yang tetap (Unchanged), ditambah (Added) dan dihapus (Removed) sebelum konfirmasi. Setiap penyimpanan membuat versi baru; posisi yang dihapus diarsipkan (RETIRED), tidak dihapus permanen, sehingga riwayat ban tetap utuh. Bila masih ada ban terpasang di posisi yang akan dihapus, penyimpanan ditolak dan sistem menyebutkan posisi, nomor seri ban, dan kendaraan — lepas atau pindahkan ban tersebut terlebih dahulu (ban tidak pernah dipindahkan otomatis). Tidak ada lagi penambahan posisi satu per satu; posisi lama hanya bisa diubah/dihapus selama kategori belum memakai konfigurasi tersimpan. | Admin | Tipe kendaraan, axle, roda per sisi, ban cadangan | Konfigurasi posisi |
 | Tire — Install | Memasang ban ke kendaraan | Mechanic | Vehicle, posisi, ban | Status INSTALLED |
 | Tire — Rotate/Swap | Memindah posisi ban | Mechanic | Posisi tujuan | Riwayat rotasi |
 | Tire — Inspect | Mencatat kondisi ban | Mechanic/Inspector | Kedalaman tapak, kondisi | Rekaman inspeksi |
@@ -1457,6 +1457,7 @@ Riwayat lengkap siklus hidup setiap ban; kendaraan selalu memiliki data ban terp
 |---|---|---|
 | Tidak bisa menghitung Tire Score | Belum ada konfigurasi TIRE_SCORING yang dipublikasikan untuk tenant ini | Susun & publikasikan konfigurasi lewat `Configuration → Tire Scoring` |
 | Tidak bisa memasang ban di posisi tertentu | Kategori kendaraan sudah punya Wheel Configuration dan posisi yang dipilih tidak terdaftar | Gunakan posisi yang sesuai daftar konfigurasi, atau perbarui Wheel Configuration |
+| Wheel Configuration tidak bisa disimpan | Masih ada ban terpasang di posisi yang akan dihapus oleh konfigurasi baru | Lepas atau pindahkan ban yang disebutkan (posisi, nomor seri, kendaraan), lalu simpan ulang |
 | Ban tidak bisa dikirim ke Retread/Repair | Partner yang dipilih bukan tipe EXTERNAL_WORKSHOP/TIRE_SUPPLIER, atau statusnya nonaktif | Pilih Partner yang sesuai dan aktif |
 | Ban UNSAFE tidak bisa dikembalikan ke layanan | Ini adalah gerbang keselamatan mutlak, disengaja | Pilih disposisi SCRAP atau QUARANTINE |
 
