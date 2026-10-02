@@ -11,9 +11,12 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { VEHICLE_TYPES, resolveVehicleType, vehicleTypeOption } from '../tires/wheel-configuration/vehicleTypes';
+import { VehicleWheelsConfigurationTab } from '../tires/wheel-configuration/VehicleWheelsConfigurationTab';
 
-const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'History'] as const;
+const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'Wheels Configuration', 'History'] as const;
 type Tab = (typeof TABS)[number];
+/** Tabs that need more than vehicle.view. */
+const TAB_PERMISSION: Partial<Record<Tab, string>> = { 'Wheels Configuration': 'tire.view' };
 
 export function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,8 +54,8 @@ export function VehicleDetailPage() {
 
       {error && <ErrorState message={error} />}
 
-      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb' }}>
-        {TABS.map((t) => (
+      <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb', overflowX: 'auto' }}>
+        {TABS.filter((t) => !TAB_PERMISSION[t] || hasPermission(TAB_PERMISSION[t])).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -65,6 +68,8 @@ export function VehicleDetailPage() {
               fontWeight: tab === t ? 600 : 400,
               cursor: 'pointer',
               fontSize: 14,
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
             {t}
@@ -76,6 +81,7 @@ export function VehicleDetailPage() {
       {tab === 'Assignment' && <AssignmentTab vehicle={vehicle} onChanged={load} />}
       {tab === 'Transfer' && <TransferTab vehicle={vehicle} onChanged={load} />}
       {tab === 'Documents' && <DocumentsTab vehicle={vehicle} />}
+      {tab === 'Wheels Configuration' && <VehicleWheelsConfigurationTab vehicleId={vehicle.id} />}
       {tab === 'History' && <HistoryTab vehicleId={vehicle.id} />}
     </div>
   );

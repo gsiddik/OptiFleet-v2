@@ -30,8 +30,23 @@ type Selection = { code: string; description: string; left: number; top: number 
  * and every tire is tappable — a small popover shows its code (no hover needed), and an optional
  * position list sits under the preview.
  */
-export function WheelConfigurationPreview({ input, bodyStyle = 'PASSENGER_CAR' }: { input: PreviewInput; bodyStyle?: BodyStyle }) {
+export function WheelConfigurationPreview({
+  input,
+  bodyStyle = 'PASSENGER_CAR',
+  selectedCode,
+  onPositionSelect,
+  installedCodes,
+}: {
+  input: PreviewInput;
+  bodyStyle?: BodyStyle;
+  /** select mode (Vehicle Detail): the parent owns the selection and shows details next to the preview */
+  selectedCode?: string | null;
+  onPositionSelect?: (code: string) => void;
+  /** positions that have an active tire — drawn with a subtle marker, layout unchanged */
+  installedCodes?: ReadonlySet<string>;
+}) {
   const g = buildPreviewGeometry(input, bodyStyle);
+  const selectMode = onPositionSelect !== undefined;
   const wrapper = useRef<HTMLDivElement>(null);
   const [compact, setCompact] = useState(false);
   const [selected, setSelected] = useState<Selection | null>(null);
@@ -48,6 +63,10 @@ export function WheelConfigurationPreview({ input, bodyStyle = 'PASSENGER_CAR' }
   }, []);
 
   function select(target: Element, code: string, description: string) {
+    if (onPositionSelect) {
+      onPositionSelect(code);
+      return;
+    }
     const box = wrapper.current?.getBoundingClientRect();
     const tire = target.getBoundingClientRect();
     if (!box) return;
@@ -85,8 +104,8 @@ export function WheelConfigurationPreview({ input, bodyStyle = 'PASSENGER_CAR' }
         <AxleLines g={g} />
         <VehicleBody g={g} />
         <AxleLabels g={g} />
-        <Wheels g={g} showCodes={!compact} selected={selected?.code ?? null} handlers={tireHandlers} />
-        <SpareTires g={g} showCodes={!compact} selected={selected?.code ?? null} handlers={tireHandlers} />
+        <Wheels g={g} showCodes={!compact} selected={selectMode ? (selectedCode ?? null) : (selected?.code ?? null)} installed={installedCodes} handlers={tireHandlers} />
+        <SpareTires g={g} showCodes={!compact} selected={selectMode ? (selectedCode ?? null) : (selected?.code ?? null)} installed={installedCodes} handlers={tireHandlers} />
       </svg>
 
       {selected && (
@@ -116,7 +135,7 @@ export function WheelConfigurationPreview({ input, bodyStyle = 'PASSENGER_CAR' }
         </div>
       )}
 
-      {compact && <PositionList g={g} />}
+      {compact && !selectMode && <PositionList g={g} />}
     </div>
   );
 }
@@ -176,11 +195,13 @@ function AxleLabels({ g }: { g: PreviewGeometry }) {
   );
 }
 
-function Wheels({ g, showCodes, selected, handlers }: { g: PreviewGeometry; showCodes: boolean; selected: string | null; handlers: Handlers }) {
+const INSTALLED = '#22c55e';
+
+function Wheels({ g, showCodes, selected, installed, handlers }: { g: PreviewGeometry; showCodes: boolean; selected: string | null; installed?: ReadonlySet<string>; handlers: Handlers }) {
   return (
     <g>
       {g.wheels.map((w) => (
-        <g key={w.code} data-wheel={w.code} {...handlers(w.code, describePosition(w))}>
+        <g key={w.code} data-wheel={w.code} data-installed={installed?.has(w.code) ? 'true' : undefined} {...handlers(w.code, describePosition(w))}>
           <title>{w.code}</title>
           <rect
             x={w.x}
@@ -189,9 +210,10 @@ function Wheels({ g, showCodes, selected, handlers }: { g: PreviewGeometry; show
             height={WHEEL.length}
             rx={WHEEL.radius}
             fill={COLORS.tire}
-            stroke={selected === w.code ? COLORS.selected : 'none'}
-            strokeWidth={3}
+            stroke={selected === w.code ? COLORS.selected : installed?.has(w.code) ? INSTALLED : 'none'}
+            strokeWidth={selected === w.code ? 3 : 2}
           />
+          {installed?.has(w.code) && <circle cx={w.x + WHEEL.width / 2} cy={w.y - 4} r={2.5} fill={INSTALLED} pointerEvents="none" />}
           {showCodes && (
             <text
               x={w.x + WHEEL.width / 2}
@@ -214,7 +236,7 @@ function Wheels({ g, showCodes, selected, handlers }: { g: PreviewGeometry; show
 }
 
 /** Spare tires: separate, outside the body, not on an axle. */
-function SpareTires({ g, showCodes, selected, handlers }: { g: PreviewGeometry; showCodes: boolean; selected: string | null; handlers: Handlers }) {
+function SpareTires({ g, showCodes, selected, installed, handlers }: { g: PreviewGeometry; showCodes: boolean; selected: string | null; installed?: ReadonlySet<string>; handlers: Handlers }) {
   return (
     <g>
       {g.spareLabel && (
@@ -223,9 +245,19 @@ function SpareTires({ g, showCodes, selected, handlers }: { g: PreviewGeometry; 
         </text>
       )}
       {g.spares.map((s) => (
-        <g key={s.code} data-spare={s.code} {...handlers(s.code, `Spare tire ${s.code.slice(1)}`)}>
+        <g key={s.code} data-spare={s.code} data-installed={installed?.has(s.code) ? 'true' : undefined} {...handlers(s.code, `Spare tire ${s.code.slice(1)}`)}>
           <title>{`Spare tire ${s.code}`}</title>
-          <rect x={s.x} y={s.y} width={WHEEL.length} height={WHEEL.width} rx={WHEEL.radius} fill={COLORS.spare} stroke={selected === s.code ? COLORS.selected : 'none'} strokeWidth={3} />
+          <rect
+            x={s.x}
+            y={s.y}
+            width={WHEEL.length}
+            height={WHEEL.width}
+            rx={WHEEL.radius}
+            fill={COLORS.spare}
+            stroke={selected === s.code ? COLORS.selected : installed?.has(s.code) ? INSTALLED : 'none'}
+            strokeWidth={selected === s.code ? 3 : 2}
+          />
+          {installed?.has(s.code) && <circle cx={s.x - 5} cy={s.y + WHEEL.width / 2} r={2.5} fill={INSTALLED} pointerEvents="none" />}
           {showCodes && (
             <text x={s.x + WHEEL.length / 2} y={s.y + WHEEL.width / 2} textAnchor="middle" dominantBaseline="central" fontSize={8} fontWeight={600} fill={COLORS.tireText} pointerEvents="none">
               {s.code}

@@ -1,5 +1,6 @@
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { apiClient } from '../../../api/client';
 import { inputStyle } from '../../../components/FormField';
 import { Pagination } from '../../../components/Pagination';
 import { Table, type Column } from '../../../components/Table';
@@ -24,7 +25,28 @@ export function WheelConfigurationListPage() {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
   const [page, setPage] = useState(1);
-  const { data, meta, loading, error } = useApiList<ConfigurationMaster>('/app/wheel-configuration-masters', { search: search || undefined, vehicle_type: typeFilter || undefined, page }, 0);
+  // Arrived from Vehicle Detail → Wheels Configuration: list only configurations the backend says
+  // this vehicle is compatible with; assignment still happens on the Vehicle Mapping page.
+  const [searchParams] = useSearchParams();
+  const vehicleId = searchParams.get('vehicle');
+  const [vehicleLabel, setVehicleLabel] = useState<string | null>(null);
+  useEffect(() => {
+    if (!vehicleId) return;
+    let cancelled = false;
+    apiClient
+      .get(`/app/vehicles/${vehicleId}`)
+      .then((res) => !cancelled && setVehicleLabel(res.data.data.registration_number))
+      .catch(() => !cancelled && setVehicleLabel(null));
+    return () => {
+      cancelled = true;
+    };
+  }, [vehicleId]);
+  const { data, meta, loading, error } = useApiList<ConfigurationMaster>(
+    '/app/wheel-configuration-masters',
+    { search: search || undefined, vehicle_type: typeFilter || undefined, compatible_vehicle_id: vehicleId || undefined, page },
+    0,
+  );
+  const mappingLink = (masterId: string) => `/app/wheel-configurations/${masterId}/vehicle-mapping${vehicleId ? `?vehicle=${vehicleId}` : ''}`;
 
   const columns: Column<ConfigurationMaster>[] = [
     { key: 'type', header: 'Vehicle Type', render: (m) => vehicleTypeOption(m.vehicle_type)?.label ?? m.vehicle_type },
@@ -47,7 +69,7 @@ export function WheelConfigurationListPage() {
               Edit
             </button>
           )}
-          <button className="btn-link" onClick={() => navigate(`/app/wheel-configurations/${m.id}/vehicle-mapping`)}>
+          <button className="btn-link" onClick={() => navigate(mappingLink(m.id))}>
             Vehicle Mapping
           </button>
         </div>
@@ -61,6 +83,19 @@ export function WheelConfigurationListPage() {
       {saved && (
         <div data-save-success role="status" style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '8px 12px', marginBottom: 14 }}>
           Saved configuration {saved.config_code} (version {saved.version_number}).
+        </div>
+      )}
+      {vehicleId && (
+        <div data-vehicle-context role="status" style={{ fontSize: 13, color: '#1e3a8a', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '8px 12px', marginBottom: 14, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span>
+            Choosing a configuration for vehicle <strong>{vehicleLabel ?? 'selected vehicle'}</strong> — showing only compatible configurations. Open <em>Vehicle Mapping</em> to assign it.
+          </span>
+          <button className="btn-link" onClick={() => navigate(`/app/vehicles/${vehicleId}`)}>
+            Back to vehicle
+          </button>
+          <button className="btn-link" onClick={() => navigate('/app/wheel-configurations')}>
+            Show all configurations
+          </button>
         </div>
       )}
       <Toolbar
@@ -99,7 +134,7 @@ export function WheelConfigurationListPage() {
 
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No wheel configurations yet." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={vehicleId ? 'No configuration matches this vehicle’s type, axles and wheels.' : 'No wheel configurations yet.'} />}
       {!error && !loading && data.length > 0 && (
         <div data-master-list style={{ overflowX: 'auto' }}>
           <Table columns={columns} rows={data} />
