@@ -12,7 +12,9 @@ use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireRotation;
 use App\Domain\Tire\Models\TireSale;
 use App\Domain\Tire\Models\TireScoringResult;
+use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfiguration;
+use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
 use App\Domain\Vehicle\Models\Vehicle;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -64,9 +66,9 @@ class TireService
             throw new TireException('Installation date cannot predate this tire\'s recorded purchase date.');
         }
 
-        $this->assertValidWheelPosition($tire->tenant_id, $vehicle->vehicle_category_id, $wheelPosition);
-
         return DB::transaction(function () use ($tire, $vehicle, $wheelPosition, $odometer, $workOrderId, $userId, $installedAt, $installedAtSource, $baselineTreadDepthMm, $baselineCondition) {
+            $this->assertValidWheelPosition($vehicle, $wheelPosition);
+
             try {
                 $installation = TireInstallation::query()->create([
                     'tenant_id' => $tire->tenant_id,
@@ -114,9 +116,30 @@ class TireService
      * zero rows configured keeps the previous permissive behavior rather than
      * fail-closed for every tenant that hasn't set up Wheel Configuration yet
      * (no platform-seeded default layout exists; see IMPROVEMENT_CONTEXT.md).
+     *
+     * A vehicle mapped to a wheel configuration is validated against that configuration
+     * version's positions instead. Runs inside the caller's transaction with a shared lock on the
+     * vehicle row, so a concurrent Vehicle Mapping change (which locks the row FOR UPDATE) cannot
+     * remove the position between this check and the commit.
      */
-    private function assertValidWheelPosition(string $tenantId, ?string $vehicleCategoryId, string $position): void
+    private function assertValidWheelPosition(Vehicle $vehicle, string $position): void
     {
+        Vehicle::query()->withoutGlobalScopes()->whereKey($vehicle->id)->sharedLock()->first();
+        $mapping = VehicleWheelConfigurationMapping::query()->withoutGlobalScopes()
+            ->where('vehicle_id', $vehicle->id)->where('status', VehicleWheelConfigurationMapping::STATUS_ACTIVE)->first();
+        if ($mapping) {
+            $valid = WheelConfigurationVersionPosition::query()->withoutGlobalScopes()
+                ->where('wheel_configuration_version_id', $mapping->wheel_configuration_version_id)
+                ->where('position_code', $position)->exists();
+            if (! $valid) {
+                throw new TireException("'{$position}' is not a position of this vehicle's wheel configuration.");
+            }
+
+            return;
+        }
+
+        $tenantId = $vehicle->tenant_id;
+        $vehicleCategoryId = $vehicle->vehicle_category_id;
         if (! $vehicleCategoryId) {
             return;
         }
@@ -144,7 +167,7 @@ class TireService
             }
 
             $vehicle = Vehicle::query()->findOrFail($locked->current_vehicle_id);
-            $this->assertValidWheelPosition($locked->tenant_id, $vehicle->vehicle_category_id, $toPosition);
+            $this->assertValidWheelPosition($vehicle, $toPosition);
 
             $active = TireInstallation::query()->where('tire_id', $locked->id)->whereNull('removed_at')->lockForUpdate()->first();
             $fromPosition = $locked->current_position;

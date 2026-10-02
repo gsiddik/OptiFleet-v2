@@ -9,6 +9,7 @@ use App\Domain\Tire\Services\VehicleTypeClassifier;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
+use Illuminate\Http\Request;
 
 /**
  * Vehicle Detail → Wheels Configuration: the vehicle's mapped configuration VERSION (not the latest
@@ -58,6 +59,45 @@ class VehicleWheelConfigurationController extends Controller
             'installations' => $this->registrations->activeInstallations($vehicle),
             'history' => $history,
         ]);
+    }
+
+    /**
+     * Initial / last-known registration of a tire that is already on the vehicle. Never a warehouse
+     * issue: no stock, stock movement, reservation or receipt is created.
+     */
+    public function registerTire(Request $request, Vehicle $vehicle)
+    {
+        $this->authorizeVehicle($vehicle);
+        $request->merge(array_map(fn ($v) => is_string($v) ? trim($v) : $v, $request->only(['serial_number', 'installed_time', 'installation_km', 'tread_depth_mm', 'position_code'])));
+        $validated = $request->validate([
+            'position_code' => ['required', 'string', 'max:20'],
+            'installed_date' => ['required', 'date_format:Y-m-d'],
+            'installed_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
+            // Decimal text (no float rounding): up to 2 decimals, never negative.
+            'installation_km' => ['nullable', 'regex:/^\d{1,10}(\.\d{1,2})?$/'],
+            'product_id' => ['required', 'uuid'],
+            'serial_number' => ['required', 'string', 'max:100'],
+            'tread_depth_mm' => ['nullable', 'regex:/^\d{1,3}(\.\d{1,2})?$/'],
+        ], [
+            'installed_time.regex' => 'Use the 24-hour format HH:mm, for example 07:30 or 14:05.',
+            'installation_km.regex' => 'Enter a number of kilometres (0 or more, up to 2 decimals), for example 12500.75.',
+            'tread_depth_mm.regex' => 'Enter a tread depth in mm (0 or more, up to 2 decimals), for example 8.5.',
+        ]);
+
+        $installation = $this->registrations->register($vehicle, $validated, $this->context->user()->id);
+
+        return $this->ok([
+            'installation_id' => $installation->id,
+            'installations' => $this->registrations->activeInstallations($vehicle),
+        ], 201);
+    }
+
+    /** Products of Item Type Tire for the registration form (server-side search). */
+    public function tireProducts(Request $request, Vehicle $vehicle)
+    {
+        $this->authorizeVehicle($vehicle);
+
+        return $this->ok($this->registrations->tireProducts($this->context->tenantId(), $request->string('search')->trim()->value() ?: null));
     }
 
     private function authorizeVehicle(Vehicle $vehicle): void

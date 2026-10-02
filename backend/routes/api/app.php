@@ -688,6 +688,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/wheel-configuration-masters/{wheelConfigurationMaster}/vehicle-mappings', [VehicleWheelConfigurationMappingController::class, 'show'])->middleware('permission:tire.view');
             Route::put('/wheel-configuration-masters/{wheelConfigurationMaster}/vehicle-mappings', [VehicleWheelConfigurationMappingController::class, 'update'])->middleware('permission:wheel_configuration.map_vehicle');
             Route::get('/vehicles/{vehicle}/wheel-configuration', [VehicleWheelConfigurationController::class, 'show'])->middleware('permission:tire.view');
+            Route::get('/vehicles/{vehicle}/wheel-configuration/tire-products', [VehicleWheelConfigurationController::class, 'tireProducts'])->middleware('permission:tire.install');
+            Route::post('/vehicles/{vehicle}/wheel-configuration/tires', [VehicleWheelConfigurationController::class, 'registerTire'])->middleware('permission:tire.install');
 
             Route::get('/tires', [TireController::class, 'index'])->middleware('permission:tire.view');
             Route::post('/tires', [TireController::class, 'store'])->middleware('permission:tire.manage');
