@@ -299,7 +299,7 @@ measured 14.0–14.6%; width unchanged); Semi Trailer tractor/trailer gap 22 →
 unchanged). Phone-width code text not reduced further (tap/popover + Position list kept). Other
 silhouettes, spacing, wheel placement and responsive behavior approved as is.
 
-### C7 — Production Save: versioning + position-set diffing (DONE, `fb926c8`, `ea745e3`)
+### C7 — Production Save: versioning + position-set diffing (SUPERSEDED by C8 — wrongly vehicle-category coupled)
 Never delete-all-and-recreate. One transaction under an exclusive Postgres advisory lock per
 (tenant, vehicle category): Validate → Generate Positions → Diff → Check Active Tire Installations
 → Create Version → Apply Position Changes → Activate → Commit.
@@ -343,3 +343,74 @@ Validation (this session):
 - Lock contention smoke: install waited ~2.6 s while the exclusive lock was held — PASS.
 - Seed check twice (idempotent) PASS; frontend build PASS; oxlint on changed files clean.
 - NOT RUN: Mongo analytics/intelligence tests (MongoDB unavailable); Docker image build (egress).
+
+### C8 — Correction: Wheel Configuration is a vehicle-independent master (DONE, `5ec2cb9`)
+Owner correction: Wheel Configuration manages only reusable configuration masters/templates. It
+does not manage which vehicle (or vehicle category) uses a configuration; that mapping is a
+separate future feature. C7 had coupled Save to a vehicle category and to installed tires.
+
+Coupling found (all introduced in C7 on this unmerged branch, not on `main`):
+- UI: Vehicle Category select + "Current configuration: … (version N)"; save dialog blocker table
+  (position / tire / vehicle) and installed-tire warning.
+- API: `/app/wheel-configuration-versions` (index / preview / store) keyed by `vehicle_category_id`.
+- DB: `wheel_configuration_versions.vehicle_category_id` (one ACTIVE per tenant+category);
+  lifecycle columns on legacy `wheel_configurations` (status/RETIRED, retired_at,
+  introduced/retired_in_version_id, position_group, axle_in_group, side, wheel_index).
+- Service: `WheelConfigurationVersionService` (category diff, active tire installation check over
+  vehicles of the category, retire/reactivate legacy rows), `WheelPositionCatalog` (per-category
+  advisory lock), `WheelConfigurationBlockedException` + renderer.
+- Other modules: `TireService` install/rotate validation took the category lock and filtered
+  RETIRED rows; legacy `WheelConfigurationController` refused edits for versioned categories and
+  retired-instead-of-deleted. Test: `WheelConfigurationVersionTest`.
+
+Removed / refactored:
+- `TireService`, `WheelConfigurationController`, `WheelConfiguration` model, `bootstrap/app.php`
+  restored byte-for-byte to their pre-C7 state (`78ad331`); coupled classes and test deleted.
+- Forward migration `2026_10_02_000005` (non-destructive for pre-existing data): drops the C7
+  columns/table (only C7 code ever read them) and creates the master model. Legacy
+  `wheel_configurations` rows are untouched. Verified up → down → up on the e2e DB (11 legacy rows
+  preserved); `down()` restores the 000004 shape.
+
+Final architecture — NO vehicle assignment in this feature:
+
+    Wheel Configuration Master   (tenant, vehicle_type, truck_configuration_type, config_code, status)
+            ↓ 1..n
+    Configuration Version        (version_number, config code, axles, spare, totals,
+                                  ACTIVE/INACTIVE, position_diff vs previous version)
+            ↓ 1..n
+    Generated Wheel Positions    (position_code, group, axle, side, wheel index, label, sequence)
+
+- Identity: `vehicle_type` + `truck_configuration_type` + `config_code` as explicit fields, partial
+  unique index (COALESCE on truck type) over ACTIVE masters → `22.222`, `+22.222`, `-22.222`
+  distinct. Vehicle Type / Truck Configuration Type of a master are fixed; edit changes the axle
+  pattern only. One ACTIVE version per master (partial unique index).
+- Save: Validate → Generate Config Code (server; client value only compared) → Generate Position
+  List → Save Configuration Version. Edit with a change → new version, previous INACTIVE with its
+  own position list kept; unchanged edit → no version. No installed-tire check.
+- API (`module:TIRE`): `GET /app/wheel-configuration-masters` (tire.view), `GET …/{id}` (versions +
+  positions, tire.view), `POST …/preview`, `POST …`, `PUT …/{id}` (tire.manage).
+- UI: form without any vehicle/category field; edit route `/app/wheel-configurations/:id/edit`;
+  save dialog (Vehicle Type, Configuration Type, Config Code, totals, generated positions, diff on
+  edit); list of masters (Vehicle Type, Truck Configuration Type, Config Code, Version, Total Axles,
+  Total Wheels, Status, Updated At) with a version-history view. Pre-existing per-category position
+  rows stay available in a collapsed "Legacy category wheel positions" section (tire installation
+  still validates against them).
+
+Future scope (not implemented): Vehicle → Assign / Change Wheel Configuration — current vehicle
+configuration → new configuration → diff positions → check installed tires → block if removed
+positions are occupied.
+
+Validation (this session):
+- `WheelConfigurationMasterTest` 14 tests PASS (Passenger Car 22.222 without vehicle, no vehicle
+  columns, Truck NON_TRAILER / TRAILER / SEMI_TRAILER 22.222 / +22.222 / -22.222, duplicate
+  identity, edit 1.22 → 1.21 with stored diff and history, unchanged edit, fixed type, identity
+  clash on edit, preview, server config code, invalid input, save ignores installed tires, tenant
+  isolation, permissions).
+- Regression: Tire*, Vehicle*, WheelConfiguration* (incl. Rules + legacy), WorkOrderClosureGuard —
+  143 tests PASS. Frontend↔backend rules parity (20 cases) PASS.
+- Browser e2e: create the 4 identities + 1.22, duplicate blocked, list columns, edit 1.22 → 1.21
+  (version 2, diff, v1 positions kept), 390 px dialog; prototype e2e (all types, trailer/semi,
+  feedback measurements) PASS; Tire list/detail, Vehicle list/detail load without errors.
+- Typecheck PASS, build PASS, oxlint 28 warnings all pre-existing (none in changed files), Pint on
+  new files PASS, seed check ×2 PASS.
+- NOT RUN: Mongo analytics/intelligence tests (MongoDB unavailable); Docker build (egress).
