@@ -36,7 +36,7 @@ export interface BodyProfile {
   wheelbase: number;
   /** fixed space above the body for parts sticking out in front (forklift forks) */
   frontExtension?: number;
-  /** space above the body as a share of the body length (trailer tow bar: 20%, owner range 15–25%) */
+  /** space above the body as a share of the body length (trailer tow bar: 15%, kept short so it does not dominate the box) */
   frontExtensionRatio?: number;
 }
 
@@ -48,7 +48,7 @@ export const BODY_PROFILES: Record<BodyStyle, BodyProfile> = {
   FORKLIFT: { widthInTires: 6, frontOverhangInTires: 1, rearOverhangInTires: 1.9, wheelbase: 96, frontExtension: 72 },
   HEAVY_EQUIPMENT: { widthInTires: 8, frontOverhangInTires: 1.7, rearOverhangInTires: 2.2, wheelbase: 190 },
   TRUCK: { widthInTires: 7.25, frontOverhangInTires: 1.5, rearOverhangInTires: 1.9, wheelbase: 220 },
-  TRAILER: { widthInTires: 7.25, frontOverhangInTires: 1.3, rearOverhangInTires: 1.6, wheelbase: 230, frontExtensionRatio: 0.2 },
+  TRAILER: { widthInTires: 7.25, frontOverhangInTires: 1.3, rearOverhangInTires: 1.6, wheelbase: 230, frontExtensionRatio: 0.15 },
   // Largest separation: the gap between the tractor (front group) and the trailer (rear group).
   SEMI_TRAILER: { widthInTires: 7.25, frontOverhangInTires: 1.2, rearOverhangInTires: 1.6, wheelbase: 300 },
 };

@@ -226,7 +226,7 @@ function CargoBox({ left, right, top, bottom }: { left: number; right: number; t
 
 /**
  * Trailer: framed cargo box + centered triangular tow bar on the front pointing forward. The tow
- * bar length is the engine's front extension (20% of the box length — owner range 15–25%).
+ * bar length is the engine's front extension (15% of the box length, width unchanged).
  */
 export function TrailerBody({ g }: BodyProps) {
   const { top, bottom, left, right } = g.body;
@@ -254,7 +254,7 @@ export function SemiTrailerBody({ g }: BodyProps) {
   const cx = (left + right) / 2;
   const firstFront = g.frontYs.length ? g.frontYs[0] : top + g.frontOverhang;
   const cabBottom = firstFront + 12;
-  const trailerTop = cabBottom + 22;
+  const trailerTop = cabBottom + 32; // visible coupling gap between tractor and trailer
   const lastFront = frontEnd(g);
   const coupling = Math.max(g.frontYs.length >= 2 ? lastFront - 2 : lastFront + 24, trailerTop + 12);
   const chassisEnd = Math.max(coupling + 30, lastFront + 30);
