@@ -12,7 +12,6 @@ use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireRotation;
 use App\Domain\Tire\Models\TireSale;
 use App\Domain\Tire\Models\TireScoringResult;
-use App\Domain\Tire\Models\WheelConfiguration;
 use App\Domain\Vehicle\Models\Vehicle;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -27,7 +26,10 @@ use Illuminate\Support\Facades\DB;
  */
 class TireService
 {
-    public function __construct(private readonly TireDispositionEligibilityService $eligibility) {}
+    public function __construct(
+        private readonly TireDispositionEligibilityService $eligibility,
+        private readonly WheelPositionCatalog $wheelPositions,
+    ) {}
 
     /**
      * G-23: installedAt/installedAtSource/baseline* parameters exist so a tire
@@ -64,9 +66,9 @@ class TireService
             throw new TireException('Installation date cannot predate this tire\'s recorded purchase date.');
         }
 
-        $this->assertValidWheelPosition($tire->tenant_id, $vehicle->vehicle_category_id, $wheelPosition);
-
         return DB::transaction(function () use ($tire, $vehicle, $wheelPosition, $odometer, $workOrderId, $userId, $installedAt, $installedAtSource, $baselineTreadDepthMm, $baselineCondition) {
+            $this->assertValidWheelPosition($tire->tenant_id, $vehicle->vehicle_category_id, $wheelPosition);
+
             try {
                 $installation = TireInstallation::query()->create([
                     'tenant_id' => $tire->tenant_id,
@@ -121,9 +123,10 @@ class TireService
             return;
         }
 
-        $configured = WheelConfiguration::query()
-            ->where('vehicle_category_id', $vehicleCategoryId)
-            ->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'));
+        // Shared lock: a concurrent wheel configuration save cannot retire this position between
+        // this check and the caller's commit. Only RETIRED-free, currently applicable positions count.
+        $this->wheelPositions->lock($tenantId, $vehicleCategoryId, exclusive: false);
+        $configured = $this->wheelPositions->currentPositions($tenantId, $vehicleCategoryId);
 
         if (! $configured->exists()) {
             return;
