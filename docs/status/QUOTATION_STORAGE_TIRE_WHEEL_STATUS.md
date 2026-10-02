@@ -478,8 +478,8 @@ Warehouse inventory stays a separate domain: initial tire registration never tou
   create tire via TireRegistrationService → TireService::install (INSTALLED, baseline tread
   inspection) → `tire_installations.installation_source = INITIAL_REGISTRATION` (new column,
   default STANDARD). Date + HH:mm are read in the tenant timezone. KM / tread: decimal text, ≤ 2
-  decimals, ≥ 0 (never truncated); both optional (last-known values may be unknown); date, time,
-  product and serial required.
+  decimals, ≥ 0 (never truncated). Required: date, time, KM (an estimate is acceptable), product,
+  serial; tread depth optional (owner decision).
 - No inventory effect: no warehouse_stocks, stock_movements, stock_reservations, stock_transfers or
   goods receipt writes (asserted in tests and e2e).
 - TireService install/rotate validate positions against the mapped version when the vehicle is

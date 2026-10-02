@@ -73,13 +73,14 @@ class VehicleWheelConfigurationController extends Controller
             'position_code' => ['required', 'string', 'max:20'],
             'installed_date' => ['required', 'date_format:Y-m-d'],
             'installed_time' => ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'],
-            // Decimal text (no float rounding): up to 2 decimals, never negative.
-            'installation_km' => ['nullable', 'regex:/^\d{1,10}(\.\d{1,2})?$/'],
+            // Required (an estimate is acceptable); decimal text, up to 2 decimals, never negative.
+            'installation_km' => ['required', 'regex:/^\d{1,10}(\.\d{1,2})?$/'],
             'product_id' => ['required', 'uuid'],
             'serial_number' => ['required', 'string', 'max:100'],
             'tread_depth_mm' => ['nullable', 'regex:/^\d{1,3}(\.\d{1,2})?$/'],
         ], [
             'installed_time.regex' => 'Use the 24-hour format HH:mm, for example 07:30 or 14:05.',
+            'installation_km.required' => 'Enter the last known installation KM (an estimate is fine).',
             'installation_km.regex' => 'Enter a number of kilometres (0 or more, up to 2 decimals), for example 12500.75.',
             'tread_depth_mm.regex' => 'Enter a tread depth in mm (0 or more, up to 2 decimals), for example 8.5.',
         ]);

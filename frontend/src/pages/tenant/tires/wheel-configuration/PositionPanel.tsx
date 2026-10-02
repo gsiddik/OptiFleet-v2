@@ -54,7 +54,7 @@ function TireRegistrationForm({ vehicleId, positionCode, onSaved }: { vehicleId:
   // Client checks are for quick feedback only; the backend validates everything again.
   const clientErrors: Record<string, string[]> = {};
   if (time && !TIME_PATTERN.test(time)) clientErrors.installed_time = ['Use HH:mm (24-hour), e.g. 07:30.'];
-  const ready = date !== '' && TIME_PATTERN.test(time) && product !== null && serial.trim() !== '';
+  const ready = date !== '' && TIME_PATTERN.test(time) && km.trim() !== '' && product !== null && serial.trim() !== '';
 
   async function submit() {
     setSaving(true);
@@ -65,7 +65,7 @@ function TireRegistrationForm({ vehicleId, positionCode, onSaved }: { vehicleId:
         position_code: positionCode,
         installed_date: date,
         installed_time: time,
-        installation_km: km || null,
+        installation_km: km,
         product_id: product?.value,
         serial_number: serial,
         tread_depth_mm: tread || null,
@@ -106,8 +106,8 @@ function TireRegistrationForm({ vehicleId, positionCode, onSaved }: { vehicleId:
           />
         </FormField>
       </div>
-      <FormField label="Last Known Installation KM" errors={fieldErrors('installation_km')}>
-        <NumericInput aria-label="Last Known Installation KM" placeholder="e.g. 12500.75" value={km} onChange={(e) => setKm(e.target.value)} style={inputStyle} />
+      <FormField label="Last Known Installation KM" required errors={fieldErrors('installation_km')}>
+        <NumericInput aria-label="Last Known Installation KM" placeholder="e.g. 12500.75 (estimate is fine)" value={km} onChange={(e) => setKm(e.target.value)} style={inputStyle} />
       </FormField>
       <FormField label="Tire" required errors={fieldErrors('product_id')}>
         <SearchableSelect

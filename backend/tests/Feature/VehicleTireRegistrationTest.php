@@ -161,8 +161,12 @@ class VehicleTireRegistrationTest extends TestCase
         $this->register($headers, $vehicle, ['product_id' => $product->id, 'installed_date' => now()->addDays(2)->format('Y-m-d')])->assertStatus(422)->assertJsonValidationErrors('installed_date');
         $this->assertSame(0, Tire::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->count());
 
-        // KM and tread depth are optional (last known values may be unavailable).
-        $this->register($headers, $vehicle, ['product_id' => $product->id, 'installation_km' => null, 'tread_depth_mm' => null])->assertStatus(201);
+        // KM is required (an estimate is acceptable); tread depth is optional.
+        $this->register($headers, $vehicle, ['product_id' => $product->id, 'installation_km' => null])->assertStatus(422)->assertJsonValidationErrors('installation_km');
+        $this->register($headers, $vehicle, ['product_id' => $product->id, 'installation_km' => '   '])->assertStatus(422)->assertJsonValidationErrors('installation_km');
+        $this->assertSame(0, Tire::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->count());
+        $this->register($headers, $vehicle, ['product_id' => $product->id, 'installation_km' => '0', 'tread_depth_mm' => null])->assertStatus(201);
+        $this->assertSame(0, TireInspection::query()->withoutGlobalScopes()->count());
     }
 
     public function test_the_generic_install_uses_the_mapped_configuration_positions(): void

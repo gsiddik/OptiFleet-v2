@@ -36,7 +36,7 @@ class VehicleTireRegistrationService
     ) {}
 
     /**
-     * @param  array{position_code: string, installed_date: string, installed_time: string, installation_km?: ?string, product_id: string, serial_number: string, tread_depth_mm?: ?string}  $data
+     * @param  array{position_code: string, installed_date: string, installed_time: string, installation_km: string, product_id: string, serial_number: string, tread_depth_mm?: ?string}  $data
      *
      * @throws ValidationException|TireException
      */
@@ -83,7 +83,7 @@ class VehicleTireRegistrationService
             // Create Installation → Mark Installed (TireService records the baseline tread depth).
             $installation = $this->tires->install(
                 $tire, $locked, $data['position_code'],
-                isset($data['installation_km']) && $data['installation_km'] !== '' ? (float) $data['installation_km'] : null,
+                (float) $data['installation_km'],
                 null, $userId, $installedAt, 'KNOWN',
                 isset($data['tread_depth_mm']) && $data['tread_depth_mm'] !== '' ? (float) $data['tread_depth_mm'] : null,
             );
