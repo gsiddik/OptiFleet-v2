@@ -184,12 +184,21 @@ class TireInventoryService
                     AND NOT EXISTS (SELECT 1 FROM tire_installations h WHERE h.tire_id = tires.id) THEN 'NEW'
                 ELSE 'USED' END AS category");
 
+        return $this->scopeToUser($query, $tenantId, $user);
+    }
+
+    /**
+     * The tire index's data-scope rule on a query over `tires`: with a restricted branch or
+     * warehouse scope, only tires on a vehicle of an allowed branch or in an allowed warehouse.
+     */
+    public function scopeToUser(Builder $query, string $tenantId, User $user, string $tires = 'tires'): Builder
+    {
         $branches = $this->scope->allowedBranchIds($user, $tenantId);
         $warehouses = $this->scope->allowedWarehouseIds($user, $tenantId);
         if ($branches !== null || $warehouses !== null) {
             $query->where(fn ($q) => $q
-                ->whereIn('tires.current_vehicle_id', DB::table('vehicles')->whereIn('branch_id', $branches ?? [])->select('id'))
-                ->orWhereIn('tires.current_warehouse_id', $warehouses ?? []));
+                ->whereIn("{$tires}.current_vehicle_id", DB::table('vehicles')->whereIn('branch_id', $branches ?? [])->select('id'))
+                ->orWhereIn("{$tires}.current_warehouse_id", $warehouses ?? []));
         }
 
         return $query;

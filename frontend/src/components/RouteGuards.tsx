@@ -19,12 +19,14 @@ export function RequireTenant({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-export function RequirePermission({ permission, children }: { permission: string; children: ReactNode }) {
+/** A list means any one of the permissions (pages whose tabs each need their own permission). */
+export function RequirePermission({ permission, children }: { permission: string | string[]; children: ReactNode }) {
   const { hasPermission } = useAuth();
-  if (!hasPermission(permission)) {
+  const allowed = Array.isArray(permission) ? permission.some(hasPermission) : hasPermission(permission);
+  if (!allowed) {
     return (
       <div style={{ padding: 32, color: '#b91c1c' }}>
-        You do not have permission ({permission}) to view this page.
+        You do not have permission ({Array.isArray(permission) ? permission.join(' / ') : permission}) to view this page.
       </div>
     );
   }

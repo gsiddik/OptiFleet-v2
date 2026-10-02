@@ -2049,6 +2049,27 @@ export interface TireInventoryRow {
   current_tread_depth_mm?: string | null;
 }
 
+export type TireActivityType = 'INSTALLATION' | 'ROTATION' | 'INSPECTION' | 'REMOVAL' | 'RETREAD' | 'REPAIR' | 'SCRAP';
+
+/** One Tire History event (GET /app/tire-activity). */
+export interface TireActivityItem {
+  type: TireActivityType;
+  id: string;
+  tire_id: string;
+  occurred_at: string;
+  vehicle_id: string | null;
+  position: string | null;
+  odometer: string | null;
+  status: string | null;
+  detail: string | null;
+  serial_number: string;
+  current_status: TireItem['current_status'];
+  product_id: string;
+  product_name: string | null;
+  product_brand: string | null;
+  registration_number: string | null;
+}
+
 export interface TireItem {
   id: string;
   product_id: string;

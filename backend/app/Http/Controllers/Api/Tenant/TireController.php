@@ -41,10 +41,12 @@ class TireController extends Controller
             });
         }
 
-        foreach (['current_status', 'current_vehicle_id'] as $filter) {
-            if ($value = $request->string($filter)->value()) {
-                $query->where($filter, $value);
-            }
+        // current_status: one status, or several comma-separated (e.g. IN_STOCK,RESERVED).
+        if ($statuses = array_filter(array_map('trim', explode(',', $request->string('current_status')->value())))) {
+            $query->whereIn('current_status', $statuses);
+        }
+        if ($vehicleId = $request->string('current_vehicle_id')->value()) {
+            $query->where('current_vehicle_id', $vehicleId);
         }
         if ($search = $request->string('search')->trim()->value()) {
             $query->where('serial_number', 'ilike', "%{$search}%");

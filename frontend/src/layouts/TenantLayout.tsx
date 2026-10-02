@@ -4,7 +4,7 @@ import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { NavDropdown } from '../components/NavDropdown';
-import { NAV_GROUPS } from './tenantNav';
+import { NAV_GROUPS, navItemAllowed } from './tenantNav';
 import { TenantSidebar } from './TenantSidebar';
 
 const MINIMIZED_KEY = 'optifleet_sidebar_minimized';
@@ -78,7 +78,7 @@ export function TenantLayout() {
       NAV_GROUPS.map((group) => ({
         ...group,
         items: group.items
-          .filter((item) => !item.permission || hasPermission(item.permission))
+          .filter((item) => navItemAllowed(item, hasPermission))
           .filter((item) => !item.module || activeModules === null || activeModules.includes(item.module)),
       })).filter((group) => group.items.length > 0),
     [hasPermission, activeModules],

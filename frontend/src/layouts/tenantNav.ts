@@ -5,8 +5,15 @@
 export interface NavItem {
   to: string;
   label: string;
-  permission: string | null;
+  /** Required permission; a list means any one of them (e.g. a page whose tabs each need their own). */
+  permission: string | string[] | null;
   module: string | null;
+}
+
+/** Whether the user holds the item's permission (any of a list). The backend enforces each action. */
+export function navItemAllowed(item: NavItem, hasPermission: (permission: string) => boolean): boolean {
+  if (!item.permission) return true;
+  return Array.isArray(item.permission) ? item.permission.some(hasPermission) : hasPermission(item.permission);
 }
 export interface NavGroup {
   label: string | null;
@@ -14,6 +21,12 @@ export interface NavGroup {
   icon: string;
   items: NavItem[];
 }
+
+/** Tire Operations tabs: Installation, Rotation, Inspection. */
+export const TIRE_OPERATION_PERMISSIONS = ['tire.install', 'tire.rotate', 'tire.inspect'];
+/** Used Tire Management tabs: Retread (any retread step) and Scrap. */
+export const RETREAD_PERMISSIONS = ['tire_retread.send', 'tire_retread.receive', 'tire_retread.inspect', 'tire_retread.approve'];
+export const USED_TIRE_PERMISSIONS = [...RETREAD_PERMISSIONS, 'tire.scrap'];
 
 export const NAV_GROUPS: NavGroup[] = [
   { label: null, icon: 'dashboard', items: [{ to: '/app/dashboard', label: 'Dashboard', permission: null, module: null }] },
@@ -103,14 +116,10 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/app/rims', label: 'Rim', permission: 'rim.view', module: 'TIRE' },
       { to: '/app/tires', label: 'Tire List', permission: 'tire.view', module: 'TIRE' },
-      { to: '/app/tires', label: 'Inventory', permission: 'tire.view', module: 'TIRE' },
       { to: '/app/wheel-configurations', label: 'Wheel Configuration', permission: 'tire.view', module: 'TIRE' },
-      { to: '/app/tires', label: 'Installation', permission: 'tire.install', module: 'TIRE' },
-      { to: '/app/tires', label: 'Rotation', permission: 'tire.rotate', module: 'TIRE' },
-      { to: '/app/tires', label: 'Inspection', permission: 'tire.inspect', module: 'TIRE' },
-      { to: '/app/tires', label: 'Retread', permission: 'tire.manage', module: 'TIRE' },
-      { to: '/app/tires', label: 'Scrap', permission: 'tire.scrap', module: 'TIRE' },
-      { to: '/app/tires', label: 'History', permission: 'tire.view', module: 'TIRE' },
+      { to: '/app/tire-operations', label: 'Tire Operations', permission: TIRE_OPERATION_PERMISSIONS, module: 'TIRE' },
+      { to: '/app/used-tires', label: 'Used Tire Management', permission: USED_TIRE_PERMISSIONS, module: 'TIRE' },
+      { to: '/app/tire-history', label: 'History', permission: 'tire.view', module: 'TIRE' },
     ],
   },
   {
