@@ -1,33 +1,79 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { apiClient } from '../../../../api/client';
 import { BackButton } from '../../../../components/BackButton';
 import { FormField, inputStyle } from '../../../../components/FormField';
 import { NumericInput } from '../../../../components/NumericInput';
 import { TRUCK_CONFIGURATION_TYPES, VEHICLE_TYPES, bodyStyleFor, configCodePrefix, requiresTruckConfigurationType, vehicleTypeOption, type BodyStyle } from './vehicleTypes';
 import { LIMITS, configCode, parseCount, saveErrors, totalAxles, totalWheels, type AxleGroups, type Range } from './wheelLayout';
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
+import { SaveConfigurationDialog, type ConfigurationVersion, type SaveRequest } from './SaveConfigurationDialog';
+import type { VehicleCategory } from '../../../../types';
 
 /**
- * PROTOTYPE — Add New Wheels Configuration (vehicle bodies awaiting owner review); nothing is
- * saved yet. Form state
- * lives here, every number shown is derived from it on each render (no "Generate" step) through
- * wheelLayout (calculations) and WheelConfigurationPreview (drawing).
+ * Add New Wheels Configuration. Form state lives here; every number shown is derived from it on
+ * each render (no "Generate" step) through wheelLayout (calculations) and WheelConfigurationPreview
+ * (drawing). Saving creates a new configuration version for the selected vehicle category on the
+ * server (diff + installed-tire check first — see SaveConfigurationDialog).
  */
 export function AddWheelConfigurationPage() {
   const [vehicleType, setVehicleType] = useState('');
   const [truckType, setTruckType] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [categories, setCategories] = useState<VehicleCategory[] | null>(null);
+  const [active, setActive] = useState<{ categoryId: string; version: ConfigurationVersion | null } | null>(null);
+  const activeVersion = active?.categoryId === categoryId ? active.version : null;
+  const [saved, setSaved] = useState<ConfigurationVersion | null>(null);
   const option = vehicleTypeOption(vehicleType);
   const needsTruckType = requiresTruckConfigurationType(vehicleType);
   const ready = option && (!needsTruckType || truckType !== '');
 
+  useEffect(() => {
+    apiClient
+      .get('/app/vehicle-categories', { params: { per_page: 100 } })
+      .then((res) => setCategories(res.data.data))
+      .catch(() => setCategories([]));
+  }, []);
+
+  useEffect(() => {
+    if (!categoryId) return;
+    let cancelled = false;
+    apiClient
+      .get('/app/wheel-configuration-versions', { params: { vehicle_category_id: categoryId, active_only: 1 } })
+      .then((res) => !cancelled && setActive({ categoryId, version: res.data.data[0] ?? null }))
+      .catch(() => !cancelled && setActive({ categoryId, version: null }));
+    return () => {
+      cancelled = true;
+    };
+  }, [categoryId, saved]);
+
   return (
     <div>
       <BackButton fallbackTo="/app/wheel-configurations" label="← Back to Wheel Configuration" />
-      <h1 style={{ fontSize: 22, margin: '0 0 6px' }}>Add New Wheels Configuration</h1>
-      <div style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px', marginBottom: 14, display: 'inline-block' }}>
-        Prototype for review — configurations are not saved yet.
-      </div>
+      <h1 style={{ fontSize: 22, margin: '0 0 14px' }}>Add New Wheels Configuration</h1>
+
+      {saved && (
+        <div data-save-success role="status" style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '8px 12px', marginBottom: 14 }}>
+          Saved: version {saved.version_number} ({saved.config_code}) is now the active configuration. <Link to="/app/wheel-configurations">View positions</Link>
+        </div>
+      )}
 
       <div className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
+        <FormField label="Vehicle Category" required>
+          <select aria-label="Vehicle Category" value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle} disabled={categories === null}>
+            <option value="">{categories === null ? 'Loading…' : 'Select vehicle category…'}</option>
+            {(categories ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          {categoryId && (
+            <div data-active-version style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
+              {activeVersion ? `Current configuration: ${activeVersion.config_code} (version ${activeVersion.version_number})` : 'No saved configuration yet.'}
+            </div>
+          )}
+        </FormField>
         <FormField label="Vehicle Type" required>
           <select
             aria-label="Vehicle Type"
@@ -70,6 +116,8 @@ export function AddWheelConfigurationPage() {
           key={`${option.value}:${truckType}`}
           bodyStyle={bodyStyleFor(option.value, needsTruckType ? truckType : null)}
           codePrefix={configCodePrefix(option.value, needsTruckType ? truckType : null)}
+          target={categoryId ? { vehicle_category_id: categoryId, vehicle_type: option.value, ...(needsTruckType ? { truck_configuration_type: truckType } : {}) } : null}
+          onSaved={setSaved}
         />
       )}
     </div>
@@ -81,7 +129,18 @@ export function AddWheelConfigurationPage() {
  * validation, calculations and code rules). Field values are kept as typed (strings) so partial or
  * invalid input can be shown and explained.
  */
-function AxleConfigurationForm({ bodyStyle, codePrefix = '' }: { bodyStyle: BodyStyle; codePrefix?: string }) {
+function AxleConfigurationForm({
+  bodyStyle,
+  codePrefix = '',
+  target,
+  onSaved,
+}: {
+  bodyStyle: BodyStyle;
+  codePrefix?: string;
+  /** where and as what the configuration is saved; null until a vehicle category is selected */
+  target: Pick<SaveRequest, 'vehicle_category_id' | 'vehicle_type' | 'truck_configuration_type'> | null;
+  onSaved: (version: ConfigurationVersion) => void;
+}) {
   const [frontAxles, setFrontAxles] = useState('');
   const [rearAxles, setRearAxles] = useState('');
   // One slot per possible axle; values survive when the axle count goes down and up again.
@@ -104,6 +163,11 @@ function AxleConfigurationForm({ bodyStyle, codePrefix = '' }: { bodyStyle: Body
   const groupErrors = groups ? saveErrors(groups) : [];
   const code = groups ? configCode(groups, codePrefix) : null;
   const saveReady = groups !== null && spare.value !== null && groupErrors.length === 0;
+  const [saveRequest, setSaveRequest] = useState<SaveRequest | null>(null);
+  const openSave = () => {
+    if (!saveReady || !target || !groups || code === null || spare.value === null) return;
+    setSaveRequest({ ...target, front_axles: groups.front, rear_axles: groups.rear, spare_tires: spare.value, config_code: code });
+  };
 
   const setRow = (setter: typeof setFrontWheels, index: number, value: string) => setter((rows) => rows.map((r, i) => (i === index ? value : r)));
   const errorOf = (field: string, parsed: { error: string | null }, raw: string) => (parsed.error && (touched[field] || raw.trim() !== '') ? [parsed.error] : undefined);
@@ -159,11 +223,22 @@ function AxleConfigurationForm({ bodyStyle, codePrefix = '' }: { bodyStyle: Body
               ? 'Valid configuration.'
               : 'The Config Code appears when every field is valid and there is at least one front and one rear axle.'}
           </p>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
-            <button className="btn-primary" disabled title="Saving will be added after the prototype is approved">
+          <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 14 }}>
+            {saveReady && !target && <span style={{ fontSize: 12, color: '#6b7280' }}>Select a vehicle category to save.</span>}
+            <button className="btn-primary" disabled={!saveReady || !target} onClick={openSave}>
               Save Configuration
             </button>
           </div>
+          {saveRequest && (
+            <SaveConfigurationDialog
+              request={saveRequest}
+              onClose={() => setSaveRequest(null)}
+              onSaved={(version) => {
+                setSaveRequest(null);
+                onSaved(version);
+              }}
+            />
+          )}
         </div>
       </div>
 
