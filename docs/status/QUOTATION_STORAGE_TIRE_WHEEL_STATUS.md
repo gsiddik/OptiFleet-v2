@@ -243,3 +243,27 @@ Semi Trailer `-`) and only decorates the shared code. Non Trailer body: cab (rou
 windshield, mirrors) over the steer axle + separate ribbed cargo box. Browser: 22.222 / +22.222 /
 -22.222 and +12.221 / -12.221 (5 axles, 17 wheels with 1 spare), 1.22, axle lines end inside
 outer tires for every case.
+
+### C4 — Trailer / Semi Trailer prototypes (PROTOTYPE — awaiting review)
+- Trailer (`+` code): box/cargo trailer (front bulkhead, roof ribs, rear doors) with an A-frame
+  tow connector triangle attached to the front and pointing forward, ending in a tow eye (drawn
+  in the space reserved above the body). Front group = trailer front axles, rear group = rear.
+- Semi Trailer (`-` code): cab-over tractor (same cab as Truck) over the steer axle, visible
+  chassis behind it, trailer front resting on the tractor's fifth wheel — kingpin marker over the
+  last tractor axle, trailer front always ahead of it. Front group = tractor axles (steer → drive
+  spacing 64 vs 50 inside groups), rear group = trailer axles, wheelbase 300.
+- Layout engine: optional per-profile `frontAxlePitch`; the body renderer map is now complete for
+  all 8 bodies (TypeScript requires a body per style).
+
+Regression (browser, rendered SVG measured): every type × 22.222 / 12.221 (+ / − for trucks) /
+1.2 → wheels per axle exact, all axle lines end inside their outermost tires, nothing outside the
+drawing; 8 types × 1440 / 820 / 390 px → no page overflow, preview inside its card, no overlap
+with the form, 4 spares visible. Frontend rules = shared cases; backend wheel + tire suites 101
+passed; build PASS, lint = baseline.
+
+### Awaiting owner review (no persistence / migration until approved)
+Body proportions and silhouettes (Bus, Van, Forklift, Heavy Equipment, Truck, Trailer, Semi
+Trailer), Trailer tow triangle, Semi Trailer tractor/coupling layout, axle spacing and overall
+usability. Then: Save (validate → generate → replace the category's position list with
+versioning / handling of positions in use), Config Code uniqueness (vehicle type + truck
+configuration type + code; `22.222`, `+22.222`, `-22.222` distinct).

@@ -26,6 +26,8 @@ export interface BodyProfile {
   /** body length behind the last rear axle */
   tail: number;
   axlePitch: number;
+  /** spacing inside the front group when it differs (semi tractor: steer → drive axles) */
+  frontAxlePitch?: number;
   /** distance between the last front axle and the first rear axle */
   wheelbase: number;
   /** space above the body for parts that stick out in front (forks, tow bar) */
@@ -41,7 +43,7 @@ export const BODY_PROFILES: Record<BodyStyle, BodyProfile> = {
   HEAVY_EQUIPMENT: { bodyWidth: 128, nose: 58, tail: 74, axlePitch: 52, wheelbase: 180, frontExtension: 0 },
   TRUCK: { bodyWidth: 116, nose: 50, tail: 64, axlePitch: 50, wheelbase: 230, frontExtension: 0 },
   TRAILER: { bodyWidth: 116, nose: 46, tail: 56, axlePitch: 50, wheelbase: 250, frontExtension: 58 },
-  SEMI_TRAILER: { bodyWidth: 116, nose: 50, tail: 56, axlePitch: 50, wheelbase: 300, frontExtension: 0 },
+  SEMI_TRAILER: { bodyWidth: 116, nose: 44, tail: 56, axlePitch: 50, frontAxlePitch: 64, wheelbase: 300, frontExtension: 0 },
 };
 
 export interface PreviewInput {
@@ -96,8 +98,9 @@ export function buildPreviewGeometry(input: PreviewInput, style: BodyStyle = 'PA
   // Axle centre lines, front to back.
   const bodyTop = MARGIN.top + profile.frontExtension;
   const firstAxle = bodyTop + profile.nose;
-  const frontYs = input.front.map((_, i) => firstAxle + i * profile.axlePitch);
-  const frontEnd = frontYs.length ? frontYs[frontYs.length - 1] : firstAxle - profile.axlePitch;
+  const frontPitch = profile.frontAxlePitch ?? profile.axlePitch;
+  const frontYs = input.front.map((_, i) => firstAxle + i * frontPitch);
+  const frontEnd = frontYs.length ? frontYs[frontYs.length - 1] : firstAxle - frontPitch;
   const rearStart = frontYs.length ? frontEnd + profile.wheelbase : firstAxle;
   const rearYs = input.rear.map((_, i) => rearStart + i * profile.axlePitch);
   const lastY = rearYs.length ? rearYs[rearYs.length - 1] : frontEnd;

@@ -204,16 +204,86 @@ function TruckCab({ left, right, top, bottom }: { left: number; right: number; t
   );
 }
 
-const BODY_RENDERERS: Partial<Record<BodyStyle, (props: BodyProps) => ReactNode>> = {
+/** Cargo box with roof ribs, a front bulkhead and rear doors (Trailer and Semi Trailer). */
+function CargoBox({ left, right, top, bottom }: { left: number; right: number; top: number; bottom: number }) {
+  const w = right - left;
+  return (
+    <g>
+      <rect x={left} y={top} width={w} height={bottom - top} rx={3} fill={BODY_COLORS.body} stroke={BODY_COLORS.bodyStroke} strokeWidth={1.5} />
+      <rect x={left + 2} y={top + 2} width={w - 4} height={7} fill={BODY_COLORS.detail} opacity={0.7} />
+      {Array.from({ length: Math.max(0, Math.floor((bottom - top - 40) / 28)) }, (_, i) => (
+        <line key={i} x1={left + 5} x2={right - 5} y1={top + 28 + i * 28} y2={top + 28 + i * 28} stroke={BODY_COLORS.detail} opacity={0.5} />
+      ))}
+      <line x1={(left + right) / 2} x2={(left + right) / 2} y1={bottom - 12} y2={bottom} stroke={BODY_COLORS.bodyStroke} />
+      <rect x={left + 8} y={bottom - 4} width={8} height={4} fill={BODY_COLORS.dark} />
+      <rect x={right - 16} y={bottom - 4} width={8} height={4} fill={BODY_COLORS.dark} />
+    </g>
+  );
+}
+
+/** Trailer: cargo box + A-frame tow connector (triangle) on the front, pointing forward. */
+export function TrailerBody({ g }: BodyProps) {
+  const { top, bottom, left, right } = g.body;
+  const cx = (left + right) / 2;
+  const apex = top - g.profile.frontExtension + 10;
+  const half = Math.min(36, (right - left) / 2 - 10);
+  return (
+    <g>
+      {/* A-frame drawbar: open triangle from the front corners to the tow eye */}
+      <path d={`M ${cx - half} ${top + 1} L ${cx} ${apex + 8} L ${cx + half} ${top + 1}`} fill="none" stroke={BODY_COLORS.dark} strokeWidth={5} strokeLinejoin="round" />
+      <path d={`M ${cx - half + 8} ${top + 1} L ${cx} ${apex + 22} L ${cx + half - 8} ${top + 1} Z`} fill={BODY_COLORS.detail} opacity={0.35} />
+      <circle cx={cx} cy={apex + 4} r={6} fill="none" stroke={BODY_COLORS.dark} strokeWidth={3} />
+      <CargoBox left={left} right={right} top={top} bottom={bottom} />
+    </g>
+  );
+}
+
+/**
+ * Semi Trailer: tractor (cab + chassis) carrying the trailer's front on its fifth wheel. The front
+ * axle group belongs to the tractor, the rear group to the trailer; the kingpin coupling sits over
+ * the tractor's last axle.
+ */
+export function SemiTrailerBody({ g }: BodyProps) {
+  const { top, bottom, left, right } = g.body;
+  const w = right - left;
+  const cx = (left + right) / 2;
+  // Cab-over tractor: short cab over the steer axle, chassis behind it.
+  const cabBottom = top + g.profile.nose + 22;
+  const lastFront = frontEnd(g);
+  // The trailer's kingpin rests on the fifth wheel just ahead of the last tractor axle; the
+  // trailer front starts behind the cab (visible gap) and always ahead of the kingpin.
+  const trailerTop = cabBottom + 18;
+  const coupling = Math.max(g.frontYs.length >= 2 ? lastFront - 6 : lastFront + 26, trailerTop + 16);
+  const chassisEnd = Math.max(coupling + 36, lastFront + 40);
+  return (
+    <g>
+      {/* tractor chassis rails + fifth-wheel plate (visible between cab and trailer) */}
+      <rect x={cx - w * 0.23} y={cabBottom - 4} width={w * 0.46} height={chassisEnd - cabBottom + 4} rx={3} fill={BODY_COLORS.dark} opacity={0.75} />
+      <circle cx={cx} cy={coupling} r={16} fill={BODY_COLORS.bodyStroke} />
+      <TruckCab left={left} right={right} top={top} bottom={cabBottom} />
+      <CargoBox left={left} right={right} top={trailerTop} bottom={bottom} />
+      {/* kingpin coupling marker: where the trailer rests on the tractor's fifth wheel */}
+      <circle cx={cx} cy={coupling} r={11} fill="none" stroke={BODY_COLORS.accentStroke} strokeWidth={2} strokeDasharray="4 3" />
+      <circle cx={cx} cy={coupling} r={3} fill={BODY_COLORS.accentStroke} />
+      <text x={cx + 16} y={coupling + 3} fontSize={8} fill={BODY_COLORS.accentStroke}>
+        kingpin
+      </text>
+    </g>
+  );
+}
+
+const BODY_RENDERERS: Record<BodyStyle, (props: BodyProps) => ReactNode> = {
   PASSENGER_CAR: PassengerCarBody,
   BUS: BusBody,
   VAN: VanBody,
   FORKLIFT: ForkliftBody,
   HEAVY_EQUIPMENT: HeavyEquipmentBody,
   TRUCK: TruckBody,
+  TRAILER: TrailerBody,
+  SEMI_TRAILER: SemiTrailerBody,
 };
 
 export function VehicleBody({ g }: BodyProps) {
-  const Renderer = BODY_RENDERERS[g.style] ?? PassengerCarBody;
+  const Renderer = BODY_RENDERERS[g.style];
   return <Renderer g={g} />;
 }
