@@ -61,8 +61,8 @@ class PurchaseOrderService
         try {
             return DB::transaction(function () use ($quotation, $deliveryWarehouse, $attributes, $userId, $orderDate) {
                 $locked = VendorQuotation::query()->lockForUpdate()->findOrFail($quotation->id);
-                if ($locked->status !== 'SELECTED') {
-                    throw new ProcurementException('Only a selected quotation can be converted to a Purchase Order.');
+                if ($locked->status !== VendorQuotation::PURCHASE_ORDER_SOURCE_STATUS) {
+                    throw new ProcurementException("This quotation is {$locked->status}: only a selected quotation can be converted to a Purchase Order.");
                 }
                 if (PurchaseOrder::query()->where('vendor_quotation_id', $locked->id)->exists()) {
                     throw new ProcurementException('This quotation has already been converted to a Purchase Order.');

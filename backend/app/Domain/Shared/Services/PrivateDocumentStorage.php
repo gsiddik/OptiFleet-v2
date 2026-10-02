@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use League\Flysystem\FilesystemException;
 use Throwable;
 
 /**
@@ -78,10 +79,7 @@ class PrivateDocumentStorage
     public function store(UploadedFile $file, string $directory): array
     {
         $extension = $file->guessExtension() ?: 'bin';
-        $path = $file->storeAs($directory, Str::uuid().'.'.$extension, ['disk' => self::DISK]);
-        if ($path === false) {
-            throw ValidationException::withMessages(['file' => ['The file could not be stored. Please try again.']]);
-        }
+        $path = self::putFileAs($file, $directory, Str::uuid().'.'.$extension);
 
         return [
             'disk' => self::DISK,
@@ -90,6 +88,29 @@ class PrivateDocumentStorage
             'mime_type' => (string) $file->getMimeType(),
             'size' => (int) $file->getSize(),
         ];
+    }
+
+    /**
+     * The one write path for private uploads: stores the file on the private disk or throws
+     * {@see DocumentStorageException}. A storage failure (missing permission, unwritable mount, …)
+     * is reported to the log with its details and surfaces to the user as a generic 503 — never as
+     * a raw filesystem error containing the server path, and never as a silently "stored" record
+     * pointing at no file (`storeAs` returns false for some failures instead of throwing).
+     */
+    public static function putFileAs(UploadedFile $file, string $directory, string $filename): string
+    {
+        try {
+            $path = $file->storeAs($directory, $filename, ['disk' => self::DISK]);
+        } catch (FilesystemException $e) {
+            report($e);
+            throw new DocumentStorageException(DocumentStorageException::USER_MESSAGE, 0, $e);
+        }
+        if ($path === false) {
+            report(new DocumentStorageException("Could not write {$directory}/{$filename} on disk ".self::DISK.'.'));
+            throw new DocumentStorageException(DocumentStorageException::USER_MESSAGE);
+        }
+
+        return $path;
     }
 
     /** @param list<string> $mimes */

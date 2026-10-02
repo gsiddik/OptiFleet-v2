@@ -19,7 +19,7 @@ use Tests\TestCase;
  */
 class PurchaseOrderFromQuotationTest extends TestCase
 {
-    private function setUpSelectedQuotation(?int $leadDays = 7): array
+    private function setUpSelectedQuotation(?int $leadDays = 7, bool $select = true): array
     {
         Storage::fake('local');
         $tenant = $this->makeTenant(['code' => 'POQ-'.Str::random(4)]);
@@ -36,7 +36,9 @@ class PurchaseOrderFromQuotationTest extends TestCase
             ['product_id' => $pads->id, 'quantity' => 4, 'unit_price' => 250000.5],
             ['product_id' => $filter->id, 'quantity' => 10, 'unit_price' => 85000],
         ], DemoQuotationDocument::make('PT Sinar Suku Cadang'), null);
-        $service->selectVendor($quotation);
+        if ($select) {
+            $service->selectVendor($quotation);
+        }
         [, $token] = $this->makeTenantUser($tenant, ['purchase_order.create', 'purchase_order.view', 'quotation.view']);
 
         return [$tenant, $warehouse, $quotation->fresh(), $this->authHeaders($token), $pads, $filter];
@@ -121,5 +123,67 @@ class PurchaseOrderFromQuotationTest extends TestCase
 
         $this->createPo($quotation, ['delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01'], $headers)->assertCreated();
         $this->createPo($quotation, ['delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01'], $headers)->assertStatus(422);
+    }
+
+    /** What every "Create PO" entry point reads: RFQ comparison, quotation detail and quotation list. */
+    private function createPoState(VendorQuotation $quotation, array $headers): array
+    {
+        $this->app['auth']->forgetGuards();
+        $compare = collect($this->getJson("/api/v1/app/rfqs/{$quotation->rfq_id}/compare", $headers)->assertOk()->json('data'))->firstWhere('quotation_id', $quotation->id);
+        $show = $this->getJson("/api/v1/app/quotations/{$quotation->id}", $headers)->assertOk()->json('data');
+        $listed = collect($this->getJson('/api/v1/app/quotations', $headers)->assertOk()->json('data'))->firstWhere('id', $quotation->id);
+
+        return [
+            'compare' => [$compare['can_create_purchase_order'], $compare['purchase_order']['po_number'] ?? null],
+            'show' => [$show['can_create_purchase_order'], $show['purchase_order']['po_number'] ?? null],
+            'list' => [$listed['can_create_purchase_order'], $listed['purchase_order']['po_number'] ?? null],
+        ];
+    }
+
+    public function test_create_po_is_offered_and_accepted_only_while_the_quotation_is_selected_and_unconverted(): void
+    {
+        [$tenant, $warehouse, $quotation] = $this->setUpSelectedQuotation();
+        [, $token] = $this->makeTenantUser($tenant, ['purchase_order.create', 'purchase_order.view', 'quotation.view']);
+        $headers = $this->authHeaders($token);
+        $payload = ['delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01'];
+
+        // Eligible: selected, no PO → offered everywhere, backend accepts.
+        $this->assertSame(['compare' => [true, null], 'show' => [true, null], 'list' => [true, null]], $this->createPoState($quotation, $headers));
+        $this->app['auth']->forgetGuards();
+        $poNumber = $this->createPo($quotation, $payload, $headers)->assertCreated()->json('data.po_number');
+
+        // Already converted → hidden everywhere (the PO is linked instead), direct API call rejected.
+        $this->assertSame(['compare' => [false, $poNumber], 'show' => [false, $poNumber], 'list' => [false, $poNumber]], $this->createPoState($quotation, $headers));
+        $this->app['auth']->forgetGuards();
+        $this->createPo($quotation, $payload, $headers)->assertStatus(422)->assertJsonPath('message', 'This quotation has already been converted to a Purchase Order.');
+        $this->assertSame(1, PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count());
+    }
+
+    public function test_quotations_of_a_closed_rfq_or_not_selected_cannot_become_a_po(): void
+    {
+        // A quotation's own status is SUBMITTED / SELECTED / REJECTED (DB check constraint); CLOSED is
+        // the RFQ's status. An RFQ closed without choosing a vendor leaves its quotations SUBMITTED.
+        [$tenant, $warehouse, $quotation] = $this->setUpSelectedQuotation(7, false);
+        [, $token] = $this->makeTenantUser($tenant, ['purchase_order.create', 'purchase_order.view', 'quotation.view', 'quotation.select']);
+        $headers = $this->authHeaders($token);
+        $payload = ['delivery_warehouse_id' => $warehouse->id, 'order_date' => '2026-10-01'];
+
+        app(RfqService::class)->close($quotation->rfq);
+        $this->assertSame(['CLOSED', 'SUBMITTED'], [$quotation->rfq->fresh()->status, $quotation->fresh()->status]);
+        $this->assertSame(['compare' => [false, null], 'show' => [false, null], 'list' => [false, null]], $this->createPoState($quotation, $headers));
+        $this->app['auth']->forgetGuards();
+        $this->createPo($quotation, $payload, $headers)->assertStatus(422)
+            ->assertJsonPath('message', 'This quotation is SUBMITTED: only a selected quotation can be converted to a Purchase Order.');
+        // …and it can no longer be selected on the closed RFQ (which would re-open the path to a PO).
+        $this->app['auth']->forgetGuards();
+        $this->postJson("/api/v1/app/quotations/{$quotation->id}/select", [], $headers)->assertStatus(422)
+            ->assertJsonPath('message', 'This RFQ is CLOSED: a vendor can only be selected while it is ISSUED.');
+
+        // A REJECTED quotation (another vendor was chosen) is never offered nor accepted.
+        VendorQuotation::query()->whereKey($quotation->id)->update(['status' => 'REJECTED']);
+        $this->assertSame(['compare' => [false, null], 'show' => [false, null], 'list' => [false, null]], $this->createPoState($quotation, $headers));
+        $this->app['auth']->forgetGuards();
+        $this->createPo($quotation, $payload, $headers)->assertStatus(422);
+        $this->assertSame(0, PurchaseOrder::query()->where('vendor_quotation_id', $quotation->id)->count());
     }
 }

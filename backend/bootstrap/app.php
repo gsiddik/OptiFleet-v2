@@ -173,6 +173,10 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json(['message' => $e->getMessage()], 422);
         });
 
+        $exceptions->render(function (\App\Domain\Shared\Services\DocumentStorageException $e, Request $request) {
+            return response()->json(['message' => \App\Domain\Shared\Services\DocumentStorageException::USER_MESSAGE], 503);
+        });
+
         $exceptions->render(function (\App\Domain\Procurement\Services\ProcurementException $e, Request $request) {
             return response()->json(['message' => $e->getMessage()], 422);
         });

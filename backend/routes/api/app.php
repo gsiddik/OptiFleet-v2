@@ -87,6 +87,7 @@ use App\Http\Controllers\Api\Tenant\WarehouseStockController;
 use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
 use App\Http\Controllers\Api\Tenant\WarrantyController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
+use App\Http\Controllers\Api\Tenant\WheelConfigurationMasterController;
 use App\Http\Controllers\Api\Tenant\WorkerController;
 use App\Http\Controllers\Api\Tenant\WorkerTypeController;
 use App\Http\Controllers\Api\Tenant\ToolTypeController;
@@ -677,6 +678,11 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/wheel-configurations', [WheelConfigurationController::class, 'store'])->middleware('permission:tire.manage');
             Route::put('/wheel-configurations/{wheelConfiguration}', [WheelConfigurationController::class, 'update'])->middleware('permission:tire.manage');
             Route::delete('/wheel-configurations/{wheelConfiguration}', [WheelConfigurationController::class, 'destroy'])->middleware('permission:tire.manage');
+            Route::get('/wheel-configuration-masters', [WheelConfigurationMasterController::class, 'index'])->middleware('permission:tire.view');
+            Route::post('/wheel-configuration-masters/preview', [WheelConfigurationMasterController::class, 'preview'])->middleware('permission:tire.manage');
+            Route::post('/wheel-configuration-masters', [WheelConfigurationMasterController::class, 'store'])->middleware('permission:tire.manage');
+            Route::get('/wheel-configuration-masters/{wheelConfigurationMaster}', [WheelConfigurationMasterController::class, 'show'])->middleware('permission:tire.view');
+            Route::put('/wheel-configuration-masters/{wheelConfigurationMaster}', [WheelConfigurationMasterController::class, 'update'])->middleware('permission:tire.manage');
 
             Route::get('/tires', [TireController::class, 'index'])->middleware('permission:tire.view');
             Route::post('/tires', [TireController::class, 'store'])->middleware('permission:tire.manage');

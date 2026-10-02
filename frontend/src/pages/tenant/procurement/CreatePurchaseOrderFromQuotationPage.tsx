@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -66,6 +66,27 @@ export function CreatePurchaseOrderFromQuotationPage() {
 
   if (error && !quotation) return <ErrorState message={error} />;
   if (!quotation) return <LoadingState />;
+
+  // Opened directly (old link / bookmark) for a quotation that already has a PO or is not the
+  // selected one: no form — the backend would reject the request anyway.
+  if (!quotation.can_create_purchase_order) {
+    return (
+      <div style={{ maxWidth: 820 }}>
+        <BackButton fallbackTo="/app/quotations" label="← Back to Quotation" />
+        <h1 style={{ fontSize: 22, marginBottom: 16 }}>Create Purchase Order</h1>
+        <div className="card" style={{ fontSize: 13 }}>
+          {quotation.purchase_order ? (
+            <>
+              A Purchase Order has already been created from this quotation:{' '}
+              <Link to={`/app/purchase-orders/${quotation.purchase_order.id}`}>{quotation.purchase_order.po_number}</Link>.
+            </>
+          ) : (
+            <>This quotation is {quotation.status} — only the selected quotation of an RFQ can be converted to a Purchase Order.</>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const leadDays = quotation.lead_time_days;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(orderDate);

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Procurement\Services;
 
+use App\Domain\Shared\Services\PrivateDocumentStorage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -37,10 +38,10 @@ class QuotationAttachmentService
             throw ValidationException::withMessages(['attachment' => 'The quotation document may not be larger than 10 MB.']);
         }
 
-        $path = $file->storeAs("vendor-quotations/{$tenantId}", Str::uuid().'.'.$extension, ['disk' => 'local']);
+        $path = PrivateDocumentStorage::putFileAs($file, "vendor-quotations/{$tenantId}", Str::uuid().'.'.$extension);
 
         return [
-            'attachment_disk' => 'local',
+            'attachment_disk' => PrivateDocumentStorage::DISK,
             'attachment_path' => $path,
             'attachment_original_filename' => Str::limit(basename(str_replace('\\', '/', $file->getClientOriginalName())), 200, ''),
             'attachment_mime_type' => $extension === 'docx' ? self::ALLOWED['docx'][0] : ($extension === 'doc' ? 'application/msword' : 'application/pdf'),

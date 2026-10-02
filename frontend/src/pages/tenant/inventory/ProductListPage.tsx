@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../../api/client';
 import { inputStyle } from '../../../components/FormField';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
@@ -15,7 +15,9 @@ import { CreateProductModal, ITEM_TYPES as PRODUCT_TYPES } from './CreateProduct
 export function ProductListPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
-  const [productType, setProductType] = useState('');
+  // `?product_type=TIRE` (e.g. from Tire List) opens the list already filtered.
+  const [searchParams] = useSearchParams();
+  const [productType, setProductType] = useState(searchParams.get('product_type') ?? '');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [groupId, setGroupId] = useState('');

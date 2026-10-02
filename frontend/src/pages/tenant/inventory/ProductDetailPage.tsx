@@ -13,6 +13,7 @@ import { VehicleBrandModelSelect } from './VehicleBrandModelSelect';
 import type { ProductItem, VehicleCategory } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
 import { NumericInput } from '../../../components/NumericInput';
+import { RegisterTireModal } from '../tires/RegisterTireModal';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,6 +29,7 @@ export function ProductDetailPage() {
   const [editingRule, setEditingRule] = useState<{ id: string; brandId: string; modelId: string; brandName: string | null; modelName: string | null } | null>(null);
   const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
   const [editingSpecs, setEditingSpecs] = useState(false);
+  const [registeringTire, setRegisteringTire] = useState(false);
   const [sdsBusy, setSdsBusy] = useState(false);
   const sdsFileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -268,6 +270,15 @@ export function ProductDetailPage() {
             </button>
           </div>
         )}
+        {product.product_type === 'TIRE' && hasPermission('tire.manage') && (
+          <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+            <button className="btn-primary" onClick={() => setRegisteringTire(true)}>
+              Register Tire
+            </button>
+            <span style={{ fontSize: 12, color: '#6b7280' }}>Add a physical tire (serial number) of this product to Tire Management.</span>
+          </div>
+        )}
+        {registeringTire && <RegisterTireModal product={product} onClose={() => setRegisteringTire(false)} />}
         {product.product_type === 'TIRE' && (
           <div style={{ marginTop: 10 }}>
             <FormField label="Reference Tread Depth (mm) — required before this Tire product's tires can be scored">

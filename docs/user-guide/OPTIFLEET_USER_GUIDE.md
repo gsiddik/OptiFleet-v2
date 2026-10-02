@@ -1382,7 +1382,7 @@ Mechanic (`tire.install/rotate/inspect/remove/scrap`); Workshop Manager (checker
 | Fitur | Kegunaan | Role | Input Utama | Output |
 |---|---|---|---|---|
 | Rim | Katalog referensi pelek (berdiri sendiri) | Warehouse | Kode, brand, dimensi | Data rim |
-| Wheel Configuration | Tata letak posisi roda per kategori kendaraan | Admin | Kategori kendaraan, daftar posisi | Konfigurasi posisi |
+| Wheel Configuration | Template konfigurasi roda yang dapat dipakai ulang, dibuat lewat **New Wheels Configuration**: pilih Vehicle Type (dan Truck Configuration Type untuk Truck), isi jumlah axle depan/belakang, roda per sisi, ban cadangan → Config Code & daftar posisi (1FL1, 1RR2, S1, …) dibuat otomatis. **Save** menampilkan ringkasan dan daftar posisi sebelum konfirmasi. Mengubah konfigurasi (Edit) membuat versi baru; versi lama tetap tersimpan beserta daftar posisinya (perubahan Unchanged/Added/Removed ditampilkan). Konfigurasi ini belum dikaitkan ke kendaraan — penetapan konfigurasi ke kendaraan adalah fitur terpisah berikutnya. Vehicle Type dan Truck Configuration Type tidak dapat diubah setelah konfigurasi dibuat; untuk tipe lain buat konfigurasi baru. | Admin | Vehicle Type, Truck Configuration Type, axle, roda per sisi, ban cadangan | Template konfigurasi + versi + daftar posisi |
 | Tire — Install | Memasang ban ke kendaraan | Mechanic | Vehicle, posisi, ban | Status INSTALLED |
 | Tire — Rotate/Swap | Memindah posisi ban | Mechanic | Posisi tujuan | Riwayat rotasi |
 | Tire — Inspect | Mencatat kondisi ban | Mechanic/Inspector | Kedalaman tapak, kondisi | Rekaman inspeksi |
@@ -1404,6 +1404,7 @@ Modul `TIRE` harus di-entitle. Untuk Tire Scoring: tenant harus sudah mempublika
 #### 7. Prosedur Penggunaan
 
 **Memasang Ban (Install):**
+0. **Registrasi ban baru** (tidak lagi lewat tombol "New Tire" di Tire List): buat Product dengan Item Type **Tire** (spesifikasi ban diisi di Product — sumber kebenaran), lalu di detail Product klik **"Register Tire"** dan isi Serial Number (+ kode tanggal produksi/DOT, tanggal beli). Spesifikasi ban (ukuran, pattern, konstruksi, tipe, load/speed/ply) diambil otomatis dari Product. Ban baru langsung muncul di Tire List berstatus `IN_STOCK`.
 1. `Tire List` → pilih ban berstatus `IN_STOCK`/`RESERVED` → buka detail → **"Install"** → pilih Vehicle & Posisi Roda.
 2. **Aturan:** bila kategori kendaraan sudah memiliki Wheel Configuration, posisi harus sesuai daftar yang terdaftar; bila belum ada konfigurasi sama sekali untuk kategori tersebut, sistem bersifat permisif (menerima posisi bebas) — sengaja demikian karena belum ada tata letak baku bawaan platform.
 3. **Hasil:** status ban `INSTALLED`, tertaut ke kendaraan & posisi tersebut. Satu posisi hanya dapat diisi satu ban aktif (dijaga di level database).
@@ -1456,6 +1457,7 @@ Riwayat lengkap siklus hidup setiap ban; kendaraan selalu memiliki data ban terp
 |---|---|---|
 | Tidak bisa menghitung Tire Score | Belum ada konfigurasi TIRE_SCORING yang dipublikasikan untuk tenant ini | Susun & publikasikan konfigurasi lewat `Configuration → Tire Scoring` |
 | Tidak bisa memasang ban di posisi tertentu | Kategori kendaraan sudah punya Wheel Configuration dan posisi yang dipilih tidak terdaftar | Gunakan posisi yang sesuai daftar konfigurasi, atau perbarui Wheel Configuration |
+| Wheel Configuration tidak bisa disimpan ("already exists") | Konfigurasi dengan Vehicle Type, Truck Configuration Type, dan Config Code yang sama sudah ada | Buka konfigurasi tersebut lewat Edit, bukan membuat baru |
 | Ban tidak bisa dikirim ke Retread/Repair | Partner yang dipilih bukan tipe EXTERNAL_WORKSHOP/TIRE_SUPPLIER, atau statusnya nonaktif | Pilih Partner yang sesuai dan aktif |
 | Ban UNSAFE tidak bisa dikembalikan ke layanan | Ini adalah gerbang keselamatan mutlak, disengaja | Pilih disposisi SCRAP atau QUARANTINE |
 

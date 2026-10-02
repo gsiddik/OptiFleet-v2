@@ -8,6 +8,7 @@ use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireScoringResult;
+use App\Domain\Tire\Services\TireRegistrationService;
 use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Tire\Services\TireService;
 use App\Domain\Vehicle\Models\Vehicle;
@@ -54,7 +55,7 @@ class TireController extends Controller
 
     public function store(StoreTireRequest $request)
     {
-        $tire = Tire::query()->create($request->validated() + ['tenant_id' => $this->context->tenantId(), 'current_status' => 'IN_STOCK']);
+        $tire = app(TireRegistrationService::class)->register($this->context->tenantId(), $request->validated());
 
         return $this->ok($tire, 201);
     }

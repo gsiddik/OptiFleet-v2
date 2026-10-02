@@ -340,6 +340,15 @@ docker compose up -d --build
 docker compose exec backend php artisan db:seed --class=DevDemoSeeder --force
 ```
 
+The backend image runs every PHP process as `www-data` — the owner of `storage/` — so
+`docker compose exec backend php artisan …` already runs as the right user. Do not add
+`--user root` to artisan commands: files a root process writes under `storage/app/private`
+(e.g. seeded demo documents) are not accessible to the web process, and uploads then fail with
+"Unable to create a directory …". Uploaded documents live in the `optifleet_storage` volume
+(`storage/app`). If an older deployment left root-owned files behind, the backend refuses to
+start and prints the fix: `docker compose run --rm --user root backend true` (repairs ownership
+once, then continues as `www-data`). Never use `chmod -R 777`.
+
 - Frontend: http://localhost:5173
 - Backend API: http://localhost:8000/api/v1
 - Postgres: localhost:5432 (user/pass/db: `optifleet`)

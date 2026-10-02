@@ -13,6 +13,7 @@ use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Tests\Concerns\BreaksPrivateStorage;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,8 @@ use Tests\TestCase;
  */
 class GoodsReceiptVendorInvoiceTest extends TestCase
 {
+    use BreaksPrivateStorage;
+
     private const PDF = "%PDF-1.4\n1 0 obj<< /Type /Catalog >>endobj\ntrailer<< /Root 1 0 R >>\n%%EOF\n";
 
     private const PERMISSIONS = ['purchase_order.view', 'goods_receipt.view', 'goods_receipt.post', 'vendor_invoice.view'];
@@ -227,5 +230,21 @@ class GoodsReceiptVendorInvoiceTest extends TestCase
         $this->assertSame('2026-10-16', $days->addBusinessDays($friday, 10)->toDateString(), 'Multi-week.');
         $this->assertSame('2026-10-05', $days->addBusinessDays(CarbonImmutable::parse('2026-10-03'), 1)->toDateString(), 'Saturday + 1 = Monday.');
         $this->assertSame('2026-10-02', $days->addBusinessDays($friday, 0)->toDateString());
+    }
+
+    public function test_a_storage_failure_saves_neither_the_receipt_nor_the_invoice_and_leaks_no_path(): void
+    {
+        [, $warehouse, $product, , $po, $headers] = $this->scenario();
+        $this->breakPrivateStorage();
+
+        $this->assertStorageFailureResponse($this->receive($po, $headers, 4, $this->newInvoice('INV-FAIL')));
+
+        $this->assertSame(0, GoodsReceipt::query()->withoutGlobalScopes()->where('purchase_order_id', $po->id)->count());
+        $this->assertSame(0, VendorInvoiceReference::query()->withoutGlobalScopes()->where('purchase_order_id', $po->id)->count());
+        $this->assertSame(['ISSUED', '0.0000'], [$po->fresh()->status, $po->items()->first()->quantity_received]);
+        $this->assertNull(WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->value('quantity_on_hand'));
+
+        // The document stays optional: without one the same receipt posts on the same disk.
+        $this->receive($po, $headers, 4, $this->newInvoice('INV-NODOC', ['invoice_document' => null]))->assertCreated();
     }
 }

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -25,6 +25,9 @@ interface ComparisonRow {
   submitted_at?: string | null;
   has_attachment?: boolean;
   attachment_original_filename?: string | null;
+  purchase_order?: { id: string; po_number: string; status: string } | null;
+  /** Server-computed: SELECTED and no PO yet. */
+  can_create_purchase_order?: boolean;
 }
 
 /** Quotation document rules (the backend re-checks the file content). */
@@ -264,15 +267,20 @@ export function RfqDetailPage() {
               )}
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
-              {c.status === 'SUBMITTED' && hasPermission('quotation.select') && (
+              {c.status === 'SUBMITTED' && rfq.status === 'ISSUED' && hasPermission('quotation.select') && (
                 <button className="btn-link" disabled={busy} onClick={() => selectVendor(c.quotation_id)}>
                   Select
                 </button>
               )}
-              {c.status === 'SELECTED' && hasPermission('purchase_order.create') && (
+              {c.can_create_purchase_order && hasPermission('purchase_order.create') && (
                 <button className="btn-link" onClick={() => createPo(c.quotation_id)}>
                   Create PO
                 </button>
+              )}
+              {c.purchase_order && (
+                <Link to={`/app/purchase-orders/${c.purchase_order.id}`} style={{ fontSize: 13 }}>
+                  PO {c.purchase_order.po_number}
+                </Link>
               )}
             </div>
           </div>
