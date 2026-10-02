@@ -92,6 +92,7 @@ export function WheelConfigurationDetailPage() {
                 <Item label="Total Wheels" value={version.total_wheels} />
                 <Item label="Spare Tires" value={version.spare_tires} />
                 <Item label="Saved" value={formatDateTime(version.created_at)} />
+                <Item label="Mapped Vehicles" value={master.mapped_vehicle_count ?? 0} />
               </dl>
             </div>
 

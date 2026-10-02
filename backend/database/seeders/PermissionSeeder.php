@@ -122,6 +122,8 @@ class PermissionSeeder extends Seeder
             'vendor_invoice' => ['view', 'pay'],
             'partner' => ['view', 'manage'],
             'tire' => ['view', 'manage', 'install', 'rotate', 'inspect', 'remove', 'scrap', 'sell'],
+            // Vehicle → Wheel Configuration assignment (configuration masters themselves use tire.view/tire.manage).
+            'wheel_configuration' => ['map_vehicle'],
             'rim' => ['view', 'manage'],
             // Phase E (G-32): send/receive/inspect/approve are separate permissions per
             // cycle type, so a maker-checker separation can actually be enforced by RBAC.

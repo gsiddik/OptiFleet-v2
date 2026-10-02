@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tire\Services;
 
+use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationMaster;
 use App\Domain\Tire\Models\WheelConfigurationVersion;
 use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
@@ -40,7 +41,16 @@ class WheelConfigurationMasterService
             'changed' => ! $current || ! $this->sameAsVersion($config, $current),
             'diff' => $current ? $this->diff($current->positions->pluck('position_code')->all(), $config['positions']) : null,
             'duplicate' => $duplicate?->only(['id', 'vehicle_type', 'truck_configuration_type', 'config_code']),
+            // Edit impact: mapped vehicles stay on the version they were mapped to.
+            'mapped_vehicle_count' => $master ? $this->mappedVehicleCount($master) : 0,
         ];
+    }
+
+    public function mappedVehicleCount(WheelConfigurationMaster $master): int
+    {
+        return VehicleWheelConfigurationMapping::query()->withoutGlobalScopes()
+            ->where('wheel_configuration_master_id', $master->id)
+            ->where('status', VehicleWheelConfigurationMapping::STATUS_ACTIVE)->count();
     }
 
     /** @return array{master: WheelConfigurationMaster, version: WheelConfigurationVersion} */

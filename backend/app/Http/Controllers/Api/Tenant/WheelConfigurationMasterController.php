@@ -48,7 +48,8 @@ class WheelConfigurationMasterController extends Controller
 
     public function show(WheelConfigurationMaster $wheelConfigurationMaster)
     {
-        return $this->ok($wheelConfigurationMaster->load(['currentVersion.positions', 'versions.positions']));
+        return $this->ok($wheelConfigurationMaster->load(['currentVersion.positions', 'versions.positions'])->toArray()
+            + ['mapped_vehicle_count' => $this->service->mappedVehicleCount($wheelConfigurationMaster)]);
     }
 
     public function preview(Request $request)

@@ -11,6 +11,7 @@ interface PreviewResult {
   changed: boolean;
   diff: PositionDiff | null;
   duplicate: { id: string; config_code: string } | null;
+  mapped_vehicle_count: number;
 }
 
 const API = '/app/wheel-configuration-masters';
@@ -125,6 +126,11 @@ export function SaveConfigurationDialog({
               </div>
             )}
 
+            {preview.changed && preview.mapped_vehicle_count > 0 && (
+              <p data-save-mapped-impact style={{ fontSize: 12, color: '#92400e', margin: '0 0 12px' }}>
+                {preview.mapped_vehicle_count} mapped vehicle(s) stay on their current version until updated in Vehicle Mapping.
+              </p>
+            )}
             {!preview.changed && (
               <p data-save-unchanged style={{ fontSize: 13, color: '#166534' }}>
                 No changes — this is already the current version.

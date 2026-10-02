@@ -10,6 +10,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { VEHICLE_TYPES, resolveVehicleType, vehicleTypeOption } from '../tires/wheel-configuration/vehicleTypes';
 
 const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'History'] as const;
 type Tab = (typeof TABS)[number];
@@ -205,6 +206,7 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
     ['Branch', vehicle.branch?.name ?? '—'],
     ['Default Workshop', vehicle.default_workshop?.name ?? '—'],
     ['Category', vehicle.vehicle_category?.name ?? '—'],
+    ['Vehicle Type', vehicleTypeOption(resolveVehicleType(vehicle.vehicle_type) ?? '')?.label ?? vehicle.vehicle_type ?? '—'],
     ['VIN', vehicle.vin ?? '—'],
     ['Chassis Number', vehicle.chassis_number ?? '—'],
     ['Engine Number', vehicle.engine_number ?? '—'],
@@ -223,7 +225,7 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
     ['Suspension', vehicle.suspension_type ?? '—'],
     ['Axles', vehicle.axle_count != null ? String(vehicle.axle_count) : '—'],
     ['Empty / Load Weight (kg)', vehicle.empty_weight_kg ? `${vehicle.empty_weight_kg} / ${vehicle.load_weight_kg ?? '—'}` : '—'],
-    ['Wheels', vehicle.wheel_count != null ? String(vehicle.wheel_count) : '—'],
+    ['Wheels (incl. spare)', vehicle.wheel_count != null ? String(vehicle.wheel_count) : '—'],
   ];
 
   return (
@@ -252,6 +254,9 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
 function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem; onClose: () => void; onSaved: () => void }) {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [categoryId, setCategoryId] = useState(vehicle.vehicle_category_id);
+  // Stored as the Vehicle Type code; a legacy free-text value that maps to no type is kept as is.
+  const [vehicleType, setVehicleType] = useState(resolveVehicleType(vehicle.vehicle_type) ?? vehicle.vehicle_type ?? '');
+  const legacyVehicleType = vehicleType !== '' && !resolveVehicleType(vehicleType) ? vehicleType : null;
   const [year, setYear] = useState(vehicle.year != null ? String(vehicle.year) : '');
   const [fuelType, setFuelType] = useState(vehicle.fuel_type ?? '');
   const [transmissionType, setTransmissionType] = useState(vehicle.transmission_type ?? '');
@@ -282,6 +287,7 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
     try {
       await apiClient.put(`/app/vehicles/${vehicle.id}`, {
         vehicle_category_id: categoryId,
+        vehicle_type: vehicleType || null,
         year: year || null,
         fuel_type: fuelType || null,
         transmission_type: transmissionType || null,
@@ -320,6 +326,17 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
                 {c.name}
               </option>
             ))}
+          </select>
+        </FormField>
+        <FormField label="Vehicle Type" errors={errors.vehicle_type}>
+          <select aria-label="Vehicle Type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle}>
+            <option value="">Select…</option>
+            {VEHICLE_TYPES.map((t) => (
+              <option key={t.value} value={t.value}>
+                {t.label}
+              </option>
+            ))}
+            {legacyVehicleType && <option value={legacyVehicleType}>{legacyVehicleType} (legacy)</option>}
           </select>
         </FormField>
         <FormField label="Year" errors={errors.year}>
@@ -364,7 +381,7 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
         <FormField label="Axles" errors={errors.axle_count}>
           <NumericInput value={axleCount} onChange={(e) => setAxleCount(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Wheels" errors={errors.wheel_count}>
+        <FormField label="Wheels (incl. spare)" errors={errors.wheel_count}>
           <NumericInput value={wheelCount} onChange={(e) => setWheelCount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label="Empty Weight (kg)" errors={errors.empty_weight_kg}>

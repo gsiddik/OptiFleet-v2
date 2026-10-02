@@ -93,7 +93,7 @@ class FunctionalTestUserSeeder
                 'goods_receipt.view', 'goods_receipt.post', 'vendor_invoice.view', 'vendor_invoice.pay',
                 'partner.view', 'partner.manage',
                 'part_request.view', 'part_request.create',
-                'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap',
+                'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap', 'wheel_configuration.map_vehicle',
                 'component_asset.view', 'component_asset.manage', 'component_asset.install', 'component_asset.remove', 'component_asset.replace',
                 'warranty.view', 'warranty.manage', 'warranty_claim.create',
             ])->pluck('id')->all());

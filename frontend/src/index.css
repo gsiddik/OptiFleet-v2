@@ -328,3 +328,8 @@ input[type='number']::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* Vehicle Mapping: clickable rows in edit mode */
+.mapping-row-editable { cursor: pointer; }
+.mapping-row-editable:hover { background: #eff6ff !important; }
+.mapping-row-editable:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }

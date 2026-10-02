@@ -48,6 +48,8 @@ export interface ConfigurationMaster {
   updated_at: string;
   current_version: ConfigurationVersion | null;
   versions?: ConfigurationVersion[];
+  /** active vehicle mappings (any version); returned by the detail endpoint */
+  mapped_vehicle_count?: number;
 }
 
 /** What Save sends: the axle pattern plus the Config Code the form shows (the server regenerates it). */
