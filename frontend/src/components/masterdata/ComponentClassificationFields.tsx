@@ -23,6 +23,7 @@ export function ComponentClassificationFields({
   errors,
   current,
   requireCategory = false,
+  lockedGroupCode,
 }: {
   itemType: ItemType;
   value: ClassificationValue;
@@ -31,6 +32,8 @@ export function ComponentClassificationFields({
   current?: { group?: ComponentGroup | null; category?: ComponentCategory | null; subcategory?: ComponentSubcategory | null };
   /** Component Group + Category mandatory (Sparepart/Consumable/Tire/Rim). */
   requireCategory?: boolean;
+  /** Fixes the Component Group to the group with this code (e.g. CG-TYRE for "New Tire"); the backend enforces it too. */
+  lockedGroupCode?: string;
 }) {
   const [groups, setGroups] = useState<ComponentGroup[]>([]);
   const [categories, setCategories] = useState<ComponentCategory[]>([]);
@@ -39,6 +42,15 @@ export function ComponentClassificationFields({
   useEffect(() => {
     apiClient.get('/app/product-classification/component-groups').then((res) => setGroups(res.data.data)).catch(() => setGroups([]));
   }, []);
+
+  const lockedGroup = lockedGroupCode ? (groups.find((g) => g.code === lockedGroupCode) ?? null) : null;
+  useEffect(() => {
+    if (lockedGroup && value.componentGroupId !== lockedGroup.id) {
+      onChange({ componentGroupId: lockedGroup.id, componentGroupAbbreviation: lockedGroup.abbreviation, componentCategoryId: '', componentSubcategoryId: '' });
+    }
+    // Only re-pin when the locked group resolves or the value drifts from it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lockedGroup?.id, value.componentGroupId]);
 
   useEffect(() => {
     if (!value.componentGroupId) return;
@@ -72,7 +84,9 @@ export function ComponentClassificationFields({
       <legend style={{ fontSize: 13, fontWeight: 600, color: '#374151', padding: '0 6px' }}>Component Classification</legend>
       <FormField label="Component Group" errors={errors.component_group_id} required={requireCategory}>
         <select
+          aria-label="Component Group"
           value={value.componentGroupId}
+          disabled={!!lockedGroupCode}
           onChange={(e) =>
             onChange({
               componentGroupId: e.target.value,

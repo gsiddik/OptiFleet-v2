@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Tenant;
 
+use App\Domain\MasterData\Models\ComponentGroup;
 use App\Support\TenantContext;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreProductRequest extends FormRequest
 {
@@ -66,6 +68,28 @@ class StoreProductRequest extends FormRequest
             'component_group_id' => ['nullable', 'uuid'],
             'component_category_id' => ['nullable', 'uuid'],
             'component_subcategory_id' => ['nullable', 'uuid'],
+            // Where the New Product form was opened: TIRE = the Tires page "New Tire" button, which
+            // fixes Item Type = TIRE and Component Group = Wheel & Tyre System. Absent = Products.
+            'creation_context' => ['nullable', 'in:PRODUCT,TIRE'],
         ];
     }
+
+    /** The Tire context's locked fields are enforced here, not only by the disabled inputs. */
+    public function after(): array
+    {
+        return [function (Validator $validator) {
+            if ($this->input('creation_context') !== 'TIRE' || $validator->errors()->isNotEmpty()) {
+                return;
+            }
+            if ($this->input('product_type') !== 'TIRE') {
+                $validator->errors()->add('product_type', 'A product created from Tires must have Item Type TIRE.');
+            }
+            $group = ComponentGroup::query()->find($this->input('component_group_id'));
+            if ($group?->code !== self::TIRE_COMPONENT_GROUP_CODE) {
+                $validator->errors()->add('component_group_id', 'A product created from Tires must be in the Wheel & Tyre System component group.');
+            }
+        }];
+    }
+
+    public const TIRE_COMPONENT_GROUP_CODE = 'CG-TYRE';
 }

@@ -2010,6 +2010,45 @@ export interface TireRetreadItem {
 /** Phase E (G-27): distinct REPAIR lifecycle — same governance shape as retread, separate table. */
 export type TireRepairItem = TireRetreadItem;
 
+/** Tire List row: a Product of Item Type TIRE with its physical-tire inventory counts. */
+export interface TireProductListItem {
+  id: string;
+  tenant_id: string | null;
+  code: string;
+  sku: string | null;
+  name: string;
+  brand: string | null;
+  status: string;
+  rim_diameter_inch: string | null;
+  tire_size_computed: string | null;
+  new_qty: number;
+  installed_qty: number;
+  used_qty: number;
+}
+
+export type TireInventoryCategory = 'NEW' | 'INSTALLED' | 'USED';
+
+export interface TireInventorySummary {
+  new_qty: number;
+  installed_qty: number;
+  used_qty: number;
+}
+
+/** One physical tire in a Tire Detail inventory table; usage fields are present for USED only. */
+export interface TireInventoryRow {
+  id: string;
+  serial_number: string;
+  current_status: TireItem['current_status'];
+  current_position: string | null;
+  vehicle_id: string | null;
+  registration_number: string | null;
+  current_odometer: string | null;
+  engine_hour: string | null;
+  usage_km?: string | null;
+  usage_hours?: string | null;
+  current_tread_depth_mm?: string | null;
+}
+
 export interface TireItem {
   id: string;
   product_id: string;

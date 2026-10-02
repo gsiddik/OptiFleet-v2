@@ -79,7 +79,22 @@ export function gradeSpecificationRequired(
  * rules are re-enforced server-side by ProductSpecificationService — this
  * form mirrors them for UX only, it is never the authority.
  */
-export function CreateProductModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+/** Where the form is opened: PRODUCT = Products (any Item Type); TIRE = Tires → "New Tire" (Item Type and Component Group fixed). */
+export type ProductCreationContext = 'PRODUCT' | 'TIRE';
+const TIRE_COMPONENT_GROUP_CODE = 'CG-TYRE';
+
+export function CreateProductModal({
+  open,
+  onClose,
+  onCreated,
+  context = 'PRODUCT',
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+  context?: ProductCreationContext;
+}) {
+  const initialItemType: ItemType = context === 'TIRE' ? 'TIRE' : 'SPARE_PART';
   const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
   const [subcategories, setSubcategories] = useState<ProductCategoryItem[]>([]);
   const [uoms, setUoms] = useState<UomItem[]>([]);
@@ -96,7 +111,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   const [traCodes, setTraCodes] = useState<TireTraCodeItem[]>([]);
   const [starRatings, setStarRatings] = useState<TireTraStarRatingItem[]>([]);
 
-  const [itemType, setItemType] = useState<ItemType>('SPARE_PART');
+  const [itemType, setItemType] = useState<ItemType>(initialItemType);
   const [name, setName] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
@@ -219,7 +234,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   }, [itemType, spec, loadIndices, speedRatings, plyRatings, traCodes, starRatings]);
 
   function reset() {
-    setItemType('SPARE_PART');
+    setItemType(initialItemType);
     setName('');
     setCategoryId('');
     setSubcategoryId('');
@@ -269,6 +284,7 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
         reference_tread_depth_mm: itemType === 'TIRE' && referenceTreadDepthMm ? referenceTreadDepthMm : undefined,
         spec: specPayload,
         ...classificationPayload(classification),
+        creation_context: context === 'TIRE' ? 'TIRE' : undefined,
       });
       reset();
       onCreated();
@@ -289,12 +305,12 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
   const canSubmit = name && (subcategoryId || categoryId) && uomId && binId && (!categoryRequired || classification.componentCategoryId) && !submitting;
 
   return (
-    <Modal open={open} title="New Product" onClose={onClose} width={680}>
+    <Modal open={open} title={context === 'TIRE' ? 'New Tire' : 'New Product'} onClose={onClose} width={680}>
       <FormField label="Code" errors={errors.code}>
         <input value="Auto-generated on save" disabled style={{ ...inputStyle, color: '#888' }} />
       </FormField>
       <FormField label="Item Type" errors={errors.product_type} required>
-        <select value={itemType} onChange={(e) => setItemType(e.target.value as ItemType)} style={inputStyle}>
+        <select aria-label="Item Type" value={itemType} disabled={context === 'TIRE'} onChange={(e) => setItemType(e.target.value as ItemType)} style={inputStyle}>
           {ITEM_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -330,7 +346,14 @@ export function CreateProductModal({ open, onClose, onCreated }: { open: boolean
           </select>
         </FormField>
       )}
-      <ComponentClassificationFields itemType={itemType} value={classification} onChange={setClassification} errors={errors} requireCategory={categoryRequired} />
+      <ComponentClassificationFields
+        itemType={itemType}
+        value={classification}
+        onChange={setClassification}
+        errors={errors}
+        requireCategory={categoryRequired}
+        lockedGroupCode={context === 'TIRE' ? TIRE_COMPONENT_GROUP_CODE : undefined}
+      />
       <FormField label="Description" errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>

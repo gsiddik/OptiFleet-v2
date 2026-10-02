@@ -1,58 +1,75 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
+import { Pagination } from '../../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
-import type { TireItem } from '../../../types';
+import { CreateProductModal } from '../inventory/CreateProductModal';
+import type { TireProductListItem } from '../../../types';
 
-const STATUSES = ['', 'IN_STOCK', 'RESERVED', 'INSTALLED', 'IN_USE', 'REMOVED', 'UNDER_INSPECTION', 'RETREAD', 'SCRAPPED', 'LOST'];
-
+/**
+ * Tire List: one row per Tire Product (Product of Item Type TIRE) with the counts of its physical
+ * tires — New Stock, Used Stock and Installed — aggregated server-side. "New Tire" creates the
+ * Product itself (the same New Product form, opened in the Tire context); physical tires are then
+ * registered from the product's Tire Detail → Inventory → New Stock.
+ */
 export function TireListPage() {
   const { hasPermission } = useAuth();
-  const [status, setStatus] = useState('');
   const [search, setSearch] = useState('');
-  const { data, loading, error } = useApiList<TireItem>('/app/tires', { current_status: status || undefined, search: search || undefined }, 0);
+  const [page, setPage] = useState(1);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [showCreate, setShowCreate] = useState(false);
+  const { data, meta, loading, error } = useApiList<TireProductListItem>('/app/tire-products', { search: search || undefined, page, per_page: 20 }, reloadKey);
 
-  const columns: Column<TireItem>[] = [
-    { key: 'serial', header: 'Serial', render: (t) => <Link to={`/app/tires/${t.id}`}>{t.serial_number}</Link> },
-    { key: 'product', header: 'Product', render: (t) => t.product?.name ?? t.product_id },
-    { key: 'size', header: 'Size', render: (t) => t.tire_size ?? '—' },
-    { key: 'vehicle', header: 'Vehicle', render: (t) => t.current_vehicle?.registration_number ?? '—' },
-    { key: 'position', header: 'Position', render: (t) => t.current_position ?? '—' },
-    { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.current_status} /> },
+  const qty = (n: number) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{n}</span>;
+  const columns: Column<TireProductListItem>[] = [
+    { key: 'brand', header: 'Brand', render: (p) => p.brand ?? '—' },
+    {
+      key: 'name',
+      header: 'Product Name',
+      render: (p) => (
+        <div>
+          <div>{p.name}</div>
+          {p.tire_size_computed && <div style={{ fontSize: 11, color: '#6b7280' }}>{p.tire_size_computed}</div>}
+        </div>
+      ),
+    },
+    { key: 'rim', header: 'Rim Diameter', render: (p) => (p.rim_diameter_inch != null ? `${p.rim_diameter_inch}"` : '—') },
+    { key: 'new', header: 'New Stock Qty', render: (p) => qty(p.new_qty) },
+    { key: 'used', header: 'Used Stock Qty', render: (p) => qty(p.used_qty) },
+    { key: 'installed', header: 'Installed Stock Qty', render: (p) => qty(p.installed_qty) },
+    { key: 'action', header: 'Action', render: (p) => <Link to={`/app/tires/products/${p.id}`}>View Detail</Link> },
   ];
 
   return (
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>Tires</h1>
-      <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
-        {STATUSES.map((s) => (
-          <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 11 }}>
-            {s || 'All'}
-          </button>
-        ))}
-      </div>
       <Toolbar
         search={search}
-        onSearchChange={setSearch}
+        onSearchChange={(value) => {
+          setSearch(value);
+          setPage(1);
+        }}
         actions={
-          hasPermission('product.view') ? (
-            // Tires are created through Product (Item Type = Tire), the source of truth for the
-            // tire specification; a physical tire is then registered from that product's page.
-            <span style={{ fontSize: 12, color: '#6b7280' }}>
-              New tires are created from <Link to="/app/products?product_type=TIRE">Products (Item Type: Tire)</Link>
-            </span>
+          hasPermission('product.create') ? (
+            <button className="btn-primary" onClick={() => setShowCreate(true)}>
+              New Tire
+            </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No tires found." />}
-      {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
-
+      {!error && !loading && data.length === 0 && <EmptyState label="No tire products found." />}
+      {!error && !loading && data.length > 0 && (
+        <>
+          <Table columns={columns} rows={data} />
+          {meta && <Pagination meta={meta} onPageChange={setPage} />}
+        </>
+      )}
+      {showCreate && <CreateProductModal context="TIRE" open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />}
     </div>
   );
 }
