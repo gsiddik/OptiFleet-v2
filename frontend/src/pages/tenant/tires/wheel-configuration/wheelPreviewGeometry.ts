@@ -4,46 +4,53 @@ import type { BodyStyle } from './vehicleTypes';
 /**
  * Top-view layout engine for the wheel configuration preview (SVG user units), derived only from
  * the form data — no static artwork. The vehicle faces up: FRONT is the top of the drawing.
+ * One engine for every vehicle type; only the proportions differ (BODY_PROFILES).
  *
- * Shared by every vehicle type; only the proportions differ (BODY_PROFILES):
- * - axles inside a group are `axlePitch` apart; the gap between the last front axle and the first
- *   rear axle is the (larger) `wheelbase`, so the two groups read as front and rear;
+ * Proportion rules (owner feedback):
+ * - body width is a fixed multiple of the tire width per type;
+ * - body length follows the axles: front overhang + front group + wheelbase + rear group + rear
+ *   overhang (overhangs in tire lengths, so the body never looks like a box between the wheels);
+ * - three spacing levels: AXLE_PITCH inside every group (small, identical for all types) <
+ *   wheelbase between the front and rear group (per type) < Semi Trailer tractor–trailer
+ *   separation (the largest);
  * - wheel 1 of each side sits just outside the body edge, further wheels go outwards;
  * - an axle line runs between the centres of its two outermost wheels and is drawn underneath the
- *   body and the wheels, so it never shows beyond the outer tire (same for every type);
+ *   body and the wheels, so it never shows beyond the outer tire;
  * - spare tires get their own column outside the body.
  * The body itself is drawn by a per-type renderer (VehicleBodies.tsx) from this geometry.
  */
 
 export const WHEEL = { width: 16, length: 34, gapBetween: 3, gapToBody: 4, radius: 4 } as const;
+/** Spacing between axles of the same group — the same for every vehicle type. */
+export const AXLE_PITCH = WHEEL.length + 16;
 const MARGIN = { top: 44, bottom: 24, side: 34 };
 const SPARE_GAP = 46; // space between the outermost wheels and the spare tire column
 
 export interface BodyProfile {
-  bodyWidth: number;
-  /** body length ahead of the first front axle */
-  nose: number;
-  /** body length behind the last rear axle */
-  tail: number;
-  axlePitch: number;
-  /** spacing inside the front group when it differs (semi tractor: steer → drive axles) */
-  frontAxlePitch?: number;
-  /** distance between the last front axle and the first rear axle */
+  /** body width in tire widths */
+  widthInTires: number;
+  /** body length ahead of the first axle / behind the last axle, in tire lengths */
+  frontOverhangInTires: number;
+  rearOverhangInTires: number;
+  /** distance between the last front axle and the first rear axle (> AXLE_PITCH) */
   wheelbase: number;
-  /** space above the body for parts that stick out in front (forks, tow bar) */
-  frontExtension: number;
+  /** fixed space above the body for parts sticking out in front (forklift forks) */
+  frontExtension?: number;
+  /** space above the body as a share of the body length (trailer tow bar: 20%, owner range 15–25%) */
+  frontExtensionRatio?: number;
 }
 
-/** Proportions per body — prototype values for owner review. */
+/** Per-type proportions — prototype values reviewed with the owner. */
 export const BODY_PROFILES: Record<BodyStyle, BodyProfile> = {
-  PASSENGER_CAR: { bodyWidth: 104, nose: 64, tail: 52, axlePitch: 50, wheelbase: 150, frontExtension: 0 },
-  VAN: { bodyWidth: 108, nose: 56, tail: 70, axlePitch: 50, wheelbase: 190, frontExtension: 0 },
-  BUS: { bodyWidth: 120, nose: 52, tail: 96, axlePitch: 50, wheelbase: 280, frontExtension: 0 },
-  FORKLIFT: { bodyWidth: 96, nose: 34, tail: 64, axlePitch: 46, wheelbase: 110, frontExtension: 78 },
-  HEAVY_EQUIPMENT: { bodyWidth: 128, nose: 58, tail: 74, axlePitch: 52, wheelbase: 180, frontExtension: 0 },
-  TRUCK: { bodyWidth: 116, nose: 50, tail: 64, axlePitch: 50, wheelbase: 230, frontExtension: 0 },
-  TRAILER: { bodyWidth: 116, nose: 46, tail: 56, axlePitch: 50, wheelbase: 250, frontExtension: 58 },
-  SEMI_TRAILER: { bodyWidth: 116, nose: 44, tail: 56, axlePitch: 50, frontAxlePitch: 64, wheelbase: 300, frontExtension: 0 },
+  PASSENGER_CAR: { widthInTires: 6.5, frontOverhangInTires: 1.8, rearOverhangInTires: 1.5, wheelbase: 150 },
+  VAN: { widthInTires: 6.75, frontOverhangInTires: 1.6, rearOverhangInTires: 1.9, wheelbase: 170 },
+  BUS: { widthInTires: 7.5, frontOverhangInTires: 1.4, rearOverhangInTires: 2.8, wheelbase: 260 },
+  FORKLIFT: { widthInTires: 6, frontOverhangInTires: 1, rearOverhangInTires: 1.9, wheelbase: 96, frontExtension: 72 },
+  HEAVY_EQUIPMENT: { widthInTires: 8, frontOverhangInTires: 1.7, rearOverhangInTires: 2.2, wheelbase: 190 },
+  TRUCK: { widthInTires: 7.25, frontOverhangInTires: 1.5, rearOverhangInTires: 1.9, wheelbase: 220 },
+  TRAILER: { widthInTires: 7.25, frontOverhangInTires: 1.3, rearOverhangInTires: 1.6, wheelbase: 230, frontExtensionRatio: 0.2 },
+  // Largest separation: the gap between the tractor (front group) and the trailer (rear group).
+  SEMI_TRAILER: { widthInTires: 7.25, frontOverhangInTires: 1.2, rearOverhangInTires: 1.6, wheelbase: 300 },
 };
 
 export interface PreviewInput {
@@ -55,9 +62,12 @@ export interface PreviewInput {
 
 export interface WheelRect {
   code: string;
+  group: AxleGroupKey;
+  axle: number;
+  side: Side;
+  index: number;
   x: number;
   y: number;
-  side: Side;
 }
 
 export interface AxleLine {
@@ -71,13 +81,16 @@ export interface AxleLine {
 
 export interface PreviewGeometry {
   style: BodyStyle;
-  profile: BodyProfile;
   width: number;
   height: number;
   centerX: number;
   /** top of the drawing area reserved for the FRONT marker */
   frontMarkerY: number;
   body: { top: number; bottom: number; left: number; right: number };
+  /** space used above body.top by parts that stick out in front (forks, tow bar) */
+  frontExtension: number;
+  frontOverhang: number;
+  rearOverhang: number;
   frontYs: number[];
   rearYs: number[];
   axles: AxleLine[];
@@ -89,25 +102,33 @@ export interface PreviewGeometry {
 
 export function buildPreviewGeometry(input: PreviewInput, style: BodyStyle = 'PASSENGER_CAR'): PreviewGeometry {
   const profile = BODY_PROFILES[style];
+  const bodyWidth = profile.widthInTires * WHEEL.width;
+  const frontOverhang = profile.frontOverhangInTires * WHEEL.length;
+  const rearOverhang = profile.rearOverhangInTires * WHEEL.length;
+
   const maxPerSide = Math.max(1, ...[...input.front, ...input.rear].map((n) => n ?? 0));
   const reach = WHEEL.gapToBody + maxPerSide * WHEEL.width + (maxPerSide - 1) * WHEEL.gapBetween;
   const spareColumn = input.spareTires > 0 ? SPARE_GAP + WHEEL.length : 0;
-  const centerX = MARGIN.side + reach + profile.bodyWidth / 2;
-  const width = centerX + profile.bodyWidth / 2 + reach + spareColumn + MARGIN.side;
+  const centerX = MARGIN.side + reach + bodyWidth / 2;
+  const width = centerX + bodyWidth / 2 + reach + spareColumn + MARGIN.side;
+
+  // Body length from the axles, so the front extension (tow bar) can be a share of it.
+  const span = (n: number) => Math.max(0, n - 1) * AXLE_PITCH;
+  const groupsLength = input.front.length && input.rear.length ? span(input.front.length) + profile.wheelbase + span(input.rear.length) : span(input.front.length + input.rear.length);
+  const bodyLength = frontOverhang + groupsLength + rearOverhang;
+  const frontExtension = Math.round(profile.frontExtensionRatio ? profile.frontExtensionRatio * bodyLength : (profile.frontExtension ?? 0));
 
   // Axle centre lines, front to back.
-  const bodyTop = MARGIN.top + profile.frontExtension;
-  const firstAxle = bodyTop + profile.nose;
-  const frontPitch = profile.frontAxlePitch ?? profile.axlePitch;
-  const frontYs = input.front.map((_, i) => firstAxle + i * frontPitch);
-  const frontEnd = frontYs.length ? frontYs[frontYs.length - 1] : firstAxle - frontPitch;
+  const bodyTop = MARGIN.top + frontExtension;
+  const firstAxle = bodyTop + frontOverhang;
+  const frontYs = input.front.map((_, i) => firstAxle + i * AXLE_PITCH);
+  const frontEnd = frontYs.length ? frontYs[frontYs.length - 1] : firstAxle - AXLE_PITCH;
   const rearStart = frontYs.length ? frontEnd + profile.wheelbase : firstAxle;
-  const rearYs = input.rear.map((_, i) => rearStart + i * profile.axlePitch);
-  const lastY = rearYs.length ? rearYs[rearYs.length - 1] : frontEnd;
-  const bodyBottom = Math.max(lastY + profile.tail, bodyTop + profile.nose + profile.tail);
+  const rearYs = input.rear.map((_, i) => rearStart + i * AXLE_PITCH);
+  const bodyBottom = bodyTop + bodyLength;
   const height = bodyBottom + MARGIN.bottom;
-  const left = centerX - profile.bodyWidth / 2;
-  const right = centerX + profile.bodyWidth / 2;
+  const left = centerX - bodyWidth / 2;
+  const right = centerX + bodyWidth / 2;
 
   const wheels: WheelRect[] = [];
   const axles: AxleLine[] = [];
@@ -117,8 +138,9 @@ export function buildPreviewGeometry(input: PreviewInput, style: BodyStyle = 'PA
       const count = perSide ?? 0;
       for (let index = 1; index <= count; index++) {
         const offset = WHEEL.gapToBody + (index - 1) * (WHEEL.width + WHEEL.gapBetween);
-        wheels.push({ code: positionCode(group, i + 1, 'L', index), side: 'L', x: left - offset - WHEEL.width, y: y - WHEEL.length / 2 });
-        wheels.push({ code: positionCode(group, i + 1, 'R', index), side: 'R', x: right + offset, y: y - WHEEL.length / 2 });
+        const base = { group, axle: i + 1, index, y: y - WHEEL.length / 2 };
+        wheels.push({ ...base, code: positionCode(group, i + 1, 'L', index), side: 'L', x: left - offset - WHEEL.width });
+        wheels.push({ ...base, code: positionCode(group, i + 1, 'R', index), side: 'R', x: right + offset });
       }
       // Ends at the centre of the outermost wheel (covered by it); without wheels, at the body.
       const outer = count > 0 ? WHEEL.gapToBody + (count - 1) * (WHEEL.width + WHEEL.gapBetween) + WHEEL.width / 2 : 0;
@@ -129,16 +151,18 @@ export function buildPreviewGeometry(input: PreviewInput, style: BodyStyle = 'PA
 
   // Spare tires: their own column to the right of the vehicle, outside the body and the axles.
   const spareX = right + reach + SPARE_GAP;
-  const spares = spareCodes(input.spareTires).map((code, i) => ({ code, x: spareX, y: bodyBottom - profile.tail - i * (WHEEL.width + 10) - WHEEL.width }));
+  const spares = spareCodes(input.spareTires).map((code, i) => ({ code, x: spareX, y: bodyBottom - rearOverhang - i * (WHEEL.width + 10) - WHEEL.width }));
 
   return {
     style,
-    profile,
     width,
     height,
     centerX,
     frontMarkerY: 14,
     body: { top: bodyTop, bottom: bodyBottom, left, right },
+    frontExtension,
+    frontOverhang,
+    rearOverhang,
     frontYs,
     rearYs,
     axles,
