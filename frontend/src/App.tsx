@@ -792,6 +792,7 @@ export default function App() {
             <Route path="wheel-configurations" element={<RequirePermission permission="tire.view"><WheelConfigurationListPage /></RequirePermission>} />
             {/* Prototype (owner review): Passenger Car wheel configuration builder — not persisted yet. */}
             <Route path="wheel-configurations/new" element={<RequirePermission permission="tire.manage"><AddWheelConfigurationPage /></RequirePermission>} />
+            <Route path="wheel-configurations/:id/edit" element={<RequirePermission permission="tire.manage"><AddWheelConfigurationPage /></RequirePermission>} />
             <Route path="rims" element={<RequirePermission permission="rim.view"><RimsPage /></RequirePermission>} />
 
             <Route path="component-assets" element={<RequirePermission permission="component_asset.view"><ComponentAssetListPage /></RequirePermission>} />

@@ -2,15 +2,15 @@
 
 namespace App\Domain\Tire\Models;
 
-use App\Domain\MasterData\Models\VehicleCategory;
 use App\Domain\Shared\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * One saved wheel configuration of a (tenant, vehicle category). Exactly one ACTIVE per pair;
- * earlier versions are SUPERSEDED and kept as history together with the position diff applied.
+ * One saved state of a wheel configuration master, with its generated position list. Exactly one
+ * ACTIVE version per master; earlier versions become INACTIVE and keep their positions as history.
  */
 class WheelConfigurationVersion extends Model
 {
@@ -18,12 +18,11 @@ class WheelConfigurationVersion extends Model
 
     public const STATUS_ACTIVE = 'ACTIVE';
 
-    public const STATUS_SUPERSEDED = 'SUPERSEDED';
+    public const STATUS_INACTIVE = 'INACTIVE';
 
     protected $fillable = [
-        'tenant_id', 'vehicle_category_id', 'version_number', 'vehicle_type', 'truck_configuration_type', 'config_code',
-        'front_axles', 'rear_axles', 'spare_tires', 'total_axles', 'total_wheels', 'status', 'position_diff',
-        'created_by', 'activated_at', 'superseded_at',
+        'tenant_id', 'wheel_configuration_master_id', 'version_number', 'config_code', 'front_axles', 'rear_axles',
+        'spare_tires', 'total_axles', 'total_wheels', 'status', 'position_diff', 'created_by', 'activated_at', 'deactivated_at',
     ];
 
     protected function casts(): array
@@ -37,12 +36,17 @@ class WheelConfigurationVersion extends Model
             'total_axles' => 'integer',
             'total_wheels' => 'integer',
             'activated_at' => 'datetime',
-            'superseded_at' => 'datetime',
+            'deactivated_at' => 'datetime',
         ];
     }
 
-    public function vehicleCategory(): BelongsTo
+    public function master(): BelongsTo
     {
-        return $this->belongsTo(VehicleCategory::class);
+        return $this->belongsTo(WheelConfigurationMaster::class, 'wheel_configuration_master_id');
+    }
+
+    public function positions(): HasMany
+    {
+        return $this->hasMany(WheelConfigurationVersionPosition::class)->orderBy('sequence');
     }
 }

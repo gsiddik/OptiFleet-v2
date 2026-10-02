@@ -2,64 +2,38 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../../api/client';
 import { Modal } from '../../../../components/Modal';
-
-export interface SaveRequest {
-  vehicle_category_id: string;
-  vehicle_type: string;
-  truck_configuration_type?: string;
-  front_axles: number[];
-  rear_axles: number[];
-  spare_tires: number;
-  /** what the form shows; the server regenerates it and rejects a mismatch */
-  config_code: string;
-}
-
-export interface ConfigurationVersion {
-  id: string;
-  version_number: number;
-  vehicle_type: string;
-  truck_configuration_type: string | null;
-  config_code: string;
-  status: 'ACTIVE' | 'SUPERSEDED';
-  total_axles: number;
-  total_wheels: number;
-  activated_at: string | null;
-}
-
-interface PositionDiff {
-  unchanged: string[];
-  added: string[];
-  removed: string[];
-}
-
-interface Blocker {
-  position_code: string;
-  reason: 'REMOVED' | 'NOT_IN_CONFIGURATION';
-  tire_id: string;
-  tire_serial_number: string;
-  vehicle_id: string;
-  vehicle_registration_number: string;
-}
+import { groupPositions, type ConfigurationMaster, type ConfigurationVersion, type GeneratedPosition, type PositionDiff, type SaveRequest } from './masterTypes';
+import { truckConfigurationTypeOption, vehicleTypeOption } from './vehicleTypes';
 
 interface PreviewResult {
-  configuration: { config_code: string; total_axles: number; total_wheels: number };
-  active_version: ConfigurationVersion | null;
+  configuration: { config_code: string; total_axles: number; total_wheels: number; positions: GeneratedPosition[] };
+  current_version: ConfigurationVersion | null;
   changed: boolean;
-  diff: PositionDiff;
-  blockers: Blocker[];
-  can_save: boolean;
+  diff: PositionDiff | null;
+  duplicate: { id: string; config_code: string } | null;
 }
 
-const API = '/app/wheel-configuration-versions';
+const API = '/app/wheel-configuration-masters';
 
 /**
- * Save step, mounted once per save attempt: the server computes a dry-run diff (UNCHANGED / ADDED /
- * REMOVED) and lists every tire still installed on a position that would disappear. Saving is only
- * offered when nothing blocks; the server re-checks everything inside the save transaction anyway.
+ * Configuration-level Save confirmation, mounted once per save attempt. Shows what will be saved —
+ * Vehicle Type, Truck Configuration Type, the server-generated Config Code, totals and the generated
+ * position list — and, when editing a saved configuration, the position diff against its current
+ * version. No vehicle or tire is involved: this saves a reusable configuration template.
  */
-export function SaveConfigurationDialog({ request, onClose, onSaved }: { request: SaveRequest; onClose: () => void; onSaved: (version: ConfigurationVersion) => void }) {
+export function SaveConfigurationDialog({
+  request,
+  masterId,
+  onClose,
+  onSaved,
+}: {
+  request: SaveRequest;
+  /** set when editing a saved configuration (creates a new version) */
+  masterId: string | null;
+  onClose: () => void;
+  onSaved: (master: ConfigurationMaster, version: ConfigurationVersion) => void;
+}) {
   const [preview, setPreview] = useState<PreviewResult | null>(null);
-  const [blockers, setBlockers] = useState<Blocker[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -67,94 +41,104 @@ export function SaveConfigurationDialog({ request, onClose, onSaved }: { request
   useEffect(() => {
     let cancelled = false;
     apiClient
-      .post(`${API}/preview`, request)
-      .then((res) => {
-        if (cancelled) return;
-        setPreview(res.data.data);
-        setBlockers(res.data.data.blockers);
-      })
-      .catch((e) => !cancelled && setError(extractApiError(e).message))
+      .post(`${API}/preview`, masterId ? { ...request, wheel_configuration_master_id: masterId } : request)
+      .then((res) => !cancelled && setPreview(res.data.data))
+      .catch((e) => !cancelled && setError(firstError(e)))
       .finally(() => !cancelled && setLoading(false));
     return () => {
       cancelled = true;
     };
-  }, [request]);
+  }, [request, masterId]);
 
   async function save() {
     setSaving(true);
     setError(null);
     try {
-      const res = await apiClient.post(API, request);
-      onSaved(res.data.data.version);
+      const res = masterId ? await apiClient.put(`${API}/${masterId}`, request) : await apiClient.post(API, request);
+      onSaved(res.data.data.master, res.data.data.version);
     } catch (e) {
-      const data = extractApiError(e) as { message: string; blockers?: Blocker[] };
-      setError(data.message);
-      if (data.blockers) setBlockers(data.blockers);
+      setError(firstError(e));
     } finally {
       setSaving(false);
     }
   }
 
-  const canSave = preview !== null && preview.changed && blockers.length === 0 && !saving;
+  const truckType = request.truck_configuration_type ? truckConfigurationTypeOption(request.truck_configuration_type)?.label : null;
+  const canSave = preview !== null && preview.changed && !preview.duplicate && !saving;
 
   return (
     <Modal open title="Save Wheels Configuration" onClose={onClose} width={560}>
       <div data-save-dialog>
-        {loading && <p style={{ fontSize: 13, color: '#6b7280' }}>Checking the configuration…</p>}
+        <dl style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 14px', fontSize: 13, margin: '0 0 12px' }}>
+          <dt style={{ color: '#6b7280' }}>Vehicle Type</dt>
+          <dd style={{ margin: 0 }}>{vehicleTypeOption(request.vehicle_type)?.label ?? request.vehicle_type}</dd>
+          {truckType && (
+            <>
+              <dt style={{ color: '#6b7280' }}>Configuration Type</dt>
+              <dd style={{ margin: 0 }}>{truckType}</dd>
+            </>
+          )}
+          <dt style={{ color: '#6b7280' }}>Config Code</dt>
+          <dd data-save-code style={{ margin: 0, fontWeight: 700 }}>
+            {preview?.configuration.config_code ?? request.config_code}
+          </dd>
+          {preview && (
+            <>
+              <dt style={{ color: '#6b7280' }}>Total Axles</dt>
+              <dd style={{ margin: 0 }}>{preview.configuration.total_axles}</dd>
+              <dt style={{ color: '#6b7280' }}>Total Wheels</dt>
+              <dd style={{ margin: 0 }}>{preview.configuration.total_wheels}</dd>
+            </>
+          )}
+          {preview?.current_version && (
+            <>
+              <dt style={{ color: '#6b7280' }}>Current Version</dt>
+              <dd style={{ margin: 0 }}>
+                Version {preview.current_version.version_number} ({preview.current_version.config_code}){preview.changed ? ` → Version ${preview.current_version.version_number + 1}` : ''}
+              </dd>
+            </>
+          )}
+        </dl>
+
+        {loading && <p style={{ fontSize: 13, color: '#6b7280' }}>Generating positions…</p>}
+
         {preview && (
           <>
-            <p style={{ fontSize: 13, margin: '0 0 12px' }}>
-              Config Code <strong>{preview.configuration.config_code}</strong> · {preview.configuration.total_axles} axles · {preview.configuration.total_wheels} wheels
-              <br />
-              <span style={{ color: '#6b7280' }}>
-                {preview.active_version
-                  ? `Current: version ${preview.active_version.version_number} (${preview.active_version.config_code}).`
-                  : 'No saved configuration for this vehicle category yet.'}
-              </span>
-            </p>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Generated Positions ({preview.configuration.positions.length})</div>
+            <table data-generated-positions style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
+              <tbody>
+                {groupPositions(preview.configuration.positions).map((row) => (
+                  <tr key={row.label} style={{ borderTop: '1px solid #f3f4f6' }}>
+                    <td style={{ padding: '3px 6px', color: '#6b7280', width: 48 }}>{row.label}</td>
+                    <td style={{ padding: '3px 6px', fontFamily: 'monospace' }}>{row.codes.join(' ')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-            {!preview.changed ? (
-              <p data-save-unchanged style={{ fontSize: 13, color: '#166534' }}>
-                This configuration is already active. Nothing to save.
-              </p>
-            ) : (
-              <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+            {preview.diff && preview.changed && (
+              <div data-save-diff style={{ display: 'grid', gap: 6, marginBottom: 12, padding: 10, background: '#f9fafb', borderRadius: 6 }}>
+                <div style={{ fontSize: 12, color: '#6b7280' }}>Changes to the position list of this configuration (the current version keeps its positions as history):</div>
                 <DiffRow kind="unchanged" label="Unchanged" codes={preview.diff.unchanged} color="#374151" />
                 <DiffRow kind="added" label="Added" codes={preview.diff.added} color="#166534" />
-                <DiffRow kind="removed" label="Removed (retired, kept in history)" codes={preview.diff.removed} color="#b45309" />
+                <DiffRow kind="removed" label="Removed" codes={preview.diff.removed} color="#b45309" />
+              </div>
+            )}
+
+            {!preview.changed && (
+              <p data-save-unchanged style={{ fontSize: 13, color: '#166534' }}>
+                No changes — this is already the current version.
+              </p>
+            )}
+            {preview.duplicate && (
+              <div data-save-duplicate role="alert" style={{ fontSize: 13, color: '#b91c1c', marginBottom: 12 }}>
+                Configuration {preview.duplicate.config_code} already exists for this vehicle type. <Link to={`/app/wheel-configurations/${preview.duplicate.id}/edit`}>Edit that configuration</Link> instead.
               </div>
             )}
           </>
         )}
 
-        {blockers.length > 0 && (
-          <div data-save-blockers style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: 10, marginBottom: 12, fontSize: 13 }}>
-            <strong style={{ color: '#b91c1c' }}>Cannot save — tires are still installed on positions this configuration removes.</strong>
-            <div style={{ color: '#7f1d1d', margin: '4px 0 8px' }}>Remove or transfer these tires first. Tires are never moved automatically.</div>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', color: '#6b7280', fontSize: 12 }}>
-                  <th style={{ padding: '2px 4px' }}>Position</th>
-                  <th style={{ padding: '2px 4px' }}>Tire</th>
-                  <th style={{ padding: '2px 4px' }}>Vehicle</th>
-                </tr>
-              </thead>
-              <tbody>
-                {blockers.map((b) => (
-                  <tr key={b.tire_id} data-blocker={b.position_code}>
-                    <td style={{ padding: '2px 4px', fontFamily: 'monospace', fontWeight: 700 }}>{b.position_code}</td>
-                    <td style={{ padding: '2px 4px' }}>
-                      <Link to={`/app/tires/${b.tire_id}`}>{b.tire_serial_number}</Link>
-                    </td>
-                    <td style={{ padding: '2px 4px' }}>{b.vehicle_registration_number}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {error && blockers.length === 0 && (
+        {error && (
           <div role="alert" style={{ color: '#b91c1c', fontSize: 13, marginBottom: 12 }}>
             {error}
           </div>
@@ -175,13 +159,18 @@ export function SaveConfigurationDialog({ request, onClose, onSaved }: { request
   );
 }
 
+function firstError(e: unknown): string {
+  const data = extractApiError(e);
+  return Object.values(data.errors ?? {})[0]?.[0] ?? data.message;
+}
+
 function DiffRow({ kind, label, codes, color }: { kind: string; label: string; codes: string[]; color: string }) {
   return (
     <div data-diff={kind} style={{ fontSize: 13 }}>
-      <div style={{ color, fontWeight: 600 }}>
-        {label} ({codes.length})
-      </div>
-      <div style={{ fontFamily: 'monospace', fontSize: 12, color: '#374151', wordBreak: 'break-word' }}>{codes.length ? codes.join(' ') : '—'}</div>
+      <span style={{ color, fontWeight: 600 }}>
+        {label} ({codes.length}):
+      </span>{' '}
+      <span style={{ fontFamily: 'monospace', fontSize: 12, color: '#374151', wordBreak: 'break-word' }}>{codes.length ? codes.join(' ') : '—'}</span>
     </div>
   );
 }

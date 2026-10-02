@@ -185,10 +185,6 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json(['message' => $e->getMessage()], 422);
         });
 
-        $exceptions->render(function (\App\Domain\Tire\Services\WheelConfigurationBlockedException $e, Request $request) {
-            return response()->json(['message' => $e->getMessage(), 'blockers' => $e->blockers], 422);
-        });
-
         $exceptions->render(function (\App\Domain\ComponentAsset\Services\ComponentAssetException $e, Request $request) {
             return response()->json(['message' => $e->getMessage()], 422);
         });
