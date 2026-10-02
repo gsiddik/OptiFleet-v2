@@ -171,12 +171,46 @@ export function HeavyEquipmentBody({ g }: BodyProps) {
   );
 }
 
+/** Rigid truck: cab with windshield and mirrors over the steer axle, then a separate cargo box. */
+export function TruckBody({ g }: BodyProps) {
+  const { top, bottom, left, right } = g.body;
+  const w = right - left;
+  const cabBottom = top + g.profile.nose + 30;
+  const boxTop = cabBottom + 6;
+  return (
+    <g>
+      <TruckCab left={left} right={right} top={top} bottom={cabBottom} />
+      {/* cargo box with roof ribs */}
+      <rect x={left} y={boxTop} width={w} height={bottom - boxTop} rx={3} fill={BODY_COLORS.body} stroke={BODY_COLORS.bodyStroke} strokeWidth={1.5} />
+      {Array.from({ length: Math.max(0, Math.floor((bottom - boxTop - 20) / 26)) }, (_, i) => (
+        <line key={i} x1={left + 6} x2={right - 6} y1={boxTop + 20 + i * 26} y2={boxTop + 20 + i * 26} stroke={BODY_COLORS.detail} opacity={0.7} />
+      ))}
+      <line x1={(left + right) / 2} x2={(left + right) / 2} y1={bottom - 12} y2={bottom} stroke={BODY_COLORS.bodyStroke} />
+    </g>
+  );
+}
+
+/** Truck cab (also the Semi Trailer tractor): rounded front, windshield, roof, side mirrors. */
+function TruckCab({ left, right, top, bottom }: { left: number; right: number; top: number; bottom: number }) {
+  const w = right - left;
+  return (
+    <g>
+      <rect x={left - 7} y={top + 16} width={7} height={5} rx={1} fill={BODY_COLORS.dark} />
+      <rect x={right} y={top + 16} width={7} height={5} rx={1} fill={BODY_COLORS.dark} />
+      <path d={roundedFrontPath(left, right, top, bottom, 14, 4)} fill={BODY_COLORS.body} stroke={BODY_COLORS.bodyStroke} strokeWidth={1.5} />
+      <path d={`M ${left + 8} ${top + 10} L ${right - 8} ${top + 10} L ${right - 6} ${top + 24} L ${left + 6} ${top + 24} Z`} fill={BODY_COLORS.glass} />
+      <rect x={left + w * 0.2} y={top + 32} width={w * 0.6} height={Math.max(8, bottom - top - 44)} rx={4} fill="none" stroke={BODY_COLORS.detail} />
+    </g>
+  );
+}
+
 const BODY_RENDERERS: Partial<Record<BodyStyle, (props: BodyProps) => ReactNode>> = {
   PASSENGER_CAR: PassengerCarBody,
   BUS: BusBody,
   VAN: VanBody,
   FORKLIFT: ForkliftBody,
   HEAVY_EQUIPMENT: HeavyEquipmentBody,
+  TRUCK: TruckBody,
 };
 
 export function VehicleBody({ g }: BodyProps) {

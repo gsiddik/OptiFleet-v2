@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BackButton } from '../../../../components/BackButton';
 import { FormField, inputStyle } from '../../../../components/FormField';
 import { NumericInput } from '../../../../components/NumericInput';
-import { VEHICLE_TYPES, bodyStyleFor, vehicleTypeOption, type BodyStyle } from './vehicleTypes';
+import { TRUCK_CONFIGURATION_TYPES, VEHICLE_TYPES, bodyStyleFor, configCodePrefix, requiresTruckConfigurationType, vehicleTypeOption, type BodyStyle } from './vehicleTypes';
 import { LIMITS, configCode, parseCount, saveErrors, totalAxles, totalWheels, type AxleGroups, type Range } from './wheelLayout';
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
 
@@ -14,7 +14,10 @@ import { WheelConfigurationPreview } from './WheelConfigurationPreview';
  */
 export function AddWheelConfigurationPage() {
   const [vehicleType, setVehicleType] = useState('');
+  const [truckType, setTruckType] = useState('');
   const option = vehicleTypeOption(vehicleType);
+  const needsTruckType = requiresTruckConfigurationType(vehicleType);
+  const ready = option && (!needsTruckType || truckType !== '');
 
   return (
     <div>
@@ -26,7 +29,15 @@ export function AddWheelConfigurationPage() {
 
       <div className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
         <FormField label="Vehicle Type" required>
-          <select aria-label="Vehicle Type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle}>
+          <select
+            aria-label="Vehicle Type"
+            value={vehicleType}
+            onChange={(e) => {
+              setVehicleType(e.target.value);
+              setTruckType('');
+            }}
+            style={inputStyle}
+          >
             <option value="">Select vehicle type…</option>
             {VEHICLE_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -35,17 +46,32 @@ export function AddWheelConfigurationPage() {
             ))}
           </select>
         </FormField>
+        {needsTruckType && (
+          <FormField label="Truck Configuration Type" required>
+            <select aria-label="Truck Configuration Type" value={truckType} onChange={(e) => setTruckType(e.target.value)} style={inputStyle}>
+              <option value="">Select truck configuration type…</option>
+              {TRUCK_CONFIGURATION_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </FormField>
+        )}
       </div>
 
       {!option && <p style={{ fontSize: 13, color: '#6b7280' }}>Select a vehicle type to configure its axles and wheels.</p>}
-      {option && option.value === 'TRUCK' && (
-        <div className="card" style={{ fontSize: 13, color: '#6b7280' }}>
-          Configuration form for this vehicle type will be added after prototype approval.
-        </div>
+      {option && !ready && <p style={{ fontSize: 13, color: '#6b7280' }}>Select the truck configuration type to configure its axles and wheels.</p>}
+      {/* Every vehicle type uses the same form and rules; only the preview body and the Config Code
+          prefix (Truck · Trailer "+", Truck · Semi Trailer "-") differ. Keyed so a type change
+          starts a fresh form. */}
+      {option && ready && (
+        <AxleConfigurationForm
+          key={`${option.value}:${truckType}`}
+          bodyStyle={bodyStyleFor(option.value, needsTruckType ? truckType : null)}
+          codePrefix={configCodePrefix(option.value, needsTruckType ? truckType : null)}
+        />
       )}
-      {/* Every vehicle type uses the same form and rules; only the preview body differs. Keyed by
-          type so switching type starts a fresh form. */}
-      {option && option.value !== 'TRUCK' && <AxleConfigurationForm key={option.value} bodyStyle={bodyStyleFor(option.value, null)} />}
     </div>
   );
 }

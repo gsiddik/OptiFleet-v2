@@ -234,3 +234,12 @@ Checks (browser, every type, 22.222 and 12.221 with 3 spares): summary 5 / 21 / 
 axle exact, every axle line ends inside its outermost tires (measured on the rendered SVG), no
 shape outside the drawing; 1440 / 820 / 390 px: no page overflow, preview inside its card, no
 overlap with the form, all 4 spares visible (stacked below the form on tablet/phone).
+
+### C3 — Truck Configuration Type + Non Trailer (PROTOTYPE — awaiting review)
+Vehicle Type = Truck shows a mandatory **Truck Configuration Type** (Non Trailer / Trailer / Semi
+Trailer); the axle form appears once it is chosen and resets when the type changes. Same form and
+rules; the Config Code prefix comes from `configCodePrefix()` (Non Trailer none, Trailer `+`,
+Semi Trailer `-`) and only decorates the shared code. Non Trailer body: cab (rounded front,
+windshield, mirrors) over the steer axle + separate ribbed cargo box. Browser: 22.222 / +22.222 /
+-22.222 and +12.221 / -12.221 (5 axles, 17 wheels with 1 spare), 1.22, axle lines end inside
+outer tires for every case.
