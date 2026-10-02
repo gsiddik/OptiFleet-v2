@@ -51,3 +51,15 @@ export function bodyStyleFor(vehicleType: VehicleType, truckConfigurationType: s
   if (truckConfigurationType === 'SEMI_TRAILER') return 'SEMI_TRAILER';
   return 'TRUCK';
 }
+
+/**
+ * A vehicle's free-text vehicle_type (legacy values such as "Car", "Truck") → Vehicle Type code.
+ * Display/form initialisation only — mirrors the backend VehicleTypeClassifier, which is what
+ * decides wheel configuration compatibility.
+ */
+export function resolveVehicleType(raw: string | null | undefined): VehicleType | null {
+  if (!raw) return null;
+  const key = raw.trim().toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+  const aliases: Record<string, VehicleType> = { CAR: 'PASSENGER_CAR', PASSENGER: 'PASSENGER_CAR' };
+  return VEHICLE_TYPES.find((t) => t.value === key)?.value ?? aliases[key] ?? null;
+}

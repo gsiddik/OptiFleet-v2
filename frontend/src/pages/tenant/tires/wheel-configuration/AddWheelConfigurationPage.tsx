@@ -104,6 +104,11 @@ function WheelConfigurationFormPage({ masterId }: { masterId: string | null }) {
             Editing version {current.version_number} ({current.config_code}). Saving a change creates version {current.version_number + 1}. Vehicle Type and Truck Configuration Type identify this configuration and cannot be changed — create a new configuration for another type.
           </p>
         )}
+        {editing && (master?.mapped_vehicle_count ?? 0) > 0 && (
+          <p data-mapped-impact style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 8px', margin: '8px 0 0' }}>
+            {master?.mapped_vehicle_count} vehicle(s) are mapped to this configuration. They keep their current version; move them to the new version from Vehicle Mapping when ready.
+          </p>
+        )}
       </div>
 
       {!option && <p style={{ fontSize: 13, color: '#6b7280' }}>Select a vehicle type to configure its axles and wheels.</p>}

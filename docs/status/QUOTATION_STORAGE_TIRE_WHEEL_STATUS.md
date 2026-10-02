@@ -426,3 +426,77 @@ Validation (this session):
 Validation: typecheck PASS, oxlint on changed files clean, build PASS; browser check — list shows 5
 masters and no legacy section (API still returns the 11 legacy rows), Tire Detail loads without
 errors.
+
+## Phase D — Wheels Configuration list/detail/edit, Vehicle Mapping, Vehicle tab, Tire registration
+
+Architecture: Wheels Configuration Master → Configuration Version → Generated Positions → Vehicle
+Mapping (version-specific) → Vehicle Wheels Configuration → Tire Installation → Tire List.
+Warehouse inventory stays a separate domain: initial tire registration never touches stock.
+
+### D1 — List / Detail / Edit (DONE, `fa9116a`)
+- List paginated: Vehicle Type, Truck Configuration Type (— for non-truck), Config Code, Total
+  Wheels, Spare Tire, Version, Status; actions View Detail / Edit (tire.manage) / Vehicle Mapping.
+- Detail page: all saved fields per version (front/rear axles + wheels per side, totals, spare),
+  preview from the saved version (same renderer), generated positions, diff, mapped vehicle count.
+- Edit reuses the existing form; editing creates a new version; mapped vehicles stay on theirs
+  (impact note in the form and the save dialog).
+
+### D2 — Vehicle Mapping (DONE, `7727c55`)
+- Table `vehicle_wheel_configuration_mappings` (history + active, version-specific; partial
+  unique index one ACTIVE per vehicle; FKs RESTRICT to vehicles/masters/versions; end reason
+  UNMAPPED / VERSION_UPDATED; previous_mapping_id chain).
+- Vehicle attribute audit: `vehicles.vehicle_type` was free text, never editable in the UI
+  (seeded "Car"/"Truck"); `axle_count` / `wheel_count` existed (nullable) on Edit Specifications.
+  No new vehicle fields: `VehicleTypeClassifier` resolves legacy text (Car → PASSENGER_CAR …), the
+  vehicle form gains a Vehicle Type select (stores the type code; legacy text kept if unknown), and
+  Wheels is labelled "incl. spare" because configuration Total Wheels includes spares.
+- Eligibility (backend): resolved type = configuration type AND axles = Total Axles AND wheels =
+  Total Wheels of the current version, in data scope, not disposed, no active mapping anywhere.
+  Vehicles with missing data / mapped elsewhere are excluded and counted. Truck: vehicles carry no
+  trailer classification, so a Truck vehicle is compatible with any Truck Configuration Type.
+- Save (`PUT …/vehicle-mappings`, wheel_configuration.map_vehicle): add / remove / update-to-current-
+  version, atomic, rows locked; history rows written; returns the refreshed page.
+- Page: VIEW first, Edit → Cancel / Save, click or Enter moves rows (draft), confirm summary
+  (Added / Removed / Changed), blocker display, responsive.
+- Permission `wheel_configuration.map_vehicle` (migration grants it to roles with tire.manage;
+  PermissionSeeder + demo/functional role lists updated).
+
+### D3 — Vehicle Detail → Wheels Configuration tab (DONE, `ccc45a6`)
+- `GET /app/vehicles/{vehicle}/wheel-configuration` (tire.view, data scope): mapped VERSION (not the
+  latest), positions, active installations per position, mapping history.
+- Empty state → "Open Wheels Configuration List" with vehicle context (`?vehicle=`): list filtered
+  by the backend (`compatible_vehicle_id`), Vehicle Mapping highlights the vehicle. Mapping stays
+  in the single Vehicle Mapping flow.
+- Mapped state: summary, newer-version notice, preview with installed markers, position panel.
+
+### D4 — Initial tire registration (DONE, `de62901`)
+- `POST /app/vehicles/{vehicle}/wheel-configuration/tires` (tire.install) + `GET …/tire-products`
+  (Item Type Tire lookup, tire.install — `/app/products` needs product.view).
+- Transaction under the vehicle row lock: position ∈ mapped version and free → product is Tire →
+  serial trimmed, case-insensitive match (reuse a loose IN_STOCK/RESERVED tire of the same product
+  outside any warehouse; reject installed / other product / other status / warehouse-held) →
+  create tire via TireRegistrationService → TireService::install (INSTALLED, baseline tread
+  inspection) → `tire_installations.installation_source = INITIAL_REGISTRATION` (new column,
+  default STANDARD). Date + HH:mm are read in the tenant timezone. KM / tread: decimal text, ≤ 2
+  decimals, ≥ 0 (never truncated). Required: date, time, KM (an estimate is acceptable), product,
+  serial; tread depth optional (owner decision).
+- No inventory effect: no warehouse_stocks, stock_movements, stock_reservations, stock_transfers or
+  goods receipt writes (asserted in tests and e2e).
+- TireService install/rotate validate positions against the mapped version when the vehicle is
+  mapped (legacy category positions otherwise), inside the transaction with a shared vehicle lock.
+
+### D5 — Mapping safety + regression (DONE)
+- Remap rule: any add / version update checks the vehicle's active installations against the
+  target positions; a tire on a missing position blocks with vehicle, position and serial; tires
+  are never moved; positions that remain keep their installation rows untouched.
+- Finding: the seeded truck B 1001 ALP has a tire on the legacy position REAR_LEFT, so it cannot
+  be mapped to a generated-position configuration until that tire is moved/removed (by design).
+- Unmapping a vehicle with installed tires is allowed; re-mapping is protected by the rule above.
+
+Validation (this session): WheelConfigurationMaster 15, WheelConfigurationVehicleMapping 10,
+VehicleWheelConfiguration 4, VehicleTireRegistration 6 PASS; Tire/Wheel/Vehicle regression 164
+PASS; full non-Mongo backend regression 1013 PASS; frontend lint 0 errors (28 pre-existing warnings), typecheck + build PASS; browser e2e for every phase
+PASS (list/detail/edit, mapping view/edit/cancel/save/remove, vehicle tab empty/mapped/context,
+registration form, decimals, duplicate serial, Tire List, warehouse unchanged, remap blocker,
+390 px); lock smoke: registration waited ~2.6 s while the vehicle row was locked; seed ×2 PASS.
+NOT RUN: Mongo analytics/intelligence tests (MongoDB unavailable).

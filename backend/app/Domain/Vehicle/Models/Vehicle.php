@@ -9,10 +9,12 @@ use App\Domain\MasterData\Models\VehicleModel as VehicleModelMaster;
 use App\Domain\Organization\Models\Branch;
 use App\Domain\Organization\Models\Workshop;
 use App\Domain\Shared\Concerns\BelongsToTenant;
+use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Vehicle extends Model
@@ -69,6 +71,12 @@ class Vehicle extends Model
     public function vehicleModel(): BelongsTo
     {
         return $this->belongsTo(VehicleModelMaster::class, 'vehicle_model_id');
+    }
+
+    /** Current wheel configuration assignment (version-specific); ended rows are the history. */
+    public function activeWheelConfigurationMapping(): HasOne
+    {
+        return $this->hasOne(VehicleWheelConfigurationMapping::class)->where('status', VehicleWheelConfigurationMapping::STATUS_ACTIVE);
     }
 
     public function assignments(): HasMany

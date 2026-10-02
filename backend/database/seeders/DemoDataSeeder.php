@@ -121,7 +121,7 @@ class DemoDataSeeder extends Seeder
                 'purchase_request.view', 'purchase_request.create',
                 'goods_receipt.view', 'goods_receipt.post', 'vendor_invoice.view', 'vendor_invoice.pay',
                 'partner.view',
-                'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap',
+                'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap', 'wheel_configuration.map_vehicle',
                 // Phase E: send/receive are logistics actions (Warehouse Manager); final
                 // inspection/approval sit with the Workshop Manager instead (G-32).
                 'tire_retread.send', 'tire_retread.receive', 'tire_repair.send', 'tire_repair.receive',
