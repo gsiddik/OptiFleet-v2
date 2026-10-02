@@ -210,3 +210,13 @@ platform default). Tire installation references positions **by code string**, no
 (`TireService` only validates the code against the category's configured positions when any
 exist). Replacing a category's list therefore cannot orphan FKs, but a tire currently installed
 on a code that disappears must be handled (block or map) — to be designed with the Save.
+
+### C1b — Manual "Add Single Position" removed (DONE)
+Dependency audit: the button + create modal on Wheel Configuration were the only callers of
+`POST /app/wheel-configurations`; Tire Detail reads positions (install dropdown) and
+`TireService` validates install positions against them. Removed: the user-facing button and the
+create modal only. Kept: model, list, edit/delete of existing rows, read API, install
+validation, and the store API (backend tests, internal use; the future Save writes generated
+positions server-side). Existing historical positions untouched. Interim gap until Save ships:
+no new positions can be added from the UI — non-blocking, because a category without configured
+positions accepts free position codes at tire install.

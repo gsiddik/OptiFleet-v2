@@ -49,7 +49,6 @@ export function WheelConfigurationListPage() {
   const [categoryFilter, setCategoryFilter] = useState('');
   const [categories, setCategories] = useState<VehicleCategory[]>([]);
   const [reloadKey, setReloadKey] = useState(0);
-  const [showCreate, setShowCreate] = useState(false);
   const [editing, setEditing] = useState<WheelConfigurationItem | null>(null);
   const [deleting, setDeleting] = useState<WheelConfigurationItem | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -116,15 +115,11 @@ export function WheelConfigurationListPage() {
         onSearchChange={setSearch}
         actions={
           hasPermission('tire.manage') ? (
-            <div style={{ display: 'flex', gap: 8 }}>
-              {/* Single-position entry kept until the new configuration flow is approved and persisted. */}
-              <button className="btn-secondary" onClick={() => setShowCreate(true)}>
-                Add Single Position
-              </button>
-              <button className="btn-primary" onClick={() => navigate('/app/wheel-configurations/new')}>
-                New Wheels Configuration
-              </button>
-            </div>
+            // Wheel positions are generated from a wheels configuration (owner decision): there is no
+            // manual one-by-one creation. Existing positions can still be edited or deleted below.
+            <button className="btn-primary" onClick={() => navigate('/app/wheel-configurations/new')}>
+              New Wheels Configuration
+            </button>
           ) : null
         }
       >
@@ -154,7 +149,6 @@ export function WheelConfigurationListPage() {
         </>
       )}
 
-      <CreateModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
       {editing && (
         <EditModal
           config={editing}
@@ -178,73 +172,6 @@ export function WheelConfigurationListPage() {
         onConfirm={confirmDelete}
       />
     </div>
-  );
-}
-
-function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
-  const [categories, setCategories] = useState<VehicleCategory[]>([]);
-  const [vehicleCategoryId, setVehicleCategoryId] = useState('');
-  const [positionCode, setPositionCode] = useState('');
-  const [label, setLabel] = useState('');
-  const [axleNumber, setAxleNumber] = useState('');
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data)).catch(() => setCategories([]));
-  }, [open]);
-
-  async function submit() {
-    setSubmitting(true);
-    setErrors({});
-    try {
-      await apiClient.post('/app/wheel-configurations', {
-        vehicle_category_id: vehicleCategoryId, position_code: positionCode, label, axle_number: axleNumber || undefined,
-      });
-      setPositionCode('');
-      setLabel('');
-      setAxleNumber('');
-      onCreated();
-      onClose();
-    } catch (err) {
-      const apiError: ApiErrorShape = extractApiError(err);
-      setErrors(apiError.errors ?? {});
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal open={open} title="Add Wheel Position" onClose={onClose}>
-      <FormField label="Vehicle Category" errors={errors.vehicle_category_id} required>
-        <select value={vehicleCategoryId} onChange={(e) => setVehicleCategoryId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-      </FormField>
-      <FormField label="Position Code" errors={errors.position_code} required>
-        <input value={positionCode} onChange={(e) => setPositionCode(e.target.value)} placeholder="e.g. FRONT_LEFT" style={inputStyle} />
-      </FormField>
-      <FormField label="Label" errors={errors.label} required>
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Front Left" style={inputStyle} />
-      </FormField>
-      <FormField label="Axle Number" errors={errors.axle_number}>
-        <NumericInput value={axleNumber} onChange={(e) => setAxleNumber(e.target.value)} style={inputStyle} />
-      </FormField>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
-          Cancel
-        </button>
-        <button className="btn-primary" disabled={submitting || !vehicleCategoryId || !positionCode || !label} onClick={submit}>
-          Save
-        </button>
-      </div>
-    </Modal>
   );
 }
 

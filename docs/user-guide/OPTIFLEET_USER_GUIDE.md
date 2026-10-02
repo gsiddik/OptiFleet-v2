@@ -1382,7 +1382,7 @@ Mechanic (`tire.install/rotate/inspect/remove/scrap`); Workshop Manager (checker
 | Fitur | Kegunaan | Role | Input Utama | Output |
 |---|---|---|---|---|
 | Rim | Katalog referensi pelek (berdiri sendiri) | Warehouse | Kode, brand, dimensi | Data rim |
-| Wheel Configuration | Tata letak posisi roda per kategori kendaraan | Admin | Kategori kendaraan, daftar posisi | Konfigurasi posisi |
+| Wheel Configuration | Tata letak posisi roda per kategori kendaraan, dibuat lewat **New Wheels Configuration** (jumlah axle depan/belakang, roda per sisi, ban cadangan → Config Code & kode posisi otomatis seperti 1FL1, 1RR2, S1). Tidak ada lagi penambahan posisi satu per satu ("Add Position"); posisi lama tetap bisa diubah/dihapus. Penyimpanan konfigurasi (mengganti daftar posisi kategori) menyusul setelah prototipe disetujui. | Admin | Tipe kendaraan, axle, roda per sisi, ban cadangan | Konfigurasi posisi |
 | Tire — Install | Memasang ban ke kendaraan | Mechanic | Vehicle, posisi, ban | Status INSTALLED |
 | Tire — Rotate/Swap | Memindah posisi ban | Mechanic | Posisi tujuan | Riwayat rotasi |
 | Tire — Inspect | Mencatat kondisi ban | Mechanic/Inspector | Kedalaman tapak, kondisi | Rekaman inspeksi |
