@@ -3,7 +3,7 @@ import { BackButton } from '../../../../components/BackButton';
 import { FormField, inputStyle } from '../../../../components/FormField';
 import { NumericInput } from '../../../../components/NumericInput';
 import { VEHICLE_TYPES, vehicleTypeOption } from './vehicleTypes';
-import { LIMITS, configCode, parseCount, totalAxles, totalWheels, type AxleGroups, type Range } from './wheelLayout';
+import { LIMITS, configCode, parseCount, saveErrors, totalAxles, totalWheels, type AxleGroups, type Range } from './wheelLayout';
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
 
 /**
@@ -37,7 +37,7 @@ export function AddWheelConfigurationPage() {
       </div>
 
       {!option && <p style={{ fontSize: 13, color: '#6b7280' }}>Select a vehicle type to configure its axles and wheels.</p>}
-      {option && !option.hasConfigurationForm && (
+      {option && option.value !== 'PASSENGER_CAR' && (
         <div className="card" style={{ fontSize: 13, color: '#6b7280' }}>
           Configuration form for this vehicle type will be added after prototype approval.
         </div>
@@ -63,12 +63,14 @@ function PassengerCarConfiguration() {
   const spare = parseCount(spareTires, LIMITS.spareTires);
   const frontRows = frontWheels.slice(0, front.value ?? 0).map((raw) => parseCount(raw, LIMITS.wheelsPerSide));
   const rearRows = rearWheels.slice(0, rear.value ?? 0).map((raw) => parseCount(raw, LIMITS.wheelsPerSide));
-  const noAxles = front.value === 0 && rear.value === 0;
-
-  const countsValid = front.value !== null && rear.value !== null && !noAxles;
+  // 0 axles in a group is a temporary editing state: the preview follows it, but there is no
+  // Config Code and the configuration cannot be saved until both groups have an axle.
+  const countsValid = front.value !== null && rear.value !== null;
   const rowsValid = [...frontRows, ...rearRows].every((r) => r.value !== null);
   const groups: AxleGroups | null = countsValid && rowsValid ? { front: frontRows.map((r) => r.value as number), rear: rearRows.map((r) => r.value as number) } : null;
-  const complete = groups !== null && spare.value !== null;
+  const groupErrors = groups ? saveErrors(groups) : [];
+  const code = groups ? configCode(groups) : null;
+  const saveReady = groups !== null && spare.value !== null && groupErrors.length === 0;
 
   const setRow = (setter: typeof setFrontWheels, index: number, value: string) => setter((rows) => rows.map((r, i) => (i === index ? value : r)));
   const errorOf = (field: string, parsed: { error: string | null }, raw: string) => (parsed.error && (touched[field] || raw.trim() !== '') ? [parsed.error] : undefined);
@@ -102,7 +104,11 @@ function PassengerCarConfiguration() {
             onRow={(i, v) => setRow(setRearWheels, i, v)}
             onRowBlur={(i) => touch(`rear-${i}`)}
           />
-          {noAxles && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 10 }}>A configuration needs at least one axle.</div>}
+          {groupErrors.map((e) => (
+            <div key={e} style={{ color: '#b91c1c', fontSize: 12, marginBottom: 6 }}>
+              {e}
+            </div>
+          ))}
           <FormField label="Spare Tires" required errors={errorOf('spare', spare, spareTires)}>
             <IntegerField label="Spare Tires" value={spareTires} onChange={setSpareTires} onBlur={() => touch('spare')} range={LIMITS.spareTires} />
           </FormField>
@@ -113,9 +119,13 @@ function PassengerCarConfiguration() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
             <SummaryField label="Total Axles" value={countsValid ? String(totalAxles(front.value as number, rear.value as number)) : ''} />
             <SummaryField label="Total Wheels" value={groups && spare.value !== null ? String(totalWheels(groups, spare.value)) : ''} />
-            <SummaryField label="Config Code" value={groups ? configCode(groups) : ''} />
+            <SummaryField label="Config Code" value={code ?? ''} />
           </div>
-          {!complete && <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 0 }}>Totals and the Config Code appear as soon as every field is valid.</p>}
+          <p style={{ fontSize: 12, color: saveReady ? '#166534' : '#6b7280', marginBottom: 0 }}>
+            {saveReady
+              ? 'Valid configuration.'
+              : 'The Config Code appears when every field is valid and there is at least one front and one rear axle.'}
+          </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 14 }}>
             <button className="btn-primary" disabled title="Saving will be added after the prototype is approved">
               Save Configuration

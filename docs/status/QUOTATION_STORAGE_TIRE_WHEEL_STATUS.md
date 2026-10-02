@@ -184,3 +184,29 @@ feature**: nothing is persisted; existing wheel-configuration data and API are u
   wheelbase gap 150 vs pitch 50, spare outside) and browser at 1440 / 820 px: §52 → 5 / 21 /
   22.222 with 2 + 3 axle lines, 20 wheels, 1 spare, FRONT visible; §53 → 4 / 12 / 12.21 with
   exact wheels per axle; validation (Required, range, 9 axles rejected), Save disabled.
+
+## Phase C — Wheel Configuration: owner decisions applied
+
+### C1 — Final business rules (DONE)
+Owner decisions (final): wheels/side 1–4; axles per group 0–6 while editing, ≥1 front AND ≥1 rear
+to be valid/saved; spare 0–4; rear axle numbering restarts at 1; spares S1–S4; Config Code
+`<prefix><front>.<rear>` with prefix `+` Truck·Trailer, `-` Truck·Semi Trailer, none otherwise —
+never an empty group (`0.22` / `22.0` impossible).
+
+- Backend `App\Domain\Tire\Services\WheelConfigurationRules::evaluate()` — validator →
+  totals → Config Code → generated position list (front, rear, spares; position_code, group,
+  axle_in_group, overall axle_number, side, wheel_index, label, sequence). Final authority for the
+  future Save; no persistence yet.
+- Frontend `wheelLayout.ts` / `vehicleTypes.ts` mirror the rules for the live preview
+  (`configCode()` returns null with an empty group, `saveErrors()`, `configCodePrefix()`).
+- Shared cases `backend/tests/fixtures/wheel_configuration_cases.json` (10 valid incl.
+  22.222 / 12.221 / 1.1 / +22.222 / -22.222, 10 invalid incl. 0 / 5 wheels, 7 axles, 5 spares,
+  empty groups, truck without type) run by `WheelConfigurationRulesTest` (5 tests) and by the
+  frontend logic check — both pass.
+
+Audit (for Save / replacement, not implemented yet): positions live in `wheel_configurations`
+(vehicle_category_id, free-text position_code, unique per tenant+category+code; tenant_id NULL =
+platform default). Tire installation references positions **by code string**, not FK
+(`TireService` only validates the code against the category's configured positions when any
+exist). Replacing a category's list therefore cannot orphan FKs, but a tire currently installed
+on a code that disappears must be handled (block or map) — to be designed with the Save.

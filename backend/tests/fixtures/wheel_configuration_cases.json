@@ -1,0 +1,27 @@
+{
+  "_comment": "Shared wheel-configuration rule cases: backend WheelConfigurationRulesTest and the frontend wheelLayout check both run these, so the two implementations stay identical.",
+  "valid": [
+    { "name": "passenger 22.222", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [2, 2], "rear": [2, 2, 2], "spare": 1, "config_code": "22.222", "total_axles": 5, "total_wheels": 21 },
+    { "name": "variable 12.221", "vehicle_type": "BUS", "truck_configuration_type": null, "front": [1, 2], "rear": [2, 2, 1], "spare": 0, "config_code": "12.221", "total_axles": 5, "total_wheels": 16 },
+    { "name": "minimal 1.1", "vehicle_type": "VAN", "truck_configuration_type": null, "front": [1], "rear": [1], "spare": 0, "config_code": "1.1", "total_axles": 2, "total_wheels": 4 },
+    { "name": "limits 4 wheels / 6 axles / 4 spare", "vehicle_type": "HEAVY_EQUIPMENT", "truck_configuration_type": null, "front": [4, 4, 4, 4, 4, 4], "rear": [1, 1, 1, 1, 1, 1], "spare": 4, "config_code": "444444.111111", "total_axles": 12, "total_wheels": 64 },
+    { "name": "forklift 12.2", "vehicle_type": "FORKLIFT", "truck_configuration_type": null, "front": [1, 2], "rear": [2], "spare": 0, "config_code": "12.2", "total_axles": 3, "total_wheels": 10 },
+    { "name": "truck non trailer", "vehicle_type": "TRUCK", "truck_configuration_type": "NON_TRAILER", "front": [2, 2], "rear": [2, 2, 2], "spare": 1, "config_code": "22.222", "total_axles": 5, "total_wheels": 21 },
+    { "name": "truck trailer", "vehicle_type": "TRUCK", "truck_configuration_type": "TRAILER", "front": [2, 2], "rear": [2, 2, 2], "spare": 1, "config_code": "+22.222", "total_axles": 5, "total_wheels": 21 },
+    { "name": "truck trailer variable", "vehicle_type": "TRUCK", "truck_configuration_type": "TRAILER", "front": [1, 2], "rear": [2, 2, 1], "spare": 0, "config_code": "+12.221", "total_axles": 5, "total_wheels": 16 },
+    { "name": "truck semi trailer", "vehicle_type": "TRUCK", "truck_configuration_type": "SEMI_TRAILER", "front": [2, 2], "rear": [2, 2, 2], "spare": 2, "config_code": "-22.222", "total_axles": 5, "total_wheels": 22 },
+    { "name": "truck semi trailer variable", "vehicle_type": "TRUCK", "truck_configuration_type": "SEMI_TRAILER", "front": [1, 2], "rear": [2, 2, 1], "spare": 0, "config_code": "-12.221", "total_axles": 5, "total_wheels": 16 }
+  ],
+  "invalid": [
+    { "name": "wheels per side 0", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [0], "rear": [1], "spare": 0, "field": "front_axles.0" },
+    { "name": "wheels per side 5", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [1], "rear": [5], "spare": 0, "field": "rear_axles.0" },
+    { "name": "7 front axles", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [1, 1, 1, 1, 1, 1, 1], "rear": [1], "spare": 0, "field": "front_axles" },
+    { "name": "7 rear axles", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [1], "rear": [1, 1, 1, 1, 1, 1, 1], "spare": 0, "field": "rear_axles" },
+    { "name": "5 spare tires", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [1], "rear": [1], "spare": 5, "field": "spare_tires" },
+    { "name": "no front axle", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [], "rear": [2, 2], "spare": 0, "field": "front_axles" },
+    { "name": "no rear axle", "vehicle_type": "PASSENGER_CAR", "truck_configuration_type": null, "front": [2, 2], "rear": [], "spare": 0, "field": "rear_axles" },
+    { "name": "truck without configuration type", "vehicle_type": "TRUCK", "truck_configuration_type": null, "front": [1], "rear": [1], "spare": 0, "field": "truck_configuration_type" },
+    { "name": "configuration type on a non-truck", "vehicle_type": "BUS", "truck_configuration_type": "TRAILER", "front": [1], "rear": [1], "spare": 0, "field": "truck_configuration_type" },
+    { "name": "unknown vehicle type", "vehicle_type": "TRAIN", "truck_configuration_type": null, "front": [1], "rear": [1], "spare": 0, "field": "vehicle_type" }
+  ]
+}

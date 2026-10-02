@@ -14,14 +14,12 @@ export interface AxleGroups {
 }
 
 /**
- * Prototype input limits (with the reason for each — to be confirmed by the owner):
- * - wheels per side 1–4: the Config Code writes one digit per axle, so 9 is the hard ceiling;
- *   real axles carry 1 (single) or 2 (dual) per side, 4 leaves headroom while the preview stays
- *   legible. 0 is not allowed — an axle without wheels is not an axle.
- * - axles per group 0–6: 0 allows a configuration without a front or a rear group (edge case,
- *   see configCode); 6 covers multi-axle heavy vehicles and keeps the preview readable.
+ * Input limits (owner-approved):
+ * - wheels per side 1–4 (the Config Code writes one digit per axle; 0 is not an axle);
+ * - axles per group 0–6 while editing, but a configuration that can be saved needs at least one
+ *   front AND one rear axle ({@link saveErrors});
  * - spare tires 0–4.
- * At least one axle in total is required.
+ * The backend (WheelConfigurationRules) enforces the same rules and is the final authority.
  */
 export const LIMITS = {
   axlesPerGroup: { min: 0, max: 6 },
@@ -53,14 +51,25 @@ export function totalWheels(groups: AxleGroups, spareTires: number): number {
 }
 
 /**
- * Config Code: one digit per front axle (its wheels per side), ".", one digit per rear axle.
- * 2 front axles of 2 + 3 rear axles of 2 → "22.222"; front 1,2 + rear 2,2,1 → "12.221".
- * An empty group is written as a single "0" ("0.22", "22.0"): wheels per side is never 0, so a
- * "0" can only mean "no axle in this group" and the code always has the same "front.rear" shape.
+ * Config Code = <prefix><one digit per front axle>.<one digit per rear axle>, e.g. 22.222, 12.221,
+ * +22.222 (Truck · Trailer), -22.222 (Truck · Semi Trailer). The prefix only decorates the code
+ * (see vehicleTypes.configCodePrefix). Both groups need at least one axle — there is no code for a
+ * configuration with an empty group (null), so "0.22" / "22.0" can never be produced.
  */
-export function configCode(groups: AxleGroups): string {
-  const digits = (axles: number[]) => (axles.length === 0 ? '0' : axles.join(''));
-  return `${digits(groups.front)}.${digits(groups.rear)}`;
+export function configCode(groups: AxleGroups, prefix = ''): string | null {
+  if (groups.front.length === 0 || groups.rear.length === 0) return null;
+  return `${prefix}${groups.front.join('')}.${groups.rear.join('')}`;
+}
+
+/**
+ * Save rules on a parsed configuration (field-level limits are checked by parseCount):
+ * at least one front and one rear axle. Empty array = the configuration can be saved.
+ */
+export function saveErrors(groups: AxleGroups): string[] {
+  const errors: string[] = [];
+  if (groups.front.length < 1) errors.push('At least one front axle is required to save.');
+  if (groups.rear.length < 1) errors.push('At least one rear axle is required to save.');
+  return errors;
 }
 
 export type AxleGroupKey = 'F' | 'R';
