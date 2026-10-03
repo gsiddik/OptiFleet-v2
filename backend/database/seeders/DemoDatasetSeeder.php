@@ -1,0 +1,675 @@
+<?php
+
+namespace Database\Seeders;
+
+use App\Domain\AccessControl\Models\DataScopeAssignment;
+use App\Domain\AccessControl\Models\Permission;
+use App\Domain\AccessControl\Models\Role;
+use App\Domain\AccessControl\Models\RoleAssignment;
+use App\Domain\Breakdown\Models\Breakdown;
+use App\Domain\Breakdown\Services\BreakdownService;
+use App\Domain\Identity\Models\Tenant;
+use App\Domain\Identity\Models\TenantUser;
+use App\Domain\Inspection\Models\Inspection;
+use App\Domain\Inspection\Models\InspectionTemplate;
+use App\Domain\Inspection\Services\InspectionService;
+use App\Domain\Inventory\Models\WarehouseStock;
+use App\Domain\Inventory\Services\InventoryService;
+use App\Domain\MaintenancePolicy\Models\MaintenancePackage;
+use App\Domain\MaintenancePolicy\Models\VehicleMaintenanceProfile;
+use App\Domain\MaintenancePolicy\Services\MaintenanceScheduleService;
+use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
+use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
+use App\Domain\MasterData\Models\ComponentCategory;
+use App\Domain\MasterData\Models\ComponentGroup;
+use App\Domain\MasterData\Models\VehicleBrand;
+use App\Domain\MasterData\Models\VehicleCategory;
+use App\Domain\MasterData\Models\VehicleModel as VehicleModelMaster;
+use App\Domain\Organization\Models\Branch;
+use App\Domain\Organization\Models\Warehouse;
+use App\Domain\Organization\Models\WarehouseBin;
+use App\Domain\Organization\Models\WarehouseRack;
+use App\Domain\Organization\Models\WarehouseZone;
+use App\Domain\Organization\Models\Workshop;
+use App\Domain\Partner\Models\Partner;
+use App\Domain\Procurement\Models\PurchaseRequest;
+use App\Domain\Procurement\Services\GoodsReceiptService;
+use App\Domain\Procurement\Services\PurchaseOrderService;
+use App\Domain\Procurement\Services\PurchaseRequestService;
+use App\Domain\Procurement\Services\RfqService;
+use App\Domain\ProductMaster\Models\Product;
+use App\Domain\ProductMaster\Models\ProductCategory;
+use App\Domain\ProductMaster\Models\Uom;
+use App\Domain\ProductMaster\Services\ProductCreationService;
+use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Models\TireLoadIndex;
+use App\Domain\Tire\Models\TireOperation;
+use App\Domain\Tire\Models\TirePlyRating;
+use App\Domain\Tire\Models\TireSpeedRating;
+use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
+use App\Domain\Tire\Models\WheelConfigurationMaster;
+use App\Domain\Tire\Services\TireOperationService;
+use App\Domain\Tire\Services\TireRegistrationService;
+use App\Domain\Tire\Services\VehicleTireRegistrationService;
+use App\Domain\Tire\Services\VehicleWheelConfigurationMappingService;
+use App\Domain\Tire\Services\WheelConfigurationMasterService;
+use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
+use App\Domain\WorkOrder\Services\WorkOrderPartRequestService;
+use App\Domain\WorkOrder\Services\WorkOrderPartService;
+use App\Domain\WorkOrder\Services\WorkOrderService;
+use App\Domain\Workshop\Models\Worker;
+use App\Domain\Workshop\Models\Workspace;
+use App\Models\User;
+use App\Support\TenantContext;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
+
+/**
+ * Demo dataset completion for the ALPHA tenant (runs after DemoDataSeeder / OperationsSeeder /
+ * SupplyChainSeeder): every demo list reaches at least 5 representative records and every role
+ * in the README has a login. Idempotent — each block finds its records by a stable natural key
+ * (codes, registration numbers, deterministic demo serials, notes) before creating anything —
+ * and every record goes through the same domain services as the application (Wheels
+ * Configuration, Vehicle Mapping, tire registration, Tire Operations + Work Orders, Part
+ * Requests, procurement chain), so the data is relationally valid and follows current rules.
+ */
+class DemoDatasetSeeder extends Seeder
+{
+    private Tenant $tenant;
+
+    private User $admin;
+
+    public function run(): void
+    {
+        $this->tenant = Tenant::query()->where('code', 'ALPHA')->firstOrFail();
+        $this->admin = User::query()->where('email', 'alpha.admin@optifleet.test')->firstOrFail();
+        $context = app(TenantContext::class);
+        $previous = $context->tenantId();
+        $context->setTenantId($this->tenant->id);
+        try {
+            $this->seedTenant();
+        } finally {
+            // Later seeders (e.g. the functional-test tenant) must not inherit ALPHA's scope.
+            $context->setTenantId($previous);
+        }
+    }
+
+    private function seedTenant(): void
+    {
+        $branches = $this->branches();
+        $this->accessAccounts($branches);
+        $this->vendors();
+        $vehicles = $this->vehicles($branches);
+        $carTire = $this->carTireProduct();
+        $truckTire = Product::query()->where('tenant_id', $this->tenant->id)->where('name', 'Truck Tire 295/80R22.5')->firstOrFail();
+        $masters = $this->wheelConfigurations();
+        $this->mapAndRegisterTires($vehicles, $masters, $carTire, $truckTire);
+        $this->newStockTires($carTire, $truckTire, $branches);
+        $this->tireOperations($vehicles, $carTire, $truckTire);
+        $this->procurement($truckTire);
+        $this->operationalLists($branches, $vehicles);
+    }
+
+    // ------------------------------------------------------------ organisation
+
+    /** 3 more branches (ALPHA has 5 in total), each with its workshop, warehouse and storage bin. */
+    private function branches(): array
+    {
+        $out = [];
+        foreach ([
+            ['code' => 'ALPHA-SMG', 'name' => 'Semarang Branch', 'city' => 'Semarang', 'province' => 'Central Java'],
+            ['code' => 'ALPHA-SBY', 'name' => 'Surabaya Branch', 'city' => 'Surabaya', 'province' => 'East Java'],
+            ['code' => 'ALPHA-DPS', 'name' => 'Denpasar Branch', 'city' => 'Denpasar', 'province' => 'Bali'],
+        ] as $def) {
+            $branch = Branch::query()->updateOrCreate(['tenant_id' => $this->tenant->id, 'code' => $def['code']], $def + ['tenant_id' => $this->tenant->id, 'status' => 'ACTIVE']);
+            $workshop = Workshop::query()->updateOrCreate(
+                ['tenant_id' => $this->tenant->id, 'code' => $def['code'].'-WS1'],
+                ['tenant_id' => $this->tenant->id, 'branch_id' => $branch->id, 'name' => $branch->name.' Workshop', 'workshop_type' => 'INTERNAL', 'capacity' => 6, 'number_of_service_bays' => 3, 'status' => 'ACTIVE']
+            );
+            $warehouse = Warehouse::query()->updateOrCreate(
+                ['tenant_id' => $this->tenant->id, 'code' => $def['code'].'-WH1'],
+                ['tenant_id' => $this->tenant->id, 'branch_id' => $branch->id, 'workshop_id' => $workshop->id, 'name' => $branch->name.' Warehouse', 'warehouse_type' => 'WORKSHOP', 'status' => 'ACTIVE']
+            );
+            $this->bin($warehouse);
+            $out[$def['code']] = compact('branch', 'workshop', 'warehouse');
+        }
+        foreach (['ALPHA-JKT', 'ALPHA-BDG'] as $code) {
+            $branch = Branch::query()->where('tenant_id', $this->tenant->id)->where('code', $code)->firstOrFail();
+            $workshop = Workshop::query()->where('tenant_id', $this->tenant->id)->where('code', $code.'-WS1')->firstOrFail();
+            $warehouse = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', $code.'-WH1')->firstOrFail();
+            $this->bin($warehouse);
+            $out[$code] = compact('branch', 'workshop', 'warehouse');
+        }
+
+        return $out;
+    }
+
+    private function bin(Warehouse $warehouse): WarehouseBin
+    {
+        $zone = WarehouseZone::query()->updateOrCreate(['tenant_id' => $this->tenant->id, 'warehouse_id' => $warehouse->id, 'code' => 'GENERAL'], ['name' => 'General Zone', 'status' => 'ACTIVE']);
+        $rack = WarehouseRack::query()->updateOrCreate(['tenant_id' => $this->tenant->id, 'warehouse_zone_id' => $zone->id, 'code' => 'GENERAL'], ['name' => 'General Rack', 'status' => 'ACTIVE']);
+
+        return WarehouseBin::query()->updateOrCreate(['tenant_id' => $this->tenant->id, 'warehouse_rack_id' => $rack->id, 'code' => 'GENERAL'], ['name' => 'General Bin', 'status' => 'ACTIVE']);
+    }
+
+    // --------------------------------------------------------- access accounts
+
+    /** Roles + logins for every README role not created by the earlier demo seeders. */
+    private function accessAccounts(array $branches): void
+    {
+        $procurement = $this->role('Procurement', [
+            'purchase_request.view', 'purchase_request.create', 'purchase_request.submit', 'purchase_request.approve',
+            'rfq.view', 'rfq.manage', 'quotation.view', 'quotation.manage', 'quotation.select',
+            'purchase_order.view', 'purchase_order.create', 'purchase_order.approve', 'purchase_order.issue',
+            'goods_receipt.view', 'vendor_invoice.view', 'partner.view', 'partner.manage', 'product.view', 'inventory.view', 'analytics.procurement.view',
+        ]);
+        $mechanic = $this->role('Mechanic', [
+            'vehicle.view', 'inspection.view', 'inspection.perform', 'work_order.view', 'work_order.create', 'work_order.update',
+            'diagnosis.manage', 'maintenance_job.manage', 'part_request.view', 'part_request.create', 'inventory.view', 'inventory.issue',
+            'tire.view', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'rim.view', 'worker.view', 'workspace.view',
+        ]);
+        $qc = $this->role('QC Inspector', [
+            'vehicle.view', 'work_order.view', 'qc.view', 'qc.perform', 'qc.approve', 'qc.reject', 'vehicle_release.perform',
+            'inspection.view', 'inspection.review', 'tire.view', 'maintenance_history.view',
+        ]);
+        // Branch admin: the tenant administration of one branch — everything except tenant-wide
+        // access, numbering, workflow, company and billing settings.
+        $branchAdmin = $this->role('Branch Admin', Permission::query()->where('scope', 'tenant')
+            ->where(fn ($q) => $q->where('name', 'not like', 'role.%')->where('name', 'not like', 'numbering.%')->where('name', 'not like', 'workflow.%')
+                ->where('name', 'not like', 'account.%')->where('name', '!=', 'company.update'))
+            ->pluck('name')->all());
+
+        $this->user('alpha.procurement@optifleet.test', 'ALPHA Procurement Officer', $procurement, ['TENANT' => null]);
+        $this->user('alpha.mechanic@optifleet.test', 'ALPHA Mechanic (Jakarta)', $mechanic, ['WORKSHOP' => $branches['ALPHA-JKT']['workshop']->id]);
+        $this->user('alpha.qc@optifleet.test', 'ALPHA QC Inspector (Jakarta)', $qc, ['WORKSHOP' => $branches['ALPHA-JKT']['workshop']->id]);
+        $this->user('alpha.branchadmin@optifleet.test', 'ALPHA Branch Admin (Bandung)', $branchAdmin, ['BRANCH' => $branches['ALPHA-BDG']['branch']->id]);
+    }
+
+    private function role(string $name, array $permissionNames): Role
+    {
+        $role = Role::query()->updateOrCreate(
+            ['tenant_id' => $this->tenant->id, 'name' => $name, 'scope' => 'tenant'],
+            ['is_system' => true, 'description' => $name.' role for '.$this->tenant->name]
+        );
+        $role->permissions()->sync(Permission::query()->where('scope', 'tenant')->whereIn('name', $permissionNames)->pluck('id')->all());
+
+        return $role;
+    }
+
+    private function user(string $email, string $name, Role $role, array $scopes): User
+    {
+        $user = User::query()->updateOrCreate(['email' => $email], ['name' => $name, 'password' => Hash::make('password'), 'user_type' => 'tenant', 'status' => 'active']);
+        TenantUser::query()->firstOrCreate(['tenant_id' => $this->tenant->id, 'user_id' => $user->id], ['status' => 'active', 'joined_at' => now()]);
+        RoleAssignment::query()->firstOrCreate(['user_id' => $user->id, 'tenant_id' => $this->tenant->id, 'role_id' => $role->id]);
+        foreach ($scopes as $type => $resourceId) {
+            DataScopeAssignment::query()->firstOrCreate(['user_id' => $user->id, 'tenant_id' => $this->tenant->id, 'scope_type' => $type, 'scope_resource_id' => $resourceId]);
+        }
+
+        return $user;
+    }
+
+    // ----------------------------------------------------------------- vendors
+
+    private function vendors(): void
+    {
+        foreach ([
+            ['code' => 'VND-ANDALAN', 'name' => 'PT Andalan Parts Nusantara', 'partner_type' => 'SPARE_PART_SUPPLIER', 'contact_name' => 'Yusuf Pratama', 'contact_phone' => '024-7601122', 'payment_terms' => 'NET_30'],
+            ['code' => 'VND-KARYABAN', 'name' => 'CV Karya Ban Mandiri', 'partner_type' => 'TIRE_SUPPLIER', 'contact_name' => 'Maria Simanjuntak', 'contact_phone' => '031-8803344', 'payment_terms' => 'NET_14'],
+        ] as $def) {
+            Partner::query()->updateOrCreate(['tenant_id' => $this->tenant->id, 'code' => $def['code']], $def + ['status' => 'ACTIVE']);
+        }
+    }
+
+    // ---------------------------------------------------------------- vehicles
+
+    /** Vehicle Brand/Model masters and the vehicles the Wheels Configurations are mapped to. */
+    private function vehicles(array $branches): array
+    {
+        $car = VehicleCategory::query()->whereNull('tenant_id')->where('code', 'VC-CAR')->first() ?? VehicleCategory::query()->whereNull('tenant_id')->firstOrFail();
+        $truck = VehicleCategory::query()->whereNull('tenant_id')->where('code', 'VC-TRUCK')->firstOrFail();
+        $bus = VehicleCategory::query()->whereNull('tenant_id')->where('code', 'VC-BUS')->first() ?? $truck;
+        $models = [
+            'avanza' => $this->vehicleMaster('TOYOTA', 'Toyota', 'AVANZA', 'Avanza', $car),
+            'granmax' => $this->vehicleMaster('DAIHATSU', 'Daihatsu', 'GRAN-MAX', 'Gran Max', $car),
+            'elf' => $this->vehicleMaster('ISUZU', 'Isuzu', 'ELF-NMR', 'Elf NMR', $truck),
+            'canter' => $this->vehicleMaster('MITSUBISHI', 'Mitsubishi', 'CANTER', 'Fuso Canter', $truck),
+            'bus' => $this->vehicleMaster('HINO', 'Hino', 'RK8', 'RK8 Bus', $bus),
+        ];
+
+        $defs = [
+            'car1' => ['reg' => 'B 3101 ALP', 'm' => 'avanza', 'cat' => $car, 'type' => 'PASSENGER_CAR', 'axles' => 2, 'wheels' => 5, 'b' => 'ALPHA-JKT', 'odo' => 23500],
+            'car2' => ['reg' => 'B 3103 ALP', 'm' => 'avanza', 'cat' => $car, 'type' => 'PASSENGER_CAR', 'axles' => 2, 'wheels' => 5, 'b' => 'ALPHA-JKT', 'odo' => 18250],
+            'van' => ['reg' => 'D 3102 ALP', 'm' => 'granmax', 'cat' => $car, 'type' => 'VAN', 'axles' => 2, 'wheels' => 4, 'b' => 'ALPHA-BDG', 'odo' => 41200],
+            'truck1' => ['reg' => 'H 3201 ALP', 'm' => 'elf', 'cat' => $truck, 'type' => 'TRUCK', 'axles' => 2, 'wheels' => 6, 'b' => 'ALPHA-SMG', 'odo' => 87300],
+            'truck2' => ['reg' => 'L 3202 ALP', 'm' => 'canter', 'cat' => $truck, 'type' => 'TRUCK', 'axles' => 3, 'wheels' => 10, 'b' => 'ALPHA-SBY', 'odo' => 64100],
+            'bus' => ['reg' => 'DK 3301 ALP', 'm' => 'bus', 'cat' => $bus, 'type' => 'BUS', 'axles' => 2, 'wheels' => 6, 'b' => 'ALPHA-DPS', 'odo' => 152000],
+        ];
+        $vehicles = [];
+        foreach ($defs as $key => $d) {
+            [$brandId, $modelId, $brandName, $modelName] = $models[$d['m']];
+            $vehicles[$key] = Vehicle::query()->updateOrCreate(
+                ['tenant_id' => $this->tenant->id, 'registration_number' => $d['reg']],
+                [
+                    'branch_id' => $branches[$d['b']]['branch']->id, 'default_workshop_id' => $branches[$d['b']]['workshop']->id,
+                    'vehicle_category_id' => $d['cat']->id, 'brand' => $brandName, 'vehicle_brand_id' => $brandId, 'model' => $modelName, 'vehicle_model_id' => $modelId,
+                    'vehicle_type' => $d['type'], 'axle_count' => $d['axles'], 'wheel_count' => $d['wheels'],
+                    'vin' => 'VIN'.strtoupper(substr(hash('sha1', $d['reg']), 0, 14)), 'chassis_number' => 'CHS-'.str_replace(' ', '', $d['reg']),
+                    'year' => 2023, 'fuel_type' => $d['type'] === 'PASSENGER_CAR' ? 'GASOLINE' : 'DIESEL', 'transmission_type' => 'MANUAL',
+                    'status' => 'ACTIVE', 'operational_status' => 'AVAILABLE',
+                ]
+            );
+            // The odometer only moves forward (Tire Operations raise it); seed the starting reading once.
+            if ((float) $vehicles[$key]->current_odometer < $d['odo']) {
+                $vehicles[$key]->update(['current_odometer' => $d['odo']]);
+            }
+        }
+
+        return $vehicles;
+    }
+
+    /** @return array{0: string, 1: string, 2: string, 3: string} */
+    private function vehicleMaster(string $brandCode, string $brandName, string $modelCode, string $modelName, VehicleCategory $category): array
+    {
+        $brand = VehicleBrand::query()->withoutGlobalScopes()->firstOrCreate(['tenant_id' => $this->tenant->id, 'code' => $brandCode], ['name' => $brandName, 'is_system' => false, 'status' => 'ACTIVE']);
+        $brand->vehicleCategories()->syncWithoutDetaching([$category->id]);
+        $model = VehicleModelMaster::query()->withoutGlobalScopes()->firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'vehicle_brand_id' => $brand->id, 'code' => $modelCode],
+            ['name' => $modelName, 'is_system' => false, 'status' => 'ACTIVE']
+        );
+
+        return [$brand->id, $model->id, $brand->name, $model->name];
+    }
+
+    private function carTireProduct(): Product
+    {
+        $name = 'Passenger Tire 185/65R15';
+        $existing = Product::query()->where('tenant_id', $this->tenant->id)->where('name', $name)->first();
+        if ($existing) {
+            return $existing;
+        }
+        $group = ComponentGroup::query()->whereNull('tenant_id')->where('code', 'CG-TYRE')->firstOrFail();
+        $category = ComponentCategory::query()->whereNull('tenant_id')->where('component_group_id', $group->id)->where('code', 'PASSENGER_TIRE')->firstOrFail();
+        $load = TireLoadIndex::query()->updateOrCreate(['tenant_id' => $this->tenant->id, 'code' => 'LI-88'], ['max_load_single_kg' => 560, 'is_system' => false, 'status' => 'ACTIVE']);
+        $speed = TireSpeedRating::query()->updateOrCreate(['tenant_id' => $this->tenant->id, 'code' => 'H'], ['max_speed_kmh' => 210, 'is_system' => false, 'status' => 'ACTIVE']);
+        $jkt = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', 'ALPHA-JKT-WH1')->firstOrFail();
+
+        return app(ProductCreationService::class)->createFromInput($this->tenant->id, [
+            'name' => $name, 'product_type' => 'TIRE', 'brand' => 'Bridgestone', 'track_serial_number' => true,
+            'product_category_id' => ProductCategory::query()->whereNull('tenant_id')->where('code', 'PC-TIRE')->firstOrFail()->id,
+            'uom_id' => Uom::query()->whereNull('tenant_id')->where('code', 'PCS')->firstOrFail()->id,
+            'default_storage_bin_id' => $this->bin($jkt)->id,
+            'reference_tread_depth_mm' => '8.00',
+            'component_group_id' => $group->id, 'component_category_id' => $category->id,
+            'spec' => [
+                'vehicle_group' => 'CAR', 'pattern_name' => 'Ecopia EP150', 'width_mm' => 185, 'aspect_ratio_percent' => 65, 'construction_type' => 'RADIAL',
+                'rim_diameter_inch' => 15, 'tire_type' => 'TUBELESS', 'single_load_index_id' => $load->id, 'speed_rating_id' => $speed->id,
+            ],
+        ]);
+    }
+
+    // ----------------------------------------------------- wheels configuration
+
+    /** 5 Wheels Configurations across vehicle types. */
+    private function wheelConfigurations(): array
+    {
+        $service = app(WheelConfigurationMasterService::class);
+        $defs = [
+            'car' => ['vehicle_type' => 'PASSENGER_CAR', 'front_axles' => [1], 'rear_axles' => [1], 'spare_tires' => 1],
+            'van' => ['vehicle_type' => 'VAN', 'front_axles' => [1], 'rear_axles' => [1], 'spare_tires' => 0],
+            'truck' => ['vehicle_type' => 'TRUCK', 'truck_configuration_type' => 'NON_TRAILER', 'front_axles' => [1], 'rear_axles' => [2], 'spare_tires' => 0],
+            'truck_tandem' => ['vehicle_type' => 'TRUCK', 'truck_configuration_type' => 'NON_TRAILER', 'front_axles' => [1], 'rear_axles' => [2, 2], 'spare_tires' => 0],
+            'bus' => ['vehicle_type' => 'BUS', 'front_axles' => [1], 'rear_axles' => [2], 'spare_tires' => 0],
+        ];
+        $masters = [];
+        foreach ($defs as $key => $input) {
+            $preview = $service->preview($this->tenant->id, $input);
+            $masters[$key] = $preview['duplicate']
+                ? WheelConfigurationMaster::query()->findOrFail($preview['duplicate']['id'])
+                : $service->create($this->tenant->id, $input + ['config_code' => $preview['configuration']['config_code']], $this->admin->id)['master'];
+        }
+
+        return $masters;
+    }
+
+    /** Map the demo vehicles and register the tire on every position (spares included). */
+    private function mapAndRegisterTires(array $vehicles, array $masters, Product $carTire, Product $truckTire): void
+    {
+        $mapping = app(VehicleWheelConfigurationMappingService::class);
+        $plan = ['car1' => 'car', 'car2' => 'car', 'van' => 'van', 'truck1' => 'truck', 'truck2' => 'truck_tandem', 'bus' => 'bus'];
+        foreach ($plan as $vehicleKey => $masterKey) {
+            $vehicle = $vehicles[$vehicleKey];
+            $mapped = VehicleWheelConfigurationMapping::query()->where('vehicle_id', $vehicle->id)->where('status', VehicleWheelConfigurationMapping::STATUS_ACTIVE)->exists();
+            if (! $mapped) {
+                $mapping->save($masters[$masterKey], [$vehicle->id], [], [], $this->admin);
+            }
+        }
+
+        $registrations = app(VehicleTireRegistrationService::class);
+        foreach (array_keys($plan) as $vehicleKey) {
+            $vehicle = $vehicles[$vehicleKey]->fresh();
+            $product = in_array($vehicleKey, ['car1', 'car2', 'van'], true) ? $carTire : $truckTire;
+            $context = app(TireOperationService::class)->context($vehicle);
+            $installKm = (string) ((int) $vehicle->current_odometer - 6000);
+            foreach ($context['positions'] as $i => $position) {
+                if ($position['tire']) {
+                    continue;
+                }
+                $registrations->register($vehicle, [
+                    'position_code' => $position['position_code'], 'installed_date' => now()->subMonths(3)->toDateString(), 'installed_time' => '08:00',
+                    'installation_km' => $installKm, 'product_id' => $product->id,
+                    'serial_number' => DemoSerial::make("{$vehicle->registration_number}|{$position['position_code']}"),
+                    'tread_depth_mm' => (string) (9 - ($i % 3) * 0.5),
+                ], $this->admin->id);
+            }
+        }
+    }
+
+    /** New Stock serials of both tire products (Tire Detail → New Stock, Replacing With options). */
+    private function newStockTires(Product $carTire, Product $truckTire, array $branches): void
+    {
+        $tires = app(TireRegistrationService::class);
+        foreach ([[$carTire, 6, 'ALPHA-JKT'], [$truckTire, 6, 'ALPHA-SMG']] as [$product, $count, $branch]) {
+            for ($n = 1; $n <= $count; $n++) {
+                $serial = DemoSerial::make("ALPHA|NEW|{$product->name}|{$n}");
+                if (Tire::query()->where('tenant_id', $this->tenant->id)->where('serial_number', $serial)->exists()) {
+                    continue;
+                }
+                $tire = $tires->register($this->tenant->id, [
+                    'product_id' => $product->id, 'serial_number' => $serial,
+                    'manufacture_date_code' => sprintf('%02d26', 10 + $n), 'purchase_date' => now()->subDays(20 + $n)->toDateString(),
+                ]);
+                $tire->update(['current_warehouse_id' => $branches[$branch]['warehouse']->id]);
+            }
+        }
+        // Warehouse quantity for the tire products, so replacements can be issued.
+        $inventory = app(InventoryService::class);
+        foreach ([[$carTire, 'ALPHA-JKT', 650000], [$truckTire, 'ALPHA-SMG', 3250000], [$truckTire, 'ALPHA-JKT', 3250000]] as [$product, $branch, $cost]) {
+            $warehouse = $branches[$branch]['warehouse'];
+            $onHand = (float) WarehouseStock::query()->where('warehouse_id', $warehouse->id)->where('product_id', $product->id)->value('quantity_on_hand');
+            if ($onHand < 6) {
+                $inventory->receive($warehouse, $product, 6, $cost, 'OPENING', null, null, $this->admin->id);
+            }
+        }
+    }
+
+    // --------------------------------------------------------- tire operations
+
+    /** One operation per status and type, each with its Work Order. */
+    private function tireOperations(array $vehicles, Product $carTire, Product $truckTire): void
+    {
+        $operations = app(TireOperationService::class);
+        $workOrders = app(WorkOrderService::class);
+        $date = fn (int $daysAgo) => now()->subDays($daysAgo)->toDateString();
+        $exists = fn (Vehicle $v, string $type) => TireOperation::query()->where('vehicle_id', $v->id)->where('operation_type', $type)->exists();
+        $start = fn (WorkOrder $wo) => $workOrders->start($workOrders->schedule($workOrders->assign($workOrders->approve($workOrders->submit($wo)))));
+        $free = fn (Product $p) => collect($operations->replacementCandidates($this->tenant->id, $p->id))->where('source', 'NEW_STOCK')->pluck('id')->values();
+
+        // 1. Replacement — NEW (requested replacement tire waiting for the Work Order).
+        if (! $exists($vehicles['car1'], 'REPLACEMENT')) {
+            $operations->create($vehicles['car1']->fresh(), [
+                'operation_type' => 'REPLACEMENT', 'operated_date' => $date(1), 'operated_time' => '09:30', 'odometer' => '23600',
+                'items' => [['position_code' => '1FL1', 'replacement_tire_id' => $free($carTire)[0]]],
+            ], $this->admin->id);
+        }
+
+        // 2. Replacement — IN PROGRESS, tires approved, issued and consumed (installed).
+        if (! $exists($vehicles['truck2'], 'REPLACEMENT')) {
+            $candidates = $free($truckTire);
+            $op = $operations->create($vehicles['truck2']->fresh(), [
+                'operation_type' => 'REPLACEMENT', 'operated_date' => $date(3), 'operated_time' => '10:15', 'odometer' => '64300',
+                'items' => [['position_code' => '1FL1', 'replacement_tire_id' => $candidates[0]], ['position_code' => '1FR1', 'replacement_tire_id' => $candidates[1]]],
+            ], $this->admin->id);
+            $wo = $start(WorkOrder::query()->findOrFail($op->work_order_id));
+            $requests = app(WorkOrderPartRequestService::class);
+            $request = WorkOrderPartRequest::query()->where('tire_operation_id', $op->id)->firstOrFail();
+            $request = $requests->approve($request, null, $this->admin->id, 'Approved for tire replacement');
+            // Issued from Semarang, which holds the truck tire stock (Issue deducts it).
+            $request = $requests->issue($request, Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', 'ALPHA-SMG-WH1')->firstOrFail(), $this->admin->id);
+            $part = $request->items->first()->plannedPart;
+            app(WorkOrderPartService::class)->consume($part, null, $this->admin->id);
+        }
+
+        // 3. Rotation — IN PROGRESS (two pairs, applied when the Work Order completes).
+        if (! $exists($vehicles['truck1'], 'ROTATION')) {
+            $op = $operations->create($vehicles['truck1']->fresh(), [
+                'operation_type' => 'ROTATION', 'operated_date' => $date(2), 'operated_time' => '13:00', 'odometer' => '87450',
+                'rotation_pairs' => [['from' => '1FL1', 'to' => '1RL1'], ['from' => '1FR1', 'to' => '1RR1']],
+            ], $this->admin->id);
+            $start(WorkOrder::query()->findOrFail($op->work_order_id));
+        }
+
+        // 4. Inspection — COMPLETED (tread depths recorded on completion; usage starts here).
+        if (! $exists($vehicles['bus'], 'INSPECTION')) {
+            $context = $operations->context($vehicles['bus']->fresh());
+            $op = $operations->create($vehicles['bus']->fresh(), [
+                'operation_type' => 'INSPECTION', 'operated_date' => $date(5), 'operated_time' => '08:45', 'odometer' => '152400',
+                'items' => collect($context['positions'])->values()->map(fn ($p, $i) => ['position_code' => $p['position_code'], 'tread_depth_mm' => (string) (7.5 - ($i % 4) * 0.5)])->all(),
+            ], $this->admin->id);
+            $workOrders->complete($workOrders->submitToQc($start(WorkOrder::query()->findOrFail($op->work_order_id))));
+        }
+
+        // 5. Inspection — NEW (all positions selected, spare included).
+        if (! $exists($vehicles['van'], 'INSPECTION')) {
+            $context = $operations->context($vehicles['van']->fresh());
+            $operations->create($vehicles['van']->fresh(), [
+                'operation_type' => 'INSPECTION', 'operated_date' => $date(0), 'operated_time' => '07:15', 'odometer' => '41300',
+                'items' => collect($context['positions'])->map(fn ($p) => ['position_code' => $p['position_code']])->values()->all(),
+            ], $this->admin->id);
+        }
+
+        // 6. Rotation — CANCELLED (operation and its Work Order cancelled together).
+        if (! $exists($vehicles['car2'], 'ROTATION')) {
+            $op = $operations->create($vehicles['car2']->fresh(), [
+                'operation_type' => 'ROTATION', 'operated_date' => $date(4), 'operated_time' => '11:20', 'odometer' => '18300',
+                'rotation_pairs' => [['from' => '1FL1', 'to' => '1RR1']],
+            ], $this->admin->id);
+            $operations->cancel($op, 'Rescheduled after the customer visit.', $this->admin->id);
+        }
+    }
+
+    // ------------------------------------------------------------- procurement
+
+    /** PR → RFQ → quotation → PO → goods receipt until ALPHA has 5 complete chains. */
+    private function procurement(Product $truckTire): void
+    {
+        $chains = [
+            ['note' => 'Demo restock: brake pads for Q4 services.', 'product' => 'Brake Pad Set', 'qty' => 40, 'price' => 425000, 'vendor' => 'VND-ANDALAN', 'wh' => 'ALPHA-SMG-WH1', 'received' => 40, 'invoice' => 'INV-APN-2026-0101'],
+            ['note' => 'Demo restock: truck tires for the Semarang fleet.', 'product' => $truckTire->name, 'qty' => 12, 'price' => 3250000, 'vendor' => 'VND-KARYABAN', 'wh' => 'ALPHA-SMG-WH1', 'received' => 12, 'invoice' => 'INV-KBM-2026-0102'],
+            ['note' => 'Demo restock: batteries for Surabaya.', 'product' => 'Truck Battery 12V 100Ah', 'qty' => 8, 'price' => 1800000, 'vendor' => 'VND-SINAR', 'wh' => 'ALPHA-SBY-WH1', 'received' => 5, 'invoice' => 'INV-SSC-2026-0103'],
+            ['note' => 'Demo restock: oil filters for Denpasar.', 'product' => 'Oil Filter', 'qty' => 30, 'price' => 85000, 'vendor' => 'VND-MITRA', 'wh' => 'ALPHA-DPS-WH1', 'received' => 30, 'invoice' => 'INV-MUS-2026-0104'],
+        ];
+        foreach ($chains as $chain) {
+            if (PurchaseRequest::query()->where('tenant_id', $this->tenant->id)->where('notes', $chain['note'])->exists()) {
+                continue;
+            }
+            $product = Product::query()->where('tenant_id', $this->tenant->id)->where('name', 'ilike', '%'.$chain['product'].'%')->first();
+            $vendor = Partner::query()->where('tenant_id', $this->tenant->id)->where('code', $chain['vendor'])->first();
+            $warehouse = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', $chain['wh'])->first();
+            if (! $product || ! $vendor || ! $warehouse) {
+                continue;
+            }
+            $prService = app(PurchaseRequestService::class);
+            $pr = $prService->create($warehouse, ['source_type' => 'MANUAL', 'priority' => 'MEDIUM', 'notes' => $chain['note']], [
+                ['product_id' => $product->id, 'requested_quantity' => $chain['qty'], 'estimated_unit_price' => $chain['price']],
+            ], $this->admin->id);
+            foreach (['SUBMITTED', 'UNDER_REVIEW', 'APPROVED'] as $to) {
+                $pr = $prService->transition($pr, $to);
+            }
+            $rfqService = app(RfqService::class);
+            $rfq = $rfqService->inviteVendors($rfqService->create($warehouse, [], [['product_id' => $product->id, 'quantity' => $chain['qty']]], $pr), [$vendor->id]);
+            $quotation = $rfqService->selectVendor($rfqService->submitQuotation($rfq, $vendor, ['lead_time_days' => 7, 'payment_terms' => $vendor->payment_terms ?? 'NET_30'], [
+                ['product_id' => $product->id, 'quantity' => $chain['qty'], 'unit_price' => $chain['price'], 'tax_percent' => 11],
+            ], DemoQuotationDocument::make($vendor->name), $this->admin->id));
+            $poService = app(PurchaseOrderService::class);
+            $po = $poService->createFromQuotation($quotation, $warehouse, ['order_date' => now()->toDateString()], $this->admin->id);
+            $po = $poService->transition($poService->approve($poService->transition($po, 'SUBMITTED'), $this->admin->id), 'ISSUED');
+            $amount = number_format($chain['received'] * $chain['price'] * 1.11, 2, '.', '');
+            app(GoodsReceiptService::class)->post($po, $warehouse, [
+                ['purchase_order_item_id' => $po->items()->first()->id, 'quantity_accepted' => $chain['received']],
+            ], $this->admin->id, $chain['received'] < $chain['qty'] ? 'Partial delivery; remainder backordered.' : 'Delivered in full.', [
+                'mode' => 'NEW', 'vendor_invoice_number' => $chain['invoice'], 'vendor_invoice_date' => now()->toDateString(),
+                'amount' => $amount, 'terms_of_payment_days' => 30,
+                'document' => DemoQuotationDocument::make($chain['invoice'], 'Demo vendor invoice', $chain['invoice'].'.pdf'),
+            ]);
+        }
+    }
+
+    // ------------------------------------------------------------ operational lists
+
+    /**
+     * Tops the workshop / maintenance lists that OperationsSeeder starts (one reference flow each)
+     * up to at least 5 records: workers, workspaces, inspection templates, maintenance packages
+     * (+ vehicle profiles and their generated schedules), breakdowns, maintenance requests,
+     * inspections and the tenant tire specification masters. Masters are keyed by code; the
+     * transactional records (breakdowns, requests, inspections) are found by their description
+     * text before anything is created, so a re-run never duplicates them.
+     */
+    private function operationalLists(array $branches, array $vehicles): void
+    {
+        $tenantId = $this->tenant->id;
+        $groups = ComponentGroup::query()->whereNull('tenant_id')->whereIn('code', ['CG-ENGINE', 'CG-BRAKE', 'CG-TYRE'])->pluck('id', 'code');
+
+        foreach ([
+            ['ALPHA-MEC-04', 'Rudi Hartono', 'ALPHA-SMG', 'MECHANIC'],
+            ['ALPHA-TEC-01', 'Wayan Sudarma', 'ALPHA-DPS', 'TECHNICIAN'],
+            ['ALPHA-INS-01', 'Rina Kusuma', 'ALPHA-SBY', 'INSPECTOR'],
+        ] as [$code, $name, $branch, $type]) {
+            Worker::query()->updateOrCreate(
+                ['tenant_id' => $tenantId, 'employee_code' => $code],
+                ['name' => $name, 'branch_id' => $branches[$branch]['branch']->id, 'workshop_id' => $branches[$branch]['workshop']->id, 'worker_type' => $type, 'status' => 'ACTIVE']
+            );
+        }
+
+        foreach ([
+            ['ALPHA-SMG', 'SMG-BAY-1', 'Semarang Service Bay 1', 'GENERAL_SERVICE_BAY'],
+            ['ALPHA-SBY', 'SBY-TIRE-1', 'Surabaya Tire Bay', 'TIRE_BAY'],
+            ['ALPHA-DPS', 'DPS-INSP-1', 'Denpasar Inspection Bay', 'INSPECTION_BAY'],
+        ] as [$branch, $code, $name, $type]) {
+            Workspace::query()->updateOrCreate(
+                ['tenant_id' => $tenantId, 'workshop_id' => $branches[$branch]['workshop']->id, 'code' => $code],
+                ['name' => $name, 'workspace_type' => $type, 'status' => 'AVAILABLE']
+            );
+        }
+
+        $category = fn (string $code) => VehicleCategory::query()->whereNull('tenant_id')->where('code', $code)->value('id')
+            ?? VehicleCategory::query()->whereNull('tenant_id')->where('code', 'VC-TRUCK')->value('id');
+        $templates = [];
+        foreach ([
+            ['VC-TRUCK', 'POST_TRIP', 'Truck Post-Trip Checklist'],
+            ['VC-CAR', 'PERIODIC', 'Passenger Car Monthly Check'],
+            ['VC-BUS', 'WORKSHOP', 'Bus Workshop Intake Check'],
+            ['VC-TRUCK', 'MAINTENANCE', 'Truck Tire & Brake Maintenance Check'],
+        ] as [$cat, $type, $name]) {
+            $template = InspectionTemplate::query()->updateOrCreate(
+                ['tenant_id' => $tenantId, 'vehicle_category_id' => $category($cat), 'inspection_type' => $type, 'name' => $name],
+                ['description' => $name.'.', 'status' => 'ACTIVE']
+            );
+            if ($template->items()->count() === 0) {
+                $template->items()->createMany([
+                    ['component_group_id' => $groups['CG-TYRE'] ?? null, 'item_text' => 'Tire condition & pressure', 'input_type' => 'PASS_FAIL', 'required' => true, 'sequence' => 10],
+                    ['component_group_id' => $groups['CG-BRAKE'] ?? null, 'item_text' => 'Brake function', 'input_type' => 'PASS_FAIL', 'required' => true, 'sequence' => 20],
+                    ['item_text' => 'Notes', 'input_type' => 'TEXT', 'required' => false, 'sequence' => 30],
+                ]);
+            }
+            $templates[$type] = $template;
+        }
+
+        $schedules = app(MaintenanceScheduleService::class);
+        foreach ([
+            ['PM-TRUCK-20K', 'Truck Major Service (20,000km / 12mo)', 'PREVENTIVE', 20000, 12, 'truck1'],
+            ['PM-CAR-5K', 'Passenger Car Service (5,000km / 3mo)', 'PREVENTIVE', 5000, 3, 'car1'],
+            ['PM-VAN-10K', 'Van Periodic Service (10,000km / 6mo)', 'PERIODIC', 10000, 6, 'van'],
+            ['PM-BUS-15K', 'Bus Preventive Service (15,000km / 6mo)', 'PREVENTIVE', 15000, 6, 'bus'],
+        ] as [$code, $name, $type, $km, $months, $vehicleKey]) {
+            $package = MaintenancePackage::query()->updateOrCreate(
+                ['tenant_id' => $tenantId, 'code' => $code],
+                ['name' => $name, 'maintenance_type' => $type, 'standard_labor_hours' => 2, 'status' => 'ACTIVE']
+            );
+            if ($package->items()->count() === 0) {
+                $package->items()->create(['component_group_id' => $groups['CG-ENGINE'] ?? null, 'service_item' => 'Engine oil & filter change', 'standard_labor_hours' => 1]);
+                $package->items()->create(['component_group_id' => $groups['CG-TYRE'] ?? null, 'service_item' => 'Tire rotation & tread check', 'standard_labor_hours' => 1]);
+            }
+            if ($package->intervals()->count() === 0) {
+                $package->intervals()->create(['trigger_type' => 'COMBINATION', 'odometer_km' => $km, 'months' => $months, 'tolerance_km' => 500, 'tolerance_days' => 14]);
+            }
+            $profile = VehicleMaintenanceProfile::query()->firstOrCreate(
+                ['vehicle_id' => $vehicles[$vehicleKey]->id, 'maintenance_package_id' => $package->id],
+                ['tenant_id' => $tenantId, 'status' => 'ACTIVE', 'effective_from' => now()->subMonths(2)->toDateString()]
+            );
+            if ($profile->wasRecentlyCreated) {
+                $schedules->generateForProfile($profile->load(['vehicle', 'package.intervals']));
+            }
+        }
+
+        // Breakdowns at different stages; the two resolved ones return their vehicle to service.
+        $breakdowns = app(BreakdownService::class);
+        $legacy = fn (string $reg) => Vehicle::query()->where('tenant_id', $tenantId)->where('registration_number', $reg)->first();
+        foreach ([
+            [$legacy('D 2002 ALP'), 'MINOR', 'Jl. Soekarno-Hatta, Bandung', 'Flat front-left tire on delivery route.', []],
+            [$legacy('B 1002 ALP'), 'MAJOR', 'Cikampek toll KM 72', 'Alternator warning light, battery not charging.', ['VERIFIED']],
+            [$vehicles['truck1'], 'MAJOR', 'Pantura KM 120, Kendal', 'Air brake pressure dropping.', ['VERIFIED', 'ASSESSED', 'RESOLVED']],
+            [$vehicles['bus'], 'MINOR', 'Terminal Mengwi', 'Door actuator stuck, passengers moved to standby bus.', ['VERIFIED', 'ASSESSED', 'RESOLVED']],
+        ] as [$vehicle, $severity, $location, $description, $steps]) {
+            if (! $vehicle || Breakdown::query()->where('tenant_id', $tenantId)->where('description', $description)->exists()) {
+                continue;
+            }
+            $breakdown = $breakdowns->report($vehicle, ['location' => $location, 'severity' => $severity, 'description' => $description], $this->admin->id);
+            foreach ($steps as $step) {
+                $breakdown = $breakdowns->transition($breakdown, $step, $step === 'RESOLVED' ? 'Fixed on site by the mobile mechanic.' : null);
+            }
+        }
+
+        $requests = app(MaintenanceRequestService::class);
+        foreach ([
+            ['car1', 'ALPHA-JKT', 'CG-BRAKE', 'MEDIUM', 'Squeaking noise when braking at low speed.', 'SUBMITTED'],
+            ['van', 'ALPHA-BDG', 'CG-ENGINE', 'LOW', 'Engine idle slightly rough in the morning.', 'DRAFT'],
+            ['bus', 'ALPHA-DPS', 'CG-TYRE', 'HIGH', 'Rear tires wearing unevenly, request alignment check.', 'SUBMITTED'],
+        ] as [$vehicleKey, $branch, $group, $priority, $complaint, $status]) {
+            if (MaintenanceRequest::query()->where('tenant_id', $tenantId)->where('complaint', $complaint)->exists()) {
+                continue;
+            }
+            $requests->create($vehicles[$vehicleKey], [
+                'workshop_id' => $branches[$branch]['workshop']->id, 'component_group_id' => $groups[$group] ?? null,
+                'source_type' => 'USER', 'priority' => $priority, 'complaint' => $complaint, 'status' => $status,
+            ], $this->admin->id);
+        }
+
+        // Inspections: two waiting to start, two submitted (all checks passed).
+        $inspections = app(InspectionService::class);
+        foreach ([
+            ['truck1', 'POST_TRIP', 'ALPHA-SMG', false],
+            ['car2', 'PERIODIC', 'ALPHA-JKT', false],
+            ['bus', 'WORKSHOP', 'ALPHA-DPS', true],
+            ['truck2', 'MAINTENANCE', 'ALPHA-SBY', true],
+        ] as [$vehicleKey, $type, $branch, $submit]) {
+            $template = $templates[$type];
+            $vehicle = $vehicles[$vehicleKey];
+            if (Inspection::query()->where('tenant_id', $tenantId)->where('inspection_template_id', $template->id)->where('vehicle_id', $vehicle->id)->exists()) {
+                continue;
+            }
+            $inspection = Inspection::query()->create([
+                'tenant_id' => $tenantId, 'branch_id' => $branches[$branch]['branch']->id, 'workshop_id' => $branches[$branch]['workshop']->id,
+                'vehicle_id' => $vehicle->id, 'inspection_template_id' => $template->id, 'inspection_type' => $type, 'status' => 'CREATED',
+                'odometer_at_inspection' => $vehicle->current_odometer, 'created_by' => $this->admin->id,
+            ]);
+            if ($submit) {
+                $inspection = $inspections->start($inspection);
+                $inspections->submit($inspection, $template->items()->where('input_type', 'PASS_FAIL')->get()
+                    ->map(fn ($item) => ['inspection_template_item_id' => $item->id, 'passed' => true])->all());
+            }
+        }
+
+        // Tenant tire specification masters (the global system list is separate).
+        foreach ([['LI-91', 615], ['LI-146', 3000], ['LI-150', 3350], ['LI-121', 1450]] as [$code, $kg]) {
+            TireLoadIndex::query()->updateOrCreate(['tenant_id' => $tenantId, 'code' => $code], ['max_load_single_kg' => $kg, 'is_system' => false, 'status' => 'ACTIVE']);
+        }
+        foreach ([['T', 190], ['V', 240], ['L', 120], ['W', 270]] as [$code, $kmh]) {
+            TireSpeedRating::query()->updateOrCreate(['tenant_id' => $tenantId, 'code' => $code], ['max_speed_kmh' => $kmh, 'is_system' => false, 'status' => 'ACTIVE']);
+        }
+        foreach ([['4PR', 'B'], ['6PR', 'C'], ['8PR', 'D'], ['16PR', 'H'], ['12PR', 'F']] as [$code, $range]) {
+            TirePlyRating::query()->updateOrCreate(['tenant_id' => $tenantId, 'code' => $code], ['load_range' => $range, 'is_system' => false, 'status' => 'ACTIVE']);
+        }
+    }
+}

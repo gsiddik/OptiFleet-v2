@@ -241,12 +241,16 @@ class SupplyChainSeeder extends Seeder
         }
 
         // --- Tire lifecycle: spare in stock + one installed with rotation & inspection ---
+        // Demo serials: 20 random-looking characters (DemoSerial); a database seeded before this
+        // change keeps its tire row, renamed in place, instead of getting a duplicate.
+        $spareSerial = $this->demoSerial($tenant, 'TIRE-ALPHA-SPARE-01');
+        $installedSerial = $this->demoSerial($tenant, 'TIRE-ALPHA-INSTALLED-01');
         $spareTire = Tire::query()->updateOrCreate(
-            ['tenant_id' => $tenant->id, 'serial_number' => 'TIRE-ALPHA-SPARE-01'],
+            ['tenant_id' => $tenant->id, 'serial_number' => $spareSerial],
             ['product_id' => $tireProduct->id, 'manufacturer' => 'Bridgestone', 'tire_size' => '295/80R22.5', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $jktWarehouse->id]
         );
         $installedTire = Tire::query()->firstOrCreate(
-            ['tenant_id' => $tenant->id, 'serial_number' => 'TIRE-ALPHA-INSTALLED-01'],
+            ['tenant_id' => $tenant->id, 'serial_number' => $installedSerial],
             ['product_id' => $tireProduct->id, 'manufacturer' => 'Bridgestone', 'tire_size' => '295/80R22.5', 'current_status' => 'IN_STOCK']
         );
         if ($installedTire->current_status === 'IN_STOCK') {
@@ -340,6 +344,14 @@ class SupplyChainSeeder extends Seeder
      * minimal, deterministic chain is required before any Product below
      * can be created through the real validation flow.
      */
+    private function demoSerial(Tenant $tenant, string $legacy): string
+    {
+        $serial = DemoSerial::make("{$tenant->code}|{$legacy}");
+        Tire::query()->where('tenant_id', $tenant->id)->where('serial_number', $legacy)->update(['serial_number' => $serial]);
+
+        return $serial;
+    }
+
     private function resolveStorageBin(Tenant $tenant, Warehouse $warehouse): WarehouseBin
     {
         $zone = WarehouseZone::query()->updateOrCreate(

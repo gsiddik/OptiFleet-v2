@@ -15,11 +15,12 @@ use Illuminate\Database\Seeder;
  *   php artisan storage:link
  *   php artisan platform:create-admin
  *
- * Demo/development data (two fully-populated demo tenants, a commercial
- * subscription-scenario tenant set, and a Work Order/Product/Inventory
- * operational history) previously ran unconditionally as part of this
- * class — that is now exclusively DevDemoSeeder, run explicitly via
- * `php artisan db:seed --class=DevDemoSeeder`, never by this default path.
+ * Demo/development data (demo tenants, commercial scenarios, operational
+ * history, the functional-test tenant and the demo access accounts) is the
+ * DevDemoSeeder layer. It is added to this default path only on a local
+ * development database (APP_ENV=local) or when SEED_DEMO_DATA=true, so
+ * `php artisan migrate:fresh --seed` seeds a complete dev/test database in one
+ * command; production (APP_ENV=production) and the test suite never get it.
  */
 class DatabaseSeeder extends Seeder
 {
@@ -31,26 +32,13 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call([
-            // --- System / bootstrap (Access Management, Modules, Configuration, Workflow, Notifications) ---
-            PermissionSeeder::class,
-            ModuleSeeder::class,
-            PlatformSuperadminRoleSeeder::class,
-            ConfigurationDefaultsSeeder::class,
-            AddExternalWorkOrderPrintSectionSeeder::class,
-            WorkflowDefaultsSeeder::class,
-            RetireMaintenanceRequestNeedInformationSeeder::class,
-            AddWorkOrderExternalStatusSeeder::class,
-            CorrectWorkOrderExternalTransitionsSeeder::class,
-            AddWorkOrderExternalClosedTransitionSeeder::class,
-            NotificationDefaultsSeeder::class,
+        $this->call(BootstrapSeeder::class);
 
-            // --- Reference / master data (Vehicle Category, Component Group, Product Category, UOM, Tire/Tool/Equipment reference, Storage Requirement) ---
-            MasterDataSeeder::class,
-            ProductReferenceDataSeeder::class,
-
-            // --- Commercial catalog (sellable bundles + pricing — real reference data, not demo) ---
-            CommercialCatalogSeeder::class,
-        ]);
+        // One-command dev/test seeding: `php artisan migrate:fresh --seed` on a local database also
+        // layers the demo data (DevDemoSeeder's layer). Production and the automated test
+        // environment stay bootstrap-only unless SEED_DEMO_DATA=true is set explicitly.
+        if ((bool) (config('app.seed_demo_data') ?? app()->environment('local'))) {
+            DevDemoSeeder::seedDemoLayer($this);
+        }
     }
 }

@@ -16,6 +16,12 @@ return [
     'name' => env('APP_NAME', 'Laravel'),
 
     /*
+    | Demo data on `php artisan db:seed` / `migrate --seed`: null = only when APP_ENV=local
+    | (DatabaseSeeder); true/false forces it. Never enable on a production database.
+    */
+    'seed_demo_data' => env('SEED_DEMO_DATA'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------

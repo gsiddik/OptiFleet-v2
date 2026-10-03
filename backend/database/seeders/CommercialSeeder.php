@@ -117,7 +117,7 @@ class CommercialSeeder extends Seeder
     private function seedActiveTenant(): void
     {
         $tenant = Tenant::query()->where('code', 'ALPHA')->first();
-        if (! $tenant) {
+        if (! $tenant || $this->hasScenario($tenant)) {
             return;
         }
 
@@ -145,7 +145,7 @@ class CommercialSeeder extends Seeder
     private function seedPastDueTenant(): void
     {
         $tenant = Tenant::query()->where('code', 'BETA')->first();
-        if (! $tenant) {
+        if (! $tenant || $this->hasScenario($tenant)) {
             return;
         }
 
@@ -169,6 +169,9 @@ class CommercialSeeder extends Seeder
     private function seedPendingTenant(): void
     {
         $tenant = $this->makeMinimalTenant('GAMMA', 'PT Gamma Transport');
+        if ($this->hasScenario($tenant)) {
+            return;
+        }
 
         $contracts = app(ContractService::class);
         $contract = $this->createBundleContract($tenant, 'OPTIFLEET_BASIC', now(), now()->addYear(), true);
@@ -181,6 +184,9 @@ class CommercialSeeder extends Seeder
     private function seedSuspendedTenant(): void
     {
         $tenant = $this->makeMinimalTenant('DELTA', 'PT Delta Heavy Equipment');
+        if ($this->hasScenario($tenant)) {
+            return;
+        }
 
         $contracts = app(ContractService::class);
         $contract = $this->createBundleContract($tenant, 'OPTIFLEET_BASIC', now()->subMonths(3), now()->addYear(), false);
@@ -195,6 +201,12 @@ class CommercialSeeder extends Seeder
         $dunning = app(DunningService::class);
         $dunning->evaluateOverdueInvoices();
         $dunning->evaluateGraceAndSuspension();
+    }
+
+    /** Idempotency: each demo tenant gets its subscription scenario (contract → invoice → payment) once. */
+    private function hasScenario(Tenant $tenant): bool
+    {
+        return Contract::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->exists();
     }
 
     private function backdateInvoice(Contract $contract, \DateTimeInterface $dueDate): void
