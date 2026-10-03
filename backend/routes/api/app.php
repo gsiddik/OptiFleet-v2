@@ -89,6 +89,7 @@ use App\Http\Controllers\Api\Tenant\WarrantyController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationMasterController;
 use App\Http\Controllers\Api\Tenant\TireActivityController;
+use App\Http\Controllers\Api\Tenant\TireOperationController;
 use App\Http\Controllers\Api\Tenant\TireProductController;
 use App\Http\Controllers\Api\Tenant\VehicleWheelConfigurationMappingController;
 use App\Http\Controllers\Api\Tenant\VehicleWheelConfigurationController;
@@ -697,6 +698,15 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/tires', [TireController::class, 'index'])->middleware('permission:tire.view');
             Route::post('/tires', [TireController::class, 'store'])->middleware('permission:tire.manage');
             Route::get('/tire-activity', [TireActivityController::class, 'index'])->middleware('permission:tire.view');
+            // Tire Operations: create/edit also need the type's permission (checked in the controller).
+            Route::get('/tire-operations', [TireOperationController::class, 'index'])->middleware('permission:tire.view');
+            Route::get('/tire-operations/replacement-candidates', [TireOperationController::class, 'replacementCandidates'])->middleware('permission:tire.view');
+            Route::post('/tire-operations', [TireOperationController::class, 'store'])->middleware('permission:work_order.create');
+            Route::get('/tire-operations/{tireOperation}', [TireOperationController::class, 'show'])->middleware('permission:tire.view');
+            Route::put('/tire-operations/{tireOperation}', [TireOperationController::class, 'update'])->middleware('permission:work_order.update');
+            Route::post('/tire-operations/{tireOperation}/cancel', [TireOperationController::class, 'cancel'])->middleware('permission:work_order.cancel');
+            Route::get('/vehicles/{vehicle}/tire-operation-context', [TireOperationController::class, 'context'])->middleware('permission:tire.view');
+            Route::get('/work-orders/{workOrder}/tire-operation', [TireOperationController::class, 'forWorkOrder'])->middleware('permission:work_order.view');
             Route::get('/tire-products', [TireProductController::class, 'index'])->middleware('permission:tire.view');
             Route::get('/tire-products/{tireProduct}', [TireProductController::class, 'show'])->middleware('permission:tire.view');
             Route::get('/tire-products/{tireProduct}/inventory', [TireProductController::class, 'inventory'])->middleware('permission:tire.view');

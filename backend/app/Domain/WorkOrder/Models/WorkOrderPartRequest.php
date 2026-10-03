@@ -28,7 +28,7 @@ class WorkOrderPartRequest extends Model
     ];
 
     protected $fillable = [
-        'tenant_id', 'work_order_id', 'notes', 'status',
+        'tenant_id', 'work_order_id', 'tire_operation_id', 'notes', 'status',
         'requested_by', 'requested_at', 'decided_by', 'decided_at', 'decision_note',
         'warehouse_id', 'issued_by', 'issued_at',
     ];

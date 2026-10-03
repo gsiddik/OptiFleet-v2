@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -23,7 +23,9 @@ export function VehicleDetailPage() {
   const { hasPermission } = useAuth();
   const [vehicle, setVehicle] = useState<VehicleItem | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('Overview');
+  // ?tab=wheels opens a tab directly (e.g. "complete the tire data" links from Tire Operations).
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => (searchParams.get('tab') === 'wheels' ? 'Wheels Configuration' : 'Overview'));
 
   function load() {
     apiClient

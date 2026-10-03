@@ -7,6 +7,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Tire\Services\TireOperationExecutionService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturnEvidence;
@@ -36,6 +37,7 @@ class WorkOrderPartService
         private readonly InventoryService $inventory,
         private readonly WorkOrderExecutionService $execution,
         private readonly DocumentNumberingService $numbers,
+        private readonly TireOperationExecutionService $tireOperations,
     ) {}
 
     public function issue(WorkOrderPlannedPart $part, ?float $quantity, ?string $userId): WorkOrderPlannedPart
@@ -175,6 +177,9 @@ class WorkOrderPartService
 
             $locked->increment('consumed_quantity', $toConsume);
             $this->recomputeStatus($locked->fresh());
+
+            // Tire Operation replacement: the consumed serials are installed on their positions.
+            $this->tireOperations->onReplacementConsumed($locked, (float) $toConsume, $userId);
 
             return $locked->fresh();
         });

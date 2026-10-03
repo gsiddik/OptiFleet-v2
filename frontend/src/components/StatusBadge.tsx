@@ -32,6 +32,9 @@ const COLORS: Record<string, string> = {
   DUE_SOON: '#b45309',
   LATE: '#b91c1c',
   PAID: '#15803d',
+  // Tire Operations / Work Orders
+  IN_PROGRESS: '#b45309',
+  COMPLETED: '#15803d',
 };
 
 export function StatusBadge({ status }: { status: string }) {

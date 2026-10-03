@@ -101,10 +101,12 @@ class TireInventoryService
     }
 
     /**
-     * Accumulated KM per tire over all its installation periods: each period runs from its
-     * installation odometer to the removal odometer (tire_removals) or, after a rotation, to the
-     * next installation's odometer. Periods without both readings are skipped (never guessed);
-     * a tire with no measurable period has no value.
+     * Accumulated KM per tire over all its installation periods. A period starts at its
+     * installation odometer and is measured up to the latest known reading inside it: the removal
+     * odometer (tire_removals), the next installation's odometer after a rotation, or the KM of an
+     * applied Tire Operation on that tire (e.g. an inspection). Usage therefore first appears at a
+     * tire's first operation/removal and every later reading adds only its delta; periods without
+     * a reading are skipped (never guessed), and a tire with no measurable period has no value.
      *
      * @param  list<string>  $tireIds
      * @return array<string, string>
@@ -119,21 +121,36 @@ class TireInventoryService
             // follow-up installation.
             ->orderBy('ti.tire_id')->orderBy('ti.installed_at')->orderByRaw('ti.removed_at ASC NULLS LAST')
             ->orderByRaw('ti.installation_odometer ASC NULLS FIRST')->orderBy('ti.created_at')
-            ->get(['ti.tire_id', 'ti.installation_odometer', 'ti.removed_at', 'tr.removal_odometer']);
+            ->get(['ti.tire_id', 'ti.installed_at', 'ti.installation_odometer', 'ti.removed_at', 'tr.removal_odometer']);
+
+        $readings = $this->operationReadings($tireIds);
 
         $usage = [];
         foreach ($installations->groupBy('tire_id') as $tireId => $periods) {
             $total = null; // hundredths of a km — integer arithmetic, no float rounding
             $periods = $periods->values();
             foreach ($periods as $i => $period) {
-                $end = $period->removal_odometer ?? ($periods[$i + 1]->installation_odometer ?? null);
-                if ($period->removed_at === null || $period->installation_odometer === null || $end === null) {
+                if ($period->installation_odometer === null) {
                     continue;
                 }
-                $distance = $this->hundredths($end) - $this->hundredths($period->installation_odometer);
-                if ($distance >= 0) {
-                    $total = ($total ?? 0) + $distance;
+                $start = $this->hundredths($period->installation_odometer);
+                // A removal or the follow-up installation (rotation) closes the period explicitly;
+                // otherwise the latest operation reading inside the period is its end so far.
+                $explicit = $period->removal_odometer ?? ($period->removed_at !== null ? ($periods[$i + 1]->installation_odometer ?? null) : null);
+                $end = $explicit !== null ? $this->hundredths($explicit) : null;
+                if ($end === null) {
+                    $from = strtotime((string) $period->installed_at);
+                    $until = $period->removed_at !== null ? strtotime((string) $period->removed_at) : PHP_INT_MAX;
+                    foreach ($readings[$tireId] ?? [] as [$at, $odometer]) {
+                        if ($at >= $from && $at <= $until) {
+                            $end = max($end ?? $odometer, $odometer);
+                        }
+                    }
                 }
+                if ($end === null || $end < $start) {
+                    continue;
+                }
+                $total = ($total ?? 0) + ($end - $start);
             }
             if ($total !== null) {
                 $usage[$tireId] = intdiv($total, 100).'.'.str_pad((string) ($total % 100), 2, '0', STR_PAD_LEFT);
@@ -141,6 +158,27 @@ class TireInventoryService
         }
 
         return $usage;
+    }
+
+    /**
+     * KM readings of applied (executed) Tire Operations per tire.
+     *
+     * @param  list<string>  $tireIds
+     * @return array<string, list<array{0: int, 1: int}>> tire id => [[operated_at epoch seconds, odometer in hundredths], …]
+     */
+    private function operationReadings(array $tireIds): array
+    {
+        $rows = DB::table('tire_operation_items as oi')
+            ->join('tire_operations as o', 'o.id', '=', 'oi.tire_operation_id')
+            ->whereIn('oi.tire_id', $tireIds)->whereNotNull('oi.applied_at')->whereNull('o.cancelled_at')
+            ->get(['oi.tire_id', 'o.operated_at', 'o.odometer']);
+
+        $readings = [];
+        foreach ($rows as $row) {
+            $readings[$row->tire_id][] = [strtotime((string) $row->operated_at), $this->hundredths($row->odometer)];
+        }
+
+        return $readings;
     }
 
     /** "12500.75" (numeric(12,2) from the database) → 1250075. */
