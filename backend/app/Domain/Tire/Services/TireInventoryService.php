@@ -82,7 +82,7 @@ class TireInventoryService
             ->where('ct.product_id', $productId)->where('ct.category', $category)
             ->leftJoin('vehicles as v', 'v.id', '=', 'ct.active_vehicle_id')
             ->orderBy('t.serial_number')
-            ->select(['t.id', 't.serial_number', 't.current_status', 't.current_position', 'ct.active_vehicle_id as vehicle_id', 'v.registration_number', 'v.current_odometer', 'v.engine_hour'])
+            ->select(['t.id', 't.serial_number', 't.current_status', 't.current_position', 't.manufacture_date_code', 't.purchase_date', 'ct.active_vehicle_id as vehicle_id', 'v.registration_number', 'v.current_odometer', 'v.engine_hour'])
             ->paginate($perPage);
 
         $ids = collect($page->items())->pluck('id')->all();

@@ -2,6 +2,8 @@ import type { ReactNode, UIEvent } from 'react';
 
 export interface ScrollColumn<T> {
   header: string;
+  /** rendered instead of `header` (e.g. a select-all checkbox); `header` stays the column key */
+  headerCell?: ReactNode;
   cell: (row: T) => ReactNode;
 }
 
@@ -42,7 +44,7 @@ export function ScrollTable<T>({
           <tr>
             {columns.map((c) => (
               <th key={c.header} style={th}>
-                {c.header}
+                {c.headerCell ?? c.header}
               </th>
             ))}
           </tr>

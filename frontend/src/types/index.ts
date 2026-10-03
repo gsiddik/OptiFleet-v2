@@ -2040,6 +2040,8 @@ export interface TireInventoryRow {
   serial_number: string;
   current_status: TireItem['current_status'];
   current_position: string | null;
+  manufacture_date_code: string | null;
+  purchase_date: string | null;
   vehicle_id: string | null;
   registration_number: string | null;
   current_odometer: string | null;

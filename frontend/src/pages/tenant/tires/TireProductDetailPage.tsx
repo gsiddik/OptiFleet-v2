@@ -10,6 +10,8 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useApiList } from '../../../hooks/useApiList';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { ProductDetailsSection } from '../inventory/ProductDetailsSection';
+import { formatDate } from '../../../utils/date';
+import { ImportTiresModal } from './ImportTiresModal';
 import { RegisterTireModal } from './RegisterTireModal';
 import type { ProductItem, TireInventoryCategory, TireInventoryRow, TireInventorySummary } from '../../../types';
 
@@ -19,7 +21,8 @@ type TireProductDetail = ProductItem & { inventory: TireInventorySummary; delete
  * Tire Detail: one Tire Product (Product of Item Type TIRE) — its product Details (the same section
  * as Product Detail) and the Inventory of its physical tires: New Stock, Installed and Used Stocks.
  * Counts and tables come from one server-side classification, so they always agree with the Tire
- * List. Each serial opens the physical tire page, where tire operations happen.
+ * List. Installed / Used serials open the physical tire page; New Stock can be registered one by one
+ * or imported from the Excel template.
  */
 export function TireProductDetailPage() {
   const { productId = '' } = useParams<{ productId: string }>();
@@ -27,6 +30,7 @@ export function TireProductDetailPage() {
   const [product, setProduct] = useState<TireProductDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const load = useCallback(() => {
@@ -68,9 +72,14 @@ export function TireProductDetailPage() {
           count={product.inventory.new_qty}
           action={
             canRegister ? (
-              <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setRegistering(true)}>
-                Register Tire
-              </button>
+              <span style={{ display: 'flex', gap: 6 }}>
+                <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setImporting(true)} data-import-open>
+                  Import
+                </button>
+                <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setRegistering(true)}>
+                  Register Tire
+                </button>
+              </span>
             ) : null
           }
         >
@@ -79,7 +88,10 @@ export function TireProductDetailPage() {
             category="NEW"
             reloadKey={reloadKey}
             columns={[
-              { header: 'Serial', cell: (r) => <SerialLink row={r} /> },
+              // New stock has no operation history yet: the serial is plain text (Installed / Used link to the tire).
+              { header: 'Serial', cell: (r) => <span style={{ fontFamily: 'monospace' }}>{r.serial_number}</span> },
+              { header: 'Manufacture Date Code', cell: (r) => r.manufacture_date_code ?? '—' },
+              { header: 'Purchase Date', cell: (r) => (r.purchase_date ? formatDate(r.purchase_date) : '—') },
               { header: 'Status', cell: (r) => <StatusBadge status={r.current_status} /> },
             ]}
           />
@@ -112,6 +124,7 @@ export function TireProductDetailPage() {
       </InventoryCard>
 
       {registering && <RegisterTireModal product={product} onClose={() => setRegistering(false)} onRegistered={refresh} />}
+      {importing && <ImportTiresModal product={product} onClose={() => setImporting(false)} onImported={refresh} />}
     </div>
   );
 }
