@@ -10,7 +10,7 @@ import type { ProductItem } from '../../../types';
  * Product (Item Type = Tire): the product's tire specification is the source of truth and is
  * applied by the backend, so only what is unique to this physical tire is entered here.
  */
-export function RegisterTireModal({ product, onClose }: { product: ProductItem; onClose: () => void }) {
+export function RegisterTireModal({ product, onClose, onRegistered }: { product: ProductItem; onClose: () => void; onRegistered?: () => void }) {
   const [serialNumber, setSerialNumber] = useState('');
   const [manufactureDateCode, setManufactureDateCode] = useState('');
   const [purchaseDate, setPurchaseDate] = useState('');
@@ -32,6 +32,7 @@ export function RegisterTireModal({ product, onClose }: { product: ProductItem; 
         purchase_date: purchaseDate || undefined,
       });
       setRegistered(res.data.data);
+      onRegistered?.();
       setSerialNumber('');
       setManufactureDateCode('');
       setPurchaseDate('');

@@ -18,6 +18,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreProductRequest;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -82,7 +83,7 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request)
     {
-        $product = $this->creation->create($this->context->tenantId(), $request->validated(), (array) $request->input('spec', []));
+        $product = $this->creation->create($this->context->tenantId(), Arr::except($request->validated(), ['creation_context']), (array) $request->input('spec', []));
 
         return $this->ok($product, 201);
     }
@@ -91,12 +92,18 @@ class ProductController extends Controller
     {
         $this->authorizeVisible($product);
 
+        return $this->ok($product->load(self::detailRelations($product)));
+    }
+
+    /** Relations of the Product Detail payload (also served by Tire Detail → Details). */
+    public static function detailRelations(Product $product): array
+    {
         $relations = ['category', 'uom', 'defaultStorageBin', 'componentGroups', 'compatibilities.componentGroup', 'compatibilities.vehicleCategory', 'compatibilities.brandMaster:id,name,status,deleted_at', 'compatibilities.modelMaster:id,vehicle_brand_id,name,status,deleted_at', ...self::CLASSIFICATION_RELATIONS];
         if ($relation = self::SPEC_RELATIONS[$product->product_type] ?? null) {
             $relations[] = $relation;
         }
 
-        return $this->ok($product->load($relations));
+        return $relations;
     }
 
     /**

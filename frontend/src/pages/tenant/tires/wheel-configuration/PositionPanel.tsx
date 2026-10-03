@@ -158,7 +158,17 @@ export function InstalledTire({ installation }: { installation: PositionInstalla
   return (
     <dl data-installed-tire style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '6px 14px', fontSize: 13, margin: 0 }}>
       <Row label="Tire Position Code" value={<span style={{ fontFamily: 'monospace' }}>{installation.position_code}</span>} />
-      <Row label="Product" value={product ? `${product.name}${product.sku ? ` — ${product.sku}` : ''}` : '—'} />
+      <Row
+        label="Product"
+        value={
+          product ? (
+            // The tire counts as Installed on this product's Tire Detail.
+            <Link to={`/app/tires/products/${product.id}`}>{`${product.name}${product.sku ? ` — ${product.sku}` : ''}`}</Link>
+          ) : (
+            '—'
+          )
+        }
+      />
       <Row label="Serial Number" value={<Link to={`/app/tires/${installation.tire.id}`}>{installation.tire.serial_number}</Link>} />
       <Row label="Last Known Installation Date" value={formatDate(installation.installed_date)} />
       <Row label="Last Known Installation Time" value={installation.installed_time} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -41,7 +41,7 @@ function CycleGovernancePanel({
   const showSendForm = tireStatus === sendReadyStatus && ! activeCycle && canSend;
 
   return (
-    <div className="card" style={{ marginBottom: 16 }}>
+    <div className="card" id={label.toLowerCase()} style={{ marginBottom: 16 }}>
       <h3 style={{ marginTop: 0, fontSize: 15 }}>{label}</h3>
 
       {showSendForm && (
@@ -212,6 +212,13 @@ export function TireDetailPage() {
   }, []);
 
   useBreadcrumbLabel(tire?.id, tire?.serial_number);
+
+  // Deep links from Tire Operations / Used Tire Management (#install, #in-service, #retread, #scrap).
+  const { hash } = useLocation();
+  const loaded = tire !== null;
+  useEffect(() => {
+    if (loaded && hash) document.getElementById(hash.slice(1))?.scrollIntoView({ block: 'start' });
+  }, [loaded, hash]);
   // Wheel position dropdown, sourced from the selected vehicle's own Wheel Configuration —
   // falls back to free text when the category has no configured positions (backend stays permissive there too).
   useEffect(() => {
@@ -554,7 +561,7 @@ export function TireDetailPage() {
       </div>
 
       {['IN_STOCK', 'RESERVED'].includes(tire.current_status) && canInstall && (
-        <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card" id="install" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Install</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <FormField label="Vehicle" required>
@@ -618,7 +625,7 @@ export function TireDetailPage() {
       )}
 
       {['INSTALLED', 'IN_USE'].includes(tire.current_status) && (
-        <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card" id="in-service" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>In-Service Actions</h3>
           {canRotate && (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
@@ -776,7 +783,7 @@ export function TireDetailPage() {
       )}
 
       {['IN_STOCK', 'REMOVED', 'UNDER_INSPECTION', 'QUARANTINED'].includes(tire.current_status) && canScrap && (
-        <div className="card" style={{ marginBottom: 16 }}>
+        <div className="card" id="scrap" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Scrap</h3>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             <FormField label="Reason">

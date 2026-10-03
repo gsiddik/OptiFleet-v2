@@ -500,3 +500,62 @@ PASS (list/detail/edit, mapping view/edit/cancel/save/remove, vehicle tab empty/
 registration form, decimals, duplicate serial, Tire List, warehouse unchanged, remap blocker,
 390 px); lock smoke: registration waited ~2.6 s while the vehicle row was locked; seed ×2 PASS.
 NOT RUN: Mongo analytics/intelligence tests (MongoDB unavailable).
+
+## Phase E — Tire Management refactor: product-level Tire List, Tire Detail, menu consolidation
+
+### E1 — Product-level Tire List + New Tire (DONE, `6d325b5`)
+- Tire List = Products of Item Type TIRE, one row each: Brand, Product Name, Rim Diameter
+  (`product_tires.rim_diameter_inch`), New / Used / Installed stock counts, View Detail.
+- `TireInventoryService` is the single classification for list counts and detail tables:
+  active installation → INSTALLED; SCRAPPED/SOLD/LOST → not stock; IN_STOCK/RESERVED never
+  installed → NEW; everything else → USED (tire keeps its own status). One grouped query, no N+1.
+- `GET /app/tire-products`, `/{id}`, `/{id}/inventory?category=` (tire.view, tenant + tire data
+  scope, server-side pagination). Soft-deleted Tire products stay reachable for history.
+- New Tire = the existing New Product modal with `context="TIRE"`: Item Type TIRE and Component
+  Group CG-TYRE locked; the backend enforces it via `creation_context=TIRE`. Products unchanged.
+- Indexes: `tires(tenant_id, product_id)`, `tire_removals(tire_installation_id)`.
+- Goods Receipt audit: GR never creates serialised tires (only `POST /app/tires` and vehicle
+  registration do), so New Stock counts serials, not warehouse quantity. No fake serials.
+
+### E2 — Tire Detail (DONE, `f4c5bd1`)
+- `/app/tires/products/:productId`: Details (shared `ProductDetailsSection`, now with the tire
+  spec) + Inventory: New Stock (Serial, Status, Register Tire) and Installed (Serial, Registration,
+  Current KM = vehicle `current_odometer`) side by side, max 5 visible rows, internal scroll, lazy
+  page loading; Used Stocks (Serial, Status, Usage KM, Usage Time/Hours Meter, Current Tread Depth)
+  paginated. Stacks on mobile.
+- Usage KM = Σ installation periods (removal odometer, or next installation odometer after a
+  rotation), integer hundredths. Hours meter: not recorded per tire → "—".
+- Register Tire removed from Product Detail (now links to Tire Detail).
+
+### E3 — Vehicle tire integration (DONE, `6eb38f0`)
+- Registration from Vehicle → Wheels Configuration counts as Installed on the product (no product
+  row duplication, warehouse stock unchanged; reused loose serial moves New → Installed).
+
+### E4 — Navigation consolidation (DONE, `18af73b`)
+- Sidebar: Rim, Tire List, Wheel Configuration, Tire Operations, Used Tire Management, History.
+  Removed items were all aliases of `/app/tires` → no broken URLs.
+- Tire Operations (`/app/tire-operations`, tabs by tire.install / tire.rotate / tire.inspect),
+  Used Tire Management (`/app/used-tires`, Retread by tire_retread.*, Scrap by tire.scrap),
+  History (`/app/tire-history`). Actions deep-link to the physical tire page sections.
+- `GET /app/tire-activity` feed; `/app/tires?current_status=A,B` multi-status filter.
+- Note: the old "Retread" menu was gated by tire.manage; the tab now uses tire_retread.*.
+
+### E5 — Release gate (PASS)
+Full non-Mongo backend regression 1023 PASS; TireProductInventory 6, TireActivity 3,
+VehicleTireRegistration 7 PASS; frontend typecheck + build PASS, lint 0 errors (28 pre-existing
+warnings); seed ×2 idempotent (329 permissions, unchanged); browser e2e PASS (Tire List / New
+Tire locks + create, count parity list ↔ detail, Tire Detail layout / 5-row scroll / lazy load /
+Register Tire / mobile, Product Detail regression, vehicle registration → Installed, sidebar +
+search, tabs per permission with a limited user, backend 403s). NOT RUN: Mongo analytics/
+intelligence tests (MongoDB unavailable), Docker build.
+
+### E6 — Owner decisions after Phase E (DONE)
+- Retread tab gated by the granular `tire_retread.*` permissions (instead of the old menu's
+  tire.manage): confirmed by the owner.
+- No separate Repair tab — Repair is a kind of Retread. The Retread tab now also lists tires in
+  REPAIR (action opens the tire's repair cycle, `#repair`), its recent activity includes repair
+  cycles, and it is shown with any `tire_retread.*` or `tire_repair.*` permission. The Repair
+  cycle itself (status, endpoints, permissions) is unchanged.
+- Validation: typecheck + build PASS, lint 0 errors (28 pre-existing warnings); browser e2e PASS
+  (REPAIR tire listed and deep-linked from the Retread tab; menu/permission suite re-run 25/25).
+  Frontend-only change — backend regression not re-run.

@@ -110,6 +110,11 @@ import { PartnerListPage } from './pages/tenant/partners/PartnerListPage';
 import { PartnerDetailPage } from './pages/tenant/partners/PartnerDetailPage';
 import { TireListPage } from './pages/tenant/tires/TireListPage';
 import { TireDetailPage } from './pages/tenant/tires/TireDetailPage';
+import { TireProductDetailPage } from './pages/tenant/tires/TireProductDetailPage';
+import { TireOperationsPage } from './pages/tenant/tires/operations/TireOperationsPage';
+import { UsedTireManagementPage } from './pages/tenant/tires/operations/UsedTireManagementPage';
+import { TireHistoryPage } from './pages/tenant/tires/operations/TireHistoryPage';
+import { TIRE_OPERATION_PERMISSIONS, USED_TIRE_PERMISSIONS } from './layouts/tenantNav';
 import { WheelConfigurationListPage } from './pages/tenant/tires/WheelConfigurationListPage';
 import { AddWheelConfigurationPage } from './pages/tenant/tires/wheel-configuration/AddWheelConfigurationPage';
 import { WheelConfigurationDetailPage } from './pages/tenant/tires/wheel-configuration/WheelConfigurationDetailPage';
@@ -790,7 +795,12 @@ export default function App() {
             <Route path="partners/:id" element={<RequirePermission permission="partner.view"><PartnerDetailPage /></RequirePermission>} />
 
             <Route path="tires" element={<RequirePermission permission="tire.view"><TireListPage /></RequirePermission>} />
+            <Route path="tires/products" element={<Navigate to="/app/tires" replace />} />
+            <Route path="tires/products/:productId" element={<RequirePermission permission="tire.view"><TireProductDetailPage /></RequirePermission>} />
             <Route path="tires/:id" element={<RequirePermission permission="tire.view"><TireDetailPage /></RequirePermission>} />
+            <Route path="tire-operations" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationsPage /></RequirePermission>} />
+            <Route path="used-tires" element={<RequirePermission permission={USED_TIRE_PERMISSIONS}><UsedTireManagementPage /></RequirePermission>} />
+            <Route path="tire-history" element={<RequirePermission permission="tire.view"><TireHistoryPage /></RequirePermission>} />
             <Route path="wheel-configurations" element={<RequirePermission permission="tire.view"><WheelConfigurationListPage /></RequirePermission>} />
             {/* Prototype (owner review): Passenger Car wheel configuration builder — not persisted yet. */}
             <Route path="wheel-configurations/new" element={<RequirePermission permission="tire.manage"><AddWheelConfigurationPage /></RequirePermission>} />
