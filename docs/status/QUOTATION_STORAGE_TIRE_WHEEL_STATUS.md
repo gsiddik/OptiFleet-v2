@@ -548,3 +548,14 @@ Tire locks + create, count parity list ↔ detail, Tire Detail layout / 5-row sc
 Register Tire / mobile, Product Detail regression, vehicle registration → Installed, sidebar +
 search, tabs per permission with a limited user, backend 403s). NOT RUN: Mongo analytics/
 intelligence tests (MongoDB unavailable), Docker build.
+
+### E6 — Owner decisions after Phase E (DONE)
+- Retread tab gated by the granular `tire_retread.*` permissions (instead of the old menu's
+  tire.manage): confirmed by the owner.
+- No separate Repair tab — Repair is a kind of Retread. The Retread tab now also lists tires in
+  REPAIR (action opens the tire's repair cycle, `#repair`), its recent activity includes repair
+  cycles, and it is shown with any `tire_retread.*` or `tire_repair.*` permission. The Repair
+  cycle itself (status, endpoints, permissions) is unchanged.
+- Validation: typecheck + build PASS, lint 0 errors (28 pre-existing warnings); browser e2e PASS
+  (REPAIR tire listed and deep-linked from the Retread tab; menu/permission suite re-run 25/25).
+  Frontend-only change — backend regression not re-run.

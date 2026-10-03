@@ -1393,7 +1393,7 @@ Mechanic (`tire.install/rotate/inspect/remove/scrap`); Workshop Manager (checker
 | Tire — Inspect | Mencatat kondisi ban | Mechanic/Inspector | Kedalaman tapak, kondisi | Rekaman inspeksi |
 | Tire — Remove/Replace | Melepas/mengganti ban | Mechanic | Disposisi (REUSE/RETREAD/REPAIR/SCRAP) | Status baru sesuai disposisi |
 | Tire Operations | Satu menu dengan tab **Installation** (tire.install), **Rotation** (tire.rotate), **Inspection** (tire.inspect) — tab hanya tampil sesuai permission. Tiap tab menampilkan ban yang relevan dan aktivitas terbaru; aksi membuka halaman ban pada langkah tersebut. | Mechanic | — | — |
-| Used Tire Management | Tab **Retread** (tire_retread.*) dan **Scrap** (tire.scrap) untuk ban bekas; pola sama dengan Tire Operations. | Warehouse/Workshop Manager/Mechanic | — | — |
+| Used Tire Management | Tab **Retread** (tire_retread.* / tire_repair.* — Repair adalah bagian dari Retread, ban berstatus RETREAD maupun REPAIR tampil di sini) dan **Scrap** (tire.scrap) untuk ban bekas; pola sama dengan Tire Operations. | Warehouse/Workshop Manager/Mechanic | — | — |
 | History | Seluruh kejadian ban (instalasi, rotasi, inspeksi, pelepasan, siklus retread/repair, scrap) terbaru di atas, dapat difilter. | tire.view | Filter jenis, pencarian | Riwayat ban |
 | Tire Retread/Repair | Siklus kirim-terima-inspeksi-approve ke partner | Warehouse (send/receive)/Workshop Manager (inspect/approve) | Partner, hasil inspeksi akhir | RETURN_TO_SERVICE/SCRAP/QUARANTINE |
 | Tire Scoring | Penilaian kelayakan (SPA/KA/KF) | Inspector/Workshop Manager | Kedalaman tapak, kondisi | Skor & klasifikasi |

@@ -19,8 +19,8 @@ export interface WorkflowTab {
   statuses: string[];
   candidatesTitle: string;
   actionLabel: string;
-  /** Section of the physical tire page that performs the step. */
-  anchor: string;
+  /** Section of the physical tire page that performs the step (per tire when it depends on the status). */
+  anchor: string | ((tire: TireItem) => string);
   activityTypes: TireActivityType[];
   activityTitle: string;
 }
@@ -79,7 +79,7 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
     { key: 'vehicle', header: 'Vehicle', render: (t) => t.current_vehicle?.registration_number ?? '—' },
     { key: 'position', header: 'Position', render: (t) => t.current_position ?? '—' },
     { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.current_status} /> },
-    { key: 'action', header: 'Action', render: (t) => <Link to={`/app/tires/${t.id}#${tab.anchor}`}>{tab.actionLabel}</Link> },
+    { key: 'action', header: 'Action', render: (t) => <Link to={`/app/tires/${t.id}#${typeof tab.anchor === 'function' ? tab.anchor(t) : tab.anchor}`}>{tab.actionLabel}</Link> },
   ];
 
   return (

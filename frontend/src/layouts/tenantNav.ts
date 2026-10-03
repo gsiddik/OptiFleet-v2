@@ -24,8 +24,17 @@ export interface NavGroup {
 
 /** Tire Operations tabs: Installation, Rotation, Inspection. */
 export const TIRE_OPERATION_PERMISSIONS = ['tire.install', 'tire.rotate', 'tire.inspect'];
-/** Used Tire Management tabs: Retread (any retread step) and Scrap. */
-export const RETREAD_PERMISSIONS = ['tire_retread.send', 'tire_retread.receive', 'tire_retread.inspect', 'tire_retread.approve'];
+/** Used Tire Management tabs: Retread (any retread or repair step — repair is a kind of retread) and Scrap. */
+export const RETREAD_PERMISSIONS = [
+  'tire_retread.send',
+  'tire_retread.receive',
+  'tire_retread.inspect',
+  'tire_retread.approve',
+  'tire_repair.send',
+  'tire_repair.receive',
+  'tire_repair.inspect',
+  'tire_repair.approve',
+];
 export const USED_TIRE_PERMISSIONS = [...RETREAD_PERMISSIONS, 'tire.scrap'];
 
 export const NAV_GROUPS: NavGroup[] = [
