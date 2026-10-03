@@ -1,6 +1,7 @@
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { apiClient } from '../../../api/client';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiClient, extractApiError } from '../../../api/client';
+import { ScrollTable } from '../../../components/ScrollTable';
 import { inputStyle } from '../../../components/FormField';
 import { Pagination } from '../../../components/Pagination';
 import { Table, type Column } from '../../../components/Table';
@@ -46,6 +47,14 @@ export function WheelConfigurationListPage() {
     { search: search || undefined, vehicle_type: typeFilter || undefined, compatible_vehicle_id: vehicleId || undefined, page },
     0,
   );
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggle = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   const mappingLink = (masterId: string) => `/app/wheel-configurations/${masterId}/vehicle-mapping${vehicleId ? `?vehicle=${vehicleId}` : ''}`;
 
   const columns: Column<ConfigurationMaster>[] = [
@@ -55,6 +64,29 @@ export function WheelConfigurationListPage() {
     { key: 'wheels', header: 'Total Wheels', render: (m) => m.current_version?.total_wheels ?? '—' },
     { key: 'spare', header: 'Spare Tire', render: (m) => m.current_version?.spare_tires ?? '—' },
     { key: 'version', header: 'Version', render: (m) => m.current_version?.version_number ?? '—' },
+    {
+      key: 'vehicles',
+      header: 'Number of Vehicle',
+      render: (m) =>
+        (m.mapped_vehicle_count ?? 0) > 0 ? (
+          <button
+            type="button"
+            className="btn-link"
+            aria-expanded={expanded.has(m.id)}
+            aria-controls={`mapped-${m.id}`}
+            data-toggle-vehicles={m.id}
+            onClick={() => toggle(m.id)}
+            style={{ fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}
+          >
+            <span aria-hidden="true" style={{ display: 'inline-block', transition: 'transform 0.15s', transform: expanded.has(m.id) ? 'rotate(90deg)' : 'none' }}>
+              ▸
+            </span>
+            {m.mapped_vehicle_count}
+          </button>
+        ) : (
+          <span style={{ color: '#9ca3af' }}>0</span>
+        ),
+    },
     { key: 'status', header: 'Status', render: (m) => <StatusBadge status={m.status} /> },
     {
       key: 'actions',
@@ -137,10 +169,75 @@ export function WheelConfigurationListPage() {
       {!error && !loading && data.length === 0 && <EmptyState label={vehicleId ? 'No configuration matches this vehicle’s type, axles and wheels.' : 'No wheel configurations yet.'} />}
       {!error && !loading && data.length > 0 && (
         <div data-master-list style={{ overflowX: 'auto' }}>
-          <Table columns={columns} rows={data} />
+          <Table columns={columns} rows={data} expandedIds={expanded} renderExpanded={(m) => <MappedVehicles masterId={m.id} total={m.mapped_vehicle_count ?? 0} />} />
         </div>
       )}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
+    </div>
+  );
+}
+
+interface MappedVehicle {
+  mapping_id: string;
+  id: string;
+  registration_number: string;
+  brand: string | null;
+  model: string | null;
+  vehicle_type: string | null;
+  branch_name: string | null;
+  version_number: number;
+  config_code: string;
+}
+
+/** Vehicles mapped to one configuration: at most 5 rows visible, more pages loaded on scroll. */
+function MappedVehicles({ masterId, total }: { masterId: string; total: number }) {
+  const [rows, setRows] = useState<MappedVehicle[] | null>(null);
+  const [lastPage, setLastPage] = useState(1);
+  const [page, setPage] = useState(1);
+  const [error, setError] = useState<string | null>(null);
+  const loading = useRef(false);
+
+  const fetchPage = useCallback(
+    (next: number) => {
+      loading.current = true;
+      return apiClient
+        .get(`/app/wheel-configuration-masters/${masterId}/mapped-vehicles`, { params: { page: next, per_page: 25 } })
+        .then((res) => {
+          setRows((prev) => (next === 1 ? res.data.data : [...(prev ?? []), ...res.data.data]));
+          setPage(res.data.meta.current_page);
+          setLastPage(res.data.meta.last_page);
+        })
+        .catch((e) => setError(extractApiError(e).message))
+        .finally(() => {
+          loading.current = false;
+        });
+    },
+    [masterId],
+  );
+  useEffect(() => {
+    fetchPage(1);
+  }, [fetchPage]);
+
+  if (error) return <ErrorState message={error} />;
+  return (
+    <div id={`mapped-${masterId}`} data-mapped-vehicles={masterId}>
+      <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
+        Mapped vehicles {rows ? `(${rows.length} of ${total} shown)` : ''}
+      </div>
+      <ScrollTable
+        dataAttr={`mapped-${masterId}`}
+        rows={rows ?? []}
+        rowKey={(v) => v.mapping_id}
+        emptyLabel={rows === null ? 'Loading…' : 'No mapped vehicles.'}
+        onReachEnd={() => !loading.current && page < lastPage && fetchPage(page + 1)}
+        columns={[
+          { header: 'Registration Number', cell: (v) => <Link to={`/app/vehicles/${v.id}`}>{v.registration_number}</Link> },
+          { header: 'Brand / Model', cell: (v) => [v.brand, v.model].filter(Boolean).join(' ') || '—' },
+          { header: 'Vehicle Type', cell: (v) => v.vehicle_type ?? '—' },
+          { header: 'Branch', cell: (v) => v.branch_name ?? '—' },
+          { header: 'Version', cell: (v) => `v${v.version_number}` },
+        ]}
+      />
     </div>
   );
 }

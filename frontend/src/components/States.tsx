@@ -1,10 +1,10 @@
 export function LoadingState({ label = 'Loading…' }: { label?: string }) {
-  return <div style={{ padding: 32, textAlign: 'center', color: '#6b7280' }}>{label}</div>;
+  return <div style={{ padding: 20, textAlign: 'center', color: '#6b7280', fontSize: 14 }}>{label}</div>;
 }
 
 export function EmptyState({ label = 'No records found.' }: { label?: string }) {
   return (
-    <div style={{ padding: 40, textAlign: 'center', color: '#9ca3af', border: '1px dashed #e5e7eb', borderRadius: 8 }}>
+    <div style={{ padding: '18px 16px', textAlign: 'center', color: '#9ca3af', border: '1px dashed #e5e7eb', borderRadius: 8, fontSize: 14 }}>
       {label}
     </div>
   );

@@ -687,6 +687,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/wheel-configuration-masters', [WheelConfigurationMasterController::class, 'store'])->middleware('permission:tire.manage');
             Route::get('/wheel-configuration-masters/{wheelConfigurationMaster}', [WheelConfigurationMasterController::class, 'show'])->middleware('permission:tire.view');
             Route::put('/wheel-configuration-masters/{wheelConfigurationMaster}', [WheelConfigurationMasterController::class, 'update'])->middleware('permission:tire.manage');
+            Route::get('/wheel-configuration-masters/{wheelConfigurationMaster}/mapped-vehicles', [WheelConfigurationMasterController::class, 'mappedVehicles'])->middleware('permission:tire.view');
             Route::get('/wheel-configuration-masters/{wheelConfigurationMaster}/vehicle-mappings', [VehicleWheelConfigurationMappingController::class, 'show'])->middleware('permission:tire.view');
             Route::put('/wheel-configuration-masters/{wheelConfigurationMaster}/vehicle-mappings', [VehicleWheelConfigurationMappingController::class, 'update'])->middleware('permission:wheel_configuration.map_vehicle');
             Route::get('/vehicles/{vehicle}/wheel-configuration', [VehicleWheelConfigurationController::class, 'show'])->middleware('permission:tire.view');

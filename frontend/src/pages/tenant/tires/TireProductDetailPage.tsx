@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { Pagination, type PaginationMeta } from '../../../components/Pagination';
+import { ScrollTable, type ScrollColumn } from '../../../components/ScrollTable';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
@@ -129,10 +130,9 @@ function InventoryCard({ title, count, action, children }: { title: string; coun
   );
 }
 
-type InventoryColumn = { header: string; cell: (row: TireInventoryRow) => ReactNode };
+type InventoryColumn = ScrollColumn<TireInventoryRow>;
 
 const PAGE_SIZE = 25;
-const ROW_HEIGHT = 37;
 const VISIBLE_ROWS = 5;
 
 /** New Stock / Installed: at most 5 rows visible, internal scroll, next page fetched on scroll. */
@@ -182,16 +182,7 @@ function ScrollingInventory({ productId, category, reloadKey, columns }: { produ
 
   return (
     <div>
-      <div
-        data-inventory-scroll={category}
-        style={{ maxHeight: ROW_HEIGHT * (VISIBLE_ROWS + 1) + 2, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          if (el.scrollTop + el.clientHeight >= el.scrollHeight - ROW_HEIGHT) loadMore();
-        }}
-      >
-        <InventoryTable columns={columns} rows={rows ?? []} sticky emptyLabel={rows === null ? 'Loading…' : 'No tires.'} />
-      </div>
+      <ScrollTable dataAttr={category} columns={columns} rows={rows ?? []} rowKey={(r) => r.serial_number} maxRows={VISIBLE_ROWS} onReachEnd={loadMore} emptyLabel={rows === null ? 'Loading…' : 'No tires.'} />
       <InventoryFooter shown={rows?.length ?? 0} meta={meta} loading={loadingMore} error={error} onMore={hasMore ? loadMore : undefined} />
     </div>
   );
@@ -204,48 +195,10 @@ function PagedInventory({ productId, reloadKey, columns }: { productId: string; 
 
   return (
     <div data-inventory-paged="USED">
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
-        <InventoryTable columns={columns} rows={data} emptyLabel={loading ? 'Loading…' : 'No tires.'} />
-      </div>
+      <ScrollTable dataAttr="USED" columns={columns} rows={data} rowKey={(r) => r.serial_number} maxRows={PAGE_SIZE} emptyLabel={loading ? 'Loading…' : 'No tires.'} />
       {error && <ErrorState message={error} />}
       {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={setPage} />}
     </div>
-  );
-}
-
-function InventoryTable({ columns, rows, sticky = false, emptyLabel }: { columns: InventoryColumn[]; rows: TireInventoryRow[]; sticky?: boolean; emptyLabel: string }) {
-  const th = { textAlign: 'left' as const, padding: '8px 10px', fontSize: 12, color: '#374151', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' as const, ...(sticky ? { position: 'sticky' as const, top: 0, zIndex: 1 } : {}) };
-  return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-      <thead>
-        <tr>
-          {columns.map((c) => (
-            <th key={c.header} style={th}>
-              {c.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={columns.length} style={{ padding: '10px', color: '#6b7280' }}>
-              {emptyLabel}
-            </td>
-          </tr>
-        ) : (
-          rows.map((r) => (
-            <tr key={r.id} data-serial={r.serial_number} style={{ height: ROW_HEIGHT }}>
-              {columns.map((c) => (
-                <td key={c.header} style={{ padding: '6px 10px', borderBottom: '1px solid #f3f4f6' }}>
-                  {c.cell(r)}
-                </td>
-              ))}
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
   );
 }
 

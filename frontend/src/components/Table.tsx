@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 
 export interface Column<T> {
   key: string;
@@ -13,12 +13,17 @@ export function Table<T extends { id: string }>({
   sort,
   direction,
   onSort,
+  expandedIds,
+  renderExpanded,
 }: {
   columns: Column<T>[];
   rows: T[];
   sort?: string;
   direction?: 'asc' | 'desc';
   onSort?: (key: string) => void;
+  /** Optional row expansion: rows whose id is in expandedIds render renderExpanded(row) below them. */
+  expandedIds?: ReadonlySet<string>;
+  renderExpanded?: (row: T) => ReactNode;
 }) {
   return (
     <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8 }}>
@@ -46,13 +51,22 @@ export function Table<T extends { id: string }>({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-              {columns.map((col) => (
-                <td key={col.key} style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
-                  {col.render(row)}
-                </td>
-              ))}
-            </tr>
+            <Fragment key={row.id}>
+              <tr style={{ borderBottom: '1px solid #f3f4f6' }}>
+                {columns.map((col) => (
+                  <td key={col.key} style={{ padding: '10px 14px', verticalAlign: 'middle' }}>
+                    {col.render(row)}
+                  </td>
+                ))}
+              </tr>
+              {renderExpanded && expandedIds?.has(row.id) && (
+                <tr data-expanded-row={row.id} style={{ borderBottom: '1px solid #f3f4f6', background: '#f9fafb' }}>
+                  <td colSpan={columns.length} style={{ padding: '8px 14px 12px' }}>
+                    {renderExpanded(row)}
+                  </td>
+                </tr>
+              )}
+            </Fragment>
           ))}
         </tbody>
       </table>
