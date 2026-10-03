@@ -2107,6 +2107,29 @@ export interface TireItem {
   repairs?: TireRepairItem[];
   scoringResults?: TireScoringResultItem[];
   sales?: TireSaleItem[];
+  /** Serial Detail of an installed tire (backend-computed); null when the tire is not on a vehicle. */
+  installed?: TireInstalledSummary | null;
+}
+
+export interface TireInstalledSummary {
+  position_code: string;
+  installed_at: string | null;
+  vehicle: { id: string; registration_number: string | null };
+  usage_km: string | null;
+  usage_hours: string | null;
+  current_tread_depth_mm: string | null;
+  reference_tread_depth_mm: string | null;
+  /** current < reference (exact decimal comparison on the server); null when either is unknown */
+  tread_below_reference: boolean | null;
+  configuration: {
+    config_code: string;
+    version_number: number;
+    vehicle_type: string | null;
+    truck_configuration_type: string | null;
+    front_axles: number[];
+    rear_axles: number[];
+    spare_tires: number;
+  } | null;
 }
 
 /** Phase F (G-31): one structured scoring calculation. */

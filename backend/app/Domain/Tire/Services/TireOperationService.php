@@ -107,6 +107,41 @@ class TireOperationService
     }
 
     /**
+     * Serial Detail of an installed tire: where it is (position on the vehicle's mapped Wheels
+     * Configuration, for the read-only preview), its usage, and its current tread depth against the
+     * product's reference. Usage comes from TireInventoryService::usage() (first value at the first
+     * reading, then accumulated deltas); the tread depth is the latest *measured* value, so a later
+     * operation without a measurement never blanks it. Null when the tire is not on a vehicle.
+     */
+    public function installedSummary(Tire $tire): ?array
+    {
+        $installation = TireInstallation::query()->withoutGlobalScopes()->where('tire_id', $tire->id)->whereNull('removed_at')
+            ->with(['vehicle' => fn ($q) => $q->withoutGlobalScopes()])->latest('installed_at')->first();
+        if (! $installation || ! $installation->vehicle) {
+            return null;
+        }
+        $vehicle = $installation->vehicle;
+        $facts = $this->facts->facts([$tire->id], $this->registrations->timezone($tire->tenant_id))[$tire->id] ?? [];
+        $mapping = VehicleWheelConfigurationMapping::query()->withoutGlobalScopes()
+            ->where('vehicle_id', $vehicle->id)->where('status', VehicleWheelConfigurationMapping::STATUS_ACTIVE)->first();
+        $current = $facts['last_tread_depth_mm'] ?? null;
+        $reference = $tire->product()->withoutGlobalScopes()->withTrashed()->value('reference_tread_depth_mm');
+
+        return [
+            'position_code' => $installation->wheel_position,
+            'installed_at' => $installation->installed_at?->toIso8601String(),
+            'vehicle' => ['id' => $vehicle->id, 'registration_number' => $vehicle->registration_number],
+            'usage_km' => $facts['usage_km'] ?? null,
+            // No hours-meter reading is recorded per tire (see TireFactsService).
+            'usage_hours' => null,
+            'current_tread_depth_mm' => $current,
+            'reference_tread_depth_mm' => $reference,
+            'tread_below_reference' => $current !== null && $reference !== null ? $this->hundredths($current) < $this->hundredths($reference) : null,
+            'configuration' => $mapping ? $this->configuration($mapping->wheel_configuration_version_id) : null,
+        ];
+    }
+
+    /**
      * Serials that may replace a tire of the given product: same Tire Product, either New Stock
      * (IN_STOCK) or Reuse (removed with disposition REUSE), not deleted, and not already held as
      * "Replacing With" by another open operation.
@@ -636,6 +671,14 @@ class TireOperationService
             'rear_axles' => $version->rear_axles,
             'spare_tires' => $version->spare_tires,
         ] : null;
+    }
+
+    /** "8.5" / "8.50" → 850 — exact decimal comparison without floats. */
+    private function hundredths(string $value): int
+    {
+        [$whole, $fraction] = array_pad(explode('.', trim($value), 2), 2, '');
+
+        return (int) $whole * 100 + (int) str_pad(substr($fraction, 0, 2), 2, '0');
     }
 
     private function card(Tire $tire, string $position, array $facts): array

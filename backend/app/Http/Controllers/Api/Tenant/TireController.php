@@ -9,6 +9,7 @@ use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireScoringResult;
 use App\Domain\Tire\Services\TireRegistrationService;
+use App\Domain\Tire\Services\TireOperationService;
 use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Tire\Services\TireService;
 use App\Domain\Vehicle\Models\Vehicle;
@@ -77,7 +78,10 @@ class TireController extends Controller
             'repairs' => fn ($q) => $q->orderByDesc('sent_at'),
             'scoringResults' => fn ($q) => $q->orderByDesc('computed_at'),
             'sales' => fn ($q) => $q->orderByDesc('sold_at'),
-        ]));
+        ])->toArray() + [
+            // Serial Detail of an installed tire (position, usage, tread vs reference, preview).
+            'installed' => app(TireOperationService::class)->installedSummary($tire),
+        ]);
     }
 
     public function install(Request $request, Tire $tire)

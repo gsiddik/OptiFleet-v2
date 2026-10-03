@@ -208,6 +208,37 @@ class TireOperationTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('odometer');
     }
 
+    public function test_serial_detail_shows_position_usage_and_tread_against_the_reference(): void
+    {
+        $s = $this->scenario();
+        $s['product']->update(['reference_tread_depth_mm' => '8.00']);
+        $tire = Tire::query()->where('serial_number', 'OLD-1FL1')->firstOrFail();
+
+        // Before any operation: registered at 10000 km with 9 mm — no usage yet, tread above reference.
+        $installed = $this->getJson("/api/v1/app/tires/{$tire->id}", $s['headers'])->assertOk()->json('data.installed');
+        $this->assertSame(['1FL1', 'B 9 TOP', null, null, '9.00', '8.00', false], [
+            $installed['position_code'], $installed['vehicle']['registration_number'], $installed['usage_km'], $installed['usage_hours'],
+            (string) $installed['current_tread_depth_mm'], (string) $installed['reference_tread_depth_mm'], $installed['tread_below_reference'],
+        ]);
+        $this->assertSame(['1.1', [1], [1], 1], [$installed['configuration']['config_code'], $installed['configuration']['front_axles'], $installed['configuration']['rear_axles'], $installed['configuration']['spare_tires']]);
+
+        // An inspection measures 7.95 mm at 15000 km: usage appears, tread drops below the reference.
+        $service = app(WorkOrderService::class);
+        $op = $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['items' => [['position_code' => '1FL1', 'tread_depth_mm' => '7.95']]]), $s['headers'])->assertStatus(201);
+        $service->complete($service->submitToQc($this->startWorkOrder($op->json('data.work_order.id'))));
+        $installed = $this->getJson("/api/v1/app/tires/{$tire->id}", $s['headers'])->json('data.installed');
+        $this->assertSame(['5000.00', '7.95', true], [$installed['usage_km'], (string) $installed['current_tread_depth_mm'], $installed['tread_below_reference']]);
+
+        // A later operation without a measurement accumulates usage but keeps the measured tread.
+        $op = $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['odometer' => '16000', 'items' => [['position_code' => '1FL1']]]), $s['headers'])->assertStatus(201);
+        $service->complete($service->submitToQc($this->startWorkOrder($op->json('data.work_order.id'))));
+        $installed = $this->getJson("/api/v1/app/tires/{$tire->id}", $s['headers'])->json('data.installed');
+        $this->assertSame(['6000.00', '7.95'], [$installed['usage_km'], (string) $installed['current_tread_depth_mm']]);
+
+        // A tire in stock has no installed block.
+        $this->assertNull($this->getJson('/api/v1/app/tires/'.$this->stockTire($s, 'NEW-ONE')->id, $s['headers'])->assertOk()->json('data.installed'));
+    }
+
     public function test_edit_keeps_the_part_request_in_sync_and_never_changes_the_vehicle(): void
     {
         $s = $this->scenario();
