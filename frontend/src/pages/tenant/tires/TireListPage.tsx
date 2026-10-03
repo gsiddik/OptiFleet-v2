@@ -31,7 +31,10 @@ export function TireListPage() {
       header: 'Product Name',
       render: (p) => (
         <div>
-          <div>{p.name}</div>
+          {/* The product name opens its Tire Detail (no separate View Detail action). */}
+          <Link to={`/app/tires/products/${p.id}`} className="entity-link" data-product-link={p.id}>
+            {p.name}
+          </Link>
           {p.tire_size_computed && <div style={{ fontSize: 11, color: '#6b7280' }}>{p.tire_size_computed}</div>}
         </div>
       ),
@@ -40,7 +43,6 @@ export function TireListPage() {
     { key: 'new', header: 'New Stock Qty', render: (p) => qty(p.new_qty) },
     { key: 'used', header: 'Used Stock Qty', render: (p) => qty(p.used_qty) },
     { key: 'installed', header: 'Installed Stock Qty', render: (p) => qty(p.installed_qty) },
-    { key: 'action', header: 'Action', render: (p) => <Link to={`/app/tires/products/${p.id}`}>View Detail</Link> },
   ];
 
   return (
