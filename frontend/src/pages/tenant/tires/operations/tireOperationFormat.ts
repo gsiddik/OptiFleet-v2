@@ -14,3 +14,9 @@ export function formatKm(value: string | null | undefined): string {
   const [whole, fraction] = String(value).split('.');
   return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction && Number(fraction) !== 0 ? `.${fraction}` : '');
 }
+
+/** Usage Time in hours from the backend: "1234.50" → "1,234.5 h"; null → "—". Display only. */
+export function formatHours(value: string | null | undefined): string {
+  const km = formatKm(value);
+  return km === '—' ? km : `${km.replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '')} h`;
+}

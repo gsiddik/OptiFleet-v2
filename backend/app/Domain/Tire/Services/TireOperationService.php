@@ -132,8 +132,7 @@ class TireOperationService
             'installed_at' => $installation->installed_at?->toIso8601String(),
             'vehicle' => ['id' => $vehicle->id, 'registration_number' => $vehicle->registration_number],
             'usage_km' => $facts['usage_km'] ?? null,
-            // No hours-meter reading is recorded per tire (see TireFactsService).
-            'usage_hours' => null,
+            'usage_hours' => $facts['usage_hours'] ?? null,
             'current_tread_depth_mm' => $current,
             'reference_tread_depth_mm' => $reference,
             'tread_below_reference' => $current !== null && $reference !== null ? $this->hundredths($current) < $this->hundredths($reference) : null,
@@ -142,25 +141,24 @@ class TireOperationService
     }
 
     /**
-     * Serials that may replace a tire of the given product: same Tire Product, either New Stock
-     * (IN_STOCK) or Reuse (removed with disposition REUSE), not deleted, and not already held as
-     * "Replacing With" by another open operation.
+     * Serials that may replace a tire of the given product: same Tire Product, in stock (IN_STOCK),
+     * not deleted, and not already held as "Replacing With" by another open operation. Source is
+     * REUSE for a tire that was installed before and is back in stock as Used, otherwise NEW_STOCK.
+     * A REMOVED tire is not offered: it first passes inspection in Used Tire Management.
      */
     public function replacementCandidates(string $tenantId, string $productId, ?string $operationId = null, ?string $search = null): array
     {
-        $reuseIds = $this->reuseTireIds($tenantId, $productId);
-
-        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)
-            ->where(fn ($q) => $q->where('current_status', 'IN_STOCK')->orWhereIn('id', $reuseIds))
+        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)->where('current_status', 'IN_STOCK')
             ->whereNotIn('id', $this->heldReplacementIds($operationId))
             ->when($search, fn ($q) => $q->where('serial_number', 'ilike', "%{$search}%"))
+            ->withExists('installations as was_installed')
             ->orderBy('serial_number')->limit(200)
             ->get(['id', 'serial_number', 'current_status', 'product_id', 'manufacture_date_code', 'purchase_date'])
             ->map(fn (Tire $t) => [
                 'id' => $t->id,
                 'serial_number' => $t->serial_number,
                 'current_status' => $t->current_status,
-                'source' => $t->current_status === 'IN_STOCK' && ! in_array($t->id, $reuseIds, true) ? 'NEW_STOCK' : 'REUSE',
+                'source' => $t->was_installed ? 'REUSE' : 'NEW_STOCK',
                 'manufacture_date_code' => $t->manufacture_date_code,
             ])->values()->all();
     }
@@ -214,7 +212,7 @@ class TireOperationService
                     'serial_number' => $i->tire?->serial_number,
                     'replacement_serial_number' => $i->replacementTire?->serial_number,
                     'usage_km' => $facts[$i->tire_id]['usage_km'] ?? null,
-                    'usage_hours' => null,
+                    'usage_hours' => $facts[$i->tire_id]['usage_hours'] ?? null,
                     'last_tread_depth_mm' => $facts[$i->tire_id]['last_tread_depth_mm'] ?? null,
                 ])->values()->all(),
                 'can_edit' => TireOperationStatus::isOpen($row->status) && ! $anyApplied,
@@ -451,6 +449,13 @@ class TireOperationService
             throw ValidationException::withMessages(['odometer' => "KM at Tire Operations cannot be lower than the last recorded KM of the selected tires ({$floor})."]);
         }
 
+        // Same for the date/time: Usage Time is measured between these dates, so it cannot go back.
+        $since = $this->lastEventAt($installations->toBase()->only(array_keys($selected))->values());
+        if ($since !== null && $operatedAt->lt($since)) {
+            $local = $since->copy()->setTimezone($timezone)->format('Y-m-d H:i');
+            throw ValidationException::withMessages(['operated_date' => "The Tire Operations date and time cannot be earlier than the last installation or Tire Operation of the selected tires ({$local})."]);
+        }
+
         $items = [];
         $lines = [];
         foreach ($selected as $code => $detail) {
@@ -529,9 +534,8 @@ class TireOperationService
             throw ValidationException::withMessages(['items' => "Choose the serial number replacing the tire on {$code}."]);
         }
         $candidate = Tire::query()->where('tenant_id', $tenantId)->lockForUpdate()->find($replacementId);
-        $reuse = $candidate ? in_array($candidate->id, $this->reuseTireIds($tenantId, $candidate->product_id), true) : false;
-        if (! $candidate || ($candidate->current_status !== 'IN_STOCK' && ! $reuse)) {
-            throw ValidationException::withMessages(['items' => "The replacement for {$code} must be a New Stock or Reuse serial number."]);
+        if (! $candidate || $candidate->current_status !== 'IN_STOCK') {
+            throw ValidationException::withMessages(['items' => "The replacement for {$code} must be a serial number in stock (New Stock or Used). A removed tire must pass inspection in Used Tire Management first."]);
         }
         if ($candidate->product_id !== $installed->product_id) {
             throw ValidationException::withMessages(['items' => "The replacement for {$code} must be the same Tire Product as the installed tire."]);
@@ -577,15 +581,6 @@ class TireOperationService
             ->pluck('replacement_tire_id')->all();
     }
 
-    /** @return list<string> REMOVED tires of the product whose latest removal disposition is REUSE */
-    private function reuseTireIds(string $tenantId, string $productId): array
-    {
-        return DB::table('tires as t')
-            ->where('t.tenant_id', $tenantId)->where('t.product_id', $productId)->where('t.current_status', 'REMOVED')->whereNull('t.deleted_at')
-            ->whereRaw("(SELECT r.disposition FROM tire_removals r WHERE r.tire_id = t.id ORDER BY r.removed_at DESC LIMIT 1) = 'REUSE'")
-            ->pluck('t.id')->all();
-    }
-
     private function lastReading(Collection $installations): ?string
     {
         $tireIds = $installations->pluck('tire_id')->all();
@@ -597,6 +592,19 @@ class TireOperationService
         }
 
         return $readings->isEmpty() ? null : (string) $readings->max(fn ($v) => (float) $v);
+    }
+
+    /** Latest installation date/time or applied Tire Operation date/time of the given installed tires. */
+    private function lastEventAt(Collection $installations): ?Carbon
+    {
+        $times = $installations->pluck('installed_at')->filter();
+        $ops = DB::table('tire_operation_items as oi')->join('tire_operations as o', 'o.id', '=', 'oi.tire_operation_id')
+            ->whereIn('oi.tire_id', $installations->pluck('tire_id')->all())->whereNotNull('oi.applied_at')->whereNull('o.cancelled_at')->max('o.operated_at');
+        if ($ops !== null) {
+            $times->push(Carbon::parse($ops));
+        }
+
+        return $times->isEmpty() ? null : Carbon::parse($times->max())->utc();
     }
 
     private function writeItems(TireOperation $operation, array $items): void

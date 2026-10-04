@@ -558,7 +558,7 @@ function OperationSection({
                         ))}
                     </select>
                   </FormField>
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Only serials of {tire.product?.name ?? 'the same tire product'} (New Stock or Reuse) are listed.</p>
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Only serials of {tire.product?.name ?? 'the same tire product'} (New Stock, or Reuse — used tires back in stock after inspection in Used Tire Management) are listed.</p>
                 </section>
               </>
             )}

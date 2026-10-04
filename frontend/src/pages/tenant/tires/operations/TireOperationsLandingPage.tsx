@@ -12,7 +12,7 @@ import { PositionLabel } from '../../../../components/tires/PositionLabel';
 import { useApiList } from '../../../../hooks/useApiList';
 import { useAuth } from '../../../../auth/AuthContext';
 import { formatDate } from '../../../../utils/date';
-import { formatKm } from './tireOperationFormat';
+import { formatHours, formatKm } from './tireOperationFormat';
 import { OPERATION_TYPES, OPERATION_TYPE_LABEL, type TireOperationListItem } from './tireOperationTypes';
 
 const TYPE_PERMISSION = { REPLACEMENT: 'tire.install', ROTATION: 'tire.rotate', INSPECTION: 'tire.inspect' } as const;
@@ -68,7 +68,7 @@ export function TireOperationsLandingPage() {
       )),
     },
     { key: 'usage', header: 'Usage KM', render: (r) => lines(r, (i) => formatKm(i.usage_km)) },
-    { key: 'hours', header: 'Usage Time / Hours Meter', render: (r) => lines(r, (i) => i.usage_hours ?? '—') },
+    { key: 'hours', header: 'Usage Time / Hours Meter', render: (r) => lines(r, (i) => formatHours(i.usage_hours)) },
     { key: 'tread', header: 'Last Tread Depth', render: (r) => lines(r, (i) => (i.last_tread_depth_mm != null ? `${i.last_tread_depth_mm} mm` : '—')) },
     { key: 'status', header: 'Tire Operations Status', render: (r) => <StatusBadge status={r.status} /> },
     {

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
  *   last operation   the latest executed Tire Operation on the tire; a tire that never had one
  *                    falls back to its latest installation (registration / install), labelled so
  *   usage_km         TireInventoryService::usage() — accumulated over installation periods
- *   usage_hours      not recorded anywhere per tire (no hours-meter source) → always null
+ *   usage_hours      TireInventoryService::usageHours() — the same periods, measured in date/time
  *   last tread depth the latest measured tread depth (inspection / operation measurement)
  */
 class TireFactsService
@@ -42,6 +42,7 @@ class TireFactsService
             ->orderBy('tire_id')->orderByDesc('installed_at')
             ->get()->keyBy('tire_id');
         $usage = $this->inventory->usage($tireIds);
+        $hours = $this->inventory->usageHours($tireIds);
         $treads = $this->inventory->latestTread($tireIds);
 
         $facts = [];
@@ -59,7 +60,7 @@ class TireFactsService
                 'last_operation_time' => $at?->format('H:i'),
                 'last_operation_odometer' => $last?->odometer,
                 'usage_km' => $usage[$id] ?? null,
-                'usage_hours' => null,
+                'usage_hours' => $hours[$id] ?? null,
                 'last_tread_depth_mm' => $treads[$id] ?? null,
             ];
         }

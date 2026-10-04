@@ -454,7 +454,7 @@ class DemoDatasetSeeder extends Seeder
         if (! $exists($vehicles['van'], 'INSPECTION')) {
             $context = $operations->context($vehicles['van']->fresh());
             $operations->create($vehicles['van']->fresh(), [
-                'operation_type' => 'INSPECTION', 'operated_date' => $date(0), 'operated_time' => '07:15', 'odometer' => '41300',
+                'operation_type' => 'INSPECTION', 'operated_date' => $date(1), 'operated_time' => '07:15', 'odometer' => '41300',
                 'items' => collect($context['positions'])->map(fn ($p) => ['position_code' => $p['position_code']])->values()->all(),
             ], $this->admin->id);
         }

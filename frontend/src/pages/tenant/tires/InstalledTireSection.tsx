@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { describePositionCode } from '../../../utils/tirePosition';
 import type { TireInstalledSummary } from '../../../types';
-import { formatKm } from './operations/tireOperationFormat';
+import { formatHours, formatKm } from './operations/tireOperationFormat';
 import { WheelConfigurationPreview } from './wheel-configuration/WheelConfigurationPreview';
 import { bodyStyleFor, type VehicleType } from './wheel-configuration/vehicleTypes';
 
@@ -35,7 +35,7 @@ export function InstalledTireSection({ installed }: { installed: TireInstalledSu
             <span data-usage-km>{formatKm(installed.usage_km)}</span>
           </Fact>
           <Fact label="Usage Time / Hours Meter">
-            <span data-usage-hours title="No hours-meter reading is recorded for tires yet.">{installed.usage_hours ?? '—'}</span>
+            <span data-usage-hours>{formatHours(installed.usage_hours)}</span>
           </Fact>
           <Fact label="Current Tread Depth">
             <div data-tread>

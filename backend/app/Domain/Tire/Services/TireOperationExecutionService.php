@@ -17,9 +17,13 @@ use App\Domain\WorkOrder\Services\WorkOrderException;
  *
  *   Replacement  per serial, when its tire product is Consumed in Work Order → Issuance & Return
  *                (stock already left the warehouse at Issue, the existing inventory flow): the old
- *                tire is removed (disposition REUSE → status REMOVED) and the "Replacing With"
- *                serial is installed on the same position (TireService::replace).
+ *                tire is removed (status REMOVED: it waits in Used Tire Management for inspection
+ *                before it can return to stock as Used) and the "Replacing With" serial is
+ *                installed on the same position (TireService::replace).
  *   Rotation     every pair swaps positions when the Work Order is completed (TireService::swapPositions).
+ *
+ * Removals, installations and rotations are dated at the operation's Tire Operations date/time,
+ * not at the moment the Work Order step happens, so Usage Time follows the dates the user entered.
  *   Inspection   one inspection record per selected tire when the Work Order is completed, with the
  *                measured tread depth when one was entered.
  *
@@ -95,11 +99,13 @@ class TireOperationExecutionService
             if ($old->current_vehicle_id !== $operation->vehicle_id || $old->current_position !== $item->position_code) {
                 throw new WorkOrderException("Tire {$old->serial_number} is no longer on {$item->position_code} of this vehicle; edit the Tire Operation first.");
             }
-            if ($new->current_status === 'REMOVED') {
-                // A "Reuse" serial (removed with disposition REUSE) goes back into service here.
-                $new->update(['current_status' => 'IN_STOCK']);
+            if ($new->current_status !== 'IN_STOCK') {
+                // e.g. a removed tire chosen before it passed Used Tire Management inspection.
+                throw new WorkOrderException("Serial {$new->serial_number} is {$new->current_status}, not in stock; edit the Tire Operation and choose another serial.");
             }
-            $this->tires->replace($old, $new->fresh(), 'Tire Operation replacement', 'REUSE', (float) $operation->odometer, $operation->work_order_id, $userId);
+            // The old tire becomes REMOVED and waits in Used Tire Management for inspection. Both
+            // the removal and the installation are dated at the Tire Operations date/time.
+            $this->tires->replace($old, $new, 'Tire Operation replacement', 'REUSE', (float) $operation->odometer, $operation->work_order_id, $userId, $operation->operated_at);
             $item->update(['applied_at' => now(), 'replacement_released_at' => now()]);
         }
 
@@ -120,7 +126,7 @@ class TireOperationExecutionService
                     throw new WorkOrderException("Tire {$tire->serial_number} is no longer on {$item->position_code}; the rotation cannot be completed as planned.");
                 }
             }
-            $this->tires->swapPositions($tireA, $tireB, (float) $operation->odometer, $operation->work_order_id, $userId);
+            $this->tires->swapPositions($tireA, $tireB, (float) $operation->odometer, $operation->work_order_id, $userId, $operation->operated_at);
             TireOperationItem::query()->withoutGlobalScopes()->whereIn('id', [$a->id, $b->id])->update(['applied_at' => now()]);
         }
     }

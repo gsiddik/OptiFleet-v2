@@ -88,11 +88,11 @@ class TireInventoryService
         $ids = collect($page->items())->pluck('id')->all();
         if ($category === self::USED && $ids !== []) {
             $usage = $this->usage($ids);
+            $hours = $this->usageHours($ids);
             $treads = $this->latestTread($ids);
             $page->getCollection()->transform(fn ($r) => (object) ((array) $r + [
                 'usage_km' => $usage[$r->id] ?? null,
-                // Installations record odometer only; no hours-meter readings exist per tire.
-                'usage_hours' => null,
+                'usage_hours' => $hours[$r->id] ?? null,
                 'current_tread_depth_mm' => $treads[$r->id] ?? null,
             ]));
         }
@@ -154,6 +154,53 @@ class TireInventoryService
             }
             if ($total !== null) {
                 $usage[$tireId] = intdiv($total, 100).'.'.str_pad((string) ($total % 100), 2, '0', STR_PAD_LEFT);
+            }
+        }
+
+        return $usage;
+    }
+
+    /**
+     * Accumulated Usage Time (hours, "1234.50") per tire — the same periods and rule as usage(),
+     * measured in date/time instead of KM. A period starts at its installation date/time (the Last
+     * Known Installation Date + Time of the first tire on a position, or the Tire Operations
+     * Date + Time of the replacement / rotation that put the tire there) and runs to the latest
+     * known event inside it: the removal or follow-up installation, otherwise the latest applied
+     * Tire Operation on the tire. So the first value appears at the tire's first operation and
+     * every later operation adds only the time since the previous one.
+     *
+     * @param  list<string>  $tireIds
+     * @return array<string, string>
+     */
+    public function usageHours(array $tireIds): array
+    {
+        $installations = DB::table('tire_installations as ti')
+            ->whereIn('ti.tire_id', $tireIds)
+            ->orderBy('ti.tire_id')->orderBy('ti.installed_at')->orderByRaw('ti.removed_at ASC NULLS LAST')->orderBy('ti.created_at')
+            ->get(['ti.tire_id', 'ti.installed_at', 'ti.removed_at']);
+        $readings = $this->operationReadings($tireIds);
+
+        $usage = [];
+        foreach ($installations->groupBy('tire_id') as $tireId => $periods) {
+            $seconds = null;
+            foreach ($periods as $period) {
+                $start = strtotime((string) $period->installed_at);
+                $end = $period->removed_at !== null ? strtotime((string) $period->removed_at) : null;
+                if ($end === null) {
+                    foreach ($readings[$tireId] ?? [] as [$at]) {
+                        if ($at >= $start) {
+                            $end = max($end ?? $at, $at);
+                        }
+                    }
+                }
+                if ($end === null || $end <= $start) {
+                    continue;
+                }
+                $seconds = ($seconds ?? 0) + ($end - $start);
+            }
+            if ($seconds !== null) {
+                $hundredths = intdiv($seconds * 100, 3600); // hundredths of an hour, integer arithmetic
+                $usage[$tireId] = intdiv($hundredths, 100).'.'.str_pad((string) ($hundredths % 100), 2, '0', STR_PAD_LEFT);
             }
         }
 

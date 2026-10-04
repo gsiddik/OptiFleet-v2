@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { PositionLabel } from '../../../../components/tires/PositionLabel';
 import { formatDate } from '../../../../utils/date';
 import type { TireCard } from './tireOperationTypes';
-import { REPLACEMENT_COLOR, ROTATION_RETURN_COLOR, formatKm } from './tireOperationFormat';
+import { REPLACEMENT_COLOR, ROTATION_RETURN_COLOR, formatHours, formatKm } from './tireOperationFormat';
 
 /**
  * Rounded card with the facts of the tire on one position (Installed Tire / To be Rotated /
@@ -44,7 +44,7 @@ export function TireOperationCard({
           <Fact label="Last Tire Operations Time" value={tire.last_operation_time ?? '—'} />
           <Fact label="Last KM at Tire Operations" value={formatKm(tire.last_operation_odometer)} />
           <Fact label="Usage KM" value={formatKm(tire.usage_km)} />
-          <Fact label="Usage Time / Hours Meter" value={tire.usage_hours ?? '—'} />
+          <Fact label="Usage Time / Hours Meter" value={formatHours(tire.usage_hours)} />
           <Fact label="Last Tread Depth" value={tire.last_tread_depth_mm != null ? `${tire.last_tread_depth_mm} mm` : '—'} />
         </dl>
       ) : (

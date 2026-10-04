@@ -89,6 +89,7 @@ class TireOperationTest extends TestCase
         $s = $this->scenario();
         $new1 = $this->stockTire($s, 'NEW-001');
         $new2 = $this->stockTire($s, 'NEW-002');
+        $this->stockTire($s, 'NEW-003');
 
         $created = $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => [
             ['position_code' => '1FL1', 'replacement_tire_id' => $new1->id],
@@ -127,6 +128,17 @@ class TireOperationTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part}/consume", ['quantity' => 1], $s['headers'])->assertOk();
         $this->assertSame(['INSTALLED', '1FR1'], [$new2->fresh()->current_status, $new2->fresh()->current_position]);
 
+        // The old tire waits in Used Tire Management (REMOVED) and is not offered as a replacement
+        // until it is back in stock; the removal and installation carry the Tire Operations date/time.
+        $old = Tire::query()->where('serial_number', 'OLD-1FL1')->firstOrFail();
+        $this->assertSame('2026-10-01 02:15:00', $old->removals()->latest('removed_at')->first()->removed_at->utc()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-10-01 02:15:00', $new1->installations()->first()->installed_at->utc()->format('Y-m-d H:i:s'));
+        $candidates = fn () => collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->assertOk()->json('data'));
+        $this->assertFalse($candidates()->pluck('serial_number')->contains('OLD-1FL1'));
+        $old->update(['current_status' => 'IN_STOCK']); // e.g. after its inspection in Used Tire Management
+        $this->assertSame('REUSE', $candidates()->firstWhere('serial_number', 'OLD-1FL1')['source']);
+        $this->assertSame('NEW_STOCK', $candidates()->firstWhere('serial_number', 'NEW-003')['source']);
+
         // Tire Detail → Installed shows the new serials.
         $installed = collect($this->getJson("/api/v1/app/tire-products/{$s['product']->id}/inventory?category=INSTALLED", $s['headers'])->json('data'))->pluck('serial_number');
         $this->assertTrue($installed->contains('NEW-001') && $installed->contains('NEW-002') && ! $installed->contains('OLD-1FL1'));
@@ -135,6 +147,13 @@ class TireOperationTest extends TestCase
         $service = app(WorkOrderService::class);
         $service->complete($service->submitToQc($wo->fresh()));
         $this->assertSame(TireOperationStatus::COMPLETED, $this->getJson(self::OPS.'/'.$created->json('data.id'), $s['headers'])->json('data.status'));
+
+        // The replacing tire's Usage Time starts at the replacement's date/time (2026-10-01 09:15):
+        // an inspection on 2026-10-03 09:15 gives 48 h. The old tire keeps its own 721.75 h.
+        $inspection = $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['operated_date' => '2026-10-03', 'odometer' => '15500', 'items' => [['position_code' => '1FL1']]]), $s['headers'])->assertStatus(201);
+        $service->complete($service->submitToQc($this->startWorkOrder($inspection->json('data.work_order.id'))));
+        $hours = app(TireInventoryService::class)->usageHours([$new1->id, $old->id]);
+        $this->assertSame(['48.00', '721.75'], [$hours[$new1->id], $hours[$old->id]]);
     }
 
     public function test_work_order_cannot_complete_before_the_replacement_is_consumed(): void
@@ -193,7 +212,8 @@ class TireOperationTest extends TestCase
         $tire = Tire::query()->where('serial_number', 'OLD-1FL1')->first();
         $spare = Tire::query()->where('serial_number', 'OLD-S1')->first();
         $facts = app(TireFactsService::class)->facts([$tire->id, $spare->id], 'Asia/Jakarta');
-        $this->assertSame(['7.50', '5000.00', null], [(string) $facts[$tire->id]['last_tread_depth_mm'], $facts[$tire->id]['usage_km'], $facts[$tire->id]['usage_hours']]);
+        // Usage Time: Last Known Installation 2026-09-01 07:30 → operation 2026-10-01 09:15 = 721.75 h.
+        $this->assertSame(['7.50', '5000.00', '721.75'], [(string) $facts[$tire->id]['last_tread_depth_mm'], $facts[$tire->id]['usage_km'], $facts[$tire->id]['usage_hours']]);
         // No measurement entered for S1: the earlier reading (registration 9 mm) is kept, never overwritten with null.
         $this->assertSame('9.00', (string) $facts[$spare->id]['last_tread_depth_mm']);
         $this->assertSame(['TIRE_OPERATION', '2026-10-01', '09:15'], [$facts[$tire->id]['last_operation_source'], $facts[$tire->id]['last_operation_date'], $facts[$tire->id]['last_operation_time']]);
@@ -202,10 +222,16 @@ class TireOperationTest extends TestCase
         $second = $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['operated_date' => '2026-10-02', 'odometer' => '18250.5', 'items' => [['position_code' => '1FL1', 'tread_depth_mm' => '7.25']]]), $s['headers'])->assertStatus(201);
         $service->complete($service->submitToQc($this->startWorkOrder($second->json('data.work_order.id'))));
         $facts = app(TireFactsService::class)->facts([$tire->id], 'Asia/Jakarta');
-        $this->assertSame(['8250.50', '7.25'], [$facts[$tire->id]['usage_km'], (string) $facts[$tire->id]['last_tread_depth_mm']]);
+        // … and Usage Time adds the 24 h since the previous operation.
+        $this->assertSame(['8250.50', '7.25', '745.75'], [$facts[$tire->id]['usage_km'], (string) $facts[$tire->id]['last_tread_depth_mm'], $facts[$tire->id]['usage_hours']]);
         // A reading below the last recorded KM is refused.
         $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['operated_date' => '2026-10-02', 'odometer' => '17000', 'items' => [['position_code' => '1FL1']]]), $s['headers'])
             ->assertStatus(422)->assertJsonValidationErrors('odometer');
+        // So is a date/time before the last operation on the tire (Usage Time would go back).
+        $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['operated_date' => '2026-10-02', 'operated_time' => '09:14', 'odometer' => '19000', 'items' => [['position_code' => '1FL1']]]), $s['headers'])
+            ->assertStatus(422)->assertJsonValidationErrors('operated_date');
+        // Positions whose tires have no later event are not affected by that floor.
+        $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['operated_date' => '2026-09-15', 'odometer' => '19000', 'items' => [['position_code' => '1RR1']]]), $s['headers'])->assertStatus(201);
     }
 
     public function test_serial_detail_shows_position_usage_and_tread_against_the_reference(): void
@@ -227,7 +253,7 @@ class TireOperationTest extends TestCase
         $op = $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['items' => [['position_code' => '1FL1', 'tread_depth_mm' => '7.95']]]), $s['headers'])->assertStatus(201);
         $service->complete($service->submitToQc($this->startWorkOrder($op->json('data.work_order.id'))));
         $installed = $this->getJson("/api/v1/app/tires/{$tire->id}", $s['headers'])->json('data.installed');
-        $this->assertSame(['5000.00', '7.95', true], [$installed['usage_km'], (string) $installed['current_tread_depth_mm'], $installed['tread_below_reference']]);
+        $this->assertSame(['5000.00', '721.75', '7.95', true], [$installed['usage_km'], $installed['usage_hours'], (string) $installed['current_tread_depth_mm'], $installed['tread_below_reference']]);
 
         // A later operation without a measurement accumulates usage but keeps the measured tread.
         $op = $this->postJson(self::OPS, $this->payload($s, 'INSPECTION', ['odometer' => '16000', 'items' => [['position_code' => '1FL1']]]), $s['headers'])->assertStatus(201);

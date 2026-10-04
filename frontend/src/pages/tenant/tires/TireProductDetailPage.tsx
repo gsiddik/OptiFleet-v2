@@ -12,6 +12,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { ProductDetailsSection } from '../inventory/ProductDetailsSection';
 import { formatDate } from '../../../utils/date';
 import { ImportTiresModal } from './ImportTiresModal';
+import { formatHours } from './operations/tireOperationFormat';
 import { RegisterTireModal } from './RegisterTireModal';
 import type { ProductItem, TireInventoryCategory, TireInventoryRow, TireInventorySummary } from '../../../types';
 
@@ -117,7 +118,7 @@ export function TireProductDetailPage() {
             { header: 'Serial', cell: (r) => <SerialLink row={r} /> },
             { header: 'Status', cell: (r) => <StatusBadge status={r.current_status} /> },
             { header: 'Usage KM', cell: (r) => <Num value={r.usage_km} /> },
-            { header: 'Usage Time / Hours Meter', cell: (r) => <Num value={r.usage_hours} /> },
+            { header: 'Usage Time / Hours Meter', cell: (r) => formatHours(r.usage_hours) },
             { header: 'Current Tread Depth', cell: (r) => (r.current_tread_depth_mm != null ? `${r.current_tread_depth_mm} mm` : '—') },
           ]}
         />
