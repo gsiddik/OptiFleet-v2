@@ -3,6 +3,7 @@
 namespace App\Domain\Tire\Services;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Tire\Inspection\UsedTireUsageRestrictions;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInstallation;
 use App\Domain\Tire\Models\TireOperation;
@@ -57,6 +58,7 @@ class TireOperationService
         private readonly TireFactsService $facts,
         private readonly DataScopeService $scope,
         private readonly VehicleTireRegistrationService $registrations,
+        private readonly UsedTireUsageRestrictions $restrictions,
     ) {}
 
     // ---------------------------------------------------------------- reads
@@ -149,7 +151,7 @@ class TireOperationService
      */
     public function replacementCandidates(string $tenantId, string $productId, ?string $operationId = null, ?string $search = null): array
     {
-        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)
+        $tires = Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)
             ->where(fn ($q) => $q->where('current_status', 'IN_STOCK')
                 // REUSE is issued from its warehouse's used tire quantity, so it must be in a warehouse.
                 ->orWhere(fn ($r) => $r->where('current_status', TireStatus::REUSE)->whereNotNull('current_warehouse_id')))
@@ -157,15 +159,19 @@ class TireOperationService
             ->whereNotIn('id', $this->heldReplacementIds($operationId))
             ->when($search, fn ($q) => $q->where('serial_number', 'ilike', "%{$search}%"))
             ->orderBy('serial_number')->limit(200)
-            ->get(['id', 'serial_number', 'current_status', 'product_id', 'current_warehouse_id', 'manufacture_date_code', 'purchase_date'])
-            ->map(fn (Tire $t) => [
-                'id' => $t->id,
-                'serial_number' => $t->serial_number,
-                'current_status' => $t->current_status,
-                'source' => $t->current_status === TireStatus::REUSE ? 'REUSE' : 'NEW_STOCK',
-                'warehouse' => $t->currentWarehouse?->name,
-                'manufacture_date_code' => $t->manufacture_date_code,
-            ])->values()->all();
+            ->get(['id', 'serial_number', 'current_status', 'product_id', 'current_warehouse_id', 'manufacture_date_code', 'purchase_date']);
+        $restrictions = $this->restrictions->forTires($tires->where('current_status', TireStatus::REUSE)->pluck('id')->all());
+
+        return $tires->map(fn (Tire $t) => [
+            'id' => $t->id,
+            'serial_number' => $t->serial_number,
+            'current_status' => $t->current_status,
+            'source' => $t->current_status === TireStatus::REUSE ? 'REUSE' : 'NEW_STOCK',
+            'warehouse' => $t->currentWarehouse?->name,
+            // From the inspection that returned it to stock; a position outside them is warned.
+            'usage_restrictions' => $restrictions[$t->id] ?? null,
+            'manufacture_date_code' => $t->manufacture_date_code,
+        ])->values()->all();
     }
 
     public function list(string $tenantId, User $user, array $filters, int $perPage): LengthAwarePaginator
@@ -242,6 +248,11 @@ class TireOperationService
         $request = $this->activeRequest($operation);
         $status = TireOperationStatus::derive($operation->cancelled_at, $operation->workOrder?->status);
         $anyApplied = $items->contains(fn ($i) => $i->applied_at !== null);
+        $pendingReuse = $items->filter(fn ($i) => $i->applied_at === null && $i->replacementTire?->current_status === TireStatus::REUSE);
+        $restrictions = $this->restrictions->forTires($pendingReuse->pluck('replacement_tire_id')->all());
+        $warnings = $pendingReuse->map(fn ($i) => isset($restrictions[$i->replacement_tire_id])
+            ? $this->restrictions->positionWarning($i->replacementTire->serial_number, $restrictions[$i->replacement_tire_id], $i->position_code) : null)
+            ->filter()->values()->all();
         $at = CarbonImmutable::parse($operation->operated_at)->setTimezone($timezone);
 
         return [
@@ -276,6 +287,8 @@ class TireOperationService
                     'product' => $i->replacementTire->product?->only(['id', 'name', 'sku']),
                 ] : null,
             ])->values()->all(),
+            // Usage restrictions of REUSE replacements: warning only (not blocking) until positions are standardized.
+            'warnings' => $warnings,
             'can_edit' => TireOperationStatus::isOpen($status) && ! $anyApplied,
             'can_cancel' => TireOperationStatus::isOpen($status) && ! $anyApplied && ! in_array($request?->status, ['APPROVED', 'ISSUED'], true)
                 && ! in_array($operation->workOrder?->status, self::WO_NOT_CANCELLABLE, true),

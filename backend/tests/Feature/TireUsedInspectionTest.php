@@ -120,6 +120,36 @@ class TireUsedInspectionTest extends TestCase
         $this->assertSame([true, 1, 'TRUCK_BUS'], [$ctx['can_inspect'], $ctx['rule_profile']['version'], $ctx['rule_profile']['tire_category']]);
     }
 
+    /** Usage restrictions (profile positions DRIVE, TRAILER) warn at installation; they do not block yet. */
+    public function test_a_reuse_tire_outside_its_allowed_positions_is_installed_with_a_warning(): void
+    {
+        $s = $this->scenario();
+        $this->profile($s);
+        $reused = [];
+        foreach (['UI-POS-1', 'UI-POS-2'] as $serial) {
+            $tire = $this->removedTire($s, $serial);
+            $this->approve($s, $this->inspect($s, $tire, $this->answers())->json('data.id'), ['warehouse_id' => $s['warehouse']->id]);
+            $reused[] = $tire->fresh();
+        }
+
+        $candidate = collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->json('data'))->firstWhere('serial_number', 'UI-POS-1');
+        $this->assertSame(['DRIVE', 'TRAILER'], $candidate['usage_restrictions']['positions']);
+        $this->assertSame(100, $candidate['usage_restrictions']['max_speed_kmh']);
+
+        $outside = $this->postJson("/api/v1/app/tires/{$reused[0]->id}/install", ['vehicle_id' => $s['vehicle']->id, 'wheel_position' => 'FL', 'odometer' => 7000], $s['headers'])->assertStatus(201);
+        $this->assertCount(1, $outside->json('warnings'));
+        $this->assertStringContainsString('restricted to position(s) DRIVE, TRAILER', $outside->json('warnings.0'));
+        $this->assertSame('INSTALLED', $reused[0]->fresh()->current_status, 'warning only — not blocked');
+
+        $inside = $this->postJson("/api/v1/app/tires/{$reused[1]->id}/install", ['vehicle_id' => $s['vehicle']->id, 'wheel_position' => 'drive', 'odometer' => 7000], $s['headers'])->assertStatus(201);
+        $this->assertSame([], $inside->json('warnings'));
+
+        // A new-stock tire carries no restriction.
+        $fresh = Tire::query()->create(['tenant_id' => $s['tenant']->id, 'product_id' => $s['product']->id, 'serial_number' => 'UI-NEW', 'current_status' => 'IN_STOCK']);
+        $this->postJson("/api/v1/app/tires/{$fresh->id}/install", ['vehicle_id' => $s['vehicle']->id, 'wheel_position' => 'FR', 'odometer' => 7000], $s['headers'])
+            ->assertStatus(201)->assertJsonPath('warnings', []);
+    }
+
     public function test_reuse_inspection_returns_the_tire_to_reusable_stock_with_the_profile_snapshot(): void
     {
         $s = $this->scenario();

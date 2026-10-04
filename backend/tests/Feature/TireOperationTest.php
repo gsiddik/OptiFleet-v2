@@ -6,6 +6,7 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireOperation;
+use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\UsedTireStock;
 use App\Domain\Tire\Models\UsedTireStockMovement;
 use App\Domain\Tire\Services\TireFactsService;
@@ -230,6 +231,32 @@ class TireOperationTest extends TestCase
         $this->assertSame(['REMOVED', 'REMOVED'], [Tire::query()->where('serial_number', 'OLD-1FL1')->value('current_status'), Tire::query()->where('serial_number', 'OLD-1FR1')->value('current_status')]);
         $this->assertSame(['INSPECTION_RECEIPT', 'ISSUE'], UsedTireStockMovement::query()->where('tire_id', $reuse->id)->orderBy('sequence')->pluck('movement_type')->all());
         $this->assertSame([9.0, 0], [$this->onHand($s), $this->usedOnHand($s)]);
+    }
+
+    public function test_a_reuse_replacement_outside_its_allowed_positions_is_warned_not_blocked(): void
+    {
+        $s = $this->scenario();
+        $reuse = $this->reuseTire($s, 'USED-POS');
+        // The inspection that returned it to stock limited it to the rear positions.
+        TireUsedInspection::query()->create([
+            'tenant_id' => $s['tenant']->id, 'tire_id' => $reuse->id, 'status' => TireUsedInspection::APPROVED, 'tire_status_before' => 'REMOVED',
+            'inspected_at' => now(), 'tire_snapshot' => [], 'identity_status' => 'COMPLETE', 'internal_inspected' => 'YES', 'wear_pattern' => 'EVEN',
+            'bulge_separation' => 'NONE', 'cord_exposure' => 'NONE', 'sidewall_condition' => 'NORMAL', 'bead_condition' => 'NORMAL',
+            'inner_liner_condition' => 'NORMAL', 'run_flat_overheat' => 'NO', 'leak_foreign_object' => 'NO', 'previous_repair' => 'NONE',
+            'age_chemical' => 'NONE', 'casing_compliance' => 'MEETS', 'recommendation' => 'REUSE', 'reasons' => [], 'follow_ups' => [], 'variables' => [],
+            'thresholds' => ['application_limits' => ['positions' => ['1RL1', '1RR1']]], 'final_disposition' => 'REUSE', 'approved_at' => now(),
+        ]);
+
+        $candidate = collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->json('data'))->firstWhere('serial_number', 'USED-POS');
+        $this->assertSame(['1RL1', '1RR1'], $candidate['usage_restrictions']['positions']);
+
+        $created = $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => [['position_code' => '1FL1', 'replacement_tire_id' => $reuse->id]]]), $s['headers'])->assertStatus(201);
+        $this->assertCount(1, $created->json('data.warnings'));
+        $this->assertStringContainsString('restricted to position(s) 1RL1, 1RR1', $created->json('data.warnings.0'));
+        $this->assertStringContainsString('planned for 1FL1', $created->json('data.warnings.0'));
+
+        $edited = $this->putJson(self::OPS.'/'.$created->json('data.id'), $this->payload($s, 'REPLACEMENT', ['items' => [['position_code' => '1RL1', 'replacement_tire_id' => $reuse->id]]]), $s['headers'])->assertOk();
+        $this->assertSame([], $edited->json('data.warnings'));
     }
 
     public function test_a_used_line_is_issued_only_from_the_warehouse_holding_the_reuse_tire(): void

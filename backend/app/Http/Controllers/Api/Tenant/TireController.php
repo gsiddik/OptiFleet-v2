@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\Tire\Inspection\UsedTireUsageRestrictions;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireRepair;
@@ -13,6 +14,7 @@ use App\Domain\Tire\Services\TireInventoryService;
 use App\Domain\Tire\Services\TireOperationService;
 use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Tire\Services\TireService;
+use App\Domain\Tire\Support\TireStatus;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreTireRequest;
@@ -25,6 +27,7 @@ class TireController extends Controller
         private readonly TireService $tires,
         private readonly TireScoringService $scoring,
         private readonly TireInventoryService $inventory,
+        private readonly UsedTireUsageRestrictions $restrictions,
         private readonly TenantContext $context,
     ) {}
 
@@ -104,6 +107,10 @@ class TireController extends Controller
         $vehicle = Vehicle::query()->findOrFail($validated['vehicle_id']);
         abort_unless($vehicle->tenant_id === $this->context->tenantId(), 404);
 
+        // A REUSE tire's usage restrictions are a warning only (not blocking) until positions are standardized.
+        $limits = $tire->current_status === TireStatus::REUSE ? ($this->restrictions->forTires([$tire->id])[$tire->id] ?? null) : null;
+        $warning = $limits ? $this->restrictions->positionWarning($tire->serial_number, $limits, $validated['wheel_position']) : null;
+
         $installation = $this->tires->install(
             $tire, $vehicle, $validated['wheel_position'], $validated['odometer'] ?? null,
             $validated['work_order_id'] ?? null, $this->context->user()->id,
@@ -113,7 +120,7 @@ class TireController extends Controller
             $validated['baseline_condition'] ?? null,
         );
 
-        return $this->ok($installation, 201);
+        return response()->json(['data' => $installation, 'warnings' => array_values(array_filter([$warning]))], 201);
     }
 
     public function rotate(Request $request, Tire $tire)
