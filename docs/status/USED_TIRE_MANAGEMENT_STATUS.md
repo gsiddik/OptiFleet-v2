@@ -9,6 +9,9 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ f76045b.
 | 3 | Inspection entity, rule profiles, decision engine, API (+ fix-forward of a staging error) | 7245ea7, 9cc8f0c |
 | 4 | Inspection page, result summary, Inspection Rules page | 9145d04 |
 | 5 | Lifecycle regression tests, this checkpoint | ba63947 + validation update |
+| 6 | Branch scope for tires on no vehicle / in no warehouse (last vehicle's branch) | a87e018 |
+| 7 | Used tire warehouse quantity, issued through Part Requests (owner decision 1) | 88e84b8 |
+| 8 | Usage-restriction warning at installation (owner decision 2) | c80d555 |
 
 ## Status semantics (TireStatus)
 
@@ -16,7 +19,7 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ f76045b.
 |---|---|---|---|
 | IN_STOCK / RESERVED | new stock, never installed | — (New Stock) | yes |
 | REMOVED | taken off a vehicle, awaiting inspection | yes | no |
-| REUSE | inspected, fit for reuse | yes (counted in `reusable_qty`) | **yes** |
+| REUSE | inspected, fit for reuse | yes (counted in `reusable_qty`) | **yes** (issued through the Part Request from the used tire quantity) |
 | HOLD | inspection incomplete / decision pending | yes | no |
 | REPAIR / RETREAD | in the repair / retread lifecycle | yes | no |
 | SCRAPPED (shown "SCRAP") | terminal; history kept | no | no |
@@ -57,34 +60,51 @@ inspection outcome).
 5. OTR product spec: dual load index and ply rating optional (required only for Truck & Bus).
 6. Demo rule profiles for ALPHA are demo values only; the application has no built-in defaults.
 
-## DECISION REQUIRED
+## Branch scope (owner request)
 
-**1. REUSE tire in a Replacement — warehouse quantity**
-- Current behavior (interim, implemented): a REUSE serial chosen as "Replacing With" is not
-  requested in the Part Request (no new-stock quantity is issued) and is installed when the Work
-  Order is completed.
-- Issue: serial tires and product warehouse quantity are tracked separately; issuing a used tire
-  through the new-stock quantity would deduct stock that did not move.
-- Proposed: keep the interim rule.
-- Alternatives: track REUSE tires as a separate "used" warehouse quantity and issue them through
-  the Part Request like new stock.
-- Affected modules: Tire Operations, Part Requests, Warehouse Stock.
-- Data impact: none for existing rows. Inventory impact: none (no quantity moves for REUSE).
-- Recommendation: keep the interim rule until used-tire warehouse quantities are required.
-- Risks: REUSE tires are not visible in warehouse quantity reports (only as serials).
+A tire on no vehicle and in no warehouse (REMOVED, HOLD, REPAIR / RETREAD at a partner, and
+terminal statuses) belongs to the data scope of the branch of the vehicle it was **last installed
+on**; a tire in a warehouse follows the warehouse scope; an installed tire follows its vehicle's
+branch. One rule (`TireInventoryService::scopeToUser`) serves the tire list, tire detail /
+history, Used Stocks and the used tire inspection.
 
-**2. Application limits enforcement**
-- Current behavior: stored on the rule profile and shown as "Usage Restrictions" on the result; not
-  enforced when the tire is installed.
-- Proposed: block / warn on installation into a position outside the allowed positions.
-- Affected modules: Tire Operations, installation. Data impact: none.
-- Recommendation: warn first; enforce later once positions are standardized.
-- Risks: without enforcement the restriction relies on the operator.
+## Owner decisions (resolved)
+
+**1. REUSE tire in a Replacement — separate used tire warehouse quantity, issued like new stock.**
+- `used_tire_stocks` (quantity on hand per warehouse + tire product, never below 0) with an
+  append-only per-serial ledger `used_tire_stock_movements` (+1 / −1). New-stock
+  `warehouse_stocks` is untouched.
+- In: inspection approved as REUSE into a warehouse (INSPECTION_RECEIPT); an issued used tire
+  returned unused and accepted New Good (RETURN); REUSE tires already in a warehouse when the
+  migration ran (OPENING_BALANCE).
+- Out: Part Request issue of a USED line (ISSUE); a counted REUSE tire installed, scrapped or sold
+  directly (INSTALL / SCRAP / SALE).
+- A Replacement with a REUSE serial creates a **USED** Part Request line (one line per product and
+  condition NEW / USED). Approve → planned part with the same `stock_condition`; Issue deducts the
+  used quantity — the serial must be counted in the issuing warehouse, all-or-nothing with the
+  other lines; Consume installs the serial (as for new stock).
+- Return of an issued, not installed, used tire: New Good → back into the used tire quantity;
+  New Faulty → the tire goes to HOLD in that warehouse for re-inspection (engineering decision).
+- Used tires carry no stock valuation: a USED line is issued at cost 0 (engineering decision).
+- Only REUSE tires that are in a warehouse are offered as "Replacing With".
+- Operations created before this change (REUSE serial without a USED line) still install the REUSE
+  serial at Work Order completion, as planned then.
+- UI: Warehouse Stock → **Used Tires** tab (quantity + serials per warehouse / product); Part
+  Request and Issuance & Return lines show "(Used)"; the serial picker shows "Reuse · warehouse".
+
+**2. Usage restrictions — warn at installation; block later.**
+- The latest approved inspection of a REUSE tire carries its rule profile's application limits
+  (snapshot). Installing it on a position outside `positions` returns a warning — Tire Operation
+  payload `warnings` (form, Work Order tab) and direct install response `warnings` — and never
+  blocks. Comparison is by position code, case-insensitive.
+- To do once position codes are standardized: turn the warning into a validation error.
 
 ## Known limitations
 
-- REMOVED / HOLD tires have no vehicle and (until REUSE) no warehouse, so branch- or
-  warehouse-scoped users do not see them (the existing tire data-scope rule).
+- A user scoped only by warehouse (no branch) does not see REMOVED / HOLD tires (they are in no
+  warehouse); branch-scoped users see them through the last vehicle's branch.
+- Load / speed / operation limits are shown with the restriction but not compared (no reliable
+  vehicle load / speed data at installation).
 - The Used Tire Management → Scrap tab still allows scrapping HOLD / QUARANTINED tires directly
   (existing scrap action).
 
