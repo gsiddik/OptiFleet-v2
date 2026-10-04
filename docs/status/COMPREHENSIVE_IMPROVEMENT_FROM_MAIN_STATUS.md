@@ -9,7 +9,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | 7 + 10 | Orphaned Warranty / Eligibility / Claims and the old Tire Operations page | DONE | e44e38b |
 | 13 | Maintenance Package `componentGroup` relationship (root cause) | DONE | 0d8b5ad |
 | 12 | Vehicle Documents: Vehicle Tax, expiry, extension, upload gating | DONE | f3a1cd5 |
-| 11 + 14 | Global image container 480 × 320; Product / Tire Product Details layout | DONE | see git log |
+| 11 + 14 | Global image container 480 × 320; Product / Tire Product Details layout | DONE | e4e3ca3 |
+| 15 + 8 + 9 | Retread Open Cycle → Receive → Tire Inspection; Retread History; serial detail cleanup | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -115,3 +116,31 @@ Operations page (`/app/tire-operations`) is unaffected.
   (inline with the specifications).
 - Not changed (not detail image containers): evidence thumbnails / galleries, logos, document
   previews in viewers.
+
+## Phases 15 + 8 + 9 — Retread processing, Retread History, serial detail cleanup
+
+**Used Tire Management → Retread** ("Tires in Retread / Repair Cycle" — repair is a kind of
+retread, both use the same flow):
+
+| Step | Cycle status (existing) | State shown | Where the tire is |
+|---|---|---|---|
+| waiting (tire RETREAD / REPAIR) | — | Waiting → **Open Cycle** | cycle list |
+| Open Cycle saved (Retread Form) | SENT | IN_PROCESS → **Receive** | cycle list |
+| Receive (opens the Tire Inspection) | RECEIVED | RECEIVED → **Inspect** | cycle list |
+| Tire Inspection submitted | FINAL_INSPECTED | REINSPECTION → **Review Inspection** | cycle list |
+| Tire Inspection approved | APPROVED, `final_status` = disposition | COMPLETED | "Recent Retread / Repair Cycles"; tire status = disposition |
+
+- Retread Form: Processed At (vendor — the existing eligible types EXTERNAL_WORKSHOP /
+  TIRE_SUPPLIER, active; no new classification), Estimated Price (mandatory, > 0, exact decimal,
+  stored in the cycle's `cost`), Photo (mandatory, 1–3, JPG / PNG ≤ 3 MB, private disk —
+  `tire_cycle_photos`), Notes (optional).
+- The cycle completes only after Receive **and** the approved Tire Inspection; a cancelled
+  re-inspection returns the cycle to RECEIVED. The legacy final-inspect endpoint refuses cycles
+  opened here. Retread count for the decision engine counts these completed cycles (not scrapped).
+- **Retread History** (shared `RetreadHistory`, `/tires/:id/cycle-history`): vendor, estimated
+  price, photos, notes, open / receive dates, inspection result, final status — shown only when
+  the tire has cycles.
+- **Serial detail** (Used Stocks and Recent Removals both open `/app/tires/:id`): Structured
+  Scoring, Sell and Scrap sections removed from the UI; the retread / repair governance panels are
+  replaced by the read-only Retread History (actions moved to Used Tire Management). Backend
+  scoring / sell / scrap / governance APIs are unchanged.

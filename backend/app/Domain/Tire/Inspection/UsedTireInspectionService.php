@@ -9,6 +9,7 @@ use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\TireUsedInspectionEvidence;
 use App\Domain\Tire\Services\TireException;
 use App\Domain\Tire\Services\TireInventoryService;
+use App\Domain\Tire\Services\TireCycleService;
 use App\Domain\Tire\Services\UsedTireStockService;
 use App\Domain\Tire\Services\VehicleTireRegistrationService;
 use App\Domain\Tire\Support\TireStatus;
@@ -43,7 +44,14 @@ class UsedTireInspectionService
         private readonly TireInventoryService $inventory,
         private readonly VehicleTireRegistrationService $registrations,
         private readonly UsedTireStockService $usedStock,
+        private readonly TireCycleService $cycles,
     ) {}
+
+    /** REMOVED / HOLD, or back from a retread / repair cycle (received, waiting for its re-inspection). */
+    public function inspectable(Tire $tire): bool
+    {
+        return in_array($tire->current_status, TireStatus::AWAITING_INSPECTION, true) || $this->cycles->receivedCycle($tire->id) !== null;
+    }
 
     // ------------------------------------------------------------------ reads
 
@@ -56,7 +64,7 @@ class UsedTireInspectionService
 
         return [
             'tire' => $facts,
-            'can_inspect' => in_array($tire->current_status, TireStatus::AWAITING_INSPECTION, true) && $open === null,
+            'can_inspect' => $this->inspectable($tire) && $open === null,
             'rule_profile' => $profile?->snapshot(),
             'applications' => TireRuleProfile::query()->where('tenant_id', $tire->tenant_id)->where('status', 'ACTIVE')
                 ->where('tire_category', $facts['category'])->whereNotNull('application')->orderBy('application')->distinct()->pluck('application')->all(),
@@ -125,9 +133,10 @@ class UsedTireInspectionService
     {
         return DB::transaction(function () use ($tire, $input, $user) {
             $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
-            if (! in_array($locked->current_status, TireStatus::AWAITING_INSPECTION, true)) {
-                throw new TireException("Only a REMOVED or HOLD tire can be inspected here; this tire is {$locked->current_status}.");
+            if (! $this->inspectable($locked)) {
+                throw new TireException("Only a REMOVED or HOLD tire, or a tire received back from a retread / repair cycle, can be inspected here; this tire is {$locked->current_status}.");
             }
+            $cycle = in_array($locked->current_status, TireStatus::AWAITING_INSPECTION, true) ? null : $this->cycles->receivedCycle($locked->id);
             if (TireUsedInspection::query()->where('tire_id', $locked->id)->where('status', TireUsedInspection::SUBMITTED)->lockForUpdate()->exists()) {
                 throw new TireException('This tire already has an inspection waiting for approval — approve or cancel it first.');
             }
@@ -158,6 +167,9 @@ class UsedTireInspectionService
                 'additional_work' => $decision['additional_work'], 'reasons' => $decision['reasons'], 'follow_ups' => $decision['follow_ups'],
                 'variables' => $decision['variables'], 'notes' => $input['notes'] ?? null, 'tire_inspection_id' => $legacy->id,
             ] + collect(TireUsedInspection::ANSWERS)->mapWithKeys(fn ($k) => [$k => $input[$k] ?? null])->all());
+
+            // Re-inspection after a retread / repair cycle: the cycle waits for this inspection's approval.
+            $cycle?->update(['status' => 'FINAL_INSPECTED', 'tire_used_inspection_id' => $inspection->id, 'final_inspected_by' => $user->id, 'final_inspected_at' => $now]);
 
             foreach ($input['measurements'] ?? [] as $m) {
                 $inspection->measurements()->create(['tenant_id' => $locked->tenant_id, 'zone' => $m['zone'], 'groove' => $m['groove'], 'depth_mm' => $m['depth_mm']]);
@@ -199,6 +211,8 @@ class UsedTireInspectionService
                 // REUSE is received into that warehouse's used tire quantity (issued through Part Requests).
                 $this->usedStock->receive($tire, $warehouseId, 'INSPECTION_RECEIPT', TireUsedInspection::class, $locked->id, $user->id);
             }
+            // The retread / repair cycle this inspection closes is completed with its disposition.
+            $this->cycles->cycleOfInspection($locked->id)?->update(['status' => 'APPROVED', 'approved_by' => $user->id, 'approved_at' => now(), 'final_status' => $disposition]);
             $locked->update([
                 'status' => TireUsedInspection::APPROVED, 'final_disposition' => $disposition, 'return_warehouse_id' => $warehouseId,
                 'approved_by' => $user->id, 'approved_at' => now(), 'approval_note' => $data['note'] ?? null,
@@ -216,6 +230,8 @@ class UsedTireInspectionService
                 throw new TireException("This inspection is {$locked->status}; only a submitted inspection can be cancelled.");
             }
             $locked->update(['status' => TireUsedInspection::CANCELLED, 'cancelled_by' => $user->id, 'cancelled_at' => now()]);
+            // A cancelled re-inspection leaves its cycle received, to be inspected again.
+            $this->cycles->cycleOfInspection($locked->id)?->update(['status' => 'RECEIVED', 'tire_used_inspection_id' => null, 'final_inspected_by' => null, 'final_inspected_at' => null]);
 
             return $locked->fresh();
         });
@@ -283,7 +299,9 @@ class UsedTireInspectionService
         $group = $product?->tireSpec?->vehicle_group;
         $category = self::CATEGORY_BY_GROUP[$group] ?? null;
         $manufactured = $this->manufactureDate($tire->manufacture_date_code);
-        $retreads = DB::table('tire_retreads')->where('tire_id', $tire->id)->where('status', 'APPROVED')->where('approval_disposition', 'RETURN_TO_SERVICE')->count();
+        // Retreads the tire went through: approved cycles that were not scrapped (governance flow or Tire Inspection).
+        $retreads = DB::table('tire_retreads')->where('tire_id', $tire->id)->where('status', 'APPROVED')
+            ->where(fn ($q) => $q->where('approval_disposition', 'RETURN_TO_SERVICE')->orWhereIn('final_status', ['REUSE', 'REPAIR', 'RETREAD', 'HOLD']))->count();
         $lastInstallation = DB::table('tire_installations as i')->leftJoin('vehicles as v', 'v.id', '=', 'i.vehicle_id')
             ->where('i.tire_id', $tire->id)->orderByDesc('i.installed_at')->first(['v.registration_number', 'i.wheel_position']);
         $lastRemoval = DB::table('tire_removals')->where('tire_id', $tire->id)->orderByDesc('removed_at')->first(['removal_reason', 'removed_at']);

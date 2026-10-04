@@ -4,6 +4,7 @@ namespace App\Domain\Tire\Services;
 
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Models\TireCyclePhoto;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireInstallation;
 use App\Domain\Tire\Models\TireRemoval;
@@ -539,6 +540,10 @@ class TireService
             $locked = $cycle::query()->lockForUpdate()->findOrFail($cycle->id);
             if ($locked->status !== 'RECEIVED') {
                 throw new TireException("Cannot record a final inspection for a cycle that is {$locked->status} (must be RECEIVED).");
+            }
+            // A cycle opened from Used Tire Management (with photos) is closed by the Tire Inspection.
+            if (TireCyclePhoto::query()->withoutGlobalScopes()->where('cycle_id', $locked->id)->exists()) {
+                throw new TireException('This cycle is closed by inspecting the tire again (Tire Inspection) — not by a final inspection result.');
             }
 
             $locked->update([

@@ -67,6 +67,7 @@ use App\Http\Controllers\Api\Tenant\StockMovementController;
 use App\Http\Controllers\Api\Tenant\StockOpnameController;
 use App\Http\Controllers\Api\Tenant\StockTransferController;
 use App\Http\Controllers\Api\Tenant\TireController;
+use App\Http\Controllers\Api\Tenant\TireCycleController;
 use App\Http\Controllers\Api\Tenant\UomController;
 use App\Http\Controllers\Api\Tenant\UsedPartDispositionController;
 use App\Http\Controllers\Api\Tenant\UserController;
@@ -745,6 +746,12 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/tires/{tire}/replace', [TireController::class, 'replace'])->middleware('permission:tire.remove');
             // Phase E: send/receive/inspect/approve are four distinct permissions per cycle
             // type — no single actor is expected to hold all four (G-32 maker-checker).
+            // Used Tire Management → Retread (Open Cycle → Receive → Tire Inspection); send / receive permission checked per cycle kind.
+            Route::get('/tire-cycles', [TireCycleController::class, 'index'])->middleware('permission:tire.view');
+            Route::post('/tires/{tire}/cycles', [TireCycleController::class, 'store'])->middleware('permission:tire.view');
+            Route::get('/tires/{tire}/cycle-history', [TireCycleController::class, 'history'])->middleware('permission:tire.view');
+            Route::post('/tire-cycles/{kind}/{cycle}/receive', [TireCycleController::class, 'receive'])->middleware('permission:tire.view')->whereIn('kind', ['retread', 'repair']);
+            Route::get('/tire-cycles/{kind}/{cycle}/photos/{photo}', [TireCycleController::class, 'photo'])->middleware('permission:tire.view')->whereIn('kind', ['retread', 'repair']);
             Route::post('/tires/{tire}/retread', [TireController::class, 'sendForRetread'])->middleware('permission:tire_retread.send');
             Route::post('/tires/{tire}/retreads/{retread}/receive', [TireController::class, 'receiveRetread'])->middleware('permission:tire_retread.receive');
             Route::post('/tires/{tire}/retreads/{retread}/final-inspect', [TireController::class, 'finalInspectRetread'])->middleware('permission:tire_retread.inspect');
