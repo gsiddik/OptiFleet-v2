@@ -12,7 +12,9 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | 11 + 14 | Global image container 480 × 320; Product / Tire Product Details layout | DONE | e4e3ca3 |
 | 15 + 8 + 9 | Retread Open Cycle → Receive → Tire Inspection; Retread History; serial detail cleanup | DONE | a3327f0 |
 | 16 | Scrap tab: Recently Scrapped selection → Sell Sparepart (row / bulk), serial preserved | DONE | 77b4a1b |
-| 17 | Demo seeder alignment: PO returns, retread states, scrapped tires, vehicle documents | DONE | see git log |
+| 17 | Demo seeder alignment: PO returns, retread states, scrapped tires, vehicle documents | DONE | ed0bc01 |
+| 18–20 | Orphan policy, permission audit, frontend / backend contract audit | DONE | see git log |
+| 21–22 | QA regression and quality gates | see below | — |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -190,3 +192,42 @@ PR notes, deterministic demo serials, document numbers):
 - Validation: `migrate:fresh --seed` PASS, re-seed (`db:seed`) leaves all counts unchanged;
   `DemoDatasetSeederTest` 3/3 PASS (new assertions for returns, cycle states, photos, scrapped
   tires, documents and re-run idempotency).
+
+## Phase 18 — Orphan policy
+
+"Orphaned" = removed from the active UI (navigation, router or tab list) while the source,
+APIs, tables and history stay intact and backward compatible; nothing is deleted.
+
+| Orphaned | How | Kept |
+|---|---|---|
+| Warranty / Eligibility / Claims | nav group + routes removed, dashboard tile hidden | pages, APIs, data, Warranty analytics |
+| Old Tire Operations page | `/app/tire-operations/legacy` route removed | source, install / rotate / inspect APIs |
+| WO External Services, Documents tabs | `ORPHANED_TABS` in WorkOrderDetailPage | components, APIs, data |
+| Serial detail Structured Scoring / Sell / Scrap / retread governance | sections removed from TireDetailPage | scoring / sell / scrap / governance APIs |
+| "Used tires that can be scrapped" list | Scrap tab now shows Recently Scrapped only | `TireService::scrap` API |
+
+## Phase 19 — Permission audit (new / changed endpoints)
+
+| Endpoint | Route permission | Extra server checks | Module |
+|---|---|---|---|
+| `POST /purchase-orders/{po}/returns` | `purchase_return.create` | tenant, PARTIALLY_RECEIVED, one open return (row lock + partial unique index) | PROCUREMENT |
+| `POST /purchase-returns/{id}/accept`, `/reject` | `purchase_return.decide` | state REFUND_REQUESTED (row lock) | PROCUREMENT |
+| `POST /purchase-returns/{id}/receive-redelivery` | `purchase_return.receive_redelivery` | printed / pending only | PROCUREMENT |
+| `GET /purchase-returns/{id}/print` | `purchase_order.view` | tenant | PROCUREMENT |
+| `GET /tire-cycles`, `/tires-scrapped`, `/tires/{t}/cycle-history`, cycle photos | `tire.view` | tenant + tire data scope | TIRE |
+| `POST /tires/{t}/cycles` | `tire.view` + `tire_retread.send` / `tire_repair.send` (by kind) | tenant, data scope, vendor type | TIRE |
+| `POST /tire-cycles/{kind}/{c}/receive` | `tire.view` + `tire_retread.receive` / `tire_repair.receive` | state SENT (row lock) | TIRE |
+| `POST /sparepart-sales/scrapped-tires` | `sparepart_sale.create` | tenant, tire data scope (403), SCRAPPED only (422), one active sale per tire (unique index) | INVENTORY |
+| Road Test actions | existing QC permissions | Work Order QC_PENDING only | WORKSHOP |
+
+No role names are used for authorization; new permissions are granted by migration to roles that
+hold the matching source permission and listed in PermissionSeeder. Frontend gating mirrors
+these permissions and is never the only check.
+
+## Phase 20 — Frontend / backend contract audit
+
+Live API responses (e2e server) compared with the TypeScript types: `GET /tires-scrapped` ↔
+`ScrappedTireRow`; `GET /tire-cycles` ↔ `CycleListRow`; `GET /sparepart-sales` (tire fields) ↔
+`SparePartSaleItem`; `GET /purchase-orders/{id}` `return_summary` / `returns` ↔
+`PurchaseReturnSummary` / `PurchaseReturn`. All keys present and typed; `npm run build`
+(includes `tsc -b`) PASS.
