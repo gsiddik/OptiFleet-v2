@@ -480,7 +480,12 @@ Configurations + mappings, installed and in-stock tires, Tire Operations in
 every status, part requests, purchase requests → RFQ → PO → goods receipt,
 workers, workspaces, inspection templates, inspections, maintenance
 packages / schedules, maintenance requests, breakdowns, tire specification
-masters). Documented exceptions, kept at one reference record because each
+masters, used tire inspection rule profiles (demo values)). Used Tire
+Management has a REMOVED tire awaiting inspection, HOLD / REUSE / SCRAP tires
+from approved inspections, a REUSE tire in Semarang's used tire quantity
+(Warehouse Stock → Used Tires), and a bus Replacement whose REUSE tire is
+issued through a USED Part Request line and shows its usage-restriction
+warning. Documented exceptions, kept at one reference record because each
 is the end product of a full Work Order lifecycle or is a per-tenant
 singleton: the commercial contract / subscription / billing / invoice /
 payment (one per tenant by design), QC inspection, road test, vehicle

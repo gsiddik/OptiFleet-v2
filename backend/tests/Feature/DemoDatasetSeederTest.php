@@ -5,7 +5,11 @@ namespace Tests\Feature;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireOperation;
+use App\Domain\Tire\Models\TireUsedInspection;
+use App\Domain\Tire\Models\UsedTireStock;
+use App\Domain\Tire\Services\TireOperationService;
 use App\Domain\Tire\Support\TireOperationStatus;
+use App\Domain\WorkOrder\Models\WorkOrderPartRequestItem;
 use App\Models\User;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\DemoDatasetSeeder;
@@ -66,8 +70,24 @@ class DemoDatasetSeederTest extends TestCase
             ->map(fn (TireOperation $op) => TireOperationStatus::derive($op->cancelled_at, $op->workOrder?->status))->unique()->sort()->values()->all();
         $this->assertSame(['CANCELLED', 'COMPLETED', 'IN_PROGRESS', 'NEW'], $statuses);
 
+        // Used Tire Management: every used status, inspections through the decision engine, the used
+        // tire quantity and a USED Part Request line whose REUSE tire carries a usage warning.
+        $tireStatuses = Tire::query()->where('tenant_id', $alpha->id)->pluck('current_status')->countBy();
+        foreach (['REMOVED', 'HOLD', 'REUSE', 'SCRAPPED'] as $status) {
+            $this->assertGreaterThanOrEqual(1, $tireStatuses[$status] ?? 0, "no {$status} demo tire");
+        }
+        $this->assertSame(['HOLD', 'REUSE', 'SCRAP'], TireUsedInspection::query()->where('tenant_id', $alpha->id)->where('status', 'APPROVED')->pluck('final_disposition')->unique()->sort()->values()->all());
+        $this->assertSame(1, (int) UsedTireStock::query()->where('tenant_id', $alpha->id)->sum('quantity_on_hand'));
+        $used = WorkOrderPartRequestItem::query()->where('tenant_id', $alpha->id)->where('stock_condition', 'USED')->with('plannedPart')->get();
+        $this->assertCount(1, $used);
+        $this->assertSame('ISSUED', $used->first()->plannedPart->status);
+        $warnings = TireOperation::query()->where('tenant_id', $alpha->id)->whereNull('cancelled_at')->whereNull('applied_at')->get()
+            ->flatMap(fn (TireOperation $op) => app(TireOperationService::class)->present($op)['warnings']);
+        $this->assertCount(1, $warnings);
+
         $this->seed(DemoDatasetSeeder::class);
         $this->assertSame($counts, $this->counts($alpha->id), 'a re-run creates no duplicates');
+        $this->assertSame(4, TireUsedInspection::query()->where('tenant_id', $alpha->id)->count(), 'a re-run inspects nothing again');
     }
 
     public function test_database_seeder_adds_demo_data_only_when_enabled(): void

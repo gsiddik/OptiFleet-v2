@@ -41,12 +41,14 @@ use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\Uom;
 use App\Domain\ProductMaster\Services\ProductCreationService;
+use App\Domain\Tire\Inspection\UsedTireInspectionService;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireLoadIndex;
 use App\Domain\Tire\Models\TireOperation;
 use App\Domain\Tire\Models\TirePlyRating;
 use App\Domain\Tire\Models\TireRuleProfile;
 use App\Domain\Tire\Models\TireSpeedRating;
+use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationMaster;
 use App\Domain\Tire\Services\TireOperationService;
@@ -112,6 +114,7 @@ class DemoDatasetSeeder extends Seeder
         $this->procurement($truckTire);
         $this->operationalLists($branches, $vehicles);
         $this->tireRuleProfiles();
+        $this->usedTires($vehicles, $truckTire);
     }
 
     // ------------------------------------------------------------ organisation
@@ -673,6 +676,72 @@ class DemoDatasetSeeder extends Seeder
         foreach ([['4PR', 'B'], ['6PR', 'C'], ['8PR', 'D'], ['16PR', 'H'], ['12PR', 'F']] as [$code, $range]) {
             TirePlyRating::query()->updateOrCreate(['tenant_id' => $tenantId, 'code' => $code], ['load_range' => $range, 'is_system' => false, 'status' => 'ACTIVE']);
         }
+    }
+
+    // -------------------------------------------------------------- used tires
+
+    /**
+     * Used Tire Management, through the same services as the application: the tires removed by
+     * the truck replacement are inspected (REUSE into Semarang's used tire quantity, HOLD); a bus
+     * Replacement then issues that REUSE tire through a USED Part Request line (its "DRIVE /
+     * TRAILER" usage restriction raises a warning) next to a new-stock line; of the bus tires it
+     * removes, one goes back to used stock (REUSE), one is scrapped and one awaits inspection.
+     */
+    private function usedTires(array $vehicles, Product $truckTire): void
+    {
+        if (TireUsedInspection::query()->where('tenant_id', $this->tenant->id)->exists()) {
+            return;
+        }
+        $inspections = app(UsedTireInspectionService::class);
+        $semarang = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', 'ALPHA-SMG-WH1')->firstOrFail();
+        $removed = fn (Vehicle $vehicle, string $code) => Tire::query()->where('tenant_id', $this->tenant->id)
+            ->where('serial_number', DemoSerial::make("{$vehicle->registration_number}|{$code}"))->firstOrFail();
+        $inspect = function (Tire $tire, array $answers, ?string $warehouseId) use ($inspections): Tire {
+            // The DOT code is read during the inspection (Q1 identity complete).
+            $tire->update(['manufacture_date_code' => $tire->manufacture_date_code ?? '1225']);
+            $points = [];
+            foreach ([1, 2, 3] as $zone) {
+                foreach (['INNER_MAIN', 'OUTER_MAIN'] as $groove) {
+                    $points[] = ['zone' => $zone, 'groove' => $groove, 'depth_mm' => $zone === 2 ? '8.5' : '9.5'];
+                }
+            }
+            $inspection = $inspections->submit($tire->fresh(), array_merge([
+                'identity_status' => 'COMPLETE', 'internal_inspected' => 'YES', 'wear_pattern' => 'EVEN', 'bulge_separation' => 'NONE',
+                'cord_exposure' => 'NONE', 'sidewall_condition' => 'NORMAL', 'bead_condition' => 'NORMAL', 'inner_liner_condition' => 'NORMAL',
+                'run_flat_overheat' => 'NO', 'leak_foreign_object' => 'NO', 'previous_repair' => 'NONE', 'age_chemical' => 'NONE',
+                'casing_compliance' => 'MEETS', 'd_new_mm' => '16', 'measurements' => $points,
+            ], $answers), $this->admin);
+            $inspections->approve($inspection, ['warehouse_id' => $warehouseId, 'note' => 'Demo inspection'], $this->admin);
+
+            return $tire->fresh();
+        };
+
+        // Truck replacement (1FL1 / 1FR1 of the tandem truck) left two REMOVED tires.
+        $truck = $vehicles['truck2']->fresh();
+        $reuse = $inspect($removed($truck, '1FL1'), [], $semarang->id);
+        $inspect($removed($truck, '1FR1'), ['internal_inspected' => 'NOT_YET'], null); // HOLD: interior not inspected yet
+
+        // Bus Replacement: the REUSE tire (USED line, from the used tire quantity) and three new-stock
+        // tires (NEW line), all issued from Semarang. The new tires are consumed (installed); the
+        // REUSE tire is issued and waits to be consumed, so its usage-restriction warning shows.
+        $operations = app(TireOperationService::class);
+        $workOrders = app(WorkOrderService::class);
+        $bus = $vehicles['bus']->fresh();
+        $positions = collect($operations->context($bus)['positions'])->pluck('position_code')->slice(1, 4)->values();
+        $newStock = collect($operations->replacementCandidates($this->tenant->id, $truckTire->id))->where('source', 'NEW_STOCK')->pluck('id')->values();
+        $op = $operations->create($bus, [
+            'operation_type' => 'REPLACEMENT', 'operated_date' => now()->subDay()->toDateString(), 'operated_time' => '14:30', 'odometer' => '152900',
+            'items' => $positions->map(fn ($code, $i) => ['position_code' => $code, 'replacement_tire_id' => $i === 0 ? $reuse->id : $newStock[$i - 1]])->all(),
+        ], $this->admin->id);
+        $workOrders->start($workOrders->schedule($workOrders->assign($workOrders->approve($workOrders->submit(WorkOrder::query()->findOrFail($op->work_order_id))))));
+        $requests = app(WorkOrderPartRequestService::class);
+        $request = $requests->approve(WorkOrderPartRequest::query()->where('tire_operation_id', $op->id)->firstOrFail(), null, $this->admin->id, 'Approved: one reused and three new tires');
+        $request = $requests->issue($request, $semarang, $this->admin->id);
+        app(WorkOrderPartService::class)->consume($request->items->firstWhere('stock_condition', 'NEW')->plannedPart, null, $this->admin->id);
+
+        // The bus tires taken off: one back to used stock, one scrapped (cord exposed), one awaiting inspection.
+        $inspect($removed($bus, $positions[1]), [], $semarang->id);
+        $inspect($removed($bus, $positions[2]), ['cord_exposure' => 'PRESENT'], null);
     }
 
     /**
