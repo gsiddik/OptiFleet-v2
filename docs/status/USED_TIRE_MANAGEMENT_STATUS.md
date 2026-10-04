@@ -121,3 +121,17 @@ history, Used Stocks and the used tire inspection.
 | Browser e2e: inspection flow 20, history popup 4, wheels/tire list 21, tire operations 37, import 20, serial detail 9 | PASS |
 | `migrate:fresh --seed` (APP_ENV=local) + re-run idempotency | PASS |
 | MongoDB analytics / intelligence tests | NOT RUN — MongoDB unavailable in this environment |
+
+### Validation — phases 6–8 (executed in this session)
+
+| Check | Result |
+|---|---|
+| Backend full regression (Mongo-only migrations/tests set aside) | PASS — 1085 tests, 6686 assertions |
+| Feature: TireRemovedBranchScopeTest, TireOperationTest 17 (USED issue / warehouse / return / direct install / warnings), TireUsedInspectionTest 9 | PASS |
+| Related feature set (tire, part request, returns, sale: 46 files) | PASS — 366 tests |
+| Data migration on the e2e DB: REUSE tire in a warehouse → OPENING_BALANCE +1; rollback + re-migrate | PASS |
+| Frontend `npm run build` | PASS |
+| oxlint | PASS — 27 warnings (none new) |
+| Browser e2e: used tires + warnings 13, tire operations 37, inspection 20, history 4 | PASS |
+| `migrate:fresh --seed` (APP_ENV=local) + re-run | PASS |
+| MongoDB analytics / intelligence tests | NOT RUN — MongoDB unavailable in this environment |
