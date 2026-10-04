@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\Tire\Services\TireInventoryService;
 use App\Domain\WorkOrder\Models\SparePartSale;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Services\SparePartSaleService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * G-16: Sell Sparepart — sale lines drawn against a Phase B SELL_ELIGIBLE
@@ -55,6 +57,31 @@ class SparePartSaleController extends Controller
         abort_unless($return->tenant_id === $this->context->tenantId(), 404);
 
         return $this->ok($this->sales->create($return, $validated, $this->context->user()->id), 201);
+    }
+
+    /**
+     * Scrapped tires sent from Used Tire Management → Scrap (row Sell or bulk Sell): one DRAFT sale
+     * per physical tire; tenant, tire data scope and SCRAPPED status are checked server-side.
+     */
+    public function storeScrappedTires(Request $request, TireInventoryService $inventory)
+    {
+        $validated = $request->validate([
+            'tire_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'tire_ids.*' => ['required', 'uuid', 'distinct'],
+            'buyer_type' => ['required', 'string', 'in:'.implode(',', SparePartSale::BUYER_TYPES)],
+            'partner_id' => ['nullable', 'uuid', 'exists:partners,id'],
+            'buyer_name' => ['nullable', 'string', 'max:255'],
+            'unit_price' => ['required', 'numeric', 'min:0'],
+            'sale_type' => ['nullable', 'string', 'in:SCRAP_MATERIAL'],
+            'notes' => ['nullable', 'string'],
+        ]);
+        $tenantId = $this->context->tenantId();
+        $visible = $inventory->scopeToUser(DB::table('tires')->where('tires.tenant_id', $tenantId)->whereIn('tires.id', $validated['tire_ids']), $tenantId, $this->context->user())->count();
+        abort_unless($visible === count($validated['tire_ids']), 403, 'A selected tire is outside your assigned data scope.');
+
+        $sales = $this->sales->createForScrappedTires($tenantId, $validated['tire_ids'], $validated + ['unit_price' => (string) $request->input('unit_price')], $this->context->user()->id);
+
+        return $this->ok($sales->values(), 201);
     }
 
     public function submit(SparePartSale $sparePartSale)

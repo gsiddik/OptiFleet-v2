@@ -10,7 +10,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | 13 | Maintenance Package `componentGroup` relationship (root cause) | DONE | 0d8b5ad |
 | 12 | Vehicle Documents: Vehicle Tax, expiry, extension, upload gating | DONE | f3a1cd5 |
 | 11 + 14 | Global image container 480 × 320; Product / Tire Product Details layout | DONE | e4e3ca3 |
-| 15 + 8 + 9 | Retread Open Cycle → Receive → Tire Inspection; Retread History; serial detail cleanup | DONE | see git log |
+| 15 + 8 + 9 | Retread Open Cycle → Receive → Tire Inspection; Retread History; serial detail cleanup | DONE | a3327f0 |
+| 16 | Scrap tab: Recently Scrapped selection → Sell Sparepart (row / bulk), serial preserved | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -144,3 +145,29 @@ retread, both use the same flow):
   Scoring, Sell and Scrap sections removed from the UI; the retread / repair governance panels are
   replaced by the read-only Retread History (actions moved to Used Tire Management). Backend
   scoring / sell / scrap / governance APIs are unchanged.
+
+## Phase 16 — Scrap tab → Sell Sparepart
+
+**Used Tire Management → Scrap**: the "Used tires that can be scrapped" list is removed (a tire is
+scrapped through its inspection's SCRAP outcome). The tab shows only **Recently Scrapped**
+(`GET /tires-scrapped`, `tire.view`, tenant + data scope; SCRAPPED tires with any open / approved
+sale): row checkbox, header Select All (current page only), bulk **Sell** above the table
+(disabled until ≥ 1 selected) and row **Sell**. A tire already in a DRAFT / PENDING_APPROVAL /
+APPROVED sale cannot be selected. Both actions open Sell Sparepart with `?tire_ids=`.
+
+**Sell Sparepart → "Sell scrapped tires"** lists the selected tires (serial, product, status, open
+sale) and posts `POST /sparepart-sales/scrapped-tires` (`sparepart_sale.create`): buyer (External
+name or Partner), unit price per tire (exact decimal), notes. One DRAFT sale per tire,
+`source_type` SCRAPPED_TIRE, quantity 1, sale type SCRAP_MATERIAL only, carrying
+`tire_serial_number`, `tire_status`, `tire_condition` (inspection reasons / removal condition).
+
+- Backend guards: tires must belong to the tenant and the user's data scope (403), be SCRAPPED
+  (422), and have no active sale (partial unique index, 422). Rows are locked during creation.
+- The existing Submit → Approve / Reject (maker ≠ approver) flow applies; **Approve** marks the tire
+  SOLD (no stock movement — a scrapped tire is not stock); Reject frees it for a new sale.
+- Migration `2026_10_07_000004` (additive): `source_type`, tire columns, `work_order_part_return_id`
+  / `warehouse_id` nullable for tire sales, CHECK per source type. Existing used-sparepart sales
+  default to USED_SPAREPART — unchanged behaviour.
+- Tests: `ScrappedTireSaleTest` (4) + `SparePartSaleTest` (8) PASS; e2e 16/16 PASS (0 / 1 / many
+  selection, Select All on/off, bulk + row Sell, serial in form and sale list, sold tire not
+  re-selectable, IN_STOCK tire refused 422, mobile 390 px no overflow).

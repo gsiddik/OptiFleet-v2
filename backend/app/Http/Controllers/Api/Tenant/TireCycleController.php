@@ -12,6 +12,7 @@ use App\Support\TenantContext;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 /** Used Tire Management → Retread: open a retread / repair cycle, receive it, history and photos. */
 class TireCycleController extends Controller
@@ -66,6 +67,24 @@ class TireCycleController extends Controller
         $this->authorizeTire($tire);
 
         return $this->ok($this->cycles->history($tire));
+    }
+
+    /**
+     * Used Tire Management → Scrap → Recently Scrapped: SCRAPPED tires (newest first, data scope)
+     * with their active sale, if any (a tire in an active sale cannot be selected again).
+     */
+    public function scrapped(Request $request)
+    {
+        $tenantId = $this->context->tenantId();
+        $query = DB::table('tires')->leftJoin('products as p', 'p.id', '=', 'tires.product_id')
+            ->leftJoin('spare_part_sales as s', fn ($j) => $j->on('s.tire_id', '=', 'tires.id')->whereIn('s.status', ['DRAFT', 'PENDING_APPROVAL', 'APPROVED']))
+            ->where('tires.tenant_id', $tenantId)->whereNull('tires.deleted_at')->where('tires.current_status', 'SCRAPPED')
+            ->when($request->string('search')->trim()->value(), fn ($q, $search) => $q->where('tires.serial_number', 'ilike', "%{$search}%"))
+            ->when(array_filter(explode(',', (string) $request->query('ids')), fn ($id) => Str::isUuid($id)), fn ($q, $ids) => $q->whereIn('tires.id', $ids))
+            ->select(['tires.id', 'tires.serial_number', 'tires.current_status', 'tires.updated_at as scrapped_at', 'tires.product_id', 'p.name as product_name', 's.id as sale_id', 's.status as sale_status'])
+            ->orderByDesc('tires.updated_at')->orderBy('tires.serial_number');
+
+        return $this->paginated($this->inventory->scopeToUser($query, $tenantId, $this->context->user())->paginate(min(100, $request->integer('per_page', 20))));
     }
 
     public function photo(string $kind, string $cycle, string $photo)

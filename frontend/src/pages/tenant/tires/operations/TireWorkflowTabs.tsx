@@ -32,6 +32,8 @@ export interface WorkflowTab {
   panel?: ReactNode;
   /** Activity lists only completed retread / repair cycles. */
   completedCycles?: boolean;
+  /** The panel already lists the step's recent records (e.g. Recently Scrapped). */
+  hideActivity?: boolean;
 }
 
 /**
@@ -132,10 +134,12 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
         {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={setPage} />}
       </section>
       )}
+      {!tab.hideActivity && (
       <section className="card" data-workflow-activity>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>{tab.activityTitle}</h3>
         <TireActivityTable types={tab.activityTypes} perPage={10} completedCycles={tab.completedCycles} />
       </section>
+      )}
       {historyOf && <TireHistoryModal tireId={historyOf.id} serial={historyOf.serial_number} onClose={() => setHistoryOf(null)} />}
     </div>
   );

@@ -5,11 +5,18 @@ namespace App\Domain\WorkOrder\Services;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Workflow\Models\WorkflowApprovalRequest;
 use App\Domain\Workflow\Services\WorkflowApprovalService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\SparePartSale;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
+use Brick\Math\BigDecimal;
+use Brick\Math\Exception\MathException;
+use Brick\Math\RoundingMode;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -93,6 +100,86 @@ class SparePartSaleService
         });
     }
 
+    /**
+     * Scrapped tires sent from Used Tire Management → Scrap (row Sell or bulk Sell): one DRAFT sale
+     * line per physical tire, keeping its identity (serial, status, condition). Only tires that are
+     * SCRAPPED and not already in an active sale are accepted; a scrapped tire is sold as material.
+     *
+     * @param  list<string>  $tireIds
+     * @return Collection<int, SparePartSale>
+     */
+    public function createForScrappedTires(string $tenantId, array $tireIds, array $data, string $userId): Collection
+    {
+        $tireIds = array_values(array_unique($tireIds));
+        if ($tireIds === []) {
+            throw new WorkOrderException('Select at least one scrapped tire to sell.');
+        }
+        if (($data['sale_type'] ?? 'SCRAP_MATERIAL') !== 'SCRAP_MATERIAL') {
+            throw new WorkOrderException('A scrapped tire can only be sold as SCRAP_MATERIAL.');
+        }
+        $buyerType = $data['buyer_type'] ?? null;
+        if (! in_array($buyerType, SparePartSale::BUYER_TYPES, true)) {
+            throw new WorkOrderException('Buyer type must be one of: '.implode(', ', SparePartSale::BUYER_TYPES).'.');
+        }
+        if ($buyerType === 'PARTNER' && empty($data['partner_id'])) {
+            throw new WorkOrderException('A PARTNER sale requires partner_id.');
+        }
+        if ($buyerType === 'EXTERNAL' && empty($data['buyer_name'])) {
+            throw new WorkOrderException('An EXTERNAL sale requires buyer_name.');
+        }
+        try {
+            $unitPrice = BigDecimal::of((string) $data['unit_price'])->toScale(4, RoundingMode::HALF_UP);
+        } catch (MathException) {
+            throw new WorkOrderException('Unit price must be a number.');
+        }
+        if ($unitPrice->isNegative()) {
+            throw new WorkOrderException('Unit price cannot be negative.');
+        }
+
+        try {
+            return DB::transaction(function () use ($tenantId, $tireIds, $data, $buyerType, $unitPrice, $userId) {
+                $tires = Tire::query()->withoutGlobalScopes()->where('tenant_id', $tenantId)->whereIn('id', $tireIds)->lockForUpdate()->get()->keyBy('id');
+                $sales = collect();
+                foreach ($tireIds as $id) {
+                    $tire = $tires->get($id);
+                    if (! $tire) {
+                        throw new WorkOrderException('A selected tire was not found.');
+                    }
+                    if ($tire->current_status !== 'SCRAPPED') {
+                        throw new WorkOrderException("Tire {$tire->serial_number} is {$tire->current_status}; only a scrapped tire (Recently Scrapped) can be sold.");
+                    }
+                    $sales->push(DB::transaction(fn () => SparePartSale::query()->create([
+                        'tenant_id' => $tenantId, 'source_type' => SparePartSale::SOURCE_SCRAPPED_TIRE,
+                        'tire_id' => $tire->id, 'tire_serial_number' => $tire->serial_number, 'tire_status' => $tire->current_status,
+                        'tire_condition' => $this->tireCondition($tire),
+                        'product_id' => $tire->product_id, 'warehouse_id' => null, 'quantity' => 1,
+                        'sale_type' => 'SCRAP_MATERIAL', 'buyer_type' => $buyerType,
+                        'partner_id' => $data['partner_id'] ?? null, 'buyer_name' => $data['buyer_name'] ?? null,
+                        'unit_price' => (string) $unitPrice, 'total_amount' => (string) $unitPrice,
+                        'status' => 'DRAFT', 'requested_by' => $userId, 'notes' => $data['notes'] ?? null,
+                    ])));
+                }
+
+                return $sales;
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw new WorkOrderException('A selected tire is already in an open or approved sale.');
+        }
+    }
+
+    /** Why the tire was scrapped: its approved inspection's reasons, else the last removal condition. */
+    private function tireCondition(Tire $tire): ?string
+    {
+        $inspection = TireUsedInspection::query()->withoutGlobalScopes()->where('tire_id', $tire->id)->where('status', TireUsedInspection::APPROVED)
+            ->where('final_disposition', 'SCRAP')->latest('approved_at')->first();
+        if ($inspection) {
+            return mb_substr(implode(' ', $inspection->reasons ?? []), 0, 255) ?: 'Inspection: SCRAP';
+        }
+
+        return DB::table('tire_removals')->where('tire_id', $tire->id)->orderByDesc('removed_at')->value('condition')
+            ?? DB::table('tire_removals')->where('tire_id', $tire->id)->orderByDesc('removed_at')->value('removal_reason');
+    }
+
     public function submit(SparePartSale $sale, string $userId): SparePartSale
     {
         return DB::transaction(function () use ($sale, $userId) {
@@ -155,6 +242,18 @@ class SparePartSaleService
 
             if ($decision === 'REJECT') {
                 $locked->update(['status' => 'REJECTED', 'decided_by' => $userId, 'decided_at' => now(), 'rejection_reason' => $note]);
+
+                return $locked->fresh();
+            }
+
+            // A scrapped tire is a serial, not warehouse quantity: approval marks the physical tire SOLD.
+            if ($locked->source_type === SparePartSale::SOURCE_SCRAPPED_TIRE) {
+                $tire = Tire::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($locked->tire_id);
+                if ($tire->current_status !== 'SCRAPPED') {
+                    throw new WorkOrderException("Tire {$tire->serial_number} is {$tire->current_status}; only a scrapped tire can be sold.");
+                }
+                $tire->update(['current_status' => 'SOLD', 'current_vehicle_id' => null, 'current_position' => null, 'current_warehouse_id' => null]);
+                $locked->update(['status' => 'APPROVED', 'decided_by' => $userId, 'decided_at' => now()]);
 
                 return $locked->fresh();
             }

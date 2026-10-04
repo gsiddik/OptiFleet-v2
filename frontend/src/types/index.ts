@@ -1604,9 +1604,15 @@ export interface WorkOrderPartReturnItem {
 
 export interface SparePartSaleItem {
   id: string;
-  work_order_part_return_id: string;
+  /** USED_SPAREPART (a finalized used return) or SCRAPPED_TIRE (one serialized scrapped tire). */
+  source_type?: 'USED_SPAREPART' | 'SCRAPPED_TIRE';
+  work_order_part_return_id: string | null;
+  tire_id?: string | null;
+  tire_serial_number?: string | null;
+  tire_status?: string | null;
+  tire_condition?: string | null;
   product_id: string;
-  warehouse_id: string;
+  warehouse_id: string | null;
   quantity: string;
   sale_type: 'OPERATIONAL_REUSE' | 'SCRAP_MATERIAL';
   buyer_type: 'PARTNER' | 'EXTERNAL';

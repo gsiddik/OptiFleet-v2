@@ -569,6 +569,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/sparepart-sales', [SparePartSaleController::class, 'index'])->middleware('permission:sparepart_sale.view');
             Route::get('/sparepart-sales/{sparePartSale}', [SparePartSaleController::class, 'show'])->middleware('permission:sparepart_sale.view');
             Route::post('/sparepart-sales', [SparePartSaleController::class, 'store'])->middleware('permission:sparepart_sale.create');
+            Route::post('/sparepart-sales/scrapped-tires', [SparePartSaleController::class, 'storeScrappedTires'])->middleware('permission:sparepart_sale.create');
             Route::post('/sparepart-sales/{sparePartSale}/submit', [SparePartSaleController::class, 'submit'])->middleware('permission:sparepart_sale.create');
             Route::post('/sparepart-sales/{sparePartSale}/decide', [SparePartSaleController::class, 'decide'])->middleware('permission:sparepart_sale.approve');
 
@@ -749,6 +750,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             // Used Tire Management → Retread (Open Cycle → Receive → Tire Inspection); send / receive permission checked per cycle kind.
             Route::get('/tire-cycles', [TireCycleController::class, 'index'])->middleware('permission:tire.view');
             Route::post('/tires/{tire}/cycles', [TireCycleController::class, 'store'])->middleware('permission:tire.view');
+            Route::get('/tires-scrapped', [TireCycleController::class, 'scrapped'])->middleware('permission:tire.view');
             Route::get('/tires/{tire}/cycle-history', [TireCycleController::class, 'history'])->middleware('permission:tire.view');
             Route::post('/tire-cycles/{kind}/{cycle}/receive', [TireCycleController::class, 'receive'])->middleware('permission:tire.view')->whereIn('kind', ['retread', 'repair']);
             Route::get('/tire-cycles/{kind}/{cycle}/photos/{photo}', [TireCycleController::class, 'photo'])->middleware('permission:tire.view')->whereIn('kind', ['retread', 'repair']);
