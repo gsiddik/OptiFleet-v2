@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
-use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireRepair;
@@ -10,6 +9,7 @@ use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireScoringResult;
 use App\Domain\Tire\Services\TireRegistrationService;
 use App\Domain\Tire\Services\TireHistoryService;
+use App\Domain\Tire\Services\TireInventoryService;
 use App\Domain\Tire\Services\TireOperationService;
 use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Tire\Services\TireService;
@@ -24,7 +24,7 @@ class TireController extends Controller
     public function __construct(
         private readonly TireService $tires,
         private readonly TireScoringService $scoring,
-        private readonly DataScopeService $scope,
+        private readonly TireInventoryService $inventory,
         private readonly TenantContext $context,
     ) {}
 
@@ -34,14 +34,7 @@ class TireController extends Controller
         $user = $this->context->user();
         $query = Tire::query()->where('tenant_id', $tenantId)->with(['product', 'currentVehicle', 'currentWarehouse']);
 
-        $allowedBranchIds = $this->scope->allowedBranchIds($user, $tenantId);
-        $allowedWarehouseIds = $this->scope->allowedWarehouseIds($user, $tenantId);
-        if ($allowedBranchIds !== null || $allowedWarehouseIds !== null) {
-            $query->where(function ($q) use ($allowedBranchIds, $allowedWarehouseIds) {
-                $q->whereHas('currentVehicle', fn ($vq) => $vq->whereIn('branch_id', $allowedBranchIds ?? []))
-                    ->orWhereIn('current_warehouse_id', $allowedWarehouseIds ?? []);
-            });
-        }
+        $this->inventory->scopeToUser($query, $tenantId, $user);
 
         // current_status: one status, or several comma-separated (e.g. IN_STOCK,RESERVED).
         if ($statuses = array_filter(array_map('trim', explode(',', $request->string('current_status')->value())))) {
@@ -352,18 +345,7 @@ class TireController extends Controller
     {
         abort_unless($tire->tenant_id === $this->context->tenantId(), 404);
 
-        $tenantId = $this->context->tenantId();
-        $user = $this->context->user();
-        $allowedBranchIds = $this->scope->allowedBranchIds($user, $tenantId);
-        $allowedWarehouseIds = $this->scope->allowedWarehouseIds($user, $tenantId);
-        if ($allowedBranchIds === null && $allowedWarehouseIds === null) {
-            return;
-        }
-
-        $vehicleBranchId = $tire->current_vehicle_id ? Vehicle::query()->find($tire->current_vehicle_id)?->branch_id : null;
-        $inBranch = $vehicleBranchId && in_array($vehicleBranchId, $allowedBranchIds, true);
-        $inWarehouse = $tire->current_warehouse_id && in_array($tire->current_warehouse_id, $allowedWarehouseIds, true);
-
-        abort_unless($inBranch || $inWarehouse, 403, 'This tire is outside your assigned data scope.');
+        $visible = $this->inventory->scopeToUser(Tire::query()->whereKey($tire->id), $tire->tenant_id, $this->context->user())->exists();
+        abort_unless($visible, 403, 'This tire is outside your assigned data scope.');
     }
 }

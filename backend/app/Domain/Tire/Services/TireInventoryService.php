@@ -5,6 +5,7 @@ namespace App\Domain\Tire\Services;
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\ProductMaster\Models\Product;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -276,19 +277,33 @@ class TireInventoryService
     }
 
     /**
-     * The tire index's data-scope rule on a query over `tires`: with a restricted branch or
-     * warehouse scope, only tires on a vehicle of an allowed branch or in an allowed warehouse.
+     * The tire data-scope rule on a query over `tires`: with a restricted branch or warehouse
+     * scope, only tires on a vehicle of an allowed branch, in an allowed warehouse, or — when the
+     * tire is on no vehicle and in no warehouse (REMOVED, HOLD, at a repair / retread partner) —
+     * last installed on a vehicle of an allowed branch.
      */
-    public function scopeToUser(Builder $query, string $tenantId, User $user, string $tires = 'tires'): Builder
+    public function scopeToUser(Builder|EloquentBuilder $query, string $tenantId, User $user, string $tires = 'tires'): Builder|EloquentBuilder
     {
         $branches = $this->scope->allowedBranchIds($user, $tenantId);
         $warehouses = $this->scope->allowedWarehouseIds($user, $tenantId);
         if ($branches !== null || $warehouses !== null) {
+            $branches ??= [];
             $query->where(fn ($q) => $q
-                ->whereIn("{$tires}.current_vehicle_id", DB::table('vehicles')->whereIn('branch_id', $branches ?? [])->select('id'))
-                ->orWhereIn("{$tires}.current_warehouse_id", $warehouses ?? []));
+                ->whereIn("{$tires}.current_vehicle_id", DB::table('vehicles')->whereIn('branch_id', $branches)->select('id'))
+                ->orWhereIn("{$tires}.current_warehouse_id", $warehouses ?? [])
+                ->orWhere(fn ($o) => $o
+                    ->whereNull("{$tires}.current_vehicle_id")
+                    ->whereNull("{$tires}.current_warehouse_id")
+                    ->whereIn(DB::raw(self::lastBranchSql($tires)), $branches)));
         }
 
         return $query;
+    }
+
+    /** Branch of the vehicle a tire was last installed on (SQL scalar subquery). */
+    public static function lastBranchSql(string $tires = 'tires'): string
+    {
+        return "(SELECT lv.branch_id FROM tire_installations li JOIN vehicles lv ON lv.id = li.vehicle_id
+            WHERE li.tire_id = {$tires}.id ORDER BY li.installed_at DESC, li.created_at DESC LIMIT 1)";
     }
 }
