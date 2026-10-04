@@ -7,7 +7,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | 1–5 | Purchase Order Return to Vendor (Return Order, Refund / Redelivery, history, print, state model) | DONE | 4465d97 |
 | 6 | Work Order tabs: order, orphaned External Services / Documents, QC / Road Test at QC_PENDING | DONE | afe1657 |
 | 7 + 10 | Orphaned Warranty / Eligibility / Claims and the old Tire Operations page | DONE | e44e38b |
-| 13 | Maintenance Package `componentGroup` relationship (root cause) | DONE | see git log |
+| 13 | Maintenance Package `componentGroup` relationship (root cause) | DONE | 0d8b5ad |
+| 12 | Vehicle Documents: Vehicle Tax, expiry, extension, upload gating | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -89,3 +90,14 @@ Operations page (`/app/tire-operations`) is unaffected.
   no schema change. Seeder already used the FK; nothing to change there.
 - Test: package detail with items (with / without a component group) and activate; all seeded
   packages load with the relation.
+
+## Phase 12 — Vehicle Documents
+
+- Document Type gains **Vehicle Tax** (same document architecture: storage, preview, download).
+- Per upload: "Have an Expiry Date?" → Expiry Date (mandatory when checked); "Need to be
+  extended?" → Extension Deadline (mandatory when checked). Upload allowed when nothing is checked
+  (case A) or every shown date is filled (case B).
+- Backend: `required_if` validation, unchecked boxes store no date, DB CHECKs
+  (`has_expiry = (expiry_date IS NOT NULL)`, same for the extension). Existing documents with an
+  expiry date were backfilled as `has_expiry = true`; a legacy client sending only `expiry_date`
+  still works.

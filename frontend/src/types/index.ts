@@ -517,10 +517,15 @@ export interface VehicleTransferItem {
 export interface VehicleDocumentItem {
   id: string;
   vehicle_id: string;
-  document_type: 'REGISTRATION' | 'INSPECTION_CERTIFICATE' | 'INSURANCE' | 'PERMIT' | 'WARRANTY' | 'OTHER';
+  document_type: 'REGISTRATION' | 'INSPECTION_CERTIFICATE' | 'INSURANCE' | 'PERMIT' | 'VEHICLE_TAX' | 'WARRANTY' | 'OTHER';
   document_number: string | null;
   issue_date: string | null;
+  /** "Have an Expiry Date?" — expiry_date is set exactly when true. */
+  has_expiry?: boolean;
   expiry_date: string | null;
+  /** "Need to be extended?" — extension_deadline is set exactly when true. */
+  needs_extension?: boolean;
+  extension_deadline?: string | null;
   original_filename: string;
   mime_type: string;
   size: number;

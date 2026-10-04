@@ -303,6 +303,40 @@ class VehicleTest extends TestCase
         $this->getJson("/api/v1/app/vehicles/{$vehicle->id}/documents/{$docId}")->assertStatus(401);
     }
 
+    /** Vehicle Tax + "Have an Expiry Date?" / "Need to be extended?": each checked box makes its date mandatory. */
+    public function test_vehicle_document_expiry_and_extension_dates_gate_the_upload(): void
+    {
+        [$tenant, $branch, $category] = $this->setUpTenant();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category);
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.update', 'vehicle.view']);
+        $headers = $this->authHeaders($token);
+        $upload = fn (array $data) => $this->post("/api/v1/app/vehicles/{$vehicle->id}/documents", array_merge([
+            'file' => UploadedFile::fake()->create('tax.pdf', 50, 'application/pdf'), 'document_type' => 'VEHICLE_TAX',
+        ], $data), $headers + ['Accept' => 'application/json']);
+
+        // Case A: nothing checked — uploaded, no dates stored even if sent.
+        $plain = $upload(['has_expiry' => '0', 'needs_extension' => '0', 'extension_deadline' => '2027-01-01'])->assertStatus(201);
+        $this->assertSame([false, null, false, null], [$plain->json('data.has_expiry'), $plain->json('data.expiry_date'), $plain->json('data.needs_extension'), $plain->json('data.extension_deadline')]);
+        $this->assertSame('VEHICLE_TAX', $plain->json('data.document_type'));
+
+        // Checked without its date — blocked; nothing stored.
+        $upload(['has_expiry' => '1'])->assertStatus(422)->assertJsonValidationErrors('expiry_date');
+        $upload(['has_expiry' => '1', 'expiry_date' => '2027-03-31', 'needs_extension' => '1'])->assertStatus(422)->assertJsonValidationErrors('extension_deadline');
+        $upload(['needs_extension' => '1'])->assertStatus(422)->assertJsonValidationErrors('extension_deadline');
+        $this->assertSame(1, $vehicle->documents()->count());
+
+        // Case B: every shown date filled.
+        $full = $upload(['has_expiry' => '1', 'expiry_date' => '2027-03-31', 'needs_extension' => '1', 'extension_deadline' => '2027-03-01'])->assertStatus(201);
+        $this->assertSame([true, true], [$full->json('data.has_expiry'), $full->json('data.needs_extension')]);
+        $this->assertStringStartsWith('2027-03-31', $full->json('data.expiry_date'));
+        $this->assertStringStartsWith('2027-03-01', $full->json('data.extension_deadline'));
+
+        // A legacy client sending only expiry_date keeps working.
+        $legacy = $upload(['document_type' => 'INSURANCE', 'expiry_date' => '2027-06-30'])->assertStatus(201);
+        $this->assertTrue($legacy->json('data.has_expiry'));
+        $upload(['document_type' => 'PASSPORT'])->assertStatus(422)->assertJsonValidationErrors('document_type');
+    }
+
     public function test_vehicle_document_upload_rejects_disallowed_mime_type(): void
     {
         [$tenant, $branch, $category] = $this->setUpTenant();

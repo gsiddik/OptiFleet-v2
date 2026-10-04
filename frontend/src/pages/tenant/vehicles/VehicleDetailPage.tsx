@@ -12,6 +12,7 @@ import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, Vehi
 import { NumericInput } from '../../../components/NumericInput';
 import { VEHICLE_TYPES, resolveVehicleType, vehicleTypeOption } from '../tires/wheel-configuration/vehicleTypes';
 import { VehicleWheelsConfigurationTab } from '../tires/wheel-configuration/VehicleWheelsConfigurationTab';
+import { formatDate } from '../../../utils/date';
 
 const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'Wheels Configuration', 'History'] as const;
 type Tab = (typeof TABS)[number];
@@ -694,12 +695,29 @@ function CreateTransferModal({ vehicle, onClose, onCreated }: { vehicle: Vehicle
   );
 }
 
+const DOCUMENT_TYPE_LABEL: Record<string, string> = {
+  REGISTRATION: 'Registration',
+  INSPECTION_CERTIFICATE: 'Inspection Certificate',
+  INSURANCE: 'Insurance',
+  PERMIT: 'Permit',
+  VEHICLE_TAX: 'Vehicle Tax',
+  WARRANTY: 'Warranty',
+  OTHER: 'Other',
+};
+
 function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
   const { hasPermission } = useAuth();
   const [documents, setDocuments] = useState<VehicleDocumentItem[]>([]);
   const [uploading, setUploading] = useState(false);
   const [docType, setDocType] = useState('REGISTRATION');
+  const [hasExpiry, setHasExpiry] = useState(false);
+  const [expiryDate, setExpiryDate] = useState('');
+  const [needsExtension, setNeedsExtension] = useState(false);
+  const [extensionDeadline, setExtensionDeadline] = useState('');
+  const [fileKey, setFileKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  // Upload gating: nothing checked, or every date a checked box shows is filled (the API enforces the same).
+  const missingDate = (hasExpiry && !expiryDate) || (needsExtension && !extensionDeadline);
 
   function load() {
     apiClient.get(`/app/vehicles/${vehicle.id}/documents`).then((res) => setDocuments(res.data.data));
@@ -714,12 +732,21 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
       const form = new FormData();
       form.append('file', file);
       form.append('document_type', docType);
+      form.append('has_expiry', hasExpiry ? '1' : '0');
+      form.append('needs_extension', needsExtension ? '1' : '0');
+      if (hasExpiry) form.append('expiry_date', expiryDate);
+      if (needsExtension) form.append('extension_deadline', extensionDeadline);
       await apiClient.post(`/app/vehicles/${vehicle.id}/documents`, form);
+      setHasExpiry(false);
+      setExpiryDate('');
+      setNeedsExtension(false);
+      setExtensionDeadline('');
       load();
     } catch (err) {
       setError(extractApiError(err).message);
     } finally {
       setUploading(false);
+      setFileKey((k) => k + 1);
     }
   }
 
@@ -764,7 +791,14 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
       {documents.map((d) => (
         <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <span>
-            {d.document_type} — {d.original_filename} <span style={{ color: '#9ca3af' }}>({(d.size / 1024).toFixed(0)} KB)</span>
+            {DOCUMENT_TYPE_LABEL[d.document_type] ?? d.document_type} — {d.original_filename} <span style={{ color: '#9ca3af' }}>({(d.size / 1024).toFixed(0)} KB)</span>
+            {(d.expiry_date || d.extension_deadline) && (
+              <span style={{ display: 'block', color: '#6b7280', fontSize: 12 }}>
+                {d.expiry_date && <>Expiry: {formatDate(d.expiry_date)}</>}
+                {d.expiry_date && d.extension_deadline && ' · '}
+                {d.extension_deadline && <>Extension deadline: {formatDate(d.extension_deadline)}</>}
+              </span>
+            )}
           </span>
           <span style={{ display: 'flex', gap: 12 }}>
             <button className="btn-link" onClick={() => preview(d.id)}>
@@ -784,23 +818,54 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
       {documents.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No documents uploaded.</p>}
 
       {hasPermission('vehicle.update') && (
-        <div style={{ marginTop: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
-          <select value={docType} onChange={(e) => setDocType(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-            {['REGISTRATION', 'INSPECTION_CERTIFICATE', 'INSURANCE', 'PERMIT', 'WARRANTY', 'OTHER'].map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-          <input
-            type="file"
-            accept=".jpg,.jpeg,.png,.webp,.pdf"
-            disabled={uploading}
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) upload(f);
-            }}
-          />
+        <div data-document-upload style={{ marginTop: 16, display: 'grid', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <select aria-label="Document Type" value={docType} onChange={(e) => setDocType(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+              {Object.entries(DOCUMENT_TYPE_LABEL).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', fontSize: 13 }}>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="checkbox" checked={hasExpiry} onChange={(e) => setHasExpiry(e.target.checked)} />
+              Have an Expiry Date?
+            </label>
+            {hasExpiry && (
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                Expiry Date <span style={{ color: '#b91c1c' }}>*</span>
+                <input aria-label="Expiry Date" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} style={{ ...inputStyle, width: 170 }} />
+              </label>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', fontSize: 13 }}>
+            <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <input type="checkbox" checked={needsExtension} onChange={(e) => setNeedsExtension(e.target.checked)} />
+              Need to be extended?
+            </label>
+            {needsExtension && (
+              <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                Extension Deadline <span style={{ color: '#b91c1c' }}>*</span>
+                <input aria-label="Extension Deadline" type="date" value={extensionDeadline} onChange={(e) => setExtensionDeadline(e.target.value)} style={{ ...inputStyle, width: 170 }} />
+              </label>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              key={fileKey}
+              aria-label="Document file"
+              type="file"
+              accept=".jpg,.jpeg,.png,.webp,.pdf"
+              disabled={uploading || missingDate}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) upload(f);
+              }}
+            />
+            {missingDate && <span style={{ fontSize: 12, color: '#b45309' }}>Fill in the date for every checked box before choosing the file.</span>}
+          </div>
         </div>
       )}
     </div>
