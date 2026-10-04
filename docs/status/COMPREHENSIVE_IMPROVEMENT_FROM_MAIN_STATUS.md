@@ -6,7 +6,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 |---|---|---|---|
 | 1–5 | Purchase Order Return to Vendor (Return Order, Refund / Redelivery, history, print, state model) | DONE | 4465d97 |
 | 6 | Work Order tabs: order, orphaned External Services / Documents, QC / Road Test at QC_PENDING | DONE | afe1657 |
-| 7 + 10 | Orphaned Warranty / Eligibility / Claims and the old Tire Operations page | DONE | see git log |
+| 7 + 10 | Orphaned Warranty / Eligibility / Claims and the old Tire Operations page | DONE | e44e38b |
+| 13 | Maintenance Package `componentGroup` relationship (root cause) | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -75,3 +76,16 @@ Dependency audit: no other page links into the Warranty pages. Vehicle Documents
 "Warranty" document type (a document category, not the Warranty module); the dashboard API still
 returns `warranty_claims_active`; Warranty analytics (Analytics menu) is unchanged. The new Tire
 Operations page (`/app/tire-operations`) is unaffected.
+
+## Phase 13 — Maintenance Package `componentGroup` error
+
+- Root cause: `maintenance_package_items.component_group_id` is a real nullable FK to
+  `component_groups` (2024_03_01_000003), the package controller eager-loads
+  `items.componentGroup` (show / activate / update items) and the frontend reads
+  `item.component_group`, but `MaintenancePackageItem` never defined the relation. Eager loading
+  only resolves it when a package has items, so new empty packages worked and every seeded
+  package (5 packages, 9 items) failed to open.
+- Fix: `MaintenancePackageItem::componentGroup()` (BelongsTo ComponentGroup) — no caller change,
+  no schema change. Seeder already used the FK; nothing to change there.
+- Test: package detail with items (with / without a component group) and activate; all seeded
+  packages load with the relation.

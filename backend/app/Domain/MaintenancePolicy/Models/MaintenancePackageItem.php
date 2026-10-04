@@ -2,6 +2,7 @@
 
 namespace App\Domain\MaintenancePolicy\Models;
 
+use App\Domain\MasterData\Models\ComponentGroup;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,5 +19,11 @@ class MaintenancePackageItem extends Model
     public function package(): BelongsTo
     {
         return $this->belongsTo(MaintenancePackage::class, 'maintenance_package_id');
+    }
+
+    /** maintenance_package_items.component_group_id → component_groups (nullable FK). */
+    public function componentGroup(): BelongsTo
+    {
+        return $this->belongsTo(ComponentGroup::class);
     }
 }
