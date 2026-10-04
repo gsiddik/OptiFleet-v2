@@ -8,7 +8,7 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ f76045b.
 | 2 | Removed tab: Tire History popup, "Inspect" action | 37a2276 |
 | 3 | Inspection entity, rule profiles, decision engine, API (+ fix-forward of a staging error) | 7245ea7, 9cc8f0c |
 | 4 | Inspection page, result summary, Inspection Rules page | 9145d04 |
-| 5 | Lifecycle regression tests, this checkpoint | (this commit) |
+| 5 | Lifecycle regression tests, this checkpoint | ba63947 + validation update |
 
 ## Status semantics (TireStatus)
 
@@ -87,3 +87,17 @@ inspection outcome).
   warehouse-scoped users do not see them (the existing tire data-scope rule).
 - The Used Tire Management → Scrap tab still allows scrapping HOLD / QUARANTINED tires directly
   (existing scrap action).
+
+## Validation (executed in this session)
+
+| Check | Result |
+|---|---|
+| Backend full regression (`php artisan test`, Mongo-only migrations/tests set aside) | PASS — 1079 tests, 6563 assertions |
+| Unit: UsedTireDecisionEngineTest | PASS — 13 tests |
+| Feature: TireUsedInspectionTest 8, TireUsedStockLifecycleTest 4, TireHistoryTest 1, TireOperationTest 13, governance / closure / inventory / registration / seeder tests | PASS |
+| Frontend `npm run build` (tsc -b + vite build) | PASS |
+| oxlint | PASS — 27 warnings (baseline 28, none new) |
+| Frontend unit tests / `npm test`, `npm run typecheck` | NOT RUN — no such scripts in the project (typecheck runs inside the build) |
+| Browser e2e: inspection flow 20, history popup 4, wheels/tire list 21, tire operations 37, import 20, serial detail 9 | PASS |
+| `migrate:fresh --seed` (APP_ENV=local) + re-run idempotency | PASS |
+| MongoDB analytics / intelligence tests | NOT RUN — MongoDB unavailable in this environment |
