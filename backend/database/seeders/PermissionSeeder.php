@@ -133,6 +133,11 @@ class PermissionSeeder extends Seeder
             // finalizer can be a different actor from whoever computed it (BD-4).
             'tire_scoring' => ['calculate', 'finalize'],
             'tire_scoring_configuration' => ['manage', 'publish'],
+            // Used Tire Management inspection: inspecting is tire.inspect; applying the disposition
+            // (REUSE / REPAIR / RETREAD / HOLD / SCRAP) is a separate approval; rule profiles hold
+            // the per-category thresholds the decision engine uses.
+            'tire_used_inspection' => ['approve'],
+            'tire_rule_profile' => ['manage'],
             'used_part' => ['view', 'inspect', 'dispose', 'approve'],
             'component_asset' => ['view', 'manage', 'install', 'remove', 'replace'],
             'warranty' => ['view', 'manage'],
