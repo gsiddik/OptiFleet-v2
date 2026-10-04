@@ -4,7 +4,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 
 | Phase | Scope | Status | Commit |
 |---|---|---|---|
-| 1–5 | Purchase Order Return to Vendor (Return Order, Refund / Redelivery, history, print, state model) | DONE | see git log |
+| 1–5 | Purchase Order Return to Vendor (Return Order, Refund / Redelivery, history, print, state model) | DONE | 4465d97 |
+| 6 | Work Order tabs: order, orphaned External Services / Documents, QC / Road Test at QC_PENDING | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -47,3 +48,17 @@ redelivery request to REDELIVERY_READY.
    print before "Receive Redelivery". A refund rejected by the vendor can be received at once.
 4. While a refund is awaiting the vendor's decision, Goods Receipt stays available for the
    remaining quantity (the refunded quantity is no longer expected).
+
+## Phase 6 — Work Order Detail tabs
+
+- Order: … Planned Parts → Tire Operations → Issuance & Return … (Tire Operations only when the
+  Work Order has one; Issuance & Return keeps its status rule).
+- ORPHANED (hidden, component / API / data kept): External Services, Documents. Documents was a
+  read-only viewer; External Workshop documents stay reachable in the External Work Order flow.
+- QC and Road Test tabs only while the Work Order is QC_PENDING. A tab that is not offered never
+  renders. Backend: QC start was already QC_PENDING-only; Road Test is now refused outside
+  QC_PENDING too (and for External Work Orders by execution mode — the old check compared the
+  status with 'EXTERNAL', which never matched). Existing seed flows record the Road Test at
+  QC_PENDING, so they are unaffected.
+- Note: QC / Road Test history is no longer visible on the Work Order once it leaves QC_PENDING
+  (requirement); it remains in QC Inspections and the data is kept.
