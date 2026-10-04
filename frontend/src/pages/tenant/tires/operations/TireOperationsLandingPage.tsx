@@ -22,7 +22,7 @@ const STATUSES = ['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
  * Tire Operations: the Recent Tire Operations (Replacement / Rotation / Inspection) with their Work
  * Order and status, newest first. New Tire Operations opens the add page; Edit / Cancel act on one
  * operation — the backend decides whether that is still possible (can_edit / can_cancel).
- * (The earlier tabbed Installation / Rotation / Inspection page is kept at /app/tire-operations/legacy.)
+ * (The earlier tabbed Installation / Rotation / Inspection page, TireOperationsPage, is ORPHANED — source kept, not routed.)
  */
 export function TireOperationsLandingPage() {
   const { hasPermission } = useAuth();

@@ -182,7 +182,7 @@ export function TenantDashboardPage() {
         </>
       )}
 
-      {(data.active_modules.includes('TIRE') || data.active_modules.includes('COMPONENT') || data.active_modules.includes('WARRANTY')) && (
+      {(data.active_modules.includes('TIRE') || data.active_modules.includes('COMPONENT')) && (
         <>
           <h2 style={{ fontSize: 16, marginBottom: 12 }}>Asset Lifecycle</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
@@ -190,7 +190,7 @@ export function TenantDashboardPage() {
               data.active_modules.includes('TIRE') && { label: 'Tires In Use', value: data.tires_in_use },
               data.active_modules.includes('TIRE') && { label: 'Tires Due Replacement', value: data.tires_due_replacement },
               data.active_modules.includes('COMPONENT') && { label: 'Component Assets Installed', value: data.component_assets_installed },
-              data.active_modules.includes('WARRANTY') && { label: 'Active Warranty Claims', value: data.warranty_claims_active },
+              // Warranty is ORPHANED in the active UI: its claim count is no longer shown (the API still returns it).
             ]
               .filter((s): s is { label: string; value: number | undefined } => Boolean(s))
               .map((s) => (

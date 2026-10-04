@@ -111,7 +111,6 @@ import { PartnerDetailPage } from './pages/tenant/partners/PartnerDetailPage';
 import { TireListPage } from './pages/tenant/tires/TireListPage';
 import { TireDetailPage } from './pages/tenant/tires/TireDetailPage';
 import { TireProductDetailPage } from './pages/tenant/tires/TireProductDetailPage';
-import { TireOperationsPage } from './pages/tenant/tires/operations/TireOperationsPage';
 import { TireOperationsLandingPage } from './pages/tenant/tires/operations/TireOperationsLandingPage';
 import { TireOperationFormPage } from './pages/tenant/tires/operations/TireOperationFormPage';
 import { UsedTireManagementPage } from './pages/tenant/tires/operations/UsedTireManagementPage';
@@ -126,10 +125,6 @@ import { VehicleMappingPage } from './pages/tenant/tires/wheel-configuration/Veh
 import { RimsPage } from './pages/tenant/tires/RimsPage';
 import { ComponentAssetListPage } from './pages/tenant/components/ComponentAssetListPage';
 import { ComponentAssetDetailPage } from './pages/tenant/components/ComponentAssetDetailPage';
-import { WarrantyListPage } from './pages/tenant/warranty/WarrantyListPage';
-import { WarrantyDetailPage } from './pages/tenant/warranty/WarrantyDetailPage';
-import { WarrantyClaimListPage } from './pages/tenant/warranty/WarrantyClaimListPage';
-import { WarrantyClaimDetailPage } from './pages/tenant/warranty/WarrantyClaimDetailPage';
 import { AnalyticsOverviewPage } from './pages/tenant/analytics/AnalyticsOverviewPage';
 import { FleetAnalyticsPage } from './pages/tenant/analytics/FleetAnalyticsPage';
 import { MaintenanceAnalyticsPage } from './pages/tenant/analytics/MaintenanceAnalyticsPage';
@@ -807,8 +802,7 @@ export default function App() {
             <Route path="tire-operations" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationsLandingPage /></RequirePermission>} />
             <Route path="tire-operations/new" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationFormPage /></RequirePermission>} />
             <Route path="tire-operations/:id/edit" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationFormPage /></RequirePermission>} />
-            {/* Deprecated (kept until the owner retires it): the earlier tabbed Installation / Rotation / Inspection page. */}
-            <Route path="tire-operations/legacy" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationsPage /></RequirePermission>} />
+            {/* ORPHANED (owner decision): the earlier tabbed Installation / Rotation / Inspection page (TireOperationsPage) is no longer routed; its source and the tire APIs it used are kept. */}
             <Route path="used-tires" element={<RequirePermission permission={USED_TIRE_PERMISSIONS}><UsedTireManagementPage /></RequirePermission>} />
             <Route path="tire-history" element={<RequirePermission permission="tire.view"><TireHistoryPage /></RequirePermission>} />
             <Route path="wheel-configurations" element={<RequirePermission permission="tire.view"><WheelConfigurationListPage /></RequirePermission>} />
@@ -822,10 +816,7 @@ export default function App() {
             <Route path="component-assets" element={<RequirePermission permission="component_asset.view"><ComponentAssetListPage /></RequirePermission>} />
             <Route path="component-assets/:id" element={<RequirePermission permission="component_asset.view"><ComponentAssetDetailPage /></RequirePermission>} />
 
-            <Route path="warranties" element={<RequirePermission permission="warranty.view"><WarrantyListPage /></RequirePermission>} />
-            <Route path="warranties/:id" element={<RequirePermission permission="warranty.view"><WarrantyDetailPage /></RequirePermission>} />
-            <Route path="warranty-claims" element={<RequirePermission permission="warranty.view"><WarrantyClaimListPage /></RequirePermission>} />
-            <Route path="warranty-claims/:id" element={<RequirePermission permission="warranty.view"><WarrantyClaimDetailPage /></RequirePermission>} />
+            {/* ORPHANED (owner decision): Warranty / Eligibility / Claims pages are not routed in the active UI; source in pages/tenant/warranty, APIs and data kept. */}
 
             <Route path="analytics/overview" element={<RequirePermission permission="analytics.overview.view"><AnalyticsOverviewPage /></RequirePermission>} />
             <Route path="analytics/fleet" element={<RequirePermission permission="analytics.fleet.view"><FleetAnalyticsPage /></RequirePermission>} />

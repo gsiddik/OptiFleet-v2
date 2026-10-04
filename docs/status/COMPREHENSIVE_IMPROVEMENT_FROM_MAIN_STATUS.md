@@ -5,7 +5,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | Phase | Scope | Status | Commit |
 |---|---|---|---|
 | 1–5 | Purchase Order Return to Vendor (Return Order, Refund / Redelivery, history, print, state model) | DONE | 4465d97 |
-| 6 | Work Order tabs: order, orphaned External Services / Documents, QC / Road Test at QC_PENDING | DONE | see git log |
+| 6 | Work Order tabs: order, orphaned External Services / Documents, QC / Road Test at QC_PENDING | DONE | afe1657 |
+| 7 + 10 | Orphaned Warranty / Eligibility / Claims and the old Tire Operations page | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -62,3 +63,15 @@ redelivery request to REDELIVERY_READY.
   QC_PENDING, so they are unaffected.
 - Note: QC / Road Test history is no longer visible on the Work Order once it leaves QC_PENDING
   (requirement); it remains in QC Inspections and the data is kept.
+
+## Phases 7 + 10 — Orphaned features
+
+| Feature | Active UI | Kept |
+|---|---|---|
+| Warranty, Eligibility, Claims | removed from navigation and from the UI router; dashboard "Active Warranty Claims" tile hidden | pages/tenant/warranty, Warranty APIs (still respond), models, tables, history, notification event `warranty_claim.submitted`, Warranty analytics |
+| Old Tire Operations page (tabbed Installation / Rotation / Inspection) | `/app/tire-operations/legacy` no longer routed | TireOperationsPage source, tire install / rotate / inspect APIs (used by other flows) |
+
+Dependency audit: no other page links into the Warranty pages. Vehicle Documents keeps its
+"Warranty" document type (a document category, not the Warranty module); the dashboard API still
+returns `warranty_claims_active`; Warranty analytics (Analytics menu) is unchanged. The new Tire
+Operations page (`/app/tire-operations`) is unaffected.

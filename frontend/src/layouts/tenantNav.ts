@@ -145,15 +145,8 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/component-assets', label: 'History', permission: 'component_asset.view', module: 'COMPONENT' },
     ],
   },
-  {
-    label: 'Warranty',
-    icon: 'warranty',
-    items: [
-      { to: '/app/warranties', label: 'Warranty', permission: 'warranty.view', module: 'WARRANTY' },
-      { to: '/app/warranties', label: 'Eligibility', permission: 'warranty.view', module: 'WARRANTY' },
-      { to: '/app/warranty-claims', label: 'Claims', permission: 'warranty.view', module: 'WARRANTY' },
-    ],
-  },
+  // ORPHANED (owner decision): Warranty, Eligibility and Claims are no longer in the active
+  // navigation. Pages (pages/tenant/warranty), APIs, data and history are kept for a future decision.
   {
     label: 'Analytics',
     icon: 'analytics',
