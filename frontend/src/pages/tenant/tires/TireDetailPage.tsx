@@ -546,7 +546,7 @@ export function TireDetailPage() {
         />
       )}
 
-      {['IN_STOCK', 'REMOVED', 'UNDER_INSPECTION', 'QUARANTINED'].includes(tire.current_status) && canScrap && (
+      {['IN_STOCK', 'HOLD', 'UNDER_INSPECTION', 'QUARANTINED'].includes(tire.current_status) && canScrap && (
         <div className="card" id="scrap" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Scrap</h3>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>

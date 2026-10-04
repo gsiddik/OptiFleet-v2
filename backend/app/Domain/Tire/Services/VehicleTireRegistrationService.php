@@ -8,6 +8,7 @@ use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireInstallation;
 use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
+use App\Domain\Tire\Support\TireStatus;
 use App\Domain\Vehicle\Models\Vehicle;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
@@ -118,7 +119,7 @@ class VehicleTireRegistrationService
         if ($existing->product_id !== $product->id) {
             throw ValidationException::withMessages(['serial_number' => "Serial number {$existing->serial_number} is already registered for another tire product."]);
         }
-        if (! in_array($existing->current_status, ['IN_STOCK', 'RESERVED'], true)) {
+        if (! in_array($existing->current_status, TireStatus::AVAILABLE_FOR_INSTALLATION, true)) {
             throw ValidationException::withMessages(['serial_number' => "Tire {$existing->serial_number} is {$existing->current_status} and cannot be registered on a vehicle."]);
         }
         if ($existing->current_warehouse_id !== null) {

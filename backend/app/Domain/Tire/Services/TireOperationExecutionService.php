@@ -6,6 +6,7 @@ use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireOperation;
 use App\Domain\Tire\Models\TireOperationItem;
+use App\Domain\Tire\Support\TireStatus;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequestItem;
@@ -15,8 +16,9 @@ use App\Domain\WorkOrder\Services\WorkOrderException;
 /**
  * When a Tire Operation physically happens — always inside the caller's transaction:
  *
- *   Replacement  per serial, when its tire product is Consumed in Work Order → Issuance & Return
- *                (stock already left the warehouse at Issue, the existing inventory flow): the old
+ *   Replacement  a new-stock serial when its tire product is Consumed in Work Order → Issuance &
+ *                Return (stock already left the warehouse at Issue, the existing inventory flow); a
+ *                REUSE serial (used stock, not warehouse quantity) when the Work Order is completed. The old
  *                tire is removed (status REMOVED: it waits in Used Tire Management for inspection
  *                before it can return to stock as Used) and the "Replacing With" serial is
  *                installed on the same position (TireService::replace).
@@ -46,7 +48,7 @@ class TireOperationExecutionService
         match ($operation->operation_type) {
             TireOperation::ROTATION => $this->applyRotation($operation, $items, $userId),
             TireOperation::INSPECTION => $this->applyInspection($operation, $items, $userId),
-            default => $this->assertReplacementApplied($items),
+            default => $this->applyReuseReplacements($operation, $items, $userId),
         };
 
         $operation->update(['applied_at' => now()]);
@@ -87,26 +89,16 @@ class TireOperationExecutionService
         }
         $pending = TireOperationItem::query()->withoutGlobalScopes()->where('tire_operation_id', $operation->id)
             ->whereNull('applied_at')->whereNotNull('replacement_tire_id')
-            ->whereHas('replacementTire', fn ($q) => $q->withoutGlobalScopes()->where('product_id', $part->product_id))
+            // Only new-stock serials are issued through the Part Request; REUSE serials are installed
+            // when the Work Order is completed (they are not warehouse quantity).
+            ->whereHas('replacementTire', fn ($q) => $q->withoutGlobalScopes()->where('product_id', $part->product_id)->where('current_status', '!=', TireStatus::REUSE))
             ->orderBy('position_code')->lockForUpdate()->get();
         if ($pending->count() < (int) $quantity) {
             throw new WorkOrderException("Only {$pending->count()} replacement tire(s) of this product are still to be installed for the Tire Operation.");
         }
 
         foreach ($pending->take((int) $quantity) as $item) {
-            $old = Tire::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($item->tire_id);
-            $new = Tire::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($item->replacement_tire_id);
-            if ($old->current_vehicle_id !== $operation->vehicle_id || $old->current_position !== $item->position_code) {
-                throw new WorkOrderException("Tire {$old->serial_number} is no longer on {$item->position_code} of this vehicle; edit the Tire Operation first.");
-            }
-            if ($new->current_status !== 'IN_STOCK') {
-                // e.g. a removed tire chosen before it passed Used Tire Management inspection.
-                throw new WorkOrderException("Serial {$new->serial_number} is {$new->current_status}, not in stock; edit the Tire Operation and choose another serial.");
-            }
-            // The old tire becomes REMOVED and waits in Used Tire Management for inspection. Both
-            // the removal and the installation are dated at the Tire Operations date/time.
-            $this->tires->replace($old, $new, 'Tire Operation replacement', 'REUSE', (float) $operation->odometer, $operation->work_order_id, $userId, $operation->operated_at);
-            $item->update(['applied_at' => now(), 'replacement_released_at' => now()]);
+            $this->replaceItem($operation, $item, $userId);
         }
 
         $stillPending = TireOperationItem::query()->withoutGlobalScopes()->where('tire_operation_id', $operation->id)->whereNull('applied_at')->exists();
@@ -144,6 +136,38 @@ class TireOperationExecutionService
             ]);
             $item->update(['applied_at' => now()]);
         }
+    }
+
+    /**
+     * The old tire becomes REMOVED and waits in Used Tire Management for inspection; the
+     * "Replacing With" serial (new stock or REUSE) is installed. Both are dated at the Tire
+     * Operations date/time.
+     */
+    private function replaceItem(TireOperation $operation, TireOperationItem $item, ?string $userId): void
+    {
+        $old = Tire::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($item->tire_id);
+        $new = Tire::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($item->replacement_tire_id);
+        if ($old->current_vehicle_id !== $operation->vehicle_id || $old->current_position !== $item->position_code) {
+            throw new WorkOrderException("Tire {$old->serial_number} is no longer on {$item->position_code} of this vehicle; edit the Tire Operation first.");
+        }
+        if (! in_array($new->current_status, TireStatus::AVAILABLE_FOR_INSTALLATION, true)) {
+            throw new WorkOrderException("Serial {$new->serial_number} is {$new->current_status}, not available for installation; edit the Tire Operation and choose another serial.");
+        }
+        $this->tires->replace($old, $new, 'Tire Operation replacement', 'REUSE', (float) $operation->odometer, $operation->work_order_id, $userId, $operation->operated_at);
+        $item->update(['applied_at' => now(), 'replacement_released_at' => now()]);
+    }
+
+    /** On completion: REUSE serials (not issued from the warehouse) are installed now; new stock must already be consumed. */
+    private function applyReuseReplacements(TireOperation $operation, $items, ?string $userId): void
+    {
+        foreach ($items->filter(fn (TireOperationItem $i) => $i->applied_at === null) as $item) {
+            $status = Tire::query()->withoutGlobalScopes()->whereKey($item->replacement_tire_id)->value('current_status');
+            if ($status === TireStatus::REUSE) {
+                $this->replaceItem($operation, $item, $userId);
+                $item->refresh();
+            }
+        }
+        $this->assertReplacementApplied($items->map(fn (TireOperationItem $i) => $i->fresh()));
     }
 
     private function assertReplacementApplied($items): void

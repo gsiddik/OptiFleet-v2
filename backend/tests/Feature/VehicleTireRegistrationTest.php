@@ -209,14 +209,14 @@ class VehicleTireRegistrationTest extends TestCase
         DB::table('warehouse_stocks')->insert(['id' => (string) Str::uuid(), 'tenant_id' => $tenant->id, 'warehouse_id' => $warehouse->id, 'product_id' => $product->id, 'quantity_on_hand' => 10, 'quantity_reserved' => 0, 'created_at' => now(), 'updated_at' => now()]);
         Tire::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'SN-LOOSE', 'current_status' => 'IN_STOCK']);
         $inventory = fn () => $this->getJson("/api/v1/app/tire-products/{$product->id}", $headers)->json('data.inventory');
-        $this->assertSame(['new_qty' => 1, 'installed_qty' => 0, 'used_qty' => 0], $inventory());
+        $this->assertSame(['new_qty' => 1, 'installed_qty' => 0, 'used_qty' => 0, 'reusable_qty' => 0], $inventory());
         $before = $this->stockSnapshot($tenant->id);
 
         // A new serial → a tire of this product, Installed.
         $this->register($headers, $vehicle, ['product_id' => $product->id, 'serial_number' => 'SN-NEW-REG'])->assertStatus(201);
         // An existing loose serial is reused: it moves New → Installed, no duplicate.
         $this->register($headers, $vehicle, ['product_id' => $product->id, 'serial_number' => 'sn-loose', 'position_code' => '1FR1'])->assertStatus(201);
-        $this->assertSame(['new_qty' => 0, 'installed_qty' => 2, 'used_qty' => 0], $inventory());
+        $this->assertSame(['new_qty' => 0, 'installed_qty' => 2, 'used_qty' => 0, 'reusable_qty' => 0], $inventory());
 
         $installed = $this->getJson("/api/v1/app/tire-products/{$product->id}/inventory?category=INSTALLED", $headers)->json('data');
         $this->assertSame([['SN-LOOSE', 'B 7788 TR', '20000.00'], ['SN-NEW-REG', 'B 7788 TR', '20000.00']], array_map(fn ($r) => [$r['serial_number'], $r['registration_number'], (string) $r['current_odometer']], $installed));
@@ -229,7 +229,7 @@ class VehicleTireRegistrationTest extends TestCase
         // Removal: Installed → Used; usage KM counts from the registered installation KM.
         $tire = Tire::query()->where('serial_number', 'SN-NEW-REG')->first();
         $this->postJson("/api/v1/app/tires/{$tire->id}/remove", ['removal_reason' => 'worn', 'disposition' => 'REUSE', 'odometer' => 15000], $headers)->assertSuccessful();
-        $this->assertSame(['new_qty' => 0, 'installed_qty' => 1, 'used_qty' => 1], $inventory());
+        $this->assertSame(['new_qty' => 0, 'installed_qty' => 1, 'used_qty' => 1, 'reusable_qty' => 0], $inventory());
         $this->assertSame('2499.25', $this->getJson("/api/v1/app/tire-products/{$product->id}/inventory?category=USED", $headers)->json('data.0.usage_km'));
     }
 }

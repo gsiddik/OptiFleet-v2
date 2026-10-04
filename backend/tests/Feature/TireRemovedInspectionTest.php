@@ -71,14 +71,14 @@ class TireRemovedInspectionTest extends TestCase
         $tire = $this->removedTire($s, 'RMV-002');
 
         $this->inspect($s, $tire, ['tread_depth_mm' => '6.5', 'condition' => 'even wear', 'result' => 'PASS', 'warehouse_id' => $s['warehouse']->id])
-            ->assertOk()->assertJsonPath('data.current_status', 'IN_STOCK')->assertJsonPath('data.current_warehouse_id', $s['warehouse']->id);
+            ->assertOk()->assertJsonPath('data.current_status', 'REUSE')->assertJsonPath('data.current_warehouse_id', $s['warehouse']->id);
 
         $inspection = TireInspection::query()->where('tire_id', $tire->id)->latest('inspected_at')->first();
         $this->assertSame(['6.50', 'even wear'], [(string) $inspection->tread_depth_mm, $inspection->condition]);
         $this->assertStringContainsString('PASS', $inspection->recommendation);
         // Back in stock as Used: still under Used Stocks (it was installed before) and offered as Reuse.
         $used = collect($this->getJson("/api/v1/app/tire-products/{$s['product']->id}/inventory?category=USED", $s['headers'])->json('data'));
-        $this->assertSame('IN_STOCK', $used->firstWhere('serial_number', 'RMV-002')['current_status']);
+        $this->assertSame('REUSE', $used->firstWhere('serial_number', 'RMV-002')['current_status']);
         $this->assertSame('REUSE', $this->candidates($s)->firstWhere('serial_number', 'RMV-002')['source']);
 
         // Only a REMOVED tire can be inspected here.

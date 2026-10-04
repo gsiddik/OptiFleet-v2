@@ -11,6 +11,7 @@ use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationVersion;
 use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
 use App\Domain\Tire\Support\TireOperationStatus;
+use App\Domain\Tire\Support\TireStatus;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
@@ -141,24 +142,23 @@ class TireOperationService
     }
 
     /**
-     * Serials that may replace a tire of the given product: same Tire Product, in stock (IN_STOCK),
-     * not deleted, and not already held as "Replacing With" by another open operation. Source is
-     * REUSE for a tire that was installed before and is back in stock as Used, otherwise NEW_STOCK.
-     * A REMOVED tire is not offered: it first passes inspection in Used Tire Management.
+     * Serials that may replace a tire of the given product: same Tire Product, available for
+     * installation — new stock (IN_STOCK, source NEW_STOCK) or a used tire inspected as REUSE
+     * (source REUSE) — not deleted, and not already held as "Replacing With" by another open
+     * operation. REMOVED / HOLD / REPAIR / RETREAD tires are never offered.
      */
     public function replacementCandidates(string $tenantId, string $productId, ?string $operationId = null, ?string $search = null): array
     {
-        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)->where('current_status', 'IN_STOCK')
+        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)->whereIn('current_status', ['IN_STOCK', TireStatus::REUSE])
             ->whereNotIn('id', $this->heldReplacementIds($operationId))
             ->when($search, fn ($q) => $q->where('serial_number', 'ilike', "%{$search}%"))
-            ->withExists('installations as was_installed')
             ->orderBy('serial_number')->limit(200)
             ->get(['id', 'serial_number', 'current_status', 'product_id', 'manufacture_date_code', 'purchase_date'])
             ->map(fn (Tire $t) => [
                 'id' => $t->id,
                 'serial_number' => $t->serial_number,
                 'current_status' => $t->current_status,
-                'source' => $t->was_installed ? 'REUSE' : 'NEW_STOCK',
+                'source' => $t->current_status === TireStatus::REUSE ? 'REUSE' : 'NEW_STOCK',
                 'manufacture_date_code' => $t->manufacture_date_code,
             ])->values()->all();
     }
@@ -462,8 +462,13 @@ class TireOperationService
             $tire = $installations->get($code)->tire;
             $item = ['position_code' => $code, 'tire_id' => $tire->id, 'replacement_tire_id' => null, 'pair_number' => $detail['pair_number'] ?? null, 'tread_depth_mm' => null];
             if ($type === TireOperation::REPLACEMENT) {
-                $item['replacement_tire_id'] = $this->assertReplacement($vehicle->tenant_id, $tire, $detail['replacement_tire_id'] ?? null, $existing?->id, $code);
-                $lines[$tire->product_id] = ($lines[$tire->product_id] ?? 0) + 1;
+                $replacement = $this->assertReplacement($vehicle->tenant_id, $tire, $detail['replacement_tire_id'] ?? null, $existing?->id, $code);
+                $item['replacement_tire_id'] = $replacement->id;
+                // Only new stock is issued from the warehouse through the Part Request; a REUSE tire
+                // is not warehouse quantity — it is installed when the Work Order is completed.
+                if ($replacement->current_status !== TireStatus::REUSE) {
+                    $lines[$tire->product_id] = ($lines[$tire->product_id] ?? 0) + 1;
+                }
             }
             if ($type === TireOperation::INSPECTION) {
                 $item['tread_depth_mm'] = $detail['tread_depth_mm'] ?? null;
@@ -528,14 +533,14 @@ class TireOperationService
         return $out;
     }
 
-    private function assertReplacement(string $tenantId, Tire $installed, ?string $replacementId, ?string $operationId, string $code): string
+    private function assertReplacement(string $tenantId, Tire $installed, ?string $replacementId, ?string $operationId, string $code): Tire
     {
         if (! $replacementId) {
             throw ValidationException::withMessages(['items' => "Choose the serial number replacing the tire on {$code}."]);
         }
         $candidate = Tire::query()->where('tenant_id', $tenantId)->lockForUpdate()->find($replacementId);
-        if (! $candidate || $candidate->current_status !== 'IN_STOCK') {
-            throw ValidationException::withMessages(['items' => "The replacement for {$code} must be a serial number in stock (New Stock or Used). A removed tire must pass inspection in Used Tire Management first."]);
+        if (! $candidate || ! in_array($candidate->current_status, ['IN_STOCK', TireStatus::REUSE], true)) {
+            throw ValidationException::withMessages(['items' => "The replacement for {$code} must be New Stock or a REUSE tire. A removed tire must pass inspection in Used Tire Management first."]);
         }
         if ($candidate->product_id !== $installed->product_id) {
             throw ValidationException::withMessages(['items' => "The replacement for {$code} must be the same Tire Product as the installed tire."]);
@@ -544,7 +549,7 @@ class TireOperationService
             throw ValidationException::withMessages(['items' => "Serial {$candidate->serial_number} is already chosen in another open Tire Operation."]);
         }
 
-        return $candidate->id;
+        return $candidate;
     }
 
     // ------------------------------------------------------------- helpers

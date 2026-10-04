@@ -74,7 +74,7 @@ class TireProductInventoryTest extends TestCase
         $reused = $this->tire($tenant, $product, 'SN-USED-INSTOCK');
         $this->install($headers, $reused, $vehicle, 'RR', 2600);
         $this->remove($headers, $reused, 2700);
-        $reused->refresh()->update(['current_status' => 'IN_STOCK']);
+        $reused->refresh()->update(['current_status' => 'REUSE']); // inspected in Used Tire Management, fit for reuse
 
         $this->tire($tenant, $product, 'SN-SCRAP', 'SCRAPPED');
 
@@ -115,7 +115,7 @@ class TireProductInventoryTest extends TestCase
 
         $detail = $this->getJson("/api/v1/app/tire-products/{$product->id}", $headers)->assertOk();
         $detail->assertJsonPath('data.name', 'Michelin X Multi')->assertJsonPath('data.product_type', 'TIRE')
-            ->assertJsonPath('data.inventory', ['new_qty' => 2, 'installed_qty' => 1, 'used_qty' => 3]);
+            ->assertJsonPath('data.inventory', ['new_qty' => 2, 'installed_qty' => 1, 'used_qty' => 3, 'reusable_qty' => 1]);
 
         $new = $this->rows($headers, $product->id, 'NEW');
         $installed = $this->rows($headers, $product->id, 'INSTALLED');
@@ -132,7 +132,7 @@ class TireProductInventoryTest extends TestCase
         $this->assertSame('6.25', (string) $used['SN-USED-ROT']['current_tread_depth_mm']);
         $this->assertNull($used['SN-USED-RETREAD']['current_tread_depth_mm']);
         // Domain status is preserved even though the category is "Used".
-        $this->assertSame(['REMOVED', 'RETREAD', 'IN_STOCK'], [$used['SN-USED-ROT']['current_status'], $used['SN-USED-RETREAD']['current_status'], $used['SN-USED-INSTOCK']['current_status']]);
+        $this->assertSame(['REMOVED', 'RETREAD', 'REUSE'], [$used['SN-USED-ROT']['current_status'], $used['SN-USED-RETREAD']['current_status'], $used['SN-USED-INSTOCK']['current_status']]);
     }
 
     public function test_removing_an_installed_tire_moves_it_from_installed_to_used(): void
@@ -140,10 +140,10 @@ class TireProductInventoryTest extends TestCase
         [$tenant, $vehicle, $product, $headers] = $this->scenario();
         $tire = $this->tire($tenant, $product, 'SN020');
         $this->install($headers, $tire, $vehicle, 'FL', 10000);
-        $this->assertSame(['new_qty' => 0, 'installed_qty' => 1, 'used_qty' => 0], $this->getJson("/api/v1/app/tire-products/{$product->id}", $headers)->json('data.inventory'));
+        $this->assertSame(['new_qty' => 0, 'installed_qty' => 1, 'used_qty' => 0, 'reusable_qty' => 0], $this->getJson("/api/v1/app/tire-products/{$product->id}", $headers)->json('data.inventory'));
 
         $this->remove($headers, $tire, 12000);
-        $this->assertSame(['new_qty' => 0, 'installed_qty' => 0, 'used_qty' => 1], $this->getJson("/api/v1/app/tire-products/{$product->id}", $headers)->json('data.inventory'));
+        $this->assertSame(['new_qty' => 0, 'installed_qty' => 0, 'used_qty' => 1, 'reusable_qty' => 0], $this->getJson("/api/v1/app/tire-products/{$product->id}", $headers)->json('data.inventory'));
         $this->assertSame([], $this->rows($headers, $product->id, 'INSTALLED'));
         $this->assertSame('2000.00', $this->rows($headers, $product->id, 'USED')[0]['usage_km']);
         $this->assertSame(1, $tire->installations()->count()); // history kept

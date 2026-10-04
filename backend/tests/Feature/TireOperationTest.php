@@ -135,7 +135,7 @@ class TireOperationTest extends TestCase
         $this->assertSame('2026-10-01 02:15:00', $new1->installations()->first()->installed_at->utc()->format('Y-m-d H:i:s'));
         $candidates = fn () => collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->assertOk()->json('data'));
         $this->assertFalse($candidates()->pluck('serial_number')->contains('OLD-1FL1'));
-        $old->update(['current_status' => 'IN_STOCK']); // e.g. after its inspection in Used Tire Management
+        $old->update(['current_status' => 'REUSE']); // e.g. after its inspection in Used Tire Management
         $this->assertSame('REUSE', $candidates()->firstWhere('serial_number', 'OLD-1FL1')['source']);
         $this->assertSame('NEW_STOCK', $candidates()->firstWhere('serial_number', 'NEW-003')['source']);
 
@@ -154,6 +154,42 @@ class TireOperationTest extends TestCase
         $service->complete($service->submitToQc($this->startWorkOrder($inspection->json('data.work_order.id'))));
         $hours = app(TireInventoryService::class)->usageHours([$new1->id, $old->id]);
         $this->assertSame(['48.00', '721.75'], [$hours[$new1->id], $hours[$old->id]]);
+    }
+
+    /** A REUSE serial is used stock, not warehouse quantity: it is not issued and is installed when the Work Order completes. */
+    public function test_replacement_with_a_reuse_tire_does_not_issue_warehouse_stock(): void
+    {
+        $s = $this->scenario();
+        $new = $this->stockTire($s, 'NEW-R1');
+        $reuse = $this->stockTire($s, 'USED-R1');
+        $reuse->update(['current_status' => 'REUSE']);
+        $removed = $this->stockTire($s, 'RMV-R1');
+        $removed->update(['current_status' => 'REMOVED']);
+
+        $candidates = collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->json('data'))->keyBy('serial_number');
+        $this->assertSame(['NEW_STOCK', 'REUSE'], [$candidates['NEW-R1']['source'], $candidates['USED-R1']['source']]);
+        $this->assertFalse($candidates->has('RMV-R1'));
+        $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => [['position_code' => '1FL1', 'replacement_tire_id' => $removed->id]]]), $s['headers'])
+            ->assertStatus(422)->assertJsonValidationErrors('items');
+
+        $created = $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => [
+            ['position_code' => '1FL1', 'replacement_tire_id' => $new->id],
+            ['position_code' => '1FR1', 'replacement_tire_id' => $reuse->id],
+        ]]), $s['headers'])->assertStatus(201);
+        $request = WorkOrderPartRequest::query()->with('items')->findOrFail($created->json('data.part_request.id'));
+        $this->assertSame(1.0, (float) $request->items[0]->quantity_requested, 'Only the new-stock serial is requested from the warehouse.');
+
+        $wo = $this->startWorkOrder($created->json('data.work_order.id'));
+        $this->postJson("/api/v1/app/part-requests/{$request->id}/approve", [], $s['headers'])->assertOk();
+        $this->postJson("/api/v1/app/part-requests/{$request->id}/issue", ['warehouse_id' => $s['warehouse']->id], $s['headers'])->assertOk();
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$request->fresh('items')->items[0]->planned_part_id}/consume", ['quantity' => 1], $s['headers'])->assertOk();
+        $this->assertSame(['INSTALLED', 'REUSE'], [$new->fresh()->current_status, $reuse->fresh()->current_status]);
+
+        $service = app(WorkOrderService::class);
+        $service->complete($service->submitToQc($wo->fresh()));
+        $this->assertSame(['INSTALLED', '1FR1'], [$reuse->fresh()->current_status, $reuse->fresh()->current_position]);
+        $this->assertSame(['REMOVED', 'REMOVED'], [Tire::query()->where('serial_number', 'OLD-1FL1')->value('current_status'), Tire::query()->where('serial_number', 'OLD-1FR1')->value('current_status')]);
+        $this->assertSame(9.0, $this->onHand($s), 'Only the new tire left the warehouse.');
     }
 
     public function test_work_order_cannot_complete_before_the_replacement_is_consumed(): void

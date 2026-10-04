@@ -125,6 +125,9 @@ class TireRepairRetreadGovernanceTest extends TestCase
         $this->postJson("/api/v1/app/tires/{$tire->id}/retreads/{$retreadId}/receive", [], $ownerHeaders)->assertOk();
         $this->postJson("/api/v1/app/tires/{$tire->id}/retreads/{$retreadId}/final-inspect", ['result' => 'SAFE'], $checkerHeaders)->assertOk();
         $this->postJson("/api/v1/app/tires/{$tire->id}/retreads/{$retreadId}/approve", ['disposition' => 'RETURN_TO_SERVICE', 'reason' => 'Passed final inspection'], $checkerHeaders)->assertOk();
+        // Back to REMOVED for the mandatory Used Tire Management inspection; it passed (REUSE).
+        $this->assertSame('REMOVED', $tire->fresh()->current_status);
+        $tire->fresh()->update(['current_status' => 'REUSE']);
 
         $tire = $this->removeForCycle($tire->fresh(), $vehicle, 'RETREAD', $ownerHeaders);
         $second = $this->postJson("/api/v1/app/tires/{$tire->id}/retread", ['partner_id' => $partner->id], $ownerHeaders)->assertStatus(201);
@@ -226,9 +229,10 @@ class TireRepairRetreadGovernanceTest extends TestCase
         $this->postJson("/api/v1/app/tires/{$tire->id}/repairs/{$repairId}/approve", ['disposition' => 'QUARANTINE', 'reason' => 'Unsafe casing, pending disposal decision'], $approverHeaders)->assertOk();
 
         $tire->refresh();
-        $this->assertSame('QUARANTINED', $tire->current_status);
+        // The QUARANTINE disposition is the HOLD status of the used-tire lifecycle.
+        $this->assertSame('HOLD', $tire->current_status);
 
-        // No alternate endpoint can install a QUARANTINED tire — install() only accepts IN_STOCK/RESERVED.
+        // No alternate endpoint can install a HOLD tire — install() only accepts new stock or REUSE.
         $this->postJson("/api/v1/app/tires/{$tire->id}/install", ['vehicle_id' => $vehicle->id, 'wheel_position' => 'FRONT_RIGHT'], $senderHeaders)->assertStatus(422);
     }
 
@@ -310,7 +314,8 @@ class TireRepairRetreadGovernanceTest extends TestCase
         ], $approverHeaders)->assertOk();
 
         $tire->refresh();
-        $this->assertSame('IN_STOCK', $tire->current_status);
+        // Returned to REMOVED: it is inspected again in Used Tire Management before reuse.
+        $this->assertSame('REMOVED', $tire->current_status);
 
         $retread = TireRetread::query()->findOrFail($retreadId);
         $this->assertSame('APPROVED', $retread->status);
@@ -400,7 +405,9 @@ class TireRepairRetreadGovernanceTest extends TestCase
         ], $checkerHeaders)->assertOk();
 
         $tire->refresh();
-        $this->assertSame('IN_STOCK', $tire->current_status);
+        // A returned tire is inspected again in Used Tire Management before reuse.
+        $this->assertSame('REMOVED', $tire->current_status);
+        $tire->update(['current_status' => 'REUSE']);
 
         // No wheel_configurations rows exist for this vehicle's category — install() stays
         // permissive (Phase D, G-25), unaffected by the Phase E approval that just ran.

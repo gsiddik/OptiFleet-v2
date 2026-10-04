@@ -296,7 +296,8 @@ class ProductSpecificationService
         $tireRefRule = fn (string $table) => Rule::exists($table, 'id')->where(fn ($q) => $q->where('tenant_id', $tenantId)->orWhereNull('tenant_id'));
 
         $v = Validator::make($input, [
-            'vehicle_group' => ['required', 'in:CAR,TRUCK_BUS'],
+            // OTR = OTR / Heavy Equipment — the third tire category the used-tire inspection rules distinguish.
+            'vehicle_group' => ['required', 'in:CAR,TRUCK_BUS,OTR'],
             'pattern_name' => ['required', 'string', 'max:150'],
             'width_mm' => ['required', 'integer', 'min:1'],
             'aspect_ratio_percent' => ['required', 'integer', 'min:1'],
@@ -311,13 +312,16 @@ class ProductSpecificationService
             'tra_star_rating_id' => ['nullable', 'uuid', Rule::exists('tire_tra_star_ratings', 'id')],
         ])->validate();
 
-        if ($v['vehicle_group'] === 'TRUCK_BUS') {
-            if (empty($v['dual_load_index_id'])) {
+        if (in_array($v['vehicle_group'], ['TRUCK_BUS', 'OTR'], true)) {
+            // Required for Truck & Bus; optional (but kept when given) for OTR / Heavy Equipment.
+            if ($v['vehicle_group'] === 'TRUCK_BUS' && empty($v['dual_load_index_id'])) {
                 throw ValidationException::withMessages(['dual_load_index_id' => 'Dual Load Index is required for Truck & Bus tires.']);
             }
-            if (empty($v['ply_rating_id'])) {
+            if ($v['vehicle_group'] === 'TRUCK_BUS' && empty($v['ply_rating_id'])) {
                 throw ValidationException::withMessages(['ply_rating_id' => 'Ply Rating is required for Truck & Bus tires.']);
             }
+            $v['dual_load_index_id'] = $v['dual_load_index_id'] ?? null;
+            $v['ply_rating_id'] = $v['ply_rating_id'] ?? null;
             // TRA Code/Star Rating are genuinely optional for Truck & Bus — unlike
             // every other field here, Laravel's validate() omits them from $v
             // entirely when the client doesn't send them at all (not merely null),
@@ -367,11 +371,13 @@ class ProductSpecificationService
             'purpose_computed' => null,
         ];
 
-        if ($v['vehicle_group'] === 'TRUCK_BUS') {
-            $dualLoadIndex = TireLoadIndex::query()->findOrFail($v['dual_load_index_id']);
-            $plyRating = TirePlyRating::query()->findOrFail($v['ply_rating_id']);
-            $derived['dual_max_load_kg_computed'] = $dualLoadIndex->max_load_dual_kg;
-            $derived['load_range_computed'] = $plyRating->load_range;
+        if (in_array($v['vehicle_group'], ['TRUCK_BUS', 'OTR'], true)) {
+            if (! empty($v['dual_load_index_id'])) {
+                $derived['dual_max_load_kg_computed'] = TireLoadIndex::query()->findOrFail($v['dual_load_index_id'])->max_load_dual_kg;
+            }
+            if (! empty($v['ply_rating_id'])) {
+                $derived['load_range_computed'] = TirePlyRating::query()->findOrFail($v['ply_rating_id'])->load_range;
+            }
 
             if (! empty($v['tra_code_id'])) {
                 $traCode = TireTraCode::query()->findOrFail($v['tra_code_id']);

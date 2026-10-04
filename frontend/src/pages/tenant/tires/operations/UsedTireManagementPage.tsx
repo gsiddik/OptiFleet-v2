@@ -8,7 +8,7 @@ const TABS: WorkflowTab[] = [
     key: 'removed',
     label: 'Removed',
     permissions: ['tire.view'],
-    statuses: ['REMOVED'],
+    statuses: ['REMOVED', 'HOLD'],
     candidatesTitle: 'Removed tires awaiting inspection',
     actionLabel: 'Inspect & return to stock',
     anchor: 'used-inspection',
@@ -31,7 +31,8 @@ const TABS: WorkflowTab[] = [
     key: 'scrap',
     label: 'Scrap',
     permissions: ['tire.scrap'],
-    statuses: ['REMOVED', 'UNDER_INSPECTION', 'QUARANTINED'],
+    // A REMOVED tire is scrapped through its inspection (SCRAP outcome), not directly.
+    statuses: ['HOLD', 'UNDER_INSPECTION', 'QUARANTINED'],
     candidatesTitle: 'Used tires that can be scrapped',
     actionLabel: 'Scrap',
     anchor: 'scrap',

@@ -18,9 +18,10 @@ use Illuminate\Support\Facades\DB;
  *              the installation table is the source of truth, not the status string;
  *   (none)     terminal states SCRAPPED / SOLD / LOST are not stock;
  *   NEW        never installed and IN_STOCK / RESERVED;
- *   USED       everything else: was installed before and is not now (REMOVED, RETREAD, REPAIR,
- *              QUARANTINED, UNDER_INSPECTION, or back IN_STOCK after removal). The tire keeps its
- *              own current_status; the category is only a grouping.
+ *   USED       everything else: was installed before and is not now (REMOVED, REUSE, HOLD,
+ *              RETREAD, REPAIR, QUARANTINED, UNDER_INSPECTION). The tire keeps its own
+ *              current_status; the category is only a grouping — visibility, not availability.
+ *              Of the used tires only REUSE is reusable stock (reusable_qty).
  *
  * New Stock counts serialised physical tires, not warehouse quantity: a Tire product may hold
  * warehouse quantity whose serials are not registered yet — those are not shown as tires.
@@ -47,6 +48,7 @@ class TireInventoryService
             ->selectRaw("count(*) filter (where category = 'NEW') as new_qty")
             ->selectRaw("count(*) filter (where category = 'INSTALLED') as installed_qty")
             ->selectRaw("count(*) filter (where category = 'USED') as used_qty")
+            ->selectRaw("count(*) filter (where category = 'USED' and current_status = 'REUSE') as reusable_qty")
             ->groupBy('product_id');
 
         return Product::query()
@@ -58,20 +60,21 @@ class TireInventoryService
             ->orderBy('products.brand')->orderBy('products.name')
             ->select(['products.id', 'products.tenant_id', 'products.code', 'products.sku', 'products.name', 'products.brand', 'products.status'])
             ->selectRaw('ts.rim_diameter_inch, ts.tire_size_computed')
-            ->selectRaw('coalesce(c.new_qty, 0)::int as new_qty, coalesce(c.installed_qty, 0)::int as installed_qty, coalesce(c.used_qty, 0)::int as used_qty')
+            ->selectRaw('coalesce(c.new_qty, 0)::int as new_qty, coalesce(c.installed_qty, 0)::int as installed_qty, coalesce(c.used_qty, 0)::int as used_qty, coalesce(c.reusable_qty, 0)::int as reusable_qty')
             ->paginate($perPage);
     }
 
-    /** @return array{new_qty: int, installed_qty: int, used_qty: int} */
+    /** @return array{new_qty: int, installed_qty: int, used_qty: int, reusable_qty: int} reusable_qty = used tires available for installation (REUSE) */
     public function summary(string $tenantId, User $user, string $productId): array
     {
         $row = DB::query()->fromSub($this->classifiedTires($tenantId, $user), 'ct')->where('product_id', $productId)
             ->selectRaw("count(*) filter (where category = 'NEW') as new_qty")
             ->selectRaw("count(*) filter (where category = 'INSTALLED') as installed_qty")
             ->selectRaw("count(*) filter (where category = 'USED') as used_qty")
+            ->selectRaw("count(*) filter (where category = 'USED' and current_status = 'REUSE') as reusable_qty")
             ->first();
 
-        return ['new_qty' => (int) $row->new_qty, 'installed_qty' => (int) $row->installed_qty, 'used_qty' => (int) $row->used_qty];
+        return ['new_qty' => (int) $row->new_qty, 'installed_qty' => (int) $row->installed_qty, 'used_qty' => (int) $row->used_qty, 'reusable_qty' => (int) $row->reusable_qty];
     }
 
     /** Physical tires of one product in one category (paginated), with the columns its table needs. */
@@ -261,7 +264,7 @@ class TireInventoryService
         $query = DB::table('tires')
             ->leftJoin('tire_installations as active', fn ($j) => $j->on('active.tire_id', '=', 'tires.id')->whereNull('active.removed_at'))
             ->where('tires.tenant_id', $tenantId)->whereNull('tires.deleted_at')
-            ->select(['tires.id', 'tires.product_id', 'active.vehicle_id as active_vehicle_id'])
+            ->select(['tires.id', 'tires.product_id', 'tires.current_status', 'active.vehicle_id as active_vehicle_id'])
             ->selectRaw("CASE
                 WHEN active.id IS NOT NULL THEN 'INSTALLED'
                 WHEN tires.current_status IN ({$terminal}) THEN NULL
