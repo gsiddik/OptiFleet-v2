@@ -7,7 +7,11 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Tire\Models\Tire;
+use App\Domain\Tire\Services\UsedTireStockService;
+use App\Domain\Tire\Support\TireStatus;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
+use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -27,7 +31,10 @@ class ReturnProcessingService
 {
     public const ACTUAL_CONDITIONS = ['UNUSED_NEW', 'UNUSED_FAULTY'];
 
-    public function __construct(private readonly InventoryService $inventory) {}
+    public function __construct(
+        private readonly InventoryService $inventory,
+        private readonly UsedTireStockService $usedStock,
+    ) {}
 
     public function process(WorkOrderPartReturn $return, string $actualCondition, float $receivedQuantity, ?string $notes, string $userId): WorkOrderPartReturn
     {
@@ -53,7 +60,13 @@ class ReturnProcessingService
             $matches = $actualCondition === $locked->condition && $receivedQuantity === (float) $locked->quantity;
             $stockMovementId = null;
 
-            if ($target === 'RESTOCKED') {
+            $part = WorkOrderPlannedPart::query()->find($locked->work_order_planned_part_id);
+            if ($part?->stock_condition === 'USED') {
+                if (floor($receivedQuantity) !== $receivedQuantity) {
+                    throw new WorkOrderException('Used tires are returned per serial number: use a whole quantity.');
+                }
+                $this->processUsedTires($locked, $part, $target, (int) $receivedQuantity, $userId);
+            } elseif ($target === 'RESTOCKED') {
                 $warehouse = Warehouse::query()->findOrFail($locked->warehouse_id);
                 $product = Product::query()->withTrashed()->findOrFail($locked->product_id);
                 $this->inventory->returnStock(
@@ -78,6 +91,28 @@ class ReturnProcessingService
 
             return $locked->fresh();
         });
+    }
+
+    /**
+     * A returned USED line (REUSE tires issued for a Tire Operation and not installed): New Good
+     * puts the serials back into the warehouse's used tire quantity; New Faulty puts them on HOLD
+     * in that warehouse to be inspected again in Used Tire Management.
+     */
+    private function processUsedTires(WorkOrderPartReturn $return, WorkOrderPlannedPart $part, string $target, int $quantity, string $userId): void
+    {
+        $tires = Tire::query()->withoutGlobalScopes()->whereIn('id', $this->usedStock->issuedTireIds(WorkOrderPlannedPart::class, $part->id))
+            ->where('current_status', TireStatus::REUSE)->whereNull('current_vehicle_id')->orderBy('serial_number')->lockForUpdate()->get();
+        if ($tires->count() < $quantity) {
+            throw new WorkOrderException("Only {$tires->count()} issued used tire(s) of this line are not installed.");
+        }
+        foreach ($tires->take($quantity) as $tire) {
+            if ($target === 'RESTOCKED') {
+                $this->usedStock->receive($tire, $return->warehouse_id, 'RETURN', WorkOrderPartReturn::class, $return->id, $userId, "Returned part {$return->return_number} accepted after inspection");
+                $tire->update(['current_warehouse_id' => $return->warehouse_id]);
+            } else {
+                $tire->update(['current_status' => TireStatus::HOLD, 'current_warehouse_id' => $return->warehouse_id]);
+            }
+        }
     }
 
     /**

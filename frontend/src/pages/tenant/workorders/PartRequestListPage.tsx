@@ -12,6 +12,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import { formatQty } from '../../../utils/quantity';
 import type { PartRequestItem } from '../../../types';
+import { lineName } from '../../../utils/stockCondition';
 
 const STATUSES = ['', 'REQUESTED', 'APPROVED', 'ISSUED', 'REJECTED', 'CANCELLED'];
 
@@ -56,7 +57,7 @@ export function PartRequestListPage() {
 
   const lines = (r: PartRequestItem) =>
     (r.items ?? []).map((i) => ({
-      name: i.product?.name ?? i.description,
+      name: lineName(i.product?.name ?? i.description, i.stock_condition),
       qty: r.status === 'REQUESTED' || i.quantity_approved === null ? i.quantity_requested : i.quantity_approved,
     }));
 

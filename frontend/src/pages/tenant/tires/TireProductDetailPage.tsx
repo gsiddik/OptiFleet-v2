@@ -110,7 +110,15 @@ export function TireProductDetailPage() {
           />
         </InventoryCard>
       </div>
-      <InventoryCard title="Used Stocks" count={product.inventory.used_qty}>
+      <InventoryCard
+        title="Used Stocks"
+        count={product.inventory.used_qty}
+        action={
+          <span data-reusable-count style={{ fontSize: 12, color: '#166534' }} title="Only REUSE tires are available for installation; REMOVED, HOLD, REPAIR and RETREAD are not.">
+            {product.inventory.reusable_qty} reusable (REUSE)
+          </span>
+        }
+      >
         <PagedInventory
           productId={productId}
           reloadKey={reloadKey}

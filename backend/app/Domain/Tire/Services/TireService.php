@@ -15,7 +15,9 @@ use App\Domain\Tire\Models\TireScoringResult;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfiguration;
 use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
+use App\Domain\Tire\Support\TireStatus;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\WorkOrder\Models\WorkOrder;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -29,7 +31,10 @@ use Illuminate\Support\Facades\DB;
  */
 class TireService
 {
-    public function __construct(private readonly TireDispositionEligibilityService $eligibility) {}
+    public function __construct(
+        private readonly TireDispositionEligibilityService $eligibility,
+        private readonly UsedTireStockService $usedStock,
+    ) {}
 
     /**
      * G-23: installedAt/installedAtSource/baseline* parameters exist so a tire
@@ -51,8 +56,8 @@ class TireService
         ?float $baselineTreadDepthMm = null,
         ?string $baselineCondition = null,
     ): TireInstallation {
-        if (! in_array($tire->current_status, ['IN_STOCK', 'RESERVED'], true)) {
-            throw new TireException("Tire is {$tire->current_status} and cannot be installed.");
+        if (! in_array($tire->current_status, TireStatus::AVAILABLE_FOR_INSTALLATION, true)) {
+            throw new TireException("Tire is {$tire->current_status} and cannot be installed (only new stock or REUSE tires).");
         }
         if (! in_array($installedAtSource, ['KNOWN', 'ESTIMATED', 'UNKNOWN'], true)) {
             throw new TireException('installedAtSource must be KNOWN, ESTIMATED, or UNKNOWN.');
@@ -85,6 +90,8 @@ class TireService
                 throw new TireException('This tire is already actively installed, or this wheel position already has an active tire.');
             }
 
+            // A REUSE tire still counted in used stock (installed without a Part Request issue) leaves it.
+            $this->usedStock->release($tire, 'INSTALL', $workOrderId ? WorkOrder::class : null, $workOrderId, $userId);
             $tire->update([
                 'current_status' => 'INSTALLED',
                 'current_vehicle_id' => $vehicle->id,
@@ -610,50 +617,13 @@ class TireService
             ]);
 
             $tire = Tire::query()->lockForUpdate()->findOrFail($locked->tire_id);
+            // A repaired / retreaded tire is inspected again before it can be reused: it goes back to
+            // REMOVED (Used Tire Management → Removed); QUARANTINE is the HOLD status.
             $tire->update(['current_status' => match ($disposition) {
-                'RETURN_TO_SERVICE' => 'IN_STOCK',
-                'SCRAP' => 'SCRAPPED',
-                'QUARANTINE' => 'QUARANTINED',
+                'RETURN_TO_SERVICE' => TireStatus::REMOVED,
+                'SCRAP' => TireStatus::SCRAPPED,
+                'QUARANTINE' => TireStatus::HOLD,
             }]);
-
-            return $locked->fresh();
-        });
-    }
-
-    /**
-     * Used Tire Management → Removed → "Inspect & return to stock" (owner decision): a tire taken
-     * off a vehicle (REMOVED) is inspected before it can be reused. The measured tread depth is
-     * always recorded as a tire inspection. PASS returns the tire to stock as a Used tire in the
-     * chosen warehouse (IN_STOCK — it is then offered as "Reuse" in Tire Operations); FAIL sends
-     * it to retread, repair or scrap, where the existing flows continue.
-     *
-     * @param  array{tread_depth_mm: string|float, condition?: ?string, result: string, warehouse_id?: ?string, fail_disposition?: ?string, notes?: ?string}  $data
-     */
-    public function inspectRemoved(Tire $tire, array $data, ?string $userId): Tire
-    {
-        return DB::transaction(function () use ($tire, $data, $userId) {
-            $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
-            if ($locked->current_status !== 'REMOVED') {
-                throw new TireException("Only a removed tire can be inspected here; this tire is {$locked->current_status}.");
-            }
-            $pass = $data['result'] === 'PASS';
-            $outcome = $pass ? 'PASS — returned to stock as Used' : 'FAIL — '.strtolower((string) $data['fail_disposition']);
-
-            TireInspection::query()->create([
-                'tenant_id' => $locked->tenant_id,
-                'tire_id' => $locked->id,
-                'tread_depth_mm' => $data['tread_depth_mm'],
-                'condition' => $data['condition'] ?? null,
-                'recommendation' => trim('Used Tire Management inspection: '.$outcome.'. '.($data['notes'] ?? '')),
-                'inspected_by' => $userId,
-                'inspected_at' => now(),
-            ]);
-
-            $locked->update(match (true) {
-                $pass => ['current_status' => 'IN_STOCK', 'current_warehouse_id' => $data['warehouse_id']],
-                $data['fail_disposition'] === 'SCRAP' => ['current_status' => 'SCRAPPED', 'current_warehouse_id' => null],
-                default => ['current_status' => $data['fail_disposition'], 'current_warehouse_id' => null], // RETREAD / REPAIR
-            });
 
             return $locked->fresh();
         });
@@ -664,8 +634,15 @@ class TireService
         if (in_array($tire->current_status, ['INSTALLED', 'IN_USE'], true)) {
             throw new TireException('Remove the tire from its vehicle before scrapping it.');
         }
+        if ($tire->current_status === TireStatus::REMOVED) {
+            // A removed tire is dispositioned by its Used Tire Management inspection (SCRAP is one outcome).
+            throw new TireException('Inspect this removed tire in Used Tire Management first; Scrap is one of the inspection outcomes.');
+        }
 
-        $tire->update(['current_status' => 'SCRAPPED', 'current_warehouse_id' => null]);
+        DB::transaction(function () use ($tire, $reason) {
+            $this->usedStock->release($tire, 'SCRAP', null, null, null, $reason);
+            $tire->update(['current_status' => 'SCRAPPED', 'current_warehouse_id' => null]);
+        });
 
         return $tire->fresh();
     }
@@ -723,6 +700,7 @@ class TireService
                 'sold_at' => now(),
             ]);
 
+            $this->usedStock->release($locked, 'SALE', TireSale::class, $sale->id, $userId);
             $locked->update(['current_status' => 'SOLD', 'current_vehicle_id' => null, 'current_position' => null, 'current_warehouse_id' => null]);
 
             return $sale->load('tire');

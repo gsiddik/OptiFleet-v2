@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Domain\ProductMaster\Models\ProductCategory;
 use App\Domain\ProductMaster\Models\StorageRequirement;
+use App\Domain\Tire\Models\ProductTireSpec;
 use App\Domain\Tire\Models\TireLoadIndex;
 use App\Domain\Tire\Models\TirePlyRating;
 use App\Domain\Tire\Models\TireSpeedRating;
@@ -339,6 +340,35 @@ class ProductDynamicSpecificationTest extends TestCase
         $sparePartId = $this->makeProduct($tenant, null, null, ['product_type' => 'SPARE_PART'])->id;
         $this->postJson('/api/v1/app/tires', ['product_id' => $sparePartId, 'serial_number' => 'SN-NOT-A-TIRE'], $headers)
             ->assertStatus(422)->assertJsonValidationErrors(['product_id']);
+    }
+
+    /** OTR / Heavy Equipment is the third tire category (used-tire inspection rules are per category). */
+    public function test_tire_otr_category_is_accepted_with_optional_dual_load_and_ply(): void
+    {
+        [$tenant] = $this->setUpTenant();
+        $this->grantModule($tenant, 'TIRE');
+        [, $token] = $this->makeTenantUser($tenant, ['product.view', 'product.create', 'tire.view', 'tire.manage']);
+        $headers = $this->authHeaders($token);
+        $refs = $this->tireRefs();
+
+        $productId = $this->postJson('/api/v1/app/products', $this->base('TIRE', [
+            'brand' => 'Titan',
+            'spec' => [
+                'vehicle_group' => 'OTR', 'pattern_name' => 'Loader L3', 'width_mm' => 445, 'aspect_ratio_percent' => 95,
+                'construction_type' => 'BIAS', 'rim_diameter_inch' => 25, 'tire_type' => 'TUBELESS',
+                'single_load_index_id' => $refs['single']->id, 'speed_rating_id' => $refs['speed']->id,
+            ],
+        ]), $headers)->assertStatus(201)->json('data.id');
+        $this->assertSame('OTR', ProductTireSpec::query()->where('product_id', $productId)->value('vehicle_group'));
+
+        $this->postJson('/api/v1/app/products', $this->base('TIRE', [
+            'brand' => 'Titan',
+            'spec' => [
+                'vehicle_group' => 'MOTORCYCLE', 'pattern_name' => 'Loader L3', 'width_mm' => 445, 'aspect_ratio_percent' => 95,
+                'construction_type' => 'BIAS', 'rim_diameter_inch' => 25, 'tire_type' => 'TUBELESS',
+                'single_load_index_id' => $refs['single']->id, 'speed_rating_id' => $refs['speed']->id,
+            ],
+        ]), $headers)->assertStatus(422)->assertJsonValidationErrors('vehicle_group');
     }
 
     public function test_tire_truck_bus_requires_dual_load_index_and_ply_rating(): void

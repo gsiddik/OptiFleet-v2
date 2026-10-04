@@ -4,6 +4,7 @@ import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { Pagination } from '../../../components/Pagination';
 import { UsedSparepartsTab } from './UsedSparepartsTab';
+import { UsedTiresTab } from './UsedTiresTab';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
@@ -23,6 +24,8 @@ const ITEM_GROUPS = [
   { value: 'TOOLS_EQUIPMENT', label: 'Tools & Equipment', hint: 'Tools, Equipment' },
   // Used parts from Used Sparepart Processing — kept apart so used and new stock never mix.
   { value: 'USED_SPAREPARTS', label: 'Used Spareparts', hint: 'Reusable, Quarantine and Repair-pending used parts' },
+  // REUSE tires: a separate used tire quantity, issued through Part Requests (Used lines).
+  { value: 'USED_TIRES', label: 'Used Tires', hint: 'REUSE tires per warehouse, issued through Part Requests' },
 ] as const;
 
 export function WarehouseStockListPage() {
@@ -37,7 +40,7 @@ export function WarehouseStockListPage() {
   const [thresholdsTarget, setThresholdsTarget] = useState<WarehouseStockItem | null>(null);
   const { data, meta, loading, error } = useApiList<WarehouseStockItem>(
     '/app/inventory',
-    { item_group: itemGroup === 'USED_SPAREPARTS' ? 'PARTS_SUPPLIES' : itemGroup, search: search || undefined, reorder_status: reorderStatus || undefined, page },
+    { item_group: itemGroup === 'USED_SPAREPARTS' || itemGroup === 'USED_TIRES' ? 'PARTS_SUPPLIES' : itemGroup, search: search || undefined, reorder_status: reorderStatus || undefined, page },
     reloadKey,
   );
 
@@ -106,6 +109,8 @@ export function WarehouseStockListPage() {
       </div>
       {itemGroup === 'USED_SPAREPARTS' ? (
         <UsedSparepartsTab />
+      ) : itemGroup === 'USED_TIRES' ? (
+        <UsedTiresTab />
       ) : (
         <>
           <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>

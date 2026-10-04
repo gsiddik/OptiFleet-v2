@@ -10,6 +10,12 @@ const COLORS: Record<string, string> = {
   ARCHIVED: '#6b7280',
   QUARANTINED: '#b91c1c',
   REPAIR: '#a16207',
+  // Used tire lifecycle (only REUSE is available stock)
+  REMOVED: '#7c3aed',
+  REUSE: '#15803d',
+  HOLD: '#b45309',
+  RETREAD: '#0f766e',
+  SCRAPPED: '#6b7280',
   SOLD: '#6b7280',
   SUBMITTED: '#1d4ed8',
   UNDER_REVIEW: '#7c3aed',
@@ -37,6 +43,9 @@ const COLORS: Record<string, string> = {
   COMPLETED: '#15803d',
 };
 
+/** Stored value → label (SCRAPPED is kept in the database for history; the lifecycle calls it SCRAP). */
+const LABELS: Record<string, string> = { SCRAPPED: 'SCRAP' };
+
 export function StatusBadge({ status }: { status: string }) {
   const color = COLORS[status] ?? '#374151';
   return (
@@ -53,7 +62,7 @@ export function StatusBadge({ status }: { status: string }) {
         letterSpacing: 0.3,
       }}
     >
-      {status}
+      {LABELS[status] ?? status}
     </span>
   );
 }

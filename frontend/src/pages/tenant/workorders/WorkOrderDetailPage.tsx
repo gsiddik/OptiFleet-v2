@@ -33,6 +33,7 @@ import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
 import { SearchableSelect, type SearchableOption } from '../../../components/SearchableSelect';
 import { WorkOrderTireOperationTab } from '../tires/operations/WorkOrderTireOperationTab';
 import type { TireOperationDetail } from '../tires/operations/tireOperationTypes';
+import { lineName } from '../../../utils/stockCondition';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
@@ -1567,7 +1568,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
           {partRequests.map((r) => (
             <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
               <span>
-                {(r.items ?? []).map((i) => `${i.product?.name ?? i.description} × ${formatQty(i.quantity_approved ?? i.quantity_requested)}`).join(', ')}
+                {(r.items ?? []).map((i) => `${lineName(i.product?.name ?? i.description, i.stock_condition)} × ${formatQty(i.quantity_approved ?? i.quantity_requested)}`).join(', ')}
                 {r.requested_at && <span style={{ color: '#9ca3af', fontSize: 12 }}> · {new Date(r.requested_at).toLocaleString()}</span>}
               </span>
               <StatusBadge status={r.status} />
@@ -1583,7 +1584,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <StatusBadge status={p.status} />
-              <strong>{p.product?.name ?? p.description}</strong>
+              <strong>{lineName(p.product?.name ?? p.description, p.stock_condition)}</strong>
               <span>— approved {formatQty(p.planned_quantity)}</span>
               {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
             </span>
@@ -1681,7 +1682,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
             {/* SYSTEM_INFORMATION */}
             <div style={{ fontSize: 13, marginBottom: 12 }}>
               <div>
-                <strong>{consumingPart.product?.name ?? consumingPart.description}</strong>
+                <strong>{lineName(consumingPart.product?.name ?? consumingPart.description, consumingPart.stock_condition)}</strong>
               </div>
               <div style={{ color: '#6b7280' }}>Issued Qty: {formatQty(consumingPart.issued_quantity)}</div>
             </div>

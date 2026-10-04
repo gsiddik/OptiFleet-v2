@@ -42,6 +42,7 @@ export function TireListPage() {
     { key: 'rim', header: 'Rim Diameter', render: (p) => (p.rim_diameter_inch != null ? `${p.rim_diameter_inch}"` : '—') },
     { key: 'new', header: 'New Stock Qty', render: (p) => qty(p.new_qty) },
     { key: 'used', header: 'Used Stock Qty', render: (p) => qty(p.used_qty) },
+    { key: 'reusable', header: 'Reusable (REUSE)', render: (p) => qty(p.reusable_qty) },
     { key: 'installed', header: 'Installed Stock Qty', render: (p) => qty(p.installed_qty) },
   ];
 

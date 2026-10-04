@@ -793,6 +793,7 @@ export interface WorkOrderPlannedPartItem {
   description: string;
   quantity: string;
   notes: string | null;
+  stock_condition?: 'NEW' | 'USED';
   status: 'PLANNED' | 'REQUESTED' | 'RESERVED' | 'PARTIALLY_RESERVED' | 'ISSUED' | 'PARTIALLY_ISSUED' | 'CONSUMED' | 'RETURNED' | 'CANCELLED';
   planned_quantity: string;
   reserved_quantity: string;
@@ -871,6 +872,8 @@ export interface PartRequestLineItem {
   quantity_requested: string;
   quantity_approved: string | null;
   planned_part_id: string | null;
+  /** NEW = warehouse stock, USED = used tire quantity (REUSE tires of a Tire Operation). */
+  stock_condition?: 'NEW' | 'USED';
   product?: ProductItem;
   planned_part?: WorkOrderPlannedPartItem;
 }
@@ -1401,7 +1404,7 @@ export interface ProductRimSpecItem {
 }
 
 export interface ProductTireSpecItem {
-  vehicle_group: 'CAR' | 'TRUCK_BUS';
+  vehicle_group: 'CAR' | 'TRUCK_BUS' | 'OTR';
   pattern_name: string;
   width_mm: number;
   aspect_ratio_percent: number;
@@ -2024,6 +2027,8 @@ export interface TireProductListItem {
   new_qty: number;
   installed_qty: number;
   used_qty: number;
+  /** used tires available for installation (status REUSE) */
+  reusable_qty: number;
 }
 
 export type TireInventoryCategory = 'NEW' | 'INSTALLED' | 'USED';
@@ -2032,6 +2037,8 @@ export interface TireInventorySummary {
   new_qty: number;
   installed_qty: number;
   used_qty: number;
+  /** used tires available for installation (status REUSE); the other used statuses are not available */
+  reusable_qty: number;
 }
 
 /** One physical tire in a Tire Detail inventory table; usage fields are present for USED only. */
@@ -2092,7 +2099,7 @@ export interface TireItem {
   purchase_cost: string | null;
   warranty_months: number | null;
   warranty_km: number | null;
-  current_status: 'IN_STOCK' | 'RESERVED' | 'INSTALLED' | 'IN_USE' | 'REMOVED' | 'UNDER_INSPECTION' | 'RETREAD' | 'REPAIR' | 'QUARANTINED' | 'SCRAPPED' | 'SOLD' | 'LOST';
+  current_status: 'IN_STOCK' | 'RESERVED' | 'INSTALLED' | 'IN_USE' | 'REMOVED' | 'REUSE' | 'HOLD' | 'UNDER_INSPECTION' | 'RETREAD' | 'REPAIR' | 'QUARANTINED' | 'SCRAPPED' | 'SOLD' | 'LOST';
   current_vehicle_id: string | null;
   current_position: string | null;
   current_warehouse_id: string | null;

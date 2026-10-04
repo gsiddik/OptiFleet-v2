@@ -41,7 +41,7 @@ class TireActivityTest extends TestCase
         $this->travel(1)->minutes();
         $this->postJson("/api/v1/app/tires/{$tire->id}/remove", ['removal_reason' => 'worn', 'disposition' => 'RETREAD', 'odometer' => 3000], $headers)->assertSuccessful();
         $this->travel(1)->minutes();
-        $scrapped = $this->tire($tenant, $product, 'SN-ACT-SCRAP', 'REMOVED');
+        $scrapped = $this->tire($tenant, $product, 'SN-ACT-SCRAP', 'HOLD');
         $this->postJson("/api/v1/app/tires/{$scrapped->id}/scrap", ['reason' => 'damaged'], $headers)->assertSuccessful();
 
         $feed = $this->getJson('/api/v1/app/tire-activity', $headers)->assertOk()->json('data');

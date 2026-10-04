@@ -171,7 +171,7 @@ function TireSpecification({ spec }: { spec: NonNullable<ProductItem['tire_spec'
       {item('Tire Size', spec.tire_size_computed)}
       {item('Rim Diameter', spec.rim_diameter_inch != null ? `${spec.rim_diameter_inch}"` : null)}
       {item('Pattern', spec.pattern_name)}
-      {item('Vehicle Group', spec.vehicle_group === 'TRUCK_BUS' ? 'Truck & Bus' : 'Car')}
+      {item('Vehicle Group', spec.vehicle_group === 'TRUCK_BUS' ? 'Truck & Bus' : spec.vehicle_group === 'OTR' ? 'OTR / Heavy Equipment' : 'Car')}
       {item('Construction', spec.construction_type)}
       {item('Tire Type', spec.tire_type)}
       {item('Max Load (single)', spec.single_max_load_kg_computed != null ? `${spec.single_max_load_kg_computed} kg` : null)}

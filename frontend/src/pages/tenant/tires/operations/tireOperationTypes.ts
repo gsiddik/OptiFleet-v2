@@ -1,5 +1,7 @@
 /** API contract of /app/tire-operations (TireOperationController / TireOperationService::present, ::list, ::context). */
 
+import type { ApplicationLimits } from '../inspection/inspectionTypes';
+
 export type TireOperationType = 'REPLACEMENT' | 'ROTATION' | 'INSPECTION';
 export type TireOperationStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
@@ -50,6 +52,10 @@ export interface ReplacementCandidate {
   serial_number: string;
   current_status: string;
   source: 'NEW_STOCK' | 'REUSE';
+  /** Warehouse holding the serial (a REUSE tire is issued from its used tire quantity). */
+  warehouse?: string | null;
+  /** From the inspection that returned a REUSE tire to stock (warning only, not enforced). */
+  usage_restrictions?: ApplicationLimits | null;
   manufacture_date_code: string | null;
 }
 
@@ -87,6 +93,8 @@ export interface TireOperationDetail {
     tire: TireCard | null;
     replacement_tire: { id: string; serial_number: string; current_status: string; product: { id: string; name: string; sku: string | null } | null } | null;
   }[];
+  /** Non-blocking usage-restriction warnings of REUSE replacements. */
+  warnings?: string[];
   can_edit: boolean;
   can_cancel: boolean;
 }

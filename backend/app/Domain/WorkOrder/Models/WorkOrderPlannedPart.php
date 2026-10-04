@@ -19,7 +19,7 @@ class WorkOrderPlannedPart extends Model
     protected $fillable = [
         'tenant_id', 'work_order_id', 'maintenance_job_id', 'product_id', 'warehouse_id', 'product_reference', 'description',
         'quantity', 'status', 'planned_quantity', 'reserved_quantity', 'issued_quantity', 'consumed_quantity',
-        'returned_quantity', 'unit_cost_at_issue', 'total_cost', 'notes',
+        'returned_quantity', 'unit_cost_at_issue', 'total_cost', 'notes', 'stock_condition',
     ];
 
     /**

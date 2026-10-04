@@ -930,7 +930,9 @@ export function TireFields({
   setReferenceTreadDepthMm: (v: string) => void;
 }) {
   const vehicleGroup = (spec.vehicle_group as string) ?? 'CAR';
-  const isTruckBus = vehicleGroup === 'TRUCK_BUS';
+  // Truck & Bus and OTR / Heavy Equipment share the heavy-tire fields; required only for Truck & Bus.
+  const isTruckBus = vehicleGroup === 'TRUCK_BUS' || vehicleGroup === 'OTR';
+  const heavyRequired = vehicleGroup === 'TRUCK_BUS';
 
   return (
     <>
@@ -938,6 +940,7 @@ export function TireFields({
         <select value={vehicleGroup} onChange={(e) => setSpecField('vehicle_group', e.target.value)} style={inputStyle}>
           <option value="CAR">Car</option>
           <option value="TRUCK_BUS">Truck & Bus</option>
+          <option value="OTR">OTR / Heavy Equipment</option>
         </select>
       </FormField>
       <FormField label="Product Name / Pattern" errors={errors['spec.pattern_name']} required>
@@ -1037,7 +1040,7 @@ export function TireFields({
 
       {isTruckBus && (
         <>
-          <FormField label="Dual Load Index" errors={errors['spec.dual_load_index_id']} required>
+          <FormField label="Dual Load Index" errors={errors['spec.dual_load_index_id']} required={heavyRequired}>
             <select value={(spec.dual_load_index_id as string) ?? ''} onChange={(e) => setSpecField('dual_load_index_id', e.target.value)} style={inputStyle}>
               <option value="">Select…</option>
               {loadIndices.map((l) => (
@@ -1047,7 +1050,7 @@ export function TireFields({
               ))}
             </select>
           </FormField>
-          <FormField label="Ply Rating" errors={errors['spec.ply_rating_id']} required>
+          <FormField label="Ply Rating" errors={errors['spec.ply_rating_id']} required={heavyRequired}>
             <select value={(spec.ply_rating_id as string) ?? ''} onChange={(e) => setSpecField('ply_rating_id', e.target.value)} style={inputStyle}>
               <option value="">Select…</option>
               {plyRatings.map((p) => (

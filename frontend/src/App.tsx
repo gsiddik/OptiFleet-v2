@@ -117,6 +117,8 @@ import { TireOperationFormPage } from './pages/tenant/tires/operations/TireOpera
 import { UsedTireManagementPage } from './pages/tenant/tires/operations/UsedTireManagementPage';
 import { TireHistoryPage } from './pages/tenant/tires/operations/TireHistoryPage';
 import { TIRE_OPERATION_PERMISSIONS, USED_TIRE_PERMISSIONS } from './layouts/tenantNav';
+import { UsedTireInspectionPage } from './pages/tenant/tires/inspection/UsedTireInspectionPage';
+import { TireRuleProfilesPage } from './pages/tenant/tires/inspection/TireRuleProfilesPage';
 import { WheelConfigurationListPage } from './pages/tenant/tires/WheelConfigurationListPage';
 import { AddWheelConfigurationPage } from './pages/tenant/tires/wheel-configuration/AddWheelConfigurationPage';
 import { WheelConfigurationDetailPage } from './pages/tenant/tires/wheel-configuration/WheelConfigurationDetailPage';
@@ -800,6 +802,8 @@ export default function App() {
             <Route path="tires/products" element={<Navigate to="/app/tires" replace />} />
             <Route path="tires/products/:productId" element={<RequirePermission permission="tire.view"><TireProductDetailPage /></RequirePermission>} />
             <Route path="tires/:id" element={<RequirePermission permission="tire.view"><TireDetailPage /></RequirePermission>} />
+            <Route path="tires/:id/inspection" element={<RequirePermission permission="tire.view"><UsedTireInspectionPage /></RequirePermission>} />
+            <Route path="tire-inspection-rules" element={<RequirePermission permission="tire.view"><TireRuleProfilesPage /></RequirePermission>} />
             <Route path="tire-operations" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationsLandingPage /></RequirePermission>} />
             <Route path="tire-operations/new" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationFormPage /></RequirePermission>} />
             <Route path="tire-operations/:id/edit" element={<RequirePermission permission={TIRE_OPERATION_PERMISSIONS}><TireOperationFormPage /></RequirePermission>} />

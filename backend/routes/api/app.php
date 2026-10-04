@@ -91,6 +91,8 @@ use App\Http\Controllers\Api\Tenant\WheelConfigurationMasterController;
 use App\Http\Controllers\Api\Tenant\TireActivityController;
 use App\Http\Controllers\Api\Tenant\TireOperationController;
 use App\Http\Controllers\Api\Tenant\TireProductController;
+use App\Http\Controllers\Api\Tenant\TireRuleProfileController;
+use App\Http\Controllers\Api\Tenant\TireUsedInspectionController;
 use App\Http\Controllers\Api\Tenant\VehicleWheelConfigurationMappingController;
 use App\Http\Controllers\Api\Tenant\VehicleWheelConfigurationController;
 use App\Http\Controllers\Api\Tenant\WorkerController;
@@ -539,6 +541,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/inventory/adjust', [WarehouseStockController::class, 'adjust'])->middleware('permission:inventory.adjust');
             Route::post('/inventory/scrap', [WarehouseStockController::class, 'scrap'])->middleware('permission:inventory.scrap');
             Route::get('/inventory/used-spareparts', [WarehouseStockController::class, 'usedSpareparts'])->middleware('permission:inventory.view');
+            Route::get('/inventory/used-tires', [WarehouseStockController::class, 'usedTires'])->middleware('permission:inventory.view');
             Route::get('/inventory/{warehouseStock}', [WarehouseStockController::class, 'show'])->middleware('permission:inventory.view');
             Route::put('/inventory/{warehouseStock}/thresholds', [WarehouseStockController::class, 'updateThresholds'])->middleware('permission:inventory.adjust');
 
@@ -714,6 +717,20 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/tire-products/{tireProduct}/import/preview', [TireProductController::class, 'importPreview'])->middleware('permission:tire.manage');
             Route::post('/tire-products/{tireProduct}/import', [TireProductController::class, 'import'])->middleware('permission:tire.manage');
             Route::get('/tires/{tire}', [TireController::class, 'show'])->middleware('permission:tire.view');
+            Route::get('/tires/{tire}/history', [TireController::class, 'history'])->middleware('permission:tire.view');
+            // Used Tire Management inspection (REMOVED / HOLD → REUSE / REPAIR / RETREAD / HOLD / SCRAP).
+            Route::get('/tires/{tire}/used-inspection/context', [TireUsedInspectionController::class, 'context'])->middleware('permission:tire.view');
+            Route::post('/tires/{tire}/used-inspection/evaluate', [TireUsedInspectionController::class, 'evaluate'])->middleware('permission:tire.inspect');
+            Route::post('/tires/{tire}/used-inspections', [TireUsedInspectionController::class, 'store'])->middleware('permission:tire.inspect');
+            Route::get('/tire-used-inspections/{tireUsedInspection}', [TireUsedInspectionController::class, 'show'])->middleware('permission:tire.view');
+            Route::post('/tire-used-inspections/{tireUsedInspection}/approve', [TireUsedInspectionController::class, 'approve'])->middleware('permission:tire_used_inspection.approve');
+            Route::post('/tire-used-inspections/{tireUsedInspection}/cancel', [TireUsedInspectionController::class, 'cancel'])->middleware('permission:tire.inspect');
+            Route::post('/tire-used-inspections/{tireUsedInspection}/evidence', [TireUsedInspectionController::class, 'storeEvidence'])->middleware('permission:tire.inspect');
+            Route::get('/tire-used-inspections/{tireUsedInspection}/evidence/{evidence}', [TireUsedInspectionController::class, 'showEvidence'])->middleware('permission:tire.view');
+            Route::get('/tire-rule-profiles', [TireRuleProfileController::class, 'index'])->middleware('permission:tire.view');
+            Route::post('/tire-rule-profiles', [TireRuleProfileController::class, 'store'])->middleware('permission:tire_rule_profile.manage');
+            Route::put('/tire-rule-profiles/{tireRuleProfile}', [TireRuleProfileController::class, 'update'])->middleware('permission:tire_rule_profile.manage');
+            Route::post('/tire-rule-profiles/{tireRuleProfile}/deactivate', [TireRuleProfileController::class, 'deactivate'])->middleware('permission:tire_rule_profile.manage');
             Route::post('/tires/{tire}/install', [TireController::class, 'install'])->middleware('permission:tire.install');
             Route::post('/tires/{tire}/rotate', [TireController::class, 'rotate'])->middleware('permission:tire.rotate');
             Route::post('/tires/{tire}/swap-positions', [TireController::class, 'swapPositions'])->middleware('permission:tire.rotate');
@@ -731,7 +748,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/tires/{tire}/repairs/{repair}/final-inspect', [TireController::class, 'finalInspectRepair'])->middleware('permission:tire_repair.inspect');
             Route::post('/tires/{tire}/repairs/{repair}/approve', [TireController::class, 'approveRepair'])->middleware('permission:tire_repair.approve');
             Route::post('/tires/{tire}/scrap', [TireController::class, 'scrap'])->middleware('permission:tire.scrap');
-            Route::post('/tires/{tire}/inspect-removed', [TireController::class, 'inspectRemoved'])->middleware('permission:tire.inspect');
             // Phase F: calculate/finalize are distinct permissions (maker-checker on the score itself).
             Route::post('/tires/{tire}/scoring', [TireController::class, 'calculateScoring'])->middleware('permission:tire_scoring.calculate');
             Route::post('/tires/{tire}/scoring/{scoringResult}/finalize', [TireController::class, 'finalizeScoring'])->middleware('permission:tire_scoring.finalize');

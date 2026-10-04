@@ -24,7 +24,7 @@ export interface NavGroup {
 
 /** Tire Operations tabs: Installation, Rotation, Inspection. */
 export const TIRE_OPERATION_PERMISSIONS = ['tire.install', 'tire.rotate', 'tire.inspect'];
-/** Used Tire Management tabs: Retread (any retread or repair step — repair is a kind of retread) and Scrap. */
+/** Used Tire Management tabs: Removed (inspect / approve), Retread (any retread or repair step — repair is a kind of retread) and Scrap. */
 export const RETREAD_PERMISSIONS = [
   'tire_retread.send',
   'tire_retread.receive',
@@ -35,7 +35,8 @@ export const RETREAD_PERMISSIONS = [
   'tire_repair.inspect',
   'tire_repair.approve',
 ];
-export const USED_TIRE_PERMISSIONS = [...RETREAD_PERMISSIONS, 'tire.scrap'];
+export const USED_TIRE_INSPECTION_PERMISSIONS = ['tire.inspect', 'tire_used_inspection.approve'];
+export const USED_TIRE_PERMISSIONS = [...USED_TIRE_INSPECTION_PERMISSIONS, ...RETREAD_PERMISSIONS, 'tire.scrap'];
 
 export const NAV_GROUPS: NavGroup[] = [
   { label: null, icon: 'dashboard', items: [{ to: '/app/dashboard', label: 'Dashboard', permission: null, module: null }] },
@@ -128,6 +129,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/wheel-configurations', label: 'Wheel Configuration', permission: 'tire.view', module: 'TIRE' },
       { to: '/app/tire-operations', label: 'Tire Operations', permission: TIRE_OPERATION_PERMISSIONS, module: 'TIRE' },
       { to: '/app/used-tires', label: 'Used Tire Management', permission: USED_TIRE_PERMISSIONS, module: 'TIRE' },
+      { to: '/app/tire-inspection-rules', label: 'Inspection Rules', permission: ['tire_rule_profile.manage', ...USED_TIRE_INSPECTION_PERMISSIONS], module: 'TIRE' },
       { to: '/app/tire-history', label: 'History', permission: 'tire.view', module: 'TIRE' },
     ],
   },

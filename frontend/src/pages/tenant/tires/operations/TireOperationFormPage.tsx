@@ -24,6 +24,8 @@ import {
   type TireOperationPayload,
   type TireOperationType,
 } from './tireOperationTypes';
+import { UsageRestrictionWarnings } from './UsageRestrictionWarnings';
+import { outsideAllowedPositions, restrictionText } from './usageRestrictions';
 
 interface Pair {
   from: string;
@@ -553,12 +555,30 @@ function OperationSection({
                         .filter((c) => c.id === replacements[code] || !chosenSerials.includes(c.id))
                         .map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.serial_number} — {c.source === 'NEW_STOCK' ? 'New Stock' : 'Reuse'}
+                            {c.serial_number} — {c.source === 'NEW_STOCK' ? 'New Stock' : `Reuse${c.warehouse ? ` · ${c.warehouse}` : ''}`}
                           </option>
                         ))}
                     </select>
                   </FormField>
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Only serials of {tire.product?.name ?? 'the same tire product'} (New Stock, or Reuse — used tires back in stock after inspection in Used Tire Management) are listed.</p>
+                  {(() => {
+                    const limits = options?.find((c) => c.id === replacements[code])?.usage_restrictions;
+                    if (!limits) return null;
+                    return (
+                      <div style={{ marginBottom: 8 }}>
+                        <p style={{ fontSize: 12, color: '#374151', margin: '0 0 6px' }}>
+                          Usage restrictions (from its inspection): {restrictionText(limits)}
+                        </p>
+                        {outsideAllowedPositions(limits, code) && (
+                          <div data-usage-warning={code}>
+                            <UsageRestrictionWarnings
+                              warnings={[`This Reuse tire is restricted to position(s) ${(limits.positions ?? []).join(', ')}, not ${code}. You can still save — check the restriction before fitting.`]}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Only serials of {tire.product?.name ?? 'the same tire product'} (New Stock, or Reuse — used tires back in stock after inspection in Used Tire Management) are listed. Both are requested and issued through the Work Order's Part Request (Reuse as a Used line).</p>
                 </section>
               </>
             )}

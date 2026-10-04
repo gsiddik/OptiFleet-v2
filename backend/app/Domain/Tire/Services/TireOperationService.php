@@ -3,6 +3,7 @@
 namespace App\Domain\Tire\Services;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Tire\Inspection\UsedTireUsageRestrictions;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInstallation;
 use App\Domain\Tire\Models\TireOperation;
@@ -11,6 +12,7 @@ use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationVersion;
 use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
 use App\Domain\Tire\Support\TireOperationStatus;
+use App\Domain\Tire\Support\TireStatus;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
@@ -56,6 +58,7 @@ class TireOperationService
         private readonly TireFactsService $facts,
         private readonly DataScopeService $scope,
         private readonly VehicleTireRegistrationService $registrations,
+        private readonly UsedTireUsageRestrictions $restrictions,
     ) {}
 
     // ---------------------------------------------------------------- reads
@@ -141,26 +144,34 @@ class TireOperationService
     }
 
     /**
-     * Serials that may replace a tire of the given product: same Tire Product, in stock (IN_STOCK),
-     * not deleted, and not already held as "Replacing With" by another open operation. Source is
-     * REUSE for a tire that was installed before and is back in stock as Used, otherwise NEW_STOCK.
-     * A REMOVED tire is not offered: it first passes inspection in Used Tire Management.
+     * Serials that may replace a tire of the given product: same Tire Product, available for
+     * installation — new stock (IN_STOCK, source NEW_STOCK) or a used tire inspected as REUSE
+     * (source REUSE) — not deleted, and not already held as "Replacing With" by another open
+     * operation. REMOVED / HOLD / REPAIR / RETREAD tires are never offered.
      */
     public function replacementCandidates(string $tenantId, string $productId, ?string $operationId = null, ?string $search = null): array
     {
-        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)->where('current_status', 'IN_STOCK')
+        $tires = Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)
+            ->where(fn ($q) => $q->where('current_status', 'IN_STOCK')
+                // REUSE is issued from its warehouse's used tire quantity, so it must be in a warehouse.
+                ->orWhere(fn ($r) => $r->where('current_status', TireStatus::REUSE)->whereNotNull('current_warehouse_id')))
+            ->with('currentWarehouse:id,name')
             ->whereNotIn('id', $this->heldReplacementIds($operationId))
             ->when($search, fn ($q) => $q->where('serial_number', 'ilike', "%{$search}%"))
-            ->withExists('installations as was_installed')
             ->orderBy('serial_number')->limit(200)
-            ->get(['id', 'serial_number', 'current_status', 'product_id', 'manufacture_date_code', 'purchase_date'])
-            ->map(fn (Tire $t) => [
-                'id' => $t->id,
-                'serial_number' => $t->serial_number,
-                'current_status' => $t->current_status,
-                'source' => $t->was_installed ? 'REUSE' : 'NEW_STOCK',
-                'manufacture_date_code' => $t->manufacture_date_code,
-            ])->values()->all();
+            ->get(['id', 'serial_number', 'current_status', 'product_id', 'current_warehouse_id', 'manufacture_date_code', 'purchase_date']);
+        $restrictions = $this->restrictions->forTires($tires->where('current_status', TireStatus::REUSE)->pluck('id')->all());
+
+        return $tires->map(fn (Tire $t) => [
+            'id' => $t->id,
+            'serial_number' => $t->serial_number,
+            'current_status' => $t->current_status,
+            'source' => $t->current_status === TireStatus::REUSE ? 'REUSE' : 'NEW_STOCK',
+            'warehouse' => $t->currentWarehouse?->name,
+            // From the inspection that returned it to stock; a position outside them is warned.
+            'usage_restrictions' => $restrictions[$t->id] ?? null,
+            'manufacture_date_code' => $t->manufacture_date_code,
+        ])->values()->all();
     }
 
     public function list(string $tenantId, User $user, array $filters, int $perPage): LengthAwarePaginator
@@ -237,6 +248,11 @@ class TireOperationService
         $request = $this->activeRequest($operation);
         $status = TireOperationStatus::derive($operation->cancelled_at, $operation->workOrder?->status);
         $anyApplied = $items->contains(fn ($i) => $i->applied_at !== null);
+        $pendingReuse = $items->filter(fn ($i) => $i->applied_at === null && $i->replacementTire?->current_status === TireStatus::REUSE);
+        $restrictions = $this->restrictions->forTires($pendingReuse->pluck('replacement_tire_id')->all());
+        $warnings = $pendingReuse->map(fn ($i) => isset($restrictions[$i->replacement_tire_id])
+            ? $this->restrictions->positionWarning($i->replacementTire->serial_number, $restrictions[$i->replacement_tire_id], $i->position_code) : null)
+            ->filter()->values()->all();
         $at = CarbonImmutable::parse($operation->operated_at)->setTimezone($timezone);
 
         return [
@@ -271,6 +287,8 @@ class TireOperationService
                     'product' => $i->replacementTire->product?->only(['id', 'name', 'sku']),
                 ] : null,
             ])->values()->all(),
+            // Usage restrictions of REUSE replacements: warning only (not blocking) until positions are standardized.
+            'warnings' => $warnings,
             'can_edit' => TireOperationStatus::isOpen($status) && ! $anyApplied,
             'can_cancel' => TireOperationStatus::isOpen($status) && ! $anyApplied && ! in_array($request?->status, ['APPROVED', 'ISSUED'], true)
                 && ! in_array($operation->workOrder?->status, self::WO_NOT_CANCELLABLE, true),
@@ -403,7 +421,7 @@ class TireOperationService
     /**
      * Validates the input against the vehicle (locked by the caller) and returns the normalised plan.
      *
-     * @return array{type: string, mapping: VehicleWheelConfigurationMapping, operated_at: Carbon, odometer: string, items: list<array<string, mixed>>, lines: list<array{product_id: string, quantity_requested: int}>}
+     * @return array{type: string, mapping: VehicleWheelConfigurationMapping, operated_at: Carbon, odometer: string, items: list<array<string, mixed>>, lines: list<array{product_id: string, stock_condition: string, quantity_requested: int}>}
      */
     private function plan(Vehicle $vehicle, array $input, ?TireOperation $existing): array
     {
@@ -462,8 +480,12 @@ class TireOperationService
             $tire = $installations->get($code)->tire;
             $item = ['position_code' => $code, 'tire_id' => $tire->id, 'replacement_tire_id' => null, 'pair_number' => $detail['pair_number'] ?? null, 'tread_depth_mm' => null];
             if ($type === TireOperation::REPLACEMENT) {
-                $item['replacement_tire_id'] = $this->assertReplacement($vehicle->tenant_id, $tire, $detail['replacement_tire_id'] ?? null, $existing?->id, $code);
-                $lines[$tire->product_id] = ($lines[$tire->product_id] ?? 0) + 1;
+                $replacement = $this->assertReplacement($vehicle->tenant_id, $tire, $detail['replacement_tire_id'] ?? null, $existing?->id, $code);
+                $item['replacement_tire_id'] = $replacement->id;
+                // Every replacement is issued through the Part Request: new stock from the warehouse
+                // quantity, a REUSE tire from the used tire quantity (a USED line).
+                $condition = $replacement->current_status === TireStatus::REUSE ? 'USED' : 'NEW';
+                $lines["{$tire->product_id}|{$condition}"] = ($lines["{$tire->product_id}|{$condition}"] ?? 0) + 1;
             }
             if ($type === TireOperation::INSPECTION) {
                 $item['tread_depth_mm'] = $detail['tread_depth_mm'] ?? null;
@@ -483,7 +505,11 @@ class TireOperationService
             'operated_at' => $operatedAt,
             'odometer' => (string) $odometer,
             'items' => $items,
-            'lines' => collect($lines)->map(fn ($qty, $productId) => ['product_id' => $productId, 'quantity_requested' => $qty])->values()->all(),
+            'lines' => collect($lines)->map(function ($qty, $key) {
+                [$productId, $condition] = explode('|', $key);
+
+                return ['product_id' => $productId, 'stock_condition' => $condition, 'quantity_requested' => $qty];
+            })->values()->all(),
         ];
     }
 
@@ -528,14 +554,17 @@ class TireOperationService
         return $out;
     }
 
-    private function assertReplacement(string $tenantId, Tire $installed, ?string $replacementId, ?string $operationId, string $code): string
+    private function assertReplacement(string $tenantId, Tire $installed, ?string $replacementId, ?string $operationId, string $code): Tire
     {
         if (! $replacementId) {
             throw ValidationException::withMessages(['items' => "Choose the serial number replacing the tire on {$code}."]);
         }
         $candidate = Tire::query()->where('tenant_id', $tenantId)->lockForUpdate()->find($replacementId);
-        if (! $candidate || $candidate->current_status !== 'IN_STOCK') {
-            throw ValidationException::withMessages(['items' => "The replacement for {$code} must be a serial number in stock (New Stock or Used). A removed tire must pass inspection in Used Tire Management first."]);
+        if (! $candidate || ! in_array($candidate->current_status, ['IN_STOCK', TireStatus::REUSE], true)) {
+            throw ValidationException::withMessages(['items' => "The replacement for {$code} must be New Stock or a REUSE tire. A removed tire must pass inspection in Used Tire Management first."]);
+        }
+        if ($candidate->current_status === TireStatus::REUSE && $candidate->current_warehouse_id === null) {
+            throw ValidationException::withMessages(['items' => "REUSE serial {$candidate->serial_number} is in no warehouse: it is issued through the Part Request from the used tire quantity of its warehouse."]);
         }
         if ($candidate->product_id !== $installed->product_id) {
             throw ValidationException::withMessages(['items' => "The replacement for {$code} must be the same Tire Product as the installed tire."]);
@@ -544,7 +573,7 @@ class TireOperationService
             throw ValidationException::withMessages(['items' => "Serial {$candidate->serial_number} is already chosen in another open Tire Operation."]);
         }
 
-        return $candidate->id;
+        return $candidate;
     }
 
     // ------------------------------------------------------------- helpers
@@ -624,8 +653,8 @@ class TireOperationService
     private function syncPartRequest(TireOperation $operation, ?WorkOrder $workOrder, array $lines, string $userId): void
     {
         $request = $this->activeRequest($operation);
-        $wanted = collect($lines)->mapWithKeys(fn ($l) => [$l['product_id'] => (float) $l['quantity_requested']])->sortKeys()->all();
-        $current = $request ? $request->items()->get()->mapWithKeys(fn ($i) => [$i->product_id => (float) $i->quantity_requested])->sortKeys()->all() : [];
+        $wanted = collect($lines)->mapWithKeys(fn ($l) => ["{$l['product_id']}|{$l['stock_condition']}" => (float) $l['quantity_requested']])->sortKeys()->all();
+        $current = $request ? $request->items()->get()->mapWithKeys(fn ($i) => ["{$i->product_id}|{$i->stock_condition}" => (float) $i->quantity_requested])->sortKeys()->all() : [];
         if ($wanted == $current) {
             return;
         }

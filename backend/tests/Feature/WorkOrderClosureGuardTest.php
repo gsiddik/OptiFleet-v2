@@ -137,7 +137,8 @@ class WorkOrderClosureGuardTest extends TestCase
         $retread = $tireService->finalInspectRetread($retread, 'SAFE', 'Passed final inspection', null);
         $tireService->approveRetread($retread, 'RETURN_TO_SERVICE', 'Meets return-to-service criteria', (string) Str::uuid());
         $tire->refresh();
-        $this->assertSame('IN_STOCK', $tire->current_status);
+        // Approved back to REMOVED (awaiting its Used Tire Management inspection) — no longer blocks closure.
+        $this->assertSame('REMOVED', $tire->current_status);
 
         $this->postJson("/api/v1/app/work-orders/{$woId}/complete", [], $headers)->assertOk()->assertJsonPath('data.status', 'COMPLETED');
         $this->postJson("/api/v1/app/work-orders/{$woId}/close", [], $headers)->assertOk()->assertJsonPath('data.status', 'CLOSED');

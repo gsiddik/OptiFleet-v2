@@ -45,6 +45,7 @@ use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireLoadIndex;
 use App\Domain\Tire\Models\TireOperation;
 use App\Domain\Tire\Models\TirePlyRating;
+use App\Domain\Tire\Models\TireRuleProfile;
 use App\Domain\Tire\Models\TireSpeedRating;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationMaster;
@@ -110,6 +111,7 @@ class DemoDatasetSeeder extends Seeder
         $this->tireOperations($vehicles, $carTire, $truckTire);
         $this->procurement($truckTire);
         $this->operationalLists($branches, $vehicles);
+        $this->tireRuleProfiles();
     }
 
     // ------------------------------------------------------------ organisation
@@ -670,6 +672,32 @@ class DemoDatasetSeeder extends Seeder
         }
         foreach ([['4PR', 'B'], ['6PR', 'C'], ['8PR', 'D'], ['16PR', 'H'], ['12PR', 'F']] as [$code, $range]) {
             TirePlyRating::query()->updateOrCreate(['tenant_id' => $tenantId, 'code' => $code], ['load_range' => $range, 'is_system' => false, 'status' => 'ACTIVE']);
+        }
+    }
+
+    /**
+     * Used tire inspection rule profiles, one per tire category. DEMO VALUES ONLY — every company
+     * sets its own thresholds (Tire Management → Inspection Rules); the application has no defaults.
+     */
+    private function tireRuleProfiles(): void
+    {
+        foreach ([
+            ['PASSENGER_LT', 'Passenger / Light Truck (demo values)', '1.60', '3.00', 72, 60, 1, ['TREAD'], 6, null, 2, ['positions' => [], 'notes' => 'Repaired tires: not on the front axle.']],
+            ['TRUCK_BUS', 'Truck / Bus (demo values)', '2.00', '4.00', 120, 84, 2, ['TREAD', 'SHOULDER'], 10, ['25', '5', '8'], 3, ['positions' => ['DRIVE', 'TRAILER'], 'max_speed_kmh' => 100, 'notes' => 'Retreaded / repaired tires: not on the steer axle.']],
+            ['OTR', 'OTR / Heavy Equipment (demo values)', '5.00', '10.00', 120, 96, 2, ['TREAD', 'SHOULDER', 'SIDEWALL'], 20, ['75', '15', '25'], 4, ['operations' => ['Site haulage only'], 'notes' => 'Section-repaired tires: reduced load per site rules.']],
+        ] as [$category, $name, $service, $pull, $aMax, $aRetread, $nRetread, $locations, $puncture, $cut, $maxRepairs, $application]) {
+            TireRuleProfile::query()->updateOrCreate(
+                ['tenant_id' => $this->tenant->id, 'tire_category' => $category, 'product_id' => null, 'application' => null, 'status' => 'ACTIVE'],
+                [
+                    'name' => $name, 'd_service_mm' => $service, 'd_pull_mm' => $pull, 'a_max_months' => $aMax, 'a_retread_max_months' => $aRetread, 'n_retread_max' => $nRetread,
+                    'repair_limits' => [
+                        'allowed_locations' => $locations, 'max_puncture_diameter_mm' => $puncture,
+                        'max_cut_length_mm' => $cut[0] ?? null, 'max_cut_width_mm' => $cut[1] ?? null, 'max_cut_depth_mm' => $cut[2] ?? null,
+                        'max_repairs' => $maxRepairs, 'allow_overlap_previous_repair' => false, 'allow_reinforcement_damage' => $category === 'OTR',
+                    ],
+                    'application_limits' => $application, 'version' => 1, 'created_by' => $this->admin->id, 'updated_by' => $this->admin->id,
+                ]
+            );
         }
     }
 }

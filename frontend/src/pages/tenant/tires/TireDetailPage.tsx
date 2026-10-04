@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -10,7 +10,6 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem, WheelConfigurationItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { InstalledTireSection } from './InstalledTireSection';
-import { RemovedTireInspectionSection } from './RemovedTireInspectionSection';
 
 type CycleItem = TireRetreadItem | TireRepairItem;
 
@@ -504,7 +503,16 @@ export function TireDetailPage() {
       )}
 
       {tire.installed && <InstalledTireSection installed={tire.installed} />}
-      {tire.current_status === 'REMOVED' && hasPermission('tire.inspect') && <RemovedTireInspectionSection tireId={tire.id} onDone={load} />}
+      {['REMOVED', 'HOLD'].includes(tire.current_status) && (
+        <div className="card" id="used-inspection" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 14 }}>
+            {tire.current_status === 'REMOVED' ? 'This tire was removed from a vehicle and waits for its Used Tire Management inspection.' : 'This tire is on HOLD — inspect it again once the open items are resolved.'}
+          </span>
+          <Link to={`/app/tires/${tire.id}/inspection`} className="btn-primary" style={{ textDecoration: 'none' }}>
+            Inspect
+          </Link>
+        </div>
+      )}
 
       {(tire.current_status === 'RETREAD' || (tire.retreads ?? []).length > 0) && (
         <CycleGovernancePanel
@@ -546,7 +554,7 @@ export function TireDetailPage() {
         />
       )}
 
-      {['IN_STOCK', 'REMOVED', 'UNDER_INSPECTION', 'QUARANTINED'].includes(tire.current_status) && canScrap && (
+      {['IN_STOCK', 'HOLD', 'UNDER_INSPECTION', 'QUARANTINED'].includes(tire.current_status) && canScrap && (
         <div className="card" id="scrap" style={{ marginBottom: 16 }}>
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Scrap</h3>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>

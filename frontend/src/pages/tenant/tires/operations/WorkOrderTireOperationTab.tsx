@@ -8,6 +8,7 @@ import { bodyStyleFor, type VehicleType } from '../wheel-configuration/vehicleTy
 import { ReplacementArrow, RotationArrows, TireOperationCard } from './TireOperationParts';
 import { INSPECTION_COLOR, REPLACEMENT_COLOR, ROTATION_PALETTE, formatKm } from './tireOperationFormat';
 import { OPERATION_TYPE_LABEL, type TireOperationDetail } from './tireOperationTypes';
+import { UsageRestrictionWarnings } from './UsageRestrictionWarnings';
 
 const TYPE_PERMISSION = { REPLACEMENT: 'tire.install', ROTATION: 'tire.rotate', INSPECTION: 'tire.inspect' } as const;
 
@@ -70,6 +71,7 @@ export function WorkOrderTireOperationTab({ operation }: { operation: TireOperat
             </fieldset>
             {operation.cancellation_reason && <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 0 }}>Cancellation reason: {operation.cancellation_reason}</p>}
           </section>
+          {(operation.warnings ?? []).length > 0 && <UsageRestrictionWarnings warnings={operation.warnings ?? []} />}
           <section className="card">
             <h3 style={{ marginTop: 0, fontSize: 15 }}>{OPERATION_TYPE_LABEL[operation.operation_type]}</h3>
             <div style={{ display: 'grid', gap: 18 }}>
