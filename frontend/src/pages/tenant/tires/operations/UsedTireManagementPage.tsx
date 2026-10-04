@@ -12,6 +12,7 @@ const TABS: WorkflowTab[] = [
     candidatesTitle: 'Removed tires awaiting inspection',
     actionLabel: 'Inspect',
     anchor: 'used-inspection',
+    actionHref: (tire) => `/app/tires/${tire.id}/inspection`,
     serialOpensHistory: true,
     activityTypes: ['REMOVAL'],
     activityTitle: 'Recent removals',
