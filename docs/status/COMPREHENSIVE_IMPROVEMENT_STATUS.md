@@ -87,7 +87,7 @@ applied operation of the selected tires.
 
 | Check | Result |
 |---|---|
-| Backend full regression (`php artisan test`, Mongo-only migrations/tests set aside) | PASS — 1051 tests, 6228 assertions (before the 2026-10-04 changes; re-run below) |
+| Backend full regression (`php artisan test`, Mongo-only migrations/tests set aside) | PASS — 1051 tests, 6228 assertions (before the 2026-10-04 changes) |
 | Targeted: TireOperationTest 12, TireImportTest 12, DemoDatasetSeederTest 3, seeder tests | PASS |
 | Frontend `npm run build` (tsc -b + vite build) | PASS |
 | oxlint | PASS — 27 warnings (baseline 28, none new) |
@@ -95,3 +95,5 @@ applied operation of the selected tires.
 | `migrate:fresh --seed` (APP_ENV=local) + re-run idempotency | PASS |
 | MongoDB analytics / intelligence tests | NOT RUN — MongoDB unavailable in this environment |
 | Docker build | NOT RUN — registry egress blocked in this environment |
+| Backend full regression after the 2026-10-04 Usage Time / Removed-tire changes (75b36f9) | PASS — 1051 tests, 6242 assertions |
+| Browser e2e after 75b36f9: tire operations 37, serial detail 9, import 20, Used Tire Management tabs | PASS |
