@@ -60,22 +60,20 @@ at its Tire Operations Date + Time (direct actions still use the current time), 
 KM floor — the Tire Operations Date + Time may not be earlier than the last installation or
 applied operation of the selected tires.
 
-## DECISION REQUIRED
+## Used Tire Management inspection (owner decision 2026-10-04, implemented)
 
-**Used Tire Management inspection (REMOVED → Used in stock)**
-- Current behavior: removed tires are listed in Used Tire Management → Removed; from there they
-  can only be retreaded / repaired or scrapped. No step returns a REMOVED tire to stock.
-- Issue: the owner's rule says a removed tire returns to stock as Used after an inspection in Used
-  Tire Management; that inspection step does not exist yet and its rules are not defined.
-- Proposed: a "Inspect & return to stock" action on the Removed tab — tread depth (required),
-  condition, result PASS (→ IN_STOCK, warehouse required) / FAIL (→ retread, repair or scrap),
-  recorded as a tire inspection; permission `tire.inspect` (or a new one).
-- Alternative: reuse the existing retread/repair governance (send → receive → final inspect →
-  approve) with an in-house "inspection only" cycle.
-- Affected modules: Used Tire Management, Tire Detail, tire inventory classification.
-- Data impact: none for existing rows; new inspection records only.
-- Recommendation: proposed option (one step, maker-checker optional).
-- Risks: until it exists, removed tires cannot be reused through the application.
+- The Tire Operations date/time floor is confirmed by the owner (kept).
+- A removed tire is listed in Tire Detail → Used Stocks with status REMOVED and in Used Tire
+  Management → Removed ("Removed tires awaiting inspection").
+- Removed tab action **Inspect & return to stock** opens the tire's inspection form
+  (`POST /tires/{tire}/inspect-removed`, permission `tire.inspect`): tread depth (required),
+  condition, notes, result. PASS → IN_STOCK in the chosen warehouse (tenant's and within the
+  user's data scope) — it is then offered as "Reuse" in Tire Operations; FAIL → RETREAD, REPAIR
+  or SCRAPPED, where the existing Used Tire Management flows continue. The inspection is always
+  recorded as a tire inspection (latest tread depth).
+- Not changed: the tire product's warehouse quantity. Serial tires and product stock quantities
+  are tracked separately today (as before for any reused tire); returning a used serial to a
+  warehouse moves no stock quantity.
 
 ## Known follow-ups
 
@@ -97,3 +95,4 @@ applied operation of the selected tires.
 | Docker build | NOT RUN — registry egress blocked in this environment |
 | Backend full regression after the 2026-10-04 Usage Time / Removed-tire changes (75b36f9) | PASS — 1051 tests, 6242 assertions |
 | Browser e2e after 75b36f9: tire operations 37, serial detail 9, import 20, Used Tire Management tabs | PASS |
+| Removed-tire inspection: TireRemovedInspectionTest 4, browser e2e (Removed tab → form → Pass, Used Stocks REMOVED row) | PASS |

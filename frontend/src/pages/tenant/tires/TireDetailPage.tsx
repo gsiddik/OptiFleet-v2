@@ -10,6 +10,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem, WheelConfigurationItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { InstalledTireSection } from './InstalledTireSection';
+import { RemovedTireInspectionSection } from './RemovedTireInspectionSection';
 
 type CycleItem = TireRetreadItem | TireRepairItem;
 
@@ -197,7 +198,7 @@ export function TireDetailPage() {
 
   useBreadcrumbLabel(tire?.id, tire?.serial_number);
 
-  // Deep links from Tire Operations / Used Tire Management (#install, #retread, #scrap).
+  // Deep links from Tire Operations / Used Tire Management (#install, #used-inspection, #retread, #scrap).
   const { hash } = useLocation();
   const loaded = tire !== null;
   useEffect(() => {
@@ -503,6 +504,7 @@ export function TireDetailPage() {
       )}
 
       {tire.installed && <InstalledTireSection installed={tire.installed} />}
+      {tire.current_status === 'REMOVED' && hasPermission('tire.inspect') && <RemovedTireInspectionSection tireId={tire.id} onDone={load} />}
 
       {(tire.current_status === 'RETREAD' || (tire.retreads ?? []).length > 0) && (
         <CycleGovernancePanel

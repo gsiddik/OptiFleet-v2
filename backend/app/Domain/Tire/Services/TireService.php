@@ -620,6 +620,45 @@ class TireService
         });
     }
 
+    /**
+     * Used Tire Management → Removed → "Inspect & return to stock" (owner decision): a tire taken
+     * off a vehicle (REMOVED) is inspected before it can be reused. The measured tread depth is
+     * always recorded as a tire inspection. PASS returns the tire to stock as a Used tire in the
+     * chosen warehouse (IN_STOCK — it is then offered as "Reuse" in Tire Operations); FAIL sends
+     * it to retread, repair or scrap, where the existing flows continue.
+     *
+     * @param  array{tread_depth_mm: string|float, condition?: ?string, result: string, warehouse_id?: ?string, fail_disposition?: ?string, notes?: ?string}  $data
+     */
+    public function inspectRemoved(Tire $tire, array $data, ?string $userId): Tire
+    {
+        return DB::transaction(function () use ($tire, $data, $userId) {
+            $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
+            if ($locked->current_status !== 'REMOVED') {
+                throw new TireException("Only a removed tire can be inspected here; this tire is {$locked->current_status}.");
+            }
+            $pass = $data['result'] === 'PASS';
+            $outcome = $pass ? 'PASS — returned to stock as Used' : 'FAIL — '.strtolower((string) $data['fail_disposition']);
+
+            TireInspection::query()->create([
+                'tenant_id' => $locked->tenant_id,
+                'tire_id' => $locked->id,
+                'tread_depth_mm' => $data['tread_depth_mm'],
+                'condition' => $data['condition'] ?? null,
+                'recommendation' => trim('Used Tire Management inspection: '.$outcome.'. '.($data['notes'] ?? '')),
+                'inspected_by' => $userId,
+                'inspected_at' => now(),
+            ]);
+
+            $locked->update(match (true) {
+                $pass => ['current_status' => 'IN_STOCK', 'current_warehouse_id' => $data['warehouse_id']],
+                $data['fail_disposition'] === 'SCRAP' => ['current_status' => 'SCRAPPED', 'current_warehouse_id' => null],
+                default => ['current_status' => $data['fail_disposition'], 'current_warehouse_id' => null], // RETREAD / REPAIR
+            });
+
+            return $locked->fresh();
+        });
+    }
+
     public function scrap(Tire $tire, ?string $reason): Tire
     {
         if (in_array($tire->current_status, ['INSTALLED', 'IN_USE'], true)) {
