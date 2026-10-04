@@ -13,8 +13,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | 15 + 8 + 9 | Retread Open Cycle → Receive → Tire Inspection; Retread History; serial detail cleanup | DONE | a3327f0 |
 | 16 | Scrap tab: Recently Scrapped selection → Sell Sparepart (row / bulk), serial preserved | DONE | 77b4a1b |
 | 17 | Demo seeder alignment: PO returns, retread states, scrapped tires, vehicle documents | DONE | ed0bc01 |
-| 18–20 | Orphan policy, permission audit, frontend / backend contract audit | DONE | see git log |
-| 21–22 | QA regression and quality gates | see below | — |
+| 18–20 | Orphan policy, permission audit, frontend / backend contract audit | DONE | b6f5514 |
+| 21–22 | QA regression and quality gates | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -231,3 +231,25 @@ Live API responses (e2e server) compared with the TypeScript types: `GET /tires-
 `SparePartSaleItem`; `GET /purchase-orders/{id}` `return_summary` / `returns` ↔
 `PurchaseReturnSummary` / `PurchaseReturn`. All keys present and typed; `npm run build`
 (includes `tsc -b`) PASS.
+
+## Phases 21–22 — QA regression and quality gates
+
+| Gate | Result |
+|---|---|
+| Backend full regression (non-Mongo, PostgreSQL) | PASS — 1101 tests, 6944 assertions |
+| Backend Mongo-dependent tests (Analytics, Intelligence, Mongo migrations) | NOT RUN — MongoDB is not available in this environment |
+| `npm run lint` (oxlint) | PASS — 0 errors, 27 warnings (unchanged baseline) |
+| `npm run build` (includes `tsc -b`) | PASS |
+| `migrate:fresh --seed` + re-seed | PASS — no errors, counts unchanged on re-run |
+| e2e (Playwright, freshly seeded DB, desktop + 390 px mobile checks) | PASS — PO Return 21/21, WO tabs 6/6, orphaned features 8/8, vehicle documents 11/11, image container 8/8, retread 18/18, scrap → sell 16/16 |
+
+The e2e scripts are session tooling (not part of the repository); the backend feature tests
+added per phase are in `backend/tests/Feature`.
+
+## Remaining risks
+
+- Mongo-backed analytics were not exercised (NOT RUN above); no analytics code was changed.
+- `scrapped_at` on Recently Scrapped is the tire's last update time, not a dedicated scrap
+  timestamp; it equals the scrap time unless the tire is touched afterwards.
+- The scrapped-tire sale endpoint sits in the INVENTORY module group; a tenant without the TIRE
+  module has no tires, so no extra TIRE entitlement check was added.
