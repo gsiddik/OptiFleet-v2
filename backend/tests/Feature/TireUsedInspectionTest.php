@@ -8,6 +8,7 @@ use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireLoadIndex;
 use App\Domain\Tire\Models\TireSpeedRating;
 use App\Domain\Tire\Models\TireUsedInspection;
+use App\Domain\Tire\Services\TireService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -236,6 +237,45 @@ class TireUsedInspectionTest extends TestCase
         $this->postJson("/api/v1/app/tire-used-inspections/{$inspection['id']}/cancel", [], $s['headers'])->assertOk()->assertJsonPath('data.status', 'CANCELLED');
         $this->assertSame('REMOVED', $tire->fresh()->current_status);
         $this->assertSame(1, TireUsedInspection::query()->where('tire_id', $tire->id)->count(), 'cancelled inspections are kept');
+    }
+
+    /** RETREAD → retread cycle → back to REMOVED (mandatory re-inspection) → inspection sees retread count 1. */
+    public function test_retread_and_repair_flows_return_for_reinspection_before_reuse(): void
+    {
+        $s = $this->scenario();
+        $this->profile($s);
+        $service = app(TireService::class);
+        $partner = $this->makePartner($s['tenant'], ['partner_type' => 'EXTERNAL_WORKSHOP', 'status' => 'ACTIVE']);
+
+        $tire = $this->removedTire($s, 'UI-RT');
+        $this->approve($s, $this->inspect($s, $tire, $this->answers(['min_depth' => '4.5', 'specialist_result' => 'ACCEPTED']))->json('data.id'));
+        $this->assertSame('RETREAD', $tire->fresh()->current_status);
+        $cycle = $service->retread($tire->fresh(), $partner->id, null, null, null);
+        $cycle = $service->finalInspectRetread($service->receiveRetread($cycle, (string) Str::uuid()), 'SAFE', null, null);
+        $service->approveRetread($cycle, 'RETURN_TO_SERVICE', 'Retreaded', (string) Str::uuid());
+        $this->assertSame('REMOVED', $tire->fresh()->current_status, 'not reusable until inspected again');
+        $this->assertSame(0, $this->inventory($s)['reusable_qty']);
+
+        $ctx = $this->getJson("/api/v1/app/tires/{$tire->id}/used-inspection/context", $s['headers'])->json('data.tire');
+        $this->assertSame([1, null], [$ctx['retread_count'], $ctx['d_new_default_mm']], 'D_new after a retread is entered, not assumed');
+        $after = $this->inspect($s, $tire, $this->answers(['min_depth' => '14', 'd_new_mm' => '15']))->json('data');
+        $this->assertSame('REUSE', $after['recommendation']);
+        $this->approve($s, $after['id'], ['warehouse_id' => $s['warehouse']->id]);
+        $this->assertSame(['REUSE', 1], [$tire->fresh()->current_status, $this->inventory($s)['reusable_qty']]);
+
+        // REPAIR → repair cycle → REMOVED → inspection (repair history auto-filled) → REUSE.
+        $repaired = $this->removedTire($s, 'UI-RP');
+        $repair = ['leak_foreign_object' => 'YES', 'repair_eligibility' => 'YES', 'damages' => [['location' => 'TREAD', 'damage_type' => 'PUNCTURE', 'diameter_mm' => 5, 'reaches_reinforcement' => 'NO', 'overlaps_previous_repair' => 'NO']]];
+        $this->approve($s, $this->inspect($s, $repaired, $this->answers($repair))->json('data.id'));
+        $this->assertSame('REPAIR', $repaired->fresh()->current_status);
+        $rc = $service->repair($repaired->fresh(), $partner->id, null, null, null);
+        $rc = $service->finalInspectRepair($service->receiveRepair($rc, (string) Str::uuid()), 'SAFE', null, null);
+        $service->approveRepair($rc, 'RETURN_TO_SERVICE', 'Repaired', (string) Str::uuid());
+        $this->assertSame('REMOVED', $repaired->fresh()->current_status);
+        $history = $this->getJson("/api/v1/app/tires/{$repaired->id}/used-inspection/context", $s['headers'])->json('data.tire.repair_history');
+        $this->assertCount(2, $history, 'the repair cycle and the REPAIR disposition');
+        $final = $this->inspect($s, $repaired, $this->answers(['previous_repair' => 'MEETS_STANDARD']))->json('data');
+        $this->assertSame('REUSE', $final['recommendation']);
     }
 
     private function profilePayload(array $overrides = []): array
