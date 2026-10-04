@@ -9,6 +9,7 @@ import { useApiList } from '../../../../hooks/useApiList';
 import { useAuth } from '../../../../auth/AuthContext';
 import { formatDateTime } from '../../../../utils/date';
 import type { TireActivityItem, TireActivityType, TireItem } from '../../../../types';
+import { TireHistoryModal } from './TireHistoryModal';
 
 export interface WorkflowTab {
   key: string;
@@ -21,6 +22,10 @@ export interface WorkflowTab {
   actionLabel: string;
   /** Section of the physical tire page that performs the step (per tire when it depends on the status). */
   anchor: string | ((tire: TireItem) => string);
+  /** Where the action goes instead of the tire page anchor (e.g. the inspection page). */
+  actionHref?: (tire: TireItem) => string;
+  /** The serial number opens the Tire History popup instead of the tire page. */
+  serialOpensHistory?: boolean;
   activityTypes: TireActivityType[];
   activityTitle: string;
 }
@@ -71,15 +76,31 @@ export function TireWorkflowTabs({ title, intro, tabs }: { title: string; intro:
 function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
+  const [historyOf, setHistoryOf] = useState<TireItem | null>(null);
   const { data, meta, loading, error } = useApiList<TireItem>('/app/tires', { current_status: tab.statuses.join(','), search: search || undefined, page, per_page: 10 }, 0);
 
   const columns: Column<TireItem>[] = [
-    { key: 'serial', header: 'Serial', render: (t) => <Link to={`/app/tires/${t.id}`}>{t.serial_number}</Link> },
+    {
+      key: 'serial',
+      header: 'Serial',
+      render: (t) =>
+        tab.serialOpensHistory ? (
+          <button type="button" className="btn-link" data-history-open={t.serial_number} onClick={() => setHistoryOf(t)} style={{ fontFamily: 'monospace' }}>
+            {t.serial_number}
+          </button>
+        ) : (
+          <Link to={`/app/tires/${t.id}`}>{t.serial_number}</Link>
+        ),
+    },
     { key: 'product', header: 'Product', render: (t) => t.product?.name ?? '—' },
     { key: 'vehicle', header: 'Vehicle', render: (t) => t.current_vehicle?.registration_number ?? '—' },
     { key: 'position', header: 'Position', render: (t) => t.current_position ?? '—' },
     { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.current_status} /> },
-    { key: 'action', header: 'Action', render: (t) => <Link to={`/app/tires/${t.id}#${typeof tab.anchor === 'function' ? tab.anchor(t) : tab.anchor}`}>{tab.actionLabel}</Link> },
+    {
+      key: 'action',
+      header: 'Action',
+      render: (t) => <Link to={tab.actionHref ? tab.actionHref(t) : `/app/tires/${t.id}#${typeof tab.anchor === 'function' ? tab.anchor(t) : tab.anchor}`}>{tab.actionLabel}</Link>,
+    },
   ];
 
   return (
@@ -109,6 +130,7 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
         <h3 style={{ marginTop: 0, fontSize: 15 }}>{tab.activityTitle}</h3>
         <TireActivityTable types={tab.activityTypes} perPage={10} />
       </section>
+      {historyOf && <TireHistoryModal tireId={historyOf.id} serial={historyOf.serial_number} onClose={() => setHistoryOf(null)} />}
     </div>
   );
 }

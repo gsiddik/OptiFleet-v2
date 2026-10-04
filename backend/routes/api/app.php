@@ -714,6 +714,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/tire-products/{tireProduct}/import/preview', [TireProductController::class, 'importPreview'])->middleware('permission:tire.manage');
             Route::post('/tire-products/{tireProduct}/import', [TireProductController::class, 'import'])->middleware('permission:tire.manage');
             Route::get('/tires/{tire}', [TireController::class, 'show'])->middleware('permission:tire.view');
+            Route::get('/tires/{tire}/history', [TireController::class, 'history'])->middleware('permission:tire.view');
             Route::post('/tires/{tire}/install', [TireController::class, 'install'])->middleware('permission:tire.install');
             Route::post('/tires/{tire}/rotate', [TireController::class, 'rotate'])->middleware('permission:tire.rotate');
             Route::post('/tires/{tire}/swap-positions', [TireController::class, 'swapPositions'])->middleware('permission:tire.rotate');

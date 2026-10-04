@@ -9,6 +9,7 @@ use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireScoringResult;
 use App\Domain\Tire\Services\TireRegistrationService;
+use App\Domain\Tire\Services\TireHistoryService;
 use App\Domain\Tire\Services\TireOperationService;
 use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Tire\Services\TireService;
@@ -84,6 +85,14 @@ class TireController extends Controller
             // Serial Detail of an installed tire (position, usage, tread vs reference, preview).
             'installed' => app(TireOperationService::class)->installedSummary($tire),
         ]);
+    }
+
+    /** Tire History (installations, rotations, inspections) from the actual records, oldest first. */
+    public function history(Tire $tire)
+    {
+        $this->authorizeScope($tire);
+
+        return $this->ok(app(TireHistoryService::class)->history($tire));
     }
 
     public function install(Request $request, Tire $tire)
