@@ -1,0 +1,49 @@
+# Comprehensive Improvement from main — Status
+
+Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
+
+| Phase | Scope | Status | Commit |
+|---|---|---|---|
+| 1–5 | Purchase Order Return to Vendor (Return Order, Refund / Redelivery, history, print, state model) | DONE | see git log |
+
+## Phases 1–5 — Purchase Order Return to Vendor
+
+**State model** (`purchase_returns.status`, one open Return Order per PO, 1:N history):
+
+| Option | Flow |
+|---|---|
+| Refund Request | REFUND_REQUESTED → REFUND_ACCEPTED (Accepted by Vendor) |
+| | REFUND_REQUESTED → REDELIVERY_PENDING (Rejected by Vendor; event REFUND_REJECTED kept) → REDELIVERY_RECEIVED |
+| Redelivery Request | REDELIVERY_REQUESTED → REDELIVERY_READY (Return Order printed) → REDELIVERY_RECEIVED |
+
+Every transition is one transaction with row locks; `purchase_return_events` keeps the history
+(a rejected refund stays visible as "Refund rejected → Redelivery").
+
+**Quantities** (per PO line, backend-computed, never trusted from the UI):
+- returnable = received − returned; Qty Returned must be > 0 and ≤ returnable.
+- remaining receivable = ordered − (received − returned) − refunded (refund requested / accepted).
+  A redelivery return re-opens its quantity for Goods Receipt; a rejected refund does too.
+- Goods Receipt is refused (API and UI) while a redelivery is awaited (REDELIVERY_REQUESTED /
+  READY / PENDING) and re-opens after "Receive Redelivery"; the redelivered goods are received
+  with a normal Goods Receipt. Post Goods Receipt / Qty are hidden when nothing remains.
+
+**Numbering / print**: Return Order # from the numbering service (`purchase_return`,
+`RO/{YYYY}/{SEQ:6}`, platform default in ConfigurationDefaultsSeeder); Print Return Order uses the
+document template architecture (`purchase_return` template, PDF preview); the first print moves a
+redelivery request to REDELIVERY_READY.
+
+**Permissions**: `purchase_return.create` (granted to roles with `goods_receipt.post`),
+`purchase_return.decide` (accept / reject; roles with `purchase_order.approve`),
+`purchase_return.receive_redelivery` (roles with `goods_receipt.post`); print / history with
+`purchase_order.view`; PO data scope (delivery warehouse) and tenant enforced on every endpoint.
+
+**Engineering decisions (please confirm)**
+1. Returned goods leave stock at Return Order creation: `RETURN_TO_VENDOR` stock movement from
+   the PO's delivery warehouse at the average cost (goods physically go back to the vendor).
+2. Refunded Amount = the PO line's own pricing formula for the returned quantity (qty × unit price,
+   less line discount, plus line tax; 4-decimal HALF_UP like the PO line total). The PO-level
+   freight is not part of a line refund.
+3. Print Return Order is available for every Return Order; only a Redelivery Request requires the
+   print before "Receive Redelivery". A refund rejected by the vendor can be received at once.
+4. While a refund is awaiting the vendor's decision, Goods Receipt stays available for the
+   remaining quantity (the refunded quantity is no longer expected).

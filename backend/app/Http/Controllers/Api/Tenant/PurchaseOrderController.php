@@ -11,6 +11,7 @@ use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\VendorQuotation;
 use App\Domain\Procurement\Services\PurchaseOrderService;
+use App\Domain\Procurement\Services\PurchaseReturnService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -96,13 +97,19 @@ class PurchaseOrderController extends Controller
 
         // Receipt history: every Goods Receipt (oldest first) with its received quantities and the
         // vendor invoice it was received against (several receipts may share one invoice).
-        return $this->ok($purchaseOrder->load([
+        $purchaseOrder->load([
             'partner', 'deliveryWarehouse', 'items.product', 'workflowApprovalRequest.steps',
             'goodsReceipts' => fn ($q) => $q->orderBy('received_at')->orderBy('created_at')->orderBy('gr_number'),
             'goodsReceipts.items.product:id,name,sku',
             'goodsReceipts.receiver:id,name',
             'goodsReceipts.vendorInvoiceReference.payment:id,vendor_invoice_reference_id,payment_date',
-        ]));
+            // Return History: every Return Order (oldest first) with its lines and state history.
+            'returns' => fn ($q) => $q->orderBy('returned_at')->orderBy('created_at'),
+            'returns.items.product:id,name,sku',
+            'returns.events.performer:id,name',
+        ]);
+
+        return $this->ok(array_merge($purchaseOrder->toArray(), ['return_summary' => app(PurchaseReturnService::class)->summary($purchaseOrder)]));
     }
 
     /**

@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\Tenant\ProductClassificationController;
 use App\Http\Controllers\Api\Tenant\ProductVehicleLookupController;
 use App\Http\Controllers\Api\Tenant\ProductController;
 use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
+use App\Http\Controllers\Api\Tenant\PurchaseReturnController;
 use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
 use App\Http\Controllers\Api\Tenant\QualityControlController;
 use App\Http\Controllers\Api\Tenant\RfqController;
@@ -656,6 +657,11 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/purchase-orders/{purchaseOrder}/close', [PurchaseOrderController::class, 'close'])->middleware('permission:purchase_order.approve');
             Route::post('/purchase-orders/{purchaseOrder}/cancel', [PurchaseOrderController::class, 'cancel'])->middleware('permission:purchase_order.create');
             Route::post('/purchase-orders/{purchaseOrder}/goods-receipts', [GoodsReceiptController::class, 'store'])->middleware('permission:goods_receipt.post');
+            Route::post('/purchase-orders/{purchaseOrder}/returns', [PurchaseReturnController::class, 'store'])->middleware('permission:purchase_return.create');
+            Route::post('/purchase-returns/{purchaseReturn}/accept', [PurchaseReturnController::class, 'accept'])->middleware('permission:purchase_return.decide');
+            Route::post('/purchase-returns/{purchaseReturn}/reject', [PurchaseReturnController::class, 'reject'])->middleware('permission:purchase_return.decide');
+            Route::post('/purchase-returns/{purchaseReturn}/receive-redelivery', [PurchaseReturnController::class, 'receiveRedelivery'])->middleware('permission:purchase_return.receive_redelivery');
+            Route::get('/purchase-returns/{purchaseReturn}/print', [PurchaseReturnController::class, 'print'])->middleware('permission:purchase_order.view');
 
             Route::get('/goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('permission:goods_receipt.view');
             Route::get('/goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('permission:goods_receipt.view');

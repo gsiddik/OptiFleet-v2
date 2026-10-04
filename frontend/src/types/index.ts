@@ -1787,7 +1787,39 @@ export interface PurchaseOrderItemLine {
   discount_percent: string;
   tax_percent: string;
   line_total: string;
+  /** Sent back to the vendor (any Return Order) / refund requested or accepted. */
+  quantity_returned?: string;
+  quantity_refunded?: string;
   product?: ProductItem;
+}
+
+export type PurchaseReturnOption = 'REFUND' | 'REDELIVERY';
+export type PurchaseReturnStatus = 'REFUND_REQUESTED' | 'REFUND_ACCEPTED' | 'REDELIVERY_REQUESTED' | 'REDELIVERY_READY' | 'REDELIVERY_PENDING' | 'REDELIVERY_RECEIVED';
+
+export interface PurchaseReturnItem {
+  id: string;
+  return_number: string;
+  purchase_order_id: string;
+  return_option: PurchaseReturnOption;
+  status: PurchaseReturnStatus;
+  returned_at: string;
+  /** Only an accepted refund has an amount. */
+  refunded_amount: string | null;
+  vendor_decision: 'ACCEPTED' | 'REJECTED' | null;
+  vendor_decided_at: string | null;
+  printed_at: string | null;
+  redelivery_received_at: string | null;
+  notes: string | null;
+  items: { id: string; purchase_order_item_id: string; product_id: string; quantity: string; refund_amount: string | null; product?: { id: string; name: string; sku: string | null } }[];
+  events: { id: string; from_status: string | null; to_status: string; event: string; note: string | null; occurred_at: string; performer?: { id: string; name: string } | null }[];
+}
+
+/** Server-computed Return to Vendor state of a PO (the UI follows these flags). */
+export interface PurchaseReturnSummary {
+  can_return: boolean;
+  open_return_id: string | null;
+  goods_receipt_blocked: boolean;
+  items: Record<string, { returnable_quantity: string; remaining_quantity: string }>;
 }
 
 export interface WorkflowApprovalStepItem {
@@ -1825,6 +1857,8 @@ export interface PurchaseOrderItem {
   items?: PurchaseOrderItemLine[];
   goods_receipts?: GoodsReceiptItem[];
   workflow_approval_request?: WorkflowApprovalRequestItem;
+  returns?: PurchaseReturnItem[];
+  return_summary?: PurchaseReturnSummary;
 }
 
 export interface GoodsReceiptItemLine {

@@ -167,7 +167,7 @@ class DemoDatasetSeeder extends Seeder
         $procurement = $this->role('Procurement', [
             'purchase_request.view', 'purchase_request.create', 'purchase_request.submit', 'purchase_request.approve',
             'rfq.view', 'rfq.manage', 'quotation.view', 'quotation.manage', 'quotation.select',
-            'purchase_order.view', 'purchase_order.create', 'purchase_order.approve', 'purchase_order.issue',
+            'purchase_order.view', 'purchase_order.create', 'purchase_order.approve', 'purchase_order.issue', 'purchase_return.decide',
             'goods_receipt.view', 'vendor_invoice.view', 'partner.view', 'partner.manage', 'product.view', 'inventory.view', 'analytics.procurement.view',
         ]);
         $mechanic = $this->role('Mechanic', [

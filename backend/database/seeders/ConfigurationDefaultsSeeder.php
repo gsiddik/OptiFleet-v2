@@ -51,6 +51,8 @@ class ConfigurationDefaultsSeeder extends Seeder
             'product_sku' => ['format' => '{ITEMTYPE}-{CG}-{SEQ:6}', 'doc_code' => 'SKU', 'reset_rule' => 'NEVER'],
             // Return Number of a new part returned (not used) from a Work Order's Issuance & Return.
             'part_return' => ['format' => 'RTN/{YYYY}/{SEQ:6}', 'doc_code' => 'RTN', 'reset_rule' => 'YEARLY'],
+            // Return Order of goods returned to the vendor from a Purchase Order.
+            'purchase_return' => ['format' => 'RO/{YYYY}/{SEQ:6}', 'doc_code' => 'RO', 'reset_rule' => 'YEARLY'],
         ];
 
         foreach ($numbering as $code => $payload) {
@@ -215,6 +217,17 @@ class ConfigurationDefaultsSeeder extends Seeder
                 </table>
                 <p style="text-align:right;">Subtotal: {{purchase_order.subtotal}} | Tax: {{purchase_order.tax_total}} | Freight: {{purchase_order.freight_cost}}<br>
                 <strong>Total: {{purchase_order.total}}</strong></p>
+                HTML),
+            'purchase_return' => $wrap('Return Order', <<<'HTML'
+                <p>Purchase Order: {{purchase_order.number}} | Returned Date: {{purchase_return.returned_date}}<br>
+                Return Option: {{purchase_return.return_option}}<br>
+                Vendor: {{partner.name}}<br>Address: {{partner.address}}<br>PIC Phone: {{partner.contact_phone}}<br>
+                Returned from: {{warehouse.name}}</p>
+                <table border="1" cellpadding="4" style="width:100%;border-collapse:collapse;">
+                  <tr><th>Product</th><th>Code</th><th>Qty Returned</th></tr>
+                  {{#items}}<tr><td>{{product_name}}</td><td>{{product_code}}</td><td>{{quantity}}</td></tr>{{/items}}
+                </table>
+                <p>Notes: {{purchase_return.notes}}</p>
                 HTML),
             // Printed per invited vendor from RFQ Detail (see RfqDocumentTemplate).
             'rfq' => RfqDocumentTemplate::html(),
