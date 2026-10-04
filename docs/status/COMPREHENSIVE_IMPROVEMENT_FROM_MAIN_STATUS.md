@@ -11,7 +11,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | 12 | Vehicle Documents: Vehicle Tax, expiry, extension, upload gating | DONE | f3a1cd5 |
 | 11 + 14 | Global image container 480 × 320; Product / Tire Product Details layout | DONE | e4e3ca3 |
 | 15 + 8 + 9 | Retread Open Cycle → Receive → Tire Inspection; Retread History; serial detail cleanup | DONE | a3327f0 |
-| 16 | Scrap tab: Recently Scrapped selection → Sell Sparepart (row / bulk), serial preserved | DONE | see git log |
+| 16 | Scrap tab: Recently Scrapped selection → Sell Sparepart (row / bulk), serial preserved | DONE | 77b4a1b |
+| 17 | Demo seeder alignment: PO returns, retread states, scrapped tires, vehicle documents | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -171,3 +172,21 @@ name or Partner), unit price per tire (exact decimal), notes. One DRAFT sale per
 - Tests: `ScrappedTireSaleTest` (4) + `SparePartSaleTest` (8) PASS; e2e 16/16 PASS (0 / 1 / many
   selection, Select All on/off, bulk + row Sell, serial in form and sale list, sold tire not
   re-selectable, IN_STOCK tire refused 422, mobile 390 px no overflow).
+
+## Phase 17 — Demo seeder alignment
+
+`DemoDatasetSeeder` (ALPHA), every record through the domain services, idempotent (natural keys:
+PR notes, deterministic demo serials, document numbers):
+
+| Area | Demo data |
+|---|---|
+| PO Return to Vendor | "Demo restock: batteries" stays Partially Received with no return; four new partially received POs with RO/2026/… returns: Refund Requested, Refund Accepted (refund amount recorded), Refund Rejected → Redelivery Pending, Redelivery Requested (not yet printed) |
+| Retread | Retread-program truck **H 3203 ALP** (6 tires replaced by new casings): 1 RETREAD tire waiting for Open Cycle, 1 in process (SENT), 1 received pending inspection, 1 completed (inspection approved → REUSE); 2 photos per cycle (`DemoPhoto`, plain-PHP PNG) |
+| Scrap | 3 SCRAPPED tires (bus cord exposure + 2 truck tires scrapped through inspection) for row / bulk Sell |
+| Vehicle documents | STNK (expiry), Vehicle Tax (expiry + extension deadline), insurance (expiry), KIR certificate (expired, extension pending), BPKB (no expiry) |
+
+- `procurement()` chain body extracted to `purchaseChain()` (no behaviour change); the used-tire
+  inspection closure extracted to `inspectUsedTire()`.
+- Validation: `migrate:fresh --seed` PASS, re-seed (`db:seed`) leaves all counts unchanged;
+  `DemoDatasetSeederTest` 3/3 PASS (new assertions for returns, cycle states, photos, scrapped
+  tires, documents and re-run idempotency).

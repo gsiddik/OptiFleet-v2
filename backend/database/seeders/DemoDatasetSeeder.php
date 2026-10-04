@@ -32,10 +32,13 @@ use App\Domain\Organization\Models\WarehouseRack;
 use App\Domain\Organization\Models\WarehouseZone;
 use App\Domain\Organization\Models\Workshop;
 use App\Domain\Partner\Models\Partner;
+use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseRequest;
+use App\Domain\Procurement\Models\PurchaseReturn;
 use App\Domain\Procurement\Services\GoodsReceiptService;
 use App\Domain\Procurement\Services\PurchaseOrderService;
 use App\Domain\Procurement\Services\PurchaseRequestService;
+use App\Domain\Procurement\Services\PurchaseReturnService;
 use App\Domain\Procurement\Services\RfqService;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Models\ProductCategory;
@@ -51,12 +54,16 @@ use App\Domain\Tire\Models\TireSpeedRating;
 use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationMaster;
+use App\Domain\Tire\Services\TireCycleService;
 use App\Domain\Tire\Services\TireOperationService;
 use App\Domain\Tire\Services\TireRegistrationService;
+use App\Domain\Tire\Services\TireService;
 use App\Domain\Tire\Services\VehicleTireRegistrationService;
 use App\Domain\Tire\Services\VehicleWheelConfigurationMappingService;
 use App\Domain\Tire\Services\WheelConfigurationMasterService;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Models\VehicleDocument;
+use App\Domain\Vehicle\Services\VehicleDocumentService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Services\WorkOrderPartRequestService;
@@ -115,6 +122,9 @@ class DemoDatasetSeeder extends Seeder
         $this->operationalLists($branches, $vehicles);
         $this->tireRuleProfiles();
         $this->usedTires($vehicles, $truckTire);
+        $this->retreadAndScrap($vehicles, $truckTire);
+        $this->purchaseReturns();
+        $this->vehicleDocuments($vehicles);
     }
 
     // ------------------------------------------------------------ organisation
@@ -249,6 +259,8 @@ class DemoDatasetSeeder extends Seeder
             'van' => ['reg' => 'D 3102 ALP', 'm' => 'granmax', 'cat' => $car, 'type' => 'VAN', 'axles' => 2, 'wheels' => 4, 'b' => 'ALPHA-BDG', 'odo' => 41200],
             'truck1' => ['reg' => 'H 3201 ALP', 'm' => 'elf', 'cat' => $truck, 'type' => 'TRUCK', 'axles' => 2, 'wheels' => 6, 'b' => 'ALPHA-SMG', 'odo' => 87300],
             'truck2' => ['reg' => 'L 3202 ALP', 'm' => 'canter', 'cat' => $truck, 'type' => 'TRUCK', 'axles' => 3, 'wheels' => 10, 'b' => 'ALPHA-SBY', 'odo' => 64100],
+            // Retread-program truck: its tires feed the Used Tire Management Retread / Scrap demo.
+            'truck3' => ['reg' => 'H 3203 ALP', 'm' => 'elf', 'cat' => $truck, 'type' => 'TRUCK', 'axles' => 2, 'wheels' => 6, 'b' => 'ALPHA-SMG', 'odo' => 112400],
             'bus' => ['reg' => 'DK 3301 ALP', 'm' => 'bus', 'cat' => $bus, 'type' => 'BUS', 'axles' => 2, 'wheels' => 6, 'b' => 'ALPHA-DPS', 'odo' => 152000],
         ];
         $vehicles = [];
@@ -342,7 +354,7 @@ class DemoDatasetSeeder extends Seeder
     private function mapAndRegisterTires(array $vehicles, array $masters, Product $carTire, Product $truckTire): void
     {
         $mapping = app(VehicleWheelConfigurationMappingService::class);
-        $plan = ['car1' => 'car', 'car2' => 'car', 'van' => 'van', 'truck1' => 'truck', 'truck2' => 'truck_tandem', 'bus' => 'bus'];
+        $plan = ['car1' => 'car', 'car2' => 'car', 'van' => 'van', 'truck1' => 'truck', 'truck2' => 'truck_tandem', 'truck3' => 'truck', 'bus' => 'bus'];
         foreach ($plan as $vehicleKey => $masterKey) {
             $vehicle = $vehicles[$vehicleKey];
             $mapped = VehicleWheelConfigurationMapping::query()->where('vehicle_id', $vehicle->id)->where('status', VehicleWheelConfigurationMapping::STATUS_ACTIVE)->exists();
@@ -486,39 +498,46 @@ class DemoDatasetSeeder extends Seeder
             ['note' => 'Demo restock: oil filters for Denpasar.', 'product' => 'Oil Filter', 'qty' => 30, 'price' => 85000, 'vendor' => 'VND-MITRA', 'wh' => 'ALPHA-DPS-WH1', 'received' => 30, 'invoice' => 'INV-MUS-2026-0104'],
         ];
         foreach ($chains as $chain) {
-            if (PurchaseRequest::query()->where('tenant_id', $this->tenant->id)->where('notes', $chain['note'])->exists()) {
-                continue;
+            if (! PurchaseRequest::query()->where('tenant_id', $this->tenant->id)->where('notes', $chain['note'])->exists()) {
+                $this->purchaseChain($chain);
             }
-            $product = Product::query()->where('tenant_id', $this->tenant->id)->where('name', 'ilike', '%'.$chain['product'].'%')->first();
-            $vendor = Partner::query()->where('tenant_id', $this->tenant->id)->where('code', $chain['vendor'])->first();
-            $warehouse = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', $chain['wh'])->first();
-            if (! $product || ! $vendor || ! $warehouse) {
-                continue;
-            }
-            $prService = app(PurchaseRequestService::class);
-            $pr = $prService->create($warehouse, ['source_type' => 'MANUAL', 'priority' => 'MEDIUM', 'notes' => $chain['note']], [
-                ['product_id' => $product->id, 'requested_quantity' => $chain['qty'], 'estimated_unit_price' => $chain['price']],
-            ], $this->admin->id);
-            foreach (['SUBMITTED', 'UNDER_REVIEW', 'APPROVED'] as $to) {
-                $pr = $prService->transition($pr, $to);
-            }
-            $rfqService = app(RfqService::class);
-            $rfq = $rfqService->inviteVendors($rfqService->create($warehouse, [], [['product_id' => $product->id, 'quantity' => $chain['qty']]], $pr), [$vendor->id]);
-            $quotation = $rfqService->selectVendor($rfqService->submitQuotation($rfq, $vendor, ['lead_time_days' => 7, 'payment_terms' => $vendor->payment_terms ?? 'NET_30'], [
-                ['product_id' => $product->id, 'quantity' => $chain['qty'], 'unit_price' => $chain['price'], 'tax_percent' => 11],
-            ], DemoQuotationDocument::make($vendor->name), $this->admin->id));
-            $poService = app(PurchaseOrderService::class);
-            $po = $poService->createFromQuotation($quotation, $warehouse, ['order_date' => now()->toDateString()], $this->admin->id);
-            $po = $poService->transition($poService->approve($poService->transition($po, 'SUBMITTED'), $this->admin->id), 'ISSUED');
-            $amount = number_format($chain['received'] * $chain['price'] * 1.11, 2, '.', '');
-            app(GoodsReceiptService::class)->post($po, $warehouse, [
-                ['purchase_order_item_id' => $po->items()->first()->id, 'quantity_accepted' => $chain['received']],
-            ], $this->admin->id, $chain['received'] < $chain['qty'] ? 'Partial delivery; remainder backordered.' : 'Delivered in full.', [
-                'mode' => 'NEW', 'vendor_invoice_number' => $chain['invoice'], 'vendor_invoice_date' => now()->toDateString(),
-                'amount' => $amount, 'terms_of_payment_days' => 30,
-                'document' => DemoQuotationDocument::make($chain['invoice'], 'Demo vendor invoice', $chain['invoice'].'.pdf'),
-            ]);
         }
+    }
+
+    /** One PR → RFQ → quotation → PO → goods receipt chain; null when its masters are missing. */
+    private function purchaseChain(array $chain): ?PurchaseOrder
+    {
+        $product = Product::query()->where('tenant_id', $this->tenant->id)->where('name', 'ilike', '%'.$chain['product'].'%')->first();
+        $vendor = Partner::query()->where('tenant_id', $this->tenant->id)->where('code', $chain['vendor'])->first();
+        $warehouse = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', $chain['wh'])->first();
+        if (! $product || ! $vendor || ! $warehouse) {
+            return null;
+        }
+        $prService = app(PurchaseRequestService::class);
+        $pr = $prService->create($warehouse, ['source_type' => 'MANUAL', 'priority' => 'MEDIUM', 'notes' => $chain['note']], [
+            ['product_id' => $product->id, 'requested_quantity' => $chain['qty'], 'estimated_unit_price' => $chain['price']],
+        ], $this->admin->id);
+        foreach (['SUBMITTED', 'UNDER_REVIEW', 'APPROVED'] as $to) {
+            $pr = $prService->transition($pr, $to);
+        }
+        $rfqService = app(RfqService::class);
+        $rfq = $rfqService->inviteVendors($rfqService->create($warehouse, [], [['product_id' => $product->id, 'quantity' => $chain['qty']]], $pr), [$vendor->id]);
+        $quotation = $rfqService->selectVendor($rfqService->submitQuotation($rfq, $vendor, ['lead_time_days' => 7, 'payment_terms' => $vendor->payment_terms ?? 'NET_30'], [
+            ['product_id' => $product->id, 'quantity' => $chain['qty'], 'unit_price' => $chain['price'], 'tax_percent' => 11],
+        ], DemoQuotationDocument::make($vendor->name), $this->admin->id));
+        $poService = app(PurchaseOrderService::class);
+        $po = $poService->createFromQuotation($quotation, $warehouse, ['order_date' => now()->toDateString()], $this->admin->id);
+        $po = $poService->transition($poService->approve($poService->transition($po, 'SUBMITTED'), $this->admin->id), 'ISSUED');
+        $amount = number_format($chain['received'] * $chain['price'] * 1.11, 2, '.', '');
+        app(GoodsReceiptService::class)->post($po, $warehouse, [
+            ['purchase_order_item_id' => $po->items()->first()->id, 'quantity_accepted' => $chain['received']],
+        ], $this->admin->id, $chain['received'] < $chain['qty'] ? 'Partial delivery; remainder backordered.' : 'Delivered in full.', [
+            'mode' => 'NEW', 'vendor_invoice_number' => $chain['invoice'], 'vendor_invoice_date' => now()->toDateString(),
+            'amount' => $amount, 'terms_of_payment_days' => 30,
+            'document' => DemoQuotationDocument::make($chain['invoice'], 'Demo vendor invoice', $chain['invoice'].'.pdf'),
+        ]);
+
+        return $po->fresh();
     }
 
     // ------------------------------------------------------------ operational lists
@@ -692,29 +711,10 @@ class DemoDatasetSeeder extends Seeder
         if (TireUsedInspection::query()->where('tenant_id', $this->tenant->id)->exists()) {
             return;
         }
-        $inspections = app(UsedTireInspectionService::class);
         $semarang = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', 'ALPHA-SMG-WH1')->firstOrFail();
         $removed = fn (Vehicle $vehicle, string $code) => Tire::query()->where('tenant_id', $this->tenant->id)
             ->where('serial_number', DemoSerial::make("{$vehicle->registration_number}|{$code}"))->firstOrFail();
-        $inspect = function (Tire $tire, array $answers, ?string $warehouseId) use ($inspections): Tire {
-            // The DOT code is read during the inspection (Q1 identity complete).
-            $tire->update(['manufacture_date_code' => $tire->manufacture_date_code ?? '1225']);
-            $points = [];
-            foreach ([1, 2, 3] as $zone) {
-                foreach (['INNER_MAIN', 'OUTER_MAIN'] as $groove) {
-                    $points[] = ['zone' => $zone, 'groove' => $groove, 'depth_mm' => $zone === 2 ? '8.5' : '9.5'];
-                }
-            }
-            $inspection = $inspections->submit($tire->fresh(), array_merge([
-                'identity_status' => 'COMPLETE', 'internal_inspected' => 'YES', 'wear_pattern' => 'EVEN', 'bulge_separation' => 'NONE',
-                'cord_exposure' => 'NONE', 'sidewall_condition' => 'NORMAL', 'bead_condition' => 'NORMAL', 'inner_liner_condition' => 'NORMAL',
-                'run_flat_overheat' => 'NO', 'leak_foreign_object' => 'NO', 'previous_repair' => 'NONE', 'age_chemical' => 'NONE',
-                'casing_compliance' => 'MEETS', 'd_new_mm' => '16', 'measurements' => $points,
-            ], $answers), $this->admin);
-            $inspections->approve($inspection, ['warehouse_id' => $warehouseId, 'note' => 'Demo inspection'], $this->admin);
-
-            return $tire->fresh();
-        };
+        $inspect = fn (Tire $tire, array $answers, ?string $warehouseId): Tire => $this->inspectUsedTire($tire, $answers, $warehouseId);
 
         // Truck replacement (1FL1 / 1FR1 of the tandem truck) left two REMOVED tires.
         $truck = $vehicles['truck2']->fresh();
@@ -742,6 +742,130 @@ class DemoDatasetSeeder extends Seeder
         // The bus tires taken off: one back to used stock, one scrapped (cord exposed), one awaiting inspection.
         $inspect($removed($bus, $positions[1]), [], $semarang->id);
         $inspect($removed($bus, $positions[2]), ['cord_exposure' => 'PRESENT'], null);
+    }
+
+    /**
+     * Used Tire Management → Retread / Scrap demo. The retread-program truck (H 3203 ALP) has six
+     * tires replaced with new casings: four removed with disposition Retread, two removed and then
+     * scrapped through their inspection (cord exposed). The Retread cycles cover every state —
+     * waiting, in process (Open Cycle: vendor, estimated price, photos, notes), received (pending
+     * inspection) and completed (inspection approved, back to used stock) — and the scrapped tires
+     * can be sold from the Scrap tab (Recently Scrapped → Sell Sparepart).
+     */
+    private function retreadAndScrap(array $vehicles, Product $truckTire): void
+    {
+        $serial = fn (int $n) => DemoSerial::make("ALPHA|CASING|{$n}");
+        if (Tire::query()->where('tenant_id', $this->tenant->id)->where('serial_number', $serial(1))->exists()) {
+            return;
+        }
+        $semarang = Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', 'ALPHA-SMG-WH1')->firstOrFail();
+        $vendor = Partner::query()->where('tenant_id', $this->tenant->id)->where('code', 'VND-KARYABAN')->firstOrFail();
+        $truck = $vehicles['truck3']->fresh();
+        $installed = Tire::query()->where('tenant_id', $this->tenant->id)->where('current_vehicle_id', $truck->id)->orderBy('current_position')->get()->values();
+        $tires = app(TireService::class);
+        $registrations = app(TireRegistrationService::class);
+
+        $removed = ['RETREAD' => [], 'SCRAP' => []];
+        foreach (['RETREAD', 'RETREAD', 'RETREAD', 'RETREAD', 'SCRAP', 'SCRAP'] as $i => $outcome) {
+            $old = $installed[$i];
+            $new = $registrations->register($this->tenant->id, ['product_id' => $truckTire->id, 'serial_number' => $serial($i + 1), 'manufacture_date_code' => '0926']);
+            $tires->replace(
+                $old, $new, $outcome === 'RETREAD' ? 'Tread worn to the pull point; casing sound.' : 'Sidewall cut found on the road check.',
+                $outcome === 'RETREAD' ? 'RETREAD' : 'REUSE', // REUSE → REMOVED: the inspection decides (here: scrap)
+                (float) $truck->current_odometer, null, $this->admin->id, now()->subDays(12 - $i),
+            );
+            $removed[$outcome][] = $old->fresh();
+        }
+
+        $cycles = app(TireCycleService::class);
+        [, $inProcess, $received, $completed] = $removed['RETREAD']; // the first one waits for Open Cycle
+        $open = fn (Tire $tire, string $price, string $notes) => $cycles->open($tire->fresh(), $vendor->id, $price, [
+            DemoPhoto::make('casing-front.png', [90, 90, 90]), DemoPhoto::make('casing-tread.png', [60, 60, 60]),
+        ], $notes, $this->admin->id);
+        $open($inProcess, '850000.00', 'Hot retread, pattern R150.');
+        $cycles->receive($open($received, '850000.00', 'Cold retread; check the bead area on return.'), $this->admin->id);
+        $cycles->receive($open($completed, '875000.50', 'Hot retread, pattern R150.'), $this->admin->id);
+        $this->inspectUsedTire($completed, [], $semarang->id);
+
+        foreach ($removed['SCRAP'] as $tire) {
+            $this->inspectUsedTire($tire, ['cord_exposure' => 'PRESENT'], null);
+        }
+    }
+
+    /**
+     * Purchase Order Return to Vendor demo: one partially received PO per return state (the
+     * "Demo restock: batteries" PO above stays partially received with no return).
+     */
+    private function purchaseReturns(): void
+    {
+        $returns = app(PurchaseReturnService::class);
+        foreach ([
+            ['note' => 'Demo return: oil filters, refund requested.', 'product' => 'Oil Filter', 'qty' => 30, 'price' => 85000, 'vendor' => 'VND-MITRA', 'wh' => 'ALPHA-DPS-WH1', 'received' => 20, 'invoice' => 'INV-MUS-2026-0201', 'option' => PurchaseReturn::REFUND, 'return' => 3, 'decision' => null],
+            ['note' => 'Demo return: brake pads, refund accepted.', 'product' => 'Brake Pad Set', 'qty' => 20, 'price' => 425000, 'vendor' => 'VND-ANDALAN', 'wh' => 'ALPHA-SMG-WH1', 'received' => 12, 'invoice' => 'INV-APN-2026-0202', 'option' => PurchaseReturn::REFUND, 'return' => 2, 'decision' => 'ACCEPT'],
+            ['note' => 'Demo return: batteries, refund rejected then redelivery.', 'product' => 'Truck Battery 12V 100Ah', 'qty' => 10, 'price' => 1800000, 'vendor' => 'VND-SINAR', 'wh' => 'ALPHA-SBY-WH1', 'received' => 6, 'invoice' => 'INV-SSC-2026-0203', 'option' => PurchaseReturn::REFUND, 'return' => 1, 'decision' => 'REJECT'],
+            ['note' => 'Demo return: oil filters, redelivery requested.', 'product' => 'Oil Filter', 'qty' => 24, 'price' => 85000, 'vendor' => 'VND-MITRA', 'wh' => 'ALPHA-DPS-WH1', 'received' => 18, 'invoice' => 'INV-MUS-2026-0204', 'option' => PurchaseReturn::REDELIVERY, 'return' => 2, 'decision' => null],
+        ] as $chain) {
+            if (PurchaseRequest::query()->where('tenant_id', $this->tenant->id)->where('notes', $chain['note'])->exists()) {
+                continue;
+            }
+            $po = $this->purchaseChain($chain);
+            if (! $po) {
+                continue;
+            }
+            $return = $returns->create($po, $chain['option'], [
+                ['purchase_order_item_id' => $po->items()->first()->id, 'quantity' => $chain['return']],
+            ], 'Damaged on arrival; returned to the vendor.', $this->admin->id);
+            if ($chain['decision'] === 'ACCEPT') {
+                $returns->accept($return, 'Vendor credit note issued.', $this->admin->id);
+            } elseif ($chain['decision'] === 'REJECT') {
+                $returns->reject($return, 'Vendor declined the refund and will redeliver.', $this->admin->id);
+            }
+        }
+    }
+
+    /** Vehicle documents with and without expiry / extension (Vehicle Detail → Documents). */
+    private function vehicleDocuments(array $vehicles): void
+    {
+        $documents = app(VehicleDocumentService::class);
+        $date = fn (int $days) => now()->addDays($days)->toDateString();
+        foreach ([
+            ['car1', 'REGISTRATION', 'STNK-B3101ALP', true, $date(330), false, null],
+            ['car1', 'VEHICLE_TAX', 'PKB-B3101ALP-2026', true, $date(25), true, $date(18)],
+            ['truck1', 'INSURANCE', 'POL-H3201-ALP', true, $date(140), false, null],
+            ['bus', 'INSPECTION_CERTIFICATE', 'KIR-DK3301-ALP', true, $date(-5), true, $date(10)],
+            ['van', 'OTHER', 'BPKB-D3102-ALP', false, null, false, null],
+        ] as [$key, $type, $number, $hasExpiry, $expiry, $extend, $deadline]) {
+            $vehicle = $vehicles[$key];
+            if (VehicleDocument::query()->where('vehicle_id', $vehicle->id)->where('document_number', $number)->exists()) {
+                continue;
+            }
+            $documents->upload($vehicle, DemoQuotationDocument::make($number, 'Demo vehicle document', "{$number}.pdf"), [
+                'document_type' => $type, 'document_number' => $number, 'issue_date' => now()->subYear()->toDateString(),
+                'has_expiry' => $hasExpiry, 'expiry_date' => $expiry, 'needs_extension' => $extend, 'extension_deadline' => $deadline,
+            ], $this->admin->id);
+        }
+    }
+
+    /** A Used Tire Management inspection through the decision engine, approved by the demo admin. */
+    private function inspectUsedTire(Tire $tire, array $answers, ?string $warehouseId): Tire
+    {
+        // The DOT code is read during the inspection (Q1 identity complete).
+        $tire->update(['manufacture_date_code' => $tire->manufacture_date_code ?? '1225']);
+        $points = [];
+        foreach ([1, 2, 3] as $zone) {
+            foreach (['INNER_MAIN', 'OUTER_MAIN'] as $groove) {
+                $points[] = ['zone' => $zone, 'groove' => $groove, 'depth_mm' => $zone === 2 ? '8.5' : '9.5'];
+            }
+        }
+        $inspection = app(UsedTireInspectionService::class)->submit($tire->fresh(), array_merge([
+            'identity_status' => 'COMPLETE', 'internal_inspected' => 'YES', 'wear_pattern' => 'EVEN', 'bulge_separation' => 'NONE',
+            'cord_exposure' => 'NONE', 'sidewall_condition' => 'NORMAL', 'bead_condition' => 'NORMAL', 'inner_liner_condition' => 'NORMAL',
+            'run_flat_overheat' => 'NO', 'leak_foreign_object' => 'NO', 'previous_repair' => 'NONE', 'age_chemical' => 'NONE',
+            'casing_compliance' => 'MEETS', 'd_new_mm' => '16', 'measurements' => $points,
+        ], $answers), $this->admin);
+        app(UsedTireInspectionService::class)->approve($inspection, ['warehouse_id' => $warehouseId, 'note' => 'Demo inspection'], $this->admin);
+
+        return $tire->fresh();
     }
 
     /**
