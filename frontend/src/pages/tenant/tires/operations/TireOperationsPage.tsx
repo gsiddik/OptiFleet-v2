@@ -36,7 +36,11 @@ const TABS: WorkflowTab[] = [
   },
 ];
 
-/** Tire Operations: Installation, Rotation and Inspection in one place (replaces three menu aliases). */
+/**
+ * @deprecated Replaced by TireOperationsLandingPage (Recent Tire Operations + Add New Tire Operations).
+ * Kept, unchanged, at /app/tire-operations/legacy until the owner decides to retire it.
+ * Tire Operations: Installation, Rotation and Inspection in one place (replaces three menu aliases).
+ */
 export function TireOperationsPage() {
   return <TireWorkflowTabs title="Tire Operations" intro="Install, rotate and inspect tires. Each action opens the tire, where the step is recorded." tabs={TABS} />;
 }

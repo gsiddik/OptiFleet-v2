@@ -65,7 +65,7 @@ export function WheelConfigurationDetailPage() {
       </div>
 
       {version && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
+        <div className="split-layout">
           <div>
             <div className="card" style={{ marginBottom: 16 }}>
               {versions.length > 1 && (

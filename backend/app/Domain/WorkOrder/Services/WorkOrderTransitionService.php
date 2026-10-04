@@ -2,6 +2,7 @@
 
 namespace App\Domain\WorkOrder\Services;
 
+use App\Domain\Tire\Services\TireOperationExecutionService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use Illuminate\Support\Facades\DB;
@@ -28,6 +29,7 @@ class WorkOrderTransitionService
     public function __construct(
         private readonly WorkflowEngine $workflow,
         private readonly WorkOrderClosureGuardService $closureGuard,
+        private readonly TireOperationExecutionService $tireOperations,
     ) {}
 
     public function canTransition(WorkOrder $workOrder, string $to): bool
@@ -49,6 +51,11 @@ class WorkOrderTransitionService
             if (in_array($to, self::GUARDED_TARGETS, true)) {
                 $this->closureGuard->assertClosable($locked);
             }
+            // A Tire Operation's rotation/inspection happens with the work: applied when the Work
+            // Order completes (a failure aborts the transition); cancelled/rejected releases it.
+            if ($to === 'COMPLETED') {
+                $this->tireOperations->applyOnWorkOrderCompleted($locked, auth()->id());
+            }
 
             $timestamps = match ($to) {
                 'IN_PROGRESS' => ['started_at' => $locked->started_at ?? now()],
@@ -58,6 +65,10 @@ class WorkOrderTransitionService
             };
 
             $locked->update(array_merge($timestamps, $extra, ['status' => $to]));
+
+            if (in_array($to, ['CANCELLED', 'REJECTED'], true)) {
+                $this->tireOperations->releaseOnWorkOrderClosedWithoutWork($locked, auth()->id());
+            }
 
             return $locked->fresh();
         });

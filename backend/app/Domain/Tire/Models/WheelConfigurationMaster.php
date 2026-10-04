@@ -35,4 +35,10 @@ class WheelConfigurationMaster extends Model
     {
         return $this->hasMany(WheelConfigurationVersion::class)->orderByDesc('version_number');
     }
+
+    /** Current vehicle assignments (any version of this master) — the source of the vehicle count. */
+    public function activeMappings(): HasMany
+    {
+        return $this->hasMany(VehicleWheelConfigurationMapping::class)->where('vehicle_wheel_configuration_mappings.status', VehicleWheelConfigurationMapping::STATUS_ACTIVE);
+    }
 }

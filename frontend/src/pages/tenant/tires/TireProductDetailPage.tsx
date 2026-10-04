@@ -3,12 +3,16 @@ import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { Pagination, type PaginationMeta } from '../../../components/Pagination';
+import { ScrollTable, type ScrollColumn } from '../../../components/ScrollTable';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import { useApiList } from '../../../hooks/useApiList';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { ProductDetailsSection } from '../inventory/ProductDetailsSection';
+import { formatDate } from '../../../utils/date';
+import { ImportTiresModal } from './ImportTiresModal';
+import { formatHours } from './operations/tireOperationFormat';
 import { RegisterTireModal } from './RegisterTireModal';
 import type { ProductItem, TireInventoryCategory, TireInventoryRow, TireInventorySummary } from '../../../types';
 
@@ -18,7 +22,8 @@ type TireProductDetail = ProductItem & { inventory: TireInventorySummary; delete
  * Tire Detail: one Tire Product (Product of Item Type TIRE) — its product Details (the same section
  * as Product Detail) and the Inventory of its physical tires: New Stock, Installed and Used Stocks.
  * Counts and tables come from one server-side classification, so they always agree with the Tire
- * List. Each serial opens the physical tire page, where tire operations happen.
+ * List. Installed / Used serials open the physical tire page; New Stock can be registered one by one
+ * or imported from the Excel template.
  */
 export function TireProductDetailPage() {
   const { productId = '' } = useParams<{ productId: string }>();
@@ -26,6 +31,7 @@ export function TireProductDetailPage() {
   const [product, setProduct] = useState<TireProductDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [registering, setRegistering] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
 
   const load = useCallback(() => {
@@ -67,9 +73,14 @@ export function TireProductDetailPage() {
           count={product.inventory.new_qty}
           action={
             canRegister ? (
-              <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setRegistering(true)}>
-                Register Tire
-              </button>
+              <span style={{ display: 'flex', gap: 6 }}>
+                <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setImporting(true)} data-import-open>
+                  Import
+                </button>
+                <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setRegistering(true)}>
+                  Register Tire
+                </button>
+              </span>
             ) : null
           }
         >
@@ -78,7 +89,10 @@ export function TireProductDetailPage() {
             category="NEW"
             reloadKey={reloadKey}
             columns={[
-              { header: 'Serial', cell: (r) => <SerialLink row={r} /> },
+              // New stock has no operation history yet: the serial is plain text (Installed / Used link to the tire).
+              { header: 'Serial', cell: (r) => <span style={{ fontFamily: 'monospace' }}>{r.serial_number}</span> },
+              { header: 'Manufacture Date Code', cell: (r) => r.manufacture_date_code ?? '—' },
+              { header: 'Purchase Date', cell: (r) => (r.purchase_date ? formatDate(r.purchase_date) : '—') },
               { header: 'Status', cell: (r) => <StatusBadge status={r.current_status} /> },
             ]}
           />
@@ -104,13 +118,14 @@ export function TireProductDetailPage() {
             { header: 'Serial', cell: (r) => <SerialLink row={r} /> },
             { header: 'Status', cell: (r) => <StatusBadge status={r.current_status} /> },
             { header: 'Usage KM', cell: (r) => <Num value={r.usage_km} /> },
-            { header: 'Usage Time / Hours Meter', cell: (r) => <Num value={r.usage_hours} /> },
+            { header: 'Usage Time / Hours Meter', cell: (r) => formatHours(r.usage_hours) },
             { header: 'Current Tread Depth', cell: (r) => (r.current_tread_depth_mm != null ? `${r.current_tread_depth_mm} mm` : '—') },
           ]}
         />
       </InventoryCard>
 
       {registering && <RegisterTireModal product={product} onClose={() => setRegistering(false)} onRegistered={refresh} />}
+      {importing && <ImportTiresModal product={product} onClose={() => setImporting(false)} onImported={refresh} />}
     </div>
   );
 }
@@ -129,10 +144,9 @@ function InventoryCard({ title, count, action, children }: { title: string; coun
   );
 }
 
-type InventoryColumn = { header: string; cell: (row: TireInventoryRow) => ReactNode };
+type InventoryColumn = ScrollColumn<TireInventoryRow>;
 
 const PAGE_SIZE = 25;
-const ROW_HEIGHT = 37;
 const VISIBLE_ROWS = 5;
 
 /** New Stock / Installed: at most 5 rows visible, internal scroll, next page fetched on scroll. */
@@ -182,16 +196,7 @@ function ScrollingInventory({ productId, category, reloadKey, columns }: { produ
 
   return (
     <div>
-      <div
-        data-inventory-scroll={category}
-        style={{ maxHeight: ROW_HEIGHT * (VISIBLE_ROWS + 1) + 2, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}
-        onScroll={(e) => {
-          const el = e.currentTarget;
-          if (el.scrollTop + el.clientHeight >= el.scrollHeight - ROW_HEIGHT) loadMore();
-        }}
-      >
-        <InventoryTable columns={columns} rows={rows ?? []} sticky emptyLabel={rows === null ? 'Loading…' : 'No tires.'} />
-      </div>
+      <ScrollTable dataAttr={category} columns={columns} rows={rows ?? []} rowKey={(r) => r.serial_number} maxRows={VISIBLE_ROWS} onReachEnd={loadMore} emptyLabel={rows === null ? 'Loading…' : 'No tires.'} />
       <InventoryFooter shown={rows?.length ?? 0} meta={meta} loading={loadingMore} error={error} onMore={hasMore ? loadMore : undefined} />
     </div>
   );
@@ -204,48 +209,10 @@ function PagedInventory({ productId, reloadKey, columns }: { productId: string; 
 
   return (
     <div data-inventory-paged="USED">
-      <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
-        <InventoryTable columns={columns} rows={data} emptyLabel={loading ? 'Loading…' : 'No tires.'} />
-      </div>
+      <ScrollTable dataAttr="USED" columns={columns} rows={data} rowKey={(r) => r.serial_number} maxRows={PAGE_SIZE} emptyLabel={loading ? 'Loading…' : 'No tires.'} />
       {error && <ErrorState message={error} />}
       {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={setPage} />}
     </div>
-  );
-}
-
-function InventoryTable({ columns, rows, sticky = false, emptyLabel }: { columns: InventoryColumn[]; rows: TireInventoryRow[]; sticky?: boolean; emptyLabel: string }) {
-  const th = { textAlign: 'left' as const, padding: '8px 10px', fontSize: 12, color: '#374151', background: '#f9fafb', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' as const, ...(sticky ? { position: 'sticky' as const, top: 0, zIndex: 1 } : {}) };
-  return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-      <thead>
-        <tr>
-          {columns.map((c) => (
-            <th key={c.header} style={th}>
-              {c.header}
-            </th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={columns.length} style={{ padding: '10px', color: '#6b7280' }}>
-              {emptyLabel}
-            </td>
-          </tr>
-        ) : (
-          rows.map((r) => (
-            <tr key={r.id} data-serial={r.serial_number} style={{ height: ROW_HEIGHT }}>
-              {columns.map((c) => (
-                <td key={c.header} style={{ padding: '6px 10px', borderBottom: '1px solid #f3f4f6' }}>
-                  {c.cell(r)}
-                </td>
-              ))}
-            </tr>
-          ))
-        )}
-      </tbody>
-    </table>
   );
 }
 

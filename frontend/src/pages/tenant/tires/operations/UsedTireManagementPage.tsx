@@ -3,6 +3,19 @@ import { TireWorkflowTabs, type WorkflowTab } from './TireWorkflowTabs';
 
 const TABS: WorkflowTab[] = [
   {
+    // Owner decision: a tire taken off by a Replacement comes here as REMOVED; it goes back to
+    // stock as a Used (reusable) tire only after its inspection in Used Tire Management.
+    key: 'removed',
+    label: 'Removed',
+    permissions: ['tire.view'],
+    statuses: ['REMOVED'],
+    candidatesTitle: 'Removed tires awaiting inspection',
+    actionLabel: 'Inspect & return to stock',
+    anchor: 'used-inspection',
+    activityTypes: ['REMOVAL'],
+    activityTitle: 'Recent removals',
+  },
+  {
     key: 'retread',
     label: 'Retread',
     permissions: RETREAD_PERMISSIONS,
@@ -27,12 +40,12 @@ const TABS: WorkflowTab[] = [
   },
 ];
 
-/** Used Tire Management: Retread and Scrap of removed tires (replaces two menu aliases). */
+/** Used Tire Management: removed tires awaiting inspection, Retread and Scrap (replaces two menu aliases). */
 export function UsedTireManagementPage() {
   return (
     <TireWorkflowTabs
       title="Used Tire Management"
-      intro="Retread or scrap tires that were removed from service. Tires removed with disposition Retread or Repair appear under Retread; each action opens the tire."
+      intro="Tires removed from service: removed tires wait here for inspection before they return to stock as Used; retread or scrap them. Tires removed with disposition Retread or Repair appear under Retread; each action opens the tire."
       tabs={TABS}
     />
   );

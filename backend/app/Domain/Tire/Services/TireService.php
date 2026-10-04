@@ -219,13 +219,15 @@ class TireService
      * position it targets has already been vacated by the other tire's
      * closure, so neither can collide with the other or with the index.
      */
-    public function swapPositions(Tire $tireA, Tire $tireB, ?float $odometer, ?string $workOrderId, ?string $userId): array
+    public function swapPositions(Tire $tireA, Tire $tireB, ?float $odometer, ?string $workOrderId, ?string $userId, ?\DateTimeInterface $at = null): array
     {
+        // $at: when it happened (a Tire Operation's date/time); defaults to now for direct actions.
+        $at ??= now();
         if ($tireA->id === $tireB->id) {
             throw new TireException('Cannot swap a tire with itself.');
         }
 
-        return DB::transaction(function () use ($tireA, $tireB, $odometer, $workOrderId, $userId) {
+        return DB::transaction(function () use ($tireA, $tireB, $odometer, $workOrderId, $userId, $at) {
             // Lock both tire rows in a fixed order so two concurrent swaps can never deadlock on each other.
             $orderedIds = [$tireA->id, $tireB->id];
             sort($orderedIds);
@@ -254,29 +256,29 @@ class TireService
                 throw new TireException('Both tires are already at the same position — nothing to swap.');
             }
 
-            $activeA->update(['removed_at' => now()]);
-            $activeB->update(['removed_at' => now()]);
+            $activeA->update(['removed_at' => $at]);
+            $activeB->update(['removed_at' => $at]);
 
             TireInstallation::query()->create([
                 'tenant_id' => $lockedA->tenant_id, 'tire_id' => $lockedA->id, 'vehicle_id' => $lockedA->current_vehicle_id,
-                'wheel_position' => $positionB, 'installed_at' => now(), 'installation_odometer' => $odometer,
+                'wheel_position' => $positionB, 'installed_at' => $at, 'installation_odometer' => $odometer,
                 'work_order_id' => $workOrderId, 'performed_by' => $userId,
             ]);
             TireInstallation::query()->create([
                 'tenant_id' => $lockedB->tenant_id, 'tire_id' => $lockedB->id, 'vehicle_id' => $lockedB->current_vehicle_id,
-                'wheel_position' => $positionA, 'installed_at' => now(), 'installation_odometer' => $odometer,
+                'wheel_position' => $positionA, 'installed_at' => $at, 'installation_odometer' => $odometer,
                 'work_order_id' => $workOrderId, 'performed_by' => $userId,
             ]);
 
             $rotationA = TireRotation::query()->create([
                 'tenant_id' => $lockedA->tenant_id, 'tire_id' => $lockedA->id, 'vehicle_id' => $lockedA->current_vehicle_id,
                 'from_position' => $positionA, 'to_position' => $positionB, 'odometer' => $odometer,
-                'work_order_id' => $workOrderId, 'performed_by' => $userId, 'occurred_at' => now(),
+                'work_order_id' => $workOrderId, 'performed_by' => $userId, 'occurred_at' => $at,
             ]);
             $rotationB = TireRotation::query()->create([
                 'tenant_id' => $lockedB->tenant_id, 'tire_id' => $lockedB->id, 'vehicle_id' => $lockedB->current_vehicle_id,
                 'from_position' => $positionB, 'to_position' => $positionA, 'odometer' => $odometer,
-                'work_order_id' => $workOrderId, 'performed_by' => $userId, 'occurred_at' => now(),
+                'work_order_id' => $workOrderId, 'performed_by' => $userId, 'occurred_at' => $at,
             ]);
 
             $lockedA->update(['current_position' => $positionB]);
@@ -296,9 +298,12 @@ class TireService
         ]));
     }
 
-    public function remove(Tire $tire, string $reason, string $disposition, ?float $odometer, ?string $condition, ?string $workOrderId, ?string $userId): TireRemoval
+    public function remove(Tire $tire, string $reason, string $disposition, ?float $odometer, ?string $condition, ?string $workOrderId, ?string $userId, ?\DateTimeInterface $at = null): TireRemoval
     {
-        return DB::transaction(function () use ($tire, $reason, $disposition, $odometer, $condition, $workOrderId, $userId) {
+        // $at: when it happened (a Tire Operation's date/time); defaults to now for direct actions.
+        $at ??= now();
+
+        return DB::transaction(function () use ($tire, $reason, $disposition, $odometer, $condition, $workOrderId, $userId, $at) {
             $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
             if (! in_array($locked->current_status, ['INSTALLED', 'IN_USE', 'UNDER_INSPECTION'], true)) {
                 throw new TireException("Tire is {$locked->current_status} and cannot be removed from a vehicle.");
@@ -308,7 +313,7 @@ class TireService
             if (! $active) {
                 throw new TireException('No active installation found for this tire.');
             }
-            $active->update(['removed_at' => now()]);
+            $active->update(['removed_at' => $at]);
 
             $removal = TireRemoval::query()->create([
                 'tenant_id' => $locked->tenant_id,
@@ -320,7 +325,7 @@ class TireService
                 'disposition' => $disposition,
                 'work_order_id' => $workOrderId,
                 'removed_by' => $userId,
-                'removed_at' => now(),
+                'removed_at' => $at,
             ]);
 
             $newStatus = match ($disposition) {
@@ -347,13 +352,13 @@ class TireService
      * it is now caller-supplied (REUSE/RETREAD/SCRAP), matching remove()'s
      * own already-flexible disposition handling.
      */
-    public function replace(Tire $oldTire, Tire $newTire, string $reason, string $disposition, ?float $odometer, ?string $workOrderId, ?string $userId): array
+    public function replace(Tire $oldTire, Tire $newTire, string $reason, string $disposition, ?float $odometer, ?string $workOrderId, ?string $userId, ?\DateTimeInterface $at = null): array
     {
         if (! in_array($disposition, ['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'], true)) {
             throw new TireException('Disposition must be one of: REUSE, RETREAD, REPAIR, SCRAP.');
         }
 
-        return DB::transaction(function () use ($oldTire, $newTire, $reason, $disposition, $odometer, $workOrderId, $userId) {
+        return DB::transaction(function () use ($oldTire, $newTire, $reason, $disposition, $odometer, $workOrderId, $userId, $at) {
             $locked = Tire::query()->lockForUpdate()->findOrFail($oldTire->id);
             if (! in_array($locked->current_status, ['INSTALLED', 'IN_USE', 'UNDER_INSPECTION'], true)) {
                 throw new TireException("Tire is {$locked->current_status} and cannot be replaced.");
@@ -363,10 +368,10 @@ class TireService
             $position = $locked->current_position;
             $vehicle = Vehicle::query()->findOrFail($vehicleId);
 
-            $removal = $this->remove($locked, $reason, $disposition, $odometer, null, $workOrderId, $userId);
+            $removal = $this->remove($locked, $reason, $disposition, $odometer, null, $workOrderId, $userId, $at);
             $removal->update(['replaced_by_tire_id' => $newTire->id]);
 
-            $installation = $this->install($newTire->fresh(), $vehicle, $position, $odometer, $workOrderId, $userId);
+            $installation = $this->install($newTire->fresh(), $vehicle, $position, $odometer, $workOrderId, $userId, $at);
 
             return ['removal' => $removal->fresh(), 'installation' => $installation];
         });
@@ -610,6 +615,45 @@ class TireService
                 'SCRAP' => 'SCRAPPED',
                 'QUARANTINE' => 'QUARANTINED',
             }]);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * Used Tire Management → Removed → "Inspect & return to stock" (owner decision): a tire taken
+     * off a vehicle (REMOVED) is inspected before it can be reused. The measured tread depth is
+     * always recorded as a tire inspection. PASS returns the tire to stock as a Used tire in the
+     * chosen warehouse (IN_STOCK — it is then offered as "Reuse" in Tire Operations); FAIL sends
+     * it to retread, repair or scrap, where the existing flows continue.
+     *
+     * @param  array{tread_depth_mm: string|float, condition?: ?string, result: string, warehouse_id?: ?string, fail_disposition?: ?string, notes?: ?string}  $data
+     */
+    public function inspectRemoved(Tire $tire, array $data, ?string $userId): Tire
+    {
+        return DB::transaction(function () use ($tire, $data, $userId) {
+            $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
+            if ($locked->current_status !== 'REMOVED') {
+                throw new TireException("Only a removed tire can be inspected here; this tire is {$locked->current_status}.");
+            }
+            $pass = $data['result'] === 'PASS';
+            $outcome = $pass ? 'PASS — returned to stock as Used' : 'FAIL — '.strtolower((string) $data['fail_disposition']);
+
+            TireInspection::query()->create([
+                'tenant_id' => $locked->tenant_id,
+                'tire_id' => $locked->id,
+                'tread_depth_mm' => $data['tread_depth_mm'],
+                'condition' => $data['condition'] ?? null,
+                'recommendation' => trim('Used Tire Management inspection: '.$outcome.'. '.($data['notes'] ?? '')),
+                'inspected_by' => $userId,
+                'inspected_at' => now(),
+            ]);
+
+            $locked->update(match (true) {
+                $pass => ['current_status' => 'IN_STOCK', 'current_warehouse_id' => $data['warehouse_id']],
+                $data['fail_disposition'] === 'SCRAP' => ['current_status' => 'SCRAPPED', 'current_warehouse_id' => null],
+                default => ['current_status' => $data['fail_disposition'], 'current_warehouse_id' => null], // RETREAD / REPAIR
+            });
 
             return $locked->fresh();
         });

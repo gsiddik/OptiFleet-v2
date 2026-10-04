@@ -9,6 +9,8 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem, TireItem, TireRepairItem, TireRetreadItem, VehicleItem, WheelConfigurationItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { InstalledTireSection } from './InstalledTireSection';
+import { RemovedTireInspectionSection } from './RemovedTireInspectionSection';
 
 type CycleItem = TireRetreadItem | TireRepairItem;
 
@@ -153,14 +155,7 @@ export function TireDetailPage() {
   const [vehicleId, setVehicleId] = useState('');
   const [wheelPosition, setWheelPosition] = useState('');
   const [availablePositions, setAvailablePositions] = useState<WheelConfigurationItem[]>([]);
-  const [rotatePositions, setRotatePositions] = useState<WheelConfigurationItem[]>([]);
   const [odometer, setOdometer] = useState('');
-  const [toPosition, setToPosition] = useState('');
-  const [treadDepth, setTreadDepth] = useState('');
-  const [pressure, setPressure] = useState('');
-  const [recommendation, setRecommendation] = useState('');
-  const [removalReason, setRemovalReason] = useState('');
-  const [disposition, setDisposition] = useState('REUSE');
   const [scrapReason, setScrapReason] = useState('');
 
   // G-23: legacy onboarding — a normal live install leaves these untouched (undefined = "install now, known").
@@ -169,16 +164,6 @@ export function TireDetailPage() {
   const [installedAtSource, setInstalledAtSource] = useState('KNOWN');
   const [baselineTreadDepth, setBaselineTreadDepth] = useState('');
   const [baselineCondition, setBaselineCondition] = useState('');
-
-  // G-24: swap positions with another currently-installed tire on the same vehicle.
-  const [otherTires, setOtherTires] = useState<TireItem[]>([]);
-  const [swapTireId, setSwapTireId] = useState('');
-
-  // G-28: replace with a caller-chosen disposition for the outgoing tire.
-  const [availableTires, setAvailableTires] = useState<TireItem[]>([]);
-  const [replaceTireId, setReplaceTireId] = useState('');
-  const [replaceReason, setReplaceReason] = useState('');
-  const [replaceDisposition, setReplaceDisposition] = useState('REUSE');
 
   // Phase E: retread/repair governance — send/receive/inspect/approve.
   const [partners, setPartners] = useState<PartnerItem[]>([]);
@@ -213,7 +198,7 @@ export function TireDetailPage() {
 
   useBreadcrumbLabel(tire?.id, tire?.serial_number);
 
-  // Deep links from Tire Operations / Used Tire Management (#install, #in-service, #retread, #scrap).
+  // Deep links from Tire Operations / Used Tire Management (#install, #used-inspection, #retread, #scrap).
   const { hash } = useLocation();
   const loaded = tire !== null;
   useEffect(() => {
@@ -233,31 +218,6 @@ export function TireDetailPage() {
       .then((res) => setAvailablePositions(res.data.data))
       .catch(() => setAvailablePositions([]));
   }, [vehicleId, vehicles]);
-  useEffect(() => {
-    const categoryId = tire?.current_vehicle?.vehicle_category_id;
-    if (!categoryId) {
-      setRotatePositions([]);
-      return;
-    }
-    apiClient
-      .get('/app/wheel-configurations', { params: { vehicle_category_id: categoryId } })
-      .then((res) => setRotatePositions(res.data.data))
-      .catch(() => setRotatePositions([]));
-  }, [tire?.current_vehicle?.vehicle_category_id]);
-  useEffect(() => {
-    if (!tire?.current_vehicle_id || !['INSTALLED', 'IN_USE'].includes(tire.current_status)) return;
-    apiClient
-      .get('/app/tires', { params: { current_vehicle_id: tire.current_vehicle_id, per_page: 100 } })
-      .then((res) => setOtherTires((res.data.data as TireItem[]).filter((t) => t.id !== tire.id)))
-      .catch(() => setOtherTires([]));
-  }, [tire?.current_vehicle_id, tire?.current_status, tire?.id]);
-  useEffect(() => {
-    if (!['INSTALLED', 'IN_USE', 'UNDER_INSPECTION'].includes(tire?.current_status ?? '')) return;
-    apiClient
-      .get('/app/tires', { params: { current_status: 'IN_STOCK', per_page: 100 } })
-      .then((res) => setAvailableTires(res.data.data))
-      .catch(() => setAvailableTires([]));
-  }, [tire?.current_status]);
   useEffect(() => {
     if (!['RETREAD', 'REPAIR'].includes(tire?.current_status ?? '')) return;
     apiClient.get('/app/partners', { params: { status: 'ACTIVE', per_page: 100 } }).then((res) => setPartners(res.data.data)).catch(() => setPartners([]));
@@ -283,84 +243,6 @@ export function TireDetailPage() {
       setBaselineTreadDepth('');
       setBaselineCondition('');
       setShowLegacyFields(false);
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function rotate() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/tires/${id}/rotate`, { to_position: toPosition, odometer: odometer || undefined });
-      setToPosition('');
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function swapPositions() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/tires/${id}/swap-positions`, { other_tire_id: swapTireId, odometer: odometer || undefined });
-      setSwapTireId('');
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function replace() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/tires/${id}/replace`, {
-        new_tire_id: replaceTireId, reason: replaceReason, disposition: replaceDisposition, odometer: odometer || undefined,
-      });
-      setReplaceTireId('');
-      setReplaceReason('');
-      setReplaceDisposition('REUSE');
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function inspect() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/tires/${id}/inspect`, {
-        tread_depth_mm: treadDepth || undefined, pressure_psi: pressure || undefined, recommendation: recommendation || undefined,
-      });
-      setTreadDepth('');
-      setPressure('');
-      setRecommendation('');
-      load();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function remove() {
-    setBusy(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/tires/${id}/remove`, { removal_reason: removalReason, disposition, odometer: odometer || undefined });
-      setRemovalReason('');
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -511,9 +393,6 @@ export function TireDetailPage() {
   if (!tire) return <LoadingState />;
 
   const canInstall = hasPermission('tire.install');
-  const canRotate = hasPermission('tire.rotate');
-  const canInspect = hasPermission('tire.inspect');
-  const canRemove = hasPermission('tire.remove');
   const canScrap = hasPermission('tire.scrap');
   const canRetreadSend = hasPermission('tire_retread.send');
   const canRetreadReceive = hasPermission('tire_retread.receive');
@@ -624,123 +503,8 @@ export function TireDetailPage() {
         </div>
       )}
 
-      {['INSTALLED', 'IN_USE'].includes(tire.current_status) && (
-        <div className="card" id="in-service" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>In-Service Actions</h3>
-          {canRotate && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              <FormField label="Rotate To Position" required>
-                {rotatePositions.length > 0 ? (
-                  <select value={toPosition} onChange={(e) => setToPosition(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-                    <option value="">Select…</option>
-                    {rotatePositions.map((p) => (
-                      <option key={p.id} value={p.position_code}>
-                        {p.label} ({p.position_code})
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input value={toPosition} onChange={(e) => setToPosition(e.target.value)} placeholder="REAR_RIGHT" style={{ ...inputStyle, width: 150 }} />
-                )}
-              </FormField>
-              <FormField label="Odometer">
-                <NumericInput value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
-              </FormField>
-              <button className="btn-secondary" disabled={busy || !toPosition} onClick={rotate} style={{ marginBottom: 14 }}>
-                Rotate
-              </button>
-            </div>
-          )}
-          {canRotate && otherTires.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              <FormField label="Swap Position With" required>
-                <select value={swapTireId} onChange={(e) => setSwapTireId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-                  <option value="">Select another installed tire…</option>
-                  {otherTires.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.serial_number} ({t.current_position})
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-              <button className="btn-secondary" disabled={busy || !swapTireId} onClick={swapPositions} style={{ marginBottom: 14 }}>
-                Swap Positions
-              </button>
-            </div>
-          )}
-          {canInspect && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
-              <FormField label="Tread Depth (mm)">
-                <NumericInput step="0.1" value={treadDepth} onChange={(e) => setTreadDepth(e.target.value)} style={{ ...inputStyle, width: 130 }} />
-              </FormField>
-              <FormField label="Pressure (psi)">
-                <NumericInput step="0.1" value={pressure} onChange={(e) => setPressure(e.target.value)} style={{ ...inputStyle, width: 130 }} />
-              </FormField>
-              <FormField label="Recommendation">
-                <input value={recommendation} onChange={(e) => setRecommendation(e.target.value)} style={{ ...inputStyle, width: 220 }} />
-              </FormField>
-              <button className="btn-secondary" disabled={busy} onClick={inspect} style={{ marginBottom: 14 }}>
-                Record Inspection
-              </button>
-            </div>
-          )}
-          {canRemove && (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <FormField label="Removal Reason" required>
-                <input value={removalReason} onChange={(e) => setRemovalReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
-              </FormField>
-              <FormField label="Disposition" required>
-                <select value={disposition} onChange={(e) => setDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
-                  {['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'].map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </FormField>
-              <button className="btn-secondary" disabled={busy || !removalReason} onClick={remove} style={{ marginBottom: 14 }}>
-                Remove From Vehicle
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {['INSTALLED', 'IN_USE', 'UNDER_INSPECTION'].includes(tire.current_status) && canRemove && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Replace Tire</h3>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Replacement Tire (from stock)" required>
-              <select value={replaceTireId} onChange={(e) => setReplaceTireId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-                <option value="">Select…</option>
-                {availableTires.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.serial_number}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Reason" required>
-              <input value={replaceReason} onChange={(e) => setReplaceReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
-            </FormField>
-            <FormField label="Outgoing Tire Disposition" required>
-              <select value={replaceDisposition} onChange={(e) => setReplaceDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
-                {['REUSE', 'RETREAD', 'REPAIR', 'SCRAP'].map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </FormField>
-            <FormField label="Odometer">
-              <NumericInput value={odometer} onChange={(e) => setOdometer(e.target.value)} style={{ ...inputStyle, width: 120 }} />
-            </FormField>
-            <button className="btn-secondary" disabled={busy || !replaceTireId || !replaceReason} onClick={replace} style={{ marginBottom: 14 }}>
-              Replace
-            </button>
-          </div>
-        </div>
-      )}
+      {tire.installed && <InstalledTireSection installed={tire.installed} />}
+      {tire.current_status === 'REMOVED' && hasPermission('tire.inspect') && <RemovedTireInspectionSection tireId={tire.id} onDone={load} />}
 
       {(tire.current_status === 'RETREAD' || (tire.retreads ?? []).length > 0) && (
         <CycleGovernancePanel

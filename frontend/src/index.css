@@ -333,3 +333,58 @@ input[type='number']::-webkit-outer-spin-button {
 .mapping-row-editable { cursor: pointer; }
 .mapping-row-editable:hover { background: #eff6ff !important; }
 .mapping-row-editable:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
+
+/* Whitespace standard: toolbar filters keep their natural width on the search's row (form
+   controls are width:100% by default, which pushed every filter onto its own line). */
+.toolbar-filters > input,
+.toolbar-filters > select,
+.toolbar-filters > label {
+  width: auto !important;
+  min-width: 170px;
+  max-width: 100%;
+}
+
+/* Two-column workspace (form/details left, preview right) used by tire and wheel pages. */
+.split-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+/* Tablet / phone: tighter page gutters and cards, columns stack. */
+@media (max-width: 1024px) {
+  .split-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .tenant-main {
+    padding: 14px !important;
+  }
+  .card {
+    padding: 14px;
+  }
+  .toolbar-filters > input,
+  .toolbar-filters > select,
+  .toolbar-filters > label {
+    flex: 1 1 100%;
+  }
+}
+
+/* Entity name link (e.g. Tire List → Product Name): readable at rest, clear on hover and focus. */
+.entity-link {
+  color: #1d4ed8;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 3px;
+}
+.entity-link:hover {
+  text-decoration: underline;
+  color: #1e40af;
+}
+.entity-link:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+  text-decoration: underline;
+}

@@ -31,6 +31,8 @@ import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
 import { SearchableSelect, type SearchableOption } from '../../../components/SearchableSelect';
+import { WorkOrderTireOperationTab } from '../tires/operations/WorkOrderTireOperationTab';
+import type { TireOperationDetail } from '../tires/operations/tireOperationTypes';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
@@ -43,7 +45,7 @@ const INTERNAL_TABS = [
 // documents (acknowledged WAL, invoice, payment proof) are under Documents instead. The
 // decision is by execution mode, never by status; internal Work Orders keep the tab.
 const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'Documents', 'History', 'Audit'] as const;
-type Tab = (typeof INTERNAL_TABS)[number] | 'Findings';
+type Tab = (typeof INTERNAL_TABS)[number] | 'Findings' | 'Tire Operations';
 
 // Mirrors backend WorkOrderExecutionService — Findings/Diagnosis/Corrective Actions are
 // Draft-only (Add + Delete/Remove hidden afterward); Jobs/Mechanic/Planned Parts stay
@@ -113,6 +115,15 @@ export function WorkOrderDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  // A Work Order created by a Tire Operation shows it in its own read-only tab.
+  const [tireOperation, setTireOperation] = useState<TireOperationDetail | null>(null);
+  useEffect(() => {
+    apiClient
+      .get(`/app/work-orders/${id}/tire-operation`)
+      .then((res) => setTireOperation(res.data.data))
+      .catch(() => setTireOperation(null));
+  }, [id, wo?.status]);
 
   useBreadcrumbLabel(wo?.id, wo?.wo_number);
 
@@ -215,9 +226,10 @@ export function WorkOrderDetailPage() {
   if (!wo) return <LoadingState />;
 
   const isExternalMode = wo.execution_mode === 'EXTERNAL';
-  const visibleTabs: readonly Tab[] = (isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS).filter(
+  const baseTabs: readonly Tab[] = (isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS).filter(
     (t) => t !== 'Issuance & Return' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status),
   );
+  const visibleTabs: readonly Tab[] = tireOperation ? [baseTabs[0], 'Tire Operations', ...baseTabs.slice(1)] : baseTabs;
   const actions = isExternalMode ? [] : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
@@ -347,6 +359,7 @@ export function WorkOrderDetailPage() {
       </div>
 
       {tab === 'Overview' && <OverviewTab wo={wo} onChanged={load} />}
+      {tab === 'Tire Operations' && tireOperation && <WorkOrderTireOperationTab operation={tireOperation} />}
       {tab === 'Complaint' && <ComplaintTab wo={wo} onChanged={load} />}
       {tab === 'Diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
       {tab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}

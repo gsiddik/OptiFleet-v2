@@ -205,7 +205,7 @@ export function TenantLayout() {
             Your account has an outstanding balance. Please settle it soon to avoid suspension — see Account → Payments.
           </div>
         )}
-        <main style={{ flex: 1, padding: 24, minWidth: 0 }}>
+        <main className="tenant-main" style={{ flex: 1, padding: 24, minWidth: 0 }}>
           <Breadcrumb />
           <Outlet />
         </main>

@@ -5,8 +5,9 @@ import { ErrorState, LoadingState } from '../../../../components/States';
 import { formatDate, formatDateTime } from '../../../../utils/date';
 import { bodyStyleFor, truckConfigurationTypeOption, vehicleTypeOption, type VehicleType } from './vehicleTypes';
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
+import { PositionLabel } from '../../../../components/tires/PositionLabel';
 import { PositionPanel } from './PositionPanel';
-import type { VehicleWheelConfiguration } from './masterTypes';
+import type { PositionInstallation, VehicleWheelConfiguration, VersionPosition } from './masterTypes';
 
 /**
  * Vehicle Detail → Wheels Configuration. Shows the configuration VERSION mapped to this vehicle
@@ -76,7 +77,7 @@ export function VehicleWheelsConfigurationTab({ vehicleId }: { vehicleId: string
         )}
       </div>
 
-      <div className="vehicle-wheels-layout" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(340px, 100%), 1fr))', gap: 16, alignItems: 'start' }}>
+      <div className="vehicle-wheels-layout split-layout">
         <div className="card">
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Preview</h3>
           <WheelConfigurationPreview
@@ -92,9 +93,14 @@ export function VehicleWheelsConfigurationTab({ vehicleId }: { vehicleId: string
         </div>
         <div className="card" data-position-panel-card>
           {selectedPosition ? (
-            <PositionPanel key={selectedPosition.position_code} vehicleId={vehicleId} position={selectedPosition} installation={installation} onSaved={load} />
+            <>
+              <button type="button" className="btn-link" data-all-positions onClick={() => setSelected(null)} style={{ fontSize: 12, marginBottom: 6 }}>
+                ← All positions
+              </button>
+              <PositionPanel key={selectedPosition.position_code} vehicleId={vehicleId} position={selectedPosition} installation={installation} onSaved={load} />
+            </>
           ) : (
-            <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Select a wheel position on the preview to see its tire.</p>
+            <PositionSummary positions={version.positions} installations={data.installations} onSelect={setSelected} />
           )}
         </div>
       </div>
@@ -125,6 +131,52 @@ function Stat({ label, value }: { label: string; value: ReactNode }) {
     <div>
       <div style={{ color: '#6b7280', fontSize: 12 }}>{label}</div>
       <div style={{ fontWeight: 600, fontSize: 15 }}>{value}</div>
+    </div>
+  );
+}
+
+/**
+ * Shown while no position is selected: every position with its registered tire, so the panel next
+ * to the preview carries information instead of empty space. A row selects that position.
+ */
+function PositionSummary({ positions, installations, onSelect }: { positions: VersionPosition[]; installations: PositionInstallation[]; onSelect: (code: string) => void }) {
+  const byCode = new Map(installations.map((i) => [i.position_code, i]));
+  return (
+    <div data-position-summary>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>Positions</h3>
+      <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>Select a position on the preview or in this list to view or register its tire.</p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: 'left', color: '#374151', background: '#f9fafb' }}>
+              <th style={{ padding: '6px 8px' }}>Position</th>
+              <th style={{ padding: '6px 8px' }}>Serial Number</th>
+              <th style={{ padding: '6px 8px' }}>Installation KM</th>
+            </tr>
+          </thead>
+          <tbody>
+            {positions.map((p) => {
+              const inst = byCode.get(p.position_code);
+              return (
+                <tr
+                  key={p.position_code}
+                  tabIndex={0}
+                  onClick={() => onSelect(p.position_code)}
+                  onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onSelect(p.position_code))}
+                  style={{ borderTop: '1px solid #f3f4f6', cursor: 'pointer' }}
+                  data-summary-position={p.position_code}
+                >
+                  <td style={{ padding: '6px 8px' }}>
+                    <PositionLabel code={p.position_code} />
+                  </td>
+                  <td style={{ padding: '6px 8px', fontFamily: inst ? 'monospace' : undefined, color: inst ? undefined : '#9ca3af' }}>{inst?.tire.serial_number ?? 'Not registered'}</td>
+                  <td style={{ padding: '6px 8px' }}>{inst?.installation_odometer ?? '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

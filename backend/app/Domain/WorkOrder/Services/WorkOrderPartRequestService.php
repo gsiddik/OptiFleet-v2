@@ -36,52 +36,100 @@ class WorkOrderPartRequestService
     {
         $this->execution->assertExecutable($workOrder);
 
+        return $this->createRequest($workOrder, $items, $notes, $userId, null);
+    }
+
+    /**
+     * The Part Request a Tire Operation Replacement generates together with its Work Order: the
+     * same REQUESTED request as Work Order "Reserve" (so approval and issuing stay in Part
+     * Requests), created by the system while the Work Order is still being planned, and linked to
+     * the operation. One line per tire product, quantity = number of "Replacing With" serials.
+     *
+     * @param  array<int, array{product_id: string, quantity_requested: int}>  $items
+     */
+    public function requestForTireOperation(WorkOrder $workOrder, string $tireOperationId, array $items, ?string $userId): WorkOrderPartRequest
+    {
+        return $this->createRequest($workOrder, $items, 'Tire Operation replacement tires', $userId, $tireOperationId);
+    }
+
+    /**
+     * Re-states the lines of a still REQUESTED Tire Operation request after the operation was
+     * edited. Once approved or issued, its lines can no longer follow an edit.
+     *
+     * @param  array<int, array{product_id: string, quantity_requested: int}>  $items
+     */
+    public function syncTireOperationLines(WorkOrderPartRequest $request, array $items): WorkOrderPartRequest
+    {
+        return DB::transaction(function () use ($request, $items) {
+            $locked = WorkOrderPartRequest::query()->lockForUpdate()->findOrFail($request->id);
+            if ($locked->status !== 'REQUESTED') {
+                throw new WorkOrderException("The replacement tires' part request is already {$locked->status}; its products and quantities can no longer change.");
+            }
+            WorkOrderPartRequestItem::query()->where('part_request_id', $locked->id)->delete();
+            $workOrder = WorkOrder::query()->findOrFail($locked->work_order_id);
+            $this->createLines($workOrder, $locked, $items);
+
+            return $locked->fresh('items.product');
+        });
+    }
+
+    private function createRequest(WorkOrder $workOrder, array $items, ?string $notes, ?string $userId, ?string $tireOperationId): WorkOrderPartRequest
+    {
         if (empty($items)) {
             throw new WorkOrderException('A part request must include at least one line item.');
         }
 
-        return DB::transaction(function () use ($workOrder, $items, $notes, $userId) {
+        return DB::transaction(function () use ($workOrder, $items, $notes, $userId, $tireOperationId) {
             $request = WorkOrderPartRequest::query()->create([
                 'tenant_id' => $workOrder->tenant_id,
                 'work_order_id' => $workOrder->id,
+                'tire_operation_id' => $tireOperationId,
                 'notes' => $notes,
                 'status' => 'REQUESTED',
                 'requested_by' => $userId,
                 'requested_at' => now(),
             ]);
 
-            foreach ($items as $item) {
-                $quantity = (float) ($item['quantity_requested'] ?? 0);
-                if ($quantity <= 0) {
-                    throw new WorkOrderException('Each part request line must have a quantity greater than zero.');
-                }
-
-                // The Product master is the item's identity; the description is only its name snapshot.
-                $product = Product::query()->where('status', 'ACTIVE')
-                    ->where(fn ($q) => $q->whereNull('tenant_id')->orWhere('tenant_id', $workOrder->tenant_id))
-                    ->find($item['product_id'] ?? null);
-                if (! $product) {
-                    throw new WorkOrderException('Each part request line must reference an active Product.');
-                }
-                QuantityPolicy::assertValid($product, $item['quantity_requested'], 'quantity_requested');
-
-                WorkOrderPartRequestItem::query()->create([
-                    'tenant_id' => $workOrder->tenant_id,
-                    'part_request_id' => $request->id,
-                    'product_id' => $product->id,
-                    'product_reference' => $product->sku,
-                    'description' => $product->name,
-                    'quantity_requested' => $quantity,
-                ]);
-            }
+            $this->createLines($workOrder, $request, $items);
 
             return $request->fresh('items.product');
         });
     }
 
+    private function createLines(WorkOrder $workOrder, WorkOrderPartRequest $request, array $items): void
+    {
+        if (empty($items)) {
+            throw new WorkOrderException('A part request must include at least one line item.');
+        }
+        foreach ($items as $item) {
+            $quantity = (float) ($item['quantity_requested'] ?? 0);
+            if ($quantity <= 0) {
+                throw new WorkOrderException('Each part request line must have a quantity greater than zero.');
+            }
+
+            // The Product master is the item's identity; the description is only its name snapshot.
+            $product = Product::query()->where('status', 'ACTIVE')
+                ->where(fn ($q) => $q->whereNull('tenant_id')->orWhere('tenant_id', $workOrder->tenant_id))
+                ->find($item['product_id'] ?? null);
+            if (! $product) {
+                throw new WorkOrderException('Each part request line must reference an active Product.');
+            }
+            QuantityPolicy::assertValid($product, $item['quantity_requested'], 'quantity_requested');
+
+            WorkOrderPartRequestItem::query()->create([
+                'tenant_id' => $workOrder->tenant_id,
+                'part_request_id' => $request->id,
+                'product_id' => $product->id,
+                'product_reference' => $product->sku,
+                'description' => $product->name,
+                'quantity_requested' => $quantity,
+            ]);
+        }
+    }
+
     /**
      * @param  array<string, float>|null  $approvedQuantities  item id => approved quantity. Any
-     *                                                          item not present defaults to its full quantity_requested.
+     *                                                         item not present defaults to its full quantity_requested.
      */
     public function approve(WorkOrderPartRequest $request, ?array $approvedQuantities, ?string $userId, ?string $note): WorkOrderPartRequest
     {
@@ -98,6 +146,11 @@ class WorkOrderPartRequestService
                 QuantityPolicy::assertValidForProductId($item->product_id, $approvedQty, 'quantity_approved');
                 if ($approvedQty < 0 || $approvedQty > $requested) {
                     throw new WorkOrderException("Approved quantity for line \"{$item->description}\" must be between 0 and the requested quantity.");
+                }
+                // Tire Operation replacement: each line is exactly the selected serials — approve
+                // all of them (or reject the request), never a partial quantity.
+                if ($locked->tire_operation_id !== null && $approvedQty !== $requested) {
+                    throw new WorkOrderException("Line \"{$item->description}\" holds the serial numbers chosen in a Tire Operation: approve its full quantity ({$requested}) or reject the request.");
                 }
 
                 $plannedPartId = null;

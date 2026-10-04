@@ -9,6 +9,7 @@ use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireScoringResult;
 use App\Domain\Tire\Services\TireRegistrationService;
+use App\Domain\Tire\Services\TireOperationService;
 use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Tire\Services\TireService;
 use App\Domain\Vehicle\Models\Vehicle;
@@ -16,6 +17,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreTireRequest;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class TireController extends Controller
 {
@@ -77,7 +80,10 @@ class TireController extends Controller
             'repairs' => fn ($q) => $q->orderByDesc('sent_at'),
             'scoringResults' => fn ($q) => $q->orderByDesc('computed_at'),
             'sales' => fn ($q) => $q->orderByDesc('sold_at'),
-        ]));
+        ])->toArray() + [
+            // Serial Detail of an installed tire (position, usage, tread vs reference, preview).
+            'installed' => app(TireOperationService::class)->installedSummary($tire),
+        ]);
     }
 
     public function install(Request $request, Tire $tire)
@@ -277,6 +283,29 @@ class TireController extends Controller
         ]);
 
         return $this->ok($this->tires->approveRepair($repair, $validated['disposition'], $validated['reason'], $this->context->user()->id));
+    }
+
+    /** Used Tire Management → Removed → Inspect & return to stock. */
+    public function inspectRemoved(Request $request, Tire $tire)
+    {
+        $this->authorizeScope($tire);
+        $tenantId = $this->context->tenantId();
+        $validated = $request->validate([
+            'tread_depth_mm' => ['required', 'numeric', 'min:0', 'max:9999.99'],
+            'condition' => ['nullable', 'string', 'max:100'],
+            'result' => ['required', 'in:PASS,FAIL'],
+            'warehouse_id' => ['required_if:result,PASS', 'nullable', 'uuid', Rule::exists('warehouses', 'id')->where('tenant_id', $tenantId)],
+            'fail_disposition' => ['required_if:result,FAIL', 'nullable', 'in:RETREAD,REPAIR,SCRAP'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'warehouse_id.required_if' => 'Choose the warehouse the tire returns to.',
+            'fail_disposition.required_if' => 'Choose what happens to the tire: retread, repair or scrap.',
+        ]);
+        if (($validated['result'] === 'PASS') && ! $this->scope->canAccessWarehouse($this->context->user(), $tenantId, $validated['warehouse_id'])) {
+            throw ValidationException::withMessages(['warehouse_id' => 'This warehouse is outside your data scope.']);
+        }
+
+        return $this->ok($this->tires->inspectRemoved($tire, $validated, $this->context->user()->id));
     }
 
     public function scrap(Request $request, Tire $tire)

@@ -380,7 +380,8 @@ php artisan key:generate
 createdb optifleet        # and optifleet_test for running tests
 composer install
 php artisan migrate       # also provisions the Mongo analytics collections/indexes
-php artisan db:seed --class=DevDemoSeeder   # full local/demo environment — see "Seed data" below
+php artisan migrate:fresh --seed            # with APP_ENV=local: schema + full demo data in one command — see "Seed data" below
+# (equivalent on an existing schema: php artisan db:seed --class=DevDemoSeeder)
 
 # Frontend
 cd ../frontend
@@ -428,9 +429,11 @@ Configuration platform-default seeder depends on the cache layer.
 Demo/development data (`DemoDataSeeder`'s two fully-populated demo tenants
 and hardcoded local-dev login, `CommercialSeeder`'s subscription-scenario
 tenants, `OperationsSeeder`'s Work Order history, `SupplyChainSeeder`'s
-product/inventory/tire supply chain) is exclusively opt-in via
-`php artisan db:seed --class=DevDemoSeeder` (see "Running locally without
-Docker" above) and must never run against production.
+product/inventory/tire supply chain, `DemoDatasetSeeder`'s list completion)
+is opt-in and must never run against production. `DatabaseSeeder` adds it
+only when `APP_ENV=local`, or when `SEED_DEMO_DATA=true` is set explicitly
+(`SEED_DEMO_DATA=false` turns it off even locally); `php artisan db:seed
+--class=DevDemoSeeder` always seeds it.
 
 ## Seed data
 
@@ -438,14 +441,55 @@ The table and scenarios below are produced by `DevDemoSeeder` (dev/demo
 only, opt-in — see "Production deployment" above for what the default
 `db:seed` actually creates).
 
-| Account | Email | Password | Scope |
+**One command (local):** with `APP_ENV=local` in `backend/.env`,
+
+```bash
+cd backend
+php artisan migrate:fresh --seed
+```
+
+drops and rebuilds the schema and seeds bootstrap + demo data. Every demo
+seeder is idempotent: running `php artisan db:seed` again on the same
+database creates no duplicates (only audit-log entries are added).
+
+All demo accounts use the password `password` (local demo credentials only —
+never reuse them in a shared or production environment).
+
+| Role | Email | Password | Tenant / data scope |
 |---|---|---|---|
 | Platform Superadmin | `admin@optifleet.test` | `password` | Platform — full access |
-| PT Alpha Fleet — Admin | `alpha.admin@optifleet.test` | `password` | Tenant `ALPHA` — TENANT data scope |
-| PT Alpha Fleet — Fleet Manager | `alpha.manager@optifleet.test` | `password` | Tenant `ALPHA` — BRANCH data scope (Jakarta only) |
-| PT Alpha Fleet — Workshop Manager | `alpha.workshopmanager@optifleet.test` | `password` | Tenant `ALPHA` — WORKSHOP data scope (Jakarta workshop only) |
-| PT Beta Logistics — Admin | `beta.admin@optifleet.test` | `password` | Tenant `BETA` — TENANT data scope |
-| PT Beta Logistics — Fleet Manager | `beta.manager@optifleet.test` | `password` | Tenant `BETA` — BRANCH data scope |
+| Admin Tenant | `alpha.admin@optifleet.test` | `password` | `ALPHA` — whole tenant |
+| Fleet Manager | `alpha.manager@optifleet.test` | `password` | `ALPHA` — branch `ALPHA-JKT` (Jakarta) |
+| Workshop Manager | `alpha.workshopmanager@optifleet.test` | `password` | `ALPHA` — workshop `ALPHA-JKT-WS1` |
+| Warehouse Manager | `alpha.warehousemanager@optifleet.test` | `password` | `ALPHA` — warehouse `ALPHA-BDG-WH1` |
+| Procurement | `alpha.procurement@optifleet.test` | `password` | `ALPHA` — whole tenant |
+| Mechanic | `alpha.mechanic@optifleet.test` | `password` | `ALPHA` — workshop `ALPHA-JKT-WS1` |
+| QC | `alpha.qc@optifleet.test` | `password` | `ALPHA` — workshop `ALPHA-JKT-WS1` |
+| Admin Branch Tenant | `alpha.branchadmin@optifleet.test` | `password` | `ALPHA` — branch `ALPHA-BDG` (Bandung) |
+| PT Beta Logistics — Admin | `beta.admin@optifleet.test` | `password` | `BETA` — whole tenant |
+| PT Beta Logistics — Fleet Manager | `beta.manager@optifleet.test` | `password` | `BETA` — branch scope |
+
+Roles are ordinary tenant roles (permission sets); what each account can do
+comes from its role's permissions and its data scope, never from the role
+name. Demo tire serial numbers are 20-character codes
+(`XXXX-XXXX-XXXX-XXXXX`, generated deterministically by `DemoSerial`).
+
+`DemoDatasetSeeder` brings the `ALPHA` lists to at least 5 representative
+records each (branches, workshops, warehouses, vendors, vehicles, Wheels
+Configurations + mappings, installed and in-stock tires, Tire Operations in
+every status, part requests, purchase requests → RFQ → PO → goods receipt,
+workers, workspaces, inspection templates, inspections, maintenance
+packages / schedules, maintenance requests, breakdowns, tire specification
+masters). Documented exceptions, kept at one reference record because each
+is the end product of a full Work Order lifecycle or is a per-tenant
+singleton: the commercial contract / subscription / billing / invoice /
+payment (one per tenant by design), QC inspection, road test, vehicle
+release, warranty + claim, stock transfer and component asset (the single
+end-to-end reference flows of `OperationsSeeder` / `SupplyChainSeeder`), the
+legacy tire rotation / removal events (superseded by Tire Operations), and
+global system reference data (component taxonomy, UOM, vehicle categories,
+tool / equipment types, configuration sets and workflows — seeded once,
+platform-wide, not per tenant).
 
 Tenant `ALPHA` and `BETA` are seeded with **different module entitlements**
 and **different capacity limits** (`BETA`'s branch limit is 2, already at 1)
