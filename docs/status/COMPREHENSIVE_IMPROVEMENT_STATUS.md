@@ -10,7 +10,7 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ a43a3e6.
 | 12 | Seeder overhaul, demo accounts, README credentials, one-command seed | 38a4835 |
 | 13–15 | New Stock columns + Excel import (template, preview, outcomes) | 2be457d |
 | 16 | Installed tire Serial Detail redesign | 0bf37c3 |
-| 17–19 | Contract review, regression, this checkpoint | (this commit) |
+| 17–19 | Contract review, regression, this checkpoint | 756b0b6 + validation update |
 
 ## Behaviour summary
 
@@ -67,3 +67,16 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ a43a3e6.
 - The deprecated legacy Tire Operations page still deep-links to the tire page's removed
   In-Service section (`#in-service`); the link opens the tire page without those actions.
 - Seeded lists below 5 records are listed as documented exceptions in the README.
+
+## Validation (executed in this session)
+
+| Check | Result |
+|---|---|
+| Backend full regression (`php artisan test`, Mongo-only migrations/tests set aside) | PASS — 1051 tests, 6228 assertions |
+| Targeted: TireOperationTest 12, TireImportTest 12, DemoDatasetSeederTest 3, seeder tests | PASS |
+| Frontend `npm run build` (tsc -b + vite build) | PASS |
+| oxlint | PASS — 27 warnings (baseline 28, none new) |
+| Browser e2e: layout / wheels config 16, tire list 5, tire operations 37, import 20, serial detail 9 | PASS |
+| `migrate:fresh --seed` (APP_ENV=local) + re-run idempotency | PASS |
+| MongoDB analytics / intelligence tests | NOT RUN — MongoDB unavailable in this environment |
+| Docker build | NOT RUN — registry egress blocked in this environment |
