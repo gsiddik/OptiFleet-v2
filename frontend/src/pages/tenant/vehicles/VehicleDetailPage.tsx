@@ -13,6 +13,7 @@ import { NumericInput } from '../../../components/NumericInput';
 import { VEHICLE_TYPES, resolveVehicleType, vehicleTypeOption } from '../tires/wheel-configuration/vehicleTypes';
 import { VehicleWheelsConfigurationTab } from '../tires/wheel-configuration/VehicleWheelsConfigurationTab';
 import { formatDate } from '../../../utils/date';
+import { DetailsWithImage, ImageContainer } from '../../../components/ImageContainer';
 
 const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'Wheels Configuration', 'History'] as const;
 type Tab = (typeof TABS)[number];
@@ -140,39 +141,13 @@ function VehiclePhoto({ vehicle, onUploaded }: { vehicle: VehicleItem; onUploade
   }
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div
-        role={canEdit ? 'button' : undefined}
-        tabIndex={canEdit ? 0 : undefined}
-        onClick={() => canEdit && inputRef.current?.click()}
-        onKeyDown={(e) => {
-          if (canEdit && (e.key === 'Enter' || e.key === ' ')) inputRef.current?.click();
-        }}
-        style={{
-          width: 240,
-          height: 160,
-          border: previewUrl ? 'none' : '2px dashed #d1d5db',
-          borderRadius: 8,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: canEdit ? 'pointer' : 'default',
-          background: '#f9fafb',
-          overflow: 'hidden',
-          position: 'relative',
-        }}
+    <div>
+      <ImageContainer
+        src={previewUrl}
+        alt={`${vehicle.registration_number} photo`}
+        placeholder={canEdit ? 'Click to upload photo (JPG/PNG)' : 'No photo'}
+        onActivate={canEdit ? () => inputRef.current?.click() : undefined}
       >
-        {previewUrl ? (
-          <img
-            src={previewUrl}
-            alt={`${vehicle.registration_number} photo`}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <span style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center', padding: 12 }}>
-            {canEdit ? 'Click to upload photo (JPG/PNG)' : 'No photo'}
-          </span>
-        )}
         {uploading && (
           <div
             style={{
@@ -189,7 +164,7 @@ function VehiclePhoto({ vehicle, onUploaded }: { vehicle: VehicleItem; onUploade
             Uploading…
           </div>
         )}
-      </div>
+      </ImageContainer>
       {canEdit && (
         <input
           ref={inputRef}
@@ -239,7 +214,6 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
 
   return (
     <div className="card">
-      <VehiclePhoto vehicle={vehicle} onUploaded={onChanged} />
       {hasPermission('vehicle.update') && (
         <div style={{ textAlign: 'right', marginBottom: 12 }}>
           <button className="btn-secondary" onClick={() => setEditing(true)}>
@@ -247,14 +221,19 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
           </button>
         </div>
       )}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        {rows.map(([label, value]) => (
-          <div key={label}>
-            <div style={{ fontSize: 12, color: '#9ca3af' }}>{label}</div>
-            <div style={{ fontSize: 14 }}>{value}</div>
+      <DetailsWithImage
+        details={
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+            {rows.map(([label, value]) => (
+              <div key={label}>
+                <div style={{ fontSize: 12, color: '#9ca3af' }}>{label}</div>
+                <div style={{ fontSize: 14 }}>{value}</div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        }
+        image={<VehiclePhoto vehicle={vehicle} onUploaded={onChanged} />}
+      />
       {editing && <EditVehicleModal vehicle={vehicle} onClose={() => setEditing(false)} onSaved={() => { setEditing(false); onChanged(); }} />}
     </div>
   );

@@ -8,7 +8,8 @@ Branch `claude/magical-volta-tv4xwl`, baseline `main` @ 55c32df.
 | 6 | Work Order tabs: order, orphaned External Services / Documents, QC / Road Test at QC_PENDING | DONE | afe1657 |
 | 7 + 10 | Orphaned Warranty / Eligibility / Claims and the old Tire Operations page | DONE | e44e38b |
 | 13 | Maintenance Package `componentGroup` relationship (root cause) | DONE | 0d8b5ad |
-| 12 | Vehicle Documents: Vehicle Tax, expiry, extension, upload gating | DONE | see git log |
+| 12 | Vehicle Documents: Vehicle Tax, expiry, extension, upload gating | DONE | f3a1cd5 |
+| 11 + 14 | Global image container 480 × 320; Product / Tire Product Details layout | DONE | see git log |
 
 ## Phases 1–5 — Purchase Order Return to Vendor
 
@@ -101,3 +102,16 @@ Operations page (`/app/tire-operations`) is unaffected.
   (`has_expiry = (expiry_date IS NOT NULL)`, same for the extension). Existing documents with an
   expiry date were backfilled as `has_expiry = true`; a legacy client sending only `expiry_date`
   still works.
+
+## Phases 11 + 14 — Image container standard, Product Details layout
+
+- `components/ImageContainer.tsx`: `ImageContainer` (width 100%, max-width 480px, aspect-ratio
+  3:2 → 480 × 320 on desktop, proportional below 480px; image `object-fit: contain`, never
+  distorted) and `DetailsWithImage` (details | image in one top-aligned row on desktop, image
+  wraps below the text on narrow screens, no horizontal overflow).
+- Applied to the main detail images: Product / Tire Product Details (shared
+  ProductDetailsSection — image top-aligned with the SKU / Type / Category / UOM row, Upload /
+  Replace / Remove under it, **Edit Product beside the "Details" heading**) and the Vehicle photo
+  (inline with the specifications).
+- Not changed (not detail image containers): evidence thumbnails / galleries, logos, document
+  previews in viewers.

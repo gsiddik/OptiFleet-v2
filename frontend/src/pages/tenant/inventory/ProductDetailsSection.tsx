@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { apiClient, extractApiError } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
-import { ImageUploadField } from '../../../components/ImageUploadField';
+import { DetailsWithImage, ImageContainer } from '../../../components/ImageContainer';
 import { NumericInput } from '../../../components/NumericInput';
 import { useAuth } from '../../../auth/AuthContext';
 import { EditProductModal } from './EditProductModal';
@@ -21,6 +21,7 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
   const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState(product.reference_tread_depth_mm ?? '');
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
   const canUpdate = !product.is_system && hasPermission('product.update');
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setReferenceTreadDepthMm(product.reference_tread_depth_mm ?? '');
@@ -71,15 +72,10 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
 
   const deleted = (row: { deleted_at?: string | null } | null | undefined) => (row?.deleted_at ? ' (deleted)' : '');
 
-  return (
-    <div className="card" style={{ marginBottom: 16 }} data-product-details>
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Details</h3>
-      {error && (
-        <div role="alert" style={{ color: '#b91c1c', fontSize: 13, marginBottom: 8 }}>
-          {error}
-        </div>
-      )}
-      <p style={{ fontSize: 13 }}>
+  const line = { fontSize: 13, margin: '0 0 10px' };
+  const details = (
+    <>
+      <p style={line}>
         <strong>SKU:</strong> {product.sku} &nbsp; <strong>Type:</strong> {product.product_type} &nbsp; <strong>Category:</strong> {product.category?.name ?? '—'} &nbsp;{' '}
         <strong>UOM:</strong> {product.uom?.name ?? '—'}
         {(product.component_groups ?? []).length > 0 && (
@@ -89,42 +85,80 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
           </>
         )}
       </p>
-      <p style={{ fontSize: 13 }}>
+      <p style={line}>
         <strong>Component Group:</strong> {product.component_group ? componentGroupLabel(product.component_group) + deleted(product.component_group) : '—'}
         &nbsp; <strong>Category:</strong> {product.component_category ? product.component_category.name + deleted(product.component_category) : '—'}
         &nbsp; <strong>Subcategory:</strong> {product.component_subcategory ? product.component_subcategory.name + deleted(product.component_subcategory) : '—'}
       </p>
       {product.brand && (
-        <p style={{ fontSize: 13 }}>
+        <p style={line}>
           <strong>Brand:</strong> {product.brand} &nbsp; <strong>Manufacturer Part #:</strong> {product.manufacturer_part_number ?? '—'}
         </p>
       )}
-      <p style={{ fontSize: 13 }}>
+      <p style={line}>
         <strong>Manufacturer:</strong> {product.manufacturer ?? '—'} &nbsp; <strong>Material:</strong> {product.material ?? '—'} &nbsp;
         <strong>Production Year:</strong> {product.production_year ?? '—'}
       </p>
-      <p style={{ fontSize: 13 }}>
+      <p style={line}>
         <strong>Dimensions (L×W×H mm):</strong> {product.length_mm ? `${product.length_mm} × ${product.width_mm ?? '—'} × ${product.height_mm ?? '—'}` : '—'} &nbsp;
         <strong>Weight (kg):</strong> {product.weight_kg ?? '—'}
       </p>
       {product.product_type === 'TIRE' && product.tire_spec && <TireSpecification spec={product.tire_spec} />}
-      <div style={{ marginTop: 8, maxWidth: 200 }}>
-        <ImageUploadField
-          images={imagePreviewUrl ? [{ id: 'product-image', previewUrl: imagePreviewUrl, name: product.name }] : []}
-          onUpload={uploadImage}
-          onRemove={!product.is_system && hasPermission('product.delete') ? () => run(() => apiClient.delete(`/app/products/${product.id}/image`)) : undefined}
-          disabled={!canUpdate}
-          multiple={false}
-        />
-      </div>
-      {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>Platform system record — read-only.</p>}
+    </>
+  );
+  const removable = Boolean(imagePreviewUrl) && !product.is_system && hasPermission('product.delete');
+  const image = (
+    <div data-product-image>
+      <ImageContainer src={imagePreviewUrl} alt={product.name} placeholder={canUpdate ? 'No image — use Upload Image (JPG or PNG)' : 'No image'} />
       {canUpdate && (
-        <div style={{ marginTop: 10 }}>
+        <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+          <button type="button" className="btn-secondary" disabled={busy} onClick={() => fileRef.current?.click()}>
+            {imagePreviewUrl ? 'Replace Image' : 'Upload Image'}
+          </button>
+          {removable && (
+            <button type="button" className="btn-link" style={{ color: '#b91c1c' }} disabled={busy} onClick={() => run(() => apiClient.delete(`/app/products/${product.id}/image`))}>
+              Remove Image
+            </button>
+          )}
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".jpg,.jpeg,.png,image/jpeg,image/png"
+            aria-label="Product image file"
+            style={{ display: 'none' }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = '';
+              if (!f) return;
+              if (!['image/jpeg', 'image/png'].includes(f.type)) {
+                setError('Only JPG or PNG images are accepted.');
+                return;
+              }
+              uploadImage(f);
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="card" style={{ marginBottom: 16 }} data-product-details>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+        <h3 style={{ margin: 0, fontSize: 15 }}>Details</h3>
+        {canUpdate && (
           <button className="btn-secondary" onClick={() => setEditing(true)}>
             Edit Product
           </button>
+        )}
+      </div>
+      {error && (
+        <div role="alert" style={{ color: '#b91c1c', fontSize: 13, marginBottom: 8 }}>
+          {error}
         </div>
       )}
+      <DetailsWithImage details={details} image={image} />
+      {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>Platform system record — read-only.</p>}
       {product.product_type === 'TIRE' && (
         <div style={{ marginTop: 10 }}>
           <FormField label="Reference Tread Depth (mm) — required before this Tire product's tires can be scored">
