@@ -8,6 +8,8 @@ use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireLoadIndex;
 use App\Domain\Tire\Models\TireSpeedRating;
 use App\Domain\Tire\Models\TireUsedInspection;
+use App\Domain\Tire\Models\UsedTireStock;
+use App\Domain\Tire\Models\UsedTireStockMovement;
 use App\Domain\Tire\Services\TireService;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -137,6 +139,9 @@ class TireUsedInspectionTest extends TestCase
         $approved = $this->approve($s, $inspection['id'], ['warehouse_id' => $s['warehouse']->id])->json('data');
         $this->assertSame(['APPROVED', 'REUSE'], [$approved['status'], $approved['final_disposition']]);
         $this->assertSame(['REUSE', $s['warehouse']->id], [$tire->fresh()->current_status, $tire->fresh()->current_warehouse_id]);
+        // …and is received into that warehouse's used tire quantity (issued through Part Requests).
+        $this->assertSame(1, UsedTireStock::query()->where('warehouse_id', $s['warehouse']->id)->where('product_id', $s['product']->id)->value('quantity_on_hand'));
+        $this->assertSame('INSPECTION_RECEIPT', UsedTireStockMovement::query()->where('tire_id', $tire->id)->value('movement_type'));
         $this->assertSame(1, $this->inventory($s)['reusable_qty']);
         $this->assertSame('REUSE', collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->json('data'))->firstWhere('serial_number', 'UI-REUSE')['source']);
 

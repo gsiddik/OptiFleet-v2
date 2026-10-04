@@ -8,6 +8,8 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Inventory\Services\UsedSparepartAvailabilityService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Tire\Models\UsedTireStock;
+use App\Domain\Tire\Services\UsedTireStockService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -125,6 +127,40 @@ class WarehouseStockController extends Controller
         $payload['meta']['summary'] = $summary;
 
         return response()->json($payload);
+    }
+
+    /**
+     * Warehouse Stock → Used Tires: the used tire quantity (REUSE tires received from Used Tire
+     * Management) per warehouse and tire product, with the serials counted there. Issued through
+     * Part Requests (USED lines); never part of the new-stock On Hand.
+     */
+    public function usedTires(Request $request, UsedTireStockService $usedStock)
+    {
+        $tenantId = $this->context->tenantId();
+        $request->validate(['warehouse_id' => ['nullable', 'uuid'], 'product_id' => ['nullable', 'uuid']]);
+        $query = UsedTireStock::query()->where('tenant_id', $tenantId)->with(['warehouse:id,code,name', 'product:id,name,sku']);
+        $this->scope->applyWarehouseScope($query, $this->context->user(), $tenantId, 'warehouse_id');
+        foreach (['warehouse_id', 'product_id'] as $filter) {
+            if ($value = $request->string($filter)->value()) {
+                $query->where($filter, $value);
+            }
+        }
+        if ($search = $request->string('search')->trim()->value()) {
+            $query->whereHas('product', fn ($q) => $q->where('name', 'ilike', "%{$search}%")->orWhere('sku', 'ilike', "%{$search}%"));
+        }
+        if (! $request->boolean('include_empty')) {
+            $query->where('quantity_on_hand', '>', 0);
+        }
+
+        $paginator = $query->orderByDesc('updated_at')->paginate($request->integer('per_page', 20));
+
+        return $this->paginated($paginator, fn (UsedTireStock $s) => [
+            'id' => $s->id,
+            'warehouse' => $s->warehouse?->only(['id', 'code', 'name']),
+            'product' => $s->product?->only(['id', 'name', 'sku']),
+            'quantity_on_hand' => $s->quantity_on_hand,
+            'serials' => $usedStock->countedSerials($s->warehouse_id, $s->product_id),
+        ]);
     }
 
     public function show(WarehouseStock $warehouseStock)

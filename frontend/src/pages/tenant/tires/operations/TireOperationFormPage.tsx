@@ -553,12 +553,12 @@ function OperationSection({
                         .filter((c) => c.id === replacements[code] || !chosenSerials.includes(c.id))
                         .map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.serial_number} — {c.source === 'NEW_STOCK' ? 'New Stock' : 'Reuse'}
+                            {c.serial_number} — {c.source === 'NEW_STOCK' ? 'New Stock' : `Reuse${c.warehouse ? ` · ${c.warehouse}` : ''}`}
                           </option>
                         ))}
                     </select>
                   </FormField>
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Only serials of {tire.product?.name ?? 'the same tire product'} (New Stock, or Reuse — used tires back in stock after inspection in Used Tire Management) are listed.</p>
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Only serials of {tire.product?.name ?? 'the same tire product'} (New Stock, or Reuse — used tires back in stock after inspection in Used Tire Management) are listed. Both are requested and issued through the Work Order's Part Request (Reuse as a Used line).</p>
                 </section>
               </>
             )}

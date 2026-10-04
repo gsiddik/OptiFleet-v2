@@ -50,6 +50,8 @@ export interface ReplacementCandidate {
   serial_number: string;
   current_status: string;
   source: 'NEW_STOCK' | 'REUSE';
+  /** Warehouse holding the serial (a REUSE tire is issued from its used tire quantity). */
+  warehouse?: string | null;
   manufacture_date_code: string | null;
 }
 

@@ -14,7 +14,7 @@ class WorkOrderPartRequestItem extends Model
 
     protected $fillable = [
         'tenant_id', 'part_request_id', 'product_id', 'product_reference', 'description',
-        'quantity_requested', 'quantity_approved', 'planned_part_id',
+        'quantity_requested', 'quantity_approved', 'planned_part_id', 'stock_condition',
     ];
 
     protected $casts = [

@@ -149,16 +149,21 @@ class TireOperationService
      */
     public function replacementCandidates(string $tenantId, string $productId, ?string $operationId = null, ?string $search = null): array
     {
-        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)->whereIn('current_status', ['IN_STOCK', TireStatus::REUSE])
+        return Tire::query()->where('tenant_id', $tenantId)->where('product_id', $productId)
+            ->where(fn ($q) => $q->where('current_status', 'IN_STOCK')
+                // REUSE is issued from its warehouse's used tire quantity, so it must be in a warehouse.
+                ->orWhere(fn ($r) => $r->where('current_status', TireStatus::REUSE)->whereNotNull('current_warehouse_id')))
+            ->with('currentWarehouse:id,name')
             ->whereNotIn('id', $this->heldReplacementIds($operationId))
             ->when($search, fn ($q) => $q->where('serial_number', 'ilike', "%{$search}%"))
             ->orderBy('serial_number')->limit(200)
-            ->get(['id', 'serial_number', 'current_status', 'product_id', 'manufacture_date_code', 'purchase_date'])
+            ->get(['id', 'serial_number', 'current_status', 'product_id', 'current_warehouse_id', 'manufacture_date_code', 'purchase_date'])
             ->map(fn (Tire $t) => [
                 'id' => $t->id,
                 'serial_number' => $t->serial_number,
                 'current_status' => $t->current_status,
                 'source' => $t->current_status === TireStatus::REUSE ? 'REUSE' : 'NEW_STOCK',
+                'warehouse' => $t->currentWarehouse?->name,
                 'manufacture_date_code' => $t->manufacture_date_code,
             ])->values()->all();
     }
@@ -403,7 +408,7 @@ class TireOperationService
     /**
      * Validates the input against the vehicle (locked by the caller) and returns the normalised plan.
      *
-     * @return array{type: string, mapping: VehicleWheelConfigurationMapping, operated_at: Carbon, odometer: string, items: list<array<string, mixed>>, lines: list<array{product_id: string, quantity_requested: int}>}
+     * @return array{type: string, mapping: VehicleWheelConfigurationMapping, operated_at: Carbon, odometer: string, items: list<array<string, mixed>>, lines: list<array{product_id: string, stock_condition: string, quantity_requested: int}>}
      */
     private function plan(Vehicle $vehicle, array $input, ?TireOperation $existing): array
     {
@@ -464,11 +469,10 @@ class TireOperationService
             if ($type === TireOperation::REPLACEMENT) {
                 $replacement = $this->assertReplacement($vehicle->tenant_id, $tire, $detail['replacement_tire_id'] ?? null, $existing?->id, $code);
                 $item['replacement_tire_id'] = $replacement->id;
-                // Only new stock is issued from the warehouse through the Part Request; a REUSE tire
-                // is not warehouse quantity — it is installed when the Work Order is completed.
-                if ($replacement->current_status !== TireStatus::REUSE) {
-                    $lines[$tire->product_id] = ($lines[$tire->product_id] ?? 0) + 1;
-                }
+                // Every replacement is issued through the Part Request: new stock from the warehouse
+                // quantity, a REUSE tire from the used tire quantity (a USED line).
+                $condition = $replacement->current_status === TireStatus::REUSE ? 'USED' : 'NEW';
+                $lines["{$tire->product_id}|{$condition}"] = ($lines["{$tire->product_id}|{$condition}"] ?? 0) + 1;
             }
             if ($type === TireOperation::INSPECTION) {
                 $item['tread_depth_mm'] = $detail['tread_depth_mm'] ?? null;
@@ -488,7 +492,11 @@ class TireOperationService
             'operated_at' => $operatedAt,
             'odometer' => (string) $odometer,
             'items' => $items,
-            'lines' => collect($lines)->map(fn ($qty, $productId) => ['product_id' => $productId, 'quantity_requested' => $qty])->values()->all(),
+            'lines' => collect($lines)->map(function ($qty, $key) {
+                [$productId, $condition] = explode('|', $key);
+
+                return ['product_id' => $productId, 'stock_condition' => $condition, 'quantity_requested' => $qty];
+            })->values()->all(),
         ];
     }
 
@@ -541,6 +549,9 @@ class TireOperationService
         $candidate = Tire::query()->where('tenant_id', $tenantId)->lockForUpdate()->find($replacementId);
         if (! $candidate || ! in_array($candidate->current_status, ['IN_STOCK', TireStatus::REUSE], true)) {
             throw ValidationException::withMessages(['items' => "The replacement for {$code} must be New Stock or a REUSE tire. A removed tire must pass inspection in Used Tire Management first."]);
+        }
+        if ($candidate->current_status === TireStatus::REUSE && $candidate->current_warehouse_id === null) {
+            throw ValidationException::withMessages(['items' => "REUSE serial {$candidate->serial_number} is in no warehouse: it is issued through the Part Request from the used tire quantity of its warehouse."]);
         }
         if ($candidate->product_id !== $installed->product_id) {
             throw ValidationException::withMessages(['items' => "The replacement for {$code} must be the same Tire Product as the installed tire."]);
@@ -629,8 +640,8 @@ class TireOperationService
     private function syncPartRequest(TireOperation $operation, ?WorkOrder $workOrder, array $lines, string $userId): void
     {
         $request = $this->activeRequest($operation);
-        $wanted = collect($lines)->mapWithKeys(fn ($l) => [$l['product_id'] => (float) $l['quantity_requested']])->sortKeys()->all();
-        $current = $request ? $request->items()->get()->mapWithKeys(fn ($i) => [$i->product_id => (float) $i->quantity_requested])->sortKeys()->all() : [];
+        $wanted = collect($lines)->mapWithKeys(fn ($l) => ["{$l['product_id']}|{$l['stock_condition']}" => (float) $l['quantity_requested']])->sortKeys()->all();
+        $current = $request ? $request->items()->get()->mapWithKeys(fn ($i) => ["{$i->product_id}|{$i->stock_condition}" => (float) $i->quantity_requested])->sortKeys()->all() : [];
         if ($wanted == $current) {
             return;
         }

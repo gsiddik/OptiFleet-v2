@@ -43,9 +43,10 @@ class WorkOrderPartRequestService
      * The Part Request a Tire Operation Replacement generates together with its Work Order: the
      * same REQUESTED request as Work Order "Reserve" (so approval and issuing stay in Part
      * Requests), created by the system while the Work Order is still being planned, and linked to
-     * the operation. One line per tire product, quantity = number of "Replacing With" serials.
+     * the operation. One line per tire product and stock condition (NEW = new stock, USED = REUSE
+     * tires from the used tire quantity), quantity = number of "Replacing With" serials.
      *
-     * @param  array<int, array{product_id: string, quantity_requested: int}>  $items
+     * @param  array<int, array{product_id: string, quantity_requested: int, stock_condition?: string}>  $items
      */
     public function requestForTireOperation(WorkOrder $workOrder, string $tireOperationId, array $items, ?string $userId): WorkOrderPartRequest
     {
@@ -56,7 +57,7 @@ class WorkOrderPartRequestService
      * Re-states the lines of a still REQUESTED Tire Operation request after the operation was
      * edited. Once approved or issued, its lines can no longer follow an edit.
      *
-     * @param  array<int, array{product_id: string, quantity_requested: int}>  $items
+     * @param  array<int, array{product_id: string, quantity_requested: int, stock_condition?: string}>  $items
      */
     public function syncTireOperationLines(WorkOrderPartRequest $request, array $items): WorkOrderPartRequest
     {
@@ -123,6 +124,8 @@ class WorkOrderPartRequestService
                 'product_reference' => $product->sku,
                 'description' => $product->name,
                 'quantity_requested' => $quantity,
+                // USED lines exist only on Tire Operation requests (REUSE serials); a manual request is new stock.
+                'stock_condition' => $request->tire_operation_id !== null && ($item['stock_condition'] ?? 'NEW') === 'USED' ? 'USED' : 'NEW',
             ]);
         }
     }
@@ -161,6 +164,7 @@ class WorkOrderPartRequestService
                         'product_reference' => $item->product_reference,
                         'description' => $item->description,
                         'quantity' => $approvedQty,
+                        'stock_condition' => $item->stock_condition,
                     ]);
                     $plannedPartId = $plannedPart->id;
                 }

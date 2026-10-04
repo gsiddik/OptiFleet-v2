@@ -793,6 +793,7 @@ export interface WorkOrderPlannedPartItem {
   description: string;
   quantity: string;
   notes: string | null;
+  stock_condition?: 'NEW' | 'USED';
   status: 'PLANNED' | 'REQUESTED' | 'RESERVED' | 'PARTIALLY_RESERVED' | 'ISSUED' | 'PARTIALLY_ISSUED' | 'CONSUMED' | 'RETURNED' | 'CANCELLED';
   planned_quantity: string;
   reserved_quantity: string;
@@ -871,6 +872,8 @@ export interface PartRequestLineItem {
   quantity_requested: string;
   quantity_approved: string | null;
   planned_part_id: string | null;
+  /** NEW = warehouse stock, USED = used tire quantity (REUSE tires of a Tire Operation). */
+  stock_condition?: 'NEW' | 'USED';
   product?: ProductItem;
   planned_part?: WorkOrderPlannedPartItem;
 }

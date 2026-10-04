@@ -9,6 +9,7 @@ use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\TireUsedInspectionEvidence;
 use App\Domain\Tire\Services\TireException;
 use App\Domain\Tire\Services\TireInventoryService;
+use App\Domain\Tire\Services\UsedTireStockService;
 use App\Domain\Tire\Services\VehicleTireRegistrationService;
 use App\Domain\Tire\Support\TireStatus;
 use App\Models\User;
@@ -41,6 +42,7 @@ class UsedTireInspectionService
         private readonly UsedTireDecisionEngine $engine,
         private readonly TireInventoryService $inventory,
         private readonly VehicleTireRegistrationService $registrations,
+        private readonly UsedTireStockService $usedStock,
     ) {}
 
     // ------------------------------------------------------------------ reads
@@ -173,7 +175,7 @@ class UsedTireInspectionService
     /**
      * Applies the recommendation as the tire's status. The final disposition is the engine's
      * recommendation — it is not overridden here (re-inspect to change it). REUSE goes into the
-     * chosen warehouse as reusable used stock.
+     * chosen warehouse as reusable used stock (+1 used tire quantity).
      */
     public function approve(TireUsedInspection $inspection, array $data, User $user): TireUsedInspection
     {
@@ -193,6 +195,10 @@ class UsedTireInspectionService
             }
 
             $tire->update(['current_status' => self::STATUS_BY_DISPOSITION[$disposition], 'current_warehouse_id' => $warehouseId]);
+            if ($warehouseId !== null) {
+                // REUSE is received into that warehouse's used tire quantity (issued through Part Requests).
+                $this->usedStock->receive($tire, $warehouseId, 'INSPECTION_RECEIPT', TireUsedInspection::class, $locked->id, $user->id);
+            }
             $locked->update([
                 'status' => TireUsedInspection::APPROVED, 'final_disposition' => $disposition, 'return_warehouse_id' => $warehouseId,
                 'approved_by' => $user->id, 'approved_at' => now(), 'approval_note' => $data['note'] ?? null,

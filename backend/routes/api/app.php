@@ -541,6 +541,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/inventory/adjust', [WarehouseStockController::class, 'adjust'])->middleware('permission:inventory.adjust');
             Route::post('/inventory/scrap', [WarehouseStockController::class, 'scrap'])->middleware('permission:inventory.scrap');
             Route::get('/inventory/used-spareparts', [WarehouseStockController::class, 'usedSpareparts'])->middleware('permission:inventory.view');
+            Route::get('/inventory/used-tires', [WarehouseStockController::class, 'usedTires'])->middleware('permission:inventory.view');
             Route::get('/inventory/{warehouseStock}', [WarehouseStockController::class, 'show'])->middleware('permission:inventory.view');
             Route::put('/inventory/{warehouseStock}/thresholds', [WarehouseStockController::class, 'updateThresholds'])->middleware('permission:inventory.adjust');
 

@@ -8,6 +8,7 @@ use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\Tire\Services\TireOperationExecutionService;
+use App\Domain\Tire\Services\UsedTireStockService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturnEvidence;
@@ -38,6 +39,7 @@ class WorkOrderPartService
         private readonly WorkOrderExecutionService $execution,
         private readonly DocumentNumberingService $numbers,
         private readonly TireOperationExecutionService $tireOperations,
+        private readonly UsedTireStockService $usedStock,
     ) {}
 
     public function issue(WorkOrderPlannedPart $part, ?float $quantity, ?string $userId): WorkOrderPlannedPart
@@ -56,9 +58,13 @@ class WorkOrderPartService
                 throw new WorkOrderException('Nothing left to issue for this planned part.');
             }
 
-            // Only this line's own reservation may be consumed; the rest must be unreserved stock.
-            $ownReserved = min($toIssue, (float) $part->reserved_quantity);
-            $result = $this->inventory->issue($warehouse, $product, $toIssue, WorkOrderPlannedPart::class, $part->id, $userId, null, $ownReserved);
+            if ($part->stock_condition === 'USED') {
+                $result = $this->issueUsedTires($part, $warehouse, $toIssue, $userId);
+            } else {
+                // Only this line's own reservation may be consumed; the rest must be unreserved stock.
+                $ownReserved = min($toIssue, (float) $part->reserved_quantity);
+                $result = $this->inventory->issue($warehouse, $product, $toIssue, WorkOrderPlannedPart::class, $part->id, $userId, null, $ownReserved);
+            }
 
             $newIssuedTotal = (float) $part->issued_quantity + $toIssue;
             $newReservedTotal = max(0, (float) $part->reserved_quantity - $toIssue);
@@ -171,9 +177,12 @@ class WorkOrderPartService
                 throw new WorkOrderException('Cannot consume more than the outstanding issued quantity.');
             }
 
-            $warehouse = Warehouse::query()->findOrFail($locked->warehouse_id);
-            $product = Product::query()->findOrFail($locked->product_id);
-            $this->inventory->recordConsumption($warehouse, $product, $toConsume, WorkOrderPlannedPart::class, $locked->id, $userId);
+            if ($locked->stock_condition !== 'USED') {
+                // A used tire left the used tire quantity at Issue; its installation is the record.
+                $warehouse = Warehouse::query()->findOrFail($locked->warehouse_id);
+                $product = Product::query()->findOrFail($locked->product_id);
+                $this->inventory->recordConsumption($warehouse, $product, $toConsume, WorkOrderPlannedPart::class, $locked->id, $userId);
+            }
 
             $locked->increment('consumed_quantity', $toConsume);
             $this->recomputeStatus($locked->fresh());
@@ -183,6 +192,24 @@ class WorkOrderPartService
 
             return $locked->fresh();
         });
+    }
+
+    /**
+     * USED line (REUSE tires of a Tire Operation replacement): one serial at a time out of the
+     * warehouse's used tire quantity. Used tires carry no stock valuation, so the issue cost is 0.
+     *
+     * @return array{unit_cost: float, total_cost: float}
+     */
+    private function issueUsedTires(WorkOrderPlannedPart $part, Warehouse $warehouse, float $quantity, ?string $userId): array
+    {
+        if (floor($quantity) !== $quantity) {
+            throw new WorkOrderException('Used tires are issued per serial number: use a whole quantity.');
+        }
+        foreach ($this->tireOperations->usedReplacementTires($part, (int) $quantity) as $tire) {
+            $this->usedStock->issue($tire, $warehouse->id, WorkOrderPlannedPart::class, $part->id, $userId);
+        }
+
+        return ['unit_cost' => 0.0, 'total_cost' => 0.0];
     }
 
     private function recomputeStatus(WorkOrderPlannedPart $part): void

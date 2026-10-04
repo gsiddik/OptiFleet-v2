@@ -6,11 +6,15 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireOperation;
+use App\Domain\Tire\Models\UsedTireStock;
+use App\Domain\Tire\Models\UsedTireStockMovement;
 use App\Domain\Tire\Services\TireFactsService;
 use App\Domain\Tire\Services\TireInventoryService;
+use App\Domain\Tire\Services\UsedTireStockService;
 use App\Domain\Tire\Support\TireOperationStatus;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
+use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Services\WorkOrderException;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use Illuminate\Support\Str;
@@ -135,7 +139,7 @@ class TireOperationTest extends TestCase
         $this->assertSame('2026-10-01 02:15:00', $new1->installations()->first()->installed_at->utc()->format('Y-m-d H:i:s'));
         $candidates = fn () => collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->assertOk()->json('data'));
         $this->assertFalse($candidates()->pluck('serial_number')->contains('OLD-1FL1'));
-        $old->update(['current_status' => 'REUSE']); // e.g. after its inspection in Used Tire Management
+        $old->update(['current_status' => 'REUSE', 'current_warehouse_id' => $s['warehouse']->id]); // e.g. after its inspection in Used Tire Management
         $this->assertSame('REUSE', $candidates()->firstWhere('serial_number', 'OLD-1FL1')['source']);
         $this->assertSame('NEW_STOCK', $candidates()->firstWhere('serial_number', 'NEW-003')['source']);
 
@@ -156,40 +160,144 @@ class TireOperationTest extends TestCase
         $this->assertSame(['48.00', '721.75'], [$hours[$new1->id], $hours[$old->id]]);
     }
 
-    /** A REUSE serial is used stock, not warehouse quantity: it is not issued and is installed when the Work Order completes. */
-    public function test_replacement_with_a_reuse_tire_does_not_issue_warehouse_stock(): void
+    /** A REUSE tire counted in a warehouse's used tire quantity (as after its inspection approval). */
+    private function reuseTire($s, string $serial, ?string $warehouseId = null): Tire
+    {
+        $tire = $this->stockTire($s, $serial);
+        $tire->update(['current_status' => 'REUSE', 'current_warehouse_id' => $warehouseId ?? $s['warehouse']->id]);
+        app(UsedTireStockService::class)->receive($tire, $warehouseId ?? $s['warehouse']->id, 'INSPECTION_RECEIPT', null, null, null);
+
+        return $tire->fresh();
+    }
+
+    private function usedOnHand($s, ?string $warehouseId = null): int
+    {
+        return (int) UsedTireStock::query()->where('warehouse_id', $warehouseId ?? $s['warehouse']->id)->where('product_id', $s['product']->id)->value('quantity_on_hand');
+    }
+
+    /** @return array{0: WorkOrder, 1: WorkOrderPartRequest} the started Work Order and its approved request */
+    private function approvedReplacement($s, array $items): array
+    {
+        $created = $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => $items]), $s['headers'])->assertStatus(201);
+        $request = WorkOrderPartRequest::query()->findOrFail($created->json('data.part_request.id'));
+        $wo = $this->startWorkOrder($created->json('data.work_order.id'));
+        $this->postJson("/api/v1/app/part-requests/{$request->id}/approve", [], $s['headers'])->assertOk();
+
+        return [$wo, $request];
+    }
+
+    /** A REUSE serial is issued through the Part Request from the used tire quantity (a USED line), like new stock. */
+    public function test_replacement_with_a_reuse_tire_is_issued_from_the_used_tire_quantity(): void
     {
         $s = $this->scenario();
         $new = $this->stockTire($s, 'NEW-R1');
-        $reuse = $this->stockTire($s, 'USED-R1');
-        $reuse->update(['current_status' => 'REUSE']);
+        $reuse = $this->reuseTire($s, 'USED-R1');
         $removed = $this->stockTire($s, 'RMV-R1');
         $removed->update(['current_status' => 'REMOVED']);
+        $nowhere = $this->stockTire($s, 'USED-NOWH');
+        $nowhere->update(['current_status' => 'REUSE']);
+        $this->assertSame(1, $this->usedOnHand($s));
 
         $candidates = collect($this->getJson("/api/v1/app/tire-operations/replacement-candidates?product_id={$s['product']->id}", $s['headers'])->json('data'))->keyBy('serial_number');
         $this->assertSame(['NEW_STOCK', 'REUSE'], [$candidates['NEW-R1']['source'], $candidates['USED-R1']['source']]);
+        $this->assertSame($s['warehouse']->name, $candidates['USED-R1']['warehouse']);
         $this->assertFalse($candidates->has('RMV-R1'));
-        $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => [['position_code' => '1FL1', 'replacement_tire_id' => $removed->id]]]), $s['headers'])
-            ->assertStatus(422)->assertJsonValidationErrors('items');
+        $this->assertFalse($candidates->has('USED-NOWH'), 'A REUSE tire in no warehouse cannot be issued.');
+        foreach ([$removed, $nowhere] as $invalid) {
+            $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => [['position_code' => '1FL1', 'replacement_tire_id' => $invalid->id]]]), $s['headers'])
+                ->assertStatus(422)->assertJsonValidationErrors('items');
+        }
 
-        $created = $this->postJson(self::OPS, $this->payload($s, 'REPLACEMENT', ['items' => [
+        [$wo, $request] = $this->approvedReplacement($s, [
             ['position_code' => '1FL1', 'replacement_tire_id' => $new->id],
             ['position_code' => '1FR1', 'replacement_tire_id' => $reuse->id],
-        ]]), $s['headers'])->assertStatus(201);
-        $request = WorkOrderPartRequest::query()->with('items')->findOrFail($created->json('data.part_request.id'));
-        $this->assertSame(1.0, (float) $request->items[0]->quantity_requested, 'Only the new-stock serial is requested from the warehouse.');
+        ]);
+        $lines = $request->fresh('items')->items->keyBy('stock_condition');
+        $this->assertSame([1.0, 1.0], [(float) $lines['NEW']->quantity_requested, (float) $lines['USED']->quantity_requested]);
+        $this->assertSame('USED', $lines['USED']->plannedPart->stock_condition);
 
-        $wo = $this->startWorkOrder($created->json('data.work_order.id'));
-        $this->postJson("/api/v1/app/part-requests/{$request->id}/approve", [], $s['headers'])->assertOk();
         $this->postJson("/api/v1/app/part-requests/{$request->id}/issue", ['warehouse_id' => $s['warehouse']->id], $s['headers'])->assertOk();
-        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$request->fresh('items')->items[0]->planned_part_id}/consume", ['quantity' => 1], $s['headers'])->assertOk();
-        $this->assertSame(['INSTALLED', 'REUSE'], [$new->fresh()->current_status, $reuse->fresh()->current_status]);
+        $this->assertSame([9.0, 0], [$this->onHand($s), $this->usedOnHand($s)], 'Each line left its own quantity.');
+        $this->assertSame('REUSE', $reuse->fresh()->current_status, 'Issued, installed at Consume.');
+
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$lines['USED']->planned_part_id}/consume", ['quantity' => 1], $s['headers'])->assertOk();
+        $this->assertSame(['INSTALLED', '1FR1'], [$reuse->fresh()->current_status, $reuse->fresh()->current_position]);
+        $this->assertSame('IN_STOCK', $new->fresh()->current_status);
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$lines['NEW']->planned_part_id}/consume", ['quantity' => 1], $s['headers'])->assertOk();
 
         $service = app(WorkOrderService::class);
         $service->complete($service->submitToQc($wo->fresh()));
-        $this->assertSame(['INSTALLED', '1FR1'], [$reuse->fresh()->current_status, $reuse->fresh()->current_position]);
         $this->assertSame(['REMOVED', 'REMOVED'], [Tire::query()->where('serial_number', 'OLD-1FL1')->value('current_status'), Tire::query()->where('serial_number', 'OLD-1FR1')->value('current_status')]);
-        $this->assertSame(9.0, $this->onHand($s), 'Only the new tire left the warehouse.');
+        $this->assertSame(['INSPECTION_RECEIPT', 'ISSUE'], UsedTireStockMovement::query()->where('tire_id', $reuse->id)->orderBy('sequence')->pluck('movement_type')->all());
+        $this->assertSame([9.0, 0], [$this->onHand($s), $this->usedOnHand($s)]);
+    }
+
+    public function test_a_used_line_is_issued_only_from_the_warehouse_holding_the_reuse_tire(): void
+    {
+        $s = $this->scenario();
+        $other = $this->makeWarehouse($s['tenant'], $s['branch'], $s['workshop'], ['code' => 'WH-OTHER']);
+        $new = $this->stockTire($s, 'NEW-W1');
+        $reuse = $this->reuseTire($s, 'USED-W2', $other->id);
+        [, $request] = $this->approvedReplacement($s, [
+            ['position_code' => '1FL1', 'replacement_tire_id' => $new->id],
+            ['position_code' => '1FR1', 'replacement_tire_id' => $reuse->id],
+        ]);
+
+        $this->postJson("/api/v1/app/part-requests/{$request->id}/issue", ['warehouse_id' => $s['warehouse']->id], $s['headers'])
+            ->assertStatus(422)->assertJsonFragment(['message' => 'Line "Bridgestone Ecopia": Used tire USED-W2 is not in this warehouse\'s used stock.']);
+        $this->assertSame([10.0, 1], [$this->onHand($s), $this->usedOnHand($s, $other->id)], 'All-or-nothing: nothing moved.');
+        $this->assertSame('APPROVED', $request->fresh()->status);
+    }
+
+    public function test_an_issued_used_tire_returned_unused_goes_back_to_used_stock_or_on_hold(): void
+    {
+        $s = $this->scenario([...self::PERMISSIONS, 'inventory.return', 'part_return.process']);
+        $good = $this->reuseTire($s, 'USED-G1');
+        $faulty = $this->reuseTire($s, 'USED-F1');
+        [$wo, $request] = $this->approvedReplacement($s, [
+            ['position_code' => '1FL1', 'replacement_tire_id' => $good->id],
+            ['position_code' => '1FR1', 'replacement_tire_id' => $faulty->id],
+        ]);
+        $this->postJson("/api/v1/app/part-requests/{$request->id}/issue", ['warehouse_id' => $s['warehouse']->id], $s['headers'])->assertOk();
+        $this->assertSame(0, $this->usedOnHand($s));
+        $part = $request->fresh('items')->items[0]->planned_part_id;
+
+        $return = fn (string $condition) => $this->postJson("/api/v1/app/work-orders/{$wo->id}/planned-parts/{$part}/return", ['quantity' => 1, 'condition' => $condition], $s['headers'])->assertOk();
+        $return('UNUSED_NEW');
+        $first = WorkOrderPartReturn::query()->latest('created_at')->firstOrFail();
+        $this->postJson("/api/v1/app/part-returns/{$first->id}/process", ['actual_condition' => 'UNUSED_NEW', 'received_quantity' => 1], $s['headers'])->assertOk();
+        $this->assertSame(1, $this->usedOnHand($s));
+        $this->assertSame(10.0, $this->onHand($s), 'New stock is untouched by a used tire return.');
+        $restocked = Tire::query()->whereIn('id', [$good->id, $faulty->id])->get()->first(fn (Tire $t) => app(UsedTireStockService::class)->isCounted($t->id));
+        $this->assertSame(['REUSE', $s['warehouse']->id], [$restocked->current_status, $restocked->current_warehouse_id]);
+
+        $return('UNUSED_FAULTY');
+        $second = WorkOrderPartReturn::query()->where('id', '!=', $first->id)->latest('created_at')->firstOrFail();
+        $this->postJson("/api/v1/app/part-returns/{$second->id}/process", ['actual_condition' => 'UNUSED_FAULTY', 'received_quantity' => 1], $s['headers'])->assertOk();
+        $held = Tire::query()->whereIn('id', [$good->id, $faulty->id])->where('id', '!=', $restocked->id)->firstOrFail();
+        $this->assertSame(['HOLD', $s['warehouse']->id], [$held->current_status, $held->current_warehouse_id], 'Faulty: re-inspected in Used Tire Management.');
+        $this->assertSame(1, $this->usedOnHand($s));
+    }
+
+    public function test_a_reuse_tire_installed_or_scrapped_directly_leaves_the_used_tire_quantity(): void
+    {
+        $s = $this->scenario([...self::PERMISSIONS, 'tire.scrap', 'inventory.view']);
+        $installed = $this->reuseTire($s, 'USED-D1');
+        $scrapped = $this->reuseTire($s, 'USED-D2');
+        $this->assertSame(2, $this->usedOnHand($s));
+        // Warehouse Stock → Used Tires: quantity and the serials counted in it.
+        $row = $this->getJson('/api/v1/app/inventory/used-tires', $s['headers'])->assertOk()->json('data.0');
+        $this->assertSame([2, $s['warehouse']->id, ['USED-D1', 'USED-D2']], [$row['quantity_on_hand'], $row['warehouse']['id'], array_column($row['serials'], 'serial_number')]);
+
+        $spare = Tire::query()->where('serial_number', 'OLD-S1')->firstOrFail();
+        $this->postJson("/api/v1/app/tires/{$spare->id}/remove", ['removal_reason' => 'swap', 'disposition' => 'REUSE', 'odometer' => 15000], $s['headers'])->assertSuccessful();
+        $this->postJson("/api/v1/app/tires/{$installed->id}/install", ['vehicle_id' => $s['vehicle']->id, 'wheel_position' => 'S1', 'odometer' => 15000], $s['headers'])->assertStatus(201);
+        $this->postJson("/api/v1/app/tires/{$scrapped->id}/scrap", ['reason' => 'damaged in storage'], $s['headers'])->assertSuccessful();
+
+        $this->assertSame(0, $this->usedOnHand($s));
+        $this->assertSame([], $this->getJson('/api/v1/app/inventory/used-tires', $s['headers'])->assertOk()->json('data'), 'Empty rows are hidden.');
+        $this->assertSame(['INSPECTION_RECEIPT', 'INSTALL'], UsedTireStockMovement::query()->where('tire_id', $installed->id)->orderBy('sequence')->pluck('movement_type')->all());
+        $this->assertSame(['INSPECTION_RECEIPT', 'SCRAP'], UsedTireStockMovement::query()->where('tire_id', $scrapped->id)->orderBy('sequence')->pluck('movement_type')->all());
     }
 
     public function test_work_order_cannot_complete_before_the_replacement_is_consumed(): void
