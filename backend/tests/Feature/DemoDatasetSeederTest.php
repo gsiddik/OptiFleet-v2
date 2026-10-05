@@ -73,10 +73,11 @@ class DemoDatasetSeederTest extends TestCase
         // Used Tire Management: every used status, inspections through the decision engine, the used
         // tire quantity and a USED Part Request line whose REUSE tire carries a usage warning.
         $tireStatuses = Tire::query()->where('tenant_id', $alpha->id)->pluck('current_status')->countBy();
-        foreach (['REMOVED', 'HOLD', 'REUSE', 'SCRAPPED'] as $status) {
+        foreach (['REMOVED', 'HOLD', 'REUSE', 'REPAIR', 'RETREAD', 'SCRAPPED'] as $status) {
             $this->assertGreaterThanOrEqual(1, $tireStatuses[$status] ?? 0, "no {$status} demo tire");
         }
-        $this->assertSame(['HOLD', 'REUSE', 'SCRAP'], TireUsedInspection::query()->where('tenant_id', $alpha->id)->where('status', 'APPROVED')->pluck('final_disposition')->unique()->sort()->values()->all());
+        // Every disposition of the Used Tire Inspection engine (the canonical assessment; no scoring).
+        $this->assertSame(['HOLD', 'REPAIR', 'RETREAD', 'REUSE', 'SCRAP'], TireUsedInspection::query()->where('tenant_id', $alpha->id)->where('status', 'APPROVED')->pluck('final_disposition')->unique()->sort()->values()->all());
         // Used stock: the bus tire inspected as REUSE and the completed retread (the truck REUSE tire was issued).
         $this->assertSame(2, (int) UsedTireStock::query()->where('tenant_id', $alpha->id)->sum('quantity_on_hand'));
         $used = WorkOrderPartRequestItem::query()->where('tenant_id', $alpha->id)->where('stock_condition', 'USED')->with('plannedPart')->get();
@@ -88,7 +89,8 @@ class DemoDatasetSeederTest extends TestCase
 
         // Retread cycles in every state (waiting = a RETREAD tire without a cycle), with photos.
         $this->assertSame(['APPROVED', 'RECEIVED', 'SENT'], DB::table('tire_retreads')->where('tenant_id', $alpha->id)->pluck('status')->sort()->values()->all());
-        $this->assertSame(1, Tire::query()->where('tenant_id', $alpha->id)->where('current_status', 'RETREAD')->whereNotIn('id', DB::table('tire_retreads')->select('tire_id'))->count());
+        // Waiting: the retread-program casing without a cycle and the tire inspected as RETREAD.
+        $this->assertSame(2, Tire::query()->where('tenant_id', $alpha->id)->where('current_status', 'RETREAD')->whereNotIn('id', DB::table('tire_retreads')->select('tire_id'))->count());
         $this->assertSame(6, DB::table('tire_cycle_photos')->where('tenant_id', $alpha->id)->count());
         // Scrapped tires to sell from the Scrap tab.
         $this->assertGreaterThanOrEqual(3, $tireStatuses['SCRAPPED']);
@@ -174,7 +176,7 @@ class DemoDatasetSeederTest extends TestCase
 
         $this->seed(DemoDatasetSeeder::class);
         $this->assertSame($counts, $this->counts($alpha->id), 'a re-run creates no duplicates');
-        $this->assertSame(7, TireUsedInspection::query()->where('tenant_id', $alpha->id)->count(), 'a re-run inspects nothing again');
+        $this->assertSame(9, TireUsedInspection::query()->where('tenant_id', $alpha->id)->count(), 'a re-run inspects nothing again');
         $this->assertSame($phase17, $phase17Counts(), 'a re-run duplicates no return, cycle, photo or document');
         $this->assertSame($assetsBefore, $assetCounts(), 'a re-run generates no Component Asset again');
     }

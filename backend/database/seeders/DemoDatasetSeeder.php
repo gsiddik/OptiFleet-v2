@@ -131,6 +131,7 @@ class DemoDatasetSeeder extends Seeder
         $this->tireRuleProfiles();
         $this->usedTires($vehicles, $truckTire);
         $this->retreadAndScrap($vehicles, $truckTire);
+        $this->repairAndRetreadInspections($vehicles, $truckTire);
         $this->purchaseReturns();
         $this->purchaseQuantityLifecycle();
         $this->componentAssetRegister($vehicles);
@@ -826,6 +827,45 @@ class DemoDatasetSeeder extends Seeder
 
         foreach ($removed['SCRAP'] as $tire) {
             $this->inspectUsedTire($tire, ['cord_exposure' => 'PRESENT'], null);
+        }
+    }
+
+    /**
+     * Used Tire Management: the remaining inspection outcomes, so every disposition of the Used
+     * Tire Inspection engine (the canonical tire assessment; Tire Scoring is retired) has a demo
+     * record — REUSE / HOLD / SCRAP above, and here on the tandem truck (L 3202 ALP) two tires
+     * replaced and inspected: a tread puncture within the repair limits (REPAIR) and a tread worn
+     * to the pull point with the retreader's casing check accepted (RETREAD).
+     */
+    private function repairAndRetreadInspections(array $vehicles, Product $truckTire): void
+    {
+        $serial = fn (int $n) => DemoSerial::make("ALPHA|INSPECTION|{$n}");
+        if (Tire::query()->where('tenant_id', $this->tenant->id)->where('serial_number', $serial(1))->exists()) {
+            return;
+        }
+        $truck = $vehicles['truck2']->fresh();
+        $installed = Tire::query()->where('tenant_id', $this->tenant->id)->where('current_vehicle_id', $truck->id)->orderByDesc('current_position')->get()->values();
+        $tires = app(TireService::class);
+        $registrations = app(TireRegistrationService::class);
+        $outcomes = [
+            'REPAIR' => ['Puncture found on the tread.', [
+                'leak_foreign_object' => 'YES', 'repair_eligibility' => 'YES',
+                'damages' => [['location' => 'TREAD', 'damage_type' => 'PUNCTURE', 'diameter_mm' => 5, 'reaches_reinforcement' => 'NO', 'overlaps_previous_repair' => 'NO']],
+            ]],
+            'RETREAD' => ['Tread worn to the pull point; casing sound.', [
+                'specialist_result' => 'ACCEPTED',
+                'measurements' => collect([1, 2, 3])->flatMap(fn ($zone) => collect(['INNER_MAIN', 'OUTER_MAIN'])
+                    ->map(fn ($groove) => ['zone' => $zone, 'groove' => $groove, 'depth_mm' => $zone === 2 ? '3.5' : '3.9']))->all(),
+            ]],
+        ];
+        $i = 0;
+        foreach ($outcomes as [$reason, $answers]) {
+            $old = $installed[$i];
+            $new = $registrations->register($this->tenant->id, ['product_id' => $truckTire->id, 'serial_number' => $serial($i + 1), 'manufacture_date_code' => '0926']);
+            // Removed with disposition REUSE → REMOVED: the inspection decides.
+            $tires->replace($old, $new, $reason, 'REUSE', (float) $truck->current_odometer, null, $this->admin->id, now()->subDays(3 - $i));
+            $this->inspectUsedTire($old->fresh(), $answers, null);
+            $i++;
         }
     }
 
