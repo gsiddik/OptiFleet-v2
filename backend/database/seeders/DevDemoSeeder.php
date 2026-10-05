@@ -43,6 +43,7 @@ class DevDemoSeeder extends Seeder
             OperationsSeeder::class,
             SupplyChainSeeder::class,
             DemoDatasetSeeder::class,
+            ConfigurationShowcaseSeeder::class,
         ]);
         // The demo seeders work inside a tenant context; the functional-test tenant is a different
         // tenant and must start without ALPHA's, and nothing after the seed may inherit its own.
