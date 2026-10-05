@@ -84,7 +84,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: 'History',
     icon: 'history',
-    items: [{ to: '/app/vehicle-history', label: 'Maintenance History', permission: 'maintenance_history.view', module: null }],
+    items: [{ to: '/app/maintenance-history', label: 'Maintenance History', permission: 'maintenance_history.view', module: null }],
   },
   {
     label: 'Inventory',

@@ -1249,6 +1249,11 @@ export interface HistoryEventItem {
   at: string;
   summary: string;
   work_order_id?: string;
+  status?: string;
+  reference?: string;
+  vehicle_id?: string;
+  /** Vehicle identity (Maintenance History lists many vehicles). */
+  vehicle?: { id: string; registration_number: string; brand: string | null; model: string | null; branch_id: string | null; branch_name?: string | null };
 }
 
 // --- Phase 4: Supply Chain & Asset Lifecycle ---

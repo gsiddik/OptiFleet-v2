@@ -75,6 +75,7 @@ use App\Domain\Workshop\Services\WorkspaceReservationService;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -128,6 +129,7 @@ class DemoDatasetSeeder extends Seeder
         $this->purchaseReturns();
         $this->vehicleDocuments($vehicles);
         $this->workspaceScheduling($branches, $vehicles);
+        $this->maintenanceHistoryCoverage();
     }
 
     // ------------------------------------------------------------ organisation
@@ -937,6 +939,24 @@ class DemoDatasetSeeder extends Seeder
         // 9. A pending request that fills the capacity-2 bay tomorrow 08:00–11:00 (2 / 2).
         $wo = $assigned($create('workspace requested, awaiting approval.', $vehicles['car1']));
         $assignments->reserve($bays[2], $tomorrow, $tomorrow->copy()->addHours(3), $wo->id, $this->admin->id);
+    }
+
+    /**
+     * Maintenance History scope demo: every ALPHA vehicle has at least one history event, so the
+     * tenant admin (all branches) and the Bandung branch admin (only Bandung) see different,
+     * non-empty lists. A vehicle without any history gets a breakdown report through the service.
+     */
+    private function maintenanceHistoryCoverage(): void
+    {
+        $breakdowns = app(BreakdownService::class);
+        $withHistory = fn (string $table) => DB::table($table)->where('tenant_id', $this->tenant->id)->select('vehicle_id');
+        Vehicle::query()->where('tenant_id', $this->tenant->id)
+            ->whereNotIn('id', $withHistory('work_orders'))->whereNotIn('id', $withHistory('breakdowns'))
+            ->whereNotIn('id', $withHistory('maintenance_requests'))->whereNotIn('id', $withHistory('inspections'))
+            ->orderBy('registration_number')->get()
+            ->each(fn (Vehicle $vehicle) => $breakdowns->report($vehicle, [
+                'location' => 'Branch depot', 'severity' => 'MINOR', 'description' => 'Demo history: warning light reported at the depot.',
+            ], $this->admin->id));
     }
 
     /** A Used Tire Management inspection through the decision engine, approved by the demo admin. */

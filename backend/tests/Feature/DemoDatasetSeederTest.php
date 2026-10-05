@@ -120,6 +120,16 @@ class DemoDatasetSeederTest extends TestCase
         $this->assertFalse(DB::table('work_orders')->where('tenant_id', $alpha->id)->whereNotNull('started_at')
             ->whereNotIn('id', DB::table('workspace_reservations')->whereNotNull('approved_at')->select('work_order_id'))->exists());
 
+        // Maintenance History scope: every vehicle has history; the Bandung branch admin's scope holds
+        // several vehicles, all of Bandung.
+        $history = app(\App\Domain\History\Services\HistoryService::class);
+        $vehicleCount = DB::table('vehicles')->where('tenant_id', $alpha->id)->whereNull('deleted_at')->count();
+        $this->assertSame($vehicleCount, $history->query($alpha->id)->get()->pluck('vehicle_id')->unique()->count(), 'a vehicle without maintenance history');
+        $bandung = DB::table('branches')->where('tenant_id', $alpha->id)->where('code', 'ALPHA-BDG')->value('id');
+        $scoped = $history->query($alpha->id, [], [$bandung])->get();
+        $this->assertGreaterThanOrEqual(2, $scoped->pluck('vehicle_id')->unique()->count());
+        $this->assertSame([$bandung], $scoped->pluck('branch_id')->unique()->values()->all());
+
         $phase17Counts = fn () => collect(['purchase_returns', 'tire_retreads', 'tire_cycle_photos', 'vehicle_documents', 'workspace_reservations'])
             ->mapWithKeys(fn ($t) => [$t => DB::table($t)->where('tenant_id', $alpha->id)->count()])->all();
         $phase17 = $phase17Counts();

@@ -37,9 +37,10 @@ export function VehicleHistoryPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Maintenance History</h1>
+      {/* Vehicle History: one selected vehicle's timeline (Maintenance History lists every accessible vehicle). */}
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vehicle History</h1>
       <div style={{ marginBottom: 16 }}>
-        <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={{ ...inputStyle, width: 280 }}>
+        <select aria-label="Vehicle" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={{ ...inputStyle, width: 280 }}>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number} — {v.brand} {v.model}
