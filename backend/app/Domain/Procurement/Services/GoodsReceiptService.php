@@ -101,7 +101,7 @@ class GoodsReceiptService
 
                 // Section 22: over-receipt beyond the PO's remaining quantity is rejected by default.
                 if (($accepted + $rejected + $damaged) > $remaining + 0.0001) {
-                    throw new ProcurementException("Receiving {$accepted} (+{$rejected} rejected +{$damaged} damaged) for product {$poItem->product_id} exceeds the PO's remaining quantity of {$remaining}.");
+                    throw new ProcurementException('Receiving '.$this->qty($accepted + $rejected + $damaged).' exceeds the Remaining Receivable Qty of this line ('.$this->qty(max(0, $remaining)).').');
                 }
 
                 GoodsReceiptItem::query()->create([
@@ -126,6 +126,11 @@ class GoodsReceiptService
                 $totalRejected += $rejected + $damaged;
             }
 
+            // Qty > 0: a receipt must receive something (the transaction rolls back otherwise).
+            if ($totalAccepted + $totalRejected <= 0) {
+                throw new ProcurementException('Enter a received quantity greater than zero.');
+            }
+
             $receipt->update(['status' => 'POSTED']);
 
             $reference = $this->invoices->resolveForReceipt($lockedPo, $receipt, $invoice, $stored['invoice_document'], $userId);
@@ -148,5 +153,10 @@ class GoodsReceiptService
 
             return $receipt->fresh(['items', 'vendorInvoiceReference']);
         }));
+    }
+
+    private function qty(float $value): string
+    {
+        return rtrim(rtrim(number_format($value, 4, '.', ''), '0'), '.');
     }
 }

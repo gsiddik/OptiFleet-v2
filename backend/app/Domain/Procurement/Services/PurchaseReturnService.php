@@ -27,10 +27,11 @@ use Illuminate\Support\Facades\DB;
  *                                     REDELIVERY_REQUESTED ──print──▶ REDELIVERY_READY ──receive──▶ REDELIVERY_RECEIVED
  *
  * Creating a Return Order takes the returned quantity out of stock (RETURN_TO_VENDOR) and
- * records it per PO line (quantity_returned; a refund also quantity_refunded, so it is no longer
- * expected from the vendor). A rejected refund becomes a redelivery: the quantity is expected
- * again. Goods Receipt is blocked while a redelivery is awaited and re-opens once "Receive
- * Redelivery" is recorded; the redelivered goods are then received by a normal Goods Receipt.
+ * records it per PO line (quantity_returned; a refund also quantity_refunded). Quantity accounting
+ * lives in PurchaseOrderQuantityService: the return reduces Remaining once; a Redelivery Request (or
+ * a rejected refund) re-opens it once; an accepted refund changes nothing more. Goods Receipt is
+ * blocked while a redelivery is awaited and re-opens once "Receive Redelivery" is recorded; the
+ * redelivered goods are then received — and counted — by a normal Goods Receipt only.
  */
 class PurchaseReturnService
 {
@@ -49,10 +50,12 @@ class PurchaseReturnService
             'can_return' => $po->status === 'PARTIALLY_RECEIVED' && $open === null && $po->items->contains(fn (PurchaseOrderItem $i) => $i->returnableQuantity() > 0.0001),
             'open_return_id' => $open?->id,
             'goods_receipt_blocked' => $open !== null && in_array($open->status, PurchaseReturn::AWAITING_REDELIVERY, true),
-            'items' => $po->items->mapWithKeys(fn (PurchaseOrderItem $i) => [$i->id => [
-                'returnable_quantity' => $this->qty($i->returnableQuantity()),
-                'remaining_quantity' => $this->qty(max(0, $i->remainingQuantity())),
-            ]])->all(),
+            // Backend-calculated per line (PurchaseOrderQuantityService); remaining_quantity is kept for
+            // compatibility and equals remaining_receivable_quantity.
+            'items' => collect(app(PurchaseOrderQuantityService::class)->forPurchaseOrder($po))->map(fn (array $q, string $id) => $q + [
+                'returnable_quantity' => $this->qty($po->items->firstWhere('id', $id)->returnableQuantity()),
+                'remaining_quantity' => $this->qty((float) $q['remaining_receivable_quantity']),
+            ])->all(),
         ];
     }
 
@@ -106,6 +109,11 @@ class PurchaseReturnService
                     $returnable = $item->returnableQuantity();
                     if ($quantity > $returnable + 0.0001) {
                         throw new ProcurementException("Qty Returned to Vendor ({$this->qty($quantity)}) exceeds the received quantity still held for this item ({$this->qty($returnable)}).");
+                    }
+                    // A return for refund reduces Remaining and is not re-opened: it can never take Remaining below zero.
+                    $remaining = $item->remainingQuantity();
+                    if ($option === PurchaseReturn::REFUND && $quantity > $remaining + 0.0001) {
+                        throw new ProcurementException("A Refund Request can cover at most the remaining quantity of this item ({$this->qty(max(0, $remaining))}); return the rest as a Redelivery Request.");
                     }
 
                     $product = Product::query()->withTrashed()->findOrFail($item->product_id);

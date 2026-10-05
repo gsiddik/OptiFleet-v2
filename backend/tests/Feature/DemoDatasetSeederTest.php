@@ -94,7 +94,7 @@ class DemoDatasetSeederTest extends TestCase
         $this->assertGreaterThanOrEqual(3, $tireStatuses['SCRAPPED']);
 
         // Purchase Order Return to Vendor: every return state, plus a partially received PO without one.
-        $this->assertSame(['REDELIVERY_PENDING', 'REDELIVERY_REQUESTED', 'REFUND_ACCEPTED', 'REFUND_REQUESTED'], DB::table('purchase_returns')->where('tenant_id', $alpha->id)->pluck('status')->sort()->values()->all());
+        $this->assertSame(['REDELIVERY_PENDING', 'REDELIVERY_RECEIVED', 'REDELIVERY_REQUESTED', 'REFUND_ACCEPTED', 'REFUND_REQUESTED'], DB::table('purchase_returns')->where('tenant_id', $alpha->id)->distinct()->pluck('status')->sort()->values()->all());
         $this->assertTrue(DB::table('purchase_orders')->where('tenant_id', $alpha->id)->where('status', 'PARTIALLY_RECEIVED')
             ->whereNotIn('id', DB::table('purchase_returns')->select('purchase_order_id'))->exists());
 
@@ -119,6 +119,27 @@ class DemoDatasetSeederTest extends TestCase
         // Every Work Order that started has (or had) an approved workspace.
         $this->assertFalse(DB::table('work_orders')->where('tenant_id', $alpha->id)->whereNotNull('started_at')
             ->whereNotIn('id', DB::table('workspace_reservations')->whereNotNull('approved_at')->select('work_order_id'))->exists());
+
+        // Maintenance History scope: every vehicle has history; the Bandung branch admin's scope holds
+        // several vehicles, all of Bandung.
+        $history = app(\App\Domain\History\Services\HistoryService::class);
+        $vehicleCount = DB::table('vehicles')->where('tenant_id', $alpha->id)->whereNull('deleted_at')->count();
+        $this->assertSame($vehicleCount, $history->query($alpha->id)->get()->pluck('vehicle_id')->unique()->count(), 'a vehicle without maintenance history');
+        $bandung = DB::table('branches')->where('tenant_id', $alpha->id)->where('code', 'ALPHA-BDG')->value('id');
+        $scoped = $history->query($alpha->id, [], [$bandung])->get();
+        $this->assertGreaterThanOrEqual(2, $scoped->pluck('vehicle_id')->unique()->count());
+        $this->assertSame([$bandung], $scoped->pluck('branch_id')->unique()->values()->all());
+
+        // PO quantity lifecycle: the mandatory Engine Oil Filter case ends at Remaining 1, an issued PO has
+        // received nothing, and no line was ever over-received.
+        $lifecycle = \App\Domain\Procurement\Models\PurchaseOrder::query()->where('tenant_id', $alpha->id)
+            ->whereHas('items', fn ($q) => $q->where('quantity_ordered', 24)->where('quantity_received', 18)->where('quantity_returned', 12))->firstOrFail();
+        $q = collect(app(\App\Domain\Procurement\Services\PurchaseOrderQuantityService::class)->forPurchaseOrder($lifecycle))->first();
+        $this->assertSame(['24.0000', '18.0000', '12.0000', '7.0000', '5.0000', '1.0000'], [
+            $q['ordered_quantity'], $q['gross_received_quantity'], $q['returned_quantity'], $q['reopened_for_redelivery_quantity'], $q['accepted_refund_quantity'], $q['remaining_receivable_quantity'],
+        ]);
+        $this->assertTrue(DB::table('purchase_orders')->where('tenant_id', $alpha->id)->where('status', 'ISSUED')->exists(), 'an ordered, not yet received PO');
+        $this->assertSame(0, DB::table('purchase_order_items')->whereRaw('quantity_received + quantity_refunded > quantity_ordered')->count());
 
         $phase17Counts = fn () => collect(['purchase_returns', 'tire_retreads', 'tire_cycle_photos', 'vehicle_documents', 'workspace_reservations'])
             ->mapWithKeys(fn ($t) => [$t => DB::table($t)->where('tenant_id', $alpha->id)->count()])->all();

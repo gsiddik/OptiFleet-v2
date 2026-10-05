@@ -2,6 +2,7 @@
 
 namespace App\Domain\Procurement\Models;
 
+use App\Domain\Procurement\Services\PurchaseOrderQuantityService;
 use App\Domain\ProductMaster\Models\Product;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -33,13 +34,12 @@ class PurchaseOrderItem extends Model
     }
 
     /**
-     * Still to be received from the vendor: ordered − kept (received − returned to the vendor) −
-     * refunded (a refund requested or accepted is no longer expected as goods). A redelivery
-     * return therefore re-opens its quantity for Goods Receipt.
+     * Remaining Receivable Qty — see PurchaseOrderQuantityService (the single source of truth):
+     * Ordered − Received − Returned + Reopened, i.e. Ordered − Received − Refunded.
      */
     public function remainingQuantity(): float
     {
-        return (float) $this->quantity_ordered - ((float) $this->quantity_received - (float) $this->quantity_returned) - (float) $this->quantity_refunded;
+        return (float) (string) app(PurchaseOrderQuantityService::class)->remaining($this);
     }
 
     /** Received goods still held from this line (may be returned to the vendor). */

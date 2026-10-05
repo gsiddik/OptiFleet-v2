@@ -45,9 +45,9 @@ export function PurchaseOrderDetailPage() {
       setPo(res.data.data);
       const initial: Record<string, string> = {};
       const summary = res.data.data.return_summary;
-      (res.data.data.items ?? []).forEach((item: { id: string; quantity_ordered: string; quantity_received: string }) => {
-        // Remaining receivable is computed by the backend (ordered − kept − refunded).
-        const remaining = Number(summary?.items?.[item.id]?.remaining_quantity ?? Number(item.quantity_ordered) - Number(item.quantity_received));
+      (res.data.data.items ?? []).forEach((item: { id: string }) => {
+        // Remaining Receivable Qty comes from the backend only (PurchaseOrderQuantityService).
+        const remaining = Number(summary?.items?.[item.id]?.remaining_receivable_quantity ?? 0);
         initial[item.id] = remaining > 0 ? String(remaining) : '';
       });
       setAccepted(initial);
@@ -138,11 +138,13 @@ export function PurchaseOrderDetailPage() {
   const actions = (LIFECYCLE[po.status] ?? []).filter((a) => hasPermission(a.permission));
   const summary = po.return_summary;
   const openReturn = (po.returns ?? []).find((r) => r.id === summary?.open_return_id) ?? null;
-  const remainingOf = (item: { id: string; quantity_ordered: string; quantity_received: string }) =>
-    Number(summary?.items[item.id]?.remaining_quantity ?? Number(item.quantity_ordered) - Number(item.quantity_received));
+  // Backend-calculated (no independent formula here); 0 when the summary is unavailable.
+  const remainingOf = (item: { id: string }) => Number(summary?.items[item.id]?.remaining_receivable_quantity ?? 0);
   // Goods Receipt: hidden when nothing is left to receive; disabled while a redelivery is awaited.
   const anyRemaining = (po.items ?? []).some((item) => remainingOf(item) > 0);
   const receiptBlocked = Boolean(summary?.goods_receipt_blocked);
+  // UI hint only — the backend rejects any quantity above the Remaining Receivable Qty.
+  const anyOver = (po.items ?? []).some((item) => Number(accepted[item.id] || 0) > remainingOf(item));
   const canReceive = ['ISSUED', 'PARTIALLY_RECEIVED'].includes(po.status) && hasPermission('goods_receipt.post') && anyRemaining;
   const receipts = po.goods_receipts ?? [];
   // "Use the same invoice": the invoice of the most recent receipt that has one — offered only
@@ -253,25 +255,37 @@ export function PurchaseOrderDetailPage() {
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
         {(po.items ?? []).map((item) => {
           const remaining = remainingOf(item);
+          const q = summary?.items[item.id];
+          const over = Number(accepted[item.id] || 0) > remaining;
           return (
-            <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
+            <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6' }} data-po-line={item.product?.name ?? item.id}>
               <div style={{ fontSize: 13, marginBottom: 6 }}>
-                {item.product?.name ?? item.product_id} — ordered {formatQty(item.quantity_ordered)} @ {formatMoney(item.unit_price)} — received {formatQty(item.quantity_received)}
-                {Number(item.quantity_returned ?? 0) > 0 && <> — returned {formatQty(item.quantity_returned ?? 0)}</>}
-                {Number(item.quantity_refunded ?? 0) > 0 && <> (refund {formatQty(item.quantity_refunded ?? 0)})</>} — remaining {formatQty(Math.max(0, remaining))}
+                {item.product?.name ?? item.product_id} — ordered {formatQty(q?.ordered_quantity ?? item.quantity_ordered)} @ {formatMoney(item.unit_price)} — received {formatQty(q?.gross_received_quantity ?? item.quantity_received)}
+                {Number(q?.returned_quantity ?? 0) > 0 && <> — returned {formatQty(q?.returned_quantity ?? 0)}</>}
+                {Number(q?.reopened_for_redelivery_quantity ?? 0) > 0 && <> (re-opened for redelivery {formatQty(q?.reopened_for_redelivery_quantity ?? 0)})</>}
+                {Number(q?.refund_requested_quantity ?? 0) > 0 && <> — refund requested {formatQty(q?.refund_requested_quantity ?? 0)}</>}
+                {Number(q?.accepted_refund_quantity ?? 0) > 0 && <> — refunded {formatQty(q?.accepted_refund_quantity ?? 0)}</>}
+                {' '}— <strong data-remaining={formatQty(remaining)}>remaining {formatQty(remaining)}</strong>
               </div>
               {canReceive && remaining > 0 && (
-                <NumericInput step="0.0001" placeholder="Accept quantity" value={accepted[item.id] ?? ''} disabled={receiptBlocked} aria-label={`Accept quantity ${item.product?.name ?? item.id}`}
-                  onChange={(e) => setAccepted((a) => ({ ...a, [item.id]: e.target.value }))}
-                  style={{ ...inputStyle, width: 140 }}
-                />
+                <>
+                  <NumericInput step="0.0001" min="0" max={String(remaining)} placeholder="Accept quantity" value={accepted[item.id] ?? ''} disabled={receiptBlocked} aria-label={`Accept quantity ${item.product?.name ?? item.id}`}
+                    onChange={(e) => setAccepted((a) => ({ ...a, [item.id]: e.target.value }))}
+                    style={{ ...inputStyle, width: 140, ...(over ? { borderColor: '#b91c1c' } : {}) }}
+                  />
+                  {over && (
+                    <span role="alert" style={{ fontSize: 12, color: '#b91c1c', marginLeft: 8 }}>
+                      Max {formatQty(remaining)} (Remaining Receivable Qty)
+                    </span>
+                  )}
+                </>
               )}
             </div>
           );
         })}
         {canReceive && (
           <>
-            <button className="btn-primary" disabled={busy || receiptBlocked} onClick={startReceipt} style={{ marginTop: 12 }}>
+            <button className="btn-primary" disabled={busy || receiptBlocked || anyOver} onClick={startReceipt} style={{ marginTop: 12 }}>
               Post Goods Receipt
             </button>
             {receiptBlocked && (

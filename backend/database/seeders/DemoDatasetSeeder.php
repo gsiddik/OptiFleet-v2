@@ -75,6 +75,7 @@ use App\Domain\Workshop\Services\WorkspaceReservationService;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 /**
@@ -126,8 +127,10 @@ class DemoDatasetSeeder extends Seeder
         $this->usedTires($vehicles, $truckTire);
         $this->retreadAndScrap($vehicles, $truckTire);
         $this->purchaseReturns();
+        $this->purchaseQuantityLifecycle();
         $this->vehicleDocuments($vehicles);
         $this->workspaceScheduling($branches, $vehicles);
+        $this->maintenanceHistoryCoverage();
     }
 
     // ------------------------------------------------------------ organisation
@@ -551,6 +554,9 @@ class DemoDatasetSeeder extends Seeder
         $poService = app(PurchaseOrderService::class);
         $po = $poService->createFromQuotation($quotation, $warehouse, ['order_date' => now()->toDateString()], $this->admin->id);
         $po = $poService->transition($poService->approve($poService->transition($po, 'SUBMITTED'), $this->admin->id), 'ISSUED');
+        if ($chain['received'] <= 0) {
+            return $po->fresh(); // ordered, nothing received yet
+        }
         $amount = number_format($chain['received'] * $chain['price'] * 1.11, 2, '.', '');
         app(GoodsReceiptService::class)->post($po, $warehouse, [
             ['purchase_order_item_id' => $po->items()->first()->id, 'quantity_accepted' => $chain['received']],
@@ -848,6 +854,47 @@ class DemoDatasetSeeder extends Seeder
         }
     }
 
+    /**
+     * PO quantity lifecycle demo (owner rule: Remaining = Ordered − Received − Returned + Reopened):
+     *  - "Engine Oil Filter" 24 — received 11, two redelivery cycles (return 2 / 5 → print → Receive
+     *    Redelivery → Goods Receipt of the replacement) and a return-for-refund of 5 accepted:
+     *    Received 18, Remaining 24 − 18 − 2 + 2 − 5 + 5 − 5 = 1 (a Goods Receipt may post at most 1);
+     *  - an issued PO with nothing received yet (Remaining = Ordered).
+     * Built through the procurement services, so every aggregate matches its transactions.
+     */
+    private function purchaseQuantityLifecycle(): void
+    {
+        $note = 'Demo quantity lifecycle: engine oil filters, remaining 1.';
+        if (! PurchaseRequest::query()->where('tenant_id', $this->tenant->id)->where('notes', $note)->exists()) {
+            $po = $this->purchaseChain(['note' => $note, 'product' => 'Engine Oil Filter', 'qty' => 24, 'price' => 85000, 'vendor' => 'VND-MITRA', 'wh' => 'ALPHA-DPS-WH1', 'received' => 11, 'invoice' => 'INV-MUS-2026-0301']);
+            if ($po) {
+                $returns = app(PurchaseReturnService::class);
+                $receipts = app(GoodsReceiptService::class);
+                $warehouse = Warehouse::query()->findOrFail($po->delivery_warehouse_id);
+                $line = $po->items()->firstOrFail();
+                $receive = fn (int $qty, string $invoice) => $receipts->post($po->fresh(), $warehouse, [
+                    ['purchase_order_item_id' => $line->id, 'quantity_accepted' => $qty],
+                ], $this->admin->id, 'Redelivered replacement.', [
+                    'mode' => 'NEW', 'vendor_invoice_number' => $invoice, 'vendor_invoice_date' => now()->toDateString(),
+                    'amount' => number_format($qty * 85000 * 1.11, 2, '.', ''), 'terms_of_payment_days' => 30,
+                    'document' => DemoQuotationDocument::make($invoice, 'Demo vendor invoice', $invoice.'.pdf'),
+                ]);
+                foreach ([[2, 'INV-MUS-2026-0302'], [5, 'INV-MUS-2026-0303']] as [$qty, $invoice]) {
+                    $return = $returns->create($po->fresh(), PurchaseReturn::REDELIVERY, [['purchase_order_item_id' => $line->id, 'quantity' => $qty]], 'Leaking seal; vendor redelivers.', $this->admin->id);
+                    $returns->receiveRedelivery($returns->markPrinted($return, $this->admin->id), $this->admin->id);
+                    $receive($qty, $invoice);
+                }
+                $refund = $returns->create($po->fresh(), PurchaseReturn::REFUND, [['purchase_order_item_id' => $line->id, 'quantity' => 5]], 'Wrong thread size; refund requested.', $this->admin->id);
+                $returns->accept($refund, 'Vendor credit note issued.', $this->admin->id);
+            }
+        }
+
+        $issued = 'Demo quantity lifecycle: brake pads ordered, not yet received.';
+        if (! PurchaseRequest::query()->where('tenant_id', $this->tenant->id)->where('notes', $issued)->exists()) {
+            $this->purchaseChain(['note' => $issued, 'product' => 'Brake Pad Set', 'qty' => 16, 'price' => 425000, 'vendor' => 'VND-ANDALAN', 'wh' => 'ALPHA-SMG-WH1', 'received' => 0, 'invoice' => 'INV-APN-2026-0305']);
+        }
+    }
+
     /** Vehicle documents with and without expiry / extension (Vehicle Detail → Documents). */
     private function vehicleDocuments(array $vehicles): void
     {
@@ -937,6 +984,24 @@ class DemoDatasetSeeder extends Seeder
         // 9. A pending request that fills the capacity-2 bay tomorrow 08:00–11:00 (2 / 2).
         $wo = $assigned($create('workspace requested, awaiting approval.', $vehicles['car1']));
         $assignments->reserve($bays[2], $tomorrow, $tomorrow->copy()->addHours(3), $wo->id, $this->admin->id);
+    }
+
+    /**
+     * Maintenance History scope demo: every ALPHA vehicle has at least one history event, so the
+     * tenant admin (all branches) and the Bandung branch admin (only Bandung) see different,
+     * non-empty lists. A vehicle without any history gets a breakdown report through the service.
+     */
+    private function maintenanceHistoryCoverage(): void
+    {
+        $breakdowns = app(BreakdownService::class);
+        $withHistory = fn (string $table) => DB::table($table)->where('tenant_id', $this->tenant->id)->select('vehicle_id');
+        Vehicle::query()->where('tenant_id', $this->tenant->id)
+            ->whereNotIn('id', $withHistory('work_orders'))->whereNotIn('id', $withHistory('breakdowns'))
+            ->whereNotIn('id', $withHistory('maintenance_requests'))->whereNotIn('id', $withHistory('inspections'))
+            ->orderBy('registration_number')->get()
+            ->each(fn (Vehicle $vehicle) => $breakdowns->report($vehicle, [
+                'location' => 'Branch depot', 'severity' => 'MINOR', 'description' => 'Demo history: warning light reported at the depot.',
+            ], $this->admin->id));
     }
 
     /** A Used Tire Management inspection through the decision engine, approved by the demo admin. */

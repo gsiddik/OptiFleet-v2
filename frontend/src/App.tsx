@@ -63,6 +63,7 @@ import { LoadingState } from './components/States';
 import { VehicleListPage } from './pages/tenant/vehicles/VehicleListPage';
 import { VehicleDetailPage } from './pages/tenant/vehicles/VehicleDetailPage';
 import { VehicleTransferListPage } from './pages/tenant/vehicles/VehicleTransferListPage';
+import { MaintenanceHistoryPage } from './pages/tenant/history/MaintenanceHistoryPage';
 import { VehicleHistoryPage } from './pages/tenant/vehicles/VehicleHistoryPage';
 import { InspectionListPage } from './pages/tenant/inspections/InspectionListPage';
 import { InspectionDetailPage } from './pages/tenant/inspections/InspectionDetailPage';
@@ -381,6 +382,14 @@ export default function App() {
               element={
                 <RequirePermission permission="vehicle.transfer">
                   <VehicleTransferListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="maintenance-history"
+              element={
+                <RequirePermission permission="maintenance_history.view">
+                  <MaintenanceHistoryPage />
                 </RequirePermission>
               }
             />

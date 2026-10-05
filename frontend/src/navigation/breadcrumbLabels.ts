@@ -52,6 +52,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   workers: 'Mechanics',
   'workshop-scheduler': 'Workshop Scheduler',
   'workspace-reservations': 'Workspace Assignments',
+  'maintenance-history': 'Maintenance History',
   workload: 'Workload',
 
   // Organization / Master Data

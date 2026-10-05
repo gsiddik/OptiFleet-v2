@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\Tenant\Intelligence\PredictionHistoryController;
 use App\Http\Controllers\Api\Tenant\Intelligence\RecommendationController;
 use App\Http\Controllers\Api\Tenant\Intelligence\TireIntelligenceApiController;
 use App\Http\Controllers\Api\Tenant\Intelligence\VehicleIntelligenceController;
+use App\Http\Controllers\Api\Tenant\MaintenanceHistoryController;
 use App\Http\Controllers\Api\Tenant\MaintenancePackageController;
 use App\Http\Controllers\Api\Tenant\MaintenanceRequestAssessmentController;
 use App\Http\Controllers\Api\Tenant\MaintenanceRequestController;
@@ -239,6 +240,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/vehicles/{vehicle}/assign', [VehicleController::class, 'assign'])->middleware('permission:vehicle.assign');
             Route::get('/vehicles/{vehicle}/assignments', [VehicleController::class, 'assignmentHistory'])->middleware('permission:vehicle.view');
             Route::get('/vehicles/{vehicle}/history', [VehicleController::class, 'history'])->middleware('permission:maintenance_history.view');
+            // Maintenance History across every vehicle in the user's data scope (no vehicle selection needed).
+            Route::get('/maintenance-history', [MaintenanceHistoryController::class, 'index'])->middleware('permission:maintenance_history.view');
 
             Route::get('/vehicles/{vehicle}/documents', [VehicleDocumentController::class, 'index'])->middleware('permission:vehicle.view');
             Route::post('/vehicles/{vehicle}/documents', [VehicleDocumentController::class, 'store'])->middleware('permission:vehicle.update');
