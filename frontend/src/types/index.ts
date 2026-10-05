@@ -1863,7 +1863,23 @@ export interface PurchaseReturnSummary {
   can_return: boolean;
   open_return_id: string | null;
   goods_receipt_blocked: boolean;
-  items: Record<string, { returnable_quantity: string; remaining_quantity: string }>;
+  /** Per PO line, calculated by the backend (PurchaseOrderQuantityService) — the UI never recomputes them. */
+  items: Record<string, PurchaseOrderLineQuantities>;
+}
+
+export interface PurchaseOrderLineQuantities {
+  returnable_quantity: string;
+  /** Compatibility alias of remaining_receivable_quantity. */
+  remaining_quantity: string;
+  ordered_quantity: string;
+  gross_received_quantity: string;
+  returned_quantity: string;
+  reopened_for_redelivery_quantity: string;
+  refund_requested_quantity: string;
+  accepted_refund_quantity: string;
+  net_held_quantity: string;
+  /** Ordered − Received − Returned + Reopened: the most a Goods Receipt may still post. */
+  remaining_receivable_quantity: string;
 }
 
 export interface WorkflowApprovalStepItem {

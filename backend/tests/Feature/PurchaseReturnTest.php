@@ -123,8 +123,8 @@ class PurchaseReturnTest extends TestCase
         $this->assertSame($created['id'], $data['return_summary']['open_return_id']);
         $this->assertFalse($data['return_summary']['can_return']);
         $this->assertFalse($data['return_summary']['goods_receipt_blocked'], 'a refund request does not block Goods Receipt');
-        // Refunded goods are no longer expected: remaining stays ordered − received.
-        $this->assertSame('4', $data['return_summary']['items'][$this->line($s, 'Oil Filter')->id]['remaining_quantity']);
+        // Owner rule: the return reduces Remaining once (10 − 6 − 2) and a refund does not re-open it.
+        $this->assertSame('2', $data['return_summary']['items'][$this->line($s, 'Oil Filter')->id]['remaining_quantity']);
         $this->assertSame('4', $data['return_summary']['items'][$this->line($s, 'Oil Filter')->id]['returnable_quantity']);
         $this->assertNull($data['returns'][0]['refunded_amount']);
         $this->returnGoods($s, 'REFUND', ['Oil Filter' => 1])->assertStatus(422); // one open Return Order at a time
@@ -156,14 +156,16 @@ class PurchaseReturnTest extends TestCase
         $data = $this->show($s);
         $this->assertTrue($data['return_summary']['goods_receipt_blocked']);
         $this->receive($s, ['Oil Filter' => 1])->assertStatus(422);
-        $this->assertSame('6', $data['return_summary']['items'][$this->line($s, 'Oil Filter')->id]['remaining_quantity'], 'the returned 2 are expected again');
+        // Owner rule: 10 − 6 − 2 (return) + 2 (re-opened by the rejected refund) = 4.
+        $this->assertSame('4', $data['return_summary']['items'][$this->line($s, 'Oil Filter')->id]['remaining_quantity'], 'the returned 2 are re-opened once');
 
         // Rejected → Receive Redelivery is available at once (no print needed).
         $this->postJson("/api/v1/app/purchase-returns/{$id}/receive-redelivery", [], $s['headers'])->assertOk()->assertJsonPath('data.status', 'REDELIVERY_RECEIVED');
         $this->assertFalse($this->show($s)['return_summary']['goods_receipt_blocked']);
-        $this->receive($s, ['Oil Filter' => 6, 'Air Filter' => 3])->assertStatus(201);
+        $this->receive($s, ['Oil Filter' => 5, 'Air Filter' => 3])->assertStatus(422); // more than Remaining (4)
+        $this->receive($s, ['Oil Filter' => 4, 'Air Filter' => 3])->assertStatus(201);
         $this->assertSame('RECEIVED', $s['po']->fresh()->status);
-        $this->assertSame(10.0, $this->onHand($s, 'oil'));
+        $this->assertSame(8.0, $this->onHand($s, 'oil'));
     }
 
     public function test_redelivery_request_needs_the_printed_return_order_before_it_is_received(): void
@@ -188,7 +190,9 @@ class PurchaseReturnTest extends TestCase
         $this->assertTrue($data['return_summary']['can_return']);
         $this->assertSame(['CREATED', 'PRINTED', 'REDELIVERY_RECEIVED'], collect($data['returns'][0]['events'])->pluck('event')->all());
         $this->assertNull($data['returns'][0]['refunded_amount'], 'a redelivery has no refunded amount');
-        $this->receive($s, ['Oil Filter' => 6])->assertStatus(201);
+        // Owner rule: − 2 returned + 2 re-opened → Remaining stays 4; the redelivered goods come in by Goods Receipt.
+        $this->receive($s, ['Oil Filter' => 5])->assertStatus(422);
+        $this->receive($s, ['Oil Filter' => 4])->assertStatus(201);
     }
 
     public function test_return_actions_are_permission_and_tenant_guarded(): void
