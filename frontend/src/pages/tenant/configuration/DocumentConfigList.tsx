@@ -24,6 +24,8 @@ export interface EditorRequest {
   payload: Record<string, unknown> | null;
   versionId: string | null;
   title: string;
+  /** New Draft: the version it starts from (e.g. to carry over a workflow's canvas layout). */
+  sourceVersionId?: string | null;
 }
 
 /**
@@ -52,7 +54,11 @@ export function DocumentConfigList({
   newLabel: string;
   describe: (payload: Record<string, unknown>) => ReactNode;
   onEdit: (request: EditorRequest) => void;
-  onPreview: (code: string, payload: Record<string, unknown>) => void;
+  onPreview: (
+    code: string,
+    payload: Record<string, unknown>,
+    version?: ConfigurationVersionItem & { isSystem: boolean },
+  ) => void;
 }) {
   const { hasPermission } = useAuth();
   const [localReload, setLocalReload] = useState(0);
@@ -151,7 +157,7 @@ export function DocumentConfigList({
         )}
         <button
           className="btn-secondary"
-          onClick={() => onPreview(set.code, v.payload)}
+          onClick={() => onPreview(set.code, v.payload, { ...v, isSystem })}
         >
           Preview
         </button>
@@ -251,6 +257,7 @@ export function DocumentConfigList({
                           defaultName: `${label(code)} (custom)`,
                           payload: source.payload,
                           versionId: null,
+                          sourceVersionId: source.id,
                           title: `New Draft — ${label(code)}`,
                         })
                       }

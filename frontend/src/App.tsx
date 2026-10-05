@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { RequirePermission, RequirePlatform, RequireTenant } from './components/RouteGuards';
@@ -47,7 +48,6 @@ import { TenantRolesPage } from './pages/tenant/access/TenantRolesPage';
 import { TenantAuditLogPage } from './pages/tenant/audit/TenantAuditLogPage';
 import { NumberingConfigPage } from './pages/tenant/configuration/NumberingConfigPage';
 import { DocumentTemplateConfigPage } from './pages/tenant/configuration/DocumentTemplateConfigPage';
-import { WorkflowConfigPage } from './pages/tenant/configuration/WorkflowConfigPage';
 import { TireScoringConfigPage } from './pages/tenant/configuration/TireScoringConfigPage';
 import { NotificationRulesPage } from './pages/tenant/configuration/NotificationRulesPage';
 import { ConfigurationHistoryPage } from './pages/tenant/configuration/ConfigurationHistoryPage';
@@ -147,6 +147,8 @@ import { VehicleIntelligenceDetailPage } from './pages/tenant/intelligence/Vehic
 import { ComponentIntelligencePage } from './pages/tenant/intelligence/ComponentIntelligencePage';
 import { TireIntelligencePage } from './pages/tenant/intelligence/TireIntelligencePage';
 import { RecommendationsPage } from './pages/tenant/intelligence/RecommendationsPage';
+
+const WorkflowConfigPage = lazy(() => import('./pages/tenant/configuration/WorkflowConfigPage').then((m) => ({ default: m.WorkflowConfigPage })));
 
 function RootRedirect() {
   const { user, loading } = useAuth();
@@ -688,7 +690,10 @@ export default function App() {
               path="configuration/workflows"
               element={
                 <RequirePermission permission="configuration.view">
-                  <WorkflowConfigPage />
+                  {/* Lazy: the visual builder's graph library loads only on this page. */}
+                  <Suspense fallback={<LoadingState />}>
+                    <WorkflowConfigPage />
+                  </Suspense>
                 </RequirePermission>
               }
             />

@@ -2589,3 +2589,66 @@ export interface NotificationMetadata {
 export interface NotificationMessagePayload {
   channels: Partial<Record<"IN_APP" | "EMAIL", { subject?: string; body: string }>>;
 }
+
+/** Workflow definition (WORKFLOW configuration payload) — the runtime's source of truth. */
+export interface WorkflowStatusDef {
+  code: string;
+  display_name?: string;
+  is_start?: boolean;
+  [key: string]: unknown;
+}
+
+export interface WorkflowTransitionDef {
+  from_status: string;
+  to_status: string;
+  action_code: string;
+  action_label?: string;
+  required_permission?: string | null;
+  condition_set?: Record<string, unknown> | null;
+  approval_rule?: {
+    type: string;
+    steps: Array<{ step_number: number; approver_type: string; approver_identifier: string }>;
+  } | null;
+  automated_actions?: Array<string | { action_code: string; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
+export interface WorkflowPayload {
+  statuses: WorkflowStatusDef[];
+  transitions: WorkflowTransitionDef[];
+  [key: string]: unknown;
+}
+
+/** The statuses a document can have and the ones a module action can move it into. */
+export interface WorkflowCatalog {
+  statuses: Array<{ code: string; display_name: string }>;
+  targets: string[];
+  entry_statuses: string[];
+}
+
+export interface WorkflowMetadata {
+  actions: string[];
+  operators: string[];
+  catalog: WorkflowCatalog | null;
+  resource_types: Array<{ code: string; name: string }>;
+}
+
+export interface WorkflowIssue {
+  type: string;
+  message: string;
+  status?: string;
+  transition?: number;
+}
+
+export interface WorkflowLayoutData {
+  positions: Record<string, { x: number; y: number }> | null;
+  viewport: { x: number; y: number; zoom: number } | null;
+}
+
+/** GET /workflow/available-transitions: what the runtime allows on one record right now. */
+export interface AvailableWorkflowTransition {
+  action_code: string;
+  action_label: string;
+  to_status: string;
+  requires_approval: boolean;
+}
