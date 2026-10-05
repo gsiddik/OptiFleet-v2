@@ -5,6 +5,7 @@ import { BackButton } from '../../../components/BackButton';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { WarrantyClaimItem } from '../../../types';
 
@@ -25,10 +26,23 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   REJECTED: [{ action: 'close', label: 'Close', permission: 'warranty_claim.approve', primary: true }],
 };
 
+/** The module action that moves a claim into each status (the workflow decides when it is offered). */
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string; primary?: boolean }> = {
+  SUBMITTED: { action: 'submit', label: 'Submit', permission: 'warranty_claim.create', primary: true },
+  UNDER_REVIEW: { action: 'review', label: 'Move to Review', permission: 'warranty_claim.review', primary: true },
+  APPROVED: { action: 'approve', label: 'Approve', permission: 'warranty_claim.approve', primary: true },
+  REJECTED: { action: 'reject', label: 'Reject', permission: 'warranty_claim.approve' },
+  REPLACEMENT: { action: 'replacement', label: 'Resolve via Replacement', permission: 'warranty_claim.approve', primary: true },
+  REPAIR: { action: 'repair', label: 'Resolve via Repair', permission: 'warranty_claim.approve' },
+  SETTLED: { action: 'settle', label: 'Settle', permission: 'warranty_claim.approve', primary: true },
+  CLOSED: { action: 'close', label: 'Close', permission: 'warranty_claim.approve', primary: true },
+};
+
 export function WarrantyClaimDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [claim, setClaim] = useState<WarrantyClaimItem | null>(null);
+  const available = useWorkflowTransitions('warranty_claim', id, claim?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
@@ -58,7 +72,7 @@ export function WarrantyClaimDetailPage() {
   if (error && !claim) return <ErrorState message={error} />;
   if (!claim) return <LoadingState />;
 
-  const actions = (LIFECYCLE[claim.status] ?? []).filter((a) => hasPermission(a.permission));
+  const actions = workflowButtons(available, ACTIONS_BY_TARGET, LIFECYCLE[claim.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
     <div>

@@ -8,6 +8,7 @@ import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { allowedByWorkflow, useWorkflowTransitions } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { formatQty } from '../../../utils/quantity';
 import { AssessmentSection, InspectionSourceSection } from '../maintenance/MaintenanceRequestDetailPage';
@@ -107,10 +108,18 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   COMPLETED: [{ action: 'close', label: 'Close', permission: 'work_order.close', primary: true }],
 };
 
+/** The status each lifecycle action moves the work order into (the workflow decides when it is offered). */
+const ACTION_TARGET: Record<string, string> = {
+  submit: 'SUBMITTED', approve: 'APPROVED', reject: 'REJECTED', cancel: 'CANCELLED', assign: 'ASSIGNED',
+  schedule: 'SCHEDULED', start: 'IN_PROGRESS', hold: 'ON_HOLD', 'wait-for-part': 'WAITING_PART',
+  'submit-to-qc': 'QC_PENDING', resume: 'IN_PROGRESS', complete: 'COMPLETED', close: 'CLOSED',
+};
+
 export function WorkOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [wo, setWo] = useState<WorkOrderItem | null>(null);
+  const available = useWorkflowTransitions('work_order', id, wo?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [tab, setTab] = useState<Tab>('Overview');
@@ -247,7 +256,9 @@ export function WorkOrderDetailPage() {
   const visibleTabs: readonly Tab[] = tireOperation ? [...baseTabs.slice(0, tireOperationsAt), 'Tire Operations', ...baseTabs.slice(tireOperationsAt)] : baseTabs;
   // A tab that is not offered (orphaned, or QC / Road Test outside QC_PENDING) never renders.
   const activeTab: Tab = visibleTabs.includes(tab) ? tab : 'Overview';
-  const actions = isExternalMode ? [] : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission));
+  const actions = isExternalMode
+    ? []
+    : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission)).filter(allowedByWorkflow(available, ACTION_TARGET));
 
   return (
     <div>

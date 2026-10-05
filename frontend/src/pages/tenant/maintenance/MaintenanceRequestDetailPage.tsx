@@ -5,6 +5,7 @@ import { BackButton } from '../../../components/BackButton';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
+import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { INSPECTION_GROUP_CODES } from '../../../types';
@@ -47,6 +48,15 @@ function emptyGroups(): Record<InspectionGroupCode, { status: InspectionGroupSta
     { status: InspectionGroupStatus; notes: string }
   >;
 }
+
+/** The module action that moves a request into each status (the workflow decides when it is offered). */
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string; needsNote?: boolean }> = {
+  SUBMITTED: { action: 'submit', label: 'Submit', permission: 'maintenance_request.create' },
+  UNDER_REVIEW: { action: 'review', label: 'Move to Review', permission: 'maintenance_request.review' },
+  APPROVED: { action: 'approve', label: 'Approve', permission: 'maintenance_request.approve' },
+  REJECTED: { action: 'reject', label: 'Reject', permission: 'maintenance_request.reject', needsNote: true },
+  CANCELLED: { action: 'cancel', label: 'Cancel', permission: 'maintenance_request.create' },
+};
 
 export function AssessmentSection({
   maintenanceRequestId,
@@ -277,6 +287,7 @@ export function MaintenanceRequestDetailPage() {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [request, setRequest] = useState<MaintenanceRequestItem | null>(null);
+  const available = useWorkflowTransitions('maintenance_request', id, request?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
@@ -345,7 +356,7 @@ export function MaintenanceRequestDetailPage() {
   if (error && !request) return <ErrorState message={error} />;
   if (!request) return <LoadingState />;
 
-  const actions = (ACTIONS[request.status] ?? []).filter((a) => hasPermission(a.permission));
+  const actions = workflowButtons(available, ACTIONS_BY_TARGET, ACTIONS[request.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
     <div>

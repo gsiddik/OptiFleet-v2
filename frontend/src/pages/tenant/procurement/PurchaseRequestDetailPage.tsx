@@ -6,6 +6,7 @@ import { inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PurchaseRequestItem, PurchaseRequestItemLine } from '../../../types';
 import { formatMoney } from '../../../utils/money';
@@ -22,11 +23,21 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   ],
 };
 
+/** The module action that moves a purchase request into each status (the workflow decides when it is offered). */
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string; primary?: boolean }> = {
+  SUBMITTED: { action: 'submit', label: 'Submit', permission: 'purchase_request.submit', primary: true },
+  UNDER_REVIEW: { action: 'review', label: 'Move to Review', permission: 'purchase_request.approve', primary: true },
+  APPROVED: { action: 'approve', label: 'Approve', permission: 'purchase_request.approve', primary: true },
+  REJECTED: { action: 'reject', label: 'Reject', permission: 'purchase_request.approve' },
+  CANCELLED: { action: 'cancel', label: 'Cancel', permission: 'purchase_request.create' },
+};
+
 export function PurchaseRequestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [pr, setPr] = useState<PurchaseRequestItem | null>(null);
+  const available = useWorkflowTransitions('purchase_request', id, pr?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -61,7 +72,7 @@ export function PurchaseRequestDetailPage() {
   if (error && !pr) return <ErrorState message={error} />;
   if (!pr) return <LoadingState />;
 
-  const actions = (LIFECYCLE[pr.status] ?? []).filter((a) => hasPermission(a.permission));
+  const actions = workflowButtons(available, ACTIONS_BY_TARGET, LIFECYCLE[pr.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
     <div>

@@ -7,6 +7,7 @@ import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
@@ -551,6 +552,31 @@ const TRANSFER_ACTIONS: Record<string, { label: string; action: string }[]> = {
   RECEIVED: [{ label: 'Complete', action: 'complete' }],
 };
 
+/** The module action that moves a vehicle transfer into each status (the workflow decides when it is offered). */
+const TRANSFER_ACTIONS_BY_TARGET: Record<string, { label: string; action: string; permission: string }> = {
+  REQUESTED: { label: 'Submit', action: 'submit', permission: 'vehicle.transfer' },
+  APPROVED: { label: 'Approve', action: 'approve', permission: 'vehicle.transfer' },
+  REJECTED: { label: 'Reject', action: 'reject', permission: 'vehicle.transfer' },
+  CANCELLED: { label: 'Cancel', action: 'cancel', permission: 'vehicle.transfer' },
+  IN_TRANSIT: { label: 'Dispatch', action: 'dispatch', permission: 'vehicle.transfer' },
+  RECEIVED: { label: 'Receive', action: 'receive', permission: 'vehicle.transfer' },
+  COMPLETED: { label: 'Complete', action: 'complete', permission: 'vehicle.transfer' },
+};
+
+function TransferActions({ transfer, onAct }: { transfer: VehicleTransferItem; onAct: (action: string) => void }) {
+  const available = useWorkflowTransitions('vehicle_transfer', transfer.id, transfer.status);
+  const fallback = (TRANSFER_ACTIONS[transfer.status] ?? []).map((a) => ({ ...a, permission: 'vehicle.transfer' }));
+  return (
+    <>
+      {workflowButtons(available, TRANSFER_ACTIONS_BY_TARGET, fallback).map((a) => (
+        <button key={a.action} className="btn-link" onClick={() => onAct(a.action)}>
+          {a.label}
+        </button>
+      ))}
+    </>
+  );
+}
+
 function TransferTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: () => void }) {
   const { hasPermission } = useAuth();
   const [transfers, setTransfers] = useState<VehicleTransferItem[]>([]);
@@ -597,11 +623,7 @@ function TransferTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
           </div>
           {hasPermission('vehicle.transfer') && (
             <div style={{ display: 'flex', gap: 8 }}>
-              {(TRANSFER_ACTIONS[t.status] ?? []).map((a) => (
-                <button key={a.action} className="btn-link" onClick={() => act(t.id, a.action)}>
-                  {a.label}
-                </button>
-              ))}
+              <TransferActions transfer={t} onAct={(action) => act(t.id, action)} />
             </div>
           )}
         </div>
