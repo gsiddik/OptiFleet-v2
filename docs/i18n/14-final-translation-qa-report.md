@@ -1,16 +1,16 @@
 # 14 — Final Translation QA Report
 
-Dataset: `12-en-id-translation-dataset-final.csv` — **5275 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **43 terminology + 6 style** (product owner), propagated to 1148 dependent rows.
+Dataset: `12-en-id-translation-dataset-final.csv` — **5276 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **43 terminology + 6 style + 4 correction terms + action verbs + cancel split** (product owner), propagated to 1194 dependent rows. AWAITING_DECISION = **0**.
 
 ## Result
 
 | Check | Count | Verdict |
 |---|---:|---|
 | Missing translation | 0 | PASS |
-| Remaining awaiting decision | 14 | OPEN — 14 rows depend on 4 correction items not in the owner decision list (07) |
+| Remaining awaiting decision | 0 | PASS (0 — all owner decisions applied) |
 | Parameter mismatch | 0 | PASS (100% integrity incl. {{x}}, {x}, :attribute) |
 | Terminology inconsistency | 0 | PASS (3 documented proper-noun exceptions excluded) |
-| Action/status mismatch | 36 | SOURCE ISSUE — status-form workflow action labels; verb proposals added (workflow.actionVerb.*) |
+| Action/status mismatch | 36 | RESOLVED IN DATASET — owner-approved verb keys supersede the legacy status-form labels; source change tracked as WORKFLOW_ACTION_LABEL_CORRECTION |
 | Duplicate key collision | 0 | PASS |
 | Do-not-translate violation | 0 | PASS |
 | Unresolved dependency | 0 | PASS (every remaining REVIEW row names its dependency) |
@@ -22,23 +22,20 @@ Dataset: `12-en-id-translation-dataset-final.csv` — **5275 rows** (5,240 prepa
 
 | Classification | Rows |
 |---|---:|
-| AUTO_TRANSLATE_SAFE | 4409 |
+| AUTO_TRANSLATE_SAFE | 4424 |
 | STRUCTURAL_PREP_REQUIRED | 786 |
 | DO_NOT_TRANSLATE | 66 |
-| REVIEW | 14 |
 
 | Translation status | Rows |
 |---|---:|
-| FINAL | 5195 |
+| FINAL | 5210 |
 | FINAL_UNCHANGED | 66 |
-| AWAITING_DECISION | 14 |
 
 | Implementation status | Rows |
 |---|---:|
-| READY_AFTER_I18N_INFRASTRUCTURE | 4409 |
+| READY_AFTER_I18N_INFRASTRUCTURE | 4424 |
 | STRUCTURAL_PREP_REQUIRED | 786 |
 | NOT_APPLICABLE | 66 |
-| BLOCKED_BY_DECISION | 14 |
 
 Translation readiness and implementation readiness are separate: a STRUCTURAL_PREP_REQUIRED row has a final Indonesian text (`translation_status = FINAL`) but stays `implementation_status = STRUCTURAL_PREP_REQUIRED` until its blocker is removed.
 
@@ -80,18 +77,19 @@ Translation readiness and implementation readiness are separate: a STRUCTURAL_PR
 | `glossary.serviceInvoice` | 11 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.workAuthorizationLetter` | 9 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.tireSpec` | 8 | APPROVED_BY_PRODUCT_OWNER |
-| `correction.tire` | 7 | AWAITING_DECISION |
+| `correction.tire` | 7 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.bead` | 7 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.innerLiner` | 7 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.roadTest` | 5 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.dashboard` | 4 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.supplier` | 4 | APPROVED_BY_PRODUCT_OWNER |
-| `correction.warrantyClaim` | 4 | AWAITING_DECISION |
+| `correction.warrantyClaim` | 4 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.sidewall` | 4 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.engineHour` | 3 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.entitlement` | 2 | APPROVED_BY_PRODUCT_OWNER |
-| `correction.wheelsConfiguration` | 2 | AWAITING_DECISION |
-| `correction.hold` | 1 | AWAITING_DECISION |
+| `correction.wheelsConfiguration` | 2 | APPROVED_BY_PRODUCT_OWNER |
+| `style.cancelRecord` | 1 | APPROVED_BY_PRODUCT_OWNER |
+| `correction.hold` | 1 | APPROVED_BY_PRODUCT_OWNER |
 | `glossary.qualityControl` | 1 | APPROVED_BY_PRODUCT_OWNER |
 
 ## Pluralization review
@@ -142,7 +140,8 @@ Translation readiness and implementation readiness are separate: a STRUCTURAL_PR
 | Breakdown vs Failure / Damage | Breakdown = unplanned vehicle stop (maintenance event type); Failure / Damage = component failure, damage findings (e.g. Repeat Failure, Failure Rate) | Owner decision Breakdown = "Kerusakan" is authoritative and applied. Failure/damage texts also read "Kerusakan", so the two concepts are textually equal in places; keys stay separate. Documented, not changed. |
 | Axle vs Wheelbase | Axle = tire position axis; Wheelbase = vehicle dimension | Axle = "Poros" (owner). Wheelbase keeps standard technical term "jarak sumbu roda" (not the Axle term). |
 | Paid vs Settled | Payment vs warranty claim | Fixed in preparation (Lunas / Diselesaikan). |
-| Approve (standalone) vs Approve <object> | Button vs action with object | Owner: Approve = "Setuju". Standalone buttons → "Setuju"; with an object the transitive "Setujui <object>" is kept for grammar (noted per row). |
+| Approve (action) vs Approved (status) | Button vs badge | Owner: action Approve = "Setujui", status Approved = "Disetujui". Same rule for Reject/Tolak–Ditolak, Cancel/Batalkan–Dibatalkan, Complete/Selesaikan–Selesai, Hold/Tahan–Ditahan. |
+| Cancel (dismiss) vs Cancel (record) | Dialog vs business record | Two keys: `common.actions.cancel` = Batal, `common.actions.cancelRecord` = Batalkan. |
 | Remove (record) vs Remove (from vehicle) | Delete record/file/line vs physical removal | Owner: Remove = "Hapus" for records. Physical removal of a tire/component from a vehicle keeps "Lepas" (noted per row). |
 
 ## Workflow action labels (action vs status)
@@ -151,12 +150,12 @@ Translation readiness and implementation readiness are separate: a STRUCTURAL_PR
 |---|---|---|---|---|
 | `workflow.actions.actionLabel` | External | Eksternal | — | — |
 | `workflow.actions.actionLabel2` | Revise | Revisi | — | — |
-| `workflow.actions.actionLabel3` | Cancel | Batal | — | — |
+| `workflow.actions.actionLabel3` | Cancel | Batalkan | — | — |
 | `workflow.actions.actionLabel4` | Close (External Invoice Paid) | Tutup (Faktur Eksternal Lunas) | — | — |
 | `workflow.actions.actionLabel5` | In Progress | Dalam Proses | — | — |
 | `workflow.actions.actionLabel6` | Qc Pending | Menunggu QC | — | — |
 | `workflow.actions.actionLabel7` | Cancelled | Dibatalkan | — | — |
-| `workflow.actions.approved` | Approved | Disetujui | `workflow.actionVerb.approved` | Approve → Setuju |
+| `workflow.actions.approved` | Approved | Disetujui | `workflow.actionVerb.approved` | Approve → Setujui |
 | `workflow.actions.assessed` | Assessed | Dinilai | `workflow.actionVerb.assessed` | Assess → Nilai |
 | `workflow.actions.assigned` | Assigned | Ditugaskan | `workflow.actionVerb.assigned` | Assign → Tugaskan |
 | `workflow.actions.closed` | Closed | Ditutup | `workflow.actionVerb.closed` | Close → Tutup |
@@ -166,7 +165,7 @@ Translation readiness and implementation readiness are separate: a STRUCTURAL_PR
 | `workflow.actions.inTransit` | In Transit | Dalam Perjalanan | `workflow.actionVerb.inTransit` | Dispatch → Kirim |
 | `workflow.actions.inspected` | Inspected | Diinspeksi | `workflow.actionVerb.inspected` | Inspect → Inspeksi |
 | `workflow.actions.issued` | Issued | Dikeluarkan | `workflow.actionVerb.issued` | Issue → Terbitkan / Keluarkan |
-| `workflow.actions.onHold` | On Hold | Ditunda | `workflow.actionVerb.onHold` | Put on Hold → Tunda |
+| `workflow.actions.onHold` | On Hold | Ditahan | `workflow.actionVerb.onHold` | Hold → Tahan |
 | `workflow.actions.pendingApproval` | Pending Approval | Menunggu Persetujuan | `workflow.actionVerb.pendingApproval` | Submit for Approval → Ajukan Persetujuan |
 | `workflow.actions.prepared` | Prepared | Disiapkan | `workflow.actionVerb.prepared` | Mark Prepared → Tandai Disiapkan |
 | `workflow.actions.procurement` | Procurement | Pengadaan | `workflow.actionVerb.procurement` | Send to Procurement → Teruskan ke Pengadaan |

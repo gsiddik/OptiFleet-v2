@@ -1,6 +1,6 @@
 # 07 — Translation Decision List
 
-> **Owner decisions received and applied.** All 43 terminology decisions and 6 style decisions from the product owner are recorded below as **APPROVED_BY_PRODUCT_OWNER** and propagated to every dependent entry by substitution of the recommended term in `proposed_text_id` (no re-translation). 1148 dataset rows moved from AWAITING_DECISION to APPROVED_GLOSSARY. Items the owner list did not cover remain open in *Remaining Decisions*.
+> **Owner decisions received and applied.** All 43 terminology decisions and 6 style decisions from the product owner are recorded below as **APPROVED_BY_PRODUCT_OWNER** and propagated to every dependent entry by substitution of the recommended term in `proposed_text_id` (no re-translation). 1194 dataset rows moved from AWAITING_DECISION to APPROVED_GLOSSARY. Items the owner list did not cover remain open in *Remaining Decisions*.
 
 ## Resolved Decisions
 
@@ -60,7 +60,7 @@
 | 2 | Delete / Remove | Hapus / Hapus | Record/file/line removal → Hapus. Exception kept with note: physical removal of a tire/component from a vehicle stays "Lepas" (different business meaning, not a record delete). | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
 | 3 | Cancel — close dialog | Batal | Dismiss buttons read "Batal". | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
 | 4 | Cancel — cancel transaction / record | Batalkan … | Record actions "Batal X" → "Batalkan X"; `workflow.actionVerb.cancelled` = "Batalkan". | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
-| 5 | Approve / Accept | Setuju / Terima | Standalone "Approve" → "Setuju"; with an object the transitive "Setujui <object>" is kept (noted per row). Accept → Terima. | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
+| 5 | Approve / Accept | Setujui / Terima | Approve → "Setujui" (owner action-verb decision, supersedes the earlier "Setuju"). Accept → Terima. | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
 | 6 | Sign In / Login | Masuk / Masuk | Login / Sign in → Masuk. | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
 
 Style decisions do not change English canonical wording or keys.
@@ -77,32 +77,38 @@ Style decisions do not change English canonical wording or keys.
 | Axle vs Wheelbase | Axle → Poros. Wheelbase keeps the standard technical term "jarak sumbu roda" (not the Axle term). |
 | Breakdown vs Failure / Damage | Breakdown → Kerusakan per decision; failure/damage texts also read "Kerusakan" — documented as a near-collision in 14. |
 
-## Resolved Architecture Decisions (localization scope)
+## Final Decisions (correction items, action verbs, cancel split)
 
-| ID | Decision | Final rule | Decision Source | Effect on dataset `12` | Status |
-|---|---|---|---|---|---|
-| D1 | Printed document language | One locale per document, not bilingual. Locale priority: explicit Print/Export choice → user preferred locale → tenant default → `en`. The locale used at generation time is preserved for history/audit. Labels, titles, instructions, table headers, status labels and system messages follow the locale; dynamic business data is unchanged. | Product owner decision | None (print-template rows stay `DATABASE_LOCALIZATION`, C+). Adds structural item `PRINT_LOCALE_SNAPSHOT` in `15` §7a. | APPROVED_BY_PRODUCT_OWNER |
-| D2 | Tenant-entered data | Not bilingual. Store and display the original value (findings, notes, remarks, descriptions, comments, reasons, free-text instructions, user-entered transaction descriptions). No automatic translation, no separate EN/ID fields. Only system-controlled text is localized. Multilingual tenant master data is a possible optional capability later. | Product owner decision | None. All 420 `DATABASE_LOCALIZATION` rows are system/seeded data; tenant/demo data was already DO_NOT_TRANSLATE. | APPROVED_BY_PRODUCT_OWNER |
+| Item | English | Final Indonesian | Decision Source | Affected Entries | Status |
+|---|---|---|---|---:|---|
+| `correction.tire` | Tire / Tires | Ban (display only; canonical codes, enums, API and DB identifiers unchanged) | Product owner decision | 7 | APPROVED_BY_PRODUCT_OWNER |
+| `correction.warrantyClaim` | Warranty Claim(s) | Klaim Garansi | Product owner decision | 4 | APPROVED_BY_PRODUCT_OWNER |
+| `correction.wheelsConfiguration` | Wheels Configuration | Konfigurasi Roda | Product owner decision | 2 | APPROVED_BY_PRODUCT_OWNER |
+| `correction.hold` | Hold | Status HOLD / Held / On Hold → Ditahan; action Hold → Tahan | Product owner decision | 1 | APPROVED_BY_PRODUCT_OWNER |
+| Workflow action verbs (`workflow.actionVerb.*`) | Verb form per action_code (Approve, Reject, Cancel, Complete, Hold, …) | Setujui, Tolak, Batalkan, Selesaikan, Tahan, … | Product owner decision | 33 | APPROVED_BY_PRODUCT_OWNER |
+| Legacy status-form action labels (`workflow.actions.*`) | e.g. "Approved", "Cancelled" used as buttons | Superseded as button labels by the verb keys; kept only as legacy fallback text | Product owner decision | 34 | APPROVED_BY_PRODUCT_OWNER |
+| Cancel split | Cancel (dismiss) / Cancel (record) | `common.actions.cancel` = Batal (close modal, abandon form, dismiss confirmation, go back); `common.actions.cancelRecord` = Batalkan (cancel Work Order / Purchase Order / request / transaction / workflow entity) | Product owner decision | 2 | APPROVED_BY_PRODUCT_OWNER |
+
+**Status vs action pairs (owner rule — never use one form for the other)**
+
+| Action (button) | Status (badge) |
+|---|---|
+| Approve → Setujui | Approved → Disetujui |
+| Reject → Tolak | Rejected → Ditolak |
+| Cancel → Batalkan | Cancelled → Dibatalkan |
+| Complete → Selesaikan | Completed → Selesai |
+| Hold → Tahan | Held / HOLD / On Hold → Ditahan |
+
+**Supersedes**: the earlier style rule "Approve = Setuju" is superseded by the action-verb decision "Approve = Setujui" (4 rows updated).
+
+## Final Architecture Decisions (documents)
+
+| ID | Decision | Final rule | Status |
+|---|---|---|---|
+| D3 | Printed document date/number formatting | Presentation formatting follows the document locale at render time: `id` → `1.234,56`, `6 Oktober 2026`; `en` → `1,234.56`, `October 6, 2026`. Stored numeric, monetary, transaction and database values and identifiers never change; no localized strings are stored in business tables. | APPROVED_BY_PRODUCT_OWNER |
+| D4 | Document locale snapshot (`PRINT_LOCALE_SNAPSHOT`) | Database change approved. Each generation is an immutable record (locale, template version, generated by/at). Reprint reuses the snapshot; Generate New Version creates a new record and never overwrites history. | APPROVED_BY_PRODUCT_OWNER |
 
 ## Remaining Decisions
 
-Dependent dataset entries still waiting: **14** (in `12-en-id-translation-dataset-final.csv`). These items were **not in the owner decision list**, so nothing was decided on the owner's behalf.
-
-| Item | Proposal (not applied) | Affected Entries | Status |
-|---|---|---:|---|
-| `correction.tire` — Tire / Tires (audit REVIEW) | Ban | 7 | AWAITING_DECISION |
-| `correction.warrantyClaim` — Warranty Claim(s) (audit REVIEW) | Klaim Garansi | 4 | AWAITING_DECISION |
-| `correction.wheelsConfiguration` — Wheels Configuration (audit REVIEW) | Konfigurasi Roda | 2 | AWAITING_DECISION |
-| `correction.hold` — Hold (audit REVIEW) | Tahan | 1 | AWAITING_DECISION |
-| Workflow verb action labels (`workflow.actionVerb.*`) | English verb wording per action_code (e.g. Approve, Send to QC); Indonesian already follows the style decisions | 33 | REVIEW_REQUIRED (English wording) |
-| Key split `common.actions.cancel` | Separate dismiss key (Batal) from record-cancel key (Batalkan); the style decision is made, the key split is implementation work | 1 | REVIEW_REQUIRED (implementation) |
-
-## Decision input format (remaining items)
-
-```
-Tire = Ban
-Warranty Claim = Klaim Garansi
-Wheels Configuration = Konfigurasi Roda
-Hold = Tahan
-```
+None. All terminology, style, action-verb and document decisions are resolved (`AWAITING_DECISION` = 0).
 

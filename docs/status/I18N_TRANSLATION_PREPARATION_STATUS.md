@@ -78,3 +78,21 @@ step 8, open decisions).
 - New open point (not assumed): whether date/number formatting on printed documents follows the document locale.
 
 Status remains **READY_FOR_REMAINING_TERMINOLOGY_DECISION** (4 correction terms still open).
+
+## Final terminology closure
+
+Owner decisions applied:
+- Tire = Ban (display only), Warranty Claim = Klaim Garansi, Wheels Configuration = Konfigurasi Roda.
+- Hold: action = Tahan; status HOLD / Held / On Hold = Ditahan.
+- Workflow action verbs approved. Approve = Setujui, which supersedes the earlier "Setuju".
+- Cancel split: `common.actions.cancel` = Batal (dismiss); new `common.actions.cancelRecord` = Batalkan (record).
+- D3: date/number formatting follows the document locale.
+- D4: the generation-record schema change is approved.
+
+Results:
+- Dataset `12`: 5,276 rows, **AWAITING_DECISION = 0**.
+- 34 legacy status-form action labels are marked superseded by verb keys.
+- QA rerun: 0 missing, 0 parameter mismatch, 0 key collision, 0 DNT violation.
+
+Status: **READY_FOR_STRUCTURAL_I18N_PREPARATION**. Structural phases continue per `15`; progress is
+tracked in `I18N_STRUCTURAL_PREPARATION_STATUS.md`.

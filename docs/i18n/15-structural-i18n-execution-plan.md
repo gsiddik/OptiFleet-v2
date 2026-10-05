@@ -284,7 +284,9 @@ Steps 1 and 6 can run in parallel with steps 2–5.
 
 **Testing**: render tests per locale; the fallback chain (explicit > user > tenant > `en`); reprint keeps the recorded locale; tenant isolation on the generation record; old template versions render identically.
 
-**Open point (not decided, not assumed)**: whether date and number *formatting* (e.g. `1.234,56` vs `1,234.56`, month names) follows the document locale. The values themselves stay unchanged either way.
+**Formatting (owner decision D3)**: date and number presentation follows the document locale at render time — `id`: `1.234,56`, `6 Oktober 2026`; `en`: `1,234.56`, `October 6, 2026`. Stored numeric, monetary, transaction and database values and identifiers never change, and no localized strings are stored in business tables.
+
+**Approval (owner decision D4)**: the database change for the generation record is approved.
 
 ## 7b. Tenant-entered data (owner decision D2)
 
@@ -302,9 +304,11 @@ Steps 1 and 6 can run in parallel with steps 2–5.
 
 ## Open decisions before execution
 
-1. ~~The terminology and style decisions in `07`~~: decided (43 terms + 6 style). Remaining: 4 correction items (Tire, Warranty Claim, Wheels Configuration, Hold).
+1. ~~The terminology and style decisions in `07`~~: decided (43 terms + 6 style + Tire, Warranty Claim, Wheels Configuration, Hold).
 2. ~~Language of printed documents~~: decided (D1, see 7a).
 3. ~~Whether tenant-entered data must be bilingual~~: decided, not bilingual (D2, see 7b).
-4. English verb wording for workflow actions (`workflow.actionVerb.*`).
-5. Whether date/number formatting on printed documents follows the document locale (7a).
-6. Approval of the schema change for the document generation record (`PRINT_LOCALE_SNAPSHOT`).
+4. ~~English verb wording for workflow actions~~: approved (action = verb form; canonical status unchanged).
+5. ~~Date/number formatting on printed documents~~: follows the document locale (D3).
+6. ~~Schema change for the document generation record~~: approved (D4).
+
+All decisions are resolved. Remaining work is structural implementation only.

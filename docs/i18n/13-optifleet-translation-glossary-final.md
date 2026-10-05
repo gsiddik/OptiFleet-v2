@@ -1,6 +1,6 @@
 # OptiFleet Final Translation Glossary
 
-Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decision, applied), **APPROVED_AUTOMATIC**, **DO_NOT_TRANSLATE**, **STRUCTURAL_PREP_REQUIRED** (translation final, implementation blocked — e.g. status labels needing the status registry), **AWAITING_DECISION** (not covered by the owner decision list). Source of truth for rows: `12-en-id-translation-dataset-final.csv`. Canonical values (status codes, enum values, keys, template variables, numbering tokens) are never translated.
+Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decision, applied), **APPROVED_AUTOMATIC**, **DO_NOT_TRANSLATE**, **STRUCTURAL_PREP_REQUIRED** (translation final, implementation blocked — e.g. status labels needing the status registry), **AWAITING_DECISION** (none remain). Source of truth for rows: `12-en-id-translation-dataset-final.csv`. Canonical values (status codes, enum values, keys, template variables, numbering tokens) are never translated.
 
 ## Core Business Terms
 
@@ -22,7 +22,7 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decis
 | Warehouse | Gudang | Inventory | GLOBAL | APPROVED_AUTOMATIC | Standard |
 | Product | Produk | Inventory | GLOBAL | APPROVED_AUTOMATIC | Standard |
 | Stock | Stok | Inventory | GLOBAL | APPROVED_AUTOMATIC | Standard |
-| Tire / Tyre | Ban | Tire | DOMAIN | APPROVED_AUTOMATIC | Audit REVIEW downgraded with documented correction (owner may veto, see 11) |
+| Tire / Tyre | Ban | Tire | DOMAIN | APPROVED_BY_PRODUCT_OWNER | Product owner decision |
 | Inspection | Inspeksi | Domain | GLOBAL | APPROVED_AUTOMATIC | Standard in fleet usage |
 
 ## Maintenance
@@ -83,7 +83,7 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decis
 |---|---|---|---|---|---|
 | Tire | Ban | Domain | tire | APPROVED_AUTOMATIC | Documented correction (owner may veto) |
 | Tire Operation (Installation / Rotation / Inspection / Removal / Replacement) | Operasi Ban (Pemasangan / Rotasi / Inspeksi / Pelepasan / Penggantian) | Operations | tire | APPROVED_AUTOMATIC | Standard |
-| Wheels Configuration / Position / Axle | Konfigurasi Roda (proposal) / Posisi / Poros | Layout | tire | AWAITING_DECISION | Axle = Poros (owner decision); Wheels Configuration awaits correction decision |
+| Wheels Configuration / Position / Axle | Konfigurasi Roda / Posisi / Poros | Layout | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision (Wheels Configuration, Axle) |
 | Spare Tire | Ban Cadangan | Layout | tire | APPROVED_AUTOMATIC | Standard |
 | Rim | Velg | Item | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.rim) |
 | Retread / Repair (casing) | Vulkanisir / Perbaikan | Lifecycle | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.retread) |
@@ -154,7 +154,7 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decis
 | DUE_SOON (canonical, unchanged) | Segera Jatuh Tempo | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | EXTERNAL (canonical, unchanged) | Eksternal | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | FINALIZED (canonical, unchanged) | Difinalisasi | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| HOLD (canonical, unchanged) | TAHAN | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
+| HOLD (canonical, unchanged) | Ditahan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Product owner decision: action Hold = Tahan, status HOLD / Held / On Hold = Ditahan |
 | INACTIVE (canonical, unchanged) | Nonaktif | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | INSPECTED (canonical, unchanged) | Diinspeksi | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | IN_PROGRESS (canonical, unchanged) | Dalam Proses | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
@@ -165,7 +165,7 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decis
 | Maintenance Request Workflow (canonical, unchanged) | Alur Kerja Permintaan Pemeliharaan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | NEED_INFORMATION (canonical, unchanged) | Perlu Informasi | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | NEW (canonical, unchanged) | Baru | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| ON_HOLD (canonical, unchanged) | Ditunda | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
+| ON_HOLD (canonical, unchanged) | Ditahan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Product owner decision: action Hold = Tahan, status HOLD / Held / On Hold = Ditahan |
 | PAID (canonical, unchanged) | LUNAS | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | PARTIALLY_RECEIVED (canonical, unchanged) | Diterima Sebagian | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | PENDING_APPROVAL (canonical, unchanged) | Menunggu Persetujuan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
@@ -247,7 +247,7 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decis
 | Prepare → Prepared | Siapkan → Disiapkan | Action → resulting status | GLOBAL | APPROVED_AUTOMATIC | Verb (imperative) vs passive/adjective status |
 | Finalize → Finalized | Finalisasi → Difinalisasi | Action → resulting status | GLOBAL | APPROVED_AUTOMATIC | Verb (imperative) vs passive/adjective status |
 | Void → Voided | Batalkan (Void) → Dibatalkan (Void) | Action → resulting status | GLOBAL | APPROVED_AUTOMATIC | Verb (imperative) vs passive/adjective status |
-| Hold → On Hold | Tunda → Ditunda | Action → resulting status | GLOBAL | APPROVED_AUTOMATIC | Verb (imperative) vs passive/adjective status |
+| Hold → On Hold | Tahan → Ditahan | Action → resulting status | GLOBAL | APPROVED_BY_PRODUCT_OWNER | Product owner decision: action Hold = Tahan, status HOLD / Held / On Hold = Ditahan |
 | Scrap → Scrapped | Scrap → Scrap | Action → resulting status | GLOBAL | APPROVED_BY_PRODUCT_OWNER | Verb (imperative) vs passive/adjective status; glossary.scrap |
 | Retread → Retread | Vulkanisir → Vulkanisir | Action → resulting status | GLOBAL | APPROVED_BY_PRODUCT_OWNER | Verb (imperative) vs passive/adjective status; glossary.retread |
 
@@ -264,7 +264,7 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decis
 | Return Order | Retur Pemesanan (document) / Retur ke Vendor (flow) | Document | procurement | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.returnToVendor) |
 | Goods Receipt | Goods Receipt | Document | inventory | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.goodsReceipt) |
 | Stock Transfer / Vehicle Transfer | Transfer Stok / Transfer Kendaraan | Document | inventory / vehicle | APPROVED_AUTOMATIC | Standard |
-| Warranty Claim | Klaim Garansi | Document | warranty | APPROVED_AUTOMATIC | Standard |
+| Warranty Claim | Klaim Garansi | Document | warranty | APPROVED_BY_PRODUCT_OWNER | Product owner decision |
 | Invoice | Faktur | Document | billing | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.invoice) |
 | Bill To / Due Date / Issue Date | Ditagihkan Kepada / Jatuh Tempo / Tanggal Terbit | Print label | documents | APPROVED_AUTOMATIC | Standard |
 | Prepared by / Approved by / Received By / Signature / Position | Disiapkan oleh / Disetujui oleh / Diterima Oleh / Tanda Tangan / Jabatan | Signature block | documents | STRUCTURAL_PREP_REQUIRED | Print templates are DB-stored (DATABASE_LOCALIZATION) |
