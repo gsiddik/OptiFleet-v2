@@ -8,6 +8,7 @@ use App\Domain\AccessControl\Models\Role;
 use App\Domain\AccessControl\Models\RoleAssignment;
 use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\Breakdown\Services\BreakdownService;
+use App\Domain\ComponentAsset\Services\ComponentAssetRegisterService;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Domain\Inspection\Models\Inspection;
@@ -33,6 +34,7 @@ use App\Domain\Organization\Models\WarehouseZone;
 use App\Domain\Organization\Models\Workshop;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseOrder;
+use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\Procurement\Models\PurchaseRequest;
 use App\Domain\Procurement\Models\PurchaseReturn;
 use App\Domain\Procurement\Services\GoodsReceiptService;
@@ -844,7 +846,7 @@ class DemoDatasetSeeder extends Seeder
                 continue;
             }
             $return = $returns->create($po, $chain['option'], [
-                ['purchase_order_item_id' => $po->items()->first()->id, 'quantity' => $chain['return']],
+                ['purchase_order_item_id' => $po->items()->first()->id, 'quantity' => $chain['return'], 'component_asset_ids' => $this->returnedAssets($po, $po->items()->first(), $chain['return'])],
             ], 'Damaged on arrival; returned to the vendor.', $this->admin->id);
             if ($chain['decision'] === 'ACCEPT') {
                 $returns->accept($return, 'Vendor credit note issued.', $this->admin->id);
@@ -880,11 +882,11 @@ class DemoDatasetSeeder extends Seeder
                     'document' => DemoQuotationDocument::make($invoice, 'Demo vendor invoice', $invoice.'.pdf'),
                 ]);
                 foreach ([[2, 'INV-MUS-2026-0302'], [5, 'INV-MUS-2026-0303']] as [$qty, $invoice]) {
-                    $return = $returns->create($po->fresh(), PurchaseReturn::REDELIVERY, [['purchase_order_item_id' => $line->id, 'quantity' => $qty]], 'Leaking seal; vendor redelivers.', $this->admin->id);
+                    $return = $returns->create($po->fresh(), PurchaseReturn::REDELIVERY, [['purchase_order_item_id' => $line->id, 'quantity' => $qty, 'component_asset_ids' => $this->returnedAssets($po, $line, $qty)]], 'Leaking seal; vendor redelivers.', $this->admin->id);
                     $returns->receiveRedelivery($returns->markPrinted($return, $this->admin->id), $this->admin->id);
                     $receive($qty, $invoice);
                 }
-                $refund = $returns->create($po->fresh(), PurchaseReturn::REFUND, [['purchase_order_item_id' => $line->id, 'quantity' => 5]], 'Wrong thread size; refund requested.', $this->admin->id);
+                $refund = $returns->create($po->fresh(), PurchaseReturn::REFUND, [['purchase_order_item_id' => $line->id, 'quantity' => 5, 'component_asset_ids' => $this->returnedAssets($po, $line, 5)]], 'Wrong thread size; refund requested.', $this->admin->id);
                 $returns->accept($refund, 'Vendor credit note issued.', $this->admin->id);
             }
         }
@@ -896,6 +898,20 @@ class DemoDatasetSeeder extends Seeder
     }
 
     /** Vehicle documents with and without expiry / extension (Vehicle Detail → Documents). */
+    /**
+     * Return to Vendor of a serial-tracked product names the exact Asset# returned (owner
+     * decision): the first in-stock assets that line's receipts generated (none for an untracked
+     * product, which is returned by quantity only).
+     *
+     * @return list<string>
+     */
+    private function returnedAssets(PurchaseOrder $po, PurchaseOrderItem $line, float $quantity): array
+    {
+        $assets = app(ComponentAssetRegisterService::class)->returnableForLine($line, $po->delivery_warehouse_id);
+
+        return array_slice(array_column($assets, 'id'), 0, (int) round($quantity));
+    }
+
     private function vehicleDocuments(array $vehicles): void
     {
         $documents = app(VehicleDocumentService::class);

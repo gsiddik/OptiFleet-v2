@@ -7,6 +7,7 @@ use App\Domain\ComponentAsset\Models\ComponentInstallation;
 use App\Domain\ComponentAsset\Models\ComponentRemoval;
 use App\Domain\ComponentAsset\Models\ComponentRepair;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\WorkOrder\Models\SparePartSale;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -25,8 +26,11 @@ class ComponentAssetService
         if (in_array($asset->current_status, ['INSTALLED', 'ACTIVE'], true)) {
             throw new ComponentAssetException('This component asset is already installed on a vehicle.');
         }
-        if (in_array($asset->current_status, ['SCRAPPED'], true)) {
-            throw new ComponentAssetException('A scrapped component asset cannot be installed.');
+        if (in_array($asset->current_status, ['SCRAPPED', ...ComponentAsset::NO_LOCATION], true)) {
+            throw new ComponentAssetException("A {$asset->current_status} component asset cannot be installed.");
+        }
+        if (SparePartSale::query()->withoutGlobalScopes()->where('component_asset_id', $asset->id)->whereIn('status', SparePartSale::ACTIVE_STATUSES)->exists()) {
+            throw new ComponentAssetException('This component asset is in an open sale (Sell Sparepart) and cannot be installed.');
         }
 
         return DB::transaction(function () use ($asset, $vehicle, $positionLocation, $odometer, $workOrderId, $userId) {
@@ -51,9 +55,10 @@ class ComponentAssetService
         });
     }
 
-    public function remove(ComponentAsset $asset, string $reason, string $disposition, ?float $odometer, ?string $condition, ?string $diagnosisNote, ?string $workOrderId, ?string $userId): ComponentRemoval
+    /** $warehouseId: where the removed component is stored (its location after removal; optional). */
+    public function remove(ComponentAsset $asset, string $reason, string $disposition, ?float $odometer, ?string $condition, ?string $diagnosisNote, ?string $workOrderId, ?string $userId, ?string $warehouseId = null): ComponentRemoval
     {
-        return DB::transaction(function () use ($asset, $reason, $disposition, $odometer, $condition, $diagnosisNote, $workOrderId, $userId) {
+        return DB::transaction(function () use ($asset, $reason, $disposition, $odometer, $condition, $diagnosisNote, $workOrderId, $userId, $warehouseId) {
             $locked = ComponentAsset::query()->lockForUpdate()->findOrFail($asset->id);
             if (! in_array($locked->current_status, ['INSTALLED', 'ACTIVE', 'FAILED'], true)) {
                 throw new ComponentAssetException("Component is {$locked->current_status} and cannot be removed from a vehicle.");
@@ -85,7 +90,7 @@ class ComponentAssetService
                 default => 'REMOVED',
             };
 
-            $locked->update(['current_status' => $newStatus, 'current_vehicle_id' => null]);
+            $locked->update(['current_status' => $newStatus, 'current_vehicle_id' => null, 'current_warehouse_id' => $warehouseId]);
 
             return $removal->fresh('componentAsset');
         });
@@ -128,9 +133,10 @@ class ComponentAssetService
         ]);
     }
 
-    public function completeRepair(ComponentRepair $repair, string $outcome, ?float $cost): ComponentRepair
+    /** Back in stock needs a warehouse: the asset's own, or $warehouseId when it has none. */
+    public function completeRepair(ComponentRepair $repair, string $outcome, ?float $cost, ?string $warehouseId = null): ComponentRepair
     {
-        return DB::transaction(function () use ($repair, $outcome, $cost) {
+        return DB::transaction(function () use ($repair, $outcome, $cost, $warehouseId) {
             $locked = ComponentRepair::query()->lockForUpdate()->findOrFail($repair->id);
             $locked->update(['completed_at' => now(), 'outcome' => $outcome, 'cost' => $cost]);
 
@@ -140,7 +146,11 @@ class ComponentAssetService
                 'SCRAPPED' => 'SCRAPPED',
                 default => 'IN_STOCK',
             };
-            $asset->update(['current_status' => $newStatus]);
+            $warehouse = $warehouseId ?? $asset->current_warehouse_id;
+            if ($newStatus === 'IN_STOCK' && $warehouse === null) {
+                throw new ComponentAssetException('Choose the warehouse the repaired component is stored in.');
+            }
+            $asset->update(['current_status' => $newStatus, 'current_warehouse_id' => $warehouse]);
 
             return $locked->fresh();
         });

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Tire\Services\TireInventoryService;
 use App\Domain\WorkOrder\Models\SparePartSale;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
@@ -80,6 +81,36 @@ class SparePartSaleController extends Controller
         abort_unless($visible === count($validated['tire_ids']), 403, 'A selected tire is outside your assigned data scope.');
 
         $sales = $this->sales->createForScrappedTires($tenantId, $validated['tire_ids'], $validated + ['unit_price' => (string) $request->input('unit_price')], $this->context->user()->id);
+
+        return $this->ok($sales->values(), 201);
+    }
+
+    /**
+     * Inventory → Component Assets → Sell: one DRAFT sale per physical asset (SCRAPPED or REMOVED);
+     * tenant, asset data scope and status are checked server-side.
+     */
+    public function storeComponentAssets(Request $request, DataScopeService $scope)
+    {
+        $validated = $request->validate([
+            'component_asset_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'component_asset_ids.*' => ['required', 'uuid', 'distinct'],
+            'sale_type' => ['required', 'string', 'in:'.implode(',', SparePartSale::SALE_TYPES)],
+            'buyer_type' => ['required', 'string', 'in:'.implode(',', SparePartSale::BUYER_TYPES)],
+            'partner_id' => ['nullable', 'uuid', 'exists:partners,id'],
+            'buyer_name' => ['nullable', 'string', 'max:255'],
+            'unit_price' => ['required', 'numeric', 'min:0'],
+            'notes' => ['nullable', 'string'],
+        ]);
+        $tenantId = $this->context->tenantId();
+        $user = $this->context->user();
+        $warehouses = $scope->allowedWarehouseIds($user, $tenantId);
+        if ($warehouses !== null || $scope->allowedBranchIds($user, $tenantId) !== null) {
+            $outside = DB::table('component_assets')->where('tenant_id', $tenantId)->whereIn('id', $validated['component_asset_ids'])
+                ->where(fn ($q) => $q->whereNull('current_warehouse_id')->orWhereNotIn('current_warehouse_id', $warehouses ?? []))->exists();
+            abort_if($outside, 403, 'A selected component asset is outside your assigned data scope.');
+        }
+
+        $sales = $this->sales->createForComponentAssets($tenantId, $validated['component_asset_ids'], $validated + ['unit_price' => (string) $request->input('unit_price')], $user->id);
 
         return $this->ok($sales->values(), 201);
     }

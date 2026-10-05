@@ -2,6 +2,7 @@
 
 namespace App\Domain\Procurement\Services;
 
+use App\Domain\ComponentAsset\Services\ComponentAssetRegisterService;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Configuration\Services\DocumentNumberingService;
 use App\Domain\Organization\Models\Warehouse;
@@ -39,6 +40,7 @@ class GoodsReceiptService
         private readonly VendorInvoiceReferenceService $invoices,
         private readonly PrivateDocumentStorage $storage,
         private readonly PurchaseReturnService $returns,
+        private readonly ComponentAssetRegisterService $assets,
     ) {}
 
     /**
@@ -104,7 +106,7 @@ class GoodsReceiptService
                     throw new ProcurementException('Receiving '.$this->qty($accepted + $rejected + $damaged).' exceeds the Remaining Receivable Qty of this line ('.$this->qty(max(0, $remaining)).').');
                 }
 
-                GoodsReceiptItem::query()->create([
+                $receiptLine = GoodsReceiptItem::query()->create([
                     'goods_receipt_id' => $receipt->id,
                     'purchase_order_item_id' => $poItem->id,
                     'product_id' => $poItem->product_id,
@@ -120,6 +122,8 @@ class GoodsReceiptService
                     $product = Product::query()->findOrFail($poItem->product_id);
                     $this->inventory->receive($warehouse, $product, $accepted, (float) $poItem->unit_price, 'RECEIPT', GoodsReceipt::class, $receipt->id, $userId);
                     $poItem->increment('quantity_received', $accepted);
+                    // Serial-tracked (non-tire) products: one Component Asset per unit actually received.
+                    $this->assets->generateFromReceipt($receiptLine, $product, $lockedPo->tenant_id, $warehouse->id, now()->toDateString());
                 }
 
                 $totalAccepted += $accepted;

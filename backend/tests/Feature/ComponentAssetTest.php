@@ -8,6 +8,8 @@ use Tests\TestCase;
 
 class ComponentAssetTest extends TestCase
 {
+    private $warehouse;
+
     private function setUpScenario(): array
     {
         $tenant = $this->makeTenant(['code' => 'CMP-'.\Illuminate\Support\Str::random(4)]);
@@ -19,9 +21,12 @@ class ComponentAssetTest extends TestCase
         $vehicle = $this->makeVehicle($tenant, $branch, $category);
         $componentGroup = $this->makeComponentGroup();
         $product = $this->makeProduct($tenant);
+        // An in-stock asset is always in a warehouse (component_assets_location_check).
+        $this->warehouse = $this->makeWarehouse($tenant, $branch);
 
         return [$tenant, $vehicle, $componentGroup, $product];
     }
+
 
     private function permissions(): array
     {
@@ -34,10 +39,14 @@ class ComponentAssetTest extends TestCase
         [, $token] = $this->makeTenantUser($tenant, $this->permissions());
         $headers = $this->authHeaders($token);
 
-        $create = $this->postJson('/api/v1/app/component-assets', [
+        // Manual creation is retired: assets come from Goods Receipt (see ComponentAssetRegisterTest).
+        $this->postJson('/api/v1/app/component-assets', [
             'product_id' => $product->id, 'component_group_id' => $componentGroup->id, 'serial_number' => 'BAT-001',
-        ], $headers)->assertStatus(201);
-        $assetId = $create->json('data.id');
+        ], $headers)->assertStatus(410);
+        $assetId = ComponentAsset::query()->create([
+            'tenant_id' => $tenant->id, 'product_id' => $product->id, 'component_group_id' => $componentGroup->id,
+            'serial_number' => 'BAT-001', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse->id,
+        ])->id;
 
         $this->postJson("/api/v1/app/component-assets/{$assetId}/install", [
             'vehicle_id' => $vehicle->id, 'position_location' => 'ENGINE_BAY', 'odometer' => 5000,
@@ -59,7 +68,7 @@ class ComponentAssetTest extends TestCase
 
         $asset = ComponentAsset::query()->create([
             'tenant_id' => $tenant->id, 'product_id' => $product->id, 'component_group_id' => $componentGroup->id,
-            'serial_number' => 'BAT-DUP', 'current_status' => 'IN_STOCK',
+            'serial_number' => 'BAT-DUP', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse->id,
         ]);
 
         $this->postJson("/api/v1/app/component-assets/{$asset->id}/install", [
@@ -79,11 +88,11 @@ class ComponentAssetTest extends TestCase
 
         $oldAsset = ComponentAsset::query()->create([
             'tenant_id' => $tenant->id, 'product_id' => $product->id, 'component_group_id' => $componentGroup->id,
-            'serial_number' => 'BAT-OLD', 'current_status' => 'IN_STOCK',
+            'serial_number' => 'BAT-OLD', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse->id,
         ]);
         $newAsset = ComponentAsset::query()->create([
             'tenant_id' => $tenant->id, 'product_id' => $product->id, 'component_group_id' => $componentGroup->id,
-            'serial_number' => 'BAT-NEW', 'current_status' => 'IN_STOCK',
+            'serial_number' => 'BAT-NEW', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse->id,
         ]);
 
         $this->postJson("/api/v1/app/component-assets/{$oldAsset->id}/install", [
@@ -113,7 +122,7 @@ class ComponentAssetTest extends TestCase
 
         $asset = ComponentAsset::query()->create([
             'tenant_id' => $tenant->id, 'product_id' => $product->id, 'component_group_id' => $componentGroup->id,
-            'serial_number' => 'BAT-REP', 'current_status' => 'IN_STOCK',
+            'serial_number' => 'BAT-REP', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse->id,
         ]);
         $this->postJson("/api/v1/app/component-assets/{$asset->id}/install", ['vehicle_id' => $vehicle->id], $headers)->assertStatus(201);
         $this->postJson("/api/v1/app/component-assets/{$asset->id}/remove", [
@@ -140,7 +149,7 @@ class ComponentAssetTest extends TestCase
     {
         [$tenant, , , $product] = $this->setUpScenario();
         $asset = ComponentAsset::query()->create([
-            'tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'BAT-ISO', 'current_status' => 'IN_STOCK',
+            'tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'BAT-ISO', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse->id, 'current_warehouse_id' => $this->warehouse->id,
         ]);
 
         $otherTenant = $this->makeTenant(['code' => 'CMPB-'.\Illuminate\Support\Str::random(4)]);
@@ -162,10 +171,11 @@ class ComponentAssetTest extends TestCase
         $vehicleA = $this->makeVehicle($tenant, $branchA, $category, ['registration_number' => 'REG-A']);
         $vehicleB = $this->makeVehicle($tenant, $branchB, $category, ['registration_number' => 'REG-B']);
         $product = $this->makeProduct($tenant);
+        $warehouse = $this->makeWarehouse($tenant, $branchA);
 
         [, $ownerToken] = $this->makeTenantUser($tenant, $this->permissions());
-        $assetA = ComponentAsset::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'BAT-BR-A', 'current_status' => 'IN_STOCK']);
-        $assetB = ComponentAsset::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'BAT-BR-B', 'current_status' => 'IN_STOCK']);
+        $assetA = ComponentAsset::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'BAT-BR-A', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $warehouse->id]);
+        $assetB = ComponentAsset::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'BAT-BR-B', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $warehouse->id]);
         $this->postJson("/api/v1/app/component-assets/{$assetA->id}/install", ['vehicle_id' => $vehicleA->id], $this->authHeaders($ownerToken))->assertStatus(201);
         $this->postJson("/api/v1/app/component-assets/{$assetB->id}/install", ['vehicle_id' => $vehicleB->id], $this->authHeaders($ownerToken))->assertStatus(201);
 

@@ -577,6 +577,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/sparepart-sales/{sparePartSale}', [SparePartSaleController::class, 'show'])->middleware('permission:sparepart_sale.view');
             Route::post('/sparepart-sales', [SparePartSaleController::class, 'store'])->middleware('permission:sparepart_sale.create');
             Route::post('/sparepart-sales/scrapped-tires', [SparePartSaleController::class, 'storeScrappedTires'])->middleware('permission:sparepart_sale.create');
+            Route::post('/sparepart-sales/component-assets', [SparePartSaleController::class, 'storeComponentAssets'])->middleware('permission:sparepart_sale.create');
             Route::post('/sparepart-sales/{sparePartSale}/submit', [SparePartSaleController::class, 'submit'])->middleware('permission:sparepart_sale.create');
             Route::post('/sparepart-sales/{sparePartSale}/decide', [SparePartSaleController::class, 'decide'])->middleware('permission:sparepart_sale.approve');
 
