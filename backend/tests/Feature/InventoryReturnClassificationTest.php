@@ -43,7 +43,7 @@ class InventoryReturnClassificationTest extends TestCase
         $wo = app(WorkOrderService::class)->approve($wo);
         $wo = app(WorkOrderService::class)->assign($wo);
         $wo = app(WorkOrderService::class)->schedule($wo);
-        $wo = app(WorkOrderService::class)->start($wo);
+        $wo = app(WorkOrderService::class)->start($this->withApprovedWorkspace($wo));
 
         // Part Requests issue the whole approved quantity; $plannedQty is kept for the callers' signature.
         $part = $this->issueThroughPartRequest($wo, $product, $issueQty, $warehouse);

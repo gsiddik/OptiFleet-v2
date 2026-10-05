@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\Workshop\Models\Workspace;
 use App\Domain\Workshop\Models\WorkspaceReservation;
 use App\Domain\Workshop\Services\WorkspaceReservationService;
@@ -23,7 +24,7 @@ class WorkspaceReservationController extends Controller
         $user = $this->context->user();
         $tenantId = $this->context->tenantId();
 
-        $query = WorkspaceReservation::query()->with(['workspace.workshop', 'workOrder.vehicle']);
+        $query = WorkspaceReservation::query()->with(['workspace.workshop', 'workOrder.vehicle', 'approver:id,name', 'transferrer:id,name', 'transferredFrom.workspace:id,name,code']);
         $allowedWorkshopIds = $this->scope->allowedWorkshopIds($user, $tenantId);
         if ($allowedWorkshopIds !== null) {
             $query->whereHas('workspace', fn ($q) => $q->whereIn('workshop_id', $allowedWorkshopIds));
@@ -65,6 +66,11 @@ class WorkspaceReservationController extends Controller
         abort_unless($workspace->tenant_id === $tenantId, 404);
         abort_unless($this->scope->canAccessWorkshop($this->context->user(), $tenantId, $workspace->workshop_id), 403);
 
+        if ($request->filled('work_order_id')) {
+            $workOrder = WorkOrder::query()->find($request->input('work_order_id'));
+            abort_unless($workOrder && $workOrder->tenant_id === $tenantId, 404);
+        }
+
         $reservation = $this->reservations->reserve(
             $workspace,
             new \DateTimeImmutable($request->input('start_at')),
@@ -74,6 +80,60 @@ class WorkspaceReservationController extends Controller
         );
 
         return $this->ok($reservation, 201);
+    }
+
+    public function approve(WorkspaceReservation $reservation)
+    {
+        $this->authorizeScope($reservation);
+
+        return $this->ok($this->reservations->approve($reservation, $this->context->user()->id)->load(['workspace', 'approver:id,name']));
+    }
+
+    /** Transfer to Another Workspace: the approved assignment becomes history; the new one is approved. */
+    public function transfer(Request $request, WorkspaceReservation $reservation)
+    {
+        $this->authorizeScope($reservation);
+        $validated = $request->validate([
+            'workspace_id' => ['required', 'uuid'],
+            'start_at' => ['nullable', 'date'],
+            'end_at' => ['nullable', 'date', 'after:start_at'],
+        ]);
+        $target = Workspace::query()->where('tenant_id', $this->context->tenantId())->find($validated['workspace_id']);
+        abort_unless($target !== null, 422, 'The target workspace was not found.');
+        abort_unless($this->scope->canAccessWorkshop($this->context->user(), $this->context->tenantId(), $target->workshop_id), 403, 'The target workspace is outside your assigned data scope.');
+
+        $new = $this->reservations->transfer(
+            $reservation, $target,
+            isset($validated['start_at']) ? new \DateTimeImmutable($validated['start_at']) : null,
+            isset($validated['end_at']) ? new \DateTimeImmutable($validated['end_at']) : null,
+            $this->context->user()->id,
+        );
+
+        return $this->ok($new->load(['workspace', 'approver:id,name', 'transferredFrom.workspace:id,name,code']), 201);
+    }
+
+    /**
+     * Workspaces of the Work Order's workshop with a free capacity slot in the window (Schedule /
+     * Transfer dropdowns). The backend re-checks everything when the assignment is saved.
+     */
+    public function available(Request $request, WorkOrder $workOrder)
+    {
+        abort_unless($workOrder->tenant_id === $this->context->tenantId(), 404);
+        abort_unless($this->scope->canAccessWorkshop($this->context->user(), $this->context->tenantId(), $workOrder->workshop_id), 403);
+        $validated = $request->validate([
+            'start_at' => ['required', 'date'],
+            'end_at' => ['required', 'date', 'after:start_at'],
+            'exclude_workspace_id' => ['nullable', 'uuid'],
+        ]);
+        $rows = $this->reservations->available(
+            $workOrder, new \DateTimeImmutable($validated['start_at']), new \DateTimeImmutable($validated['end_at']), $validated['exclude_workspace_id'] ?? null,
+        );
+
+        return $this->ok($rows->map(fn (array $r) => [
+            'id' => $r['workspace']->id, 'code' => $r['workspace']->code, 'name' => $r['workspace']->name,
+            'workspace_type' => $r['workspace']->workspace_type, 'status' => $r['workspace']->status,
+            'capacity' => $r['capacity'], 'occupied' => $r['occupied'],
+        ])->values());
     }
 
     public function activate(WorkspaceReservation $reservation)

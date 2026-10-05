@@ -227,6 +227,7 @@ class OperationsSeeder extends Seeder
         $wo = $workOrders->submit($wo);
         $wo = $workOrders->approve($wo);
         $wo = $workOrders->assign($wo);
+        DemoWorkspaceAssignment::approve($wo, $wsManager->id, $bay1, now());
         $wo = $workOrders->schedule($wo, $bay1->id, now(), now()->addHours(3));
         $wo = $workOrders->start($wo);
 

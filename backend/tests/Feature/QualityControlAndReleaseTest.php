@@ -28,7 +28,7 @@ class QualityControlAndReleaseTest extends TestCase
         $wo = $workOrders->approve($wo);
         $wo = $workOrders->assign($wo);
         $wo = $workOrders->schedule($wo);
-        $wo = $workOrders->start($wo);
+        $wo = $workOrders->start($this->withApprovedWorkspace($wo));
 
         app(\App\Domain\Workshop\Services\MechanicAssignmentService::class)->assign($wo, $mechanic, 'PRIMARY', null, $user->id);
 
@@ -108,7 +108,7 @@ class QualityControlAndReleaseTest extends TestCase
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
             $wo = $workOrders->schedule($wo);
-            $wo = $workOrders->start($wo);
+            $wo = $workOrders->start($this->withApprovedWorkspace($wo));
             $wo = $workOrders->submitToQc($wo);
 
             return app(\App\Domain\QualityControl\Services\QualityControlService::class)->start($wo, null, $user->id);

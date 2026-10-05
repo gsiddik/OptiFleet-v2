@@ -171,6 +171,7 @@ class SupplyChainSeeder extends Seeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            DemoWorkspaceAssignment::approve($wo, $warehouseManager->id);
             $wo = $workOrders->schedule($wo);
             $wo = $workOrders->start($wo);
 

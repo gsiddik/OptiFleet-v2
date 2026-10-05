@@ -50,7 +50,7 @@ class FunctionalTestWorkOrderSeeder
         $bay2 = $ops->workspaces['BAY_2'];
 
         // FT-WO-DRAFT: just created, nothing else — the simplest possible state.
-        $this->scenario('FT-WO-DRAFT', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $ops) {
+        $this->scenario('FT-WO-DRAFT', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $ops, $workshopManagerId) {
             return $workOrders->create($ops->vehicles['CAR_1'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'PREVENTIVE', 'priority' => 'LOW',
                 'complaint' => '[FT-WO-DRAFT] Routine 10,000km service due.',
@@ -58,7 +58,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-SCHEDULED: scheduled 1 day from now, in Bay 1.
-        $this->scenario('FT-WO-SCHEDULED', $ops->vehicles['CAR_2'], $referenceDate, function () use ($workOrders, $ops, $bay1, $referenceDate) {
+        $this->scenario('FT-WO-SCHEDULED', $ops->vehicles['CAR_2'], $referenceDate, function () use ($workOrders, $ops, $bay1, $referenceDate, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['CAR_2'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
                 'complaint' => '[FT-WO-SCHEDULED] AC not cooling, needs inspection.',
@@ -74,7 +74,7 @@ class FunctionalTestWorkOrderSeeder
         ]));
 
         // FT-WO-IN_PROGRESS: started today, mid-execution (finding + job + mechanic assigned + labor running).
-        $this->scenario('FT-WO-IN_PROGRESS', $ops->vehicles['TRUCK_1'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $ops, $bay2, $referenceDate, $brakeGroupId, $leadMechanic) {
+        $this->scenario('FT-WO-IN_PROGRESS', $ops->vehicles['TRUCK_1'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $ops, $bay2, $referenceDate, $brakeGroupId, $leadMechanic, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['TRUCK_1'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'HIGH',
                 'complaint' => '[FT-WO-IN_PROGRESS] Brake pedal soft, needs inspection.',
@@ -89,6 +89,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+            DemoWorkspaceAssignment::approve($wo, $workshopManagerId, $bay2, $referenceDate->copy()->setTime(8, 0));
             $wo = $workOrders->schedule($wo, $bay2->id, $referenceDate->copy()->setTime(8, 0), $referenceDate->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
 
@@ -101,7 +103,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-ON_HOLD: same shape as IN_PROGRESS, then paused (e.g. waiting on customer decision).
-        $this->scenario('FT-WO-ON_HOLD', $ops->vehicles['TRUCK_2'], $referenceDate, function () use ($workOrders, $execution, $ops, $bay2, $referenceDate, $engineGroupId) {
+        $this->scenario('FT-WO-ON_HOLD', $ops->vehicles['TRUCK_2'], $referenceDate, function () use ($workOrders, $execution, $ops, $bay2, $referenceDate, $engineGroupId, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['TRUCK_2'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
                 'complaint' => '[FT-WO-ON_HOLD] Engine noise on cold start.',
@@ -115,6 +117,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+            DemoWorkspaceAssignment::approve($wo, $workshopManagerId, $bay2, $referenceDate->copy()->setTime(8, 0));
             $wo = $workOrders->schedule($wo, $bay2->id, $referenceDate->copy()->setTime(8, 0), $referenceDate->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
 
@@ -122,7 +126,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-WAITING_PART: in progress, blocked on a part with no stock at this warehouse.
-        $this->scenario('FT-WO-WAITING_PART', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $partRequests, $ops, $bay1, $referenceDate, $products) {
+        $this->scenario('FT-WO-WAITING_PART', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $partRequests, $ops, $bay1, $referenceDate, $products, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['CAR_1'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
                 'complaint' => '[FT-WO-WAITING_PART] Hydraulic lift arm requires replacement part not in stock.',
@@ -130,6 +134,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+            DemoWorkspaceAssignment::approve($wo, $workshopManagerId, $bay1, $referenceDate->copy()->setTime(8, 0));
             $wo = $workOrders->schedule($wo, $bay1->id, $referenceDate->copy()->setTime(8, 0), $referenceDate->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
             // Requested, awaiting approval: the part is not in stock yet.
@@ -139,7 +145,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-QC_PENDING: job finished, submitted to QC, inspection not yet started.
-        $this->scenario('FT-WO-QC_PENDING', $ops->vehicles['CAR_2'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $ops, $bay1, $referenceDate, $engineGroupId, $leadMechanic) {
+        $this->scenario('FT-WO-QC_PENDING', $ops->vehicles['CAR_2'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $ops, $bay1, $referenceDate, $engineGroupId, $leadMechanic, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['CAR_2'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'PREVENTIVE', 'priority' => 'MEDIUM',
                 'complaint' => '[FT-WO-QC_PENDING] Scheduled oil & filter change, ready for QC.',
@@ -147,6 +153,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+            DemoWorkspaceAssignment::approve($wo, $workshopManagerId, $bay1, $referenceDate->copy()->setTime(8, 0));
             $wo = $workOrders->schedule($wo, $bay1->id, $referenceDate->copy()->setTime(8, 0), $referenceDate->copy()->setTime(9, 0));
             $wo = $workOrders->start($wo);
             $job = $execution->addJob($wo, ['component_group_id' => $engineGroupId, 'service_item' => 'Oil & filter change', 'description' => 'Routine oil and filter service.', 'estimated_hours' => 1]);
@@ -160,7 +168,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-COMPLETED: full flow through QC pass + road test + complete (yesterday).
-        $this->scenario('FT-WO-COMPLETED', $ops->vehicles['CAR_3'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $qc, $ops, $bay1, $referenceDate, $brakeGroupId, $leadMechanic, $qcInspector, $partService, $partRequests, $products) {
+        $this->scenario('FT-WO-COMPLETED', $ops->vehicles['CAR_3'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $qc, $ops, $bay1, $referenceDate, $brakeGroupId, $leadMechanic, $qcInspector, $partService, $partRequests, $products, $workshopManagerId) {
             $yesterday = $referenceDate->copy()->subDay();
             $wo = $workOrders->create($ops->vehicles['CAR_3'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'HIGH',
@@ -176,6 +184,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+            DemoWorkspaceAssignment::approve($wo, $workshopManagerId, $bay1, $yesterday->copy()->setTime(8, 0));
             $wo = $workOrders->schedule($wo, $bay1->id, $yesterday->copy()->setTime(8, 0), $yesterday->copy()->setTime(11, 0));
             $wo = $workOrders->start($wo);
 
@@ -214,7 +224,7 @@ class FunctionalTestWorkOrderSeeder
         }, null);
 
         // FT-WO-CLOSED: same shape, older, and explicitly closed (Scheduler must exclude it).
-        $this->scenario('FT-WO-CLOSED', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $qc, $ops, $bay1, $referenceDate, $engineGroupId, $leadMechanic, $qcInspector) {
+        $this->scenario('FT-WO-CLOSED', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $execution, $mechanics, $laborTimer, $qc, $ops, $bay1, $referenceDate, $engineGroupId, $leadMechanic, $qcInspector, $workshopManagerId) {
             $twoDaysAgo = $referenceDate->copy()->subDays(2);
             $wo = $workOrders->create($ops->vehicles['CAR_1'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'PREVENTIVE', 'priority' => 'LOW',
@@ -223,6 +233,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+            DemoWorkspaceAssignment::approve($wo, $workshopManagerId, $bay1, $twoDaysAgo->copy()->setTime(8, 0));
             $wo = $workOrders->schedule($wo, $bay1->id, $twoDaysAgo->copy()->setTime(8, 0), $twoDaysAgo->copy()->setTime(9, 0));
             $wo = $workOrders->start($wo);
             $job = $execution->addJob($wo, ['component_group_id' => $engineGroupId, 'service_item' => 'Oil change', 'description' => 'Routine oil change.', 'estimated_hours' => 1]);
@@ -243,7 +255,7 @@ class FunctionalTestWorkOrderSeeder
 
         // Additional relative-dated Scheduled WOs (Section 29): Today+2/+3 for the
         // 7-day window, plus Today+7/Today-7 to exercise next-week/previous-week navigation.
-        $this->scenario('FT-WO-SCHEDULED-PLUS2', $ops->vehicles['TRUCK_2'], $referenceDate, function () use ($workOrders, $ops, $bay2, $referenceDate) {
+        $this->scenario('FT-WO-SCHEDULED-PLUS2', $ops->vehicles['TRUCK_2'], $referenceDate, function () use ($workOrders, $ops, $bay2, $referenceDate, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['TRUCK_2'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'PREVENTIVE', 'priority' => 'LOW',
                 'complaint' => '[FT-WO-SCHEDULED-PLUS2] Tire rotation scheduled.',
@@ -258,7 +270,7 @@ class FunctionalTestWorkOrderSeeder
             'target_completion_at' => $referenceDate->copy()->addDays(2)->setTime(10, 0),
         ]));
 
-        $this->scenario('FT-WO-SCHEDULED-PLUS3', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $ops, $bay1, $referenceDate) {
+        $this->scenario('FT-WO-SCHEDULED-PLUS3', $ops->vehicles['CAR_1'], $referenceDate, function () use ($workOrders, $ops, $bay1, $referenceDate, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['CAR_1'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'PREVENTIVE', 'priority' => 'LOW',
                 'complaint' => '[FT-WO-SCHEDULED-PLUS3] Air filter replacement scheduled.',
@@ -273,7 +285,7 @@ class FunctionalTestWorkOrderSeeder
             'target_completion_at' => $referenceDate->copy()->addDays(3)->setTime(10, 0),
         ]));
 
-        $this->scenario('FT-WO-SCHEDULED-NEXTWEEK', $ops->vehicles['TRUCK_1'], $referenceDate, function () use ($workOrders, $ops, $bay2, $referenceDate) {
+        $this->scenario('FT-WO-SCHEDULED-NEXTWEEK', $ops->vehicles['TRUCK_1'], $referenceDate, function () use ($workOrders, $ops, $bay2, $referenceDate, $workshopManagerId) {
             $wo = $workOrders->create($ops->vehicles['TRUCK_1'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'PREVENTIVE', 'priority' => 'LOW',
                 'complaint' => '[FT-WO-SCHEDULED-NEXTWEEK] Major service scheduled next week.',
@@ -290,7 +302,7 @@ class FunctionalTestWorkOrderSeeder
 
         // Previous-week: completed rather than left Scheduled, since a past target date
         // that never started would be a stale/implausible state, not a real historical record.
-        $this->scenario('FT-WO-COMPLETED-PREVWEEK', $ops->vehicles['CAR_2'], $referenceDate, function () use ($workOrders, $qc, $ops, $bay1, $referenceDate, $qcInspector) {
+        $this->scenario('FT-WO-COMPLETED-PREVWEEK', $ops->vehicles['CAR_2'], $referenceDate, function () use ($workOrders, $qc, $ops, $bay1, $referenceDate, $qcInspector, $workshopManagerId) {
             $lastWeek = $referenceDate->copy()->subWeek();
             $wo = $workOrders->create($ops->vehicles['CAR_2'], [
                 'workshop_id' => $ops->workshop->id, 'maintenance_type' => 'PREVENTIVE', 'priority' => 'LOW',
@@ -299,6 +311,8 @@ class FunctionalTestWorkOrderSeeder
             $wo = $workOrders->submit($wo);
             $wo = $workOrders->approve($wo);
             $wo = $workOrders->assign($wo);
+            // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+            DemoWorkspaceAssignment::approve($wo, $workshopManagerId, $bay1, $lastWeek->copy()->setTime(9, 0));
             $wo = $workOrders->schedule($wo, $bay1->id, $lastWeek->copy()->setTime(9, 0), $lastWeek->copy()->setTime(10, 0));
             $wo = $workOrders->start($wo);
             $wo = $workOrders->submitToQc($wo);

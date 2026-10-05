@@ -31,6 +31,7 @@ class WorkOrderClosureGuardTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$woId}/approve", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/assign", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/schedule", [], $headers)->assertOk();
+        $this->withApprovedWorkspace($woId);
         $this->postJson("/api/v1/app/work-orders/{$woId}/start", [], $headers)->assertOk();
     }
 

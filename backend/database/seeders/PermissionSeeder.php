@@ -104,7 +104,7 @@ class PermissionSeeder extends Seeder
                 'view_settlement_history',
             ],
             'worker' => ['view', 'manage', 'assign'],
-            'workspace' => ['view', 'manage', 'reserve', 'block'],
+            'workspace' => ['view', 'manage', 'reserve', 'approve', 'block'],
             'qc' => ['view', 'perform', 'approve', 'reject'],
             'vehicle_release' => ['perform'],
             'maintenance_history' => ['view'],

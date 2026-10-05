@@ -474,4 +474,31 @@ abstract class TestCase extends BaseTestCase
             'status' => 'ACTIVE',
         ], $overrides));
     }
+
+    /**
+     * SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment with a scheduled window. Gives
+     * the Work Order one (a workspace in its workshop, capacity 1) unless it already has a current
+     * assignment (a pending one is approved). Returns the fresh Work Order, so it can wrap a call:
+     * $service->start($this->withApprovedWorkspace($wo)).
+     */
+    protected function withApprovedWorkspace(\App\Domain\WorkOrder\Models\WorkOrder|string $workOrder): \App\Domain\WorkOrder\Models\WorkOrder
+    {
+        $wo = \App\Domain\WorkOrder\Models\WorkOrder::query()->withoutGlobalScopes()->findOrFail(is_string($workOrder) ? $workOrder : $workOrder->id);
+        $current = \App\Domain\Workshop\Models\WorkspaceReservation::query()->withoutGlobalScopes()->where('work_order_id', $wo->id)
+            ->whereIn('status', \App\Domain\Workshop\Models\WorkspaceReservation::CURRENT)->first();
+        if ($current?->status === 'RESERVED') {
+            $current->update(['status' => 'APPROVED', 'approved_at' => now()]);
+        } elseif (! $current) {
+            $workspace = \App\Domain\Workshop\Models\Workspace::query()->withoutGlobalScopes()->create([
+                'tenant_id' => $wo->tenant_id, 'workshop_id' => $wo->workshop_id, 'code' => 'WS-'.Str::upper(Str::random(6)),
+                'name' => 'Test Bay', 'workspace_type' => 'GENERAL_SERVICE_BAY', 'capacity' => 1, 'status' => 'AVAILABLE',
+            ]);
+            \App\Domain\Workshop\Models\WorkspaceReservation::query()->withoutGlobalScopes()->create([
+                'tenant_id' => $wo->tenant_id, 'workspace_id' => $workspace->id, 'work_order_id' => $wo->id,
+                'start_at' => now()->subHour(), 'end_at' => now()->addHours(8), 'status' => 'APPROVED', 'approved_at' => now(),
+            ]);
+        }
+
+        return $wo->fresh();
+    }
 }

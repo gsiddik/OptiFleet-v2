@@ -102,6 +102,7 @@ class WorkOrderTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$id}/approve", [], $headers)->assertOk()->assertJsonPath('data.status', 'APPROVED');
         $this->postJson("/api/v1/app/work-orders/{$id}/assign", [], $headers)->assertOk()->assertJsonPath('data.status', 'ASSIGNED');
         $this->postJson("/api/v1/app/work-orders/{$id}/schedule", [], $headers)->assertOk()->assertJsonPath('data.status', 'SCHEDULED');
+        $this->withApprovedWorkspace($id);
         $this->postJson("/api/v1/app/work-orders/{$id}/start", [], $headers)->assertOk()->assertJsonPath('data.status', 'IN_PROGRESS');
 
         $this->assertSame('IN_MAINTENANCE', $vehicle->fresh()->status);

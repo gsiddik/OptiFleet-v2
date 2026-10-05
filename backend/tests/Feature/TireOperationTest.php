@@ -81,7 +81,7 @@ class TireOperationTest extends TestCase
     {
         $service = app(WorkOrderService::class);
 
-        return $service->start($service->schedule($service->assign($service->approve($service->submit(WorkOrder::query()->findOrFail($workOrderId))))));
+        return $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(WorkOrder::query()->findOrFail($workOrderId)))))));
     }
 
     private function onHand($s): float

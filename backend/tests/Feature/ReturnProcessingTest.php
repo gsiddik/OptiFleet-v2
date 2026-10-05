@@ -38,9 +38,9 @@ class ReturnProcessingTest extends TestCase
         app(InventoryService::class)->receive($warehouse, $product, 20, 15, 'OPENING', null, null, null);
 
         $service = app(WorkOrderService::class);
-        $wo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $wo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
-        )))));
+        ))))));
         $part = $this->issueThroughPartRequest($wo, $product, $qty, $warehouse);
         [$user, $token] = $this->makeTenantUser($tenant, self::PERMISSIONS);
 

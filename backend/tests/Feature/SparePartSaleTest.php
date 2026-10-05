@@ -54,7 +54,7 @@ class SparePartSaleTest extends TestCase
         $wo = app(WorkOrderService::class)->approve($wo);
         $wo = app(WorkOrderService::class)->assign($wo);
         $wo = app(WorkOrderService::class)->schedule($wo);
-        $wo = app(WorkOrderService::class)->start($wo);
+        $wo = app(WorkOrderService::class)->start($this->withApprovedWorkspace($wo));
 
         // The new part installed on the vehicle (issued + consumed) — the old one it replaced is
         // then recorded as a Removed Component.

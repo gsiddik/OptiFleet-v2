@@ -31,9 +31,9 @@ class UsedPartEvidenceTest extends TestCase
         $product = $this->makeProduct($tenant);
         app(InventoryService::class)->receive($warehouse, $product, 10, 15, 'OPENING', null, null, null);
         $service = app(WorkOrderService::class);
-        $wo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $wo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
-        )))));
+        ))))));
         $this->consumeOnWorkOrder($wo, $product, 2, $warehouse);
         [, $token] = $this->makeTenantUser($tenant, ['maintenance_job.manage', 'used_part.view', 'used_part.inspect']);
         $headers = $this->authHeaders($token);

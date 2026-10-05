@@ -61,23 +61,23 @@ class WorkspaceReservationTest extends TestCase
             'workspace_type' => 'GENERAL_SERVICE_BAY', 'status' => 'AVAILABLE',
         ]);
 
-        [, $token] = $this->makeTenantUser($tenant, ['workspace.view', 'workspace.reserve']);
+        [, $token] = $this->makeTenantUser($tenant, ['workspace.view', 'workspace.reserve', 'workspace.approve']);
         $headers = $this->authHeaders($token);
 
         $create = $this->postJson('/api/v1/app/workspace-reservations', [
             'workspace_id' => $workspace->id,
             'start_at' => now()->addHour()->toIso8601String(),
             'end_at' => now()->addHours(2)->toIso8601String(),
-        ], $headers)->assertStatus(201);
+        ], $headers)->assertStatus(201)->assertJsonPath('data.status', 'RESERVED');
         $id = $create->json('data.id');
 
-        $this->postJson("/api/v1/app/workspace-reservations/{$id}/activate", [], $headers)
-            ->assertOk()->assertJsonPath('data.status', 'ACTIVE');
-        $this->assertSame('OCCUPIED', $workspace->fresh()->status);
-
-        $this->postJson("/api/v1/app/workspace-reservations/{$id}/complete", [], $headers)
-            ->assertOk()->assertJsonPath('data.status', 'COMPLETED');
-        $this->assertSame('AVAILABLE', $workspace->fresh()->status);
+        // Approval model: RESERVED → APPROVED; Activate and manual Complete are retired.
+        $this->postJson("/api/v1/app/workspace-reservations/{$id}/activate", [], $headers)->assertStatus(422);
+        $this->postJson("/api/v1/app/workspace-reservations/{$id}/approve", [], $headers)
+            ->assertOk()->assertJsonPath('data.status', 'APPROVED');
+        $this->assertNotNull($workspace->fresh()->reservations()->first()->approved_at);
+        $this->postJson("/api/v1/app/workspace-reservations/{$id}/complete", [], $headers)->assertStatus(422);
+        $this->assertSame('APPROVED', $workspace->reservations()->first()->status);
     }
 
     public function test_overlapping_reservation_is_rejected(): void
