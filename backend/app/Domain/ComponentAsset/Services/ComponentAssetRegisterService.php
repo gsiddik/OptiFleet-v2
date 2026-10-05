@@ -183,10 +183,13 @@ class ComponentAssetRegisterService
         // Serialize generation per receipt line (row lock), then continue after the units it already has.
         GoodsReceiptItem::query()->whereKey($line->id)->lockForUpdate()->first();
         $existing = (int) ComponentAsset::query()->withoutGlobalScopes()->where('goods_receipt_item_id', $line->id)->count();
+        // The asset's own group (used by component analytics) when the product has exactly one.
+        $groups = DB::table('product_component_groups')->where('product_id', $product->id)->pluck('component_group_id');
+        $groupId = $groups->count() === 1 ? $groups->first() : null;
         $assets = [];
         for ($sequence = $existing + 1; $sequence <= (int) round($units); $sequence++) {
             $assets[] = ComponentAsset::query()->create([
-                'tenant_id' => $tenantId, 'product_id' => $product->id, 'asset_number' => $this->nextAssetNumber($tenantId),
+                'tenant_id' => $tenantId, 'product_id' => $product->id, 'component_group_id' => $groupId, 'asset_number' => $this->nextAssetNumber($tenantId),
                 'purchase_date' => $receivedOn, 'purchase_cost' => $line->unit_cost, 'current_status' => 'IN_STOCK',
                 'current_warehouse_id' => $warehouseId, 'goods_receipt_item_id' => $line->id, 'receipt_sequence' => $sequence,
             ]);

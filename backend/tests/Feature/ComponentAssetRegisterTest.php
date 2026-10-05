@@ -75,7 +75,7 @@ class ComponentAssetRegisterTest extends TestCase
         $assets = $this->assets($s);
         $this->assertCount(3, $assets, 'received 3 of 10 ordered → 3 assets');
         foreach ($assets as $asset) {
-            $this->assertSame(['IN_STOCK', $s['warehouse']->id, '1500000.0000'], [$asset->current_status, $asset->current_warehouse_id, $asset->purchase_cost]);
+            $this->assertSame(['IN_STOCK', $s['warehouse']->id, '1500000.0000', $s['group']->id], [$asset->current_status, $asset->current_warehouse_id, $asset->purchase_cost, $asset->component_group_id]);
             $this->assertMatchesRegularExpression('/^AST-\d{4}-\d{6}$/', $asset->asset_number);
         }
         $this->assertSame([1, 2, 3], $assets->pluck('receipt_sequence')->sort()->values()->all());
