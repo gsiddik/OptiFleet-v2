@@ -8,6 +8,7 @@ use App\Domain\Invoice\Services\NumberSequenceService;
 use App\Domain\Organization\Models\Branch;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Organization\Models\Workshop;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -73,33 +74,51 @@ class DocumentNumberingService
         return ['document_number' => $number, 'configuration_version_id' => $version->id];
     }
 
-    /** Section 9: preview without mutating any sequence counter. */
-    public function preview(array $payload, string $documentType, string $tenantId, ?string $branchId = null, ?string $workshopId = null, ?string $warehouseId = null, int $sampleSequence = 1): string
+    /**
+     * Section 9: preview without mutating any sequence counter. `$at` is the sample date (now by
+     * default). A BRANCH / WORKSHOP / WAREHOUSE token without an Initial and without a given
+     * branch / workshop / warehouse shows a sample code of the tenant (its first one), because a
+     * real document always has one.
+     */
+    public function preview(array $payload, string $documentType, string $tenantId, ?string $branchId = null, ?string $workshopId = null, ?string $warehouseId = null, int $sampleSequence = 1, ?CarbonInterface $at = null): string
     {
         $this->validator->validate($payload);
         $startAt = (int) ($payload['sequence_start'] ?? 1);
+        $samples = [
+            'BRANCH' => Branch::query()->withoutGlobalScopes()->where('tenant_id', $tenantId)->orderBy('code')->value('code') ?? 'BRANCH',
+            'WORKSHOP' => Workshop::query()->withoutGlobalScopes()->where('tenant_id', $tenantId)->orderBy('code')->value('code') ?? 'WORKSHOP',
+            'WAREHOUSE' => Warehouse::query()->withoutGlobalScopes()->where('tenant_id', $tenantId)->orderBy('code')->value('code') ?? 'WAREHOUSE',
+            'ITEMTYPE' => 'SPR', 'CG' => 'BRK',
+        ];
 
-        return $this->format($payload, $documentType, $tenantId, $branchId, $workshopId, $warehouseId, max($sampleSequence, $startAt));
+        return $this->format($payload, $documentType, $tenantId, $branchId, $workshopId, $warehouseId, max($sampleSequence, $startAt), [], $at, $samples);
     }
 
     /** `$seq` null renders the sequence as '#' (partition key for context-token formats). */
-    private function format(array $payload, string $documentType, string $tenantId, ?string $branchId, ?string $workshopId, ?string $warehouseId, ?int $seq, array $context = []): string
+    private function format(array $payload, string $documentType, string $tenantId, ?string $branchId, ?string $workshopId, ?string $warehouseId, ?int $seq, array $context = [], ?CarbonInterface $at = null, array $samples = []): string
     {
-        $now = now();
+        $now = $at ?? now();
         $padding = (int) ($payload['sequence_padding'] ?? 6);
+        // Owner decision: an Initial filled in the configuration overrides the entity's own code
+        // for every document of that configuration; left empty, each document keeps the code of
+        // its own tenant / branch / workshop / warehouse (the behaviour before Initials existed).
+        $initial = fn (string $key) => is_string($payload[$key] ?? null) && trim($payload[$key]) !== '' ? trim($payload[$key]) : null;
+        $locale = $now->copy()->locale(app()->getLocale());
 
         $tokens = [
             'DOC' => $payload['doc_code'] ?? strtoupper($documentType),
-            'TENANT' => Tenant::query()->find($tenantId)?->code ?? $tenantId,
-            'BRANCH' => $branchId ? (Branch::query()->find($branchId)?->code ?? $branchId) : '',
-            'WORKSHOP' => $workshopId ? (Workshop::query()->find($workshopId)?->code ?? $workshopId) : '',
-            'WAREHOUSE' => $warehouseId ? (Warehouse::query()->find($warehouseId)?->code ?? $warehouseId) : '',
+            'TENANT' => $initial('tenant_initial') ?? Tenant::query()->find($tenantId)?->code ?? $tenantId,
+            'BRANCH' => $initial('branch_initial') ?? ($branchId ? (Branch::query()->find($branchId)?->code ?? $branchId) : ($samples['BRANCH'] ?? '')),
+            'WORKSHOP' => $initial('workshop_initial') ?? ($workshopId ? (Workshop::query()->find($workshopId)?->code ?? $workshopId) : ($samples['WORKSHOP'] ?? '')),
+            'WAREHOUSE' => $initial('warehouse_initial') ?? ($warehouseId ? (Warehouse::query()->find($warehouseId)?->code ?? $warehouseId) : ($samples['WAREHOUSE'] ?? '')),
             'YYYY' => $now->format('Y'),
             'YY' => $now->format('y'),
+            'MMMM' => mb_strtoupper($locale->isoFormat('MMMM')),
+            'MMM' => mb_strtoupper(rtrim($locale->isoFormat('MMM'), '.')),
             'MM' => $now->format('m'),
             'DD' => $now->format('d'),
-            'ITEMTYPE' => $context['ITEMTYPE'] ?? '',
-            'CG' => $context['CG'] ?? '',
+            'ITEMTYPE' => $context['ITEMTYPE'] ?? ($samples['ITEMTYPE'] ?? ''),
+            'CG' => $context['CG'] ?? ($samples['CG'] ?? ''),
         ];
 
         $result = preg_replace_callback('/\{([A-Z]+)(:(\d+))?\}/', function ($m) use ($tokens, $seq, $padding) {

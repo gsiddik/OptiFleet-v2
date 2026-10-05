@@ -203,6 +203,61 @@ class TemplateVariableRegistry
         ];
     }
 
+    /** Friendly names of repeating blocks (sections) shown in the visual template editor. */
+    private const SECTION_LABELS = ['jobs' => 'Jobs', 'findings' => 'Findings', 'items' => 'Items'];
+
+    /** Friendly names of variable groups. */
+    private const GROUP_LABELS = [
+        'company' => 'Company', 'tenant' => 'Tenant', 'wal' => 'Work Authorization Letter', 'claim' => 'Warranty Claim',
+        'from_branch' => 'From Branch', 'to_branch' => 'To Branch', 'from_warehouse' => 'From Warehouse', 'to_warehouse' => 'To Warehouse',
+        'delivery_warehouse' => 'Delivery Warehouse', 'partner' => 'Vendor / Partner', 'vendor' => 'Vendor', 'printed_by' => 'Printed By',
+        'rfq' => 'RFQ',
+    ];
+
+    /**
+     * The variables of a document type described for non-technical users (visual template
+     * editor cards): label, key, category, type and a short description — scalars, then each
+     * repeating block with the fields valid inside it.
+     *
+     * @return array{variables: list<array{key: string, label: string, category: string, type: string, description: string}>, blocks: list<array{name: string, label: string, description: string, fields: list<array{key: string, label: string, category: string, type: string, description: string}>}>}
+     */
+    public function catalog(string $documentType): array
+    {
+        $definition = $this->forDocumentType($documentType);
+        $describe = function (string $path, ?string $block = null): array {
+            [$group, $field] = str_contains($path, '.') ? explode('.', $path, 2) : [null, $path];
+            $category = $block !== null ? (self::SECTION_LABELS[$block] ?? ucwords(str_replace('_', ' ', $block)))
+                : ($group !== null ? (self::GROUP_LABELS[$group] ?? ucwords(str_replace('_', ' ', $group))) : 'Document');
+            $label = match ($path) {
+                'document_number' => 'Document Number',
+                'generated_at' => 'Generated At',
+                'template_version' => 'Template Version',
+                'configuration_version' => 'Configuration Version',
+                'is_external' => 'External Workshop (yes / no)',
+                default => ucwords(str_replace(['_', '.'], ' ', $field)),
+            };
+            $type = match (true) {
+                str_starts_with($field, 'is_') => 'Yes / No',
+                (bool) preg_match('/(_at|_date|^date|deadline)$/', $field) => 'Date',
+                (bool) preg_match('/(quantity|total|price|hours|cost|amount|subtotal|percent|odometer|revision|version|line_no)/', $field) => 'Number',
+                default => 'Text',
+            };
+
+            return ['key' => $path, 'label' => $label, 'category' => $category, 'type' => $type,
+                'description' => $block !== null ? "{$label} of each {$category} row." : "{$category} — {$label}."];
+        };
+
+        return [
+            'variables' => array_map(fn ($path) => $describe($path), $definition['scalars']),
+            'blocks' => array_map(fn ($name, $fields) => [
+                'name' => $name,
+                'label' => self::SECTION_LABELS[$name] ?? ucwords(str_replace('_', ' ', $name)),
+                'description' => 'Repeats its content once for every '.strtolower(self::SECTION_LABELS[$name] ?? $name).' row of the document.',
+                'fields' => array_map(fn ($field) => $describe($field, $name), $fields),
+            ], array_keys($definition['sections']), array_values($definition['sections'])),
+        ];
+    }
+
     /**
      * Section 11: deterministic, non-mutating sample data for previewing a
      * template with no live document present.

@@ -2427,6 +2427,83 @@ export interface ConfigurationSetItem {
   versions: ConfigurationVersionItem[];
 }
 
+/** Central Document Type Registry entry (GET /configuration/metadata). */
+export interface DocumentTypeOption {
+  key: string;
+  label: string;
+  numbering: boolean;
+  template: boolean;
+  /** Tokens only this document type can fill (e.g. ITEMTYPE / CG for Product SKU). */
+  extra_tokens: string[];
+}
+
+/** One Format Builder card. */
+export interface NumberingTokenDefinition {
+  token: string;
+  label: string;
+  description: string;
+  /** Setting the token uses (doc_code, tenant_initial, …, sequence_digits) — null when none. */
+  parameter: string | null;
+  parameter_label: string | null;
+}
+
+export interface NumberingMetadata {
+  document_types: DocumentTypeOption[];
+  token_definitions: NumberingTokenDefinition[];
+  reset_rules: { value: string; label: string }[];
+  max_sequence_digits: number;
+}
+
+/** Numbering configuration as stored (the numbering engine's payload). */
+export interface NumberingPayload {
+  format: string;
+  doc_code?: string;
+  reset_rule?: string;
+  tenant_initial?: string;
+  branch_initial?: string;
+  workshop_initial?: string;
+  warehouse_initial?: string;
+  sequence_start?: number;
+  sequence_padding?: number;
+  [key: string]: unknown;
+}
+
+/** A Format segment: literal text the user typed, or a token card. */
+export type NumberingSegment = { type: 'literal'; value: string } | { type: 'token'; token: string };
+
+/** Visual template editor catalog (GET /configuration/metadata?type=TEMPLATE&code=…). */
+export interface TemplateVariable {
+  key: string;
+  label: string;
+  category: string;
+  type: string;
+  description: string;
+}
+
+export interface TemplateBlock {
+  name: string;
+  label: string;
+  description: string;
+  fields: TemplateVariable[];
+}
+
+export interface TemplateCatalog {
+  variables: TemplateVariable[];
+  blocks: TemplateBlock[];
+}
+
+/** Template editor document (stored as payload.editor; the server builds payload.html from it). */
+export type TemplateEditorNode =
+  | { t: 'text'; v: string }
+  | { t: 'var'; path: string }
+  | { t: 'section'; name: string; inverted?: boolean; mode: 'element' | 'block' | 'inline'; children: TemplateEditorNode[] }
+  | { t: 'el'; tag: string; attrs: Record<string, string>; children: TemplateEditorNode[] };
+
+export interface TemplateEditorState {
+  version: 1;
+  nodes: TemplateEditorNode[];
+}
+
 export interface ConfigurationHistoryRow {
   id: string;
   type: ConfigurationType;
