@@ -22,8 +22,6 @@ import type {
   WorkOrderFindingItem,
   WorkOrderItem,
   WorkOrderPlannedPartItem,
-  WorkspaceItem,
-  WorkspaceReservationItem,
 } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney, sumMoney } from '../../../utils/money';
@@ -34,6 +32,9 @@ import { SearchableSelect, type SearchableOption } from '../../../components/Sea
 import { WorkOrderTireOperationTab } from '../tires/operations/WorkOrderTireOperationTab';
 import type { TireOperationDetail } from '../tires/operations/tireOperationTypes';
 import { lineName } from '../../../utils/stockCondition';
+import { ScheduleWorkspaceModal } from './workspace/ScheduleWorkspaceModal';
+import { WorkOrderWorkspaceTab } from './workspace/WorkOrderWorkspaceTab';
+import { SCHEDULABLE_WORK_ORDER_STATUSES, START_BLOCKED_REASON, canStart } from './workspace/workspaceAssignment';
 
 const INTERNAL_TABS = [
   'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
@@ -81,7 +82,8 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
     { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
   ],
   APPROVED: [{ action: 'assign', label: 'Assign', permission: 'work_order.assign', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
-  ASSIGNED: [{ action: 'schedule', label: 'Schedule', permission: 'work_order.schedule', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
+  // Moves the Work Order to SCHEDULED; where / when comes from its approved Workspace Assignment (Schedule Workspace).
+  ASSIGNED: [{ action: 'schedule', label: 'Mark as Scheduled', permission: 'work_order.schedule', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
   SCHEDULED: [
     { action: 'start', label: 'Start', permission: 'work_order.start', primary: true },
     { action: 'external', label: 'Send External', permission: 'work_order.pause' },
@@ -155,10 +157,6 @@ export function WorkOrderDetailPage() {
   }
 
   async function act(action: string) {
-    if (action === 'schedule') {
-      setShowSchedule(true);
-      return;
-    }
     if (action === 'complete') {
       setShowComplete(true);
       return;
@@ -254,7 +252,7 @@ export function WorkOrderDetailPage() {
   return (
     <div>
       <BackButton fallbackTo="/app/work-orders" label="← Back to Work Order" />
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 8, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {wo.wo_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({wo.vehicle?.registration_number})</span>
         </h1>
@@ -300,14 +298,29 @@ export function WorkOrderDetailPage() {
               Cancel
             </button>
           )}
+          {!isExternalMode && SCHEDULABLE_WORK_ORDER_STATUSES.includes(wo.status) && hasPermission('workspace.reserve') && (
+            <button className="btn-secondary" disabled={busy} onClick={() => setShowSchedule(true)}>
+              Schedule Workspace
+            </button>
+          )}
           {!isExternalMode &&
-            actions.map((a) => (
-              <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
-                {a.label}
-              </button>
-            ))}
+            actions.map((a) => {
+              // SCHEDULED → IN_PROGRESS needs an approved workspace and work date (the backend enforces it too).
+              const blocked = a.action === 'start' && wo.status === 'SCHEDULED' && !canStart(wo);
+              return (
+                <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy || blocked} title={blocked ? START_BLOCKED_REASON : undefined} onClick={() => act(a.action)}>
+                  {a.label}
+                </button>
+              );
+            })}
         </div>
       </div>
+
+      {!isExternalMode && wo.status === 'SCHEDULED' && !canStart(wo) && (
+        <p role="note" data-start-blocked style={{ fontSize: 13, color: '#b45309', marginTop: -8, marginBottom: 16 }}>
+          {START_BLOCKED_REASON}
+        </p>
+      )}
 
       {isExternalMode && wo.status === 'DRAFT' && (wo.findings?.length ?? 0) < 1 && (
         <p style={{ fontSize: 13, color: '#b45309', marginTop: -8, marginBottom: 16 }}>
@@ -385,7 +398,7 @@ export function WorkOrderDetailPage() {
       {activeTab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
       {activeTab === 'Planned Parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
       {activeTab === 'Issuance & Return' && <IssuanceReturnTab wo={wo} onChanged={load} />}
-      {activeTab === 'Workspace' && <WorkspaceTab wo={wo} onChanged={load} />}
+      {activeTab === 'Workspace' && <WorkOrderWorkspaceTab wo={wo} onChanged={load} />}
       {activeTab === 'QC' && <QcTab wo={wo} onChanged={load} />}
       {activeTab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
       {activeTab === 'Findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
@@ -394,7 +407,7 @@ export function WorkOrderDetailPage() {
       {activeTab === 'History' && <HistoryTab vehicleId={wo.vehicle_id} />}
       {activeTab === 'Audit' && <AuditTab workOrderId={wo.id} />}
 
-      <ScheduleModal open={showSchedule} wo={wo} onClose={() => setShowSchedule(false)} onScheduled={load} />
+      <ScheduleWorkspaceModal open={showSchedule} wo={wo} onClose={() => setShowSchedule(false)} onDone={load} />
       <CompleteModal open={showComplete} wo={wo} onClose={() => setShowComplete(false)} onCompleted={load} />
     </div>
   );
@@ -439,69 +452,6 @@ function CompleteModal({ open, wo, onClose, onCompleted }: { open: boolean; wo: 
     </Modal>
   );
 }
-
-function ScheduleModal({ open, wo, onClose, onScheduled }: { open: boolean; wo: WorkOrderItem; onClose: () => void; onScheduled: () => void }) {
-  const [workspaces, setWorkspaces] = useState<WorkspaceItem[]>([]);
-  const [workspaceId, setWorkspaceId] = useState('');
-  const [start, setStart] = useState('');
-  const [end, setEnd] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    apiClient.get('/app/workspaces', { params: { workshop_id: wo.workshop_id, status: 'AVAILABLE', per_page: 100 } }).then((res) => setWorkspaces(res.data.data));
-  }, [open, wo.workshop_id]);
-
-  async function submit() {
-    setSubmitting(true);
-    setError(null);
-    try {
-      await apiClient.post(`/app/work-orders/${wo.id}/schedule`, {
-        workspace_id: workspaceId || undefined,
-        target_start_at: start || undefined,
-        target_completion_at: end || undefined,
-      });
-      onScheduled();
-      onClose();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  return (
-    <Modal open={open} title="Schedule Work Order" onClose={onClose}>
-      {error && <ErrorState message={error} />}
-      <FormField label="Workspace (optional)">
-        <select value={workspaceId} onChange={(e) => setWorkspaceId(e.target.value)} style={inputStyle}>
-          <option value="">None</option>
-          {workspaces.map((w) => (
-            <option key={w.id} value={w.id}>
-              {w.name} ({w.code})
-            </option>
-          ))}
-        </select>
-      </FormField>
-      <FormField label="Target Start">
-        <input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} style={inputStyle} />
-      </FormField>
-      <FormField label="Target Completion">
-        <input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} style={inputStyle} />
-      </FormField>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>
-          Cancel
-        </button>
-        <button className="btn-primary" disabled={submitting} onClick={submit}>
-          Schedule
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
 
 /**
  * "Improvement OptiFleet - Maintenance Request dan Work Order": the Overview
@@ -1989,80 +1939,6 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
             Record Removal
           </button>
         </div>
-      )}
-    </div>
-  );
-}
-
-function WorkspaceTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) {
-  const { hasPermission } = useAuth();
-  const [busyId, setBusyId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const reservations: WorkspaceReservationItem[] = wo.workspace_reservations ?? [];
-  const canManage = hasPermission('workspace.reserve');
-
-  async function act(id: string, action: 'activate' | 'complete' | 'cancel') {
-    setBusyId(id);
-    setError(null);
-    try {
-      await apiClient.post(`/app/workspace-reservations/${id}/${action}`);
-      onChanged();
-    } catch (err) {
-      setError(extractApiError(err).message);
-    } finally {
-      setBusyId(null);
-    }
-  }
-
-  return (
-    <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Workspace Reservations</h3>
-      {error && <ErrorState message={error} />}
-      {reservations.length === 0 ? (
-        <EmptyState label="No workspace reserved yet. Use the Schedule action to assign one." />
-      ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-          <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: '6px 4px' }}>Workspace</th>
-              <th style={{ padding: '6px 4px' }}>Start</th>
-              <th style={{ padding: '6px 4px' }}>End</th>
-              <th style={{ padding: '6px 4px' }}>Status</th>
-              {canManage && <th style={{ padding: '6px 4px' }} />}
-            </tr>
-          </thead>
-          <tbody>
-            {reservations.map((r) => (
-              <tr key={r.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                <td style={{ padding: '6px 4px' }}>{r.workspace?.name ?? r.workspace_id} {r.workspace?.code ? `(${r.workspace.code})` : ''}</td>
-                <td style={{ padding: '6px 4px' }}>{new Date(r.start_at).toLocaleString()}</td>
-                <td style={{ padding: '6px 4px' }}>{new Date(r.end_at).toLocaleString()}</td>
-                <td style={{ padding: '6px 4px' }}><StatusBadge status={r.status} /></td>
-                {canManage && (
-                  <td style={{ padding: '6px 4px' }}>
-                    <div style={{ display: 'flex', gap: 6 }}>
-                      {r.status === 'RESERVED' && (
-                        <>
-                          <button className="btn-secondary" disabled={busyId === r.id} onClick={() => act(r.id, 'activate')}>
-                            Activate
-                          </button>
-                          <button className="btn-secondary" disabled={busyId === r.id} onClick={() => act(r.id, 'cancel')}>
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                      {r.status === 'ACTIVE' && (
-                        <button className="btn-secondary" disabled={busyId === r.id} onClick={() => act(r.id, 'complete')}>
-                          Complete
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
       )}
     </div>
   );
