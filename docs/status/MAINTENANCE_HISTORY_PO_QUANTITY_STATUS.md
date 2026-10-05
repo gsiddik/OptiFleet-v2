@@ -8,7 +8,7 @@ difference).
 | 1–3 | Global Maintenance History by data scope; Vehicle History stays vehicle-specific; scope tests | DONE | e4cea0a |
 | 4–8 | Remaining Receivable Qty rule, single source of truth, Post GR guard, DB check | DONE | a39f559 |
 | 9 | Seeders (history for every vehicle; Engine Oil Filter lifecycle; issued PO) | DONE | e4cea0a, 2961735 |
-| 10–13 | Contract, QA, quality gates | see below | see git log |
+| 10–13 | Contract, QA, quality gates | DONE | see git log |
 
 ## Maintenance History
 
@@ -70,3 +70,24 @@ exceed Remaining (4) under the owner rule.
 - PO cases: ordered not received (new), partial, partial + refund requested, return + redelivery,
   refund accepted, refund rejected → redelivery, fully received (remaining 0), and the Engine Oil
   Filter lifecycle (remaining 1) — all through the procurement services; idempotent.
+
+## Quality gates
+
+| Gate | Result |
+|---|---|
+| Backend targeted (MaintenanceHistoryScopeTest 5, PurchaseOrderQuantityTest 7, PurchaseReturnTest, ProcurementTest, GoodsReceiptVendorInvoiceTest, HistoryAndDowntimeTest, VehicleTest, seeder tests) | PASS |
+| Backend full regression (non-Mongo, PostgreSQL) | PASS — 1122 tests, 7197 assertions |
+| Mongo-dependent tests (Analytics / Intelligence) | NOT RUN — MongoDB is not available in this environment (no analytics code changed in this task) |
+| `npm run lint` | PASS — 0 errors, 27 warnings (unchanged baseline) |
+| `npm run build` (includes `tsc -b`) | PASS |
+| `npm run typecheck` / `npm test` | not defined in package.json |
+| `migrate:fresh --seed` + `db:seed` re-run | PASS — Engine Oil Filter Remaining 1; counts unchanged on re-run |
+| e2e (Playwright, freshly seeded DB) | PASS — Maintenance History scope 14/14, PO quantity 9/9, PO Return regression 21/21 |
+
+## Remaining risks
+
+- Behaviour change for existing data: lines with returns now follow the owner rule (a redelivery
+  return no longer adds its quantity on top of the original outstanding quantity), so Remaining on
+  such existing lines can drop; the CHECK constraint is added NOT VALID if any legacy row violates it.
+- Concurrency of Post Goods Receipt is guarded by the PO row lock (SELECT … FOR UPDATE); not load-
+  tested with parallel requests in this environment.
