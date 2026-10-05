@@ -2518,6 +2518,29 @@ export interface ConfigurationHistoryRow {
   change_summary: string | null;
 }
 
+export interface NotificationRecipientRule {
+  type: string;
+  identifier?: string;
+}
+
+/** A leaf condition {field, op, value} compared by the server's ConditionEvaluator. */
+export interface NotificationCondition {
+  field: string;
+  op: string;
+  value?: unknown;
+}
+
+export interface NotificationConditionSet {
+  operator: string;
+  rules: Array<NotificationCondition | NotificationConditionSet>;
+}
+
+export interface NotificationEscalation {
+  after_minutes: number;
+  recipient_rules: NotificationRecipientRule[];
+  unresolved_condition_set?: NotificationConditionSet | null;
+}
+
 export interface NotificationRuleItem {
   id: string;
   tenant_id: string | null;
@@ -2525,14 +2548,44 @@ export interface NotificationRuleItem {
   name: string;
   is_active: boolean;
   is_system: boolean;
-  condition_set: Record<string, unknown> | null;
-  recipient_rules: Array<{ type: string; identifier?: string }>;
+  condition_set: NotificationConditionSet | null;
+  recipient_rules: NotificationRecipientRule[];
   channels: string[];
-  escalation: Record<string, unknown> | null;
+  escalation: NotificationEscalation | null;
 }
 
 export interface NotificationEventInfo {
   code: string;
+  label: string;
   platform_locked: boolean;
   variables: { scalars: string[]; sections: Record<string, string[]> };
+}
+
+/** Configuration metadata for the Notification forms (GET /configuration/metadata?type=NOTIFICATION). */
+export interface NotificationMetadata {
+  events: Array<{
+    code: string;
+    label: string;
+    platform_locked: boolean;
+    variables: Array<{ key: string; label: string }>;
+  }>;
+  channels: Array<{ value: string; label: string }>;
+  recipient_types: Array<{
+    value: string;
+    label: string;
+    description: string;
+    identifier: "user" | "role" | "permission" | "email" | null;
+  }>;
+  operators: Array<{
+    value: string;
+    label: string;
+    needs_value: boolean;
+    multiple: boolean;
+  }>;
+  unresolved_fields: Array<{ key: string; label: string }>;
+}
+
+/** NOTIFICATION configuration payload: the message per channel. */
+export interface NotificationMessagePayload {
+  channels: Partial<Record<"IN_APP" | "EMAIL", { subject?: string; body: string }>>;
 }

@@ -11,8 +11,11 @@ use App\Domain\Configuration\Services\DocumentTemplateRenderService;
 use App\Domain\Configuration\Services\DocumentTypeRegistry;
 use App\Domain\Configuration\Services\NumberingFormatValidator;
 use App\Domain\Configuration\Services\TemplateDocumentCompiler;
+use App\Domain\Configuration\Services\TemplateRenderer;
 use App\Domain\Configuration\Services\TemplateValidator;
 use App\Domain\Configuration\Services\TemplateVariableRegistry;
+use App\Domain\Notification\Services\NotificationEventCatalog;
+use App\Domain\Notification\Services\NotificationRuleService;
 use App\Domain\Notification\Services\NotificationTemplateValidator;
 use App\Domain\Tire\Services\TireException;
 use App\Domain\Tire\Services\TireScoringConfigurationValidator;
@@ -57,6 +60,8 @@ class ConfigurationController extends Controller
         private readonly PermissionService $permissionService,
         private readonly DocumentTypeRegistry $documentTypes,
         private readonly TemplateDocumentCompiler $templateCompiler,
+        private readonly NotificationEventCatalog $notificationEvents,
+        private readonly TemplateRenderer $templateRenderer,
     ) {}
 
     /** Numbering Format Builder cards: what each token means and which setting it uses. */
@@ -114,6 +119,7 @@ class ConfigurationController extends Controller
                 'catalog' => $request->query('code') ? $this->templateVariables->catalog($request->query('code')) : null,
             ]),
             'WORKFLOW' => $this->ok(['actions' => WorkflowActionCatalog::ACTIONS, 'operators' => ConditionEvaluator::OPERATORS]),
+            'NOTIFICATION' => $this->ok($this->notificationMetadata()),
             default => abort(422, 'Unknown metadata type.'),
         };
     }
@@ -294,6 +300,7 @@ class ConfigurationController extends Controller
                 (array) $request->input('context', []),
             )),
             'TIRE_SCORING' => $this->ok($this->previewTireScoring($request, $tenantId)),
+            'NOTIFICATION' => $this->ok(['channels' => $this->previewNotification((string) $request->input('code'), (array) $request->input('payload', []))]),
             default => abort(422, 'Preview is not supported for this configuration type.'),
         };
     }
@@ -367,6 +374,77 @@ class ConfigurationController extends Controller
         if ($type === 'TEMPLATE') {
             abort_unless($this->documentTypes->supportsTemplate($code), 422, 'Choose a document type that supports document templates.');
         }
+        if ($type === 'NOTIFICATION') {
+            abort_unless($this->notificationEvents->isKnownEvent($code) && ! $this->notificationEvents->isPlatformLocked($code), 422, 'Choose a notification event your company can configure.');
+        }
+    }
+
+    /**
+     * Notification configuration screens: events with their variables, channels, recipient
+     * types (and what each one's identifier is), and the condition operators — the existing
+     * NotificationRule / message template schema described for a form, never new semantics.
+     */
+    private function notificationMetadata(): array
+    {
+        $recipientLabels = [
+            'EXPLICIT_USER' => ['Specific User', 'One user of your company.'],
+            'ROLE' => ['Everyone with a Role', 'Every user who has the chosen role.'],
+            'PERMISSION' => ['Everyone with a Permission', 'Every user whose role grants the chosen permission.'],
+            'CUSTOM_EMAIL' => ['Email Address', 'Any email address (Email channel only).'],
+            'BRANCH_MANAGER' => ['Branch Manager', 'Branch Managers who can access the branch of the record.'],
+            'WORKSHOP_MANAGER' => ['Workshop Manager', 'Workshop Managers who can access the workshop of the record.'],
+            'REQUESTER' => ['Requester', 'The user who requested the record.'],
+            'APPROVER' => ['Approver', 'The user who approved the record.'],
+            'ASSIGNED_MECHANIC' => ['Assigned Mechanic', 'The mechanic assigned to the record.'],
+            'VEHICLE_PIC' => ['Vehicle PIC', 'The person in charge of the vehicle.'],
+            'WAREHOUSE_PIC' => ['Warehouse PIC', 'The person in charge of the warehouse.'],
+            'VENDOR_CONTACT' => ['Vendor Contact', "The vendor's contact email (Email channel only)."],
+        ];
+        $operators = [
+            '=' => 'is', '!=' => 'is not', '>' => 'is greater than', '>=' => 'is at least', '<' => 'is less than', '<=' => 'is at most',
+            'IN' => 'is one of', 'NOT_IN' => 'is none of', 'IS_NULL' => 'is empty', 'IS_NOT_NULL' => 'is not empty',
+        ];
+
+        return [
+            'events' => array_map(fn (string $code) => [
+                'code' => $code,
+                'label' => $this->notificationEvents->label($code),
+                'platform_locked' => $this->notificationEvents->isPlatformLocked($code),
+                'variables' => $this->notificationEvents->variables($code),
+            ], $this->notificationEvents->eventCodes()),
+            'channels' => [['value' => 'IN_APP', 'label' => 'In-App'], ['value' => 'EMAIL', 'label' => 'Email']],
+            'recipient_types' => array_map(fn (string $type) => [
+                'value' => $type,
+                'label' => $recipientLabels[$type][0],
+                'description' => $recipientLabels[$type][1],
+                'identifier' => NotificationRuleService::RECIPIENT_TYPES[$type],
+            ], array_keys(NotificationRuleService::RECIPIENT_TYPES)),
+            'operators' => array_map(fn (string $op) => [
+                'value' => $op,
+                'label' => $operators[$op],
+                'needs_value' => ! in_array($op, ['IS_NULL', 'IS_NOT_NULL'], true),
+                'multiple' => in_array($op, ['IN', 'NOT_IN'], true),
+            ], ConditionEvaluator::OPERATORS),
+            // Escalation re-checks only the record's current status (EscalationProcessor).
+            'unresolved_fields' => [['key' => 'status', 'label' => 'Status of the record']],
+        ];
+    }
+
+    /** A message template rendered with readable sample values, per channel. */
+    private function previewNotification(string $eventCode, array $payload): array
+    {
+        abort_unless($this->notificationEvents->isKnownEvent($eventCode), 422, 'Unknown notification event.');
+        $this->notificationValidator->validate($eventCode, $payload);
+        $context = $this->notificationEvents->sampleContext($eventCode);
+        $out = [];
+        foreach ($payload['channels'] as $channel => $content) {
+            $out[$channel] = [
+                'subject' => isset($content['subject']) ? $this->templateRenderer->render((string) $content['subject'], $context) : null,
+                'body' => $this->templateRenderer->render((string) $content['body'], $context),
+            ];
+        }
+
+        return $out;
     }
 
     /**
