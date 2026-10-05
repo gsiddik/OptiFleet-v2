@@ -1,98 +1,101 @@
 # 07 — Translation Decision List
 
-> **Finalization task (latest):** the decision request listed every term as `[ISI KEPUTUSAN]` (placeholder) — **no terminology or style decision was provided**. Per the instruction *"Jangan mengarang keputusan"*, nothing was decided on the owner's behalf: all decisions remain **AWAITING_DECISION**. The propagation mechanism is ready: once decisions are supplied, every dependent entry (`depends_on`) is finalized by substitution in `proposed_text_id` without re-translation.
+> **Owner decisions received and applied.** All 43 terminology decisions and 6 style decisions from the product owner are recorded below as **APPROVED_BY_PRODUCT_OWNER** and propagated to every dependent entry by substitution of the recommended term in `proposed_text_id` (no re-translation). 1148 dataset rows moved from AWAITING_DECISION to APPROVED_GLOSSARY. Items the owner list did not cover remain open in *Remaining Decisions*.
 
 ## Resolved Decisions
 
-| English Term | Final Indonesian / Keep English | Decision Source | Affected Entries |
-|---|---|---|---:|
-| — | — | No decision provided (placeholders only) | 0 |
-
-## Remaining Decisions
-
-Dependent dataset entries still waiting: **1162** (in `12-en-id-translation-dataset-final.csv`).
-
 ### Terminology (43)
 
-| No | English Term | Context | Module/Domain | Recommended Option | Alternative | Reason | Severity | Occurrence | Affected Entries | Status |
-|---:|---|---|---|---|---|---|---|---:|---:|---|
-| 1 | **Work Order** (`glossary.workOrder`) | Document / module name | workOrder, backend:workOrder, backend:workshop, externalWorkOrderInvoice | Work Order | Perintah Kerja | Core document across maintenance, workshop, inventory and procurement; "WO" abbreviation is kept everywhere, and Indonesian workshops widely say "Work Order". "Perintah Kerja" collides with "Surat Perintah Kerja (SPK)". | CRITICAL | 163 | 135 | AWAITING_DECISION |
-| 2 | **Maintenance** (`glossary.maintenance`) | Module / domain | maintenance, backend:analytics, navigation, backend:workOrder | Perawatan | Pemeliharaan | Module, menu, document and KPI name. "Perawatan" is the common fleet/workshop term; "Pemeliharaan" is more formal/asset-management. | CRITICAL | 126 | 109 | AWAITING_DECISION |
-| 3 | **Spare Part / Part** (`glossary.sparePart`) | Inventory / item type | inventory, backend:workOrder, workOrder, navigation | Suku Cadang | Sparepart | Item type, menu ("Used Spareparts"), sale and request flows; English has two spellings (see 03). | CRITICAL | 114 | 110 | AWAITING_DECISION |
-| 4 | **Workshop** (`glossary.workshop`) | Organization / workshop operations | backend:configurationDefaults, externalWorkOrderInvoice, navigation, organization | Bengkel | Workshop | Organization unit, menu group, external partner type and invoice name. | CRITICAL | 87 | 71 | AWAITING_DECISION |
-| 5 | **Invoice** (`glossary.invoice`) | Billing / procurement | backend:workOrder, procurement, externalWorkOrderInvoice, navigation | Invoice | Faktur | Platform billing, vendor invoice references, workshop invoices; "Faktur" may be confused with Faktur Pajak, "Tagihan" with billing. | HIGH | 144 | 112 | AWAITING_DECISION |
-| 6 | **Tenant** (`glossary.tenant`) | Platform / SaaS | platform.tenants, backend:configuration, backend:http, platform.contracts | Tenant | Perusahaan Pelanggan | SaaS account concept used in the platform portal and system-default wording; no natural Indonesian equivalent. | HIGH | 104 | 56 | AWAITING_DECISION |
-| 7 | **Vendor** (`glossary.vendor`) | Procurement | procurement, backend:procurement, partner, navigation | Vendor | Pemasok | Procurement role of a Partner; overlaps with Supplier (03). | HIGH | 95 | 75 | AWAITING_DECISION |
-| 8 | **Workspace** (`glossary.workspace`) | Workshop operations | workOrder, backend:workshop, workshop, navigation | Area Kerja | Bay Kerja | Workshop bay concept used by scheduler, assignment and WO. | HIGH | 63 | 55 | AWAITING_DECISION |
-| 9 | **Retread** (`glossary.retread`) | Tire | tire, backend:tire, common, backend:workOrder | Vulkanisir | Retread | Tire lifecycle process (cycle, history, partner); "vulkanisir" is the common Indonesian word, "retread" is used by fleet tire specialists. | HIGH | 46 | 44 | AWAITING_DECISION |
-| 10 | **Purchase Order** (`glossary.purchaseOrder`) | Procurement document | backend:procurement, procurement, navigation, configuration | Purchase Order | Pesanan Pembelian | Procurement document; abbreviation PO stays and is common in Indonesian companies. | HIGH | 42 | 36 | AWAITING_DECISION |
-| 11 | **Breakdown** (`glossary.breakdown`) | Maintenance | maintenance, backend:analytics, analytics, backend:breakdown | Breakdown | Kerusakan Darurat | Operational incident type and module name. | HIGH | 38 | 35 | AWAITING_DECISION |
-| 12 | **Quotation** (`glossary.quotation`) | Procurement | procurement, backend:procurement, navigation, backend:configuration | Penawaran Harga | Quotation | Vendor quotation / RFQ flow; RFQ abbreviation stays. | HIGH | 38 | 35 | AWAITING_DECISION |
-| 13 | **Part Request** (`glossary.partRequest`) | Work order / inventory | workOrder, backend:workOrder, backend:tire, navigation | Permintaan Suku Cadang | Part Request | Work-order part request document; depends on glossary.sparePart. | HIGH | 28 | 27 | AWAITING_DECISION |
-| 14 | **Partner** (`glossary.partner`) | Partner master | backend:tire, navigation, workOrder, backend:configurationDefaults | Mitra | Rekanan | Master record for vendors, workshops, towing providers. | HIGH | 25 | 17 | AWAITING_DECISION |
-| 15 | **Goods Receipt** (`glossary.goodsReceipt`) | Inventory / procurement document | procurement, backend:procurement, navigation, tenantComponents | Penerimaan Barang | Goods Receipt | Inventory document; abbreviation GR stays. | HIGH | 22 | 21 | AWAITING_DECISION |
-| 16 | **Purchase Request** (`glossary.purchaseRequest`) | Procurement document | procurement, navigation, backend:procurement, dashboard | Permintaan Pembelian | Purchase Request | Procurement document; abbreviation PR stays. | HIGH | 13 | 12 | AWAITING_DECISION |
-| 17 | **Work Authorization Letter** (`glossary.workAuthorizationLetter`) | Document | externalWorkOrderInvoice, backend:configurationDefaults, workOrder, backend:configuration,workOrder | Surat Otorisasi Kerja | Surat Perintah Kerja (SPK) | External workshop document; "SPK" is the common Indonesian name but is also how many companies call a Work Order. | HIGH | 11 | 9 | AWAITING_DECISION |
-| 18 | **Supplier** (`glossary.supplier`) | Partner type | partner, navigation, backend:procurement | Pemasok | Supplier | Partner type (Spare Part / Tire Supplier); must not collide with Vendor. | HIGH | 4 | 4 | AWAITING_DECISION |
-| 19 | **Tread** (`glossary.tread`) | Tire | tire, backend:tire, inventory, backend:analytics | Tapak | Tread | Tread depth / tread condition. | MEDIUM | 47 | 42 | AWAITING_DECISION |
-| 20 | **Scrap** (`glossary.scrap`) | Tire / inventory | inventory, backend:workOrder, tire, backend:tire | Scrap | Afkir | Disposal status/action for tires and used parts (SCRAPPED stays the stored code). | MEDIUM | 41 | 38 | AWAITING_DECISION |
-| 21 | **Finding** (`glossary.finding`) | Inspection / work order | workOrder, backend:workOrder, inspection, backend:addExternalWorkOrderPrintSection | Temuan | Hasil Pemeriksaan | Inspection / work-order findings. | MEDIUM | 35 | 28 | AWAITING_DECISION |
-| 22 | **Mechanic / Worker** (`glossary.mechanic`) | Workshop operations | workshop, workOrder, navigation, backend:workshop | Mekanik | Teknisi | Menu says Mechanic, API says worker (03). | MEDIUM | 34 | 33 | AWAITING_DECISION |
-| 23 | **Reuse** (`glossary.reuse`) | Tire / inventory | inventory, tire, backend:tire, backend:workOrder | Pakai Ulang | Reuse | Used-tire / used-part disposition. | MEDIUM | 30 | 28 | AWAITING_DECISION |
-| 24 | **Intelligence** (`glossary.intelligence`) | Intelligence | intelligence, backend:notificationDefaults, navigation, backend:module | Intelligence | Analitik Prediktif | Feature/module brand (Maintenance Intelligence). | MEDIUM | 25 | 20 | AWAITING_DECISION |
-| 25 | **Inventory** (`glossary.inventory`) | Inventory | inventory, backend:analytics, analytics, dashboard | Inventori | Persediaan | Module/menu name; "Persediaan" is the accounting term. | MEDIUM | 20 | 19 | AWAITING_DECISION |
-| 26 | **Return Order / Return to Vendor** (`glossary.returnToVendor`) | Procurement | procurement, backend:procurement, backend:configurationDefaults, tenantComponents | Retur ke Vendor (flow); document name "Return Order" kept | Retur Pembelian | Three English names for one flow (03); depends on glossary.vendor. | MEDIUM | 19 | 18 | AWAITING_DECISION |
-| 27 | **Casing** (`glossary.casing`) | Tire | backend:tire, tire | Casing | Karkas | Tire casing eligibility for retread. | MEDIUM | 18 | 18 | AWAITING_DECISION |
-| 28 | **Bundle** (`glossary.bundle`) | Platform commercial | platform.bundles, backend:productCatalog, navigation, backend:contract | Paket | Bundle | Commercial bundle of modules (platform). | MEDIUM | 18 | 18 | AWAITING_DECISION |
-| 29 | **Service Invoice** (`glossary.serviceInvoice`) | Workshop invoice | backend:workOrder, workOrder, navigation, workshopInvoice | Invoice Servis | Invoice Bengkel | English canonical is itself undecided (Workshop Invoice vs Service Invoice, 03). | MEDIUM | 12 | 11 | AWAITING_DECISION |
-| 30 | **Stock Opname** (`glossary.stockOpname`) | Inventory | inventory, backend:inventory, navigation | Stock Opname | Penghitungan Stok | Already the Indonesian business term used in the English UI. | MEDIUM | 12 | 12 | AWAITING_DECISION |
-| 31 | **Load Index / Speed Rating / Ply Rating** (`glossary.tireSpec`) | Tire product | inventory, backend:productMaster, tire, backend:tire | keep English (Load Index / Speed Rating / Ply Rating) | Indeks Beban / Indeks Kecepatan / Peringkat Lapisan | Tire industry standard specification names. | MEDIUM | 10 | 8 | AWAITING_DECISION |
-| 32 | **Bead** (`glossary.bead`) | Tire | tire, backend:tire | Bead | Tumit Ban | Tire inspection location. | MEDIUM | 8 | 7 | AWAITING_DECISION |
-| 33 | **Inner Liner** (`glossary.innerLiner`) | Tire | tire, backend:tire | Lapisan Dalam | Inner Liner | Tire inspection location. | MEDIUM | 7 | 7 | AWAITING_DECISION |
-| 34 | **Sidewall** (`glossary.sidewall`) | Tire | tire, backend:tire | Dinding Samping | Sidewall | Tire inspection location. | MEDIUM | 5 | 4 | AWAITING_DECISION |
-| 35 | **Engine Hour** (`glossary.engineHour`) | Vehicle / maintenance | maintenance | Jam Mesin | Hour Meter (HM) | Usage meter for heavy equipment; "HM" is common in mining fleets. | MEDIUM | 5 | 3 | AWAITING_DECISION |
-| 36 | **Entitlement** (`glossary.entitlement`) | Platform commercial | platform.subscriptions, platform.tenants | Hak Akses Modul | Entitlement | Module entitlement per tenant/contract. | MEDIUM | 2 | 2 | AWAITING_DECISION |
-| 37 | **Data Scope** (`glossary.dataScope`) | Access management | backend:componentAsset, backend:sparePartSale, backend:workspaceReservation, access | Cakupan Data | Data Scope | Access-control concept. | LOW | 71 | 37 | AWAITING_DECISION |
-| 38 | **Axle** (`glossary.axle`) | Tire | tire, backend:tire, common, backend:masterData | Sumbu | As Roda | Wheel configuration axles. | LOW | 38 | 28 | AWAITING_DECISION |
-| 39 | **Rim** (`glossary.rim`) | Tire / inventory | tire, inventory, navigation, masterData | Velg | Pelek | Wheel rim item type. | LOW | 19 | 17 | AWAITING_DECISION |
-| 40 | **Odometer** (`glossary.odometer`) | Vehicle | maintenance, tire, workOrder, vehicle | Odometer | Penunjuk Kilometer | Usage meter label; alternates with "KM" (03). | LOW | 18 | 14 | AWAITING_DECISION |
-| 41 | **Road Test** (`glossary.roadTest`) | Work order | workOrder, backend:qualityControl | Uji Jalan | Road Test | Work-order QC step. | LOW | 7 | 5 | AWAITING_DECISION |
-| 42 | **Dashboard** (`glossary.dashboard`) | Global | navigation, dashboard, platform.dashboard | Dasbor | Dashboard | Page/menu name; KBBI form is "dasbor", many Indonesian SaaS keep "Dashboard". | LOW | 5 | 4 | AWAITING_DECISION |
-| 43 | **Quality Control** (`glossary.qualityControl`) | Work order | workOrder | Quality Control (QC) | Kontrol Kualitas | QC step / module; QC abbreviation stays. | LOW | 1 | 1 | AWAITING_DECISION |
+| No | English Term | Final Indonesian / Keep English | Previous recommendation | Decision Source | Affected Entries | Occurrences | Status |
+|---:|---|---|---|---|---:|---:|---|
+| 1 | **Work Order** (`glossary.workOrder`) | Work Order (keep English) | Work Order | Product owner decision | 135 | 163 | APPROVED_BY_PRODUCT_OWNER |
+| 2 | **Maintenance** (`glossary.maintenance`) | Pemeliharaan | Perawatan | Product owner decision | 109 | 126 | APPROVED_BY_PRODUCT_OWNER |
+| 3 | **Spare Part / Part** (`glossary.sparePart`) | Suku Cadang | Suku Cadang | Product owner decision | 110 | 114 | APPROVED_BY_PRODUCT_OWNER |
+| 4 | **Workshop** (`glossary.workshop`) | Bengkel | Bengkel | Product owner decision | 71 | 87 | APPROVED_BY_PRODUCT_OWNER |
+| 5 | **Invoice** (`glossary.invoice`) | Faktur | Invoice | Product owner decision | 112 | 144 | APPROVED_BY_PRODUCT_OWNER |
+| 6 | **Tenant** (`glossary.tenant`) | Penyewa | Tenant | Product owner decision | 56 | 104 | APPROVED_BY_PRODUCT_OWNER |
+| 7 | **Vendor** (`glossary.vendor`) | Vendor (keep English) | Vendor | Product owner decision | 75 | 95 | APPROVED_BY_PRODUCT_OWNER |
+| 8 | **Workspace** (`glossary.workspace`) | Workspace | Area Kerja | Product owner decision | 55 | 63 | APPROVED_BY_PRODUCT_OWNER |
+| 9 | **Retread** (`glossary.retread`) | Vulkanisir | Vulkanisir | Product owner decision | 44 | 46 | APPROVED_BY_PRODUCT_OWNER |
+| 10 | **Purchase Order** (`glossary.purchaseOrder`) | Purchase Order (keep English) | Purchase Order | Product owner decision | 36 | 42 | APPROVED_BY_PRODUCT_OWNER |
+| 11 | **Breakdown** (`glossary.breakdown`) | Kerusakan | Breakdown | Product owner decision | 35 | 38 | APPROVED_BY_PRODUCT_OWNER |
+| 12 | **Quotation** (`glossary.quotation`) | Penawaran | Penawaran Harga | Product owner decision | 35 | 38 | APPROVED_BY_PRODUCT_OWNER |
+| 13 | **Part Request** (`glossary.partRequest`) | Permintaan Suku Cadang | Permintaan Suku Cadang | Product owner decision | 27 | 28 | APPROVED_BY_PRODUCT_OWNER |
+| 14 | **Partner** (`glossary.partner`) | Mitra | Mitra | Product owner decision | 17 | 25 | APPROVED_BY_PRODUCT_OWNER |
+| 15 | **Goods Receipt** (`glossary.goodsReceipt`) | Goods Receipt (keep English) | Penerimaan Barang | Product owner decision | 21 | 22 | APPROVED_BY_PRODUCT_OWNER |
+| 16 | **Purchase Request** (`glossary.purchaseRequest`) | Purchase Request (keep English) | Permintaan Pembelian | Product owner decision | 12 | 13 | APPROVED_BY_PRODUCT_OWNER |
+| 17 | **Work Authorization Letter** (`glossary.workAuthorizationLetter`) | Work Authorization Letter (keep English) | Surat Otorisasi Kerja | Product owner decision | 9 | 11 | APPROVED_BY_PRODUCT_OWNER |
+| 18 | **Supplier** (`glossary.supplier`) | Pemasok | Pemasok | Product owner decision | 4 | 4 | APPROVED_BY_PRODUCT_OWNER |
+| 19 | **Tread** (`glossary.tread`) | Tapak Ban | Tapak | Product owner decision | 42 | 47 | APPROVED_BY_PRODUCT_OWNER |
+| 20 | **Scrap** (`glossary.scrap`) | Scrap (keep English) | Scrap | Product owner decision | 38 | 41 | APPROVED_BY_PRODUCT_OWNER |
+| 21 | **Finding** (`glossary.finding`) | Temuan | Temuan | Product owner decision | 28 | 35 | APPROVED_BY_PRODUCT_OWNER |
+| 22 | **Mechanic / Worker** (`glossary.mechanic`) | Mekanik (Mechanic) / Pekerja (Worker) | Mekanik | Product owner decision | 33 | 34 | APPROVED_BY_PRODUCT_OWNER |
+| 23 | **Reuse** (`glossary.reuse`) | Guna Ulang | Pakai Ulang | Product owner decision | 28 | 30 | APPROVED_BY_PRODUCT_OWNER |
+| 24 | **Intelligence** (`glossary.intelligence`) | Kecerdasan | Intelligence | Product owner decision | 20 | 25 | APPROVED_BY_PRODUCT_OWNER |
+| 25 | **Inventory** (`glossary.inventory`) | Inventori | Inventori | Product owner decision | 19 | 20 | APPROVED_BY_PRODUCT_OWNER |
+| 26 | **Return Order / Return to Vendor** (`glossary.returnToVendor`) | Retur Pemesanan (Return Order) / Retur ke Vendor (Return to Vendor) | Retur ke Vendor (flow); document name "Return Order" kept | Product owner decision | 18 | 19 | APPROVED_BY_PRODUCT_OWNER |
+| 27 | **Casing** (`glossary.casing`) | Casing (keep English) | Casing | Product owner decision | 18 | 18 | APPROVED_BY_PRODUCT_OWNER |
+| 28 | **Bundle** (`glossary.bundle`) | Bundel | Paket | Product owner decision | 18 | 18 | APPROVED_BY_PRODUCT_OWNER |
+| 29 | **Service Invoice** (`glossary.serviceInvoice`) | Faktur Layanan | Invoice Servis | Product owner decision | 11 | 12 | APPROVED_BY_PRODUCT_OWNER |
+| 30 | **Stock Opname** (`glossary.stockOpname`) | Stok Opname | Stock Opname | Product owner decision | 12 | 12 | APPROVED_BY_PRODUCT_OWNER |
+| 31 | **Load Index / Speed Rating / Ply Rating** (`glossary.tireSpec`) | Indeks Beban / Peringkat Kecepatan / Peringkat Lapisan | keep English (Load Index / Speed Rating / Ply Rating) | Product owner decision | 8 | 10 | APPROVED_BY_PRODUCT_OWNER |
+| 32 | **Bead** (`glossary.bead`) | Bead (keep English) | Bead | Product owner decision | 7 | 8 | APPROVED_BY_PRODUCT_OWNER |
+| 33 | **Inner Liner** (`glossary.innerLiner`) | Lapisan Dalam | Lapisan Dalam | Product owner decision | 7 | 7 | APPROVED_BY_PRODUCT_OWNER |
+| 34 | **Sidewall** (`glossary.sidewall`) | Dinding Samping | Dinding Samping | Product owner decision | 4 | 5 | APPROVED_BY_PRODUCT_OWNER |
+| 35 | **Engine Hour** (`glossary.engineHour`) | Engine Hour (keep English) | Jam Mesin | Product owner decision | 3 | 5 | APPROVED_BY_PRODUCT_OWNER |
+| 36 | **Entitlement** (`glossary.entitlement`) | Entitlement (keep English) | Hak Akses Modul | Product owner decision | 2 | 2 | APPROVED_BY_PRODUCT_OWNER |
+| 37 | **Data Scope** (`glossary.dataScope`) | Lingkup Data | Cakupan Data | Product owner decision | 37 | 71 | APPROVED_BY_PRODUCT_OWNER |
+| 38 | **Axle** (`glossary.axle`) | Poros | Sumbu | Product owner decision | 28 | 38 | APPROVED_BY_PRODUCT_OWNER |
+| 39 | **Rim** (`glossary.rim`) | Velg | Velg | Product owner decision | 17 | 19 | APPROVED_BY_PRODUCT_OWNER |
+| 40 | **Odometer** (`glossary.odometer`) | Odometer (keep English) | Odometer | Product owner decision | 14 | 18 | APPROVED_BY_PRODUCT_OWNER |
+| 41 | **Road Test** (`glossary.roadTest`) | Uji Jalan | Uji Jalan | Product owner decision | 5 | 7 | APPROVED_BY_PRODUCT_OWNER |
+| 42 | **Dashboard** (`glossary.dashboard`) | Dasbor | Dasbor | Product owner decision | 4 | 5 | APPROVED_BY_PRODUCT_OWNER |
+| 43 | **Quality Control** (`glossary.qualityControl`) | Kendali Mutu | Quality Control (QC) | Product owner decision | 1 | 1 | APPROVED_BY_PRODUCT_OWNER |
 
 ### Style (6)
 
-| No | Decision | Recommended Option | Alternative | Current dataset handling | Status |
+| No | Decision | Final rule | Dataset handling | Decision Source | Status |
 |---:|---|---|---|---|---|
-| 1 | Create / Add / New | Create → Buat, Add → Tambah, New → Baru | Normalize English first | Each English verb translated literally (no forced merge) | AWAITING_DECISION |
-| 2 | Delete / Remove | Delete → Hapus; Remove → Hapus (files/lines) / Lepas (vehicle) | Remove → Keluarkan | Context-based | AWAITING_DECISION |
-| 3 | Cancel — close dialog | Batal | Tutup | Batal on dismiss buttons | AWAITING_DECISION |
-| 4 | Cancel — cancel transaction/record | Batalkan … | Batal … | Batalkan on record actions | AWAITING_DECISION |
-| 5 | Approve / Accept | Approve → Setujui; Accept → Terima | Accept → Setujui | Literal | AWAITING_DECISION |
-| 6 | Sign In / Login | Masuk | Login | Masuk / Gagal masuk | AWAITING_DECISION |
+| 1 | Create / Add / New | Buat / Tambah / Baru | Create → Buat, Add → Tambah, New → Baru (already literal; no change needed) | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
+| 2 | Delete / Remove | Hapus / Hapus | Record/file/line removal → Hapus. Exception kept with note: physical removal of a tire/component from a vehicle stays "Lepas" (different business meaning, not a record delete). | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
+| 3 | Cancel — close dialog | Batal | Dismiss buttons read "Batal". | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
+| 4 | Cancel — cancel transaction / record | Batalkan … | Record actions "Batal X" → "Batalkan X"; `workflow.actionVerb.cancelled` = "Batalkan". | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
+| 5 | Approve / Accept | Setuju / Terima | Standalone "Approve" → "Setuju"; with an object the transitive "Setujui <object>" is kept (noted per row). Accept → Terima. | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
+| 6 | Sign In / Login | Masuk / Masuk | Login / Sign in → Masuk. | Product owner decision | APPROVED_BY_PRODUCT_OWNER |
 
-Style decisions change English canonical wording; no dataset row is blocked by them (Indonesian already follows context).
+Style decisions do not change English canonical wording or keys.
 
-### Correction proposals that change terminology authority (REVIEW_REQUIRED)
+### Decision applications that needed context (documented, not new decisions)
 
-| Item | Proposal | Affected Entries | Status |
+| Case | Handling |
+|---|---|
+| Mechanic / Worker | English "Mechanic" → Mekanik, English "Worker" → Pekerja (row by row on the English source). |
+| Return Order / Return to Vendor | Document name Return Order → Retur Pemesanan; flow Return to Vendor → Retur ke Vendor. |
+| Intelligence | Indonesian word order: "Maintenance Intelligence" → "Kecerdasan Pemeliharaan", "Tire Intelligence" → "Kecerdasan Ban". |
+| Tenant | Display text → Penyewa. Numbering token `{TENANT}` and canonical codes are unchanged (do-not-translate). |
+| Bundle vs Maintenance Package | Commercial bundle → Bundel; maintenance package stays "Paket" (APPROVED_AUTOMATIC, different domain). |
+| Axle vs Wheelbase | Axle → Poros. Wheelbase keeps the standard technical term "jarak sumbu roda" (not the Axle term). |
+| Breakdown vs Failure / Damage | Breakdown → Kerusakan per decision; failure/damage texts also read "Kerusakan" — documented as a near-collision in 14. |
+
+## Remaining Decisions
+
+Dependent dataset entries still waiting: **14** (in `12-en-id-translation-dataset-final.csv`). These items were **not in the owner decision list**, so nothing was decided on the owner's behalf.
+
+| Item | Proposal (not applied) | Affected Entries | Status |
 |---|---|---:|---|
-| `correction.tire` — Tire / Tires (audit REVIEW) | Ban | 7 | AWAITING_DECISION (proposal not applied) |
-| `correction.warrantyClaim` — Warranty Claim(s) (audit REVIEW) | Klaim Garansi | 4 | AWAITING_DECISION (proposal not applied) |
-| `correction.wheelsConfiguration` — Wheels Configuration (audit REVIEW) | Konfigurasi Roda | 2 | AWAITING_DECISION (proposal not applied) |
-| `correction.hold` — Hold (audit REVIEW) | Tahan | 1 | AWAITING_DECISION (proposal not applied) |
-| Workflow verb action labels (`workflow.actionVerb.*`) | English verb wording per action_code (e.g. Approve, Send to QC) | 33 | REVIEW_REQUIRED (English wording) |
-| Key split `common.actions.cancel` | dismiss vs record cancel keys | 1 | REVIEW_REQUIRED (implementation) |
+| `correction.tire` — Tire / Tires (audit REVIEW) | Ban | 7 | AWAITING_DECISION |
+| `correction.warrantyClaim` — Warranty Claim(s) (audit REVIEW) | Klaim Garansi | 4 | AWAITING_DECISION |
+| `correction.wheelsConfiguration` — Wheels Configuration (audit REVIEW) | Konfigurasi Roda | 2 | AWAITING_DECISION |
+| `correction.hold` — Hold (audit REVIEW) | Tahan | 1 | AWAITING_DECISION |
+| Workflow verb action labels (`workflow.actionVerb.*`) | English verb wording per action_code (e.g. Approve, Send to QC); Indonesian already follows the style decisions | 33 | REVIEW_REQUIRED (English wording) |
+| Key split `common.actions.cancel` | Separate dismiss key (Batal) from record-cancel key (Batalkan); the style decision is made, the key split is implementation work | 1 | REVIEW_REQUIRED (implementation) |
 
-## Decision input format
-
-Reply with one line per term (keep English = repeat the term):
+## Decision input format (remaining items)
 
 ```
-Work Order = Work Order
-Maintenance = Perawatan
-Workshop = Bengkel
-…
-Cancel — close dialog = Batal
+Tire = Ban
+Warranty Claim = Klaim Garansi
+Wheels Configuration = Konfigurasi Roda
+Hold = Tahan
 ```
 

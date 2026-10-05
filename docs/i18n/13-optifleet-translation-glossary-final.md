@@ -1,21 +1,21 @@
 # OptiFleet Final Translation Glossary
 
-Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision received), **APPROVED_AUTOMATIC**, **DO_NOT_TRANSLATE**, **STRUCTURAL_PREP_REQUIRED** (translation final, implementation blocked), **AWAITING_DECISION** (recommended option shown, not final). Source of truth for rows: `12-en-id-translation-dataset-final.csv`. Canonical codes, identifiers, routes, permission keys and template variables never change — only display labels are translated.
+Authority values: **APPROVED_BY_PRODUCT_OWNER** (product owner terminology decision, applied), **APPROVED_AUTOMATIC**, **DO_NOT_TRANSLATE**, **STRUCTURAL_PREP_REQUIRED** (translation final, implementation blocked — e.g. status labels needing the status registry), **AWAITING_DECISION** (not covered by the owner decision list). Source of truth for rows: `12-en-id-translation-dataset-final.csv`. Canonical values (status codes, enum values, keys, template variables, numbering tokens) are never translated.
 
 ## Core Business Terms
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Work Order | Rec: Work Order · Alt: Perintah Kerja | Document / module name | — | AWAITING_DECISION | CRITICAL — Core document across maintenance, workshop, inventory and procurement; "WO" abbreviation is kept everywhere, and Indonesian workshops widely say "Work Order". "Perintah Kerja" collides with "Surat Perintah Kerja (SPK)". |
-| Maintenance | Rec: Perawatan · Alt: Pemeliharaan | Module / domain | — | AWAITING_DECISION | CRITICAL — Module, menu, document and KPI name. "Perawatan" is the common fleet/workshop term; "Pemeliharaan" is more formal/asset-management. |
-| Workshop | Rec: Bengkel · Alt: Workshop | Organization / workshop operations | — | AWAITING_DECISION | CRITICAL — Organization unit, menu group, external partner type and invoice name. |
-| Spare art / Sparepart / art | Rec: Suku Cadang · Alt: Sparepart | Inventory / item type | — | AWAITING_DECISION | CRITICAL — Item type, menu ("Used Spareparts"), sale and request flows; English has two spellings (see 03). |
-| Tenant | Rec: Tenant · Alt: Perusahaan Pelanggan | Platform / SaaS | — | AWAITING_DECISION | HIGH — SaaS account concept used in the platform portal and system-default wording; no natural Indonesian equivalent. |
-| Vendor | Rec: Vendor · Alt: Pemasok | Procurement | — | AWAITING_DECISION | HIGH — Procurement role of a Partner; overlaps with Supplier (03). |
-| Supplier | Rec: Pemasok · Alt: Supplier | Partner type | — | AWAITING_DECISION | HIGH — Partner type (Spare Part / Tire Supplier); must not collide with Vendor. |
-| Partner | Rec: Mitra · Alt: Rekanan | Partner master | — | AWAITING_DECISION | HIGH — Master record for vendors, workshops, towing providers. |
-| Invoice | Rec: Invoice · Alt: Faktur | Billing / procurement | — | AWAITING_DECISION | HIGH — Platform billing, vendor invoice references, workshop invoices; "Faktur" may be confused with Faktur Pajak, "Tagihan" with billing. |
-| Work Authorization Letter | Rec: Surat Otorisasi Kerja · Alt: Surat Perintah Kerja (SPK) | Document | — | AWAITING_DECISION | HIGH — External workshop document; "SPK" is the common Indonesian name but is also how many companies call a Work Order. |
+| Work Order | Work Order | Document / module name | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Work Order · Alt: Perintah Kerja) |
+| Maintenance | Pemeliharaan | Module / domain | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Perawatan · Alt: Pemeliharaan) |
+| Workshop | Bengkel | Organization / workshop operations | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Bengkel · Alt: Workshop) |
+| Spare Part / Part | Suku Cadang | Inventory / item type | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Suku Cadang · Alt: Sparepart) |
+| Tenant | Penyewa | Platform / SaaS | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Tenant · Alt: Perusahaan Pelanggan) |
+| Vendor | Vendor | Procurement | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Vendor · Alt: Pemasok) |
+| Supplier | Pemasok | Partner type | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Pemasok · Alt: Supplier) |
+| Partner | Mitra | Partner master | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Mitra · Alt: Rekanan) |
+| Invoice | Faktur | Billing / procurement | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Invoice · Alt: Faktur) |
+| Work Authorization Letter | Work Authorization Letter | Document | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Surat Otorisasi Kerja · Alt: Surat Perintah Kerja (SPK)) |
 | Vehicle | Kendaraan | Domain | GLOBAL | APPROVED_AUTOMATIC | Standard |
 | Fleet | Armada | Domain | GLOBAL | APPROVED_AUTOMATIC | Standard |
 | Branch | Cabang | Organization | GLOBAL | APPROVED_AUTOMATIC | Standard |
@@ -29,49 +29,49 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Maintenance | Perawatan (rec.) | Module | maintenance | AWAITING_DECISION | glossary.maintenance |
-| Maintenance Request | Permintaan Perawatan (rec.) | Document | maintenance | AWAITING_DECISION | glossary.maintenance |
-| Maintenance Package / Schedule | Paket Perawatan / Jadwal Perawatan (rec.) | Planning | maintenance | AWAITING_DECISION | glossary.maintenance |
+| Maintenance | Pemeliharaan | Module | maintenance | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.maintenance) |
+| Maintenance Request | Permintaan Pemeliharaan | Document | maintenance | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.maintenance) |
+| Maintenance Package / Schedule | Paket Pemeliharaan / Jadwal Pemeliharaan | Planning | maintenance | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.maintenance) |
 | Preventive / Corrective | Preventif / Korektif | Maintenance type | maintenance | APPROVED_AUTOMATIC | Standard |
-| Breakdown | Breakdown (rec.) | Incident | maintenance | AWAITING_DECISION | glossary.breakdown |
-| Complaint / Diagnosis / Finding | Keluhan / Diagnosis / Temuan (rec.) | Work order | workOrder | AWAITING_DECISION | Finding = glossary.finding |
+| Breakdown | Kerusakan | Incident | maintenance | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.breakdown) |
+| Complaint / Diagnosis / Finding | Keluhan / Diagnosis / Temuan | Work order | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (Finding = glossary.finding) |
 | Root Cause / Corrective Action | Akar Masalah / Tindakan Korektif | Work order | workOrder | APPROVED_AUTOMATIC | Standard |
-| Road Test / Quality Control | Uji Jalan / Quality Control (rec.) | QC | workOrder | AWAITING_DECISION | glossary.roadTest / qualityControl |
+| Road Test / Quality Control | Uji Jalan / Kendali Mutu | QC | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.roadTest / qualityControl) |
 | Rework | Pengerjaan Ulang | QC | workOrder | APPROVED_AUTOMATIC | Standard |
-| Odometer / Engine Hour | Odometer / Jam Mesin (rec.) | Meter | vehicle | AWAITING_DECISION | glossary.odometer / engineHour |
+| Odometer / Engine Hour | Odometer / Engine Hour | Meter | vehicle | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.odometer / engineHour) |
 | Interval / Tolerance / Due / Overdue | Interval / Toleransi / Jatuh Tempo / Terlambat | Schedule | maintenance | APPROVED_AUTOMATIC | Standard |
 
 ## Work Order
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Complaint / Diagnosis / Finding | Keluhan / Diagnosis / Temuan (rec.) | Work order | workOrder | AWAITING_DECISION | Finding = glossary.finding |
+| Complaint / Diagnosis / Finding | Keluhan / Diagnosis / Temuan | Work order | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (Finding = glossary.finding) |
 | Root Cause / Corrective Action | Akar Masalah / Tindakan Korektif | Work order | workOrder | APPROVED_AUTOMATIC | Standard |
-| Road Test / Quality Control | Uji Jalan / Quality Control (rec.) | QC | workOrder | AWAITING_DECISION | glossary.roadTest / qualityControl |
+| Road Test / Quality Control | Uji Jalan / Kendali Mutu | QC | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.roadTest / qualityControl) |
 | Rework | Pengerjaan Ulang | QC | workOrder | APPROVED_AUTOMATIC | Standard |
-| Work Order | Work Order (rec.) | Document | workOrder | AWAITING_DECISION | glossary.workOrder |
-| Work Authorization Letter (WAL) | Surat Otorisasi Kerja (rec.) | Document | workOrder | AWAITING_DECISION | glossary.workAuthorizationLetter |
+| Work Order | Work Order | Document | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workOrder) |
+| Work Authorization Letter (WAL) | Work Authorization Letter (WAL) | Document | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workAuthorizationLetter) |
 
 ## Inventory
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Inventory | Inventori (rec.) | Module | inventory | AWAITING_DECISION | glossary.inventory |
-| Stock Opname | Stock Opname (rec.) | Count | inventory | AWAITING_DECISION | glossary.stockOpname |
+| Inventory | Inventori | Module | inventory | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.inventory) |
+| Stock Opname | Stok Opname | Count | inventory | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.stockOpname) |
 | Stock Movement / Ledger / Running Balance | Pergerakan Stok / Buku Besar / Saldo Berjalan | Inventory | inventory | APPROVED_AUTOMATIC | Standard |
 | Issuance & Return | Pengeluaran & Pengembalian | WO parts | workOrder | APPROVED_AUTOMATIC | Issue = stock leaves warehouse |
 | Consumable | Bahan Habis Pakai | Item type | inventory | APPROVED_AUTOMATIC | Standard |
-| Spare Part | Suku Cadang (rec.) | Item type | inventory | AWAITING_DECISION | glossary.sparePart |
+| Spare Part | Suku Cadang | Item type | inventory | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.sparePart) |
 | Quarantine | Karantina | Disposition | inventory | APPROVED_AUTOMATIC | Standard |
-| Reuse / Reusable | Pakai Ulang (rec.) | Disposition | inventory | AWAITING_DECISION | glossary.reuse |
-| Scrap | Scrap (rec.) | Disposition | inventory | AWAITING_DECISION | glossary.scrap |
+| Reuse / Reusable | Guna Ulang | Disposition | inventory | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.reuse) |
+| Scrap | Scrap | Disposition | inventory | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.scrap) |
 
 ## Procurement
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Vendor / Supplier / Partner | Vendor / Pemasok / Mitra (rec.) | Procurement | procurement | AWAITING_DECISION | glossary.vendor / supplier / partner |
-| Quotation | Penawaran Harga (rec.) | Procurement | procurement | AWAITING_DECISION | glossary.quotation |
+| Vendor / Supplier / Partner | Vendor / Pemasok / Mitra | Procurement | procurement | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.vendor / supplier / partner) |
+| Quotation | Penawaran | Procurement | procurement | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.quotation) |
 | Refund / Redelivery | Refund / Pengiriman Ulang | Return to vendor | procurement | APPROVED_AUTOMATIC | "Refund" kept as business loanword |
 | Terms of Payment | Termin Pembayaran | Procurement | procurement | APPROVED_AUTOMATIC | Standard |
 | Freight | Ongkos Kirim | PO | procurement | APPROVED_AUTOMATIC | Standard |
@@ -83,12 +83,12 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 |---|---|---|---|---|---|
 | Tire | Ban | Domain | tire | APPROVED_AUTOMATIC | Documented correction (owner may veto) |
 | Tire Operation (Installation / Rotation / Inspection / Removal / Replacement) | Operasi Ban (Pemasangan / Rotasi / Inspeksi / Pelepasan / Penggantian) | Operations | tire | APPROVED_AUTOMATIC | Standard |
-| Wheels Configuration / Position / Axle | Konfigurasi Roda / Posisi / Sumbu (rec.) | Layout | tire | AWAITING_DECISION | Axle = glossary.axle |
+| Wheels Configuration / Position / Axle | Konfigurasi Roda (proposal) / Posisi / Poros | Layout | tire | AWAITING_DECISION | Axle = Poros (owner decision); Wheels Configuration awaits correction decision |
 | Spare Tire | Ban Cadangan | Layout | tire | APPROVED_AUTOMATIC | Standard |
-| Rim | Velg (rec.) | Item | tire | AWAITING_DECISION | glossary.rim |
-| Retread / Repair (casing) | Vulkanisir (rec.) / Perbaikan | Lifecycle | tire | AWAITING_DECISION | glossary.retread |
-| Casing / Tread / Bead / Sidewall / Inner Liner / Shoulder | Casing / Tapak / Bead / Dinding Samping / Lapisan Dalam (rec.) / Bahu Ban | Anatomy | tire | AWAITING_DECISION | glossary.casing / tread / bead / sidewall / innerLiner |
-| Tread Depth / Wear Pattern | Kedalaman Tapak / Pola Keausan (rec.) | Inspection | tire | AWAITING_DECISION | glossary.tread |
+| Rim | Velg | Item | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.rim) |
+| Retread / Repair (casing) | Vulkanisir / Perbaikan | Lifecycle | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.retread) |
+| Casing / Tread / Bead / Sidewall / Inner Liner / Shoulder | Casing / Tapak Ban / Bead / Dinding Samping / Lapisan Dalam / Bahu Ban | Anatomy | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.casing / tread / bead / sidewall / innerLiner) |
+| Tread Depth / Wear Pattern | Kedalaman Tapak Ban / Pola Keausan | Inspection | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.tread) |
 | Run-flat / Puncture / Cut / Crack / Separation / Bulge | Kempis berjalan / Tusukan / Sayatan / Retak / Pemisahan / Benjolan | Damage | tire | APPROVED_AUTOMATIC | Standard |
 | Manufacture Date Code (DOT) | Kode Tanggal Produksi (DOT) | Identity | tire | APPROVED_AUTOMATIC | DOT kept |
 | Used Tire Management / Used Stock | Manajemen Ban Bekas / Stok Bekas | Module | tire | APPROVED_AUTOMATIC | Standard |
@@ -98,21 +98,21 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Workshop | Bengkel (rec.) | Organization | workshop | AWAITING_DECISION | glossary.workshop |
-| External Workshop | Bengkel Eksternal (rec.) | Partner type | workshop | AWAITING_DECISION | glossary.workshop |
-| Workspace / Service Bay | Area Kerja (rec.) / Bay Servis | Bay | workshop | AWAITING_DECISION | glossary.workspace |
-| Mechanic / Worker | Mekanik (rec.) | People | workshop | AWAITING_DECISION | glossary.mechanic |
+| Workshop | Bengkel | Organization | workshop | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workshop) |
+| External Workshop | Bengkel Eksternal | Partner type | workshop | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workshop) |
+| Workspace / Service Bay | Workspace / Bay Servis | Bay | workshop | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workspace) |
+| Mechanic / Worker | Mekanik / Pekerja | People | workshop | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.mechanic) |
 | Assignment / Reservation | Penugasan / Reservasi | Scheduling | workshop | APPROVED_AUTOMATIC | Standard |
 | Scheduler / Workload | Penjadwal / Beban Kerja | Pages | workshop | APPROVED_AUTOMATIC | Standard |
 | Labor log / Labor time / Hourly Rate | Log kerja / Waktu kerja / Tarif per Jam | Labor | workshop | APPROVED_AUTOMATIC | Standard |
-| Service Invoice / Workshop Invoice | Invoice Servis (rec.) | Billing | workshop | AWAITING_DECISION | glossary.serviceInvoice / invoice |
+| Service Invoice / Workshop Invoice | Faktur Layanan / Faktur Bengkel | Billing | workshop | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.serviceInvoice / invoice) |
 
 ## Finance / Invoice
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Invoice | Rec: Invoice · Alt: Faktur | Billing / procurement | — | AWAITING_DECISION | HIGH — Platform billing, vendor invoice references, workshop invoices; "Faktur" may be confused with Faktur Pajak, "Tagihan" with billing. |
-| Service Invoice | Rec: Invoice Servis · Alt: Invoice Bengkel | Workshop invoice | — | AWAITING_DECISION | MEDIUM — English canonical is itself undecided (Workshop Invoice vs Service Invoice, 03). |
+| Invoice | Faktur | Billing / procurement | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Invoice · Alt: Faktur) |
+| Service Invoice | Faktur Layanan | Workshop invoice | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Invoice Servis · Alt: Invoice Bengkel) |
 | Void | Batalkan (Void) | Invoice void | MODULE | APPROVED_AUTOMATIC | Accounting meaning kept with "Void" in brackets |
 | Amount (money) | Nominal | Field | GLOBAL | APPROVED_AUTOMATIC | "Jumlah" is reserved for quantities |
 | Unit Price / Discount / Tax / Total / Subtotal | Harga Satuan / Diskon / Pajak / Total / Subtotal | Money | GLOBAL | APPROVED_AUTOMATIC | Standard |
@@ -122,12 +122,12 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Tenant | Rec: Tenant · Alt: Perusahaan Pelanggan | Platform / SaaS | — | AWAITING_DECISION | HIGH — SaaS account concept used in the platform portal and system-default wording; no natural Indonesian equivalent. |
-| Bundle | Rec: Paket · Alt: Bundle | Platform commercial | — | AWAITING_DECISION | MEDIUM — Commercial bundle of modules (platform). |
-| Entitlement | Rec: Hak Akses Modul · Alt: Entitlement | Platform commercial | — | AWAITING_DECISION | MEDIUM — Module entitlement per tenant/contract. |
-| Intelligence | Rec: Intelligence · Alt: Analitik Prediktif | Intelligence | — | AWAITING_DECISION | MEDIUM — Feature/module brand (Maintenance Intelligence). |
-| Data Scope | Rec: Cakupan Data · Alt: Data Scope | Access management | — | AWAITING_DECISION | LOW — Access-control concept. |
-| Dashboard | Rec: Dasbor · Alt: Dashboard | Global | — | AWAITING_DECISION | LOW — Page/menu name; KBBI form is "dasbor", many Indonesian SaaS keep "Dashboard". |
+| Tenant | Penyewa | Platform / SaaS | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Tenant · Alt: Perusahaan Pelanggan) |
+| Bundle | Bundel | Platform commercial | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Paket · Alt: Bundle) |
+| Entitlement | Entitlement | Platform commercial | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Hak Akses Modul · Alt: Entitlement) |
+| Intelligence | Kecerdasan | Intelligence | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Intelligence · Alt: Analitik Prediktif) |
+| Data Scope | Lingkup Data | Access management | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Cakupan Data · Alt: Data Scope) |
+| Dashboard | Dasbor | Global | — | APPROVED_BY_PRODUCT_OWNER | Product owner decision (previous rec.: Dasbor · Alt: Dashboard) |
 | Template | Templat | Configuration | GLOBAL | APPROVED_AUTOMATIC | KBBI |
 | Configuration | Konfigurasi | Configuration | GLOBAL | APPROVED_AUTOMATIC | Standard |
 | Workflow | Alur Kerja | Configuration | GLOBAL | APPROVED_AUTOMATIC | Standard |
@@ -143,12 +143,12 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 | ARCHIVED (canonical, unchanged) | Diarsipkan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | ASSESSED (canonical, unchanged) | Dinilai | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | ASSIGNED (canonical, unchanged) | Ditugaskan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| Add EXTERNAL -> CLOSED transition, triggered when the External Invoice becomes Paid (canonical, unchanged) | Tambah transisi EXTERNAL -> CLOSED, dipicu saat Invoice Eksternal menjadi Lunas | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
-| Add EXTERNAL status (top-level, parallel to IN_PROGRESS) for work carried out by an external workshop (canonical, unchanged) | Tambah status EXTERNAL (tingkat atas, sejajar dengan IN_PROGRESS) untuk pekerjaan yang dilakukan bengkel eksternal | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
+| Add EXTERNAL -> CLOSED transition, triggered when the External Invoice becomes Paid (canonical, unchanged) | Tambah transisi EXTERNAL -> CLOSED, dipicu saat Faktur Eksternal menjadi Lunas | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
+| Add EXTERNAL status (top-level, parallel to IN_PROGRESS) for work carried out by an external workshop (canonical, unchanged) | Tambah status EXTERNAL (tingkat atas, sejajar dengan IN_PROGRESS) untuk pekerjaan yang dilakukan bengkel eksternal | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | CANCELLED (canonical, unchanged) | Dibatalkan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | CLOSED (canonical, unchanged) | Ditutup | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | COMPLETED (canonical, unchanged) | Selesai | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| Correct EXTERNAL transitions: Findings-only finalization reachable only from DRAFT, exiting only via Revise/Cancel (canonical, unchanged) | Koreksi transisi EXTERNAL: finalisasi khusus Temuan hanya dapat dicapai dari DRAFT, dan keluar hanya melalui Revisi/Batal | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
+| Correct EXTERNAL transitions: Findings-only finalization reachable only from DRAFT, exiting only via Revise/Cancel (canonical, unchanged) | Koreksi transisi EXTERNAL: finalisasi khusus Temuan hanya dapat dicapai dari DRAFT, dan keluar hanya melalui Revisi/Batal | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | DISPATCHED (canonical, unchanged) | Dikirim | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | DRAFT (canonical, unchanged) | Draf | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | DUE_SOON (canonical, unchanged) | Segera Jatuh Tempo | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
@@ -162,7 +162,7 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 | ISSUED (canonical, unchanged) | Diterbitkan (document) / Dikeluarkan (stock) | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Split per domain: status.document.issued / status.stock.issued |
 | Initial platform default (migrated from hardcoded transitions) (canonical, unchanged) | Default awal platform (dimigrasikan dari transisi yang sebelumnya hardcoded) | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | LATE (canonical, unchanged) | Terlambat | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| Maintenance Request Workflow (canonical, unchanged) | Alur Kerja Permintaan Perawatan | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
+| Maintenance Request Workflow (canonical, unchanged) | Alur Kerja Permintaan Pemeliharaan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | NEED_INFORMATION (canonical, unchanged) | Perlu Informasi | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | NEW (canonical, unchanged) | Baru | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | ON_HOLD (canonical, unchanged) | Ditunda | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
@@ -194,13 +194,13 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 | RESERVED (canonical, unchanged) | Dipesan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | RESOLVED (canonical, unchanged) | Terselesaikan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | RESTOCKED (canonical, unchanged) | Dikembalikan ke Stok | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| RETREAD (canonical, unchanged) | Vulkanisir | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
-| REUSE (canonical, unchanged) | Pakai Ulang | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
+| RETREAD (canonical, unchanged) | Vulkanisir | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
+| REUSE (canonical, unchanged) | Guna Ulang | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | REWORK (canonical, unchanged) | Pengerjaan Ulang | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | Retire Request Info: remove UNDER_REVIEW -> NEED_INFORMATION (app-level only, enum value kept for legacy records) (canonical, unchanged) | Hentikan Request Info: hapus UNDER_REVIEW -> NEED_INFORMATION (hanya di tingkat aplikasi, nilai enum dipertahankan untuk data lama) | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | SCHEDULED (canonical, unchanged) | Terjadwal | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| SCRAP (canonical, unchanged) | Scrap | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
-| SCRAPPED (canonical, unchanged) | Scrap | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
+| SCRAP (canonical, unchanged) | Scrap | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
+| SCRAPPED (canonical, unchanged) | Scrap | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | SETTLED (canonical, unchanged) | Diselesaikan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | SOLD (canonical, unchanged) | Terjual | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | SUBMITTED (canonical, unchanged) | Diajukan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
@@ -208,10 +208,10 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 | TRANSFERRED (canonical, unchanged) | Dipindahkan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | UNDER_REVIEW (canonical, unchanged) | Dalam Peninjauan | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | VERIFIED (canonical, unchanged) | Terverifikasi | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| WAITING_PART (canonical, unchanged) | Menunggu Suku Cadang | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
+| WAITING_PART (canonical, unchanged) | Menunggu Suku Cadang | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | WARRANTY_CLAIM (canonical, unchanged) | Klaim Garansi | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | WORK_ORDER_CREATED (canonical, unchanged) | Work Order Dibuat | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
-| Work Order Workflow (canonical, unchanged) | Alur Kerja Work Order | Status display label | DOMAIN | AWAITING_DECISION | Display only — canonical code never changes; needs status registry |
+| Work Order Workflow (canonical, unchanged) | Alur Kerja Work Order | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 | Workflow (canonical, unchanged) | Alur Kerja | Status display label | DOMAIN | STRUCTURAL_PREP_REQUIRED | Display only — canonical code never changes; needs status registry |
 
 ## Action Terminology
@@ -248,27 +248,27 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 | Finalize → Finalized | Finalisasi → Difinalisasi | Action → resulting status | GLOBAL | APPROVED_AUTOMATIC | Verb (imperative) vs passive/adjective status |
 | Void → Voided | Batalkan (Void) → Dibatalkan (Void) | Action → resulting status | GLOBAL | APPROVED_AUTOMATIC | Verb (imperative) vs passive/adjective status |
 | Hold → On Hold | Tunda → Ditunda | Action → resulting status | GLOBAL | APPROVED_AUTOMATIC | Verb (imperative) vs passive/adjective status |
-| Scrap → Scrapped | Scrap → Scrap | Action → resulting status | GLOBAL | AWAITING_DECISION | Verb (imperative) vs passive/adjective status; glossary.scrap |
-| Retread → Retread | Vulkanisir → Vulkanisir | Action → resulting status | GLOBAL | AWAITING_DECISION | Verb (imperative) vs passive/adjective status; glossary.retread |
+| Scrap → Scrapped | Scrap → Scrap | Action → resulting status | GLOBAL | APPROVED_BY_PRODUCT_OWNER | Verb (imperative) vs passive/adjective status; glossary.scrap |
+| Retread → Retread | Vulkanisir → Vulkanisir | Action → resulting status | GLOBAL | APPROVED_BY_PRODUCT_OWNER | Verb (imperative) vs passive/adjective status; glossary.retread |
 
 ## Document Terminology
 
 | English Term | Indonesian | Context | Module/Domain | Authority / Status | Note |
 |---|---|---|---|---|---|
-| Work Order | Work Order (rec.) | Document | workOrder | AWAITING_DECISION | glossary.workOrder |
-| Work Authorization Letter (WAL) | Surat Otorisasi Kerja (rec.) | Document | workOrder | AWAITING_DECISION | glossary.workAuthorizationLetter |
-| Maintenance Memo / Maintenance Report | Memo Perawatan / Laporan Perawatan (rec.) | Document | maintenance | AWAITING_DECISION | glossary.maintenance |
+| Work Order | Work Order | Document | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workOrder) |
+| Work Authorization Letter (WAL) | Work Authorization Letter (WAL) | Document | workOrder | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workAuthorizationLetter) |
+| Maintenance Memo / Maintenance Report | Memo Pemeliharaan / Laporan Pemeliharaan | Document | maintenance | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.maintenance) |
 | Inspection Report | Laporan Inspeksi | Document | inspection | APPROVED_AUTOMATIC | Standard |
-| Purchase Request / Purchase Order | Permintaan Pembelian / Purchase Order (rec.) | Document | procurement | AWAITING_DECISION | glossary.purchaseRequest / purchaseOrder |
-| Request for Quotation | Permintaan Penawaran Harga (rec.) | Document | procurement | AWAITING_DECISION | glossary.quotation |
-| Return Order | Return Order (rec., document name) | Document | procurement | AWAITING_DECISION | glossary.returnToVendor |
-| Goods Receipt | Penerimaan Barang (rec.) | Document | inventory | AWAITING_DECISION | glossary.goodsReceipt |
+| Purchase Request / Purchase Order | Purchase Request / Purchase Order | Document | procurement | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.purchaseRequest / purchaseOrder) |
+| Request for Quotation | Permintaan Penawaran | Document | procurement | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.quotation) |
+| Return Order | Retur Pemesanan (document) / Retur ke Vendor (flow) | Document | procurement | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.returnToVendor) |
+| Goods Receipt | Goods Receipt | Document | inventory | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.goodsReceipt) |
 | Stock Transfer / Vehicle Transfer | Transfer Stok / Transfer Kendaraan | Document | inventory / vehicle | APPROVED_AUTOMATIC | Standard |
 | Warranty Claim | Klaim Garansi | Document | warranty | APPROVED_AUTOMATIC | Standard |
-| Invoice | Invoice (rec.) | Document | billing | AWAITING_DECISION | glossary.invoice |
+| Invoice | Faktur | Document | billing | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.invoice) |
 | Bill To / Due Date / Issue Date | Ditagihkan Kepada / Jatuh Tempo / Tanggal Terbit | Print label | documents | APPROVED_AUTOMATIC | Standard |
 | Prepared by / Approved by / Received By / Signature / Position | Disiapkan oleh / Disetujui oleh / Diterima Oleh / Tanda Tangan / Jabatan | Signature block | documents | STRUCTURAL_PREP_REQUIRED | Print templates are DB-stored (DATABASE_LOCALIZATION) |
-| Workshop Stamp | Stempel Bengkel (rec.) | Signature block | documents | AWAITING_DECISION | glossary.workshop |
+| Workshop Stamp | Stempel Bengkel | Signature block | documents | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.workshop) |
 | Attn: / Dear | Up.: / Kepada Yth. | Letter | documents | STRUCTURAL_PREP_REQUIRED | Indonesian letter conventions |
 
 ## Technical Terms
@@ -294,8 +294,8 @@ Authority values: **APPROVED_BY_PRODUCT_OWNER** (none yet — no owner decision 
 | Lead Time | Waktu Tunggu (lead time) | Procurement | procurement | APPROVED_AUTOMATIC | Standard |
 | Inspection Certificate | Sertifikat Uji Kelayakan | Vehicle document | vehicle | APPROVED_AUTOMATIC | Indonesian KIR document |
 | Tax ID | NPWP | Company profile | account | APPROVED_AUTOMATIC | Indonesian tax id |
-| Load Index / Speed Rating / Ply Rating | keep English | Tire spec | tire | AWAITING_DECISION | glossary.tireSpec |
-| Engine Hour / HM | Jam Mesin / HM | Meter | vehicle | AWAITING_DECISION | glossary.engineHour |
+| Load Index / Speed Rating / Ply Rating | Indeks Beban / Peringkat Kecepatan / Peringkat Lapisan | Tire spec | tire | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.tireSpec) |
+| Engine Hour / HM | Engine Hour / HM | Meter | vehicle | APPROVED_BY_PRODUCT_OWNER | Product owner decision applied (glossary.engineHour) |
 
 ## Do Not Translate
 

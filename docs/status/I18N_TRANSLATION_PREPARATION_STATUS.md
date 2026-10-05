@@ -35,3 +35,28 @@ received. None was invented. The propagation mechanism (`depends_on` → substit
 
 Status: **READY_FOR_REMAINING_TERMINOLOGY_DECISION**. Audit artifacts `01`–`05`, `translation-inventory.csv`,
 `08`–`11` are preserved unchanged.
+
+## Owner terminology decisions applied
+
+The product owner supplied all 43 terminology decisions and 6 style decisions. They are recorded in
+`07` as APPROVED_BY_PRODUCT_OWNER and were propagated by substitution in `proposed_text_id`; nothing was
+re-translated.
+
+- 1,148 dataset rows: AWAITING_DECISION → APPROVED_GLOSSARY.
+- Context applications are documented in `07`, for example Mechanic → Mekanik vs Worker → Pekerja,
+  Intelligence word order, and physical "Lepas" vs record "Hapus".
+- During propagation the `invoice` substitution corrupted 9 `{{…invoice…}}` placeholder names. They were
+  restored from the English source, and parameter integrity is back to 100%.
+
+| Output | Status |
+|---|---|
+| `06` — AWAITING rows marked SUPERSEDED_BY_OWNER_DECISION (preparation recommendations kept as history) | DONE |
+| `07` — Resolved: 43 terms + 6 style; Remaining: 4 correction items (14 rows), workflow verb English wording, cancel key split | DONE |
+| `12` — 5,275 rows; 14 rows still AWAITING_DECISION (correction.tire / warrantyClaim / wheelsConfiguration / hold) | DONE |
+| `13` — decided terms marked APPROVED_BY_PRODUCT_OWNER | DONE |
+| `14` — QA rerun: 0 missing, 0 parameter mismatch, 0 key collision, 0 DNT violation, 0 pluralization issue; near-collisions documented (incl. Breakdown vs failure "Kerusakan") | DONE |
+| `15` — unchanged (terminology-independent) | DONE (not implemented) |
+
+Status: **READY_FOR_REMAINING_TERMINOLOGY_DECISION**. The remaining decisions are the 4 correction items
+that were not in the owner list. Once they are decided the status becomes
+READY_FOR_STRUCTURAL_I18N_PREPARATION. `01`–`05`, `translation-inventory.csv`, `08`–`11` and `15` are unchanged.

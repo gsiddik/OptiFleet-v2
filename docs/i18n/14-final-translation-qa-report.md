@@ -1,19 +1,19 @@
 # 14 — Final Translation QA Report
 
-Dataset: `12-en-id-translation-dataset-final.csv` — **5275 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **0** (none provided).
+Dataset: `12-en-id-translation-dataset-final.csv` — **5275 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **43 terminology + 6 style** (product owner), propagated to 1148 dependent rows.
 
 ## Result
 
 | Check | Count | Verdict |
 |---|---:|---|
 | Missing translation | 0 | PASS |
-| Remaining awaiting decision | 1162 | OPEN — waits for owner decisions (07) |
+| Remaining awaiting decision | 14 | OPEN — 14 rows depend on 4 correction items not in the owner decision list (07) |
 | Parameter mismatch | 0 | PASS (100% integrity incl. {{x}}, {x}, :attribute) |
 | Terminology inconsistency | 0 | PASS (3 documented proper-noun exceptions excluded) |
 | Action/status mismatch | 36 | SOURCE ISSUE — status-form workflow action labels; verb proposals added (workflow.actionVerb.*) |
 | Duplicate key collision | 0 | PASS |
 | Do-not-translate violation | 0 | PASS |
-| Unresolved dependency | 0 | PASS (every REVIEW row names its dependency) |
+| Unresolved dependency | 0 | PASS (every remaining REVIEW row names its dependency) |
 | Pluralization issue | 0 | PASS (no "(s)" in Indonesian) |
 | Near-collision | 0 | RESOLVED / DOCUMENTED (below) |
 | Structural blocker | 786 | TRACKED (implementation readiness, see 15) |
@@ -22,101 +22,101 @@ Dataset: `12-en-id-translation-dataset-final.csv` — **5275 rows** (5,240 prepa
 
 | Classification | Rows |
 |---|---:|
-| AUTO_TRANSLATE_SAFE | 3384 |
-| REVIEW | 1162 |
-| STRUCTURAL_PREP_REQUIRED | 663 |
+| AUTO_TRANSLATE_SAFE | 4409 |
+| STRUCTURAL_PREP_REQUIRED | 786 |
 | DO_NOT_TRANSLATE | 66 |
+| REVIEW | 14 |
 
 | Translation status | Rows |
 |---|---:|
-| FINAL | 4047 |
-| AWAITING_DECISION | 1162 |
+| FINAL | 5195 |
 | FINAL_UNCHANGED | 66 |
+| AWAITING_DECISION | 14 |
 
 | Implementation status | Rows |
 |---|---:|
-| READY_AFTER_I18N_INFRASTRUCTURE | 3384 |
-| BLOCKED_BY_DECISION | 1039 |
+| READY_AFTER_I18N_INFRASTRUCTURE | 4409 |
 | STRUCTURAL_PREP_REQUIRED | 786 |
 | NOT_APPLICABLE | 66 |
+| BLOCKED_BY_DECISION | 14 |
 
 Translation readiness and implementation readiness are separate: a STRUCTURAL_PREP_REQUIRED row has a final Indonesian text (`translation_status = FINAL`) but stays `implementation_status = STRUCTURAL_PREP_REQUIRED` until its blocker is removed.
 
-## Remaining awaiting decision by dependency
+## Entries per dependency
 
-| Dependency | Rows |
-|---|---:|
-| `glossary.workOrder` | 135 |
-| `glossary.invoice` | 112 |
-| `glossary.sparePart` | 110 |
-| `glossary.maintenance` | 109 |
-| `glossary.vendor` | 75 |
-| `glossary.workshop` | 71 |
-| `glossary.tenant` | 56 |
-| `glossary.workspace` | 55 |
-| `glossary.retread` | 44 |
-| `glossary.tread` | 42 |
-| `glossary.scrap` | 38 |
-| `glossary.dataScope` | 37 |
-| `glossary.purchaseOrder` | 36 |
-| `glossary.breakdown` | 35 |
-| `glossary.quotation` | 35 |
-| `glossary.mechanic` | 33 |
-| `glossary.axle` | 28 |
-| `glossary.finding` | 28 |
-| `glossary.reuse` | 28 |
-| `glossary.partRequest` | 27 |
-| `glossary.goodsReceipt` | 21 |
-| `glossary.intelligence` | 20 |
-| `glossary.inventory` | 19 |
-| `glossary.bundle` | 18 |
-| `glossary.returnToVendor` | 18 |
-| `glossary.casing` | 18 |
-| `glossary.partner` | 17 |
-| `glossary.rim` | 17 |
-| `glossary.odometer` | 14 |
-| `glossary.purchaseRequest` | 12 |
-| `glossary.stockOpname` | 12 |
-| `glossary.serviceInvoice` | 11 |
-| `glossary.workAuthorizationLetter` | 9 |
-| `glossary.tireSpec` | 8 |
-| `correction.tire` | 7 |
-| `glossary.bead` | 7 |
-| `glossary.innerLiner` | 7 |
-| `glossary.roadTest` | 5 |
-| `glossary.dashboard` | 4 |
-| `glossary.supplier` | 4 |
-| `correction.warrantyClaim` | 4 |
-| `glossary.sidewall` | 4 |
-| `glossary.engineHour` | 3 |
-| `glossary.entitlement` | 2 |
-| `correction.wheelsConfiguration` | 2 |
-| `correction.hold` | 1 |
-| `glossary.qualityControl` | 1 |
+| Dependency | Rows | Resolution |
+|---|---:|---|
+| `glossary.workOrder` | 135 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.invoice` | 112 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.sparePart` | 110 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.maintenance` | 109 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.vendor` | 75 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.workshop` | 71 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.tenant` | 56 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.workspace` | 55 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.retread` | 44 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.tread` | 42 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.scrap` | 38 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.dataScope` | 37 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.purchaseOrder` | 36 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.breakdown` | 35 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.quotation` | 35 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.mechanic` | 33 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.axle` | 28 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.finding` | 28 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.reuse` | 28 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.partRequest` | 27 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.goodsReceipt` | 21 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.intelligence` | 20 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.inventory` | 19 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.bundle` | 18 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.returnToVendor` | 18 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.casing` | 18 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.partner` | 17 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.rim` | 17 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.odometer` | 14 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.purchaseRequest` | 12 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.stockOpname` | 12 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.serviceInvoice` | 11 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.workAuthorizationLetter` | 9 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.tireSpec` | 8 | APPROVED_BY_PRODUCT_OWNER |
+| `correction.tire` | 7 | AWAITING_DECISION |
+| `glossary.bead` | 7 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.innerLiner` | 7 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.roadTest` | 5 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.dashboard` | 4 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.supplier` | 4 | APPROVED_BY_PRODUCT_OWNER |
+| `correction.warrantyClaim` | 4 | AWAITING_DECISION |
+| `glossary.sidewall` | 4 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.engineHour` | 3 | APPROVED_BY_PRODUCT_OWNER |
+| `glossary.entitlement` | 2 | APPROVED_BY_PRODUCT_OWNER |
+| `correction.wheelsConfiguration` | 2 | AWAITING_DECISION |
+| `correction.hold` | 1 | AWAITING_DECISION |
+| `glossary.qualityControl` | 1 | APPROVED_BY_PRODUCT_OWNER |
 
 ## Pluralization review
 
-31 rows flagged REQUIRES_PLURALIZATION. Indonesian uses no plural suffix, so every translation is a single natural form with the count parameter kept (e.g. `{count} breakdown dalam 90 hari terakhir`). The English side must move to ICU/i18next plural forms (`_one` / `_other`) at implementation; no "(s)" pattern remains in Indonesian.
+31 rows flagged REQUIRES_PLURALIZATION. Indonesian uses no plural suffix, so every translation is a single natural form with the count parameter kept (e.g. `{count} kerusakan dalam 90 hari terakhir`). The English side must move to ICU/i18next plural forms (`_one` / `_other`) at implementation; no "(s)" pattern remains in Indonesian.
 
 | Key | English | Indonesian |
 |---|---|---|
 | `configuration.help.conditionConditionRulesRuleS` | Condition: {{conditionRules}} rule(s). | Kondisi: {{conditionRules}} aturan. |
 | `configuration.help.stepsCountStepS` | {{stepsCount}} step(s). | {{stepsCount}} tahap. |
 | `inventory.actions.createSellableCountSaleSDraft` | Create {{sellableCount}} Sale(s) (Draft) | Buat {{sellableCount}} Penjualan (Draf) |
-| `inventory.help.missingSelectedTireSNoLonger` | {{missing}} selected tire(s) are no longer scrapped or are outside your data scope and were left out. | {{missing}} ban yang dipilih tidak lagi berstatus scrap atau berada di luar cakupan data Anda dan tidak disertakan. |
+| `inventory.help.missingSelectedTireSNoLonger` | {{missing}} selected tire(s) are no longer scrapped or are outside your data scope and were left out. | {{missing}} ban yang dipilih tidak lagi berstatus scrap atau berada di luar lingkup data Anda dan tidak disertakan. |
 | `procurement.help.leadDaysDaySAfterPo` | {{leadDays}} day(s) after PO | {{leadDays}} hari setelah PO |
 | `tire.help.mappedVehicleCountMappedVehicleS` | {{mapped_vehicle_count}} mapped vehicle(s) stay on their current version until updated in Vehicle Mapping. | {{mapped_vehicle_count}} kendaraan yang terpetakan tetap pada versi saat ini sampai diperbarui di Pemetaan Kendaraan. |
 | `tire.help.mappedVehicleCountVehicleSMapped` | {{mapped_vehicle_count}} vehicle(s) are mapped to this configuration. They keep their current version; move them to the new version from Vehicle Mapping when ready. | {{mapped_vehicle_count}} kendaraan dipetakan ke konfigurasi ini. Kendaraan tersebut tetap pada versi saat ini; pindahkan ke versi baru dari Pemetaan Kendaraan saat siap. |
-| `tire.help.notListedIncompleteVehicleDataVehicle` | Not listed: {{incomplete_vehicle_data}} vehicle(s) without Vehicle Type, Axles or Wheels on their Vehicle Detail, and {{mapped_to_other_configuration}} vehicle(s) mapped to another configuration (remove them there first). | Tidak ditampilkan: {{incomplete_vehicle_data}} kendaraan tanpa Jenis Kendaraan, Sumbu, atau Roda pada Detail Kendaraan, dan {{mapped_to_other_configuration}} kendaraan yang dipetakan ke konfigurasi lain (hapus dari sana terlebih dahulu). |
+| `tire.help.notListedIncompleteVehicleDataVehicle` | Not listed: {{incomplete_vehicle_data}} vehicle(s) without Vehicle Type, Axles or Wheels on their Vehicle Detail, and {{mapped_to_other_configuration}} vehicle(s) mapped to another configuration (remove them there first). | Tidak ditampilkan: {{incomplete_vehicle_data}} kendaraan tanpa Jenis Kendaraan, Poros, atau Roda pada Detail Kendaraan, dan {{mapped_to_other_configuration}} kendaraan yang dipetakan ke konfigurasi lain (hapus dari sana terlebih dahulu). |
 | `tire.help.unansweredCountQuestionSStillUnanswered` | {{unansweredCount}} question(s) still unanswered. | {{unansweredCount}} pertanyaan belum dijawab. |
-| `tire.warnings.reuseTireRestrictedPositionSValue` | This Reuse tire is restricted to position(s) {{value}}, not {{code}}. You can still save — check the restriction before fitting. | Ban Pakai Ulang ini dibatasi untuk posisi {{value}}, bukan {{code}}. Anda tetap dapat menyimpan — periksa batasan sebelum memasang. |
-| `app.labels.countBreakdownSLast30Days` | {count} breakdown(s) in the last 30 days | {count} breakdown dalam 30 hari terakhir |
-| `app.labels.countBreakdownSLast90Days` | {count} breakdown(s) in the last 90 days | {count} breakdown dalam 90 hari terakhir |
+| `tire.warnings.reuseTireRestrictedPositionSValue` | This Reuse tire is restricted to position(s) {{value}}, not {{code}}. You can still save — check the restriction before fitting. | Ban Guna Ulang ini dibatasi untuk posisi {{value}}, bukan {{code}}. Anda tetap dapat menyimpan — periksa batasan sebelum memasang. |
+| `app.labels.countBreakdownSLast30Days` | {count} breakdown(s) in the last 30 days | {count} kerusakan dalam 30 hari terakhir |
+| `app.labels.countBreakdownSLast90Days` | {count} breakdown(s) in the last 90 days | {count} kerusakan dalam 90 hari terakhir |
 | `app.labels.countComponentReplacementSLast90` | {count} component replacement(s) in the last 90 days | {count} penggantian komponen dalam 90 hari terakhir |
 | `app.labels.countCriticalInspectionFindingSLast` | {count} critical inspection finding(s) in the last 90 days | {count} temuan inspeksi kritis dalam 90 hari terakhir |
 | `app.labels.countDaySDowntimeLast90` | {count} day(s) of downtime in the last 90 days | {count} hari downtime dalam 90 hari terakhir |
 | `app.labels.countMinuteSDowntimeLast90` | {count} minute(s) of downtime in the last 90 days | {count} menit downtime dalam 90 hari terakhir |
-| `app.labels.countOverdueMaintenanceItemS` | {count} overdue maintenance item(s) | {count} item perawatan terlambat |
+| `app.labels.countOverdueMaintenanceItemS` | {count} overdue maintenance item(s) | {count} item pemeliharaan terlambat |
 | `app.labels.countRepeatRepairSSameComponent` | {count} repeat repair(s) on the same component group in the last 90 days | {count} perbaikan berulang pada grup komponen yang sama dalam 90 hari terakhir |
 | `app.labels.countTireReplacementSLast90` | {count} tire replacement(s) in the last 90 days | {count} penggantian ban dalam 90 hari terakhir |
 | `app.labels.countWarrantyClaimSLast90` | {count} warranty claim(s) in the last 90 days | {count} klaim garansi dalam 90 hari terakhir |
@@ -128,7 +128,7 @@ Translation readiness and implementation readiness are separate: a STRUCTURAL_PR
 | `errors.tire.onlyPendingReplacementTireSProduct` | Only {{pending}} replacement tire(s) of this product are still to be installed for the Tire Operation. | Hanya tersisa {{pending}} ban pengganti dari produk ini yang belum dipasang untuk Operasi Ban. |
 | `errors.tire.onlyTiresReuseReplacementTireS` | Only {{tires}} REUSE replacement tire(s) of this product are still to be issued for the Tire Operation. | Hanya tersisa {{tires}} ban pengganti REUSE dari produk ini yang belum dikeluarkan untuk Operasi Ban. |
 | `errors.workOrder.onlyTiresIssuedUsedTireS` | Only {{tires}} issued used tire(s) of this line are not installed. | Hanya {{tires}} ban bekas yang dikeluarkan dari baris ini yang belum dipasang. |
-| `tire.reasons.repairableDamages` | {{count}} repairable damage(s) within the repair limits; tread still usable. | {{count}} kerusakan yang dapat diperbaiki dalam batas perbaikan; tapak masih layak pakai. |
+| `tire.reasons.repairableDamages` | {{count}} repairable damage(s) within the repair limits; tread still usable. | {{count}} kerusakan yang dapat diperbaiki dalam batas perbaikan; tapak ban masih layak pakai. |
 | `tire.reasons.serialSerialNumberRestrictedPositionS` | Serial {{serialNumber}} is restricted to position(s) | Seri {{serialNumber}} dibatasi untuk posisi |
 | `validation.accessControl.invalidPermissions` | {{count}} selected permission(s) do not exist or do not belong to the {{scope}} scope. | {{count}} izin yang dipilih tidak ada atau bukan milik cakupan {{scope}}. |
 
@@ -137,9 +137,13 @@ Translation readiness and implementation readiness are separate: a STRUCTURAL_PR
 | Pair | Domains | Final handling |
 |---|---|---|
 | ISSUED vs PUBLISHED | ISSUED: documents (PO/RFQ/invoice) and stock (part request); PUBLISHED: configuration | Separate keys: `status.document.issued` = Diterbitkan, `status.stock.issued` = Dikeluarkan, `status.published` = Diterbitkan (configuration domain). `status.issued` marked superseded. Needs the status registry (per domain). |
-| Receive vs Accept | Receive = goods/cycle receipt; Accept = recommendation / vendor acceptance | Kept as separate keys; both read "Terima" literally. Pending style.approveAccept (owner may choose Accept → Setujui). |
-| Bundle vs Package | Bundle = commercial module bundle (platform); Package = maintenance package | Separate keys. Package = "Paket" (APPROVED_AUTOMATIC). Bundle is AWAITING_DECISION (recommended "Paket", alternative "Bundle"); choosing "Paket" makes the two literally equal in different domains — choosing "Bundle" avoids it. |
+| Receive vs Accept | Receive = goods/cycle receipt; Accept = recommendation / vendor acceptance | Separate keys; both read "Terima" — consistent with the owner style decision (Accept = Terima). |
+| Bundle vs Package | Bundle = commercial module bundle; Package = maintenance package | RESOLVED by owner decision: Bundle = "Bundel", Package = "Paket". No longer equal. |
+| Breakdown vs Failure / Damage | Breakdown = unplanned vehicle stop (maintenance event type); Failure / Damage = component failure, damage findings (e.g. Repeat Failure, Failure Rate) | Owner decision Breakdown = "Kerusakan" is authoritative and applied. Failure/damage texts also read "Kerusakan", so the two concepts are textually equal in places; keys stay separate. Documented, not changed. |
+| Axle vs Wheelbase | Axle = tire position axis; Wheelbase = vehicle dimension | Axle = "Poros" (owner). Wheelbase keeps standard technical term "jarak sumbu roda" (not the Axle term). |
 | Paid vs Settled | Payment vs warranty claim | Fixed in preparation (Lunas / Diselesaikan). |
+| Approve (standalone) vs Approve <object> | Button vs action with object | Owner: Approve = "Setuju". Standalone buttons → "Setuju"; with an object the transitive "Setujui <object>" is kept for grammar (noted per row). |
+| Remove (record) vs Remove (from vehicle) | Delete record/file/line vs physical removal | Owner: Remove = "Hapus" for records. Physical removal of a tire/component from a vehicle keeps "Lepas" (noted per row). |
 
 ## Workflow action labels (action vs status)
 
@@ -148,11 +152,11 @@ Translation readiness and implementation readiness are separate: a STRUCTURAL_PR
 | `workflow.actions.actionLabel` | External | Eksternal | — | — |
 | `workflow.actions.actionLabel2` | Revise | Revisi | — | — |
 | `workflow.actions.actionLabel3` | Cancel | Batal | — | — |
-| `workflow.actions.actionLabel4` | Close (External Invoice Paid) | Tutup (Invoice Eksternal Lunas) | — | — |
+| `workflow.actions.actionLabel4` | Close (External Invoice Paid) | Tutup (Faktur Eksternal Lunas) | — | — |
 | `workflow.actions.actionLabel5` | In Progress | Dalam Proses | — | — |
 | `workflow.actions.actionLabel6` | Qc Pending | Menunggu QC | — | — |
 | `workflow.actions.actionLabel7` | Cancelled | Dibatalkan | — | — |
-| `workflow.actions.approved` | Approved | Disetujui | `workflow.actionVerb.approved` | Approve → Setujui |
+| `workflow.actions.approved` | Approved | Disetujui | `workflow.actionVerb.approved` | Approve → Setuju |
 | `workflow.actions.assessed` | Assessed | Dinilai | `workflow.actionVerb.assessed` | Assess → Nilai |
 | `workflow.actions.assigned` | Assigned | Ditugaskan | `workflow.actionVerb.assigned` | Assign → Tugaskan |
 | `workflow.actions.closed` | Closed | Ditutup | `workflow.actionVerb.closed` | Close → Tutup |
