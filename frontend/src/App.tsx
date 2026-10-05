@@ -48,7 +48,6 @@ import { TenantRolesPage } from './pages/tenant/access/TenantRolesPage';
 import { TenantAuditLogPage } from './pages/tenant/audit/TenantAuditLogPage';
 import { NumberingConfigPage } from './pages/tenant/configuration/NumberingConfigPage';
 import { DocumentTemplateConfigPage } from './pages/tenant/configuration/DocumentTemplateConfigPage';
-import { TireScoringConfigPage } from './pages/tenant/configuration/TireScoringConfigPage';
 import { NotificationRulesPage } from './pages/tenant/configuration/NotificationRulesPage';
 import { ConfigurationHistoryPage } from './pages/tenant/configuration/ConfigurationHistoryPage';
 import { AccountSubscriptionPage } from './pages/tenant/account/AccountSubscriptionPage';
@@ -705,14 +704,8 @@ export default function App() {
                 </RequirePermission>
               }
             />
-            <Route
-              path="configuration/tire-scoring"
-              element={
-                <RequirePermission permission="configuration.view">
-                  <TireScoringConfigPage />
-                </RequirePermission>
-              }
-            />
+            {/* Tire Scoring is retired (replaced by Used Tire Inspection); old links land on Used Tire Management. */}
+            <Route path="configuration/tire-scoring" element={<Navigate to="/app/used-tires" replace />} />
             <Route
               path="configuration/history"
               element={

@@ -264,7 +264,7 @@ class RewiredPermissionsTest extends TestCase
 
         // Configuration permissions are resolved per document type inside ConfigurationController.
         $configuration = ['document_template.manage', 'document_template.publish', 'numbering.manage', 'numbering.publish',
-            'tire_scoring_configuration.manage', 'tire_scoring_configuration.publish', 'workflow.manage', 'workflow.publish', 'workflow.simulate'];
+            'workflow.manage', 'workflow.publish', 'workflow.simulate'];
 
         $unused = Permission::query()->pluck('name')->unique()
             ->reject(fn ($name) => $enforced->contains($name) || in_array($name, $configuration, true))

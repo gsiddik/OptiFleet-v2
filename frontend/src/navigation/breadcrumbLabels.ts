@@ -76,7 +76,6 @@ export const SEGMENT_LABELS: Record<string, string> = {
   'document-templates': 'Document Templates',
   workflows: 'Workflows',
   notifications: 'Notification Rules',
-  'tire-scoring': 'Tire Scoring Configuration',
   history: 'Configuration History',
 
   // Account (Tenant self-service)

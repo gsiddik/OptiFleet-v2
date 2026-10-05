@@ -33,12 +33,15 @@ class PermissionCatalog
     public function __construct(private readonly Router $router) {}
 
     /** @return Collection<int, array<string, mixed>> */
+    /** Permission groups of retired features: kept in the database (history) but no longer offered. */
+    public const RETIRED_GROUPS = ['tire_scoring', 'tire_scoring_configuration'];
+
     public function forScope(string $scope): Collection
     {
         $moduleByPermission = $this->moduleByPermission($scope);
         $moduleNames = DB::table('modules')->pluck('name', 'code');
 
-        return Permission::query()->where('scope', $scope)->orderBy('group')->orderBy('name')->get()
+        return Permission::query()->where('scope', $scope)->whereNotIn('group', self::RETIRED_GROUPS)->orderBy('group')->orderBy('name')->get()
             ->map(function (Permission $permission) use ($moduleByPermission, $moduleNames) {
                 $moduleCode = $moduleByPermission[$permission->name] ?? null;
                 $action = str_starts_with($permission->name, $permission->group.'.')
@@ -97,7 +100,7 @@ class PermissionCatalog
         return match (true) {
             in_array($group, ['user', 'role', 'audit'], true) => 'Access Management',
             $group === 'account' => 'Account & Subscription',
-            in_array($group, ['configuration', 'numbering', 'document_template', 'workflow', 'notification_rule', 'configuration_history', 'tire_scoring_configuration'], true) => 'Configuration',
+            in_array($group, ['configuration', 'numbering', 'document_template', 'workflow', 'notification_rule', 'configuration_history'], true) => 'Configuration',
             in_array($group, ['tenant', 'module', 'entitlement', 'bundle', 'pricing', 'contract', 'subscription', 'billing', 'invoice', 'payment'], true) => 'Commercial',
             in_array($group, ['analytics', 'analytics_etl'], true) => 'Analytics',
             in_array($group, ['intelligence', 'intelligence_admin'], true) => 'Maintenance Intelligence',

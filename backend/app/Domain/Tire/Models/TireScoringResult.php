@@ -10,9 +10,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * Phase F (G-31): one structured scoring calculation. Immutability once
- * finalized is enforced in TireScoringService, not here — see the
- * migration's docblock.
+ * LEGACY — historical only. Tire Scoring was retired in favour of the Used Tire Inspection engine:
+ * no code creates, finalizes or decides anything from these rows any more. They are kept (and
+ * readable through Tire::scoringResults / TireSale::scoringResult) so past results stay auditable.
+ *
+ * Phase F (G-31): one structured scoring calculation.
  */
 class TireScoringResult extends Model
 {

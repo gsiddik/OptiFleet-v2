@@ -775,8 +775,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/tires/{tire}/repairs/{repair}/approve', [TireController::class, 'approveRepair'])->middleware('permission:tire_repair.approve');
             Route::post('/tires/{tire}/scrap', [TireController::class, 'scrap'])->middleware('permission:tire.scrap');
             // Phase F: calculate/finalize are distinct permissions (maker-checker on the score itself).
-            Route::post('/tires/{tire}/scoring', [TireController::class, 'calculateScoring'])->middleware('permission:tire_scoring.calculate');
-            Route::post('/tires/{tire}/scoring/{scoringResult}/finalize', [TireController::class, 'finalizeScoring'])->middleware('permission:tire_scoring.finalize');
             Route::post('/tires/{tire}/sell', [TireController::class, 'sell'])->middleware('permission:tire.sell');
         });
 
