@@ -114,7 +114,7 @@ SupplyChainSeeder's battery asset is stored in a warehouse before installation (
 | Gate | Result |
 |---|---|
 | Backend targeted (tire suites 176, component / procurement / sale / seeder suites 221, new tests) | PASS |
-| Backend full regression (non-Mongo, PostgreSQL) | see final report |
+| Backend full regression (non-Mongo, PostgreSQL) | PASS — 1135 tests, 7378 assertions (affected suites re-run on final HEAD: 50 passed) |
 | Mongo-dependent tests (Analytics / Intelligence) | NOT RUN — MongoDB is not available in this environment |
 | `npm run lint` | PASS — 0 errors, 27 warnings (unchanged baseline) |
 | `npm run build` (includes `tsc -b`) | PASS |
