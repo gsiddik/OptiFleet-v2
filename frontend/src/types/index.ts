@@ -2171,6 +2171,11 @@ export interface TireActivityItem {
   product_name: string | null;
   product_brand: string | null;
   registration_number: string | null;
+  /** Retread / repair cycle rows: the cycle's own state (SENT, RECEIVED, FINAL_INSPECTED, APPROVED, REJECTED). */
+  stage?: string | null;
+  /** Retread / repair cycle rows: the tire's usage up to entering the cycle (null when unknown, never a guessed 0). */
+  usage_km?: string | null;
+  usage_hours?: string | null;
 }
 
 export interface TireItem {

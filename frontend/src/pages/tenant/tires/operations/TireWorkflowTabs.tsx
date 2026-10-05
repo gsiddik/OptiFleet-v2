@@ -5,11 +5,13 @@ import { EmptyState, ErrorState, LoadingState } from '../../../../components/Sta
 import { StatusBadge } from '../../../../components/StatusBadge';
 import { Table, type Column } from '../../../../components/Table';
 import { Toolbar } from '../../../../components/Toolbar';
+import { PositionLabel } from '../../../../components/tires/PositionLabel';
 import { useApiList } from '../../../../hooks/useApiList';
 import { useAuth } from '../../../../auth/AuthContext';
 import { formatDateTime } from '../../../../utils/date';
 import type { TireActivityItem, TireActivityType, TireItem } from '../../../../types';
 import { TireHistoryModal } from './TireHistoryModal';
+import { formatHours, formatKm } from './tireOperationFormat';
 
 export interface WorkflowTab {
   key: string;
@@ -155,6 +157,21 @@ const ACTIVITY_LABELS: Record<TireActivityType, string> = {
   SCRAP: 'Scrapped',
 };
 
+/** Retread / repair cycle states (the cycle model's own steps). */
+const CYCLE_STAGE_LABELS: Record<string, string> = {
+  SENT: 'Sent to vendor',
+  RECEIVED: 'Received',
+  FINAL_INSPECTED: 'Re-inspection',
+  APPROVED: 'Completed',
+  REJECTED: 'Rejected',
+};
+
+function cycleEvent(e: TireActivityItem): string {
+  const stage = e.stage ? (CYCLE_STAGE_LABELS[e.stage] ?? e.stage) : null;
+  const result = e.stage === 'APPROVED' && e.status && e.status !== e.stage ? ` → ${e.status}` : '';
+  return [ACTIVITY_LABELS[e.type], stage].filter(Boolean).join(' · ') + result;
+}
+
 /** Tire History events (newest first), server-side paginated; shared by History and the workflow tabs. */
 export function TireActivityTable({ types, search, perPage = 20, completedCycles = false }: { types: TireActivityType[]; search?: string; perPage?: number; completedCycles?: boolean }) {
   const [page, setPage] = useState(1);
@@ -165,12 +182,27 @@ export function TireActivityTable({ types, search, perPage = 20, completedCycles
   );
   const rows = data.map((e) => ({ ...e, id: `${e.type}-${e.id}` }));
 
-  const columns: Column<TireActivityItem>[] = [
+  const vehicleCell = (e: TireActivityItem) => (e.vehicle_id ? <Link to={`/app/vehicles/${e.vehicle_id}`}>{e.registration_number ?? '—'}</Link> : '—');
+
+  // Used Tire Management → Retread: the vehicle / position the tire was last on before the cycle and
+  // the tire's own usage up to then (backend values; "—" when unknown).
+  const cycleColumns: Column<TireActivityItem>[] = [
+    { key: 'when', header: 'When', render: (e) => formatDateTime(e.occurred_at) },
+    { key: 'event', header: 'Event', render: (e) => cycleEvent(e) },
+    { key: 'serial', header: 'Serial', render: (e) => <Link to={`/app/tires/${e.tire_id}`}>{e.serial_number}</Link> },
+    { key: 'product', header: 'Product', render: (e) => (e.product_name ? <Link to={`/app/tires/products/${e.product_id}`}>{e.product_name}</Link> : '—') },
+    { key: 'vehicle', header: 'Vehicle', render: vehicleCell },
+    { key: 'position', header: 'Position', render: (e) => <PositionLabel code={e.position} /> },
+    { key: 'usage_km', header: 'Usage KM', render: (e) => formatKm(e.usage_km) },
+    { key: 'usage_hours', header: 'Usage Hours', render: (e) => formatHours(e.usage_hours) },
+  ];
+
+  const columns: Column<TireActivityItem>[] = completedCycles ? cycleColumns : [
     { key: 'when', header: 'When', render: (e) => formatDateTime(e.occurred_at) },
     { key: 'event', header: 'Event', render: (e) => ACTIVITY_LABELS[e.type] },
     { key: 'serial', header: 'Serial', render: (e) => <Link to={`/app/tires/${e.tire_id}`}>{e.serial_number}</Link> },
     { key: 'product', header: 'Product', render: (e) => (e.product_name ? <Link to={`/app/tires/products/${e.product_id}`}>{e.product_name}</Link> : '—') },
-    { key: 'vehicle', header: 'Vehicle', render: (e) => (e.vehicle_id ? <Link to={`/app/vehicles/${e.vehicle_id}`}>{e.registration_number ?? '—'}</Link> : '—') },
+    { key: 'vehicle', header: 'Vehicle', render: vehicleCell },
     { key: 'position', header: 'Position', render: (e) => e.position ?? '—' },
     { key: 'odometer', header: 'KM', render: (e) => e.odometer ?? '—' },
     { key: 'status', header: 'Result', render: (e) => [e.status, e.detail].filter(Boolean).join(' · ') || '—' },
