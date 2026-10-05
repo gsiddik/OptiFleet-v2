@@ -24,6 +24,25 @@ export function ReturnToVendorModal({
 }) {
   const [option, setOption] = useState<PurchaseReturnOption | "">("");
   const [quantities, setQuantities] = useState<Record<string, string>>({});
+  // Lines whose receipts generated Component Assets: the returned Asset# are selected and the
+  // quantity is the number selected (owner decision).
+  const [selectedAssets, setSelectedAssets] = useState<
+    Record<string, string[]>
+  >({});
+  const assetsOf = (id: string) =>
+    po.return_summary?.items[id]?.returnable_assets ?? [];
+  const toggleAsset = (lineId: string, assetId: string) =>
+    setSelectedAssets((sel) => {
+      const current = sel[lineId] ?? [];
+      const next = current.includes(assetId)
+        ? current.filter((a) => a !== assetId)
+        : [...current, assetId];
+      setQuantities((q) => ({
+        ...q,
+        [lineId]: next.length ? String(next.length) : "",
+      }));
+      return { ...sel, [lineId]: next };
+    });
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,6 +57,9 @@ export function ReturnToVendorModal({
       .map((item) => ({
         purchase_order_item_id: item.id,
         quantity: quantities[item.id],
+        ...(assetsOf(item.id).length > 0
+          ? { component_asset_ids: selectedAssets[item.id] ?? [] }
+          : {}),
       }));
     if (!option) return setError("Choose the Return Option.");
     if (items.length === 0)
@@ -162,6 +184,7 @@ export function ReturnToVendorModal({
               </span>
               <NumericInput
                 aria-label={`Qty Returned ${item.product?.name ?? item.id}`}
+                readOnly={assetsOf(item.id).length > 0}
                 step="0.0001"
                 min="0"
                 max={String(returnable(item.id))}
@@ -172,6 +195,51 @@ export function ReturnToVendorModal({
                 }
                 style={{ ...inputStyle, width: 130 }}
               />
+              {assetsOf(item.id).length > 0 && (
+                <fieldset
+                  data-return-assets={item.product?.name}
+                  style={{
+                    flex: "1 1 100%",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "6px 10px",
+                    margin: 0,
+                  }}
+                >
+                  <legend style={{ fontSize: 12, color: "#374151" }}>
+                    Select the Asset# returned (quantity = number selected)
+                  </legend>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+                    {assetsOf(item.id).map((a) => (
+                      <label
+                        key={a.id}
+                        style={{
+                          fontSize: 12,
+                          display: "inline-flex",
+                          gap: 4,
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={(selectedAssets[item.id] ?? []).includes(
+                            a.id,
+                          )}
+                          onChange={() => toggleAsset(item.id, a.id)}
+                        />
+                        <span style={{ fontFamily: "monospace" }}>
+                          {a.asset_number}
+                        </span>
+                        {a.serial_number && (
+                          <span style={{ color: "#6b7280" }}>
+                            (S/N {a.serial_number})
+                          </span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+              )}
             </div>
           ))}
         </div>

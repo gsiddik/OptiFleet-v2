@@ -94,6 +94,7 @@ export function SparePartSalePage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <span>
               {sale.source_type === 'SCRAPPED_TIRE' && <strong data-sale-serial>Tire {sale.tire_serial_number} · </strong>}
+              {sale.source_type === 'COMPONENT_ASSET' && <strong data-sale-asset>Asset {sale.asset_number} · </strong>}
               {sale.product?.name ?? sale.product_id} — qty {formatQty(sale.quantity)} × {formatMoney(sale.unit_price)} = {formatMoney(sale.total_amount)} ({sale.sale_type})
               <br />
               <span style={{ color: '#6b7280', fontSize: 12 }}>
