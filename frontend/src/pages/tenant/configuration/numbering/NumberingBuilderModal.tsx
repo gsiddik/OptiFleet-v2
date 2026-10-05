@@ -275,9 +275,6 @@ export function NumberingBuilderModal({
                   e.dataTransfer.setData(TOKEN_DRAG_TYPE, t.token);
                   e.dataTransfer.effectAllowed = "copy";
                 }}
-                onMouseDown={
-                  (e) => e.preventDefault() /* keep the Format's cursor */
-                }
                 onClick={() => editor.current?.insertToken(t.token)}
                 style={{
                   padding: "3px 9px",

@@ -196,8 +196,12 @@ export function DocumentConfigList({
         const { system, custom } = groups.get(code)!;
         const customActive = published(custom);
         const systemActive = published(system);
+        // New Draft starts from what is in use: the active custom configuration, else the System Default.
         const source =
-          custom?.versions[0] ?? systemActive ?? system?.versions[0];
+          customActive ??
+          systemActive ??
+          custom?.versions[0] ??
+          system?.versions[0];
         return (
           <section
             key={code}

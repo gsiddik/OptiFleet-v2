@@ -89,6 +89,15 @@ export const FormatEditor = forwardRef<
     const el = root.current;
     if (!el) return;
     if (range && el.contains(range.startContainer)) {
+      // Never inside a chip: a caret within one moves to just after it.
+      const start = range.startContainer;
+      const inChip = (
+        start instanceof Element ? start : start.parentElement
+      )?.closest("[data-token]");
+      if (inChip) {
+        range.setStartAfter(inChip);
+        range.collapse(true);
+      }
       range.deleteContents();
       range.insertNode(node);
     } else {
@@ -102,11 +111,11 @@ export const FormatEditor = forwardRef<
     if (next && next.nodeType === Node.TEXT_NODE) after.setStart(next, 0);
     else after.setStartAfter(node);
     after.collapse(true);
-    if (document.activeElement === el) {
-      const sel = window.getSelection();
-      sel?.removeAllRanges();
-      sel?.addRange(after);
-    }
+    // Back to the Format with the cursor after the inserted part, so typing continues there.
+    el.focus();
+    const sel = window.getSelection();
+    sel?.removeAllRanges();
+    sel?.addRange(after);
     saved.current = after.cloneRange();
     emit();
   };
@@ -139,6 +148,19 @@ export const FormatEditor = forwardRef<
           sel && sel.rangeCount ? sel.getRangeAt(0) : saved.current,
           document.createTextNode(text),
         );
+      }}
+      onMouseUp={(e) => {
+        // A click on a chip puts the cursor right after it (chips are not editable inside).
+        const chip = (e.target as HTMLElement).closest("[data-token]");
+        if (!chip) return;
+        const range = document.createRange();
+        if (chip.nextSibling?.nodeType === Node.TEXT_NODE)
+          range.setStart(chip.nextSibling, 0);
+        else range.setStartAfter(chip);
+        range.collapse(true);
+        const sel = window.getSelection();
+        sel?.removeAllRanges();
+        sel?.addRange(range);
       }}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes(TOKEN_DRAG_TYPE)) e.preventDefault();

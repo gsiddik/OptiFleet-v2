@@ -31,7 +31,7 @@ class TemplateDocumentCompiler
 
     private const CSS_PROPERTIES = [
         'font-family', 'font-size', 'font-weight', 'font-style', 'text-align', 'text-decoration', 'text-transform', 'color',
-        'background-color', 'border', 'border-top', 'border-bottom', 'border-left', 'border-right', 'border-collapse', 'border-color',
+        'background', 'background-color', 'border', 'border-top', 'border-bottom', 'border-left', 'border-right', 'border-collapse', 'border-color',
         'border-style', 'border-width', 'border-radius', 'padding', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right',
         'margin', 'margin-top', 'margin-bottom', 'margin-left', 'margin-right', 'width', 'min-width', 'max-width', 'height',
         'display', 'justify-content', 'align-items', 'flex', 'flex-direction', 'flex-wrap', 'gap', 'vertical-align', 'line-height',

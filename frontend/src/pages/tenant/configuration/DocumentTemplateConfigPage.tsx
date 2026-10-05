@@ -1,87 +1,116 @@
-import { useEffect, useState } from 'react';
-import { apiClient, extractApiError } from '../../../api/client';
-import { FormField, inputStyle } from '../../../components/FormField';
-import { Modal } from '../../../components/Modal';
-import { ConfigurationSetManager } from './ConfigurationSetManager';
-import type { ConfigurationSetItem } from '../../../types';
+import { useEffect, useState } from "react";
+import { apiClient, extractApiError } from "../../../api/client";
+import { Modal } from "../../../components/Modal";
+import { ErrorState, LoadingState } from "../../../components/States";
+import type { DocumentTypeOption } from "../../../types";
+import { DocumentConfigList, type EditorRequest } from "./DocumentConfigList";
+import {
+  TemplateEditor,
+  type TemplateEditorTarget,
+} from "./templates/TemplateEditor";
 
-const DOCUMENT_TYPES = [
-  'work_order', 'maintenance_report', 'inspection_report', 'vehicle_transfer', 'stock_transfer',
-  'purchase_request', 'purchase_order', 'goods_receipt', 'warranty_claim', 'invoice',
-];
-
+/**
+ * Configuration → Document Template: per printed document type, the System Default and your
+ * Custom Configuration, designed in the visual editor (variables and repeating blocks as cards,
+ * no HTML or JSON to edit). Documents already printed are not changed.
+ */
 export function DocumentTemplateConfigPage() {
-  const [selectedType, setSelectedType] = useState('work_order');
-  const [variables, setVariables] = useState<{ scalars: string[]; sections: Record<string, string[]> } | null>(null);
-  const [preview, setPreview] = useState<{ code: string; html: string } | null>(null);
+  const [types, setTypes] = useState<DocumentTypeOption[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState<EditorRequest | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [preview, setPreview] = useState<{ code: string; html: string } | null>(
+    null,
+  );
 
   useEffect(() => {
-    apiClient.get('/app/configuration/metadata', { params: { type: 'TEMPLATE', code: selectedType } }).then((res) => setVariables(res.data.data.variables));
-  }, [selectedType]);
+    apiClient
+      .get("/app/configuration/metadata", { params: { type: "TEMPLATE" } })
+      .then((res) => setTypes(res.data.data.document_type_options))
+      .catch((e) => setError(extractApiError(e).message));
+  }, []);
 
-  async function handlePreview(set: ConfigurationSetItem, payload: Record<string, unknown>) {
+  async function handlePreview(code: string, payload: Record<string, unknown>) {
     try {
-      const res = await apiClient.post('/app/configuration/preview', { type: 'TEMPLATE', code: set.code, html: (payload as { html?: string }).html ?? '' });
-      setPreview({ code: set.code, html: res.data.data.html });
+      const body = payload.editor
+        ? {
+            type: "TEMPLATE",
+            code,
+            editor: (payload.editor as { nodes: unknown[] }).nodes,
+          }
+        : {
+            type: "TEMPLATE",
+            code,
+            html: (payload.html as string | undefined) ?? "",
+          };
+      const res = await apiClient.post("/app/configuration/preview", body);
+      setPreview({ code, html: res.data.data.html });
     } catch (err) {
-      alert(extractApiError(err).message);
+      setError(extractApiError(err).message);
     }
   }
+
+  if (error && !types) return <ErrorState message={error} />;
+  if (!types) return <LoadingState />;
+  const label = (code: string) =>
+    types.find((t) => t.key === code)?.label ?? code;
 
   return (
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>Document Templates</h1>
-      <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 16 }}>
-        Configure the printable HTML template for each document type. Payload is <code>{'{"html": "..."}'}</code>, using{' '}
-        <code>{'{{variable}}'}</code> substitution and <code>{'{{#section}}...{{/section}}'}</code> repeating sections — only variables
-        listed below are allowed; publish is rejected if the template references anything else.
+      <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
+        Design how each printed document looks. Write and format text like in a
+        word processor and add information such as the vehicle registration or
+        the list of jobs from the cards; the preview shows the result with
+        sample data. Documents already printed keep their layout.
       </p>
-
-      <FormField label="Preview variables for document type">
-        <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} style={{ ...inputStyle, maxWidth: 280 }}>
-          {DOCUMENT_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
-      </FormField>
-      {variables && (
-        <div style={{ marginBottom: 20, fontSize: 12, color: '#6b7280', background: '#f9fafb', padding: 10, borderRadius: 6 }}>
-          <div>
-            <strong>Variables:</strong>{' '}
-            {variables.scalars.map((v) => (
-              <code key={v} style={{ background: '#fff', border: '1px solid #e5e7eb', padding: '1px 5px', borderRadius: 4, marginRight: 4, marginBottom: 4, display: 'inline-block' }}>
-                {`{{${v}}}`}
-              </code>
-            ))}
-          </div>
-          {Object.entries(variables.sections).map(([section, fields]) => (
-            <div key={section} style={{ marginTop: 6 }}>
-              <strong>{`{{#${section}}}...{{/${section}}}`}</strong> fields:{' '}
-              {fields.map((f) => (
-                <code key={f} style={{ background: '#fff', border: '1px solid #e5e7eb', padding: '1px 5px', borderRadius: 4, marginRight: 4 }}>
-                  {`{{${f}}}`}
-                </code>
-              ))}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <ConfigurationSetManager
+      {error && <ErrorState message={error} />}
+      <DocumentConfigList
         type="TEMPLATE"
-        manageParm="document_template.manage"
+        managePermission="document_template.manage"
         publishPermission="document_template.publish"
-        codeLabel="Document Type"
-        codePlaceholder="e.g. work_order, purchase_order"
-        payloadHelp={<div style={{ marginBottom: 6, fontSize: 12, color: '#6b7280' }}>Payload shape: {'{"html": "<div>...</div>"}'}</div>}
+        documentTypes={types}
+        reloadKey={reloadKey}
+        newLabel="New Document Type Configuration"
+        describe={(payload) => (
+          <span style={{ color: "#6b7280" }}>
+            {payload.editor ? "Designed in the visual editor" : "Template"}
+          </span>
+        )}
+        onEdit={setEditing}
         onPreview={handlePreview}
       />
-
+      {editing && (
+        <TemplateEditor
+          documentTypes={types}
+          target={editing as TemplateEditorTarget}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            setReloadKey((k) => k + 1);
+          }}
+        />
+      )}
       {preview && (
-        <Modal open title={`Preview — ${preview.code}`} onClose={() => setPreview(null)} width={700}>
-          <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 16, maxHeight: '60vh', overflow: 'auto' }} dangerouslySetInnerHTML={{ __html: preview.html }} />
+        <Modal
+          open
+          title={`Preview — ${label(preview.code)}`}
+          onClose={() => setPreview(null)}
+          width={860}
+        >
+          <iframe
+            title="Template preview"
+            sandbox=""
+            srcDoc={preview.html}
+            style={{
+              width: "100%",
+              height: "65vh",
+              border: "1px solid #e5e7eb",
+              borderRadius: 6,
+              background: "#fff",
+            }}
+            data-template-preview
+          />
         </Modal>
       )}
     </div>
