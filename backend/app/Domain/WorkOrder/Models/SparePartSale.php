@@ -30,12 +30,16 @@ class SparePartSale extends Model
         'status', 'workflow_configuration_version_id', 'workflow_approval_request_id',
         'stock_movement_id', 'requested_by', 'decided_by', 'decided_at', 'rejection_reason', 'notes',
         'source_type', 'tire_id', 'tire_serial_number', 'tire_status', 'tire_condition',
+        'component_asset_id', 'asset_number',
     ];
 
     public const SOURCE_USED_SPAREPART = 'USED_SPAREPART';
 
     /** A physical tire from Used Tire Management → Scrap → Recently Scrapped (quantity 1). */
     public const SOURCE_SCRAPPED_TIRE = 'SCRAPPED_TIRE';
+
+    /** A physical Component Asset (Inventory → Component Assets; SCRAPPED or REMOVED; quantity 1). */
+    public const SOURCE_COMPONENT_ASSET = 'COMPONENT_ASSET';
 
     protected function casts(): array
     {

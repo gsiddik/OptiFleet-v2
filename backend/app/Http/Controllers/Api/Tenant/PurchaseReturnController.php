@@ -30,6 +30,8 @@ class PurchaseReturnController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.purchase_order_item_id' => ['required', 'uuid'],
             'items.*.quantity' => ['required', 'numeric', 'min:0'],
+            'items.*.component_asset_ids' => ['nullable', 'array'],
+            'items.*.component_asset_ids.*' => ['uuid', 'distinct'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 

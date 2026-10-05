@@ -3,7 +3,10 @@
 export type Option = { value: string; label: string };
 const o = (value: string, label: string): Option => ({ value, label });
 
-export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
+export const QUESTIONS: Record<
+  string,
+  { label: string; options: Option[]; help?: string }
+> = {
   identity_status: {
     label: "Can the tire identity, category, and manufacture date be verified?",
     options: [
@@ -19,6 +22,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   wear_pattern: {
     label: "Wear pattern",
+    help: "The tread wear pattern — even, one-sided, center, both sides, cupping / scalloping or flat spot. Abnormal wear helps reveal alignment, suspension, inflation pressure or load problems.",
     options: [
       o("EVEN", "Even"),
       o("ONE_SIDED", "One-Sided Wear"),
@@ -31,6 +35,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   bulge_separation: {
     label: "Bulge / deformation / separation",
+    help: "Check for bulges, deformation or signs that the tire layers are separating. A finding can indicate casing, belt or ply damage.",
     options: [
       o("NONE", "None"),
       o("PRESENT", "Present"),
@@ -40,6 +45,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   cord_exposure: {
     label: "Cord / wire exposure",
+    help: "Check whether the reinforcing cords / steel wires are visible, broken or corroded. This concerns the tire's structural integrity.",
     options: [
       o("NONE", "None"),
       o("PRESENT", "Present"),
@@ -49,6 +55,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   sidewall_condition: {
     label: "Sidewall",
+    help: "Condition of the tire's side wall: surface abrasion, cracking, cuts and deeper damage.",
     options: [
       o("NORMAL", "Normal"),
       o("SURFACE_ABRASION", "Surface Abrasion"),
@@ -59,6 +66,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   bead_condition: {
     label: "Bead",
+    help: "Condition of the bead — the part of the tire that seats on the rim. Check for abrasion, tearing, deformation and an exposed or damaged bead wire.",
     options: [
       o("NORMAL", "Normal"),
       o("MINOR_ABRASION", "Minor Abrasion"),
@@ -70,6 +78,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   inner_liner_condition: {
     label: "Inner liner",
+    help: "Condition of the inner layer that helps hold the air pressure. It can reveal internal damage that is not visible from the outside.",
     options: [
       o("NORMAL", "Normal"),
       o("LOCAL_DAMAGE", "Local Damage"),
@@ -81,6 +90,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   run_flat_overheat: {
     label: "Run flat / low pressure / overheat",
+    help: "History or signs that the tire ran with very low pressure, leaking or overheated, which can cause internal casing damage.",
     options: [
       o("NO", "No"),
       o("HISTORY_NO_SIGN", "History Present, No Sign Found"),
@@ -90,10 +100,12 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   leak_foreign_object: {
     label: "Leak / foreign object",
+    help: "Check for leaks or penetration by a foreign object such as a nail, screw or other object.",
     options: [o("NO", "No"), o("YES", "Yes"), o("NOT_TESTED", "Not Tested")],
   },
   previous_repair: {
     label: "Previous repair",
+    help: "Check repairs done before and whether they still meet the repair standard.",
     options: [
       o("NONE", "None"),
       o("MEETS_STANDARD", "Meets Standard"),
@@ -104,6 +116,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   age_chemical: {
     label: "Age / chemical damage",
+    help: "Degradation from age or chemical exposure, such as rubber hardening, brittleness, softening, swelling or cracking.",
     options: [
       o("NONE", "None"),
       o("SUSPECTED", "Suspected"),
@@ -113,6 +126,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   casing_compliance: {
     label: "Age / retread / casing compliance",
+    help: "Whether the tire's age, retread count and casing condition still meet the limits that apply to this tire category / model (the active Inspection Rules profile).",
     options: [
       o("MEETS", "Meets Requirement"),
       o("DOES_NOT_MEET", "Does Not Meet Requirement"),
@@ -130,6 +144,7 @@ export const QUESTIONS: Record<string, { label: string; options: Option[] }> = {
   },
   specialist_result: {
     label: "Specialist / retreader result",
+    help: "The result of a further examination by a specialist / retreader, when the decision cannot be made from the fleet inspection alone.",
     options: [
       o("NOT_REQUESTED", "Not Requested"),
       o("PENDING", "Pending"),
@@ -161,10 +176,42 @@ export const TRI_STATE: Option[] = [
   o("UNKNOWN", "Unknown"),
 ];
 export const GROOVES = [
-  { value: "INNER_MAIN", label: "Main groove inner", required: true },
-  { value: "OUTER_MAIN", label: "Main groove outer", required: true },
-  { value: "CENTER", label: "Center / most worn", required: false },
+  {
+    value: "INNER_MAIN",
+    label: "Main groove inner",
+    required: true,
+    help: "Tread depth (mm) measured in the main groove on the inner side of the tire. Captures inner-side wear and helps detect uneven wear.",
+  },
+  {
+    value: "OUTER_MAIN",
+    label: "Main groove outer",
+    required: true,
+    help: "Tread depth (mm) measured in the main groove on the outer side of the tire. Compared with the inner groove to read the wear pattern.",
+  },
+  {
+    value: "CENTER",
+    label: "Center / most worn",
+    required: false,
+    help: "Tread depth (mm) at the center of the tread or at the point that visibly looks the most worn. Captures the lowest tread that the inner / outer grooves may miss.",
+  },
 ] as const;
+
+/** Tread zones: measurement areas around the tire's circumference. */
+export const ZONE_HELP: Record<number, string> = {
+  1: "Zone 1 — the first measurement area around the tire's circumference. Measuring in 3 different areas (not just one spot) makes sure the reading represents the whole tread.",
+  2: "Zone 2 — the second measurement area around the tire's circumference, away from Zone 1.",
+  3: "Zone 3 — the third measurement area around the tire's circumference, away from Zones 1 and 2.",
+};
+
+/** Tread figures (all in mm). D_pull names its real configuration page. */
+export const TREAD_HELP = {
+  d_new:
+    "D_new — the reference tread depth (mm) when the tire was new, or after its last retread. Used as the baseline for the remaining tread percentage when available.",
+  d_min:
+    "D_min — the lowest tread depth (mm) of all measured points: D_min = min(all tread depth measurements). One of the main inputs of the inspection decision.",
+  d_pull:
+    "D_pull — the planned removal tread depth (mm): the threshold at which the fleet pulls a tire from service before it reaches the legal / minimum D_service. D_pull must be ≥ D_service. Adjusted per tire category in Tire Management → Inspection Rules (the active rule profile).",
+} as const;
 export const CATEGORY_LABELS: Record<string, string> = {
   PASSENGER_LT: "Passenger / Light Truck",
   TRUCK_BUS: "Truck / Bus",

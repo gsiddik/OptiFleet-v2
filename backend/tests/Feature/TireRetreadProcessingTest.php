@@ -9,6 +9,7 @@ use App\Domain\Tire\Models\TireLoadIndex;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireSpeedRating;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -162,6 +163,39 @@ class TireRetreadProcessingTest extends TestCase
         $this->assertNotNull($row['received_at']);
         $this->assertCount(2, $row['photos']);
         $this->get("/api/v1/app/tire-cycles/retread/{$row['id']}/photos/{$row['photos'][0]['id']}", $s['headers'])->assertOk();
+    }
+
+    /**
+     * Recent Retread / Repair Cycles: each row carries the vehicle and wheel position the tire was
+     * last on before it entered the cycle, and the tire's own usage (KM and hours) up to then —
+     * later installations do not change it; unknown usage stays null, never 0.
+     */
+    public function test_completed_cycle_rows_carry_the_previous_vehicle_position_and_tire_usage(): void
+    {
+        $s = $this->scenario();
+        // The installation period: 10 hours (installed earlier the same day, removed in scenario()).
+        DB::table('tire_installations')->where('tire_id', $s['tire']->id)->update(['installed_at' => DB::raw("removed_at - interval '10 hours'")]);
+        $cycle = $this->open($s)->assertStatus(201)->json('data');
+        $this->postJson("/api/v1/app/tire-cycles/retread/{$cycle['id']}/receive", [], $s['headers'])->assertOk();
+        $this->postJson('/api/v1/app/tire-used-inspections/'.$this->inspection($s).'/approve', ['warehouse_id' => $s['warehouse']->id], $s['headers'])->assertOk();
+
+        $row = $this->completedFeed($s)[0];
+        $this->assertSame(['RETREAD', 'APPROVED', 'B 77 TRP', 'RL', '8000.00', '10.00'], [$row['type'], $row['stage'], $row['registration_number'], $row['position'], $row['usage_km'], $row['usage_hours']]);
+        $this->assertNull($row['odometer'], 'no raw vehicle KM on a cycle row');
+
+        // Back in service afterwards: the completed cycle keeps the usage it was entered with.
+        $this->travel(2)->hours();
+        $vehicle = $this->makeVehicle($s['tenant'], $this->makeBranch($s['tenant']), $this->makeVehicleCategory(), ['registration_number' => 'B 78 TRP']);
+        $this->postJson("/api/v1/app/tires/{$s['tire']->id}/install", ['vehicle_id' => $vehicle->id, 'wheel_position' => 'FL', 'odometer' => 20000], $s['headers'])->assertStatus(201);
+        $this->postJson("/api/v1/app/tires/{$s['tire']->id}/remove", ['removal_reason' => 'Cut', 'disposition' => 'REPAIR', 'odometer' => 23000], $s['headers'])->assertSuccessful();
+        $row = $this->completedFeed($s)[0];
+        $this->assertSame(['B 77 TRP', 'RL', '8000.00', '10.00'], [$row['registration_number'], $row['position'], $row['usage_km'], $row['usage_hours']]);
+
+        // A cycle of a tire that was never installed: no vehicle / position / usage (null, not 0).
+        $spare = Tire::query()->create(['tenant_id' => $s['tenant']->id, 'product_id' => $s['tire']->product_id, 'serial_number' => 'RTD-SPARE', 'current_status' => 'RETREAD']);
+        $this->open(['tire' => $spare] + $s)->assertStatus(201);
+        $all = collect($this->getJson('/api/v1/app/tire-activity?type[]=RETREAD&type[]=REPAIR', $s['headers'])->json('data'))->keyBy('serial_number');
+        $this->assertSame(['SENT', null, null, null, null], [$all['RTD-SPARE']['stage'], $all['RTD-SPARE']['vehicle_id'], $all['RTD-SPARE']['position'], $all['RTD-SPARE']['usage_km'], $all['RTD-SPARE']['usage_hours']]);
     }
 
     public function test_a_retread_recommendation_after_inspection_starts_a_new_cycle(): void

@@ -92,6 +92,9 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: '/app/products', label: 'Product', permission: 'product.view', module: 'INVENTORY' },
       { to: '/app/inventory', label: 'Warehouse Stock', permission: 'inventory.view', module: 'INVENTORY' },
+      // Physical-asset register (moved from the retired Component Management group; same page,
+      // permission and module, so nobody loses access).
+      { to: '/app/component-assets', label: 'Component Assets', permission: 'component_asset.view', module: 'COMPONENT' },
       { to: '/app/returns', label: 'Return', permission: 'part_return.view', module: 'INVENTORY' },
       { to: '/app/stock-transfers', label: 'Transfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
       { to: '/app/goods-receipts', label: 'Receiving', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
@@ -133,18 +136,9 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/tire-history', label: 'History', permission: 'tire.view', module: 'TIRE' },
     ],
   },
-  {
-    label: 'Component Management',
-    icon: 'component',
-    items: [
-      { to: '/app/component-assets', label: 'Component Assets', permission: 'component_asset.view', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Installation', permission: 'component_asset.install', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Removal', permission: 'component_asset.remove', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Replacement', permission: 'component_asset.replace', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'Repair / Recondition', permission: 'component_asset.manage', module: 'COMPONENT' },
-      { to: '/app/component-assets', label: 'History', permission: 'component_asset.view', module: 'COMPONENT' },
-    ],
-  },
+  // RETIRED: Component Management. Its Installation / Removal / Replacement / Repair-Recondition /
+  // History items only pointed at the Component Assets page (now Inventory → Component Assets),
+  // where the asset detail keeps those actions and the history; services and APIs are unchanged.
   // ORPHANED (owner decision): Warranty, Eligibility and Claims are no longer in the active
   // navigation. Pages (pages/tenant/warranty), APIs, data and history are kept for a future decision.
   {

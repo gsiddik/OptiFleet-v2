@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -117,47 +118,14 @@ class TireInventoryService
      */
     public function usage(array $tireIds): array
     {
-        $installations = DB::table('tire_installations as ti')
-            ->leftJoin('tire_removals as tr', 'tr.tire_installation_id', '=', 'ti.id')
-            ->whereIn('ti.tire_id', $tireIds)
-            // A rotation closes one period and opens the next in the same instant: order the closed
-            // period first (removed_at NULLS LAST, then the lower odometer) so "next" is always the
-            // follow-up installation.
-            ->orderBy('ti.tire_id')->orderBy('ti.installed_at')->orderByRaw('ti.removed_at ASC NULLS LAST')
-            ->orderByRaw('ti.installation_odometer ASC NULLS FIRST')->orderBy('ti.created_at')
-            ->get(['ti.tire_id', 'ti.installed_at', 'ti.installation_odometer', 'ti.removed_at', 'tr.removal_odometer']);
-
+        $installations = $this->installationPeriods($tireIds);
         $readings = $this->operationReadings($tireIds);
 
         $usage = [];
         foreach ($installations->groupBy('tire_id') as $tireId => $periods) {
-            $total = null; // hundredths of a km — integer arithmetic, no float rounding
-            $periods = $periods->values();
-            foreach ($periods as $i => $period) {
-                if ($period->installation_odometer === null) {
-                    continue;
-                }
-                $start = $this->hundredths($period->installation_odometer);
-                // A removal or the follow-up installation (rotation) closes the period explicitly;
-                // otherwise the latest operation reading inside the period is its end so far.
-                $explicit = $period->removal_odometer ?? ($period->removed_at !== null ? ($periods[$i + 1]->installation_odometer ?? null) : null);
-                $end = $explicit !== null ? $this->hundredths($explicit) : null;
-                if ($end === null) {
-                    $from = strtotime((string) $period->installed_at);
-                    $until = $period->removed_at !== null ? strtotime((string) $period->removed_at) : PHP_INT_MAX;
-                    foreach ($readings[$tireId] ?? [] as [$at, $odometer]) {
-                        if ($at >= $from && $at <= $until) {
-                            $end = max($end ?? $odometer, $odometer);
-                        }
-                    }
-                }
-                if ($end === null || $end < $start) {
-                    continue;
-                }
-                $total = ($total ?? 0) + ($end - $start);
-            }
+            $total = $this->kmOf($periods->values(), $readings[$tireId] ?? [], null);
             if ($total !== null) {
-                $usage[$tireId] = intdiv($total, 100).'.'.str_pad((string) ($total % 100), 2, '0', STR_PAD_LEFT);
+                $usage[$tireId] = $this->format($total);
             }
         }
 
@@ -178,37 +146,127 @@ class TireInventoryService
      */
     public function usageHours(array $tireIds): array
     {
-        $installations = DB::table('tire_installations as ti')
-            ->whereIn('ti.tire_id', $tireIds)
-            ->orderBy('ti.tire_id')->orderBy('ti.installed_at')->orderByRaw('ti.removed_at ASC NULLS LAST')->orderBy('ti.created_at')
-            ->get(['ti.tire_id', 'ti.installed_at', 'ti.removed_at']);
+        $installations = $this->installationPeriods($tireIds);
         $readings = $this->operationReadings($tireIds);
 
         $usage = [];
         foreach ($installations->groupBy('tire_id') as $tireId => $periods) {
-            $seconds = null;
-            foreach ($periods as $period) {
-                $start = strtotime((string) $period->installed_at);
-                $end = $period->removed_at !== null ? strtotime((string) $period->removed_at) : null;
-                if ($end === null) {
-                    foreach ($readings[$tireId] ?? [] as [$at]) {
-                        if ($at >= $start) {
-                            $end = max($end ?? $at, $at);
-                        }
-                    }
-                }
-                if ($end === null || $end <= $start) {
-                    continue;
-                }
-                $seconds = ($seconds ?? 0) + ($end - $start);
-            }
-            if ($seconds !== null) {
-                $hundredths = intdiv($seconds * 100, 3600); // hundredths of an hour, integer arithmetic
-                $usage[$tireId] = intdiv($hundredths, 100).'.'.str_pad((string) ($hundredths % 100), 2, '0', STR_PAD_LEFT);
+            $hundredths = $this->hoursOf($periods->values(), $readings[$tireId] ?? [], null);
+            if ($hundredths !== null) {
+                $usage[$tireId] = $this->format($hundredths);
             }
         }
 
         return $usage;
+    }
+
+    /**
+     * Tire usage up to a moment (e.g. a retread / repair cycle opening): KM and hours over the
+     * installation periods that had ended (tire removed) by then — the same rules as usage() and
+     * usageHours(). A value that cannot be measured stays null (never a fabricated zero).
+     *
+     * @param  array<string, array{0: string, 1: string}>  $cutoffs  key => [tire id, date/time]
+     * @return array<string, array{km: ?string, hours: ?string}>
+     */
+    public function usageBefore(array $cutoffs): array
+    {
+        $tireIds = array_values(array_unique(array_map(fn (array $c) => $c[0], $cutoffs)));
+        $periods = $this->installationPeriods($tireIds)->groupBy('tire_id');
+        $readings = $this->operationReadings($tireIds);
+
+        $usage = [];
+        foreach ($cutoffs as $key => [$tireId, $at]) {
+            $own = ($periods[$tireId] ?? collect())->values();
+            $cutoff = strtotime($at);
+            $km = $this->kmOf($own, $readings[$tireId] ?? [], $cutoff);
+            $hours = $this->hoursOf($own, $readings[$tireId] ?? [], $cutoff);
+            $usage[$key] = ['km' => $km === null ? null : $this->format($km), 'hours' => $hours === null ? null : $this->format($hours)];
+        }
+
+        return $usage;
+    }
+
+    /** Installation periods ordered so a rotation's closed period comes before its follow-up. */
+    private function installationPeriods(array $tireIds): Collection
+    {
+        return DB::table('tire_installations as ti')
+            ->leftJoin('tire_removals as tr', 'tr.tire_installation_id', '=', 'ti.id')
+            ->whereIn('ti.tire_id', $tireIds)
+            // A rotation closes one period and opens the next in the same instant: order the closed
+            // period first (removed_at NULLS LAST, then the lower odometer) so "next" is always the
+            // follow-up installation.
+            ->orderBy('ti.tire_id')->orderBy('ti.installed_at')->orderByRaw('ti.removed_at ASC NULLS LAST')
+            ->orderByRaw('ti.installation_odometer ASC NULLS FIRST')->orderBy('ti.created_at')
+            ->get(['ti.tire_id', 'ti.installed_at', 'ti.installation_odometer', 'ti.removed_at', 'tr.removal_odometer']);
+    }
+
+    /** A period counts toward usage "before" a cutoff only when it had ended by then. */
+    private function endedBy(object $period, ?int $cutoff): bool
+    {
+        return $cutoff === null || ($period->removed_at !== null && strtotime((string) $period->removed_at) <= $cutoff);
+    }
+
+    /** KM over the periods, in hundredths of a km (integer arithmetic, no float rounding). */
+    private function kmOf(Collection $periods, array $readings, ?int $cutoff): ?int
+    {
+        $total = null;
+        foreach ($periods as $i => $period) {
+            if ($period->installation_odometer === null || ! $this->endedBy($period, $cutoff)) {
+                continue;
+            }
+            $start = $this->hundredths($period->installation_odometer);
+            // A removal or the follow-up installation (rotation) closes the period explicitly;
+            // otherwise the latest operation reading inside the period is its end so far.
+            $explicit = $period->removal_odometer ?? ($period->removed_at !== null ? ($periods[$i + 1]->installation_odometer ?? null) : null);
+            $end = $explicit !== null ? $this->hundredths($explicit) : null;
+            if ($end === null) {
+                $from = strtotime((string) $period->installed_at);
+                $until = $period->removed_at !== null ? strtotime((string) $period->removed_at) : PHP_INT_MAX;
+                foreach ($readings as [$at, $odometer]) {
+                    if ($at >= $from && $at <= $until) {
+                        $end = max($end ?? $odometer, $odometer);
+                    }
+                }
+            }
+            if ($end === null || $end < $start) {
+                continue;
+            }
+            $total = ($total ?? 0) + ($end - $start);
+        }
+
+        return $total;
+    }
+
+    /** Hours over the periods, in hundredths of an hour. */
+    private function hoursOf(Collection $periods, array $readings, ?int $cutoff): ?int
+    {
+        $seconds = null;
+        foreach ($periods as $period) {
+            if (! $this->endedBy($period, $cutoff)) {
+                continue;
+            }
+            $start = strtotime((string) $period->installed_at);
+            $end = $period->removed_at !== null ? strtotime((string) $period->removed_at) : null;
+            if ($end === null) {
+                foreach ($readings as [$at]) {
+                    if ($at >= $start) {
+                        $end = max($end ?? $at, $at);
+                    }
+                }
+            }
+            if ($end === null || $end <= $start) {
+                continue;
+            }
+            $seconds = ($seconds ?? 0) + ($end - $start);
+        }
+
+        return $seconds === null ? null : intdiv($seconds * 100, 3600); // hundredths of an hour, integer arithmetic
+    }
+
+    /** Hundredths → "1234.05". */
+    private function format(int $hundredths): string
+    {
+        return intdiv($hundredths, 100).'.'.str_pad((string) ($hundredths % 100), 2, '0', STR_PAD_LEFT);
     }
 
     /**

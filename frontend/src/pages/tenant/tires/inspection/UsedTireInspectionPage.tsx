@@ -15,6 +15,7 @@ import {
 import { useAuth } from "../../../../auth/AuthContext";
 import { BackButton } from "../../../../components/BackButton";
 import { FormField, inputStyle } from "../../../../components/FormField";
+import { InfoTip } from "../../../../components/InfoTip";
 import { NumericInput } from "../../../../components/NumericInput";
 import { ErrorState, LoadingState } from "../../../../components/States";
 import { StatusBadge } from "../../../../components/StatusBadge";
@@ -29,7 +30,9 @@ import {
   LOCATIONS,
   QUESTIONS,
   RECOMMENDATION_COLOR,
+  TREAD_HELP,
   TRI_STATE,
+  ZONE_HELP,
   damageSectionRelevant,
 } from "./inspectionOptions";
 import type {
@@ -128,6 +131,7 @@ export function UsedTireInspectionPage() {
           application={application}
           setApplication={setApplication}
           onSubmitted={reload}
+          onIdentityUpdated={reload}
         />
       ) : (
         <section className="card" style={{ fontSize: 14 }}>
@@ -222,11 +226,14 @@ function InspectionForm({
   application,
   setApplication,
   onSubmitted,
+  onIdentityUpdated,
 }: {
   context: InspectionContext;
   application: string;
   setApplication: (v: string) => void;
   onSubmitted: () => void;
+  /** The physical tire's identity changed (e.g. Manufacture Date Code filled in) — reload the facts. */
+  onIdentityUpdated: () => void;
 }) {
   const facts = context.tire;
   const [answers, setAnswers] = useState<Answers>({});
@@ -277,7 +284,7 @@ function InspectionForm({
         .catch(() => undefined);
     }, 350);
     return () => clearTimeout(timer);
-  }, [payload, facts.id]);
+  }, [payload, facts.id, facts.age_months]);
 
   const set = (key: string) => (value: string) =>
     setAnswers((a) => ({ ...a, [key]: value || null }));
@@ -366,7 +373,13 @@ function InspectionForm({
             />
             <Fact
               label="Manufacture Date Code"
-              value={facts.manufacture_date_code}
+              value={
+                <ManufactureDateCode
+                  tireId={facts.id}
+                  code={facts.manufacture_date_code}
+                  onSaved={onIdentityUpdated}
+                />
+              }
             />
             <Fact
               label="Tire Age"
@@ -461,10 +474,13 @@ function InspectionForm({
             >
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", padding: 4 }}>mm</th>
+                  <th style={{ textAlign: "left", padding: 4 }}>
+                    Tread depth (mm)
+                  </th>
                   {[1, 2, 3].map((z) => (
-                    <th key={z} style={{ padding: 4 }}>
+                    <th key={z} style={{ padding: 4, whiteSpace: "nowrap" }}>
                       Zone {z}
+                      <InfoTip label={`Zone ${z}`}>{ZONE_HELP[z]}</InfoTip>
                     </th>
                   ))}
                 </tr>
@@ -473,8 +489,9 @@ function InspectionForm({
                 {GROOVES.map((g) => (
                   <tr key={g.value}>
                     <td style={{ padding: 4, whiteSpace: "nowrap" }}>
-                      {g.label}
+                      {g.label} (mm)
                       {g.required ? " *" : ""}
+                      <InfoTip label={g.label}>{g.help}</InfoTip>
                     </td>
                     {[1, 2, 3].map((z) => (
                       <td key={z} style={{ padding: 4 }}>
@@ -489,7 +506,10 @@ function InspectionForm({
                             }))
                           }
                           style={{ ...inputStyle, width: 90 }}
-                        />
+                        />{" "}
+                        <span style={{ fontSize: 12, color: "#6b7280" }}>
+                          mm
+                        </span>
                       </td>
                     ))}
                   </tr>
@@ -506,7 +526,10 @@ function InspectionForm({
               marginTop: 8,
             }}
           >
-            <FormField label="D_new (tread when new / after last retread, mm)">
+            <FormField
+              label="D_new (tread when new / after last retread, mm)"
+              hint={TREAD_HELP.d_new}
+            >
               <NumericInput
                 aria-label="D new"
                 step="0.1"
@@ -516,7 +539,8 @@ function InspectionForm({
               />
             </FormField>
             <div style={{ fontSize: 13 }} data-dmin>
-              D_min:{" "}
+              D_min (mm)
+              <InfoTip label="D_min">{TREAD_HELP.d_min}</InfoTip>:{" "}
               <strong>
                 {evaluation?.d_min_mm != null
                   ? `${evaluation.d_min_mm} mm`
@@ -529,6 +553,20 @@ function InspectionForm({
                   <em>(indicator only — not a safety score)</em>
                 </span>
               )}
+            </div>
+            <div style={{ fontSize: 13 }} data-dpull>
+              D_pull (mm)
+              <InfoTip label="D_pull">{TREAD_HELP.d_pull}</InfoTip>:{" "}
+              <strong>
+                {context.rule_profile?.d_pull_mm != null
+                  ? `${context.rule_profile.d_pull_mm} mm`
+                  : "—"}
+              </strong>
+              <span style={{ color: "#6b7280" }}>
+                {context.rule_profile
+                  ? ` · D_service ${context.rule_profile.d_service_mm} mm`
+                  : " · no active rule profile (Tire Management → Inspection Rules)"}
+              </span>
             </div>
           </div>
           {errors.measurements && (
@@ -958,7 +996,7 @@ function Question({
 }) {
   const q = QUESTIONS[k];
   return (
-    <FormField label={q.label} errors={errors[k]}>
+    <FormField label={q.label} errors={errors[k]} hint={q.help}>
       <select
         aria-label={q.label}
         data-question={k}
@@ -1221,6 +1259,109 @@ function EvidencePicker({
         </div>
       ))}
     </div>
+  );
+}
+
+/**
+ * Tire Identity → Manufacture Date Code. When the physical tire has no code yet, Edit lets the
+ * inspector fill it in; it is saved on the tire and the backend returns the new Tire Age.
+ */
+function ManufactureDateCode({
+  tireId,
+  code,
+  onSaved,
+}: {
+  tireId: string;
+  code: string | null;
+  onSaved: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  if (code) return <span data-mdc-value>{code}</span>;
+  if (!editing)
+    return (
+      <span style={{ display: "inline-flex", gap: 8, alignItems: "center" }}>
+        <span data-mdc-value>—</span>
+        <button
+          type="button"
+          className="btn-secondary"
+          data-mdc-edit
+          onClick={() => setEditing(true)}
+          style={{ padding: "1px 8px", fontSize: 12 }}
+        >
+          Edit
+        </button>
+      </span>
+    );
+
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiClient.put(`/app/tires/${tireId}/manufacture-date-code`, {
+        manufacture_date_code: value,
+      });
+      setEditing(false);
+      onSaved();
+    } catch (e) {
+      const api = extractApiError(e);
+      setError(api.errors?.manufacture_date_code?.[0] ?? api.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <span style={{ display: "grid", gap: 4 }} data-mdc-form>
+      <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
+        <input
+          aria-label="Manufacture Date Code"
+          placeholder="WWYY, e.g. 1225"
+          value={value}
+          maxLength={20}
+          autoFocus
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && value.trim()) void save();
+            if (e.key === "Escape") setEditing(false);
+          }}
+          style={{ ...inputStyle, width: 120, padding: "3px 6px" }}
+        />
+        <button
+          type="button"
+          className="btn-primary"
+          disabled={saving || !value.trim()}
+          onClick={() => void save()}
+          style={{ padding: "2px 8px", fontSize: 12 }}
+        >
+          {saving ? "Saving…" : "Save"}
+        </button>
+        <button
+          type="button"
+          className="btn-secondary"
+          disabled={saving}
+          onClick={() => {
+            setEditing(false);
+            setError(null);
+          }}
+          style={{ padding: "2px 8px", fontSize: 12 }}
+        >
+          Cancel
+        </button>
+      </span>
+      <span style={{ fontSize: 11, color: "#6b7280" }}>
+        DOT date code: production week + 2-digit year. Saved on the physical
+        tire; Tire Age is recalculated.
+      </span>
+      {error && (
+        <span role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>
+          {error}
+        </span>
+      )}
+    </span>
   );
 }
 

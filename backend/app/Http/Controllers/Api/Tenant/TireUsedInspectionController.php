@@ -9,6 +9,7 @@ use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\TireUsedInspectionDamage;
 use App\Domain\Tire\Models\TireUsedInspectionEvidence;
 use App\Domain\Tire\Models\TireUsedInspectionMeasurement;
+use App\Domain\Tire\Services\TireAgeService;
 use App\Domain\Tire\Services\TireInventoryService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
@@ -88,6 +89,25 @@ class TireUsedInspectionController extends Controller
         }
 
         return $this->ok($this->inspections->present($this->inspections->approve($tireUsedInspection, $data, $this->context->user())));
+    }
+
+    /**
+     * Tire Inspection → Tire Identity: fill in a missing Manufacture Date Code. It is saved on the
+     * physical tire (not only the inspection snapshot) and the response carries the refreshed facts
+     * (Tire Age is computed by TireAgeService). A code that is already set is not changed here.
+     */
+    public function updateManufactureDateCode(Request $request, Tire $tire)
+    {
+        $this->authorizeTire($tire);
+        $data = $request->validate([
+            'manufacture_date_code' => ['required', 'string', 'max:20', function ($attribute, $value, $fail) {
+                if (! app(TireAgeService::class)->isValidCode((string) $value)) {
+                    $fail(TireAgeService::FORMAT_MESSAGE);
+                }
+            }],
+        ]);
+
+        return $this->ok($this->inspections->setManufactureDateCode($tire, trim($data['manufacture_date_code']), $this->context->user()));
     }
 
     public function cancel(TireUsedInspection $tireUsedInspection)

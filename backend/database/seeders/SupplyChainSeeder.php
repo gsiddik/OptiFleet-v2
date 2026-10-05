@@ -266,7 +266,7 @@ class SupplyChainSeeder extends Seeder
         // --- Component asset: installed battery under warranty, with an in-flight claim ---
         $batteryAsset = ComponentAsset::query()->firstOrCreate(
             ['tenant_id' => $tenant->id, 'serial_number' => 'BAT-ALPHA-01'],
-            ['product_id' => $battery->id, 'component_group_id' => $elecGroup->id, 'purchase_date' => now()->subMonths(4), 'purchase_cost' => 1800000, 'current_status' => 'IN_STOCK']
+            ['product_id' => $battery->id, 'component_group_id' => $elecGroup->id, 'purchase_date' => now()->subMonths(4), 'purchase_cost' => 1800000, 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $jktWarehouse->id]
         );
         if ($batteryAsset->current_status === 'IN_STOCK') {
             app(ComponentAssetService::class)->install($batteryAsset, $vehicle2, 'ENGINE_BAY', (float) $vehicle2->current_odometer, null, $warehouseManager->id);

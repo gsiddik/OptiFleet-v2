@@ -2,6 +2,7 @@
 
 namespace App\Domain\WorkOrder\Services;
 
+use App\Domain\ComponentAsset\Models\ComponentAsset;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
@@ -167,6 +168,75 @@ class SparePartSaleService
         }
     }
 
+    /**
+     * Sell Sparepart for physical Component Assets (one DRAFT sale per asset, quantity 1): only a
+     * SCRAPPED or REMOVED asset can be sold, a scrapped one only as scrap material; an asset can be
+     * in at most one active sale. Approval marks the asset SOLD (location cleared, history kept).
+     *
+     * @param  list<string>  $assetIds
+     */
+    public function createForComponentAssets(string $tenantId, array $assetIds, array $data, string $userId): Collection
+    {
+        $assetIds = array_values(array_unique($assetIds));
+        if ($assetIds === []) {
+            throw new WorkOrderException('Select at least one component asset to sell.');
+        }
+        $saleType = $data['sale_type'] ?? null;
+        if (! in_array($saleType, SparePartSale::SALE_TYPES, true)) {
+            throw new WorkOrderException('Sale type must be one of: '.implode(', ', SparePartSale::SALE_TYPES).'.');
+        }
+        $buyerType = $data['buyer_type'] ?? null;
+        if (! in_array($buyerType, SparePartSale::BUYER_TYPES, true)) {
+            throw new WorkOrderException('Buyer type must be one of: '.implode(', ', SparePartSale::BUYER_TYPES).'.');
+        }
+        if ($buyerType === 'PARTNER' && empty($data['partner_id'])) {
+            throw new WorkOrderException('A PARTNER sale requires partner_id.');
+        }
+        if ($buyerType === 'EXTERNAL' && empty($data['buyer_name'])) {
+            throw new WorkOrderException('An EXTERNAL sale requires buyer_name.');
+        }
+        try {
+            $unitPrice = BigDecimal::of((string) $data['unit_price'])->toScale(4, RoundingMode::HALF_UP);
+        } catch (MathException) {
+            throw new WorkOrderException('Unit price must be a number.');
+        }
+        if ($unitPrice->isNegative()) {
+            throw new WorkOrderException('Unit price cannot be negative.');
+        }
+
+        try {
+            return DB::transaction(function () use ($tenantId, $assetIds, $data, $saleType, $buyerType, $unitPrice, $userId) {
+                $assets = ComponentAsset::query()->withoutGlobalScopes()->where('tenant_id', $tenantId)->whereNull('deleted_at')->whereIn('id', $assetIds)->lockForUpdate()->get()->keyBy('id');
+                $sales = collect();
+                foreach ($assetIds as $id) {
+                    $asset = $assets->get($id);
+                    if (! $asset) {
+                        throw new WorkOrderException('A selected component asset was not found.');
+                    }
+                    if (! in_array($asset->current_status, ComponentAsset::SELLABLE, true)) {
+                        throw new WorkOrderException("Asset {$asset->asset_number} is {$asset->current_status}; only a SCRAPPED or REMOVED component asset can be sold.");
+                    }
+                    if ($asset->current_status === 'SCRAPPED' && $saleType !== 'SCRAP_MATERIAL') {
+                        throw new WorkOrderException("Asset {$asset->asset_number} is scrapped: it can only be sold as SCRAP_MATERIAL.");
+                    }
+                    $sales->push(DB::transaction(fn () => SparePartSale::query()->create([
+                        'tenant_id' => $tenantId, 'source_type' => SparePartSale::SOURCE_COMPONENT_ASSET,
+                        'component_asset_id' => $asset->id, 'asset_number' => $asset->asset_number ?? $asset->serial_number,
+                        'product_id' => $asset->product_id, 'warehouse_id' => $asset->current_warehouse_id, 'quantity' => 1,
+                        'sale_type' => $saleType, 'buyer_type' => $buyerType,
+                        'partner_id' => $data['partner_id'] ?? null, 'buyer_name' => $data['buyer_name'] ?? null,
+                        'unit_price' => (string) $unitPrice, 'total_amount' => (string) $unitPrice,
+                        'status' => 'DRAFT', 'requested_by' => $userId, 'notes' => $data['notes'] ?? null,
+                    ])));
+                }
+
+                return $sales;
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw new WorkOrderException('A selected component asset is already in an open or approved sale.');
+        }
+    }
+
     /** Why the tire was scrapped: its approved inspection's reasons, else the last removal condition. */
     private function tireCondition(Tire $tire): ?string
     {
@@ -253,6 +323,19 @@ class SparePartSaleService
                     throw new WorkOrderException("Tire {$tire->serial_number} is {$tire->current_status}; only a scrapped tire can be sold.");
                 }
                 $tire->update(['current_status' => 'SOLD', 'current_vehicle_id' => null, 'current_position' => null, 'current_warehouse_id' => null]);
+                $locked->update(['status' => 'APPROVED', 'decided_by' => $userId, 'decided_at' => now()]);
+
+                return $locked->fresh();
+            }
+
+            // A physical Component Asset: approval marks it SOLD and clears its location; the asset
+            // row, its installations / removals / repairs and its audit history are all kept.
+            if ($locked->source_type === SparePartSale::SOURCE_COMPONENT_ASSET) {
+                $asset = ComponentAsset::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($locked->component_asset_id);
+                if (! in_array($asset->current_status, ComponentAsset::SELLABLE, true)) {
+                    throw new WorkOrderException("Asset {$asset->asset_number} is {$asset->current_status}; it can no longer be sold.");
+                }
+                $asset->update(['current_status' => 'SOLD', 'current_vehicle_id' => null, 'current_warehouse_id' => null, 'sold_at' => now(), 'spare_part_sale_id' => $locked->id]);
                 $locked->update(['status' => 'APPROVED', 'decided_by' => $userId, 'decided_at' => now()]);
 
                 return $locked->fresh();

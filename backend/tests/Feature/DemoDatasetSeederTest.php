@@ -141,6 +141,33 @@ class DemoDatasetSeederTest extends TestCase
         $this->assertTrue(DB::table('purchase_orders')->where('tenant_id', $alpha->id)->where('status', 'ISSUED')->exists(), 'an ordered, not yet received PO');
         $this->assertSame(0, DB::table('purchase_order_items')->whereRaw('quantity_received + quantity_refunded > quantity_ordered')->count());
 
+        // Component Assets: every status represented, Goods Receipt 3 then 2 → 5 Asset# for one PO
+        // line, Asset# unique, SOLD has no location, tires listed with Serial Number as Asset#.
+        $statuses = DB::table('component_assets')->where('tenant_id', $alpha->id)->pluck('current_status')->unique()->sort()->values()->all();
+        foreach (['IN_STOCK', 'INSTALLED', 'REMOVED', 'UNDER_REPAIR', 'RECONDITIONED', 'SCRAPPED', 'SOLD', 'RETURNED_TO_VENDOR'] as $status) {
+            $this->assertContains($status, $statuses);
+        }
+        $this->assertTrue(DB::table('purchase_requests')->where('tenant_id', $alpha->id)->where('notes', 'Demo component assets: batteries received 3 then 2.')->exists());
+        $batteryLines = DB::table('goods_receipt_items as gi')->join('component_assets as ca', 'ca.goods_receipt_item_id', '=', 'gi.id')
+            ->where('ca.tenant_id', $alpha->id)->groupBy('gi.purchase_order_item_id')->selectRaw('gi.purchase_order_item_id, count(*) as n, count(distinct gi.id) as receipts')->get();
+        $this->assertTrue($batteryLines->contains(fn ($l) => (int) $l->n === 5 && (int) $l->receipts === 2), 'a PO line received 3 then 2 has exactly 5 assets');
+        $this->assertCount(0, DB::table('component_assets')->where('tenant_id', $alpha->id)->select('asset_number')->groupBy('asset_number')->havingRaw('count(*) > 1')->get());
+        $this->assertSame(0, DB::table('component_assets')->where('tenant_id', $alpha->id)->where('current_status', 'SOLD')->where(fn ($q) => $q->whereNotNull('current_warehouse_id')->orWhereNotNull('current_vehicle_id'))->count());
+        $admin = User::query()->where('email', 'alpha.admin@optifleet.test')->firstOrFail();
+        $register = app(\App\Domain\ComponentAsset\Services\ComponentAssetRegisterService::class)->paginate($alpha->id, $admin, ['kind' => 'TIRE'], 100)->getCollection();
+        $this->assertNotEmpty($register);
+        $this->assertTrue($register->every(fn ($row) => $row['asset_number'] === $row['serial_number'] && Tire::query()->whereKey($row['id'])->exists()));
+
+        // Retread history rows carry the previous vehicle / position and the tire's own usage.
+        $cycles = collect(app(\App\Domain\Tire\Services\TireActivityService::class)->feed($alpha->id, $admin, ['RETREAD'], null, 50)->items());
+        $this->assertTrue($cycles->contains(fn ($r) => $r->registration_number && $r->position && $r->usage_km !== null && $r->usage_hours !== null));
+        // Tire Inspection cases: a removed tire without Manufacture Date Code, one with it, D_pull configured.
+        $this->assertTrue(Tire::query()->where('tenant_id', $alpha->id)->whereIn('current_status', ['REMOVED', 'HOLD'])->whereNull('manufacture_date_code')->exists());
+        $this->assertTrue(Tire::query()->where('tenant_id', $alpha->id)->whereIn('current_status', ['REMOVED', 'HOLD'])->whereNotNull('manufacture_date_code')->exists());
+        $this->assertTrue(DB::table('tire_rule_profiles')->where('tenant_id', $alpha->id)->where('status', 'ACTIVE')->whereNotNull('d_pull_mm')->exists());
+        $assetCounts = fn () => DB::table('component_assets')->where('tenant_id', $alpha->id)->selectRaw('current_status, count(*) as n')->groupBy('current_status')->pluck('n', 'current_status')->all();
+        $assetsBefore = $assetCounts();
+
         $phase17Counts = fn () => collect(['purchase_returns', 'tire_retreads', 'tire_cycle_photos', 'vehicle_documents', 'workspace_reservations'])
             ->mapWithKeys(fn ($t) => [$t => DB::table($t)->where('tenant_id', $alpha->id)->count()])->all();
         $phase17 = $phase17Counts();
@@ -149,6 +176,7 @@ class DemoDatasetSeederTest extends TestCase
         $this->assertSame($counts, $this->counts($alpha->id), 'a re-run creates no duplicates');
         $this->assertSame(7, TireUsedInspection::query()->where('tenant_id', $alpha->id)->count(), 'a re-run inspects nothing again');
         $this->assertSame($phase17, $phase17Counts(), 'a re-run duplicates no return, cycle, photo or document');
+        $this->assertSame($assetsBefore, $assetCounts(), 'a re-run generates no Component Asset again');
     }
 
     public function test_database_seeder_adds_demo_data_only_when_enabled(): void
