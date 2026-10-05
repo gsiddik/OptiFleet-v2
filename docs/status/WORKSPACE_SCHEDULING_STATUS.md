@@ -9,7 +9,7 @@ content difference at start).
 | 1–5, 7–9 (backend) | Approval model, Schedule Workspace, SCHEDULED → IN_PROGRESS guard, transfer, QC re-scheduling, capacity, completion from Work Order, permissions | DONE | 9433dc4 |
 | 1–6, 10 (frontend) | Schedule Work Order popup, Start guard, Workspace tab, Transfer, assignment list, scheduler occupancy | DONE | 09aff0e |
 | 11 | Seeders (service bays, capacity 1/2/3, every scheduling state, transfer history) | DONE | 9433dc4 |
-| 12–13 | QA matrix (backend + e2e), quality gates | see below | see git log |
+| 12–13 | QA matrix (backend + e2e), quality gates | DONE | see git log |
 
 ## Owner decisions (DECISION REQUIRED, answered)
 
@@ -107,3 +107,23 @@ content difference at start).
 - 26 existing call sites that start a Work Order give it an approved workspace first
   (`TestCase::withApprovedWorkspace`).
 - e2e (Playwright, freshly seeded DB): 33/33.
+
+## Quality gates
+
+| Gate | Result |
+|---|---|
+| Backend targeted (WorkspaceAssignmentWorkflowTest, WorkspaceReservationTest, WorkshopSchedulerTest, WorkOrderTest + all suites that start Work Orders, seeder tests) | PASS — 219 tests |
+| Backend full regression (non-Mongo, PostgreSQL) | PASS — 1110 tests, 7076 assertions |
+| Mongo-dependent tests (Analytics / Intelligence) | NOT RUN — MongoDB is not available in this environment (covers the WorkshopMetricsExtractor status-filter change) |
+| `npm run lint` | PASS — 0 errors, 27 warnings (unchanged baseline) |
+| `npm run build` (includes `tsc -b`) | PASS |
+| `npm run typecheck` / `npm test` | not defined in package.json (typecheck runs inside the build) |
+| `migrate:fresh --seed` + `db:seed` re-run | PASS — assignment counts unchanged |
+| e2e (Playwright, freshly seeded DB, incl. 390 px mobile) | PASS — 33/33 |
+
+## Remaining risks
+
+- Analytics occupancy change verified by code review only (Mongo tests NOT RUN).
+- Existing tenants: open reservations created before this release stay RESERVED (now meaning
+  "requested") and need approval before their Work Orders can start; legacy ACTIVE rows count as
+  approved. Duplicate open reservations per Work Order (if any) are cancelled by the migration.
