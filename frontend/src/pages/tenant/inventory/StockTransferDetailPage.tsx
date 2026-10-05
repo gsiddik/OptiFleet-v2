@@ -6,6 +6,7 @@ import { inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { StockTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
@@ -24,10 +25,26 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   RECEIVED: [{ action: 'complete', label: 'Complete', permission: 'stock_transfer.receive', primary: true }],
 };
 
+/**
+ * The module action that moves a transfer into each status (the workflow decides when it is
+ * offered). Dispatch and Receive record goods movements and enter their status directly, so they
+ * stay as their own actions.
+ */
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string; primary?: boolean }> = {
+  REQUESTED: { action: 'submit', label: 'Submit', permission: 'stock_transfer.create', primary: true },
+  APPROVED: { action: 'approve', label: 'Approve', permission: 'stock_transfer.approve', primary: true },
+  REJECTED: { action: 'reject', label: 'Reject', permission: 'stock_transfer.approve' },
+  PREPARED: { action: 'prepare', label: 'Mark Prepared', permission: 'stock_transfer.approve', primary: true },
+  IN_TRANSIT: { action: 'in-transit', label: 'Mark In-Transit', permission: 'stock_transfer.dispatch', primary: true },
+  COMPLETED: { action: 'complete', label: 'Complete', permission: 'stock_transfer.receive', primary: true },
+  CANCELLED: { action: 'cancel', label: 'Cancel', permission: 'stock_transfer.create' },
+};
+
 export function StockTransferDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [transfer, setTransfer] = useState<StockTransferItem | null>(null);
+  const available = useWorkflowTransitions('stock_transfer', id, transfer?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [receipts, setReceipts] = useState<Record<string, { received: string; damaged: string; lost: string; reason: string }>>({});
@@ -85,7 +102,11 @@ export function StockTransferDetailPage() {
   if (error && !transfer) return <ErrorState message={error} />;
   if (!transfer) return <LoadingState />;
 
-  const actions = (LIFECYCLE[transfer.status] ?? []).filter((a) => hasPermission(a.permission));
+  const builtIn = LIFECYCLE[transfer.status] ?? [];
+  const actions = [
+    ...workflowButtons(available, ACTIONS_BY_TARGET, builtIn),
+    ...(available ? builtIn.filter((a) => a.action === 'dispatch') : []),
+  ].filter((a) => hasPermission(a.permission));
   const canReceive = transfer.status === 'IN_TRANSIT' && hasPermission('stock_transfer.receive');
   const showReceipt = transfer.status === 'RECEIVED' || transfer.status === 'COMPLETED';
 

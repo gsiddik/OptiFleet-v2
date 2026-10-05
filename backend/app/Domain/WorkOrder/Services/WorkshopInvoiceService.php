@@ -33,9 +33,7 @@ use Illuminate\Support\Facades\DB;
  * `UsedPartDispositionService` pattern exactly: self-approval is rejected
  * here (the underlying `WorkflowApprovalService`/engine is not used
  * because this workflow has no branching/conditions to justify it — a
- * plain two-user check is simpler and equally auditable, same class of
- * decision already made for `TireScoringService::finalize()`'s
- * maker-checker).
+ * plain two-user check is simpler and equally auditable).
  */
 class WorkshopInvoiceService
 {

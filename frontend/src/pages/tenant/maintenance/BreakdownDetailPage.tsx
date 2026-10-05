@@ -5,6 +5,7 @@ import { BackButton } from '../../../components/BackButton';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { BreakdownItem } from '../../../types';
 
@@ -14,11 +15,19 @@ const ACTIONS: Record<string, { action: string; label: string; permission: strin
   ASSESSED: [{ action: 'require-repair', label: 'Require Repair', permission: 'breakdown.review' }],
 };
 
+/** The module action that moves a breakdown into each status (the workflow decides when it is offered). */
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string }> = {
+  VERIFIED: { action: 'verify', label: 'Verify', permission: 'breakdown.review' },
+  ASSESSED: { action: 'assess', label: 'Mark Assessed', permission: 'breakdown.review' },
+  REPAIR_REQUIRED: { action: 'require-repair', label: 'Require Repair', permission: 'breakdown.review' },
+};
+
 export function BreakdownDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const [breakdown, setBreakdown] = useState<BreakdownItem | null>(null);
+  const available = useWorkflowTransitions('breakdown', id, breakdown?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [note, setNote] = useState('');
@@ -69,7 +78,7 @@ export function BreakdownDetailPage() {
   if (error && !breakdown) return <ErrorState message={error} />;
   if (!breakdown) return <LoadingState />;
 
-  const actions = (ACTIONS[breakdown.status] ?? []).filter((a) => hasPermission(a.permission));
+  const actions = workflowButtons(available, ACTIONS_BY_TARGET, ACTIONS[breakdown.status] ?? []).filter((a) => hasPermission(a.permission));
 
   return (
     <div>

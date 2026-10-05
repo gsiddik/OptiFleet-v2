@@ -37,7 +37,7 @@ class WorkflowDefinitionService
 
     public function publish(ConfigurationVersion $version, ?string $userId): ConfigurationVersion
     {
-        return $this->configuration->publish($version, $userId, fn (array $payload) => $this->validator->validate($payload));
+        return $this->configuration->publish($version, $userId, fn (array $payload) => $this->validator->validate($payload, $version->configurationSet?->code));
     }
 
     public function archive(ConfigurationVersion $version, ?string $userId): ConfigurationVersion

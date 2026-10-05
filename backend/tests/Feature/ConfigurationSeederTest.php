@@ -10,10 +10,14 @@ use App\Domain\Configuration\Services\NumberingFormatValidator;
 use App\Domain\Configuration\Services\TemplateRenderer;
 use App\Domain\Configuration\Services\TemplateVariableRegistry;
 use App\Domain\Notification\Models\NotificationRule;
+use App\Domain\Workflow\Models\WorkflowLayout;
+use App\Domain\Workflow\Services\WorkflowCatalog;
+use App\Domain\Workflow\Services\WorkflowGraphAnalyzer;
 use Carbon\CarbonImmutable;
 use Database\Seeders\ConfigurationDefaultsSeeder;
 use Database\Seeders\ConfigurationShowcaseSeeder;
 use Database\Seeders\NotificationDefaultsSeeder;
+use Database\Seeders\WorkflowDefaultsSeeder;
 use Tests\TestCase;
 
 /**
@@ -44,11 +48,12 @@ class ConfigurationSeederTest extends TestCase
     {
         $this->seed(ConfigurationDefaultsSeeder::class);
         $this->seed(NotificationDefaultsSeeder::class);
+        $this->seed(WorkflowDefaultsSeeder::class);
         $tenant = $this->makeTenant(['code' => 'BETA']);
         $this->seed(ConfigurationShowcaseSeeder::class);
 
         $sets = ConfigurationSet::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->get()->keyBy(fn ($s) => $s->type.':'.$s->code);
-        $this->assertCount(6, $sets);
+        $this->assertCount(7, $sets);
         $at = CarbonImmutable::parse('2026-10-05');
         $numbering = app(DocumentNumberingService::class);
         $preview = fn (string $code) => $numbering->preview($sets["NUMBERING:{$code}"]->versions()->first()->payload, $code, $tenant->id, null, null, null, 1, $at);
@@ -75,6 +80,17 @@ class ConfigurationSeederTest extends TestCase
         $this->assertStringContainsString('Description 2', $rendered);
         $this->assertStringNotContainsString('{{', $rendered);
 
+        // The workflow: published, valid, with a backward transition and a deterministic layout.
+        $workflow = $sets['WORKFLOW:maintenance_request']->publishedVersion();
+        $this->assertNotNull($workflow);
+        $this->assertSame([], app(WorkflowGraphAnalyzer::class)->analyze($workflow->payload, app(WorkflowCatalog::class)->forResource('maintenance_request'))['errors']);
+        $this->assertContains(['UNDER_REVIEW', 'SUBMITTED'], array_map(fn ($t) => [$t['from_status'], $t['to_status']], $workflow->payload['transitions']));
+        $positions = WorkflowLayout::query()->withoutGlobalScopes()->where('configuration_version_id', $workflow->id)->firstOrFail()->positions;
+        $this->assertSame(['x' => 0, 'y' => 0], $positions['DRAFT']);
+        $this->assertSame(['x' => 270, 'y' => 0], $positions['SUBMITTED']);
+        $this->assertEquals(ConfigurationShowcaseSeeder::layout($workflow->payload), $positions, 'same rule as the builder auto-layout');
+        $this->assertCount(count($workflow->payload['statuses']), array_unique(array_map('json_encode', $positions)), 'no two cards overlap');
+
         $rule = NotificationRule::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->sole();
         $this->assertSame('inventory.low_stock', $rule->event_code);
         $this->assertSame(240, $rule->escalation['after_minutes']);
@@ -85,6 +101,7 @@ class ConfigurationSeederTest extends TestCase
         $this->seed(ConfigurationDefaultsSeeder::class);
         $this->assertSame($versions, ConfigurationVersion::query()->count());
         $this->assertSame(1, NotificationRule::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->count());
-        $this->assertCount(6, ConfigurationSet::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->get());
+        $this->assertCount(7, ConfigurationSet::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->get());
+        $this->assertSame(1, WorkflowLayout::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->count());
     }
 }

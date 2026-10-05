@@ -60,7 +60,7 @@ class StoreProductRequest extends FormRequest
             'track_serial_number' => ['nullable', 'boolean'],
             'track_batch' => ['nullable', 'boolean'],
             'status' => ['nullable', 'in:ACTIVE,INACTIVE'],
-            // Phase F / BD-3: reference tread depth for TIRE products — the "KTN" source for scoring.
+            // Reference (new) tread depth for TIRE products — the default D_new of a used tire inspection.
             'reference_tread_depth_mm' => ['nullable', 'numeric', 'min:0.01'],
             // Mechanical classification. Component Group + Category are mandatory for
             // Sparepart/Consumable/Tire/Rim, Subcategory is optional for every Item Type;

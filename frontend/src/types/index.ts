@@ -2216,7 +2216,6 @@ export interface TireItem {
   removals?: TireRemovalItem[];
   retreads?: TireRetreadItem[];
   repairs?: TireRepairItem[];
-  scoringResults?: TireScoringResultItem[];
   sales?: TireSaleItem[];
   /** Serial Detail of an installed tire (backend-computed); null when the tire is not on a vehicle. */
   installed?: TireInstalledSummary | null;
@@ -2243,37 +2242,15 @@ export interface TireInstalledSummary {
   } | null;
 }
 
-/** Phase F (G-31): one structured scoring calculation. */
-export interface TireScoringResultItem {
-  id: string;
-  tire_id: string;
-  tire_inspection_id: string;
-  tire_retread_id: string | null;
-  tire_repair_id: string | null;
-  scoring_type: 'REPAIR' | 'RETREAD';
-  configuration_version_id: string;
-  reference_tread_depth_mm: string;
-  measured_tread_depth_mm: string;
-  spa_raw_percent: string;
-  spa_normalized_score: string;
-  classification: string;
-  ka_score: string | null;
-  kf_score: string | null;
-  critical_safety_fail: boolean;
-  critical_safety_reasons: string | null;
-  eligible_for_operational_reuse: boolean;
-  computed_by: string | null;
-  computed_at: string;
-  finalized_by: string | null;
-  finalized_at: string | null;
-}
-
 /** Phase F (BD-5): a tire's terminal sell disposition. */
 export interface TireSaleItem {
   id: string;
   tire_id: string;
   sell_type: 'SELL_FOR_OPERATIONAL_REUSE' | 'SELL_AS_RETREADABLE_CASING' | 'SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL';
+  /** Legacy (historical): the retired Tire Scoring result an older sale referenced. */
   tire_scoring_result_id: string | null;
+  /** The approved Used Tire Inspection that justified a sale for operational reuse. */
+  tire_used_inspection_id?: string | null;
   reason: string;
   sold_by: string | null;
   sold_at: string;
@@ -2400,7 +2377,7 @@ export interface WarrantyClaimItem {
 
 // --- Phase 5: Tenant Configuration & Business Rules ---
 
-export type ConfigurationType = 'NUMBERING' | 'TEMPLATE' | 'WORKFLOW' | 'NOTIFICATION' | 'TIRE_SCORING';
+export type ConfigurationType = 'NUMBERING' | 'TEMPLATE' | 'WORKFLOW' | 'NOTIFICATION';
 export type ConfigurationVersionStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
 
 export interface ConfigurationVersionItem {
@@ -2588,4 +2565,67 @@ export interface NotificationMetadata {
 /** NOTIFICATION configuration payload: the message per channel. */
 export interface NotificationMessagePayload {
   channels: Partial<Record<"IN_APP" | "EMAIL", { subject?: string; body: string }>>;
+}
+
+/** Workflow definition (WORKFLOW configuration payload) — the runtime's source of truth. */
+export interface WorkflowStatusDef {
+  code: string;
+  display_name?: string;
+  is_start?: boolean;
+  [key: string]: unknown;
+}
+
+export interface WorkflowTransitionDef {
+  from_status: string;
+  to_status: string;
+  action_code: string;
+  action_label?: string;
+  required_permission?: string | null;
+  condition_set?: Record<string, unknown> | null;
+  approval_rule?: {
+    type: string;
+    steps: Array<{ step_number: number; approver_type: string; approver_identifier: string }>;
+  } | null;
+  automated_actions?: Array<string | { action_code: string; [key: string]: unknown }>;
+  [key: string]: unknown;
+}
+
+export interface WorkflowPayload {
+  statuses: WorkflowStatusDef[];
+  transitions: WorkflowTransitionDef[];
+  [key: string]: unknown;
+}
+
+/** The statuses a document can have and the ones a module action can move it into. */
+export interface WorkflowCatalog {
+  statuses: Array<{ code: string; display_name: string }>;
+  targets: string[];
+  entry_statuses: string[];
+}
+
+export interface WorkflowMetadata {
+  actions: string[];
+  operators: string[];
+  catalog: WorkflowCatalog | null;
+  resource_types: Array<{ code: string; name: string }>;
+}
+
+export interface WorkflowIssue {
+  type: string;
+  message: string;
+  status?: string;
+  transition?: number;
+}
+
+export interface WorkflowLayoutData {
+  positions: Record<string, { x: number; y: number }> | null;
+  viewport: { x: number; y: number; zoom: number } | null;
+}
+
+/** GET /workflow/available-transitions: what the runtime allows on one record right now. */
+export interface AvailableWorkflowTransition {
+  action_code: string;
+  action_label: string;
+  to_status: string;
+  requires_approval: boolean;
 }

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Configuration\Models\ConfigurationSet;
 use App\Domain\Configuration\Services\ConfigurationService;
 use App\Domain\Configuration\Services\NumberingFormatValidator;
 use App\Domain\Configuration\Services\TemplateDocumentCompiler;
@@ -9,6 +10,8 @@ use App\Domain\Configuration\Services\TemplateValidator;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Notification\Models\NotificationRule;
 use App\Domain\Notification\Services\NotificationRuleService;
+use App\Domain\Workflow\Models\WorkflowLayout;
+use App\Domain\Workflow\Services\WorkflowDefinitionService;
 use Illuminate\Database\Seeder;
 
 /**
@@ -17,7 +20,9 @@ use Illuminate\Database\Seeder;
  * visual editor and the Notification forms open on realistic examples — the owner's RPO
  * example, plain / branch / warehouse formats, a literal that contains a token name and a
  * repeated token, a template with variables, Jobs table, Findings block and formatting, and a
- * notification rule with a condition and an escalation.
+ * notification rule with a condition and an escalation, and a published Maintenance Request
+ * workflow (the System Default plus a backward "Return for revision" transition) with a saved
+ * deterministic canvas layout for the Visual Workflow Builder.
  *
  * Only the RPO numbering is published (BETA's new Purchase Orders use it; Return to System
  * Default reverts it); the others are drafts. ALPHA keeps the System Defaults. Idempotent: a
@@ -56,6 +61,8 @@ class ConfigurationShowcaseSeeder extends Seeder
         app(TemplateValidator::class)->validate('work_order', $html);
         $this->seedCustom($service, $tenant->id, 'TEMPLATE', 'work_order', 'Work Order with findings', ['html' => $html, 'editor' => $editor], false);
 
+        $this->seedWorkflow($tenant->id);
+
         if (! NotificationRule::query()->withoutGlobalScopes()->where('tenant_id', $tenant->id)->where('name', 'Low stock → warehouse team')->exists()) {
             app(NotificationRuleService::class)->create($tenant->id, 'inventory.low_stock', 'Low stock → warehouse team',
                 [['type' => 'WAREHOUSE_PIC'], ['type' => 'PERMISSION', 'identifier' => 'inventory.view']],
@@ -64,6 +71,58 @@ class ConfigurationShowcaseSeeder extends Seeder
                 ['after_minutes' => 240, 'recipient_rules' => [['type' => 'ROLE', 'identifier' => 'Warehouse Manager']]],
             );
         }
+    }
+
+    /** BETA's Maintenance Request workflow: the default graph plus a backward review transition. */
+    private function seedWorkflow(string $tenantId): void
+    {
+        $default = ConfigurationSet::query()->withoutGlobalScopes()->whereNull('tenant_id')
+            ->where('type', ConfigurationSet::TYPE_WORKFLOW)->where('code', 'maintenance_request')->first()?->publishedVersion();
+        $workflows = app(WorkflowDefinitionService::class);
+        $set = $workflows->findOrCreateSet($tenantId, 'maintenance_request', 'TENANT', null, 'Maintenance Request with revision loop');
+        if (! $default || $set->versions()->exists()) {
+            return;
+        }
+        $payload = $default->payload;
+        $payload['transitions'][] = ['from_status' => 'UNDER_REVIEW', 'to_status' => 'SUBMITTED', 'action_code' => 'return_for_revision', 'action_label' => 'Return for revision'];
+        $version = $workflows->publish($workflows->createDraft($set, $payload, null, 'Demo example: reviewers can send a request back'), null);
+        WorkflowLayout::query()->create(['tenant_id' => $tenantId, 'configuration_version_id' => $version->id, 'positions' => self::layout($payload)]);
+    }
+
+    /**
+     * The builder's deterministic left-to-right layout: column = shortest distance from a start
+     * status, row = order within the column (same rule as the Workflow Builder's Auto Layout).
+     */
+    public static function layout(array $payload): array
+    {
+        $depth = [];
+        $queue = [];
+        foreach ($payload['statuses'] as $s) {
+            if (! empty($s['is_start'])) {
+                $depth[$s['code']] = 0;
+                $queue[] = $s['code'];
+            }
+        }
+        while ($queue !== []) {
+            $current = array_shift($queue);
+            foreach ($payload['transitions'] as $t) {
+                if ($t['from_status'] === $current && ! isset($depth[$t['to_status']])) {
+                    $depth[$t['to_status']] = $depth[$current] + 1;
+                    $queue[] = $t['to_status'];
+                }
+            }
+        }
+        $maxDepth = $depth === [] ? 0 : max($depth);
+        $rows = [];
+        $positions = [];
+        foreach ($payload['statuses'] as $s) {
+            $column = $depth[$s['code']] ?? $maxDepth + 1;
+            $row = $rows[$column] ?? 0;
+            $rows[$column] = $row + 1;
+            $positions[$s['code']] = ['x' => $column * 270, 'y' => $row * 120];
+        }
+
+        return $positions;
     }
 
     private function seedCustom(ConfigurationService $service, string $tenantId, string $type, string $code, string $name, array $payload, bool $publish): void

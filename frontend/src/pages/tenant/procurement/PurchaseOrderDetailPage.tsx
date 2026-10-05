@@ -6,6 +6,7 @@ import { inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { allowedByWorkflow, useWorkflowTransitions } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PurchaseOrderItem, PurchaseReturnItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
@@ -27,10 +28,14 @@ const LIFECYCLE: Record<string, { action: string; label: string; permission: str
   RECEIVED: [{ action: 'close', label: 'Close', permission: 'purchase_order.approve', primary: true }],
 };
 
+/** The status each lifecycle action moves the order into (the workflow decides when it is offered). */
+const ACTION_TARGET: Record<string, string> = { submit: 'SUBMITTED', approve: 'APPROVED', reject: 'REJECTED', issue: 'ISSUED', cancel: 'CANCELLED', close: 'CLOSED' };
+
 export function PurchaseOrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [po, setPo] = useState<PurchaseOrderItem | null>(null);
+  const available = useWorkflowTransitions('purchase_order', id, po?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [accepted, setAccepted] = useState<Record<string, string>>({});
@@ -135,7 +140,7 @@ export function PurchaseOrderDetailPage() {
   if (error && !po) return <ErrorState message={error} />;
   if (!po) return <LoadingState />;
 
-  const actions = (LIFECYCLE[po.status] ?? []).filter((a) => hasPermission(a.permission));
+  const actions = (LIFECYCLE[po.status] ?? []).filter((a) => hasPermission(a.permission)).filter(allowedByWorkflow(available, ACTION_TARGET));
   const summary = po.return_summary;
   const openReturn = (po.returns ?? []).find((r) => r.id === summary?.open_return_id) ?? null;
   // Backend-calculated (no independent formula here); 0 when the summary is unavailable.

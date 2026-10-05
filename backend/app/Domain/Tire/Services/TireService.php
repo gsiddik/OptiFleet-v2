@@ -12,7 +12,7 @@ use App\Domain\Tire\Models\TireRepair;
 use App\Domain\Tire\Models\TireRetread;
 use App\Domain\Tire\Models\TireRotation;
 use App\Domain\Tire\Models\TireSale;
-use App\Domain\Tire\Models\TireScoringResult;
+use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfiguration;
 use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
@@ -33,7 +33,6 @@ use Illuminate\Support\Facades\DB;
 class TireService
 {
     public function __construct(
-        private readonly TireDispositionEligibilityService $eligibility,
         private readonly UsedTireStockService $usedStock,
     ) {}
 
@@ -429,10 +428,8 @@ class TireService
             if (TireRetread::query()->where('tire_id', $locked->id)->whereNotIn('status', ['APPROVED', 'REJECTED'])->exists()) {
                 throw new TireException('An open retread cycle already exists for this tire — receive and approve it before sending again.');
             }
-            // R2: opt-in — only gates when the tenant has published an active RETREAD
-            // scoring configuration with casing_eligibility/lifecycle_limits/legal_restrictions
-            // rules; otherwise identical to pre-R2 behavior (see TireDispositionEligibilityService).
-            $this->eligibility->assertEligible($locked, 'RETREAD');
+            // Casing eligibility for retreading (compliance, A_retread_max, N_retread_max) is decided
+            // by the Used Tire Inspection that put the tire in RETREAD status.
 
             $cycle = (int) TireRetread::query()->where('tire_id', $locked->id)->max('cycle_number') + 1;
 
@@ -461,8 +458,8 @@ class TireService
             if (TireRepair::query()->where('tire_id', $locked->id)->whereNotIn('status', ['APPROVED', 'REJECTED'])->exists()) {
                 throw new TireException('An open repair cycle already exists for this tire — receive and approve it before sending again.');
             }
-            // R2: opt-in — see the identical note in retread() above.
-            $this->eligibility->assertEligible($locked, 'REPAIR');
+            // Repair eligibility (permitted repair limits) is decided by the Used Tire Inspection
+            // that put the tire in REPAIR status.
 
             $cycle = (int) TireRepair::query()->where('tire_id', $locked->id)->max('cycle_number') + 1;
 
@@ -604,14 +601,6 @@ class TireService
             if ($locked->final_inspection_result === 'UNSAFE' && $disposition === 'RETURN_TO_SERVICE') {
                 throw new TireException('A tire with an UNSAFE final inspection result cannot be approved for RETURN_TO_SERVICE — choose SCRAP or QUARANTINE.');
             }
-            // Phase F: a structured scoring result marking this cycle critical-safety-fail
-            // overrides RETURN_TO_SERVICE the same way an UNSAFE final inspection does —
-            // the critical-fail gate is absolute regardless of which check surfaced it.
-            $scoringLinkColumn = $cycle instanceof TireRetread ? 'tire_retread_id' : 'tire_repair_id';
-            $hasCriticalFailScore = TireScoringResult::query()->where($scoringLinkColumn, $locked->id)->where('critical_safety_fail', true)->exists();
-            if ($hasCriticalFailScore && $disposition === 'RETURN_TO_SERVICE') {
-                throw new TireException('A tire with a critical safety failure on its scoring result cannot be approved for RETURN_TO_SERVICE — choose SCRAP or QUARANTINE.');
-            }
 
             $locked->update([
                 'status' => 'APPROVED',
@@ -656,10 +645,10 @@ class TireService
      * Phase F (BD-5/BD-6): "Sell" is never one generic action — the three
      * sell types are safety-distinct. SELL_FOR_OPERATIONAL_REUSE is the
      * one that can put a tire back into service elsewhere, so it is the
-     * one this method gates hard: it requires a scoring result to exist
-     * at all (an unscored tire's fitness for reuse is simply unknown),
-     * and that result must be neither critical-safety-fail nor ineligible
-     * for operational reuse. SELL_AS_RETREADABLE_CASING and
+     * one this method gates hard: the tire's latest approved Used Tire
+     * Inspection (the canonical assessment; Tire Scoring was retired) must
+     * have disposed it REUSE and the tire must still be in REUSE status.
+     * The sale records that inspection. SELL_AS_RETREADABLE_CASING and
      * SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL carry no such requirement —
      * neither claims the tire is fit to keep running as-is.
      */
@@ -681,17 +670,15 @@ class TireService
                 throw new TireException('This tire has already been sold.');
             }
 
-            $scoringResult = null;
+            $inspection = null;
             if ($sellType === 'SELL_FOR_OPERATIONAL_REUSE') {
-                $scoringResult = TireScoringResult::query()->where('tire_id', $locked->id)->orderByDesc('computed_at')->first();
-                if (! $scoringResult) {
-                    throw new TireException('SELL_FOR_OPERATIONAL_REUSE requires a scoring result — this tire has never been scored.');
+                $inspection = TireUsedInspection::query()->where('tire_id', $locked->id)->where('status', TireUsedInspection::APPROVED)
+                    ->orderByDesc('approved_at')->first();
+                if (! $inspection) {
+                    throw new TireException('SELL_FOR_OPERATIONAL_REUSE requires an approved used tire inspection — this tire has not been inspected.');
                 }
-                if ($scoringResult->critical_safety_fail) {
-                    throw new TireException('This tire has a critical safety failure on its most recent scoring result and cannot be sold for operational reuse.');
-                }
-                if (! $scoringResult->eligible_for_operational_reuse) {
-                    throw new TireException("This tire's most recent scoring result ({$scoringResult->classification}) is not eligible for operational reuse.");
+                if ($inspection->final_disposition !== 'REUSE' || $locked->current_status !== TireStatus::REUSE) {
+                    throw new TireException("This tire's latest inspection disposed it {$inspection->final_disposition}; only a tire inspected and kept as REUSE can be sold for operational reuse.");
                 }
             }
 
@@ -699,7 +686,7 @@ class TireService
                 'tenant_id' => $locked->tenant_id,
                 'tire_id' => $locked->id,
                 'sell_type' => $sellType,
-                'tire_scoring_result_id' => $scoringResult?->id,
+                'tire_used_inspection_id' => $inspection?->id,
                 'reason' => $reason,
                 'sold_by' => $userId,
                 'sold_at' => now(),

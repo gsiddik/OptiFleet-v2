@@ -13,7 +13,7 @@ class TireSale extends Model
 {
     use Auditable, BelongsToTenant, HasUuids;
 
-    protected $fillable = ['tenant_id', 'tire_id', 'sell_type', 'tire_scoring_result_id', 'reason', 'sold_by', 'sold_at'];
+    protected $fillable = ['tenant_id', 'tire_id', 'sell_type', 'tire_scoring_result_id', 'tire_used_inspection_id', 'reason', 'sold_by', 'sold_at'];
 
     protected function casts(): array
     {
@@ -25,6 +25,13 @@ class TireSale extends Model
         return $this->belongsTo(Tire::class);
     }
 
+    /** The approved Used Tire Inspection that justified a sale for operational reuse. */
+    public function usedInspection(): BelongsTo
+    {
+        return $this->belongsTo(TireUsedInspection::class, 'tire_used_inspection_id');
+    }
+
+    /** Legacy (historical only): the Tire Scoring result an older sale referenced; Tire Scoring is retired. */
     public function scoringResult(): BelongsTo
     {
         return $this->belongsTo(TireScoringResult::class, 'tire_scoring_result_id');

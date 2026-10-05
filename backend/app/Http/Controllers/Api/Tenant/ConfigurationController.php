@@ -17,11 +17,9 @@ use App\Domain\Configuration\Services\TemplateVariableRegistry;
 use App\Domain\Notification\Services\NotificationEventCatalog;
 use App\Domain\Notification\Services\NotificationRuleService;
 use App\Domain\Notification\Services\NotificationTemplateValidator;
-use App\Domain\Tire\Services\TireException;
-use App\Domain\Tire\Services\TireScoringConfigurationValidator;
-use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Workflow\Services\ConditionEvaluator;
 use App\Domain\Workflow\Services\WorkflowActionCatalog;
+use App\Domain\Workflow\Services\WorkflowCatalog;
 use App\Domain\Workflow\Services\WorkflowDefinitionValidator;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Http\Controllers\Controller;
@@ -42,7 +40,9 @@ use Illuminate\Http\Request;
  */
 class ConfigurationController extends Controller
 {
-    private const TYPES = ['NUMBERING', 'TEMPLATE', 'WORKFLOW', 'NOTIFICATION', 'TIRE_SCORING'];
+    // TIRE_SCORING is retired (replaced by the Used Tire Inspection engine): its configurations stay
+    // in the history, but none can be listed for editing, created, changed or published.
+    private const TYPES = ['NUMBERING', 'TEMPLATE', 'WORKFLOW', 'NOTIFICATION'];
 
     public function __construct(
         private readonly ConfigurationService $configuration,
@@ -50,8 +50,6 @@ class ConfigurationController extends Controller
         private readonly TemplateValidator $templateValidator,
         private readonly WorkflowDefinitionValidator $workflowValidator,
         private readonly NotificationTemplateValidator $notificationValidator,
-        private readonly TireScoringConfigurationValidator $tireScoringValidator,
-        private readonly TireScoringService $tireScoring,
         private readonly DocumentNumberingService $numbering,
         private readonly DocumentTemplateRenderService $templates,
         private readonly WorkflowEngine $workflow,
@@ -62,6 +60,7 @@ class ConfigurationController extends Controller
         private readonly TemplateDocumentCompiler $templateCompiler,
         private readonly NotificationEventCatalog $notificationEvents,
         private readonly TemplateRenderer $templateRenderer,
+        private readonly WorkflowCatalog $workflowCatalog,
     ) {}
 
     /** Numbering Format Builder cards: what each token means and which setting it uses. */
@@ -83,9 +82,24 @@ class ConfigurationController extends Controller
         ['token' => 'CG', 'label' => 'Component Group Code', 'description' => 'Abbreviation of the product component group (Product SKU only).', 'parameter' => null, 'parameter_label' => null],
     ];
 
-    private const MANAGE_PERMISSIONS = ['NUMBERING' => 'numbering.manage', 'TEMPLATE' => 'document_template.manage', 'WORKFLOW' => 'workflow.manage', 'NOTIFICATION' => 'document_template.manage', 'TIRE_SCORING' => 'tire_scoring_configuration.manage'];
+    private const MANAGE_PERMISSIONS = ['NUMBERING' => 'numbering.manage', 'TEMPLATE' => 'document_template.manage', 'WORKFLOW' => 'workflow.manage', 'NOTIFICATION' => 'document_template.manage'];
 
-    private const PUBLISH_PERMISSIONS = ['NUMBERING' => 'numbering.publish', 'TEMPLATE' => 'document_template.publish', 'WORKFLOW' => 'workflow.publish', 'NOTIFICATION' => 'document_template.publish', 'TIRE_SCORING' => 'tire_scoring_configuration.publish'];
+    private const PUBLISH_PERMISSIONS = ['NUMBERING' => 'numbering.publish', 'TEMPLATE' => 'document_template.publish', 'WORKFLOW' => 'workflow.publish', 'NOTIFICATION' => 'document_template.publish'];
+
+    /** A retired type (Tire Scoring) is history only: it can no longer be changed or published. */
+    private function managePermission(string $type): string
+    {
+        abort_unless(isset(self::MANAGE_PERMISSIONS[$type]), 422, 'This configuration type is retired and can no longer be changed.');
+
+        return self::MANAGE_PERMISSIONS[$type];
+    }
+
+    private function publishPermission(string $type): string
+    {
+        abort_unless(isset(self::PUBLISH_PERMISSIONS[$type]), 422, 'This configuration type is retired and can no longer be changed.');
+
+        return self::PUBLISH_PERMISSIONS[$type];
+    }
 
     private function requirePermission(string $permission): void
     {
@@ -118,7 +132,16 @@ class ConfigurationController extends Controller
                 'variables' => $request->query('code') ? $this->templateVariables->forDocumentType($request->query('code')) : null,
                 'catalog' => $request->query('code') ? $this->templateVariables->catalog($request->query('code')) : null,
             ]),
-            'WORKFLOW' => $this->ok(['actions' => WorkflowActionCatalog::ACTIONS, 'operators' => ConditionEvaluator::OPERATORS]),
+            'WORKFLOW' => $this->ok([
+                'actions' => WorkflowActionCatalog::ACTIONS,
+                'operators' => ConditionEvaluator::OPERATORS,
+                // Visual Workflow Builder: the statuses this document can have and the statuses a
+                // module action can move it into (null for a resource without a platform default).
+                'catalog' => $request->query('code') ? $this->workflowCatalog->forResource((string) $request->query('code')) : null,
+                'resource_types' => ConfigurationSet::query()->withoutGlobalScopes()->whereNull('tenant_id')
+                    ->where('type', ConfigurationSet::TYPE_WORKFLOW)->orderBy('code')->get(['code', 'name'])
+                    ->map(fn ($s) => ['code' => $s->code, 'name' => $s->name])->values(),
+            ]),
             'NOTIFICATION' => $this->ok($this->notificationMetadata()),
             default => abort(422, 'Unknown metadata type.'),
         };
@@ -155,7 +178,7 @@ class ConfigurationController extends Controller
             'payload' => ['required', 'array'],
             'change_summary' => ['nullable', 'string'],
         ]);
-        $this->requirePermission(self::MANAGE_PERMISSIONS[$validated['type']]);
+        $this->requirePermission($this->managePermission($validated['type']));
         $this->assertKnownDocumentType($validated['type'], $validated['code']);
 
         $tenantId = $this->context->tenantId();
@@ -168,7 +191,7 @@ class ConfigurationController extends Controller
     public function updateDraft(ConfigurationVersion $version, Request $request)
     {
         $this->authorizeVersionScope($version);
-        $this->requirePermission(self::MANAGE_PERMISSIONS[$version->configurationSet->type]);
+        $this->requirePermission($this->managePermission($version->configurationSet->type));
         $validated = $request->validate(['payload' => ['required', 'array'], 'change_summary' => ['nullable', 'string']]);
 
         return $this->ok($this->configuration->updateDraft($version, $this->normalizePayload($version->configurationSet->type, $validated['payload']), $validated['change_summary'] ?? null));
@@ -178,27 +201,13 @@ class ConfigurationController extends Controller
     {
         $this->authorizeVersionScope($version);
         $set = $version->configurationSet;
-        $this->requirePermission(self::PUBLISH_PERMISSIONS[$set->type]);
+        $this->requirePermission($this->publishPermission($set->type));
 
         $validator = match ($set->type) {
             'NUMBERING' => fn (array $p) => $this->numberingValidator->validate($p),
             'TEMPLATE' => fn (array $p) => $this->templateValidator->validate($set->code, $p['html'] ?? ''),
-            'WORKFLOW' => fn (array $p) => $this->workflowValidator->validate($p),
+            'WORKFLOW' => fn (array $p) => $this->workflowValidator->validate($p, $set->code),
             'NOTIFICATION' => fn (array $p) => $this->notificationValidator->validate($set->code, $p),
-            // R2: shape validation (incl. the required legal_restrictions/casing_eligibility/
-            // lifecycle_limits keys) runs first, so an invalid payload is still rejected for
-            // its own specific reason even when maker and checker happen to be the same user;
-            // only once the payload is genuinely valid does the maker-checker self-check apply
-            // — publish is this framework's "activate" action, so it is the one that must be
-            // gated, mirroring UsedPartDispositionService's/TireScoringService::finalize()'s
-            // established explicit-self-check pattern (WorkflowApprovalService itself does not
-            // enforce this generically).
-            'TIRE_SCORING' => function (array $p) use ($set, $version) {
-                $this->tireScoringValidator->validate($set, $p);
-                if ($version->created_by !== null && $version->created_by === $this->context->user()->id) {
-                    throw new TireException('The maker who drafted this Tire Scoring configuration cannot also publish (activate) it — a different authorized user must verify and publish.');
-                }
-            },
         };
 
         return $this->ok($this->configuration->publish($version, $this->context->user()->id, $validator));
@@ -212,7 +221,7 @@ class ConfigurationController extends Controller
     public function restoreDefault(ConfigurationSet $set)
     {
         $this->authorizeSetScope($set);
-        $this->requirePermission(self::MANAGE_PERMISSIONS[$set->type]);
+        $this->requirePermission($this->managePermission($set->type));
         abort_if($set->is_system || $set->tenant_id === null, 422, 'This is the system default already.');
         $hasDefault = ConfigurationSet::query()->withoutGlobalScopes()->whereNull('tenant_id')->where('type', $set->type)->where('code', $set->code)->where('scope_type', 'TENANT')->exists();
         abort_unless($hasDefault, 422, 'There is no system default for this document type to return to.');
@@ -225,7 +234,7 @@ class ConfigurationController extends Controller
     public function archive(ConfigurationVersion $version)
     {
         $this->authorizeVersionScope($version);
-        $this->requirePermission(self::MANAGE_PERMISSIONS[$version->configurationSet->type]);
+        $this->requirePermission($this->managePermission($version->configurationSet->type));
 
         return $this->ok($this->configuration->archive($version, $this->context->user()->id));
     }
@@ -299,55 +308,9 @@ class ConfigurationController extends Controller
                 $tenantId,
                 (array) $request->input('context', []),
             )),
-            'TIRE_SCORING' => $this->ok($this->previewTireScoring($request, $tenantId)),
             'NOTIFICATION' => $this->ok(['channels' => $this->previewNotification((string) $request->input('code'), (array) $request->input('payload', []))]),
             default => abort(422, 'Preview is not supported for this configuration type.'),
         };
-    }
-
-    /**
-     * R2 §18: dry-run against a DRAFT (or arbitrary) payload — validates its
-     * shape first (the same validator publish() would run), then computes
-     * what calculate() would produce for the supplied representative/test
-     * measurements. NEVER persists a TireScoringResult and never touches
-     * any Tire/inspection/retread/repair row. If the scoring type already
-     * has a currently PUBLISHED (active) version, also computes the same
-     * inputs against it so the two can be compared side by side.
-     */
-    private function previewTireScoring(Request $request, string $tenantId): array
-    {
-        $code = strtoupper((string) $request->input('code'));
-        abort_unless(in_array($code, ['REPAIR', 'RETREAD'], true), 422, 'code must be REPAIR or RETREAD.');
-        $payload = (array) $request->input('payload', []);
-
-        $dummySet = new ConfigurationSet(['tenant_id' => $tenantId, 'type' => 'TIRE_SCORING', 'code' => $code, 'scope_type' => 'TENANT']);
-        $this->tireScoringValidator->validate($dummySet, $payload);
-
-        $referenceTreadDepth = $request->input('reference_tread_depth_mm') !== null ? (float) $request->input('reference_tread_depth_mm') : null;
-        $measuredTreadDepth = $request->input('measured_tread_depth_mm') !== null ? (float) $request->input('measured_tread_depth_mm') : null;
-        $kaScore = $request->input('ka_score') !== null ? (float) $request->input('ka_score') : null;
-        $criticalSafetyFail = (bool) $request->boolean('critical_safety_fail');
-
-        $draftResult = $this->tireScoring->dryRun($payload, $referenceTreadDepth, $measuredTreadDepth, $kaScore, $criticalSafetyFail);
-
-        $activeVersion = null;
-        $activeResult = null;
-        $active = ConfigurationSet::query()
-            ->where('tenant_id', $tenantId)->where('type', 'TIRE_SCORING')->where('code', $code)
-            ->with(['versions' => fn ($q) => $q->where('status', 'PUBLISHED')])->first();
-        $activePublished = $active?->versions->first();
-        if ($activePublished) {
-            $activeVersion = $activePublished->id;
-            $activeResult = $this->tireScoring->dryRun($activePublished->payload, $referenceTreadDepth, $measuredTreadDepth, $kaScore, $criticalSafetyFail);
-        }
-
-        return [
-            'draft_result' => $draftResult,
-            'active_configuration_version_id' => $activeVersion,
-            'active_result' => $activeResult,
-            'changed_from_active' => $activeResult !== null && $activeResult !== $draftResult,
-            'note' => 'Dry-run only — no Tire, inspection, or scoring result was created or changed.',
-        ];
     }
 
     private function resolveWorkflowVersionForPreview(Request $request, string $tenantId): ConfigurationVersion

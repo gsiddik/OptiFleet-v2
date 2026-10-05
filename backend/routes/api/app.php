@@ -90,6 +90,7 @@ use App\Http\Controllers\Api\Tenant\WarehouseStockController;
 use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
 use App\Http\Controllers\Api\Tenant\WarrantyController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationController;
+use App\Http\Controllers\Api\Tenant\WorkflowBuilderController;
 use App\Http\Controllers\Api\Tenant\WheelConfigurationMasterController;
 use App\Http\Controllers\Api\Tenant\TireActivityController;
 use App\Http\Controllers\Api\Tenant\TireOperationController;
@@ -774,8 +775,6 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/tires/{tire}/repairs/{repair}/approve', [TireController::class, 'approveRepair'])->middleware('permission:tire_repair.approve');
             Route::post('/tires/{tire}/scrap', [TireController::class, 'scrap'])->middleware('permission:tire.scrap');
             // Phase F: calculate/finalize are distinct permissions (maker-checker on the score itself).
-            Route::post('/tires/{tire}/scoring', [TireController::class, 'calculateScoring'])->middleware('permission:tire_scoring.calculate');
-            Route::post('/tires/{tire}/scoring/{scoringResult}/finalize', [TireController::class, 'finalizeScoring'])->middleware('permission:tire_scoring.finalize');
             Route::post('/tires/{tire}/sell', [TireController::class, 'sell'])->middleware('permission:tire.sell');
         });
 
@@ -850,7 +849,15 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             // Return to System Default: archives the tenant's published custom configuration
             // (manage permission of the set's type, checked in the controller).
             Route::post('/sets/{set}/restore-default', [ConfigurationController::class, 'restoreDefault']);
+            // Visual Workflow Builder: graph validation (all problems at once) and the canvas layout
+            // of a workflow version (presentation only; saving needs workflow.manage, checked inside).
+            Route::post('/workflow/validate', [WorkflowBuilderController::class, 'validateGraph'])->middleware('permission:configuration.view');
+            Route::get('/versions/{version}/layout', [WorkflowBuilderController::class, 'showLayout'])->middleware('permission:configuration.view');
+            Route::put('/versions/{version}/layout', [WorkflowBuilderController::class, 'saveLayout']);
         });
+
+        // The transitions the published workflow allows on one record right now (module action buttons).
+        Route::get('/workflow/available-transitions', [WorkflowBuilderController::class, 'availableTransitions']);
 
         Route::prefix('notification-rules')->group(function () {
             Route::get('/', [NotificationRuleController::class, 'index'])->middleware('permission:configuration.view');

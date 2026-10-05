@@ -130,10 +130,9 @@ class PermissionSeeder extends Seeder
             // cycle type, so a maker-checker separation can actually be enforced by RBAC.
             'tire_retread' => ['send', 'receive', 'inspect', 'approve'],
             'tire_repair' => ['send', 'receive', 'inspect', 'approve'],
-            // Phase F (G-31): calculate/finalize are separate so a scoring result's
-            // finalizer can be a different actor from whoever computed it (BD-4).
-            'tire_scoring' => ['calculate', 'finalize'],
-            'tire_scoring_configuration' => ['manage', 'publish'],
+            // Tire Scoring (tire_scoring.*, tire_scoring_configuration.*) is retired — replaced by the
+            // Used Tire Inspection engine. Existing permission rows and role assignments are kept as
+            // history (never deleted) but are no longer seeded or listed (PermissionCatalog).
             // Used Tire Management inspection: inspecting is tire.inspect; applying the disposition
             // (REUSE / REPAIR / RETREAD / HOLD / SCRAP) is a separate approval; rule profiles hold
             // the per-category thresholds the decision engine uses.
