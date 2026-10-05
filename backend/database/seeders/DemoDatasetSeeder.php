@@ -8,7 +8,9 @@ use App\Domain\AccessControl\Models\Role;
 use App\Domain\AccessControl\Models\RoleAssignment;
 use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\Breakdown\Services\BreakdownService;
+use App\Domain\ComponentAsset\Models\ComponentAsset;
 use App\Domain\ComponentAsset\Services\ComponentAssetRegisterService;
+use App\Domain\ComponentAsset\Services\ComponentAssetService;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Domain\Inspection\Models\Inspection;
@@ -68,6 +70,7 @@ use App\Domain\Vehicle\Models\VehicleDocument;
 use App\Domain\Vehicle\Services\VehicleDocumentService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
+use App\Domain\WorkOrder\Services\SparePartSaleService;
 use App\Domain\WorkOrder\Services\WorkOrderPartRequestService;
 use App\Domain\WorkOrder\Services\WorkOrderPartService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
@@ -130,6 +133,7 @@ class DemoDatasetSeeder extends Seeder
         $this->retreadAndScrap($vehicles, $truckTire);
         $this->purchaseReturns();
         $this->purchaseQuantityLifecycle();
+        $this->componentAssetRegister($vehicles);
         $this->vehicleDocuments($vehicles);
         $this->workspaceScheduling($branches, $vehicles);
         $this->maintenanceHistoryCoverage();
@@ -897,7 +901,70 @@ class DemoDatasetSeeder extends Seeder
         }
     }
 
-    /** Vehicle documents with and without expiry / extension (Vehicle Detail → Documents). */
+    /**
+     * Inventory → Component Assets demo, built through the real services (idempotent by the
+     * purchase request notes):
+     *  - "Truck Battery 12V 100Ah" ordered 5, Goods Receipt 3 then 2 → exactly 5 generated Asset#;
+     *    they are then IN_STOCK, INSTALLED (truck1), REMOVED (stored in Semarang), UNDER_REPAIR and
+     *    RECONDITIONED;
+     *  - a second battery order of 2: one SCRAPPED, one REMOVED and sold through Sell Sparepart
+     *    (approved by the branch admin — maker-checker) → SOLD, no location, history kept.
+     * Tires appear in the same register with their Serial Number as Asset# (no copy rows).
+     */
+    private function componentAssetRegister(array $vehicles): void
+    {
+        $note = 'Demo component assets: batteries received 3 then 2.';
+        $chain = ['note' => $note, 'product' => 'Truck Battery 12V 100Ah', 'qty' => 5, 'price' => 1800000, 'vendor' => 'VND-SINAR', 'wh' => 'ALPHA-SMG-WH1', 'received' => 3, 'invoice' => 'INV-SSC-2026-0401'];
+        if (PurchaseRequest::query()->where('tenant_id', $this->tenant->id)->where('notes', $note)->exists()) {
+            return;
+        }
+        $po = $this->purchaseChain($chain);
+        if (! $po) {
+            return;
+        }
+        $warehouse = Warehouse::query()->findOrFail($po->delivery_warehouse_id);
+        $line = $po->items()->firstOrFail();
+        app(GoodsReceiptService::class)->post($po->fresh(), $warehouse, [['purchase_order_item_id' => $line->id, 'quantity_accepted' => 2]], $this->admin->id, 'Backordered remainder delivered.', [
+            'mode' => 'NEW', 'vendor_invoice_number' => 'INV-SSC-2026-0402', 'vendor_invoice_date' => now()->toDateString(),
+            'amount' => number_format(2 * 1800000 * 1.11, 2, '.', ''), 'terms_of_payment_days' => 30,
+            'document' => DemoQuotationDocument::make('INV-SSC-2026-0402', 'Demo vendor invoice', 'INV-SSC-2026-0402.pdf'),
+        ]);
+
+        $truck = $vehicles['truck1']->fresh();
+        $components = app(ComponentAssetService::class);
+        $assetsOf = fn (PurchaseOrder $order) => ComponentAsset::query()->whereIn('goods_receipt_item_id', DB::table('goods_receipt_items')->where('purchase_order_item_id', $order->items()->firstOrFail()->id)->select('id'))
+            ->orderBy('asset_number')->get()->values();
+        $fit = fn (ComponentAsset $asset) => $components->install($asset->fresh(), $truck, 'Battery box', (float) $truck->current_odometer, null, $this->admin->id);
+        $takeOff = fn (ComponentAsset $asset, string $reason, string $disposition) => $components->remove($asset->fresh(), $reason, $disposition, (float) $truck->current_odometer, null, null, null, $this->admin->id, $warehouse->id);
+
+        [, $installed, $removed, $underRepair, $reconditioned] = $assetsOf($po)->all(); // the first stays IN_STOCK
+        $fit($installed);
+        foreach ([$removed, $underRepair, $reconditioned] as $asset) {
+            $fit($asset);
+        }
+        $takeOff($removed, 'Swapped during the battery audit; still good.', 'REUSE');
+        $takeOff($underRepair, 'Weak cell on the load test.', 'REPAIR');
+        $takeOff($reconditioned, 'Terminal corrosion.', 'REPAIR');
+        $components->startRepair($underRepair->fresh(), 'Cell replacement at the battery shop.', null, $this->admin->id);
+        $repair = $components->startRepair($reconditioned->fresh(), 'Terminal rebuild and recharge.', null, $this->admin->id);
+        $components->completeRepair($repair, 'RECONDITIONED', 350000);
+
+        $sold = $this->purchaseChain(['note' => 'Demo component assets: batteries scrapped and sold.', 'qty' => 2, 'received' => 2, 'invoice' => 'INV-SSC-2026-0403'] + $chain);
+        [$scrapped, $forSale] = $assetsOf($sold)->all();
+        $fit($scrapped);
+        $takeOff($scrapped, 'Case cracked; acid leak.', 'SCRAP');
+        $fit($forSale);
+        $takeOff($forSale, 'Replaced by the fleet-wide battery upgrade.', 'REUSE');
+        $sales = app(SparePartSaleService::class);
+        $sale = $sales->createForComponentAssets($this->tenant->id, [$forSale->id], [
+            'sale_type' => 'OPERATIONAL_REUSE', 'buyer_type' => 'EXTERNAL', 'buyer_name' => 'CV Aki Bekas Semarang', 'unit_price' => '650000',
+        ], $this->admin->id)->first();
+        $approver = User::query()->where('email', 'alpha.branchadmin@optifleet.test')->first();
+        if ($approver) {
+            $sales->decide($sales->submit($sale, $this->admin->id), 'APPROVE', $approver->id, 'Price agreed.');
+        }
+    }
+
     /**
      * Return to Vendor of a serial-tracked product names the exact Asset# returned (owner
      * decision): the first in-stock assets that line's receipts generated (none for an untracked
@@ -912,6 +979,7 @@ class DemoDatasetSeeder extends Seeder
         return array_slice(array_column($assets, 'id'), 0, (int) round($quantity));
     }
 
+    /** Vehicle documents with and without expiry / extension (Vehicle Detail → Documents). */
     private function vehicleDocuments(array $vehicles): void
     {
         $documents = app(VehicleDocumentService::class);
