@@ -54,6 +54,13 @@ return Application::configure(basePath: dirname(__DIR__))
             CheckPermission::class,
             \Illuminate\Auth\Middleware\Authorize::class,
         ]);
+
+        // Configuration editors send text exactly as typed (a template's "Work Order " before a
+        // variable keeps its space; an empty text stays ""). Their values are validated and
+        // normalized by the configuration services instead.
+        $configurationEditor = fn (Request $request) => $request->is('api/v1/app/configuration/*');
+        \Illuminate\Foundation\Http\Middleware\TrimStrings::skipWhen($configurationEditor);
+        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::skipWhen($configurationEditor);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         $exceptions->shouldRenderJsonWhen(fn (Request $request) => true);

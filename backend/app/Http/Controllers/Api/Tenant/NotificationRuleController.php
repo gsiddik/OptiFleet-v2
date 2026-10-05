@@ -41,6 +41,7 @@ class NotificationRuleController extends Controller
     {
         return $this->ok(array_map(fn ($code) => [
             'code' => $code,
+            'label' => $this->catalog->label($code),
             'platform_locked' => $this->catalog->isPlatformLocked($code),
             'variables' => $this->catalog->variableDefinition($code),
         ], $this->catalog->eventCodes()));

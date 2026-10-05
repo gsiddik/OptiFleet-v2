@@ -2427,6 +2427,83 @@ export interface ConfigurationSetItem {
   versions: ConfigurationVersionItem[];
 }
 
+/** Central Document Type Registry entry (GET /configuration/metadata). */
+export interface DocumentTypeOption {
+  key: string;
+  label: string;
+  numbering: boolean;
+  template: boolean;
+  /** Tokens only this document type can fill (e.g. ITEMTYPE / CG for Product SKU). */
+  extra_tokens: string[];
+}
+
+/** One Format Builder card. */
+export interface NumberingTokenDefinition {
+  token: string;
+  label: string;
+  description: string;
+  /** Setting the token uses (doc_code, tenant_initial, …, sequence_digits) — null when none. */
+  parameter: string | null;
+  parameter_label: string | null;
+}
+
+export interface NumberingMetadata {
+  document_types: DocumentTypeOption[];
+  token_definitions: NumberingTokenDefinition[];
+  reset_rules: { value: string; label: string }[];
+  max_sequence_digits: number;
+}
+
+/** Numbering configuration as stored (the numbering engine's payload). */
+export interface NumberingPayload {
+  format: string;
+  doc_code?: string;
+  reset_rule?: string;
+  tenant_initial?: string;
+  branch_initial?: string;
+  workshop_initial?: string;
+  warehouse_initial?: string;
+  sequence_start?: number;
+  sequence_padding?: number;
+  [key: string]: unknown;
+}
+
+/** A Format segment: literal text the user typed, or a token card. */
+export type NumberingSegment = { type: 'literal'; value: string } | { type: 'token'; token: string };
+
+/** Visual template editor catalog (GET /configuration/metadata?type=TEMPLATE&code=…). */
+export interface TemplateVariable {
+  key: string;
+  label: string;
+  category: string;
+  type: string;
+  description: string;
+}
+
+export interface TemplateBlock {
+  name: string;
+  label: string;
+  description: string;
+  fields: TemplateVariable[];
+}
+
+export interface TemplateCatalog {
+  variables: TemplateVariable[];
+  blocks: TemplateBlock[];
+}
+
+/** Template editor document (stored as payload.editor; the server builds payload.html from it). */
+export type TemplateEditorNode =
+  | { t: 'text'; v: string }
+  | { t: 'var'; path: string }
+  | { t: 'section'; name: string; inverted?: boolean; mode: 'element' | 'block' | 'inline'; children: TemplateEditorNode[] }
+  | { t: 'el'; tag: string; attrs: Record<string, string>; children: TemplateEditorNode[] };
+
+export interface TemplateEditorState {
+  version: 1;
+  nodes: TemplateEditorNode[];
+}
+
 export interface ConfigurationHistoryRow {
   id: string;
   type: ConfigurationType;
@@ -2441,6 +2518,29 @@ export interface ConfigurationHistoryRow {
   change_summary: string | null;
 }
 
+export interface NotificationRecipientRule {
+  type: string;
+  identifier?: string;
+}
+
+/** A leaf condition {field, op, value} compared by the server's ConditionEvaluator. */
+export interface NotificationCondition {
+  field: string;
+  op: string;
+  value?: unknown;
+}
+
+export interface NotificationConditionSet {
+  operator: string;
+  rules: Array<NotificationCondition | NotificationConditionSet>;
+}
+
+export interface NotificationEscalation {
+  after_minutes: number;
+  recipient_rules: NotificationRecipientRule[];
+  unresolved_condition_set?: NotificationConditionSet | null;
+}
+
 export interface NotificationRuleItem {
   id: string;
   tenant_id: string | null;
@@ -2448,14 +2548,44 @@ export interface NotificationRuleItem {
   name: string;
   is_active: boolean;
   is_system: boolean;
-  condition_set: Record<string, unknown> | null;
-  recipient_rules: Array<{ type: string; identifier?: string }>;
+  condition_set: NotificationConditionSet | null;
+  recipient_rules: NotificationRecipientRule[];
   channels: string[];
-  escalation: Record<string, unknown> | null;
+  escalation: NotificationEscalation | null;
 }
 
 export interface NotificationEventInfo {
   code: string;
+  label: string;
   platform_locked: boolean;
   variables: { scalars: string[]; sections: Record<string, string[]> };
+}
+
+/** Configuration metadata for the Notification forms (GET /configuration/metadata?type=NOTIFICATION). */
+export interface NotificationMetadata {
+  events: Array<{
+    code: string;
+    label: string;
+    platform_locked: boolean;
+    variables: Array<{ key: string; label: string }>;
+  }>;
+  channels: Array<{ value: string; label: string }>;
+  recipient_types: Array<{
+    value: string;
+    label: string;
+    description: string;
+    identifier: "user" | "role" | "permission" | "email" | null;
+  }>;
+  operators: Array<{
+    value: string;
+    label: string;
+    needs_value: boolean;
+    multiple: boolean;
+  }>;
+  unresolved_fields: Array<{ key: string; label: string }>;
+}
+
+/** NOTIFICATION configuration payload: the message per channel. */
+export interface NotificationMessagePayload {
+  channels: Partial<Record<"IN_APP" | "EMAIL", { subject?: string; body: string }>>;
 }

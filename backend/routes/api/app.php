@@ -847,6 +847,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/versions/{version}', [ConfigurationController::class, 'updateDraft']);
             Route::post('/versions/{version}/publish', [ConfigurationController::class, 'publish']);
             Route::post('/versions/{version}/archive', [ConfigurationController::class, 'archive']);
+            // Return to System Default: archives the tenant's published custom configuration
+            // (manage permission of the set's type, checked in the controller).
+            Route::post('/sets/{set}/restore-default', [ConfigurationController::class, 'restoreDefault']);
         });
 
         Route::prefix('notification-rules')->group(function () {

@@ -20,7 +20,7 @@ export function GoodsReceiptListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Goods Receipts</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Goods Receipt</h1>
       <Toolbar />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}

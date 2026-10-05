@@ -41,6 +41,45 @@ class NotificationEventCatalog
 
     private const COMMON_SCALARS = ['tenant.name', 'event_code', 'generated_at'];
 
+    /** Display names for the configuration screens (the event codes stay the contract). */
+    private const LABELS = [
+        'maintenance.due' => 'Maintenance Due',
+        'maintenance_request.submitted' => 'Maintenance Request Submitted',
+        'work_order.created' => 'Work Order Created',
+        'breakdown.reported' => 'Breakdown Reported',
+        'inventory.low_stock' => 'Low Stock',
+        'purchase_order.approved' => 'Purchase Order Approved',
+        'warranty_claim.submitted' => 'Warranty Claim Submitted',
+        'subscription.expiring' => 'Subscription Expiring',
+        'invoice.due' => 'Subscription Invoice Due',
+        'subscription.suspended' => 'Subscription Suspended',
+        'payment.verification_required' => 'Payment Verification Required',
+        'intelligence.vehicle_high_risk' => 'Vehicle High Risk',
+        'intelligence.vehicle_critical' => 'Vehicle Critical Risk',
+        'intelligence.component_high_risk' => 'Component High Risk',
+        'intelligence.predicted_failure' => 'Predicted Failure',
+        'intelligence.rul_low' => 'Low Remaining Useful Life',
+        'intelligence.repeat_failure' => 'Repeat Failure',
+        'intelligence.anomaly_detected' => 'Anomaly Detected',
+        'intelligence.inventory_shortage_risk' => 'Inventory Shortage Risk',
+    ];
+
+    /** Variable display names that a plain "Vehicle Registration Number" style label would get wrong. */
+    private const VARIABLE_LABELS = [
+        'event_code' => 'Event Code',
+        'generated_at' => 'Sent At',
+        'tenant.name' => 'Company Name',
+        'request.number' => 'Maintenance Request Number',
+        'request.priority' => 'Maintenance Request Priority',
+        'request.complaint' => 'Maintenance Request Complaint',
+        'claim.number' => 'Warranty Claim Number',
+        'claim.reason' => 'Warranty Claim Reason',
+        'partner.name' => 'Vendor Name',
+        'stock.available' => 'Available Stock',
+        'stock.reorder_point' => 'Reorder Point',
+        'product.sku' => 'Product SKU',
+    ];
+
     public function isKnownEvent(string $eventCode): bool
     {
         return array_key_exists($eventCode, self::EVENTS);
@@ -66,5 +105,37 @@ class NotificationEventCatalog
             'scalars' => [...self::COMMON_SCALARS, ...self::EVENTS[$eventCode]['scalars']],
             'sections' => self::EVENTS[$eventCode]['sections'],
         ];
+    }
+
+    public function label(string $eventCode): string
+    {
+        return self::LABELS[$eventCode] ?? ucwords(str_replace(['.', '_'], ' ', $eventCode));
+    }
+
+    public function variableLabel(string $path): string
+    {
+        return self::VARIABLE_LABELS[$path] ?? ucwords(str_replace(['.', '_'], ' ', $path));
+    }
+
+    /**
+     * The event's variables with display names — what the message editor offers and what a
+     * rule condition may compare (dispatch passes exactly this context to ConditionEvaluator).
+     *
+     * @return list<array{key: string, label: string}>
+     */
+    public function variables(string $eventCode): array
+    {
+        return array_map(fn (string $path) => ['key' => $path, 'label' => $this->variableLabel($path)], $this->variableDefinition($eventCode)['scalars']);
+    }
+
+    /** Preview context: every variable filled with a readable sample ("[Vehicle Registration Number]"). */
+    public function sampleContext(string $eventCode): array
+    {
+        $context = [];
+        foreach ($this->variableDefinition($eventCode)['scalars'] as $path) {
+            data_set($context, $path, '['.$this->variableLabel($path).']');
+        }
+
+        return $context;
     }
 }
