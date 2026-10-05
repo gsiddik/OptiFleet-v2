@@ -22,6 +22,7 @@ use App\Domain\Tire\Services\TireScoringConfigurationValidator;
 use App\Domain\Tire\Services\TireScoringService;
 use App\Domain\Workflow\Services\ConditionEvaluator;
 use App\Domain\Workflow\Services\WorkflowActionCatalog;
+use App\Domain\Workflow\Services\WorkflowCatalog;
 use App\Domain\Workflow\Services\WorkflowDefinitionValidator;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Http\Controllers\Controller;
@@ -62,6 +63,7 @@ class ConfigurationController extends Controller
         private readonly TemplateDocumentCompiler $templateCompiler,
         private readonly NotificationEventCatalog $notificationEvents,
         private readonly TemplateRenderer $templateRenderer,
+        private readonly WorkflowCatalog $workflowCatalog,
     ) {}
 
     /** Numbering Format Builder cards: what each token means and which setting it uses. */
@@ -118,7 +120,16 @@ class ConfigurationController extends Controller
                 'variables' => $request->query('code') ? $this->templateVariables->forDocumentType($request->query('code')) : null,
                 'catalog' => $request->query('code') ? $this->templateVariables->catalog($request->query('code')) : null,
             ]),
-            'WORKFLOW' => $this->ok(['actions' => WorkflowActionCatalog::ACTIONS, 'operators' => ConditionEvaluator::OPERATORS]),
+            'WORKFLOW' => $this->ok([
+                'actions' => WorkflowActionCatalog::ACTIONS,
+                'operators' => ConditionEvaluator::OPERATORS,
+                // Visual Workflow Builder: the statuses this document can have and the statuses a
+                // module action can move it into (null for a resource without a platform default).
+                'catalog' => $request->query('code') ? $this->workflowCatalog->forResource((string) $request->query('code')) : null,
+                'resource_types' => ConfigurationSet::query()->withoutGlobalScopes()->whereNull('tenant_id')
+                    ->where('type', ConfigurationSet::TYPE_WORKFLOW)->orderBy('code')->get(['code', 'name'])
+                    ->map(fn ($s) => ['code' => $s->code, 'name' => $s->name])->values(),
+            ]),
             'NOTIFICATION' => $this->ok($this->notificationMetadata()),
             default => abort(422, 'Unknown metadata type.'),
         };
@@ -183,7 +194,7 @@ class ConfigurationController extends Controller
         $validator = match ($set->type) {
             'NUMBERING' => fn (array $p) => $this->numberingValidator->validate($p),
             'TEMPLATE' => fn (array $p) => $this->templateValidator->validate($set->code, $p['html'] ?? ''),
-            'WORKFLOW' => fn (array $p) => $this->workflowValidator->validate($p),
+            'WORKFLOW' => fn (array $p) => $this->workflowValidator->validate($p, $set->code),
             'NOTIFICATION' => fn (array $p) => $this->notificationValidator->validate($set->code, $p),
             // R2: shape validation (incl. the required legal_restrictions/casing_eligibility/
             // lifecycle_limits keys) runs first, so an invalid payload is still rejected for
