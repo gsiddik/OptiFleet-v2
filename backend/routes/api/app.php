@@ -737,6 +737,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/tires/{tire}/used-inspection/context', [TireUsedInspectionController::class, 'context'])->middleware('permission:tire.view');
             Route::post('/tires/{tire}/used-inspection/evaluate', [TireUsedInspectionController::class, 'evaluate'])->middleware('permission:tire.inspect');
             Route::post('/tires/{tire}/used-inspections', [TireUsedInspectionController::class, 'store'])->middleware('permission:tire.inspect');
+            // Tire Inspection → Tire Identity: fill a missing Manufacture Date Code on the physical tire.
+            Route::put('/tires/{tire}/manufacture-date-code', [TireUsedInspectionController::class, 'updateManufactureDateCode'])->middleware('permission:tire.inspect');
             Route::get('/tire-used-inspections/{tireUsedInspection}', [TireUsedInspectionController::class, 'show'])->middleware('permission:tire.view');
             Route::post('/tire-used-inspections/{tireUsedInspection}/approve', [TireUsedInspectionController::class, 'approve'])->middleware('permission:tire_used_inspection.approve');
             Route::post('/tire-used-inspections/{tireUsedInspection}/cancel', [TireUsedInspectionController::class, 'cancel'])->middleware('permission:tire.inspect');

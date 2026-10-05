@@ -7,6 +7,7 @@ use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireRuleProfile;
 use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\TireUsedInspectionEvidence;
+use App\Domain\Tire\Services\TireAgeService;
 use App\Domain\Tire\Services\TireException;
 use App\Domain\Tire\Services\TireInventoryService;
 use App\Domain\Tire\Services\TireCycleService;
@@ -45,6 +46,7 @@ class UsedTireInspectionService
         private readonly VehicleTireRegistrationService $registrations,
         private readonly UsedTireStockService $usedStock,
         private readonly TireCycleService $cycles,
+        private readonly TireAgeService $age,
     ) {}
 
     /** REMOVED / HOLD, or back from a retread / repair cycle (received, waiting for its re-inspection). */
@@ -185,6 +187,24 @@ class UsedTireInspectionService
     }
 
     /**
+     * Saves a missing Manufacture Date Code on the physical tire (row-locked; the tire is the one
+     * identified by its serial number). Fill-only: an existing code is never overwritten here.
+     * Inspection snapshots already recorded keep the facts they were taken with.
+     */
+    public function setManufactureDateCode(Tire $tire, string $code, User $user): array
+    {
+        return DB::transaction(function () use ($tire, $code, $user) {
+            $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
+            if (trim((string) $locked->manufacture_date_code) !== '') {
+                throw new TireException('This tire already has a Manufacture Date Code ('.$locked->manufacture_date_code.'); it is only filled in here when missing.');
+            }
+            $locked->update(['manufacture_date_code' => $code]);
+
+            return $this->facts($locked->fresh(), $user);
+        });
+    }
+
+    /**
      * Applies the recommendation as the tire's status. The final disposition is the engine's
      * recommendation — it is not overridden here (re-inspect to change it). REUSE goes into the
      * chosen warehouse as reusable used stock (+1 used tire quantity).
@@ -298,7 +318,6 @@ class UsedTireInspectionService
         $product = $tire->product()->withoutGlobalScopes()->withTrashed()->with('tireSpec')->first();
         $group = $product?->tireSpec?->vehicle_group;
         $category = self::CATEGORY_BY_GROUP[$group] ?? null;
-        $manufactured = $this->manufactureDate($tire->manufacture_date_code);
         // Retreads the tire went through: approved cycles that were not scrapped (governance flow or Tire Inspection).
         $retreads = DB::table('tire_retreads')->where('tire_id', $tire->id)->where('status', 'APPROVED')
             ->where(fn ($q) => $q->where('approval_disposition', 'RETURN_TO_SERVICE')->orWhereIn('final_status', ['REUSE', 'REPAIR', 'RETREAD', 'HOLD']))->count();
@@ -325,7 +344,7 @@ class UsedTireInspectionService
             'category' => $category,
             'category_label' => self::CATEGORY_LABELS[$category] ?? null,
             'manufacture_date_code' => $tire->manufacture_date_code,
-            'age_months' => $manufactured ? (int) floor($manufactured->diffInMonths($now)) : null,
+            'age_months' => $this->age->ageMonths($tire->manufacture_date_code, $now),
             'retread_count' => $retreads,
             'repair_history' => $repairs,
             'last_vehicle' => $lastInstallation?->registration_number,
@@ -339,18 +358,10 @@ class UsedTireInspectionService
         ];
     }
 
-    /** DOT date code "WWYY" (week, year) → the Monday of that ISO week; anything else is unknown. */
+    /** DOT date code "WWYY" (week, year) → the Monday of that ISO week (see TireAgeService). */
     public function manufactureDate(?string $code): ?CarbonImmutable
     {
-        if ($code === null || ! preg_match('/^\s*(\d{2})(\d{2})\s*$/', $code, $m)) {
-            return null;
-        }
-        [$week, $year] = [(int) $m[1], 2000 + (int) $m[2]];
-        if ($week < 1 || $week > 53 || $year > (int) now()->format('Y')) {
-            return null;
-        }
-
-        return CarbonImmutable::now()->setISODate($year, $week)->startOfDay();
+        return $this->age->manufactureDate($code);
     }
 
     private function summaryRow(TireUsedInspection $i): array

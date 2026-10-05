@@ -1,14 +1,34 @@
 import { cloneElement, isValidElement, type CSSProperties, type ReactNode } from 'react';
+import { InfoTip } from './InfoTip';
+
+function labelElement(label: string, required: boolean | undefined, marginBottom: number) {
+  return (
+    <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom, color: '#374151' }}>
+      {label}
+      {required && (
+        <>
+          <span aria-hidden="true" style={{ color: '#dc2626', marginLeft: 3 }}>
+            *
+          </span>
+          <span className="sr-only"> (required)</span>
+        </>
+      )}
+    </label>
+  );
+}
 
 export function FormField({
   label,
   errors,
   required,
+  hint,
   children,
 }: {
   label: string;
   errors?: string[];
   required?: boolean;
+  /** Optional explanation, shown in an accessible tooltip next to the label. */
+  hint?: ReactNode;
   children: ReactNode;
 }) {
   const content =
@@ -18,17 +38,14 @@ export function FormField({
 
   return (
     <div style={{ marginBottom: 14 }}>
-      <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 4, color: '#374151' }}>
-        {label}
-        {required && (
-          <>
-            <span aria-hidden="true" style={{ color: '#dc2626', marginLeft: 3 }}>
-              *
-            </span>
-            <span className="sr-only"> (required)</span>
-          </>
-        )}
-      </label>
+      {hint ? (
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+          {labelElement(label, required, 0)}
+          <InfoTip label={label}>{hint}</InfoTip>
+        </div>
+      ) : (
+        labelElement(label, required, 4)
+      )}
       {content}
       {errors?.map((err) => (
         <div key={err} style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>
