@@ -97,7 +97,10 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/component-assets', label: 'Component Assets', permission: 'component_asset.view', module: 'COMPONENT' },
       { to: '/app/returns', label: 'Return', permission: 'part_return.view', module: 'INVENTORY' },
       { to: '/app/stock-transfers', label: 'Transfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
-      { to: '/app/goods-receipts', label: 'Receiving', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
+      // Goods Receipt lives under Inventory (it was listed twice: Procurement → Goods Receipt and
+      // Inventory → Receiving, both the same page). Posting stays on the Purchase Order detail;
+      // same route, permission and module, so nobody loses access.
+      { to: '/app/goods-receipts', label: 'Goods Receipt', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
       { to: '/app/stock-opnames', label: 'Stock Opname', permission: 'inventory.stock_opname', module: 'INVENTORY' },
       { to: '/app/stock-movements', label: 'Stock Movement', permission: 'inventory.view', module: 'INVENTORY' },
       { to: '/app/used-part-returns', label: 'Used Sparepart Processing', permission: 'used_part.view', module: 'INVENTORY' },
@@ -112,7 +115,6 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/rfqs', label: 'RFQ', permission: 'rfq.view', module: 'PROCUREMENT' },
       { to: '/app/quotations', label: 'Quotation', permission: 'quotation.view', module: 'PROCUREMENT' },
       { to: '/app/purchase-orders', label: 'Purchase Order', permission: 'purchase_order.view', module: 'PROCUREMENT' },
-      { to: '/app/goods-receipts', label: 'Goods Receipt', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
       { to: '/app/vendor-invoice-references', label: 'Vendor Invoice Reference', permission: 'vendor_invoice.view', module: 'PROCUREMENT' },
     ],
   },

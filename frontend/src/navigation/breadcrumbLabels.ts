@@ -98,7 +98,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   quotations: 'Vendor Quotations',
   'create-po': 'Create Purchase Order',
   'purchase-orders': 'Purchase Orders',
-  'goods-receipts': 'Goods Receipts',
+  'goods-receipts': 'Goods Receipt',
   'vendor-invoice-references': 'Vendor Invoice References',
 
   // Partners
