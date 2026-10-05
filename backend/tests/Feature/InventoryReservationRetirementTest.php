@@ -38,9 +38,9 @@ class InventoryReservationRetirementTest extends TestCase
         $inventory = app(InventoryService::class);
         $inventory->receive($warehouse, $product, 10, 50, 'OPENING', null, null, null);
         $service = app(WorkOrderService::class);
-        $wo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $wo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
-        )))));
+        ))))));
 
         // A reservation made before the feature was retired, still holding 4 units.
         $line = WorkOrderPlannedPart::query()->create([

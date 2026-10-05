@@ -30,7 +30,7 @@ class WorkOrderExecutionTest extends TestCase
             $wo = app(WorkOrderService::class)->approve($wo);
             $wo = app(WorkOrderService::class)->assign($wo);
             $wo = app(WorkOrderService::class)->schedule($wo);
-            $wo = app(WorkOrderService::class)->start($wo);
+            $wo = app(WorkOrderService::class)->start($this->withApprovedWorkspace($wo));
         }
 
         return [$tenant, $branch, $workshop, $vehicle, $wo, $mechanic];
@@ -60,7 +60,7 @@ class WorkOrderExecutionTest extends TestCase
         $wo = app(WorkOrderService::class)->approve($wo);
         $wo = app(WorkOrderService::class)->assign($wo);
         $wo = app(WorkOrderService::class)->schedule($wo);
-        $wo = app(WorkOrderService::class)->start($wo);
+        $wo = app(WorkOrderService::class)->start($this->withApprovedWorkspace($wo));
 
         // Findings/Diagnosis are no longer addable once the WO has left Draft.
         $this->postJson("/api/v1/app/work-orders/{$wo->id}/findings", [

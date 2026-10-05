@@ -47,7 +47,7 @@ class WorkOrderRemovedComponentTest extends TestCase
         $wo = app(WorkOrderService::class)->approve($wo);
         $wo = app(WorkOrderService::class)->assign($wo);
         $wo = app(WorkOrderService::class)->schedule($wo);
-        $wo = app(WorkOrderService::class)->start($wo);
+        $wo = app(WorkOrderService::class)->start($this->withApprovedWorkspace($wo));
 
         // New part: issued and consumed — the replacement installation.
         $partId = $this->issueThroughPartRequest($wo, $newProduct, 4, $warehouse)->id;
@@ -118,9 +118,9 @@ class WorkOrderRemovedComponentTest extends TestCase
         $branch = $this->makeBranch($tenant);
         $workshop = $this->makeWorkshop($tenant, $branch);
         $service = app(WorkOrderService::class);
-        $otherWo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $otherWo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($this->makeVehicle($tenant, $branch, $this->makeVehicleCategory(), ['default_workshop_id' => $workshop->id]), ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
-        )))));
+        ))))));
         $this->postJson("/api/v1/app/work-orders/{$otherWo->id}/removed-components", [
             'product_id' => $consumedProduct->id, 'quantity' => 1, 'condition' => 'FAULTY',
         ], $headers)->assertStatus(422);

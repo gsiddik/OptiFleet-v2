@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Workshop\Models\Workspace;
+use App\Domain\Workshop\Models\WorkspaceReservation;
+use App\Domain\Workshop\Services\WorkspaceReservationService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -20,6 +22,7 @@ class WorkshopSchedulerController extends Controller
     public function __construct(
         private readonly DataScopeService $scope,
         private readonly TenantContext $context,
+        private readonly WorkspaceReservationService $reservations,
     ) {}
 
     public function index(Request $request)
@@ -39,7 +42,8 @@ class WorkshopSchedulerController extends Controller
             ->with(['reservations' => function ($q) use ($request) {
                 $q->where('end_at', '>=', $request->input('from'))
                     ->where('start_at', '<=', $request->input('to'))
-                    ->whereIn('status', ['RESERVED', 'ACTIVE'])
+                    // Current assignments only (requested, approved, legacy active) — they are what occupies capacity.
+                    ->whereIn('status', WorkspaceReservation::CURRENT)
                     // "Next Improvement Tenant Portal - Products" (Scheduler): a
                     // Closed Work Order's card is removed from the scheduler
                     // entirely, even if its reservation row itself hasn't been
@@ -48,7 +52,10 @@ class WorkshopSchedulerController extends Controller
                     ->with(['workOrder.vehicle', 'workOrder.mechanicAssignments.worker'])
                     ->orderBy('start_at');
             }])
-            ->get();
+            ->orderBy('code')
+            ->get()
+            // Capacity N = up to N concurrent Work Orders (null = 1); the scheduler renders N slots.
+            ->each(fn (Workspace $w) => $w->setAttribute('effective_capacity', $this->reservations->capacity($w)));
 
         return $this->ok($workspaces);
     }

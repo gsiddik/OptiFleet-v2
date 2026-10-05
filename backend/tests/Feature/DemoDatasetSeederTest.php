@@ -103,7 +103,24 @@ class DemoDatasetSeederTest extends TestCase
         $this->assertTrue($docs->contains(fn ($d) => $d->document_type === 'VEHICLE_TAX' && $d->needs_extension && $d->extension_deadline !== null));
         $this->assertTrue($docs->contains(fn ($d) => ! $d->has_expiry && $d->expiry_date === null));
 
-        $phase17Counts = fn () => collect(['purchase_returns', 'tire_retreads', 'tire_cycle_photos', 'vehicle_documents'])
+        // Workspace scheduling: capacity 1 / 2 / 3 bays, every assignment state incl. a transfer, a
+        // SCHEDULED Work Order without a workspace, and no finished Work Order left with an open assignment.
+        $this->assertEqualsCanonicalizing([1, 2, 3], DB::table('workspaces')->where('tenant_id', $alpha->id)->where('code', 'like', 'JKT-BAY-C%')->pluck('capacity')->all());
+        $assignmentStatuses = DB::table('workspace_reservations')->where('tenant_id', $alpha->id)->distinct()->pluck('status')->all();
+        foreach (['RESERVED', 'APPROVED', 'TRANSFERRED', 'COMPLETED'] as $status) {
+            $this->assertContains($status, $assignmentStatuses, "no {$status} workspace assignment");
+        }
+        $withApproved = DB::table('workspace_reservations')->whereIn('status', ['APPROVED', 'ACTIVE'])->select('work_order_id');
+        $this->assertTrue(DB::table('work_orders')->where('tenant_id', $alpha->id)->where('status', 'SCHEDULED')->whereNotIn('id', $withApproved)->exists());
+        $this->assertTrue(DB::table('work_orders')->where('tenant_id', $alpha->id)->where('status', 'SCHEDULED')->whereIn('id', $withApproved)->exists());
+        $this->assertTrue(DB::table('work_orders')->where('tenant_id', $alpha->id)->where('status', 'QC_PENDING')->whereIn('id', $withApproved)->exists());
+        $this->assertFalse(DB::table('work_orders')->where('tenant_id', $alpha->id)->whereIn('status', ['COMPLETED', 'CLOSED', 'CANCELLED'])
+            ->whereIn('id', DB::table('workspace_reservations')->whereIn('status', ['RESERVED', 'APPROVED', 'ACTIVE'])->select('work_order_id'))->exists(), 'a finished Work Order keeps an open workspace assignment');
+        // Every Work Order that started has (or had) an approved workspace.
+        $this->assertFalse(DB::table('work_orders')->where('tenant_id', $alpha->id)->whereNotNull('started_at')
+            ->whereNotIn('id', DB::table('workspace_reservations')->whereNotNull('approved_at')->select('work_order_id'))->exists());
+
+        $phase17Counts = fn () => collect(['purchase_returns', 'tire_retreads', 'tire_cycle_photos', 'vehicle_documents', 'workspace_reservations'])
             ->mapWithKeys(fn ($t) => [$t => DB::table($t)->where('tenant_id', $alpha->id)->count()])->all();
         $phase17 = $phase17Counts();
 

@@ -5,6 +5,7 @@ import { inputStyle } from '../../../components/FormField';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import type { WorkspaceItem, WorkspaceReservationItem } from '../../../types';
+import { peakConcurrency, reservationsOnDay } from './schedulerOccupancy';
 
 function toDateInput(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -126,27 +127,52 @@ export function WorkshopSchedulerPage() {
                   <td style={{ padding: 8, borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }}>
                     <div style={{ fontWeight: 600 }}>{ws.name}</div>
                     <div style={{ color: '#9ca3af' }}>{ws.code}</div>
+                    <div style={{ color: '#374151', margin: '2px 0' }} data-capacity>
+                      Capacity {ws.effective_capacity ?? ws.capacity ?? 1}
+                    </div>
                     <StatusBadge status={ws.status} />
                   </td>
                   {days.map((d) => {
-                    const dayReservations = (ws.reservations ?? [])
-                      .filter((r) => r.start_at.slice(0, 10) <= d && r.end_at.slice(0, 10) >= d)
-                      .sort((a, b) => a.start_at.localeCompare(b.start_at));
+                    // Capacity N = up to N concurrent Work Orders: N slots per day, occupied by the
+                    // assignments running at the same time (each Work Order appears once — never cloned).
+                    const capacity = ws.effective_capacity ?? ws.capacity ?? 1;
+                    const dayReservations = reservationsOnDay(ws.reservations ?? [], d);
+                    const occupied = peakConcurrency(ws.reservations ?? [], d);
+                    const full = occupied >= capacity;
                     return (
-                      <td key={d} style={{ padding: 6, borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }}>
+                      <td key={d} style={{ padding: 6, borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }} data-day={d}>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: full ? '#b91c1c' : '#6b7280', marginBottom: 4 }} data-occupancy={`${occupied}/${capacity}`}>
+                          Occupied {occupied} / {capacity}
+                          {full ? ' · Full' : ''}
+                        </div>
                         {dayReservations.map((r) => (
                           <Link
                             key={r.id}
                             to={r.work_order_id ? `/app/work-orders/${r.work_order_id}` : '#'}
+                            data-scheduler-card
                             style={{
                               display: 'block', background: cardColor(r.work_order?.status), borderRadius: 6,
                               padding: '4px 6px', marginBottom: 4, textDecoration: 'none', color: 'inherit',
+                              border: r.status === 'RESERVED' ? '1px dashed #b45309' : '1px solid transparent',
                             }}
                           >
                             <div style={{ fontWeight: 600 }}>{r.work_order?.wo_number ?? 'Reserved'}</div>
                             <div style={{ color: '#6b7280' }}>{r.work_order?.vehicle?.registration_number ?? ''}</div>
-                            <div style={{ color: '#6b7280' }}>{r.start_at.slice(11, 16)}</div>
+                            <div style={{ color: '#6b7280' }}>
+                              {new Date(r.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–
+                              {new Date(r.end_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {r.status === 'RESERVED' ? ' · Requested' : ''}
+                            </div>
                           </Link>
+                        ))}
+                        {Array.from({ length: Math.max(0, capacity - occupied) }, (_, i) => (
+                          <div
+                            key={`free-${i}`}
+                            data-free-slot
+                            style={{ border: '1px dashed #d1d5db', borderRadius: 6, padding: '4px 6px', marginBottom: 4, color: '#9ca3af' }}
+                          >
+                            Free slot
+                          </div>
                         ))}
                       </td>
                     );

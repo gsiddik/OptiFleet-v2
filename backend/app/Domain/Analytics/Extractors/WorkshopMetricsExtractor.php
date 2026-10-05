@@ -139,7 +139,9 @@ class WorkshopMetricsExtractor implements DatasetExtractor
 
         $reservations = DB::table('workspace_reservations')
             ->whereIn('workspace_id', $workspaces->pluck('id'))
-            ->whereIn('status', ['ACTIVE', 'COMPLETED'])
+            // Approved (legacy ACTIVE) and completed assignments occupied the bay; a TRANSFERRED one is
+            // excluded so its window is not counted twice next to its replacement.
+            ->whereIn('status', ['APPROVED', 'ACTIVE', 'COMPLETED'])
             ->where('start_at', '<', $end)
             ->where('end_at', '>', $start)
             ->get(['start_at', 'end_at']);

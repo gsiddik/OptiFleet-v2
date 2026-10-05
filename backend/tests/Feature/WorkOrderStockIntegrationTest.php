@@ -37,7 +37,7 @@ class WorkOrderStockIntegrationTest extends TestCase
         $wo = app(WorkOrderService::class)->approve($wo);
         $wo = app(WorkOrderService::class)->assign($wo);
         $wo = app(WorkOrderService::class)->schedule($wo);
-        $wo = app(WorkOrderService::class)->start($wo);
+        $wo = app(WorkOrderService::class)->start($this->withApprovedWorkspace($wo));
 
         return [$tenant, $warehouse, $product, $wo];
     }

@@ -29,9 +29,9 @@ class WorkOrderPartCostTest extends TestCase
         $product = $this->makeProduct($tenant, null, null, ['name' => 'Brake Pad Set']);
         app(InventoryService::class)->receive($warehouse, $product, 50, $unitCost, 'OPENING', null, null, null);
         $service = app(WorkOrderService::class);
-        $wo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $wo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
-        )))));
+        ))))));
         [, $token] = $this->makeTenantUser($tenant, ['work_order.view', 'maintenance_job.manage', 'inventory.return']);
 
         return [$wo, $product, $warehouse, $this->authHeaders($token)];

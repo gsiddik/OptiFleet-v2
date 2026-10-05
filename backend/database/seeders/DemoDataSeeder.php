@@ -103,7 +103,7 @@ class DemoDataSeeder extends Seeder
                 // received the tire (Warehouse Manager, below), by design (G-32).
                 'tire_retread.inspect', 'tire_retread.approve', 'tire_repair.inspect', 'tire_repair.approve',
                 'worker.view', 'worker.manage', 'worker.assign',
-                'workspace.view', 'workspace.manage', 'workspace.reserve', 'workspace.block',
+                'workspace.view', 'workspace.manage', 'workspace.reserve', 'workspace.approve', 'workspace.block',
                 'qc.view', 'qc.perform', 'qc.approve', 'qc.reject',
                 'vehicle_release.perform', 'maintenance_history.view',
             ])

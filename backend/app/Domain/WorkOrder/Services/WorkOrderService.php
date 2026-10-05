@@ -10,6 +10,7 @@ use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\Workshop\Models\WorkspaceReservation;
 use Brick\Math\BigDecimal;
 use Brick\Math\RoundingMode;
 use Illuminate\Support\Facades\DB;
@@ -201,6 +202,15 @@ class WorkOrderService
 
     public function schedule(WorkOrder $workOrder, ?string $workspaceId = null, ?\DateTimeInterface $targetStartAt = null, ?\DateTimeInterface $targetCompletionAt = null): WorkOrder
     {
+        // The approved Workspace Assignment is the source of truth for where and when the work runs.
+        $assignment = WorkspaceReservation::query()->where('work_order_id', $workOrder->id)
+            ->whereIn('status', WorkspaceReservation::APPROVED_STATES)->first();
+        if ($assignment) {
+            $workspaceId = $assignment->workspace_id;
+            $targetStartAt ??= $assignment->start_at;
+            $targetCompletionAt ??= $assignment->end_at;
+        }
+
         return $this->transitions->transition($workOrder, 'SCHEDULED', array_filter([
             'workspace_id' => $workspaceId,
             'target_start_at' => $targetStartAt,

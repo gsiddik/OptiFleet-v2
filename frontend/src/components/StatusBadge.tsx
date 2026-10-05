@@ -1,5 +1,7 @@
 const COLORS: Record<string, string> = {
   ACTIVE: '#15803d',
+  RESERVED: '#b45309',
+  TRANSFERRED: '#6366f1',
   active: '#15803d',
   DRAFT: '#a16207',
   INACTIVE: '#6b7280',

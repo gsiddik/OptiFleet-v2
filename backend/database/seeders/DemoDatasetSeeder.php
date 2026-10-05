@@ -71,6 +71,7 @@ use App\Domain\WorkOrder\Services\WorkOrderPartService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use App\Domain\Workshop\Models\Worker;
 use App\Domain\Workshop\Models\Workspace;
+use App\Domain\Workshop\Services\WorkspaceReservationService;
 use App\Models\User;
 use App\Support\TenantContext;
 use Illuminate\Database\Seeder;
@@ -117,6 +118,7 @@ class DemoDatasetSeeder extends Seeder
         $masters = $this->wheelConfigurations();
         $this->mapAndRegisterTires($vehicles, $masters, $carTire, $truckTire);
         $this->newStockTires($carTire, $truckTire, $branches);
+        $this->serviceBays($branches);
         $this->tireOperations($vehicles, $carTire, $truckTire);
         $this->procurement($truckTire);
         $this->operationalLists($branches, $vehicles);
@@ -125,6 +127,7 @@ class DemoDatasetSeeder extends Seeder
         $this->retreadAndScrap($vehicles, $truckTire);
         $this->purchaseReturns();
         $this->vehicleDocuments($vehicles);
+        $this->workspaceScheduling($branches, $vehicles);
     }
 
     // ------------------------------------------------------------ organisation
@@ -413,6 +416,20 @@ class DemoDatasetSeeder extends Seeder
 
     // --------------------------------------------------------- tire operations
 
+    /**
+     * One general service bay (capacity 2) per branch workshop, created before any Work Order is
+     * scheduled: SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment.
+     */
+    private function serviceBays(array $branches): void
+    {
+        foreach ($branches as $code => $branch) {
+            Workspace::query()->updateOrCreate(
+                ['tenant_id' => $this->tenant->id, 'workshop_id' => $branch['workshop']->id, 'code' => "{$code}-SVC-1"],
+                ['name' => $branch['branch']->name.' Service Bay', 'workspace_type' => 'GENERAL_SERVICE_BAY', 'capacity' => 2, 'capacity_unit' => 'vehicles', 'status' => 'AVAILABLE']
+            );
+        }
+    }
+
     /** One operation per status and type, each with its Work Order. */
     private function tireOperations(array $vehicles, Product $carTire, Product $truckTire): void
     {
@@ -420,7 +437,13 @@ class DemoDatasetSeeder extends Seeder
         $workOrders = app(WorkOrderService::class);
         $date = fn (int $daysAgo) => now()->subDays($daysAgo)->toDateString();
         $exists = fn (Vehicle $v, string $type) => TireOperation::query()->where('vehicle_id', $v->id)->where('operation_type', $type)->exists();
-        $start = fn (WorkOrder $wo) => $workOrders->start($workOrders->schedule($workOrders->assign($workOrders->approve($workOrders->submit($wo)))));
+        // SCHEDULED → IN_PROGRESS needs an approved Workspace Assignment (reserve → approve).
+        $start = function (WorkOrder $wo) use ($workOrders) {
+            $wo = $workOrders->assign($workOrders->approve($workOrders->submit($wo)));
+            DemoWorkspaceAssignment::approve($wo, $this->admin->id);
+
+            return $workOrders->start($workOrders->schedule($wo));
+        };
         $free = fn (Product $p) => collect($operations->replacementCandidates($this->tenant->id, $p->id))->where('source', 'NEW_STOCK')->pluck('id')->values();
 
         // 1. Replacement — NEW (requested replacement tire waiting for the Work Order).
@@ -733,7 +756,9 @@ class DemoDatasetSeeder extends Seeder
             'operation_type' => 'REPLACEMENT', 'operated_date' => now()->subDay()->toDateString(), 'operated_time' => '14:30', 'odometer' => '152900',
             'items' => $positions->map(fn ($code, $i) => ['position_code' => $code, 'replacement_tire_id' => $i === 0 ? $reuse->id : $newStock[$i - 1]])->all(),
         ], $this->admin->id);
-        $workOrders->start($workOrders->schedule($workOrders->assign($workOrders->approve($workOrders->submit(WorkOrder::query()->findOrFail($op->work_order_id))))));
+        $busWorkOrder = $workOrders->assign($workOrders->approve($workOrders->submit(WorkOrder::query()->findOrFail($op->work_order_id))));
+        DemoWorkspaceAssignment::approve($busWorkOrder, $this->admin->id);
+        $workOrders->start($workOrders->schedule($busWorkOrder));
         $requests = app(WorkOrderPartRequestService::class);
         $request = $requests->approve(WorkOrderPartRequest::query()->where('tire_operation_id', $op->id)->firstOrFail(), null, $this->admin->id, 'Approved: one reused and three new tires');
         $request = $requests->issue($request, $semarang, $this->admin->id);
@@ -844,6 +869,74 @@ class DemoDatasetSeeder extends Seeder
                 'has_expiry' => $hasExpiry, 'expiry_date' => $expiry, 'needs_extension' => $extend, 'extension_deadline' => $deadline,
             ], $this->admin->id);
         }
+    }
+
+    /**
+     * Workspace scheduling demo (Jakarta workshop): bays with capacity 1, 2 and 3 and Work Orders in
+     * every scheduling state — DRAFT without a workspace, APPROVED ready to schedule, SCHEDULED with
+     * and without an approved workspace (Start blocked), IN_PROGRESS, QC_PENDING moved to the QC bay
+     * (transfer history), COMPLETED (assignment completed with the Work Order), an approved and
+     * transferable assignment and a pending request that fills the capacity-2 bay. All through the
+     * domain services; idempotent via the complaint marker.
+     */
+    private function workspaceScheduling(array $branches, array $vehicles): void
+    {
+        $marker = 'Demo workspace scheduling:';
+        $workshop = $branches['ALPHA-JKT']['workshop'];
+        $bays = [];
+        foreach ([1, 2, 3] as $capacity) {
+            $bays[$capacity] = Workspace::query()->updateOrCreate(
+                ['tenant_id' => $this->tenant->id, 'workshop_id' => $workshop->id, 'code' => "JKT-BAY-C{$capacity}"],
+                ['name' => "Jakarta Bay (capacity {$capacity})", 'workspace_type' => 'GENERAL_SERVICE_BAY', 'capacity' => $capacity, 'capacity_unit' => 'vehicles', 'status' => 'AVAILABLE']
+            );
+        }
+        $qcBay = Workspace::query()->updateOrCreate(
+            ['tenant_id' => $this->tenant->id, 'workshop_id' => $workshop->id, 'code' => 'JKT-QC-DEMO'],
+            ['name' => 'Jakarta QC Bay (demo)', 'workspace_type' => 'QC_BAY', 'capacity' => 1, 'capacity_unit' => 'vehicles', 'status' => 'AVAILABLE']
+        );
+        if (WorkOrder::query()->where('tenant_id', $this->tenant->id)->where('complaint', 'like', $marker.'%')->exists()) {
+            return;
+        }
+
+        $workOrders = app(WorkOrderService::class);
+        $assignments = app(WorkspaceReservationService::class);
+        $create = fn (string $label, Vehicle $vehicle) => $workOrders->create($vehicle->fresh(), [
+            'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM', 'complaint' => "{$marker} {$label}",
+        ], $this->admin->id);
+        $assigned = fn (WorkOrder $wo) => $workOrders->assign($workOrders->approve($workOrders->submit($wo)));
+        $approved = fn (WorkOrder $wo, Workspace $bay, $start, int $hours = 3) => $assignments->approve(
+            $assignments->reserve($bay, $start, $start->copy()->addHours($hours), $wo->id, $this->admin->id), $this->admin->id,
+        );
+        $tomorrow = now()->addDay()->setTime(8, 0);
+
+        // 1. DRAFT — no workspace yet.
+        $create('draft, no workspace yet.', $vehicles['car1']);
+        // 2. APPROVED — eligible for Schedule Workspace.
+        $workOrders->approve($workOrders->submit($create('approved, ready to schedule a workspace.', $vehicles['car2'])));
+        // 3. SCHEDULED with an approved workspace and work date (capacity-2 bay, tomorrow 08:00–11:00).
+        $wo = $assigned($create('scheduled with an approved workspace.', $vehicles['car1']));
+        $approved($wo, $bays[2], $tomorrow);
+        $workOrders->schedule($wo->fresh());
+        // 4. SCHEDULED without a workspace — Start is blocked until one is approved.
+        $workOrders->schedule($assigned($create('scheduled without a workspace (start blocked).', $vehicles['car2'])));
+        // 5. IN_PROGRESS in the capacity-3 bay.
+        $wo = $assigned($create('in progress in the capacity-3 bay.', $vehicles['car1']));
+        $approved($wo, $bays[3], now()->subHour(), 6);
+        $workOrders->start($workOrders->schedule($wo->fresh()));
+        // 6. QC_PENDING — moved from the capacity-1 bay to the QC bay (TRANSFERRED history + new approved assignment).
+        $wo = $assigned($create('QC pending, moved to the QC bay.', $vehicles['car2']));
+        $first = $approved($wo, $bays[1], now()->subHours(3), 2);
+        $workOrders->submitToQc($workOrders->start($workOrders->schedule($wo->fresh())));
+        $assignments->transfer($first, $qcBay, now()->subMinutes(30), now()->addHours(2), $this->admin->id);
+        // 7. COMPLETED — its assignment completed together with the Work Order.
+        $wo = $assigned($create('completed; workspace assignment completed with it.', $vehicles['car1']));
+        $approved($wo, $bays[1], now()->subDays(2)->setTime(8, 0));
+        $workOrders->complete($workOrders->submitToQc($workOrders->start($workOrders->schedule($wo->fresh()))));
+        // 8. ASSIGNED with an approved, transferable workspace (capacity-1 bay, tomorrow 13:00–16:00).
+        $approved($assigned($create('assigned with an approved, transferable workspace.', $vehicles['car2'])), $bays[1], $tomorrow->copy()->addHours(5));
+        // 9. A pending request that fills the capacity-2 bay tomorrow 08:00–11:00 (2 / 2).
+        $wo = $assigned($create('workspace requested, awaiting approval.', $vehicles['car1']));
+        $assignments->reserve($bays[2], $tomorrow, $tomorrow->copy()->addHours(3), $wo->id, $this->admin->id);
     }
 
     /** A Used Tire Management inspection through the decision engine, approved by the demo admin. */

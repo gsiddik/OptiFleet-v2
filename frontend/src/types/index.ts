@@ -1172,6 +1172,8 @@ export interface WorkspaceItem {
   status: 'AVAILABLE' | 'RESERVED' | 'OCCUPIED' | 'BLOCKED' | 'UNDER_MAINTENANCE' | 'INACTIVE';
   workshop?: Workshop;
   vehicle_categories?: VehicleCategory[];
+  /** Workshop Scheduler only: capacity used for occupancy (null capacity = 1). */
+  effective_capacity?: number;
 }
 
 export interface WorkspaceReservationItem {
@@ -1180,9 +1182,35 @@ export interface WorkspaceReservationItem {
   work_order_id: string | null;
   start_at: string;
   end_at: string;
-  status: 'RESERVED' | 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  /** RESERVED = requested; APPROVED = approved (legacy ACTIVE counts as approved); TRANSFERRED = history after a transfer. */
+  status: WorkspaceAssignmentStatus;
+  created_by?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  transferred_from_id?: string | null;
+  transferred_by?: string | null;
+  transferred_at?: string | null;
+  completed_at?: string | null;
+  cancelled_at?: string | null;
   workspace?: WorkspaceItem;
   work_order?: WorkOrderItem;
+  approver?: { id: string; name: string } | null;
+  transferrer?: { id: string; name: string } | null;
+  transferred_from?: (WorkspaceReservationItem & { workspace?: Pick<WorkspaceItem, 'id' | 'name' | 'code'> }) | null;
+}
+
+export type WorkspaceAssignmentStatus = 'RESERVED' | 'APPROVED' | 'ACTIVE' | 'TRANSFERRED' | 'COMPLETED' | 'CANCELLED';
+
+/** GET /work-orders/{id}/available-workspaces — workspaces with a free capacity slot in the window. */
+export interface AvailableWorkspaceItem {
+  id: string;
+  code: string;
+  name: string;
+  workspace_type: WorkspaceItem['workspace_type'];
+  status: WorkspaceItem['status'];
+  capacity: number;
+  /** Peak number of current assignments overlapping the window. */
+  occupied: number;
 }
 
 export interface QcInspectionItem {

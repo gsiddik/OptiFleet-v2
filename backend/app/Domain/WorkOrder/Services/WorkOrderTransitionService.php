@@ -5,6 +5,7 @@ namespace App\Domain\WorkOrder\Services;
 use App\Domain\Tire\Services\TireOperationExecutionService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\Workshop\Services\WorkspaceReservationService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -30,6 +31,7 @@ class WorkOrderTransitionService
         private readonly WorkflowEngine $workflow,
         private readonly WorkOrderClosureGuardService $closureGuard,
         private readonly TireOperationExecutionService $tireOperations,
+        private readonly WorkspaceReservationService $workspaces,
     ) {}
 
     public function canTransition(WorkOrder $workOrder, string $to): bool
@@ -48,6 +50,10 @@ class WorkOrderTransitionService
                 throw new WorkOrderException("Cannot transition Work Order from {$locked->status} to {$to}.");
             }
 
+            // Work starts only in an approved workspace with a valid scheduled window.
+            if ($locked->status === 'SCHEDULED' && $to === 'IN_PROGRESS') {
+                $this->workspaces->assertStartable($locked);
+            }
             if (in_array($to, self::GUARDED_TARGETS, true)) {
                 $this->closureGuard->assertClosable($locked);
             }
@@ -68,6 +74,14 @@ class WorkOrderTransitionService
 
             if (in_array($to, ['CANCELLED', 'REJECTED'], true)) {
                 $this->tireOperations->releaseOnWorkOrderClosedWithoutWork($locked, auth()->id());
+            }
+            // The Work Order is the source of truth for its Workspace Assignment: completing it
+            // completes the approved assignment in the same transaction; ending it without work
+            // (or handing it to an external workshop) releases the slot.
+            if ($to === 'COMPLETED') {
+                $this->workspaces->completeForWorkOrder($locked);
+            } elseif (in_array($to, ['CANCELLED', 'REJECTED', 'EXTERNAL'], true)) {
+                $this->workspaces->releaseForWorkOrder($locked);
             }
 
             return $locked->fresh();

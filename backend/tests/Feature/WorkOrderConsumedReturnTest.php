@@ -35,9 +35,9 @@ class WorkOrderConsumedReturnTest extends TestCase
         $headers = $this->authHeaders($token);
 
         $service = app(WorkOrderService::class);
-        $wo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $wo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
-        )))));
+        ))))));
 
         $partId = $this->issueThroughPartRequest($wo, $product, $issueQty, $warehouse)->id;
 

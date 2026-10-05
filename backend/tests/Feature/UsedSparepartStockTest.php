@@ -32,9 +32,9 @@ class UsedSparepartStockTest extends TestCase
         $product = $this->makeProduct($tenant, null, null, ['name' => 'Alternator', 'sku' => 'SP-ALT-'.Str::random(4)]);
         app(InventoryService::class)->receive($warehouse, $product, 20, 100, 'OPENING', null, null, null);
         $service = app(WorkOrderService::class);
-        $wo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $wo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], null)
-        )))));
+        ))))));
         [, $makerToken] = $this->makeTenantUser($tenant, self::MAKER);
         [, $approverToken] = $this->makeTenantUser($tenant, ['used_part.view', 'used_part.approve']);
 

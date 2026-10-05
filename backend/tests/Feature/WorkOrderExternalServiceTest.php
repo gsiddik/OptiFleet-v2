@@ -52,6 +52,7 @@ class WorkOrderExternalServiceTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$id}/approve", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/assign", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$id}/schedule", [], $headers)->assertOk();
+        $this->withApprovedWorkspace($id);
         $this->postJson("/api/v1/app/work-orders/{$id}/start", [], $headers)->assertOk();
 
         return $id;

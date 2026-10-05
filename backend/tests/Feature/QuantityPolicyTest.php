@@ -83,9 +83,9 @@ class QuantityPolicyTest extends TestCase
         [$user, $token] = $this->makeTenantUser($tenant, ['inventory.adjust', 'maintenance_job.manage', 'part_request.create']);
         $headers = $this->authHeaders($token);
         $service = app(WorkOrderService::class);
-        $wo = $service->start($service->schedule($service->assign($service->approve($service->submit(
+        $wo = $service->start($this->withApprovedWorkspace($service->schedule($service->assign($service->approve($service->submit(
             $service->create($vehicle, ['workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE'], $user->id)
-        )))));
+        ))))));
 
         $this->postJson('/api/v1/app/inventory/adjust', ['warehouse_id' => $warehouse->id, 'product_id' => $counted->id, 'quantity' => 1.5, 'direction' => 'PLUS', 'reason' => 'x'], $headers)
             ->assertStatus(422)->assertJsonValidationErrors('quantity');

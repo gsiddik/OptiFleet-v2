@@ -75,7 +75,7 @@ class FunctionalTestUserSeeder
                 'workshop_invoice.verify_correction', 'workshop_invoice.verify_cancellation', 'workshop_invoice.view_settlement_history',
                 'diagnosis.manage', 'maintenance_job.manage', 'part_request.view', 'part_request.approve', 'part_request.reject',
                 'worker.view', 'worker.manage', 'worker.assign',
-                'workspace.view', 'workspace.manage', 'workspace.reserve', 'workspace.block',
+                'workspace.view', 'workspace.manage', 'workspace.reserve', 'workspace.approve', 'workspace.block',
                 'qc.view', 'qc.perform', 'qc.approve', 'qc.reject',
                 'vehicle_release.perform', 'maintenance_history.view', 'partner.view',
             ])->pluck('id')->all());

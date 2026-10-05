@@ -459,6 +459,10 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
 
             Route::get('/workspace-reservations', [WorkspaceReservationController::class, 'index'])->middleware('permission:workspace.view');
             Route::post('/workspace-reservations', [WorkspaceReservationController::class, 'store'])->middleware('permission:workspace.reserve');
+            Route::post('/workspace-reservations/{reservation}/approve', [WorkspaceReservationController::class, 'approve'])->middleware('permission:workspace.approve');
+            Route::post('/workspace-reservations/{reservation}/transfer', [WorkspaceReservationController::class, 'transfer'])->middleware('permission:workspace.approve');
+            Route::get('/work-orders/{workOrder}/available-workspaces', [WorkspaceReservationController::class, 'available'])->middleware('permission:workspace.view');
+            // Deprecated (approval model): respond 422 with the replacement action.
             Route::post('/workspace-reservations/{reservation}/activate', [WorkspaceReservationController::class, 'activate'])->middleware('permission:workspace.reserve');
             Route::post('/workspace-reservations/{reservation}/complete', [WorkspaceReservationController::class, 'complete'])->middleware('permission:workspace.reserve');
             Route::post('/workspace-reservations/{reservation}/cancel', [WorkspaceReservationController::class, 'cancel'])->middleware('permission:workspace.reserve');

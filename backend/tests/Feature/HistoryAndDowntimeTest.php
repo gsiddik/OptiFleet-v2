@@ -64,7 +64,7 @@ class HistoryAndDowntimeTest extends TestCase
         $wo = $workOrders->approve($wo);
         $wo = $workOrders->assign($wo);
         $wo = $workOrders->schedule($wo);
-        $wo = $workOrders->start($wo); // started_at = now()
+        $wo = $workOrders->start($this->withApprovedWorkspace($wo)); // started_at = now()
 
         $downtime = app(DowntimeService::class)->forWorkOrder($wo);
 

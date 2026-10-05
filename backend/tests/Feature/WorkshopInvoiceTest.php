@@ -61,6 +61,7 @@ class WorkshopInvoiceTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$woId}/approve", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/assign", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/schedule", [], $headers)->assertOk();
+        $this->withApprovedWorkspace($woId);
         $this->postJson("/api/v1/app/work-orders/{$woId}/start", [], $headers)->assertOk();
 
         $serviceId = $this->postJson("/api/v1/app/work-orders/{$woId}/external-services", [
@@ -122,6 +123,7 @@ class WorkshopInvoiceTest extends TestCase
         $this->postJson("/api/v1/app/work-orders/{$woId}/approve", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/assign", [], $headers)->assertOk();
         $this->postJson("/api/v1/app/work-orders/{$woId}/schedule", [], $headers)->assertOk();
+        $this->withApprovedWorkspace($woId);
         $this->postJson("/api/v1/app/work-orders/{$woId}/start", [], $headers)->assertOk();
         $serviceId = $this->postJson("/api/v1/app/work-orders/{$woId}/external-services", [
             'partner_id' => $partner->id, 'description' => 'Still in progress',
@@ -228,6 +230,9 @@ class WorkshopInvoiceTest extends TestCase
         $partner = $this->makePartner($tenant, ['partner_type' => 'EXTERNAL_WORKSHOP']);
         $woId = $this->postJson('/api/v1/app/work-orders', ['vehicle_id' => $vehicle->id, 'workshop_id' => $workshop->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000], $headers)->json('data.id');
         foreach (['submit', 'approve', 'assign', 'schedule', 'start'] as $action) {
+            if ($action === 'start') {
+                $this->withApprovedWorkspace($woId);
+            }
             $this->postJson("/api/v1/app/work-orders/{$woId}/{$action}", [], $headers)->assertOk();
         }
         $serviceId = $this->postJson("/api/v1/app/work-orders/{$woId}/external-services", ['partner_id' => $partner->id, 'description' => 'No estimate given'], $headers)->json('data.id');
