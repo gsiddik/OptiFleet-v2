@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { useAuth } from '../../../auth/AuthContext';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -10,6 +11,7 @@ import type { SparePartSaleItem, WorkOrderPartReturnItem } from '../../../types'
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { ScrappedTireSaleForm } from './ScrappedTireSaleForm';
 
 const inputStyle: React.CSSProperties = { padding: '6px 8px', fontSize: 12, border: '1px solid #d1d5db', borderRadius: 4 };
 const STATUS_FILTERS = ['', 'DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CANCELLED'];
@@ -20,6 +22,9 @@ export function SparePartSalePage() {
   const [page, setPage] = useState(1);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Tires selected on Used Tire Management → Scrap (row or bulk Sell).
+  const [params, setParams] = useSearchParams();
+  const tireIds = (params.get('tire_ids') ?? '').split(',').filter(Boolean);
   const { data: sales, meta, loading, error: listError, reload } = useApiList<SparePartSaleItem>(
     '/app/sparepart-sales',
     { status: statusFilter || undefined, page },
@@ -52,6 +57,17 @@ export function SparePartSalePage() {
         Only quantity finalized as SELL_ELIGIBLE by Used Sparepart Processing can be sold. Every sale is approved by someone other than the maker before it counts as final.
       </p>
 
+      {canCreate && tireIds.length > 0 && (
+        <ScrappedTireSaleForm
+          tireIds={tireIds}
+          onCancel={() => setParams({}, { replace: true })}
+          onCreated={() => {
+            setParams({}, { replace: true });
+            reload();
+          }}
+        />
+      )}
+
       {canCreate && (
         <NewSaleForm
           eligibleReturns={eligibleReturns.filter((r) => (r.remaining_eligible_quantity ?? 0) > 0)}
@@ -77,6 +93,7 @@ export function SparePartSalePage() {
         <div key={sale.id} className="card" style={{ marginBottom: 10, fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <span>
+              {sale.source_type === 'SCRAPPED_TIRE' && <strong data-sale-serial>Tire {sale.tire_serial_number} · </strong>}
               {sale.product?.name ?? sale.product_id} — qty {formatQty(sale.quantity)} × {formatMoney(sale.unit_price)} = {formatMoney(sale.total_amount)} ({sale.sale_type})
               <br />
               <span style={{ color: '#6b7280', fontSize: 12 }}>

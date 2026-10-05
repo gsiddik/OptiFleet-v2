@@ -55,6 +55,11 @@ class PurchaseOrder extends Model
         return $this->hasMany(GoodsReceipt::class);
     }
 
+    public function returns(): HasMany
+    {
+        return $this->hasMany(PurchaseReturn::class);
+    }
+
     public function workflowApprovalRequest(): BelongsTo
     {
         return $this->belongsTo(WorkflowApprovalRequest::class);

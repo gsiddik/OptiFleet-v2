@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Pagination } from '../../../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../../../components/States';
@@ -28,6 +28,12 @@ export interface WorkflowTab {
   serialOpensHistory?: boolean;
   activityTypes: TireActivityType[];
   activityTitle: string;
+  /** Replaces the generic candidates list (e.g. the Retread cycle panel). */
+  panel?: ReactNode;
+  /** Activity lists only completed retread / repair cycles. */
+  completedCycles?: boolean;
+  /** The panel already lists the step's recent records (e.g. Recently Scrapped). */
+  hideActivity?: boolean;
 }
 
 /**
@@ -105,6 +111,7 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
 
   return (
     <div role="tabpanel" data-workflow-tab={tab.key}>
+      {tab.panel ?? (
       <section className="card" style={{ marginBottom: 16 }} data-workflow-candidates>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>
           {tab.candidatesTitle} {meta && <span style={{ color: '#6b7280', fontWeight: 400 }}>({meta.total})</span>}
@@ -126,10 +133,13 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
         )}
         {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={setPage} />}
       </section>
+      )}
+      {!tab.hideActivity && (
       <section className="card" data-workflow-activity>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>{tab.activityTitle}</h3>
-        <TireActivityTable types={tab.activityTypes} perPage={10} />
+        <TireActivityTable types={tab.activityTypes} perPage={10} completedCycles={tab.completedCycles} />
       </section>
+      )}
       {historyOf && <TireHistoryModal tireId={historyOf.id} serial={historyOf.serial_number} onClose={() => setHistoryOf(null)} />}
     </div>
   );
@@ -146,9 +156,13 @@ const ACTIVITY_LABELS: Record<TireActivityType, string> = {
 };
 
 /** Tire History events (newest first), server-side paginated; shared by History and the workflow tabs. */
-export function TireActivityTable({ types, search, perPage = 20 }: { types: TireActivityType[]; search?: string; perPage?: number }) {
+export function TireActivityTable({ types, search, perPage = 20, completedCycles = false }: { types: TireActivityType[]; search?: string; perPage?: number; completedCycles?: boolean }) {
   const [page, setPage] = useState(1);
-  const { data, meta, loading, error } = useApiList<TireActivityItem>('/app/tire-activity', { type: types.length ? types : undefined, search: search || undefined, page, per_page: perPage }, 0);
+  const { data, meta, loading, error } = useApiList<TireActivityItem>(
+    '/app/tire-activity',
+    { type: types.length ? types : undefined, search: search || undefined, page, per_page: perPage, completed_cycles: completedCycles ? 1 : undefined },
+    0,
+  );
   const rows = data.map((e) => ({ ...e, id: `${e.type}-${e.id}` }));
 
   const columns: Column<TireActivityItem>[] = [

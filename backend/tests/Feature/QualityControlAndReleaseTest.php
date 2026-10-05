@@ -37,6 +37,23 @@ class QualityControlAndReleaseTest extends TestCase
         return [$tenant, $branch, $workshop, $vehicle, $wo, $mechanic, $qcInspector];
     }
 
+    /** Road Test (like QC) belongs to the QC step: refused before and after QC_PENDING. */
+    public function test_road_test_is_recorded_only_while_the_work_order_is_pending_qc(): void
+    {
+        [$tenant, , , , $wo] = $this->setUpWorkOrderAtQc();
+        [, $token] = $this->makeTenantUser($tenant, ['qc.view', 'qc.perform']);
+        $headers = $this->authHeaders($token);
+
+        foreach (['IN_PROGRESS', 'COMPLETED'] as $status) {
+            $wo->forceFill(['status' => $status])->save();
+            $this->postJson("/api/v1/app/work-orders/{$wo->id}/road-test", ['result' => 'PASS'], $headers)->assertStatus(422);
+        }
+        $this->assertSame(0, \App\Domain\QualityControl\Models\RoadTest::query()->where('work_order_id', $wo->id)->count());
+
+        $wo->forceFill(['status' => 'QC_PENDING'])->save();
+        $this->postJson("/api/v1/app/work-orders/{$wo->id}/road-test", ['result' => 'PASS'], $headers)->assertStatus(201);
+    }
+
     public function test_qc_pass_flow_and_road_test(): void
     {
         [$tenant, , , $vehicle, $wo, , $qcInspector] = $this->setUpWorkOrderAtQc();

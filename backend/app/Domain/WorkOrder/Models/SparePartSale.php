@@ -8,6 +8,7 @@ use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\Shared\Concerns\BelongsToTenant;
+use App\Domain\Tire\Models\Tire;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -28,7 +29,13 @@ class SparePartSale extends Model
         'sale_type', 'buyer_type', 'partner_id', 'buyer_name', 'unit_price', 'total_amount',
         'status', 'workflow_configuration_version_id', 'workflow_approval_request_id',
         'stock_movement_id', 'requested_by', 'decided_by', 'decided_at', 'rejection_reason', 'notes',
+        'source_type', 'tire_id', 'tire_serial_number', 'tire_status', 'tire_condition',
     ];
+
+    public const SOURCE_USED_SPAREPART = 'USED_SPAREPART';
+
+    /** A physical tire from Used Tire Management → Scrap → Recently Scrapped (quantity 1). */
+    public const SOURCE_SCRAPPED_TIRE = 'SCRAPPED_TIRE';
 
     protected function casts(): array
     {
@@ -63,5 +70,10 @@ class SparePartSale extends Model
     public function stockMovement(): BelongsTo
     {
         return $this->belongsTo(StockMovement::class, 'stock_movement_id');
+    }
+
+    public function tire(): BelongsTo
+    {
+        return $this->belongsTo(Tire::class)->withoutGlobalScopes();
     }
 }

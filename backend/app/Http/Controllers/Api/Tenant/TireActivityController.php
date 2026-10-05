@@ -20,6 +20,8 @@ class TireActivityController extends Controller
             'type.*' => [Rule::in(TireActivityService::TYPES)],
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            // Used Tire Management → Retread lists only completed retread / repair cycles.
+            'completed_cycles' => ['nullable', 'boolean'],
         ]);
 
         return $this->paginated($this->activity->feed(
@@ -28,6 +30,7 @@ class TireActivityController extends Controller
             $validated['type'] ?? [],
             trim((string) ($validated['search'] ?? '')) ?: null,
             (int) ($validated['per_page'] ?? 20),
+            $request->boolean('completed_cycles'),
         ));
     }
 }

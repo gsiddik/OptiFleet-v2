@@ -11,13 +11,14 @@ class PurchaseOrderItem extends Model
 {
     use HasUuids;
 
-    protected $fillable = ['purchase_order_id', 'product_id', 'quantity_ordered', 'quantity_received', 'unit_price', 'discount_percent', 'tax_percent', 'line_total'];
+    protected $fillable = ['purchase_order_id', 'product_id', 'quantity_ordered', 'quantity_received', 'unit_price', 'discount_percent', 'tax_percent', 'line_total', 'quantity_returned', 'quantity_refunded'];
 
     protected function casts(): array
     {
         return [
             'quantity_ordered' => 'decimal:4', 'quantity_received' => 'decimal:4', 'unit_price' => 'decimal:4',
             'discount_percent' => 'decimal:2', 'tax_percent' => 'decimal:2', 'line_total' => 'decimal:4',
+            'quantity_returned' => 'decimal:4', 'quantity_refunded' => 'decimal:4',
         ];
     }
 
@@ -31,8 +32,19 @@ class PurchaseOrderItem extends Model
         return $this->belongsTo(Product::class);
     }
 
+    /**
+     * Still to be received from the vendor: ordered − kept (received − returned to the vendor) −
+     * refunded (a refund requested or accepted is no longer expected as goods). A redelivery
+     * return therefore re-opens its quantity for Goods Receipt.
+     */
     public function remainingQuantity(): float
     {
-        return (float) $this->quantity_ordered - (float) $this->quantity_received;
+        return (float) $this->quantity_ordered - ((float) $this->quantity_received - (float) $this->quantity_returned) - (float) $this->quantity_refunded;
+    }
+
+    /** Received goods still held from this line (may be returned to the vendor). */
+    public function returnableQuantity(): float
+    {
+        return (float) $this->quantity_received - (float) $this->quantity_returned;
     }
 }

@@ -136,6 +136,16 @@ class TemplateVariableRegistry
                 'items' => ['product_name', 'quantity_ordered', 'unit_price', 'discount_percent', 'tax_percent', 'line_total'],
             ],
         ],
+        'purchase_return' => [
+            'scalars' => [
+                'purchase_return.number', 'purchase_return.returned_date', 'purchase_return.return_option', 'purchase_return.status',
+                'purchase_return.notes', 'purchase_order.number',
+                'partner.name', 'partner.address', 'partner.contact_name', 'partner.contact_phone', 'warehouse.name',
+            ],
+            'sections' => [
+                'items' => ['product_name', 'product_code', 'quantity'],
+            ],
+        ],
         'rfq' => [
             'scalars' => [
                 'rfq.number', 'rfq.issue_date', 'rfq.response_deadline', 'rfq.status',

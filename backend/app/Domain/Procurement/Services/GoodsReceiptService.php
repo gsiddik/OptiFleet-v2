@@ -38,6 +38,7 @@ class GoodsReceiptService
         private readonly PartnerPerformanceService $performance,
         private readonly VendorInvoiceReferenceService $invoices,
         private readonly PrivateDocumentStorage $storage,
+        private readonly PurchaseReturnService $returns,
     ) {}
 
     /**
@@ -65,6 +66,8 @@ class GoodsReceiptService
 
         return $this->storage->persist(['invoice_document' => $upload], fn (array $stored) => DB::transaction(function () use ($po, $warehouse, $lines, $userId, $notes, $invoice, $stored) {
             $lockedPo = PurchaseOrder::query()->lockForUpdate()->findOrFail($po->id);
+            // A Return Order waiting for the vendor's redelivery blocks receiving until it is received.
+            $this->returns->assertGoodsReceiptAllowed($lockedPo);
 
             $number = $this->numbers->generate('goods_receipt', $lockedPo->tenant_id, null, null, $warehouse->id);
 

@@ -12,8 +12,12 @@ class RoadTestService
     {
         // Road Test is an internal-workshop-execution capability — never usable for an External
         // Work Order (Findings-only scope carried out by an external workshop).
-        if ($workOrder->status === 'EXTERNAL') {
+        if ($workOrder->execution_mode === 'EXTERNAL' || $workOrder->status === 'EXTERNAL') {
             throw new WorkOrderException('Road Test is not available for an External Work Order.');
+        }
+        // Like QC, a Road Test belongs to the QC step: only while the Work Order is pending QC.
+        if ($workOrder->status !== 'QC_PENDING') {
+            throw new WorkOrderException("A Road Test can only be recorded while the Work Order is pending QC (this one is {$workOrder->status}).");
         }
 
         return RoadTest::query()->create(array_merge($attributes, [

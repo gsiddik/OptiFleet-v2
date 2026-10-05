@@ -278,6 +278,30 @@ class InventoryService
         });
     }
 
+    /** Goods sent back to their vendor (Purchase Order Return to Vendor), at the average cost. */
+    public function returnToVendor(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): WarehouseStock
+    {
+        QuantityPolicy::assertValid($product, $quantity);
+        if ($quantity <= 0) {
+            throw new InventoryException('Return quantity must be positive.');
+        }
+
+        return DB::transaction(function () use ($warehouse, $product, $quantity, $referenceType, $referenceId, $userId, $reason) {
+            $stock = $this->lockOrCreateStock($warehouse, $product);
+            $available = (float) $stock->quantity_on_hand - (float) $stock->quantity_reserved;
+            if ($quantity > $available) {
+                throw new InventoryException("Insufficient stock in {$warehouse->name} to return {$quantity}: available {$available}.");
+            }
+            $stock->decrement('quantity_on_hand', $quantity);
+            $this->writeMovement($stock, 'RETURN_TO_VENDOR', $quantity, (float) $stock->average_unit_cost, $referenceType, $referenceId, $userId, $reason);
+
+            $fresh = $stock->fresh();
+            $this->notifyIfLowStock($warehouse, $product, $fresh);
+
+            return $fresh;
+        });
+    }
+
     public function transferOut(Warehouse $warehouse, Product $product, float $quantity, ?string $referenceType, ?string $referenceId, ?string $userId): WarehouseStock
     {
         QuantityPolicy::assertValid($product, $quantity);

@@ -5,6 +5,7 @@ namespace App\Domain\Configuration\Services;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseOrder;
+use App\Domain\Procurement\Models\PurchaseReturn;
 use App\Domain\Procurement\Models\Rfq;
 use App\Domain\Shared\Support\DisplayFormat;
 use App\Domain\WorkOrder\Models\WorkOrder;
@@ -137,6 +138,41 @@ class DocumentTemplateContextBuilder
                 'discount_percent' => (string) $item->discount_percent,
                 'tax_percent' => (string) $item->tax_percent,
                 'line_total' => DisplayFormat::money($item->line_total),
+            ])->all(),
+        ];
+    }
+
+    /** Return Order (Purchase Order Return to Vendor) — printed from the PO's Return History. */
+    public static function forPurchaseReturn(PurchaseReturn $return): array
+    {
+        $return->loadMissing(['purchaseOrder', 'partner', 'warehouse', 'items.product']);
+        $tenant = Tenant::query()->find($return->tenant_id);
+        $timezone = $tenant?->timezone ?: config('app.timezone');
+
+        return [
+            'company' => self::company(),
+            'tenant' => ['name' => $tenant?->name, 'code' => $tenant?->code],
+            'document_number' => $return->return_number,
+            'configuration_version' => $return->numbering_configuration_version_id,
+            'purchase_return' => [
+                'number' => $return->return_number,
+                'returned_date' => $return->returned_at?->copy()->setTimezone($timezone)->format('Y-m-d'),
+                'return_option' => $return->return_option === PurchaseReturn::REFUND ? 'Refund Request' : 'Redelivery Request',
+                'status' => $return->status,
+                'notes' => $return->notes,
+            ],
+            'purchase_order' => ['number' => $return->purchaseOrder?->po_number],
+            'partner' => [
+                'name' => $return->partner?->name,
+                'address' => $return->partner?->address,
+                'contact_name' => $return->partner?->contact_name,
+                'contact_phone' => $return->partner?->contact_phone,
+            ],
+            'warehouse' => ['name' => $return->warehouse?->name],
+            'items' => $return->items->map(fn ($item) => [
+                'product_name' => $item->product?->name,
+                'product_code' => $item->product?->sku,
+                'quantity' => DisplayFormat::quantity($item->quantity),
             ])->all(),
         ];
     }

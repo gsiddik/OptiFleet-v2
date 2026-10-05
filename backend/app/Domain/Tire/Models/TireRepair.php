@@ -8,6 +8,7 @@ use App\Domain\Shared\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** Phase E (G-27/G-37): distinct REPAIR lifecycle, mirroring TireRetread's governance trail; auditable. */
 class TireRepair extends Model
@@ -18,7 +19,7 @@ class TireRepair extends Model
         'tenant_id', 'tire_id', 'cycle_number', 'sent_at', 'sent_by', 'partner_id', 'cost', 'notes',
         'received_at', 'received_by', 'status',
         'final_inspected_by', 'final_inspected_at', 'final_inspection_result', 'final_inspection_notes',
-        'approved_by', 'approved_at', 'approval_disposition', 'approval_reason',
+        'approved_by', 'approved_at', 'approval_disposition', 'approval_reason', 'tire_used_inspection_id', 'final_status',
     ];
 
     protected function casts(): array
@@ -37,5 +38,17 @@ class TireRepair extends Model
     public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
+    }
+
+    /** Photos taken when the cycle was opened. */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(TireCyclePhoto::class, 'cycle_id')->where('cycle_type', 'REPAIR')->orderBy('created_at');
+    }
+
+    /** The Tire Inspection that re-inspected the tire after the cycle. */
+    public function usedInspection(): BelongsTo
+    {
+        return $this->belongsTo(TireUsedInspection::class, 'tire_used_inspection_id');
     }
 }

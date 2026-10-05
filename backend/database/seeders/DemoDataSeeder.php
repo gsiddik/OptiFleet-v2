@@ -119,7 +119,7 @@ class DemoDataSeeder extends Seeder
                 'part_request.view', 'part_request.approve', 'part_request.reject', 'part_request.issue', 'part_return.view', 'part_return.process',
                 'stock_transfer.view', 'stock_transfer.create', 'stock_transfer.dispatch', 'stock_transfer.receive',
                 'purchase_request.view', 'purchase_request.create',
-                'goods_receipt.view', 'goods_receipt.post', 'vendor_invoice.view', 'vendor_invoice.pay',
+                'goods_receipt.view', 'goods_receipt.post', 'purchase_return.create', 'purchase_return.receive_redelivery', 'vendor_invoice.view', 'vendor_invoice.pay',
                 'partner.view',
                 'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap', 'wheel_configuration.map_vehicle',
                 // Phase E: send/receive are logistics actions (Warehouse Manager); final

@@ -77,7 +77,8 @@ class DemoDatasetSeederTest extends TestCase
             $this->assertGreaterThanOrEqual(1, $tireStatuses[$status] ?? 0, "no {$status} demo tire");
         }
         $this->assertSame(['HOLD', 'REUSE', 'SCRAP'], TireUsedInspection::query()->where('tenant_id', $alpha->id)->where('status', 'APPROVED')->pluck('final_disposition')->unique()->sort()->values()->all());
-        $this->assertSame(1, (int) UsedTireStock::query()->where('tenant_id', $alpha->id)->sum('quantity_on_hand'));
+        // Used stock: the bus tire inspected as REUSE and the completed retread (the truck REUSE tire was issued).
+        $this->assertSame(2, (int) UsedTireStock::query()->where('tenant_id', $alpha->id)->sum('quantity_on_hand'));
         $used = WorkOrderPartRequestItem::query()->where('tenant_id', $alpha->id)->where('stock_condition', 'USED')->with('plannedPart')->get();
         $this->assertCount(1, $used);
         $this->assertSame('ISSUED', $used->first()->plannedPart->status);
@@ -85,9 +86,31 @@ class DemoDatasetSeederTest extends TestCase
             ->flatMap(fn (TireOperation $op) => app(TireOperationService::class)->present($op)['warnings']);
         $this->assertCount(1, $warnings);
 
+        // Retread cycles in every state (waiting = a RETREAD tire without a cycle), with photos.
+        $this->assertSame(['APPROVED', 'RECEIVED', 'SENT'], DB::table('tire_retreads')->where('tenant_id', $alpha->id)->pluck('status')->sort()->values()->all());
+        $this->assertSame(1, Tire::query()->where('tenant_id', $alpha->id)->where('current_status', 'RETREAD')->whereNotIn('id', DB::table('tire_retreads')->select('tire_id'))->count());
+        $this->assertSame(6, DB::table('tire_cycle_photos')->where('tenant_id', $alpha->id)->count());
+        // Scrapped tires to sell from the Scrap tab.
+        $this->assertGreaterThanOrEqual(3, $tireStatuses['SCRAPPED']);
+
+        // Purchase Order Return to Vendor: every return state, plus a partially received PO without one.
+        $this->assertSame(['REDELIVERY_PENDING', 'REDELIVERY_REQUESTED', 'REFUND_ACCEPTED', 'REFUND_REQUESTED'], DB::table('purchase_returns')->where('tenant_id', $alpha->id)->pluck('status')->sort()->values()->all());
+        $this->assertTrue(DB::table('purchase_orders')->where('tenant_id', $alpha->id)->where('status', 'PARTIALLY_RECEIVED')
+            ->whereNotIn('id', DB::table('purchase_returns')->select('purchase_order_id'))->exists());
+
+        // Vehicle documents with and without expiry / extension.
+        $docs = DB::table('vehicle_documents')->where('tenant_id', $alpha->id)->get();
+        $this->assertTrue($docs->contains(fn ($d) => $d->document_type === 'VEHICLE_TAX' && $d->needs_extension && $d->extension_deadline !== null));
+        $this->assertTrue($docs->contains(fn ($d) => ! $d->has_expiry && $d->expiry_date === null));
+
+        $phase17Counts = fn () => collect(['purchase_returns', 'tire_retreads', 'tire_cycle_photos', 'vehicle_documents'])
+            ->mapWithKeys(fn ($t) => [$t => DB::table($t)->where('tenant_id', $alpha->id)->count()])->all();
+        $phase17 = $phase17Counts();
+
         $this->seed(DemoDatasetSeeder::class);
         $this->assertSame($counts, $this->counts($alpha->id), 'a re-run creates no duplicates');
-        $this->assertSame(4, TireUsedInspection::query()->where('tenant_id', $alpha->id)->count(), 'a re-run inspects nothing again');
+        $this->assertSame(7, TireUsedInspection::query()->where('tenant_id', $alpha->id)->count(), 'a re-run inspects nothing again');
+        $this->assertSame($phase17, $phase17Counts(), 'a re-run duplicates no return, cycle, photo or document');
     }
 
     public function test_database_seeder_adds_demo_data_only_when_enabled(): void

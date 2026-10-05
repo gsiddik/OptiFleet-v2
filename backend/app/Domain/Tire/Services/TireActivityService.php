@@ -20,9 +20,9 @@ class TireActivityService
     public function __construct(private readonly TireInventoryService $inventory) {}
 
     /** @param  list<string>  $types */
-    public function feed(string $tenantId, User $user, array $types, ?string $search, int $perPage): LengthAwarePaginator
+    public function feed(string $tenantId, User $user, array $types, ?string $search, int $perPage, bool $completedCyclesOnly = false): LengthAwarePaginator
     {
-        $sources = array_values(array_filter(array_map(fn (string $type) => $this->source($type, $tenantId), $types ?: self::TYPES)));
+        $sources = array_values(array_filter(array_map(fn (string $type) => $this->source($type, $tenantId, $completedCyclesOnly), $types ?: self::TYPES)));
         $union = array_shift($sources);
         foreach ($sources as $source) {
             $union->unionAll($source);
@@ -42,7 +42,7 @@ class TireActivityService
         return $this->inventory->scopeToUser($query, $tenantId, $user)->paginate($perPage);
     }
 
-    private function source(string $type, string $tenantId): ?Builder
+    private function source(string $type, string $tenantId, bool $completedCyclesOnly = false): ?Builder
     {
         $row = fn (Builder $q, string $id, string $tire, string $at, string $vehicle, string $position, string $odometer, string $status, string $detail) => $q
             ->where(explode('.', $id)[0].'.tenant_id', $tenantId)
@@ -54,8 +54,8 @@ class TireActivityService
             'INSPECTION' => $row(DB::table('tire_inspections as n'), 'n.id', 'n.tire_id', 'n.inspected_at', 'null::uuid', 'null::text', 'null::numeric', 'n.condition::text',
                 "concat_ws(' · ', case when n.tread_depth_mm is not null then n.tread_depth_mm::text || ' mm' end, n.recommendation::text)"),
             'REMOVAL' => $row(DB::table('tire_removals as m')->leftJoin('tire_installations as mi', 'mi.id', '=', 'm.tire_installation_id'), 'm.id', 'm.tire_id', 'm.removed_at', 'mi.vehicle_id', 'mi.wheel_position::text', 'm.removal_odometer', 'm.disposition::text', 'm.removal_reason::text'),
-            'RETREAD' => $row(DB::table('tire_retreads as t'), 't.id', 't.tire_id', 'coalesce(t.approved_at, t.final_inspected_at, t.received_at, t.sent_at, t.created_at)', 'null::uuid', 'null::text', 'null::numeric', 't.status::text', "'Cycle ' || t.cycle_number"),
-            'REPAIR' => $row(DB::table('tire_repairs as a'), 'a.id', 'a.tire_id', 'coalesce(a.approved_at, a.final_inspected_at, a.received_at, a.sent_at, a.created_at)', 'null::uuid', 'null::text', 'null::numeric', 'a.status::text', "'Cycle ' || a.cycle_number"),
+            'RETREAD' => $row(DB::table('tire_retreads as t')->when($completedCyclesOnly, fn ($q) => $q->whereIn('t.status', ['APPROVED', 'REJECTED'])), 't.id', 't.tire_id', 'coalesce(t.approved_at, t.final_inspected_at, t.received_at, t.sent_at, t.created_at)', 'null::uuid', 'null::text', 'null::numeric', "coalesce(t.final_status, t.status::text)", "'Cycle ' || t.cycle_number"),
+            'REPAIR' => $row(DB::table('tire_repairs as a')->when($completedCyclesOnly, fn ($q) => $q->whereIn('a.status', ['APPROVED', 'REJECTED'])), 'a.id', 'a.tire_id', 'coalesce(a.approved_at, a.final_inspected_at, a.received_at, a.sent_at, a.created_at)', 'null::uuid', 'null::text', 'null::numeric', "coalesce(a.final_status, a.status::text)", "'Cycle ' || a.cycle_number"),
             'SCRAP' => $row(DB::table('tires as s')->where('s.current_status', 'SCRAPPED'), 's.id', 's.id', 's.updated_at', 'null::uuid', 'null::text', 'null::numeric', 's.current_status::text', 'null::text'),
             default => null,
         };

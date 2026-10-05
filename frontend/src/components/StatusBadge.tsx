@@ -10,6 +10,13 @@ const COLORS: Record<string, string> = {
   ARCHIVED: '#6b7280',
   QUARANTINED: '#b91c1c',
   REPAIR: '#a16207',
+  // Purchase Order Return to Vendor
+  REFUND_REQUESTED: '#a16207',
+  REFUND_ACCEPTED: '#15803d',
+  REDELIVERY_REQUESTED: '#a16207',
+  REDELIVERY_READY: '#1d4ed8',
+  REDELIVERY_PENDING: '#b45309',
+  REDELIVERY_RECEIVED: '#15803d',
   // Used tire lifecycle (only REUSE is available stock)
   REMOVED: '#7c3aed',
   REUSE: '#15803d',

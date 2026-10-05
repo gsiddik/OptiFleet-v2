@@ -1,5 +1,7 @@
 import { RETREAD_PERMISSIONS } from '../../../../layouts/tenantNav';
 import { TireWorkflowTabs, type WorkflowTab } from './TireWorkflowTabs';
+import { RetreadCyclePanel } from '../retread/RetreadCyclePanel';
+import { ScrappedTiresPanel } from '../scrap/ScrappedTiresPanel';
 
 const TABS: WorkflowTab[] = [
   {
@@ -23,23 +25,29 @@ const TABS: WorkflowTab[] = [
     permissions: RETREAD_PERMISSIONS,
     // Repair is a kind of retread (owner decision): both cycles live in this tab.
     statuses: ['RETREAD', 'REPAIR'],
-    candidatesTitle: 'Tires in the retread / repair cycle',
-    actionLabel: 'Open cycle',
+    candidatesTitle: 'Tires in Retread / Repair Cycle',
+    actionLabel: 'Open Cycle',
     anchor: (tire) => (tire.current_status === 'REPAIR' ? 'repair' : 'retread'),
+    // Open Cycle (Retread Form) → Receive → Tire Inspection; a cycle is "recent" once completed.
+    panel: <RetreadCyclePanel />,
     activityTypes: ['RETREAD', 'REPAIR'],
-    activityTitle: 'Recent retread / repair cycles',
+    activityTitle: 'Recent Retread / Repair Cycles',
+    completedCycles: true,
   },
   {
     key: 'scrap',
     label: 'Scrap',
-    permissions: ['tire.scrap'],
-    // A REMOVED tire is scrapped through its inspection (SCRAP outcome), not directly.
-    statuses: ['HOLD', 'UNDER_INSPECTION', 'QUARANTINED'],
-    candidatesTitle: 'Used tires that can be scrapped',
-    actionLabel: 'Scrap',
+    permissions: ['tire.scrap', 'sparepart_sale.create'],
+    // A tire is scrapped through its inspection (SCRAP outcome); this tab lists the scrapped tires,
+    // which are sold (row or bulk) through Sell Sparepart.
+    statuses: ['SCRAPPED'],
+    candidatesTitle: 'Recently Scrapped',
+    actionLabel: 'Sell',
     anchor: 'scrap',
+    panel: <ScrappedTiresPanel />,
     activityTypes: ['SCRAP'],
     activityTitle: 'Recently scrapped',
+    hideActivity: true,
   },
 ];
 

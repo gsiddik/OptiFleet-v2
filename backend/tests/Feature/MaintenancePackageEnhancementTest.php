@@ -115,6 +115,29 @@ class MaintenancePackageEnhancementTest extends TestCase
         $this->assertCount(1, $activate->json('data.component_groups'));
     }
 
+    /** Regression: a package with items opened in detail ("Call to undefined relationship [componentGroup]"). */
+    public function test_package_detail_with_items_shows_their_component_group(): void
+    {
+        [$tenant] = $this->setUpTenant();
+        $group = ComponentGroup::query()->create(['tenant_id' => null, 'code' => 'CG-E', 'name' => 'Engine', 'is_system' => true, 'status' => 'ACTIVE']);
+        [, $token] = $this->makeTenantUser($tenant, ['maintenance_policy.view', 'maintenance_policy.manage']);
+        $headers = $this->authHeaders($token);
+        $packageId = $this->postJson('/api/v1/app/maintenance-policies', [
+            'code' => 'PM-CG', 'name' => 'Engine service', 'maintenance_type' => 'PREVENTIVE', 'period_by' => 'ODOMETER', 'threshold_km' => 10000,
+        ], $headers)->assertStatus(201)->json('data.id');
+        $this->postJson("/api/v1/app/maintenance-policies/{$packageId}/items", ['component_group_id' => $group->id, 'service_item' => 'Replace oil filter'], $headers)->assertStatus(201);
+        $this->postJson("/api/v1/app/maintenance-policies/{$packageId}/items", ['service_item' => 'Visual check'], $headers)->assertStatus(201);
+
+        $detail = $this->getJson("/api/v1/app/maintenance-policies/{$packageId}", $headers)->assertOk();
+        $items = collect($detail->json('data.items'))->keyBy('service_item');
+        $this->assertSame('Engine', $items['Replace oil filter']['component_group']['name']);
+        $this->assertNull($items['Visual check']['component_group']);
+
+        // Activate (edit) returns the same shape.
+        $activated = $this->postJson("/api/v1/app/maintenance-policies/{$packageId}/activate", ['component_group_ids' => [$group->id]], $headers)->assertOk();
+        $this->assertSame($group->id, collect($activated->json('data.items'))->firstWhere('service_item', 'Replace oil filter')['component_group']['id']);
+    }
+
     public function test_updating_active_package_items_flips_to_inactive_only_when_changed(): void
     {
         [$tenant] = $this->setUpTenant();

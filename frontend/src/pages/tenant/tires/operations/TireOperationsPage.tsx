@@ -38,7 +38,7 @@ const TABS: WorkflowTab[] = [
 
 /**
  * @deprecated Replaced by TireOperationsLandingPage (Recent Tire Operations + Add New Tire Operations).
- * Kept, unchanged, at /app/tire-operations/legacy until the owner decides to retire it.
+ * ORPHANED: no longer routed or linked (owner decision); kept, unchanged, for a future decision.
  * Tire Operations: Installation, Rotation and Inspection in one place (replaces three menu aliases).
  */
 export function TireOperationsPage() {

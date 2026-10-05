@@ -119,6 +119,7 @@ class PermissionSeeder extends Seeder
             'quotation' => ['view', 'manage', 'select'],
             'purchase_order' => ['view', 'create', 'approve', 'issue'],
             'goods_receipt' => ['view', 'post'],
+            'purchase_return' => ['create', 'decide', 'receive_redelivery'],
             'vendor_invoice' => ['view', 'pay'],
             'partner' => ['view', 'manage'],
             'tire' => ['view', 'manage', 'install', 'rotate', 'inspect', 'remove', 'scrap', 'sell'],
