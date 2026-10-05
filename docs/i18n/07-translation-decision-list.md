@@ -77,6 +77,13 @@ Style decisions do not change English canonical wording or keys.
 | Axle vs Wheelbase | Axle → Poros. Wheelbase keeps the standard technical term "jarak sumbu roda" (not the Axle term). |
 | Breakdown vs Failure / Damage | Breakdown → Kerusakan per decision; failure/damage texts also read "Kerusakan" — documented as a near-collision in 14. |
 
+## Resolved Architecture Decisions (localization scope)
+
+| ID | Decision | Final rule | Decision Source | Effect on dataset `12` | Status |
+|---|---|---|---|---|---|
+| D1 | Printed document language | One locale per document, not bilingual. Locale priority: explicit Print/Export choice → user preferred locale → tenant default → `en`. The locale used at generation time is preserved for history/audit. Labels, titles, instructions, table headers, status labels and system messages follow the locale; dynamic business data is unchanged. | Product owner decision | None (print-template rows stay `DATABASE_LOCALIZATION`, C+). Adds structural item `PRINT_LOCALE_SNAPSHOT` in `15` §7a. | APPROVED_BY_PRODUCT_OWNER |
+| D2 | Tenant-entered data | Not bilingual. Store and display the original value (findings, notes, remarks, descriptions, comments, reasons, free-text instructions, user-entered transaction descriptions). No automatic translation, no separate EN/ID fields. Only system-controlled text is localized. Multilingual tenant master data is a possible optional capability later. | Product owner decision | None. All 420 `DATABASE_LOCALIZATION` rows are system/seeded data; tenant/demo data was already DO_NOT_TRANSLATE. | APPROVED_BY_PRODUCT_OWNER |
+
 ## Remaining Decisions
 
 Dependent dataset entries still waiting: **14** (in `12-en-id-translation-dataset-final.csv`). These items were **not in the owner decision list**, so nothing was decided on the owner's behalf.

@@ -60,3 +60,21 @@ re-translated.
 Status: **READY_FOR_REMAINING_TERMINOLOGY_DECISION**. The remaining decisions are the 4 correction items
 that were not in the owner list. Once they are decided the status becomes
 READY_FOR_STRUCTURAL_I18N_PREPARATION. `01`–`05`, `translation-inventory.csv`, `08`–`11` and `15` are unchanged.
+
+## Owner architecture decisions D1 / D2 (localization scope)
+
+- **D1, printed document language:** one locale per document, not bilingual. Priority: explicit Print/Export
+  choice → user preferred locale → tenant default → `en`. The locale is preserved at generation time.
+- **D2, tenant-entered data:** not bilingual. The original value is stored and shown. No auto-translation and
+  no EN/ID fields. Only system-controlled text is localized.
+
+Recorded in `07` (Resolved Architecture Decisions) and `15` (§7a, §7b, recommendation table, execution order
+step 8, open decisions).
+
+- Dataset `12`: no change needed. All 420 `DATABASE_LOCALIZATION` rows are system/seeded data.
+- Finding from code: the 7 print endpoints re-render on demand and persist neither the locale nor the template
+  version. Meeting D1's "preserve locale at generation time" needs a document generation record. It is
+  recorded as structural item `PRINT_LOCALE_SNAPSHOT` (schema change, not implemented, needs approval).
+- New open point (not assumed): whether date/number formatting on printed documents follows the document locale.
+
+Status remains **READY_FOR_REMAINING_TERMINOLOGY_DECISION** (4 correction terms still open).

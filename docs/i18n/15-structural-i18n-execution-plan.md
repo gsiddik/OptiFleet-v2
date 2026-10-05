@@ -27,6 +27,7 @@ Rows per blocker in the final dataset. A row can carry several blockers.
 | 6 | Database localization | 420 | Workflow display names and action labels, print templates (14 platform defaults + tenant copies), notification templates and default rule names, seeded master data (modules, component taxonomy, product reference data, UoM, vehicle categories), stored notes and reasons |
 | 7 | Laravel validation localization | 36 rules | 75 FormRequests and 227 `validate()` calls; 2 `messages()` methods and 0 `attributes()` methods |
 | + | Workflow action label correction | 33 | Status-form `action_label` (e.g. "Approved" used as a button label). Verb proposals are in `workflow.actionVerb.*`. |
+| + | Printed document locale snapshot (`PRINT_LOCALE_SNAPSHOT`, owner decision D1) | 7 print endpoints | `DocumentTemplateRenderService::render()` callers in the tenant controllers; `DocumentTemplateContextBuilder` (canonical `status` codes). No dataset rows: this is behaviour, not text. |
 
 ## Recommended execution order
 
@@ -34,14 +35,15 @@ Each step is ordered so it has no unmet technical dependency.
 
 | Order | Area | Why here |
 |---:|---|---|
-| 0 | i18n foundation: locale resolution (user preference → tenant default → `en`), message catalogs on both tiers | Every other step emits keys and needs somewhere to resolve them. This is a separate, explicitly approved implementation task. |
+| 0 | i18n foundation: locale resolution (user preference → tenant default → `en`; for print/export an explicit document language comes first — owner decision D1), message catalogs on both tiers | Every other step emits keys and needs somewhere to resolve them. This is a separate, explicitly approved implementation task. |
 | 1 | Stable tab IDs | Pure frontend, very small blast radius. It removes a hidden coupling before any label changes. |
 | 2 | Status display label registry | Shared by badges, filters, options, the workflow builder and print templates. Step 5 depends on it. |
 | 3 | Runtime label mapping | Replaces humanizers with registry lookups from step 2. Dates move to `Intl` with an explicit locale. |
 | 4 | Full sentence templates | Mechanical once catalogs exist (step 0). Independent of the database. |
 | 5 | Error code decoupling | Needs step 4's templates (most reasons are parameterized) and the API error envelope from step 0. |
 | 6 | Laravel validation localization | Needs backend locale resolution (step 0); independent of the frontend. |
-| 7 | Database localization strategy | Largest change. Needs owner decisions (`07` plus the data questions below), the status/action registry (step 2) and the workflow action verb correction. |
+| 7 | Database localization strategy | Largest change. Needs the owner decisions (`07`, terminology and D1/D2 decided), the status/action registry (step 2) and the workflow action verb correction. |
+| 8 | Printed document locale (D1) | Needs step 0 (locale resolution), step 2 (status labels on documents) and step 7 (per-locale template labels). Adds the generation record that pins the locale. |
 
 Steps 1 and 6 can run in parallel with steps 2–5.
 
@@ -221,21 +223,21 @@ Steps 1 and 6 can run in parallel with steps 2–5.
 | Entity | Recommendation | Reason |
 |---|---|---|
 | **System master data** (`is_system = true`): component groups, categories, subcategories, vehicle categories, UoM, product reference data, modules, system roles | **C**, keyed by `code`, falling back to the stored `name` | The rows are platform-owned, read-only for tenants, and already have stable codes. Translation ships with the application. |
-| **Tenant-created master data and records** (`is_system = false`, tenant roles, tenant notification rule names, vendors, notes) | **Not translated** (user-generated content) | The audit rules exclude user data. If bilingual tenant data becomes a business requirement, use **B** scoped by `tenant_id`. DECISION REQUIRED. |
+| **Tenant-created master data and records** (`is_system = false`, tenant roles, tenant notification rule names, vendors, notes) | **Not translated.** Store and display the original value. | **Owner decision D2**: tenant-entered and user-generated data is not bilingual — no automatic translation, no separate EN/ID fields. If multilingual tenant-managed master data is introduced later as an optional capability (only with a clear business requirement), use **B** scoped by `tenant_id`. |
 | **Workflow system defaults** (statuses, actions) | **C**: `workflow.status.<code>`, `workflow.actionVerb.<action_code>`; the stored `display_name` / `action_label` become fallbacks | Codes are canonical and catalog-bounded. This removes `ucwords` and fixes the status-form actions at the same time. |
 | **Tenant custom workflow labels** | **C+**: optional `{en, id}` map per status and transition inside the version payload | Tenants can rename labels. Keeping them in the payload preserves versioning and pinning. |
-| **Print templates** (platform defaults and tenant copies) | **C+**: per-locale HTML variants in the version payload (`payload.locales.id.html`), with a document-language rule (tenant default or a per-print choice) | Whole documents cannot be key-translated because tenants edit the HTML. Printed documents may need a language independent of the UI language. DECISION REQUIRED on the printed-document language. |
+| **Print templates** (platform defaults and tenant copies) | **C+**: per-locale HTML variants in the version payload (`payload.locales.id.html`), with the document-language rule of owner decision D1 (see *7a*) | Whole documents cannot be key-translated because tenants edit the HTML. One language per printed document, not both at once (D1). |
 | **Notification templates** | **C+**: per-locale subject/body per channel in the payload; the recipient's locale picks the variant | Same versioning model as templates. Recipients may have different languages. |
 | **Default rule and set names** (seeded) | **C**, keyed by event code or set code, falling back to the stored name | Platform-owned. |
 | **Stored notes and reasons** appended by code | Store `{code, params}` (step 5) and render through **C**; keep existing English history as-is | Historical text cannot be re-translated reliably. |
 
-**Overall**: use **C** for everything platform-owned and code-identified, and **C+** for versioned configuration that tenants can edit. Avoid **A**. Reserve **B** for a future decision on bilingual tenant data. This keeps PostgreSQL the operational source of truth, keeps tenant isolation within existing scoped tables, and needs no migration for system data. The C+ changes are additive JSONB payload fields with a backward-compatible reader.
+**Overall**: use **C** for everything platform-owned and code-identified, and **C+** for versioned configuration that tenants can edit. Avoid **A**. **B** is not needed now (D2); it stays reserved for a future, optional multilingual tenant master-data capability. This keeps PostgreSQL the operational source of truth, keeps tenant isolation within existing scoped tables, and needs no migration for system data. The C+ changes are additive JSONB payload fields with a backward-compatible reader.
 
 **Dependency**
 - Owner terminology decisions (`07`).
 - The status/action registry (step 2).
 - The workflow action verb correction.
-- Decisions on printed-document language and on bilingual tenant data.
+- Owner decisions D1 (printed document language) and D2 (tenant-entered data): both decided, see *7a* and *7b*.
 
 **Risk**: High. It touches versioned, pinned configuration and print output. Existing published versions must render unchanged, so the reader must fall back to the current fields.
 
@@ -249,9 +251,60 @@ Steps 1 and 6 can run in parallel with steps 2–5.
 
 **Order**: 7
 
+## 7a. Printed document locale (owner decision D1)
+
+**Decision**: printed and exported documents render in **one** locale. They do not show English and Indonesian at the same time. Do not assume every template must contain both languages.
+
+**Locale resolution for print/export**, in priority order:
+1. The language the user explicitly selects in the Print/Export action.
+2. The user's preferred locale.
+3. The tenant's default locale.
+4. The system fallback, `en`.
+
+**What follows the document locale, and what does not**
+
+| Follows the selected locale | Stays unchanged (dynamic business data) |
+|---|---|
+| Static labels, section titles, document instructions, table headers | Document numbers, dates and amounts as values, quantities |
+| Status labels (rendered from the canonical code) | Vendor, vehicle, product and party names |
+| System-generated messages on the document | Tenant-entered text: findings, notes, remarks, descriptions, reasons (D2) |
+| Predefined / reference values (system master data, UoM, categories) through **C** | Canonical codes and numbering tokens |
+
+**Current state** (verified in code):
+- 7 print endpoints (e.g. `PurchaseOrderController::print`, `WorkOrderController::print`) call `DocumentTemplateRenderService::render()` and stream the PDF.
+- The render returns `template_version_id`, but the caller discards it. **Nothing about a print is persisted**: no locale, no template version. Every reprint re-renders against the current effective template.
+- `DocumentTemplateContextBuilder` passes canonical codes such as `status` (`APPROVED`), not display labels.
+- Money and quantities are pre-formatted by `DisplayFormat`, which uses a fixed format.
+
+**Structural requirement — new blocker `PRINT_LOCALE_SNAPSHOT`** (not implemented; a schema change, needs explicit approval):
+- The Print/Export request accepts an optional `locale`, validated against the supported locales. The server resolves the effective locale with the chain above. The tenant default comes from server-side tenant context, never from client input.
+- Persist a tenant-scoped generation record per generated document: document type and id, `locale`, `template_version_id`, generated by/at. A reprint of a historical document reuses the recorded locale and template version unless the user explicitly asks for a new generation, so historical/audit output stays consistent.
+- Template label text resolves per locale: platform defaults through **C+** (per-locale label maps or HTML variants in the version payload); tenant copies fall back to their single stored HTML when no variant exists for the locale. Existing published versions render unchanged.
+- The context builder adds locale-resolved display labels next to the canonical values (e.g. keep `status`, add `status_label`), so existing templates using `{{status}}` keep working.
+
+**Testing**: render tests per locale; the fallback chain (explicit > user > tenant > `en`); reprint keeps the recorded locale; tenant isolation on the generation record; old template versions render identically.
+
+**Open point (not decided, not assumed)**: whether date and number *formatting* (e.g. `1.234,56` vs `1,234.56`, month names) follows the document locale. The values themselves stay unchanged either way.
+
+## 7b. Tenant-entered data (owner decision D2)
+
+**Decision**: tenant-entered and user-generated data is **not** required to be bilingual.
+- Store and display the original value the user entered: findings, notes, remarks, descriptions, comments, reasons, free-text instructions, user-entered transaction descriptions.
+- No automatic translation and no separate EN/ID fields.
+
+**Localization scope**: only system-controlled text — labels, statuses, actions, validations, notifications, document labels and predefined/reference values.
+
+**Mixed text**: where code appends a system prefix to user text (e.g. `"Rejected: " + reason`), only the system part is localized (stored as `{code, params}`, step 5). The user's reason stays verbatim.
+
+**Dataset impact**: none. All 420 `DATABASE_LOCALIZATION` rows in `12` are seeded or system data (configuration defaults, workflow defaults, master and reference data, modules, notification defaults). Tenant/demo data was already DO_NOT_TRANSLATE. No row was reclassified.
+
+**Later, optional**: multilingual tenant-managed master data is a possible future capability, only with a clear business requirement. It would use option **B** scoped by `tenant_id`.
+
 ## Open decisions before execution
 
-1. The terminology and style decisions in `07` (all 48 still open).
-2. Language of printed documents: tenant default, user, or chosen per print.
-3. Whether tenant-entered master data must be bilingual (that would trigger option B).
+1. ~~The terminology and style decisions in `07`~~: decided (43 terms + 6 style). Remaining: 4 correction items (Tire, Warranty Claim, Wheels Configuration, Hold).
+2. ~~Language of printed documents~~: decided (D1, see 7a).
+3. ~~Whether tenant-entered data must be bilingual~~: decided, not bilingual (D2, see 7b).
 4. English verb wording for workflow actions (`workflow.actionVerb.*`).
+5. Whether date/number formatting on printed documents follows the document locale (7a).
+6. Approval of the schema change for the document generation record (`PRINT_LOCALE_SNAPSHOT`).
