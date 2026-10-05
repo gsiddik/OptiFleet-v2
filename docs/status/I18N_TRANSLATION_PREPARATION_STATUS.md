@@ -17,3 +17,21 @@ tab id, error handling, schema or migration change.
 Readiness: **READY_FOR_TERMINOLOGY_DECISION**. After the owner decides `07`, the dataset becomes
 READY_FOR_FINAL_TRANSLATION_DATASET (substitute `proposed_text_id` → `translated_text_id`).
 Not ready for i18n implementation until the structural items in `10` are prepared.
+
+## Finalization task (terminology decisions)
+
+The decision request contained only `[ISI KEPUTUSAN]` placeholders, so **0 of 48 decisions** were
+received. None was invented. The propagation mechanism (`depends_on` → substitution in
+`proposed_text_id`) is ready for when decisions arrive.
+
+| Output | Status |
+|---|---|
+| `06` glossary — authority/status column added | DONE |
+| `07` decision list — Resolved (0) / Remaining (43 terminology + 6 style + correction items) | AWAITING OWNER DECISION |
+| `12-en-id-translation-dataset-final.csv` — 5,275 rows | DONE; translation readiness and implementation readiness tracked separately |
+| `13-optifleet-translation-glossary-final.md` | DONE |
+| `14-final-translation-qa-report.md` — 0 missing, 0 parameter mismatch, 0 key collision, 0 DNT violation | DONE |
+| `15-structural-i18n-execution-plan.md` — ordered plan + database localization strategy | DONE (not implemented) |
+
+Status: **READY_FOR_REMAINING_TERMINOLOGY_DECISION**. Audit artifacts `01`–`05`, `translation-inventory.csv`,
+`08`–`11` are preserved unchanged.
