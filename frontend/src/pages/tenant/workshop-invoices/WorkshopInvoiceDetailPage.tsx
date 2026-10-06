@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
@@ -115,6 +116,7 @@ export function WorkshopInvoiceDetailPage() {
           <button className="btn-secondary" disabled={printing} onClick={printInvoice}>
             {printing ? 'Loading…' : 'Print'}
           </button>
+          <DocumentVersionsButton printPath={`/app/workshop-invoices/${invoice.id}/print`} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13 }}>
           <div><strong>Service Provider:</strong> {invoice.partner?.name ?? invoice.partner_id}</div>

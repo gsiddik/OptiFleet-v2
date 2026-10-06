@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState, EmptyState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -221,9 +222,12 @@ export function RfqDetailPage() {
             <span>
               {v.name} ({v.code})
             </span>
-            <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} disabled={printingVendorId === v.id} onClick={() => printForVendor(v.id)}>
-              {printingVendorId === v.id ? 'Loading…' : 'Print'}
-            </button>
+            <span style={{ display: 'flex', gap: 6 }}>
+              <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} disabled={printingVendorId === v.id} onClick={() => printForVendor(v.id)}>
+                {printingVendorId === v.id ? 'Loading…' : 'Print'}
+              </button>
+              <DocumentVersionsButton printPath={`/app/rfqs/${rfq.id}/vendors/${v.id}/print`} />
+            </span>
           </div>
         ))}
         {hasPermission('rfq.manage') && rfq.status !== 'CLOSED' && rfq.status !== 'CANCELLED' && (

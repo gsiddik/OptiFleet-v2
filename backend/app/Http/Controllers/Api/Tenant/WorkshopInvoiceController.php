@@ -3,9 +3,8 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
-use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
-use App\Domain\Configuration\Services\DocumentTemplateRenderService;
+use App\Domain\DocumentGeneration\Support\DocumentSource;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalService;
 use App\Domain\WorkOrder\Models\WorkshopInvoice;
@@ -13,6 +12,7 @@ use App\Domain\WorkOrder\Models\WorkshopInvoiceCancellation;
 use App\Domain\WorkOrder\Models\WorkshopInvoiceCorrection;
 use App\Domain\WorkOrder\Services\WorkshopInvoiceReconciliationService;
 use App\Domain\WorkOrder\Services\WorkshopInvoiceService;
+use App\Http\Controllers\Concerns\PrintsDocuments;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -24,6 +24,8 @@ use Illuminate\Http\Request;
  */
 class WorkshopInvoiceController extends Controller
 {
+    use PrintsDocuments;
+
     public function __construct(
         private readonly WorkshopInvoiceService $invoices,
         private readonly WorkshopInvoiceReconciliationService $reconciliation,
@@ -181,20 +183,34 @@ class WorkshopInvoiceController extends Controller
         return $this->ok($this->invoices->recordPayment($workshopInvoice, $validated, $this->context->user()->id), 201);
     }
 
-    public function print(WorkshopInvoice $workshopInvoice, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    public function print(Request $request, WorkshopInvoice $workshopInvoice)
     {
         $this->authorizeInvoiceScope($workshopInvoice);
 
-        $context = DocumentTemplateContextBuilder::forWorkshopInvoice($workshopInvoice);
-        $rendered = $templates->render(
-            'workshop_invoice', $context, $workshopInvoice->tenant_id,
-            $workshopInvoice->workOrder?->branch_id, $workshopInvoice->workOrder?->workshop_id,
-        );
+        return $this->printDocument($request, $this->workshopInvoiceDocument($workshopInvoice));
+    }
 
-        return response($pdf->fromHtml($rendered['html']), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="workshop-invoice-'.$workshopInvoice->id.'.pdf"',
-        ]);
+    public function printGenerations(WorkshopInvoice $workshopInvoice)
+    {
+        $this->authorizeInvoiceScope($workshopInvoice);
+
+        return $this->documentGenerations($this->workshopInvoiceDocument($workshopInvoice));
+    }
+
+    public function generatePrint(Request $request, WorkshopInvoice $workshopInvoice)
+    {
+        $this->authorizeInvoiceScope($workshopInvoice);
+
+        return $this->generateDocument($request, $this->workshopInvoiceDocument($workshopInvoice));
+    }
+
+    private function workshopInvoiceDocument(WorkshopInvoice $workshopInvoice): DocumentSource
+    {
+        return new DocumentSource(
+            'workshop_invoice', 'workshop_invoice', $workshopInvoice->id, $workshopInvoice->tenant_id, 'workshop-invoice-'.$workshopInvoice->id.'.pdf',
+            fn (string $locale) => DocumentTemplateContextBuilder::forWorkshopInvoice($workshopInvoice, $locale),
+            branchId: $workshopInvoice->workOrder?->branch_id, workshopId: $workshopInvoice->workOrder?->workshop_id,
+        );
     }
 
     private function authorizeWorkOrderScope(WorkOrder $workOrder): void

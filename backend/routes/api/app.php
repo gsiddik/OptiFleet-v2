@@ -333,6 +333,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/work-orders/{workOrder}/documents', [WorkOrderController::class, 'documents'])->middleware('permission:work_order.view');
             Route::put('/work-orders/{workOrder}', [WorkOrderController::class, 'update'])->middleware('permission:work_order.update');
             Route::get('/work-orders/{workOrder}/print', [WorkOrderController::class, 'print'])->middleware('permission:work_order.view');
+            Route::get('/work-orders/{workOrder}/print/generations', [WorkOrderController::class, 'printGenerations'])->middleware('permission:work_order.view');
+            Route::post('/work-orders/{workOrder}/print/generations', [WorkOrderController::class, 'generatePrint'])->middleware('permission:work_order.view');
             Route::post('/work-orders/{workOrder}/submit', [WorkOrderController::class, 'submit'])->middleware('permission:work_order.submit');
             Route::post('/work-orders/{workOrder}/approve', [WorkOrderController::class, 'approve'])->middleware('permission:work_order.approve');
             Route::post('/work-orders/{workOrder}/reject', [WorkOrderController::class, 'reject'])->middleware('permission:work_order.reject');
@@ -365,6 +367,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/external-work-order-invoices/{externalInvoice}/generate-authorization', [ExternalWorkOrderInvoiceController::class, 'generateAuthorization'])->middleware('permission:external_work_order_invoice.generate_authorization');
             Route::post('/external-work-order-invoices/{externalInvoice}/cancel', [ExternalWorkOrderInvoiceController::class, 'cancel'])->middleware(['permission:external_work_order_invoice.cancel', 'permission:work_order.cancel_external']);
             Route::get('/external-work-order-invoices/{externalInvoice}/authorization', [ExternalWorkOrderInvoiceController::class, 'viewAuthorization'])->middleware('permission:external_work_order_invoice.view');
+            Route::get('/external-work-order-invoices/{externalInvoice}/authorization/generations', [ExternalWorkOrderInvoiceController::class, 'authorizationGenerations'])->middleware('permission:external_work_order_invoice.view');
+            Route::post('/external-work-order-invoices/{externalInvoice}/authorization/generations', [ExternalWorkOrderInvoiceController::class, 'generateAuthorizationVersion'])->middleware('permission:external_work_order_invoice.view');
             Route::post('/external-work-order-invoices/{externalInvoice}/deliver', [ExternalWorkOrderInvoiceController::class, 'deliver'])->middleware('permission:external_work_order_invoice.deliver');
             Route::post('/external-work-order-invoices/{externalInvoice}/acknowledge', [ExternalWorkOrderInvoiceController::class, 'acknowledge'])->middleware('permission:external_work_order_invoice.acknowledge');
             Route::get('/external-work-order-invoices/{externalInvoice}/acknowledgement', [ExternalWorkOrderInvoiceController::class, 'viewAcknowledgement'])->middleware('permission:external_work_order_invoice.view');
@@ -400,11 +404,15 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/complete', [WorkOrderExternalServiceController::class, 'complete'])->middleware('permission:work_order_external_service.complete');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/cancel', [WorkOrderExternalServiceController::class, 'cancel'])->middleware('permission:work_order_external_service.cancel');
             Route::get('/work-orders/{workOrder}/external-services/{externalService}/print', [WorkOrderExternalServiceController::class, 'print'])->middleware('permission:work_order.view');
+            Route::get('/work-orders/{workOrder}/external-services/{externalService}/print/generations', [WorkOrderExternalServiceController::class, 'printGenerations'])->middleware('permission:work_order.view');
+            Route::post('/work-orders/{workOrder}/external-services/{externalService}/print/generations', [WorkOrderExternalServiceController::class, 'generatePrint'])->middleware('permission:work_order.view');
 
             // R1 (Workshop Invoice and Settlement) — externally-issued document, OptiFleet records it.
             Route::get('/workshop-invoices', [WorkshopInvoiceController::class, 'index'])->middleware('permission:workshop_invoice.view');
             Route::get('/workshop-invoices/{workshopInvoice}', [WorkshopInvoiceController::class, 'show'])->middleware('permission:workshop_invoice.view');
             Route::get('/workshop-invoices/{workshopInvoice}/print', [WorkshopInvoiceController::class, 'print'])->middleware('permission:workshop_invoice.view');
+            Route::get('/workshop-invoices/{workshopInvoice}/print/generations', [WorkshopInvoiceController::class, 'printGenerations'])->middleware('permission:workshop_invoice.view');
+            Route::post('/workshop-invoices/{workshopInvoice}/print/generations', [WorkshopInvoiceController::class, 'generatePrint'])->middleware('permission:workshop_invoice.view');
             Route::get('/workshop-invoices/{workshopInvoice}/reconciliation', [WorkshopInvoiceController::class, 'reconciliation'])->middleware('permission:workshop_invoice.view');
             Route::put('/workshop-invoices/{workshopInvoice}/reconciliation-note', [WorkshopInvoiceController::class, 'updateReconciliationNote'])->middleware('permission:workshop_invoice.view_settlement_history');
             Route::post('/work-orders/{workOrder}/external-services/{externalService}/workshop-invoice', [WorkshopInvoiceController::class, 'record'])->middleware('permission:workshop_invoice.record');
@@ -645,6 +653,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/rfqs/{rfq}', [RfqController::class, 'show'])->middleware('permission:rfq.view');
             Route::post('/rfqs/{rfq}/vendors', [RfqController::class, 'inviteVendors'])->middleware('permission:rfq.manage');
             Route::get('/rfqs/{rfq}/vendors/{partner}/print', [RfqController::class, 'printForVendor'])->middleware('permission:rfq.view');
+            Route::get('/rfqs/{rfq}/vendors/{partner}/print/generations', [RfqController::class, 'printGenerationsForVendor'])->middleware('permission:rfq.view');
+            Route::post('/rfqs/{rfq}/vendors/{partner}/print/generations', [RfqController::class, 'generatePrintForVendor'])->middleware('permission:rfq.view');
             Route::post('/rfqs/{rfq}/close', [RfqController::class, 'close'])->middleware('permission:rfq.manage');
             Route::post('/rfqs/{rfq}/cancel', [RfqController::class, 'cancel'])->middleware('permission:rfq.manage');
             Route::get('/rfqs/{rfq}/compare', [RfqController::class, 'compare'])->middleware('permission:quotation.view');
@@ -660,6 +670,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/purchase-orders', [PurchaseOrderController::class, 'store'])->middleware('permission:purchase_order.create');
             Route::get('/purchase-orders/{purchaseOrder}', [PurchaseOrderController::class, 'show'])->middleware('permission:purchase_order.view');
             Route::get('/purchase-orders/{purchaseOrder}/print', [PurchaseOrderController::class, 'print'])->middleware('permission:purchase_order.view');
+            Route::get('/purchase-orders/{purchaseOrder}/print/generations', [PurchaseOrderController::class, 'printGenerations'])->middleware('permission:purchase_order.view');
+            Route::post('/purchase-orders/{purchaseOrder}/print/generations', [PurchaseOrderController::class, 'generatePrint'])->middleware('permission:purchase_order.view');
             Route::post('/purchase-orders/{purchaseOrder}/submit', [PurchaseOrderController::class, 'submit'])->middleware('permission:purchase_order.create');
             Route::post('/purchase-orders/{purchaseOrder}/approve', [PurchaseOrderController::class, 'approve'])->middleware('permission:purchase_order.approve');
             Route::post('/purchase-orders/{purchaseOrder}/reject', [PurchaseOrderController::class, 'reject'])->middleware('permission:purchase_order.approve');
@@ -673,6 +685,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/purchase-returns/{purchaseReturn}/reject', [PurchaseReturnController::class, 'reject'])->middleware('permission:purchase_return.decide');
             Route::post('/purchase-returns/{purchaseReturn}/receive-redelivery', [PurchaseReturnController::class, 'receiveRedelivery'])->middleware('permission:purchase_return.receive_redelivery');
             Route::get('/purchase-returns/{purchaseReturn}/print', [PurchaseReturnController::class, 'print'])->middleware('permission:purchase_order.view');
+            Route::get('/purchase-returns/{purchaseReturn}/print/generations', [PurchaseReturnController::class, 'printGenerations'])->middleware('permission:purchase_order.view');
+            Route::post('/purchase-returns/{purchaseReturn}/print/generations', [PurchaseReturnController::class, 'generatePrint'])->middleware('permission:purchase_order.view');
 
             Route::get('/goods-receipts', [GoodsReceiptController::class, 'index'])->middleware('permission:goods_receipt.view');
             Route::get('/goods-receipts/{goodsReceipt}', [GoodsReceiptController::class, 'show'])->middleware('permission:goods_receipt.view');

@@ -3,15 +3,15 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
-use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
-use App\Domain\Configuration\Services\DocumentTemplateRenderService;
+use App\Domain\DocumentGeneration\Support\DocumentSource;
 use App\Domain\History\Services\DowntimeService;
 use App\Domain\MaintenancePolicy\Models\MaintenanceSchedule;
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Services\WorkOrderService;
+use App\Http\Controllers\Concerns\PrintsDocuments;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreWorkOrderRequest;
 use App\Support\TenantContext;
@@ -19,6 +19,8 @@ use Illuminate\Http\Request;
 
 class WorkOrderController extends Controller
 {
+    use PrintsDocuments;
+
     public function __construct(
         private readonly WorkOrderService $workOrders,
         private readonly DowntimeService $downtime,
@@ -120,17 +122,34 @@ class WorkOrderController extends Controller
      * PDF, preserving which document number, numbering config version, and
      * template version were in effect at generation time.
      */
-    public function print(WorkOrder $workOrder, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    public function print(Request $request, WorkOrder $workOrder)
     {
         $this->authorizeScope($workOrder);
 
-        $context = DocumentTemplateContextBuilder::forWorkOrder($workOrder);
-        $rendered = $templates->render('work_order', $context, $workOrder->tenant_id, $workOrder->branch_id, $workOrder->workshop_id);
+        return $this->printDocument($request, $this->workOrderDocument($workOrder));
+    }
 
-        return response($pdf->fromHtml($rendered['html']), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$workOrder->wo_number.'.pdf"',
-        ]);
+    public function printGenerations(WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+
+        return $this->documentGenerations($this->workOrderDocument($workOrder));
+    }
+
+    public function generatePrint(Request $request, WorkOrder $workOrder)
+    {
+        $this->authorizeScope($workOrder);
+
+        return $this->generateDocument($request, $this->workOrderDocument($workOrder));
+    }
+
+    private function workOrderDocument(WorkOrder $workOrder): DocumentSource
+    {
+        return new DocumentSource(
+            'work_order', 'work_order', $workOrder->id, $workOrder->tenant_id, $workOrder->wo_number.'.pdf',
+            fn (string $locale) => DocumentTemplateContextBuilder::forWorkOrder($workOrder, $locale),
+            branchId: $workOrder->branch_id, workshopId: $workOrder->workshop_id,
+        );
     }
 
     public function update(Request $request, WorkOrder $workOrder)

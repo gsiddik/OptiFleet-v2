@@ -13,6 +13,7 @@ import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney, toMoneyInput } from '../../../utils/money';
 import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'NEW_EXTERNAL_WO', 'DELIVERED', 'IN_PROGRESS', 'CANCELLED', 'BILLED', 'PAID'];
@@ -241,6 +242,7 @@ export function ExternalWorkOrderInvoiceListPage() {
               View Work Authorization
             </button>
           )}
+          {r.allowed_actions.includes('view_authorization') && <DocumentVersionsButton printPath={`/app/external-work-order-invoices/${r.id}/authorization`} disabled={busyId === r.id} />}
           {r.allowed_actions.includes('deliver') && hasPermission('external_work_order_invoice.deliver') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setDeliveringFor(r)}>
               Deliver

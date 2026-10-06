@@ -20,10 +20,13 @@ use App\Domain\WorkOrder\Models\WorkshopInvoice;
  * ->toArray() or a raw model — so a published template can never reach a
  * column this builder did not choose to expose ("no unrestricted DB
  * access").
+ *
+ * Each builder takes the document locale (D3): dates and numbers are formatted for it; codes,
+ * identifiers and tenant-entered text are passed through unchanged.
  */
 class DocumentTemplateContextBuilder
 {
-    public static function forWorkOrder(WorkOrder $workOrder): array
+    public static function forWorkOrder(WorkOrder $workOrder, string $locale = 'en'): array
     {
         $workOrder->loadMissing(['vehicle', 'branch', 'workshop', 'jobs', 'findings']);
         $tenant = Tenant::query()->find($workOrder->tenant_id);
@@ -45,9 +48,9 @@ class DocumentTemplateContextBuilder
                 'maintenance_type' => $workOrder->maintenance_type,
                 'priority' => $workOrder->priority,
                 'complaint' => $workOrder->complaint,
-                'created_at' => optional($workOrder->created_at)->toDateTimeString(),
-                'started_at' => optional($workOrder->started_at)->toDateTimeString(),
-                'completed_at' => optional($workOrder->completed_at)->toDateTimeString(),
+                'created_at' => DisplayFormat::dateTime($workOrder->created_at, $locale),
+                'started_at' => DisplayFormat::dateTime($workOrder->started_at, $locale),
+                'completed_at' => DisplayFormat::dateTime($workOrder->completed_at, $locale),
                 'revision' => $workOrder->external_finalized_revision,
             ],
             'vehicle' => [
@@ -77,7 +80,7 @@ class DocumentTemplateContextBuilder
      * from the live Partner/Vehicle/Tenant it was generated against — so a later change to any
      * of that master data can never alter an already-issued Work Authorization Letter.
      */
-    public static function forWorkAuthorizationLetter(WorkOrderExternalInvoice $invoice): array
+    public static function forWorkAuthorizationLetter(WorkOrderExternalInvoice $invoice, string $locale = 'en'): array
     {
         $invoice->loadMissing('workOrder');
 
@@ -88,7 +91,7 @@ class DocumentTemplateContextBuilder
             'configuration_version' => null,
             'wal' => [
                 'number' => $invoice->wal_number,
-                'issue_date' => optional($invoice->wal_issue_date)->toDateString(),
+                'issue_date' => DisplayFormat::date($invoice->wal_issue_date, $locale),
                 'workshop_name' => $invoice->wal_workshop_name,
                 'workshop_address' => $invoice->wal_workshop_address,
                 'workshop_pic' => $invoice->wal_workshop_pic,
@@ -104,7 +107,7 @@ class DocumentTemplateContextBuilder
         ];
     }
 
-    public static function forPurchaseOrder(PurchaseOrder $purchaseOrder): array
+    public static function forPurchaseOrder(PurchaseOrder $purchaseOrder, string $locale = 'en'): array
     {
         $purchaseOrder->loadMissing(['partner', 'deliveryWarehouse', 'items.product']);
         $tenant = Tenant::query()->find($purchaseOrder->tenant_id);
@@ -117,12 +120,12 @@ class DocumentTemplateContextBuilder
             'purchase_order' => [
                 'number' => $purchaseOrder->po_number,
                 'status' => $purchaseOrder->status,
-                'order_date' => optional($purchaseOrder->order_date)->toDateString(),
-                'expected_delivery_date' => optional($purchaseOrder->expected_delivery_date)->toDateString(),
-                'subtotal' => DisplayFormat::money($purchaseOrder->subtotal),
-                'tax_total' => DisplayFormat::money($purchaseOrder->tax_total),
-                'freight_cost' => DisplayFormat::money($purchaseOrder->freight_cost),
-                'total' => DisplayFormat::money($purchaseOrder->total),
+                'order_date' => DisplayFormat::date($purchaseOrder->order_date, $locale),
+                'expected_delivery_date' => DisplayFormat::date($purchaseOrder->expected_delivery_date, $locale),
+                'subtotal' => DisplayFormat::money($purchaseOrder->subtotal, $locale),
+                'tax_total' => DisplayFormat::money($purchaseOrder->tax_total, $locale),
+                'freight_cost' => DisplayFormat::money($purchaseOrder->freight_cost, $locale),
+                'total' => DisplayFormat::money($purchaseOrder->total, $locale),
             ],
             'partner' => [
                 'name' => $purchaseOrder->partner?->name,
@@ -133,17 +136,17 @@ class DocumentTemplateContextBuilder
             'delivery_warehouse' => ['name' => $purchaseOrder->deliveryWarehouse?->name],
             'items' => $purchaseOrder->items->map(fn ($item) => [
                 'product_name' => $item->product?->name,
-                'quantity_ordered' => DisplayFormat::quantity($item->quantity_ordered),
-                'unit_price' => DisplayFormat::money($item->unit_price),
+                'quantity_ordered' => DisplayFormat::quantity($item->quantity_ordered, $locale),
+                'unit_price' => DisplayFormat::money($item->unit_price, $locale),
                 'discount_percent' => (string) $item->discount_percent,
                 'tax_percent' => (string) $item->tax_percent,
-                'line_total' => DisplayFormat::money($item->line_total),
+                'line_total' => DisplayFormat::money($item->line_total, $locale),
             ])->all(),
         ];
     }
 
     /** Return Order (Purchase Order Return to Vendor) — printed from the PO's Return History. */
-    public static function forPurchaseReturn(PurchaseReturn $return): array
+    public static function forPurchaseReturn(PurchaseReturn $return, string $locale = 'en'): array
     {
         $return->loadMissing(['purchaseOrder', 'partner', 'warehouse', 'items.product']);
         $tenant = Tenant::query()->find($return->tenant_id);
@@ -156,7 +159,7 @@ class DocumentTemplateContextBuilder
             'configuration_version' => $return->numbering_configuration_version_id,
             'purchase_return' => [
                 'number' => $return->return_number,
-                'returned_date' => $return->returned_at?->copy()->setTimezone($timezone)->format('Y-m-d'),
+                'returned_date' => DisplayFormat::date($return->returned_at?->copy()->setTimezone($timezone), $locale),
                 'return_option' => $return->return_option === PurchaseReturn::REFUND ? 'Refund Request' : 'Redelivery Request',
                 'status' => $return->status,
                 'notes' => $return->notes,
@@ -172,7 +175,7 @@ class DocumentTemplateContextBuilder
             'items' => $return->items->map(fn ($item) => [
                 'product_name' => $item->product?->name,
                 'product_code' => $item->product?->sku,
-                'quantity' => DisplayFormat::quantity($item->quantity),
+                'quantity' => DisplayFormat::quantity($item->quantity, $locale),
             ])->all(),
         ];
     }
@@ -181,7 +184,7 @@ class DocumentTemplateContextBuilder
      * RFQ printed for ONE invited vendor: the document names that vendor and asks for unit prices
      * and the delivery lead time after the Purchase Order is received.
      */
-    public static function forRfqVendor(Rfq $rfq, Partner $vendor, ?string $printedByName): array
+    public static function forRfqVendor(Rfq $rfq, Partner $vendor, ?string $printedByName, string $locale = 'en'): array
     {
         $rfq->loadMissing(['warehouse', 'items.product.uom']);
         $tenant = Tenant::query()->find($rfq->tenant_id);
@@ -194,8 +197,8 @@ class DocumentTemplateContextBuilder
             'rfq' => [
                 'number' => $rfq->rfq_number,
                 'status' => $rfq->status,
-                'issue_date' => optional($rfq->issue_date)->toDateString() ?? now()->toDateString(),
-                'response_deadline' => optional($rfq->response_deadline)->toDateString(),
+                'issue_date' => DisplayFormat::date($rfq->issue_date ?? now(), $locale),
+                'response_deadline' => DisplayFormat::date($rfq->response_deadline, $locale),
             ],
             'vendor' => [
                 'name' => $vendor->name,
@@ -206,12 +209,12 @@ class DocumentTemplateContextBuilder
             ],
             'warehouse' => ['name' => $rfq->warehouse?->name, 'address' => $rfq->warehouse?->address],
             'printed_by' => ['name' => $printedByName],
-            'printed_at' => now()->toDateTimeString(),
+            'printed_at' => DisplayFormat::dateTime(now(), $locale),
             'items' => $rfq->items->values()->map(fn ($item, $i) => [
                 'line_no' => (string) ($i + 1),
                 'product_code' => $item->product?->sku ?? $item->product?->code,
                 'product_name' => $item->product?->name,
-                'quantity' => DisplayFormat::quantity($item->quantity),
+                'quantity' => DisplayFormat::quantity($item->quantity, $locale),
                 'uom' => $item->product?->uom?->code,
             ])->all(),
         ];
@@ -224,7 +227,7 @@ class DocumentTemplateContextBuilder
      * domain that already owns the pre-existing (and separately unused)
      * 'maintenance_report' template type.
      */
-    public static function forMaintenanceMemo(WorkOrderExternalService $service): array
+    public static function forMaintenanceMemo(WorkOrderExternalService $service, string $locale = 'en'): array
     {
         $service->loadMissing(['partner', 'workOrder.vehicle']);
         $tenant = Tenant::query()->find($service->tenant_id);
@@ -241,9 +244,9 @@ class DocumentTemplateContextBuilder
                 'condition_notes' => $service->condition_notes,
                 'priority' => $service->priority,
                 'status' => $service->status,
-                'cost' => DisplayFormat::money($service->cost),
-                'requested_at' => optional($service->requested_at)->toDateTimeString(),
-                'completed_at' => optional($service->completed_at)->toDateTimeString(),
+                'cost' => DisplayFormat::money($service->cost, $locale),
+                'requested_at' => DisplayFormat::dateTime($service->requested_at, $locale),
+                'completed_at' => DisplayFormat::dateTime($service->completed_at, $locale),
             ],
             'partner' => [
                 'name' => $service->partner?->name,
@@ -267,7 +270,7 @@ class DocumentTemplateContextBuilder
      * R1: renders OptiFleet's own RECORD of an externally-issued Workshop
      * Invoice — never a document that claims OptiFleet issued the invoice.
      */
-    public static function forWorkshopInvoice(WorkshopInvoice $invoice): array
+    public static function forWorkshopInvoice(WorkshopInvoice $invoice, string $locale = 'en'): array
     {
         $invoice->loadMissing(['partner', 'workOrder', 'memo']);
         $tenant = Tenant::query()->find($invoice->tenant_id);
@@ -280,13 +283,13 @@ class DocumentTemplateContextBuilder
             'configuration_version' => null,
             'workshop_invoice' => [
                 'external_invoice_number' => $invoice->external_invoice_number,
-                'invoice_date' => optional($invoice->invoice_date)->toDateString(),
-                'due_date' => optional($invoice->due_date)->toDateString(),
+                'invoice_date' => DisplayFormat::date($invoice->invoice_date, $locale),
+                'due_date' => DisplayFormat::date($invoice->due_date, $locale),
                 'currency' => $invoice->currency,
-                'subtotal' => DisplayFormat::money($invoice->subtotal),
-                'tax_total' => DisplayFormat::money($invoice->tax_total),
-                'discount_total' => DisplayFormat::money($invoice->discount_total),
-                'total_amount' => DisplayFormat::money($invoice->total_amount),
+                'subtotal' => DisplayFormat::money($invoice->subtotal, $locale),
+                'tax_total' => DisplayFormat::money($invoice->tax_total, $locale),
+                'discount_total' => DisplayFormat::money($invoice->discount_total, $locale),
+                'total_amount' => DisplayFormat::money($invoice->total_amount, $locale),
                 'status' => $invoice->status,
                 'notes' => $invoice->notes,
                 'reconciliation_note' => $invoice->reconciliation_note,
@@ -301,9 +304,9 @@ class DocumentTemplateContextBuilder
             'maintenance_memo' => ['reference_number' => $memo?->reference_number, 'description' => $memo?->description],
             'items' => collect($invoice->line_items ?? [])->map(fn ($item) => [
                 'description' => $item['description'] ?? '',
-                'quantity' => DisplayFormat::quantity($item['quantity'] ?? null),
-                'unit_price' => DisplayFormat::money($item['unit_price'] ?? null),
-                'line_total' => DisplayFormat::money($item['line_total'] ?? null),
+                'quantity' => DisplayFormat::quantity($item['quantity'] ?? null, $locale),
+                'unit_price' => DisplayFormat::money($item['unit_price'] ?? null, $locale),
+                'line_total' => DisplayFormat::money($item['line_total'] ?? null, $locale),
             ])->all(),
         ];
     }

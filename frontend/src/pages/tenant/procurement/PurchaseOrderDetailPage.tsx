@@ -17,6 +17,7 @@ import { RecordVendorInvoiceModal, type ReceiptLine } from './RecordVendorInvoic
 import { ReturnToVendorModal } from './ReturnToVendorModal';
 import { ReturnHistory } from './ReturnHistory';
 import { DocumentViewer } from '../../../components/DocumentViewer';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', permission: 'purchase_order.create', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'purchase_order.create' }],
@@ -170,6 +171,7 @@ export function PurchaseOrderDetailPage() {
               {printing ? 'Loading…' : 'Print'}
             </button>
           )}
+          {hasPermission('purchase_order.view') && <DocumentVersionsButton printPath={`/app/purchase-orders/${po.id}/print`} />}
           {summary?.can_return && hasPermission('purchase_return.create') && (
             <button className="btn-secondary" disabled={busy} onClick={() => setReturning(true)}>
               Return to Vendor
@@ -200,6 +202,7 @@ export function PurchaseOrderDetailPage() {
               Print Return Order
             </button>
           )}
+          {openReturn && <DocumentVersionsButton printPath={`/app/purchase-returns/${openReturn.id}/print`} disabled={busy} />}
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
               {a.label}

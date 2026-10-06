@@ -28,6 +28,7 @@ import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney, sumMoney } from '../../../utils/money';
 import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
 import { useTabParam } from '../../../hooks/useTabParam';
 import type { TabDef } from '../../../utils/tabs';
@@ -291,6 +292,7 @@ export function WorkOrderDetailPage() {
               {printing ? 'Loading…' : 'Print'}
             </button>
           )}
+          {hasPermission('work_order.view') && <DocumentVersionsButton printPath={`/app/work-orders/${wo.id}/print`} />}
           {!isExternalMode && wo.status === 'DRAFT' && hasPermission('work_order.prepare_external') && (
             <button className="btn-secondary" disabled={busy} onClick={markExternalWorkshop}>
               Select External Workshop
@@ -2337,6 +2339,7 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
                 Print Memo
               </button>
             )}
+            {hasPermission('work_order.view') && <DocumentVersionsButton printPath={`/app/work-orders/${wo.id}/external-services/${s.id}/print`} disabled={busy} />}
             {s.status === 'COMPLETED' && hasPermission('workshop_invoice.record') && (
               <button className="btn-primary" disabled={busy} onClick={() => setRecordingInvoiceFor(s.id)}>
                 Record Service Invoice

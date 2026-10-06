@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Audit\Models\AuditLog;
-use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
-use App\Domain\Configuration\Services\DocumentTemplateRenderService;
+use App\Domain\DocumentGeneration\Support\DocumentSource;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalInvoice;
 use App\Domain\WorkOrder\Services\ExternalWorkOrderService;
 use App\Domain\WorkOrder\Services\WorkOrderExternalInvoiceService;
+use App\Http\Controllers\Concerns\PrintsDocuments;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -31,6 +31,8 @@ use Illuminate\Support\Facades\Storage;
  */
 class ExternalWorkOrderInvoiceController extends Controller
 {
+    use PrintsDocuments;
+
     public function __construct(
         private readonly WorkOrderExternalInvoiceService $invoices,
         private readonly DataScopeService $scope,
@@ -92,21 +94,37 @@ class ExternalWorkOrderInvoiceController extends Controller
         return $this->ok($externalInvoice->fresh());
     }
 
-    public function viewAuthorization(WorkOrderExternalInvoice $externalInvoice, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    public function viewAuthorization(Request $request, WorkOrderExternalInvoice $externalInvoice)
     {
         $this->authorizeScope($externalInvoice);
         abort_if($externalInvoice->work_authorization_status === 'NOT_GENERATED', 404, 'No Work Authorization Letter has been generated yet.');
 
-        $context = DocumentTemplateContextBuilder::forWorkAuthorizationLetter($externalInvoice);
-        $rendered = $templates->render(
-            'work_authorization_letter', $context, $externalInvoice->tenant_id,
-            $externalInvoice->workOrder?->branch_id, $externalInvoice->workOrder?->workshop_id,
-        );
+        return $this->printDocument($request, $this->authorizationLetterDocument($externalInvoice));
+    }
 
-        return response($pdf->fromHtml($rendered['html']), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$externalInvoice->wal_number.'.pdf"',
-        ]);
+    public function authorizationGenerations(WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        abort_if($externalInvoice->work_authorization_status === 'NOT_GENERATED', 404, 'No Work Authorization Letter has been generated yet.');
+
+        return $this->documentGenerations($this->authorizationLetterDocument($externalInvoice));
+    }
+
+    public function generateAuthorizationVersion(Request $request, WorkOrderExternalInvoice $externalInvoice)
+    {
+        $this->authorizeScope($externalInvoice);
+        abort_if($externalInvoice->work_authorization_status === 'NOT_GENERATED', 404, 'No Work Authorization Letter has been generated yet.');
+
+        return $this->generateDocument($request, $this->authorizationLetterDocument($externalInvoice));
+    }
+
+    private function authorizationLetterDocument(WorkOrderExternalInvoice $externalInvoice): DocumentSource
+    {
+        return new DocumentSource(
+            'work_authorization_letter', 'work_order_external_invoice', $externalInvoice->id, $externalInvoice->tenant_id, $externalInvoice->wal_number.'.pdf',
+            fn (string $locale) => DocumentTemplateContextBuilder::forWorkAuthorizationLetter($externalInvoice, $locale),
+            branchId: $externalInvoice->workOrder?->branch_id, workshopId: $externalInvoice->workOrder?->workshop_id,
+        );
     }
 
     public function deliver(WorkOrderExternalInvoice $externalInvoice)

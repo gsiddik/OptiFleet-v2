@@ -3,9 +3,13 @@
 namespace Tests\Unit;
 
 use App\Domain\Shared\Support\DisplayFormat;
+use Carbon\CarbonImmutable;
 use PHPUnit\Framework\TestCase;
 
-/** Money = exactly two decimals (half-up, grouped); quantities drop meaningless decimals. */
+/**
+ * Money = exactly two decimals (half-up, grouped); quantities drop meaningless decimals. Printed
+ * documents format numbers and dates for their locale (i18n D3); English numbers are unchanged.
+ */
 class DisplayFormatTest extends TestCase
 {
     public function test_money_always_has_two_decimals_with_half_up_rounding(): void
@@ -28,5 +32,30 @@ class DisplayFormatTest extends TestCase
             $this->assertSame($expected, DisplayFormat::quantity($input), $input);
         }
         $this->assertNull(DisplayFormat::quantity(null));
+    }
+
+    public function test_numbers_follow_the_document_locale(): void
+    {
+        $this->assertSame('1,234.56', DisplayFormat::money('1234.56'));
+        $this->assertSame('1,234.56', DisplayFormat::money('1234.56', 'en'));
+        $this->assertSame('1.234,56', DisplayFormat::money('1234.56', 'id'));
+        $this->assertSame('-1.234.567,50', DisplayFormat::money('-1234567.5', 'id'));
+        $this->assertSame('0,00', DisplayFormat::money('0', 'id'));
+        $this->assertSame('1,234.5', DisplayFormat::quantity('1234.5000'));
+        $this->assertSame('1.234,5', DisplayFormat::quantity('1234.5000', 'id'));
+        $this->assertSame('5', DisplayFormat::quantity('5.0000', 'id'));
+        $this->assertNull(DisplayFormat::money(null, 'id'));
+    }
+
+    public function test_dates_follow_the_document_locale(): void
+    {
+        $date = CarbonImmutable::parse('2026-10-06 14:05:09');
+        $this->assertSame('October 6, 2026', DisplayFormat::date($date, 'en'));
+        $this->assertSame('6 Oktober 2026', DisplayFormat::date($date, 'id'));
+        $this->assertSame('6 Oktober 2026', DisplayFormat::date('2026-10-06', 'id'));
+        $this->assertSame('October 6, 2026 14:05', DisplayFormat::dateTime($date, 'en'));
+        $this->assertSame('6 Oktober 2026 14:05', DisplayFormat::dateTime($date, 'id'));
+        $this->assertNull(DisplayFormat::date(null, 'id'));
+        $this->assertSame('2026-10-06 14:05:09', $date->toDateTimeString(), 'The value itself is never changed.');
     }
 }

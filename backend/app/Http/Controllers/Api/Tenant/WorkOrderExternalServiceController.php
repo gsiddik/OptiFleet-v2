@@ -3,19 +3,21 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
-use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
-use App\Domain\Configuration\Services\DocumentTemplateRenderService;
+use App\Domain\DocumentGeneration\Support\DocumentSource;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderExternalService;
 use App\Domain\WorkOrder\Services\WorkOrderExternalServiceService;
+use App\Http\Controllers\Concerns\PrintsDocuments;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 
 class WorkOrderExternalServiceController extends Controller
 {
+    use PrintsDocuments;
+
     public function __construct(
         private readonly WorkOrderExternalServiceService $externalServices,
         private readonly DataScopeService $scope,
@@ -67,18 +69,37 @@ class WorkOrderExternalServiceController extends Controller
      * template render + PDF pattern exactly, for the 'maintenance_memo'
      * document type.
      */
-    public function print(WorkOrder $workOrder, WorkOrderExternalService $externalService, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    public function print(Request $request, WorkOrder $workOrder, WorkOrderExternalService $externalService)
     {
         $this->authorizeScope($workOrder);
         abort_unless($externalService->work_order_id === $workOrder->id, 404);
 
-        $context = DocumentTemplateContextBuilder::forMaintenanceMemo($externalService);
-        $rendered = $templates->render('maintenance_memo', $context, $workOrder->tenant_id, $workOrder->branch_id, $workOrder->workshop_id);
+        return $this->printDocument($request, $this->maintenanceMemoDocument($workOrder, $externalService));
+    }
 
-        return response($pdf->fromHtml($rendered['html']), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="memo-'.$externalService->id.'.pdf"',
-        ]);
+    public function printGenerations(WorkOrder $workOrder, WorkOrderExternalService $externalService)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($externalService->work_order_id === $workOrder->id, 404);
+
+        return $this->documentGenerations($this->maintenanceMemoDocument($workOrder, $externalService));
+    }
+
+    public function generatePrint(Request $request, WorkOrder $workOrder, WorkOrderExternalService $externalService)
+    {
+        $this->authorizeScope($workOrder);
+        abort_unless($externalService->work_order_id === $workOrder->id, 404);
+
+        return $this->generateDocument($request, $this->maintenanceMemoDocument($workOrder, $externalService));
+    }
+
+    private function maintenanceMemoDocument(WorkOrder $workOrder, WorkOrderExternalService $externalService): DocumentSource
+    {
+        return new DocumentSource(
+            'maintenance_memo', 'work_order_external_service', $externalService->id, $workOrder->tenant_id, 'memo-'.$externalService->id.'.pdf',
+            fn (string $locale) => DocumentTemplateContextBuilder::forMaintenanceMemo($externalService, $locale),
+            branchId: $workOrder->branch_id, workshopId: $workOrder->workshop_id,
+        );
     }
 
     private function authorizeScope(WorkOrder $workOrder): void

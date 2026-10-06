@@ -19,6 +19,7 @@ Continuation checkpoint for the structural i18n preparation defined in
 | S3 | Runtime label mapping (+ workflow action verbs) | RUNTIME_LABEL_GENERATION (115 of 122), WORKFLOW_ACTION_LABEL_CORRECTION (33) | DONE |
 | S4 | Full sentence templates | FULL_SENTENCE_TEMPLATE (192), RUNTIME_LABEL_GENERATION (remaining 7) | DONE |
 | S5 | Error code decoupling | ERROR_CODE_DECOUPLING (98 of 124) | DONE, 26 rows open (see S5) |
+| S6 | Document generation locale snapshot | PRINT_LOCALE_SNAPSHOT (D1, D3, D4) | DONE |
 
 ## S1 — Stable tab IDs
 
@@ -292,6 +293,8 @@ already in the contract, and the English wording of every message (asserted in t
 - Browser e2e, 4 checks: the no-tire-data notice text is unchanged; the Vehicle Details link is
   driven by the code and points to `?tab=wheels`; no page errors.
 - Frontend: `tsc -b`, 23 unit tests and lint (27 pre-existing warnings, 0 errors) pass.
+- Full backend regression: 1132 passed. MongoDB-backed Analytics / Intelligence suites NOT RUN (no
+  MongoDB or PHP `mongodb` extension in this environment).
 
 **Open (26 rows)**
 - 25 Intelligence rows (data readiness, RUL, feature extractors, training, diagnostics,
@@ -307,3 +310,113 @@ already in the contract, and the English wording of every message (asserted in t
 - The migration is additive with nullable columns.
 - Older inspections have no codes. A reader must fall back to the stored text when
   `reason_codes` is `NULL`.
+
+## S6 — Document generation locale snapshot (PRINT_LOCALE_SNAPSHOT)
+
+Owner decisions applied:
+- **D1 language priority:** explicit Print/Export choice → user preferred locale → tenant default →
+  English. A document is never bilingual.
+- **D3 formatting:** the document locale decides number and date presentation only:
+  - `id`: "1.234,56" and "6 Oktober 2026";
+  - `en`: "1,234.56" and "October 6, 2026".
+- **D4 reprint integrity:** a reprint uses the locale and template version of the original generation.
+
+**Schema** (migration `2026_10_12_000002`, additive and idempotent)
+- `document_generations` has:
+  - `id`, `tenant_id`, `document_type`, `source_entity_type`, `source_entity_id`;
+  - `recipient_partner_id` (only for the RFQ, which is printed per invited vendor);
+  - `locale`;
+  - `template_id` (configuration set), `template_version_id`, `template_version`;
+  - `generated_at` (microseconds), `generated_by`, `created_at`.
+- There is no file path or checksum: PDFs are rendered on demand, as before, so nothing is stored.
+- **Immutable.** The model refuses update and delete, and a PostgreSQL trigger refuses `UPDATE`. The
+  only exception is the `generated_by` foreign key's own `ON DELETE SET NULL`.
+- `tenants.default_locale` and `users.preferred_locale` are nullable. Null means not set, so English.
+  There is no UI to set them yet; the language selector is rollout work.
+
+**Behaviour** (`DocumentGenerationService`, controller trait `PrintsDocuments`)
+
+| Endpoint | Meaning |
+|---|---|
+| `GET …/print` | Reprint the latest generation. Only the very first print of a document creates one (in `?locale=` or the D1 default), under a PostgreSQL advisory lock, so concurrent first prints create one row. |
+| `GET …/print?generation=<id>` | Reprint that generation. The id must belong to this tenant and this document, otherwise 404. |
+| `GET …/print/generations` | History, newest first, with a sequence number. |
+| `POST …/print/generations {locale?}` | Generate New Version: a new row from the current effective template. History is never overwritten. |
+
+- Covers all 7 printed documents:
+  - Work Order;
+  - Maintenance Memo;
+  - Workshop Invoice;
+  - RFQ (per vendor);
+  - Purchase Order;
+  - Return Order;
+  - Work Authorization Letter (`…/authorization`, `…/authorization/generations`).
+- Existing URLs, permissions, tenant and data-scope checks are unchanged. The Return Order print still
+  records `printed_at`.
+- PDF responses carry `X-Document-Generation-Id`, `X-Document-Locale` and
+  `X-Document-Template-Version`.
+- Rendering uses the **pinned** `ConfigurationVersion`, even after it is archived.
+  - A version may carry per-locale bodies (`payload.locales.<locale>.html`). Without one, its single
+    `html` serves every locale, so no HTML is duplicated per language.
+  - Per-locale bodies pass the same variable whitelist on publish, and only `en` / `id` keys are
+    accepted.
+- The RFQ built-in body (no published template) is recorded with a null template version and renders
+  as `default`.
+- `{{generated_at}}` is the generation's time, so a reprint shows the original generation time.
+- `DisplayFormat::money/quantity/date/dateTime` take the locale. The context builders format with the
+  generation's locale at render time. Stored values and identifiers are never localized, and nothing
+  localized is written to business tables.
+
+**Frontend**: a "Versions" button next to each print action opens the document's history:
+- language, template version and generation time for each version;
+- Open, which reprints that generation;
+- Generate New Version, with a language choice of Default, English or Bahasa Indonesia.
+
+The existing Print buttons are unchanged and now reprint the latest version.
+
+**Behaviour change (approved, D3/D4)**
+- Printed dates were ISO (`2026-10-06`). English documents now read "October 6, 2026", and date-times
+  "October 6, 2026 14:05". English numbers are unchanged.
+- A plain Print no longer silently picks up a newly published template. Generate New Version does.
+  The comment in `DocumentTemplateTest` described the old behaviour; its assertions (the PDF still
+  renders after a republish) pass.
+- `PurchaseOrderFromQuotationTest` asserted the ISO date in the print context. Its assertion now
+  expects the D3 presentation ("October 1, 2026", "1 Oktober 2026"); the stored-date assertions are
+  unchanged.
+
+**Tests**
+- `Feature/DocumentGenerationLocaleTest` (6 tests):
+  - A: an explicit `id` print stores `id`, with id date formatting.
+  - B: after the user and tenant switch to `en`, a reprint is still `id` and creates no new row.
+  - C: Generate New Version with `en` adds a row and leaves the history unchanged.
+  - D: after a template republish, the old generation renders its own (archived) version, and a plain
+    print stays on it.
+  - The D1 priority chain, including 422 for an unsupported locale.
+  - Immutability at both the model and database level.
+  - Per-locale bodies, with fallback and whitelist validation.
+  - Tenant and document isolation of generation ids.
+  - A single first generation across repeated prints.
+- `Unit/DisplayFormatTest`: `en` / `id` money, quantity, date and date-time; values are not mutated.
+- All existing print tests pass unchanged: DocumentTemplate, RfqVendor, PurchaseReturn,
+  PurchaseOrderQuantity, WorkOrderExternalService, ExternalWorkOrder, WorkshopInvoice and
+  ConfigurationAuditAndRegression (93 tests).
+- Browser e2e, 7 checks:
+  - Print returns a generation;
+  - the Versions list;
+  - generating a Bahasa Indonesia version opens it;
+  - reopening the older version keeps its locale;
+  - the history count;
+  - no page errors.
+- Frontend: `tsc -b`, build, 23 unit tests, lint (27 pre-existing warnings, 0 errors).
+- Full backend regression: 1137 passed, 1 failed. The failure was the ISO-date assertion above, fixed
+  and re-run green with its whole test class. The existing `Unit/DisplayFormatTest` cases are kept, and
+  the locale cases are added to that class (4 passed). MongoDB suites NOT RUN.
+
+**Remaining risk**
+- **Live data.** A generation pins locale and template, not data. A reprint renders the document's
+  current data, exactly as before; the WAL already prints from its own frozen snapshot columns. Storing
+  rendered output would need the `file_path`/`checksum` columns, which were left out as not needed now.
+- **Concurrency.** The advisory lock serializes generation creation per document. It is exercised
+  sequentially in tests; a true concurrent test is NOT RUN (a single-connection test harness).
+- **Template labels.** Document labels inside templates (headings, captions) are still English
+  template text. Indonesian bodies are authored per version under `locales.id` at rollout.
