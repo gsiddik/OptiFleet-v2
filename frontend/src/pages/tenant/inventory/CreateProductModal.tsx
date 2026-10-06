@@ -150,10 +150,10 @@ export function CreateProductModal({
     setSpec({});
     setCompatibilities([emptyCompatRow()]);
     setBrand('');
-    setTrackSerialNumber(false);
+    setTrackSerialNumber(context === 'RIM'); // a rim is always serial-tracked (locked in the Rim context)
     setTrackBatch(false);
     setReferenceTreadDepthMm('');
-  }, [itemType]);
+  }, [itemType, context]);
 
   useEffect(() => {
     if (!open) return;
@@ -252,7 +252,7 @@ export function CreateProductModal({
     setRackId('');
     setBinId('');
     setBrand('');
-    setTrackSerialNumber(false);
+    setTrackSerialNumber(context === 'RIM'); // a rim is always serial-tracked (locked in the Rim context)
     setTrackBatch(false);
     setReferenceTreadDepthMm('');
     setSpec({});
