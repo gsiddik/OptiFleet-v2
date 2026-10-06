@@ -584,6 +584,21 @@ class TireOperationTest extends TestCase
         $this->assertSame('CANCELLED', TireOperationStatus::derive(now(), 'DRAFT'));
     }
 
+    /** i18n: the message follows the request language; the machine-readable code does not. */
+    public function test_a_coded_error_is_localized_while_its_code_stays_the_same(): void
+    {
+        $s = $this->scenario();
+        $payload = $this->payload($s, 'INSPECTION', ['items' => [['position_code' => '9ZZ9']]]);
+
+        $en = $this->postJson(self::OPS, $payload, $s['headers'] + ['Accept-Language' => 'en'])->assertStatus(422);
+        $id = $this->postJson(self::OPS, $payload, $s['headers'] + ['Accept-Language' => 'id-ID,id;q=0.9,en;q=0.8'])->assertStatus(422);
+
+        $this->assertSame($en->json('codes'), $id->json('codes'));
+        $this->assertSame('validation.tire.codeNotPositionVehicleSWheels', $id->json('codes.items.code'));
+        $this->assertSame("9ZZ9 is not a position of this vehicle's Wheels Configuration (1.1).", $en->json('errors.items.0'));
+        $this->assertSame('9ZZ9 bukan posisi pada Konfigurasi Roda kendaraan ini (1.1).', $id->json('errors.items.0'));
+    }
+
     public function test_position_errors_carry_a_machine_readable_code(): void
     {
         $s = $this->scenario();

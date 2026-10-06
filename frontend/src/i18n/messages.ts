@@ -1,3 +1,5 @@
+import { translated } from './i18n';
+
 /**
  * Whole-sentence message templates (i18n structural preparation).
  *
@@ -54,5 +56,5 @@ export function messageTemplate(key: MessageKey): string {
 
 /** Renders a message; a placeholder without a value is left visible rather than silently dropped. */
 export function message(key: MessageKey, params: MessageParams = {}): string {
-  return MESSAGES[key].replace(/\{\{(\w+)\}\}/g, (whole, name: string) => (name in params ? String(params[name]) : whole));
+  return translated(key, MESSAGES[key], params);
 }

@@ -54,7 +54,7 @@ test('every registry key has a final Indonesian translation in the EN-ID dataset
 test('domain disambiguates ISSUED (document vs stock)', () => {
   assert.equal(statusDisplayKey('ISSUED', 'document'), 'status.document.issued');
   assert.equal(statusDisplayKey('ISSUED', 'stock'), 'status.stock.issued');
-  assert.equal(statusDisplayKey('ISSUED'), 'status.issued');
+  assert.equal(statusDisplayKey('ISSUED'), 'status.document.issued', 'without a domain, ISSUED is a document status');
   assert.equal(statusDisplayKey('APPROVED', 'stock'), 'status.approved');
 });
 

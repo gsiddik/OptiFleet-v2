@@ -7,8 +7,8 @@ use Tests\TestCase;
 
 /**
  * i18n structural preparation S7: framework validation messages can be served in Indonesian from
- * lang/id, resolved per request (user preferred → tenant default → en). Runtime resolution is off by
- * default, so responses stay English until the rollout. Validation rules themselves never change.
+ * lang/id, resolved per request (user preferred → tenant default → Accept-Language → en). Validation
+ * rules themselves never change.
  */
 class ValidationLocalizationTest extends TestCase
 {
@@ -33,13 +33,13 @@ class ValidationLocalizationTest extends TestCase
         return $this->postJson('/api/v1/app/work-orders', [], $headers)->assertStatus(422)->json('errors.vehicle_id.0');
     }
 
-    public function test_responses_stay_english_while_runtime_locale_resolution_is_off(): void
+    public function test_responses_stay_english_when_runtime_locale_resolution_is_switched_off(): void
     {
+        config(['app.runtime_locale_resolution' => false]);
         [$tenant, $user, $headers] = $this->setUpTenantUser();
         $user->forceFill(['preferred_locale' => 'id'])->save();
         $tenant->forceFill(['default_locale' => 'id'])->save();
 
-        $this->assertFalse((bool) config('app.runtime_locale_resolution'));
         $this->assertSame('The vehicle id field is required.', $this->requiredMessage($headers));
     }
 
@@ -56,6 +56,33 @@ class ValidationLocalizationTest extends TestCase
         $user->forceFill(['preferred_locale' => 'id'])->save();
         $tenant->forceFill(['default_locale' => 'en'])->save();
         $this->assertSame('Kolom vehicle id wajib diisi.', $this->requiredMessage($headers));
+    }
+
+    public function test_accept_language_applies_when_no_preference_is_stored_and_a_preference_wins_over_it(): void
+    {
+        [$tenant, $user, $headers] = $this->setUpTenantUser();
+        $post = function (array $h) {
+            $this->app['auth']->forgetGuards();
+
+            return $this->postJson('/api/v1/app/work-orders', [], $h)->assertStatus(422)->json('errors.vehicle_id.0');
+        };
+
+        $this->assertSame('The vehicle id field is required.', $post($headers), 'No header, no preference → English.');
+        $this->assertSame('Kolom vehicle id wajib diisi.', $post($headers + ['Accept-Language' => 'id']));
+        $this->assertSame('The vehicle id field is required.', $post($headers + ['Accept-Language' => 'fr-FR, en;q=0.5']));
+        $user->forceFill(['preferred_locale' => 'en'])->save();
+        $this->assertSame('The vehicle id field is required.', $post($headers + ['Accept-Language' => 'id']), 'The stored preference wins.');
+        $tenant->forceFill(['default_locale' => 'id'])->save();
+        $user->forceFill(['preferred_locale' => null])->save();
+        $this->assertSame('Kolom vehicle id wajib diisi.', $post($headers + ['Accept-Language' => 'en']), 'Tenant default before the header.');
+    }
+
+    public function test_login_errors_follow_accept_language(): void
+    {
+        $en = $this->postJson('/api/v1/auth/login', [], ['Accept-Language' => 'en'])->assertStatus(422)->json('errors.email.0');
+        $id = $this->postJson('/api/v1/auth/login', [], ['Accept-Language' => 'id'])->assertStatus(422)->json('errors.email.0');
+        $this->assertSame('The email field is required.', $en);
+        $this->assertSame('Kolom email wajib diisi.', $id);
     }
 
     public function test_rules_without_an_indonesian_message_fall_back_to_english(): void

@@ -1,3 +1,5 @@
+import { translated } from './i18n';
+
 /**
  * Default workflow action (button) labels in verb form, keyed by the transition's target status
  * (owner decision: action "Approve" → status "Approved"). Mirror of backend
@@ -46,7 +48,8 @@ export const ACTION_VERBS: Readonly<Record<string, ActionVerbEntry>> = {
 
 /** Default verb label for a transition into `targetStatus`. */
 export function actionVerbLabel(targetStatus: string): string | undefined {
-  return ACTION_VERBS[targetStatus]?.en;
+  const entry = ACTION_VERBS[targetStatus];
+  return entry ? translated(entry.key, entry.en) : undefined;
 }
 
 /** Compares labels ignoring case, spaces and punctuation (e.g. "Qc Pending" vs "QC_PENDING"). */
@@ -60,6 +63,7 @@ const normalizeLabel = (value: string) => value.toLowerCase().replace(/[^a-z0-9]
 export function isDefaultActionLabel(t: { action_label?: string | null; action_code: string; to_status: string }): boolean {
   if (!t.action_label) return true;
   const label = normalizeLabel(t.action_label);
-  const defaults = [t.to_status, t.action_code, actionVerbLabel(t.to_status) ?? ''].map(normalizeLabel);
+  // Stored labels are English: compare with the English default verb, whatever the active locale.
+  const defaults = [t.to_status, t.action_code, ACTION_VERBS[t.to_status]?.en ?? ''].map(normalizeLabel);
   return defaults.includes(label);
 }

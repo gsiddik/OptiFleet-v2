@@ -68,7 +68,8 @@ final class StatusLabels
         'IN_PROGRESS' => ['key' => 'status.inProgress', 'en' => 'In Progress'],
         'IN_STOCK' => ['key' => 'status.inStock', 'en' => 'In Stock'],
         'IN_TRANSIT' => ['key' => 'status.inTransit', 'en' => 'In Transit'],
-        'ISSUED' => ['key' => 'status.issued', 'en' => 'Issued'],
+        // Without a domain, ISSUED means a document was issued (status.issued was split into document / stock).
+        'ISSUED' => ['key' => 'status.document.issued', 'en' => 'Issued'],
         'LATE' => ['key' => 'status.late', 'en' => 'Late'],
         'LOW_STOCK' => ['key' => 'status.lowStock', 'en' => 'Low Stock'],
         'NEED_INFORMATION' => ['key' => 'status.needInformation', 'en' => 'Need Information'],

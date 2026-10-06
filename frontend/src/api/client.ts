@@ -1,4 +1,5 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { appLocale } from '../i18n/locale';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1';
 
@@ -14,6 +15,8 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // API language contract: the active UI locale. Messages are localized; codes never are.
+  config.headers['Accept-Language'] = appLocale();
   const tenantId = localStorage.getItem('optifleet_active_tenant');
   if (tenantId) {
     config.headers['X-Tenant-ID'] = tenantId;

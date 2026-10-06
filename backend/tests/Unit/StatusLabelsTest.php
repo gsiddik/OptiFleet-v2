@@ -63,7 +63,7 @@ class StatusLabelsTest extends TestCase
     {
         $this->assertSame('status.document.issued', StatusLabels::key('ISSUED', 'document'));
         $this->assertSame('status.stock.issued', StatusLabels::key('ISSUED', 'stock'));
-        $this->assertSame('status.issued', StatusLabels::key('ISSUED'));
+        $this->assertSame('status.document.issued', StatusLabels::key('ISSUED'), 'Without a domain, ISSUED is a document status.');
     }
 
     public function test_unknown_codes_are_returned_unchanged(): void

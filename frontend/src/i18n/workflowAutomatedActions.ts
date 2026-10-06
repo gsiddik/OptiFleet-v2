@@ -1,3 +1,5 @@
+import { translated } from './i18n';
+
 /**
  * Display labels for the platform's workflow automated-action catalog (backend WorkflowActionCatalog).
  * Codes are canonical; labels are looked up, never derived by reformatting the code.
@@ -22,5 +24,6 @@ export const AUTOMATED_ACTIONS: Readonly<Record<string, AutomatedActionEntry>> =
 
 /** Label for an automated-action code; an unknown code is shown unchanged. */
 export function automatedActionLabel(code: string): string {
-  return AUTOMATED_ACTIONS[code]?.en ?? code;
+  const entry = AUTOMATED_ACTIONS[code];
+  return entry ? translated(entry.key, entry.en) : code;
 }

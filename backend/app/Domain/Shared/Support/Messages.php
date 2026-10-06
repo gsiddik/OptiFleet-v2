@@ -2,6 +2,7 @@
 
 namespace App\Domain\Shared\Support;
 
+use Illuminate\Support\Facades\Lang;
 use InvalidArgumentException;
 
 /**
@@ -11,8 +12,13 @@ use InvalidArgumentException;
  * (docs/i18n/12-en-id-translation-dataset-final.csv) with named {{param}} placeholders, so a language
  * can reorder words freely. Never assemble a sentence from fragments; when a fallback changes the
  * grammar (a missing value, approve vs cancel), add a separate key instead of passing a word as a
- * parameter. This catalog is the English source; the i18n rollout swaps the lookup for the request /
- * document locale. Parity with the dataset is enforced by MessagesTest.
+ * parameter. Parity with the dataset is enforced by MessagesTest.
+ *
+ * Locales (i18n rollout): `text()` renders English unless a locale is given — the language of anything
+ * stored in a record (notes, default complaints, inspection reasons, seeded names), which stays as
+ * stored (D2). `localized()` renders in the request locale for messages returned to the user. Other
+ * locales come from the generated catalog (lang/<locale>/catalog.php); a key missing there falls back
+ * to English. A message's code (its key) never changes with the language.
  */
 final class Messages
 {
@@ -190,11 +196,11 @@ final class Messages
      *
      * @param  array<string, scalar|array|null>  $params
      */
-    public static function text(string $key, array $params = []): string
+    public static function text(string $key, array $params = [], string $locale = 'en'): string
     {
-        $template = self::EN[$key] ?? throw new InvalidArgumentException("Unknown message key [{$key}].");
+        $template = self::template($key, $locale);
 
-        return preg_replace_callback('/\{\{(\w+)\}\}/', function (array $m) use ($params) {
+        return preg_replace_callback('/\{\{(\w+)\}\}/', function (array $m) use ($params, $locale) {
             if (! array_key_exists($m[1], $params)) {
                 return $m[0];
             }
@@ -206,9 +212,30 @@ final class Messages
 
             // A list parameter (e.g. missing tread points) renders each item and joins them.
             return array_is_list($value)
-                ? implode(', ', array_map(fn ($item) => is_array($item) ? self::render($item) : (string) $item, $value))
-                : self::render($value);
+                ? implode(', ', array_map(fn ($item) => is_array($item) ? self::render($item, $locale) : (string) $item, $value))
+                : self::render($value, $locale);
         }, $template);
+    }
+
+    /**
+     * Renders a message in the request locale (app()->getLocale()), for text returned to the user.
+     *
+     * @param  array<string, scalar|array|null>  $params
+     */
+    public static function localized(string $key, array $params = []): string
+    {
+        return self::text($key, $params, app()->getLocale());
+    }
+
+    /** The template in the given locale; English when the locale has no entry for the key. */
+    private static function template(string $key, string $locale): string
+    {
+        $english = self::EN[$key] ?? throw new InvalidArgumentException("Unknown message key [{$key}].");
+        if ($locale === 'en' || ! Lang::has("catalog.{$key}", $locale, false)) {
+            return $english;
+        }
+
+        return Lang::get("catalog.{$key}", [], $locale, false);
     }
 
     /**
@@ -227,8 +254,8 @@ final class Messages
     }
 
     /** @param  array{code: string, params?: array<string, scalar|array|null>}  $message */
-    public static function render(array $message): string
+    public static function render(array $message, string $locale = 'en'): string
     {
-        return self::text($message['code'], $message['params'] ?? []);
+        return self::text($message['code'], $message['params'] ?? [], $locale);
     }
 }

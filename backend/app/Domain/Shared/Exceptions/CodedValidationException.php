@@ -18,7 +18,7 @@ class CodedValidationException extends ValidationException
     /** @param  array<string, scalar|array|null>  $params */
     public static function forField(string $field, string $key, array $params = []): static
     {
-        $exception = static::withMessages([$field => Messages::text($key, $params)]);
+        $exception = static::withMessages([$field => Messages::localized($key, $params)]);
         $exception->codes[$field] = Messages::make($key, $params);
 
         return $exception;

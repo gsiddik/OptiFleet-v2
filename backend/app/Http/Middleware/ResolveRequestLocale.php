@@ -10,12 +10,17 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * i18n structural preparation (S7): the request locale used for framework validation messages is
- * resolved the same way as a document's language without an explicit choice — the user's preferred
- * locale, then the tenant default, then English.
+ * Request locale (i18n): the language of framework validation messages and of the messages the API
+ * returns (`Messages::localized()`). Resolution, first supported value wins:
  *
- * Off until the i18n rollout (`app.runtime_locale_resolution`, env APP_RUNTIME_LOCALE_RESOLUTION):
- * every response stays English. Browser Accept-Language is deliberately not used.
+ *   1. the authenticated user's preferred locale (users.preferred_locale)
+ *   2. the tenant default (tenants.default_locale)
+ *   3. the request's Accept-Language (the web client sends its active UI locale)
+ *   4. English
+ *
+ * A client that sends no language and has no stored preference gets English, as before. Codes in the
+ * response (`codes`, reason codes, status codes) never depend on the locale. The resolution can be
+ * switched off with APP_RUNTIME_LOCALE_RESOLUTION=false (every response then stays English).
  */
 class ResolveRequestLocale
 {
@@ -23,13 +28,30 @@ class ResolveRequestLocale
 
     public function handle(Request $request, Closure $next): Response
     {
-        if (config('app.runtime_locale_resolution')) {
-            $user = $this->context->user();
-            $tenantId = $this->context->tenantId();
-            $tenantDefault = $tenantId ? Tenant::query()->whereKey($tenantId)->value('default_locale') : null;
-            app()->setLocale(DocumentLocale::resolve(null, $user?->preferred_locale, $tenantDefault));
+        if (! config('app.runtime_locale_resolution')) {
+            app()->setLocale(config('app.locale'));
+
+            return $next($request);
         }
 
+        $user = $this->context->user() ?? $request->user();
+        $tenantId = $this->context->tenantId();
+        $tenantDefault = $tenantId ? Tenant::query()->whereKey($tenantId)->value('default_locale') : null;
+        app()->setLocale(DocumentLocale::resolve($user?->preferred_locale, $tenantDefault, $this->headerLocale($request)));
+
         return $next($request);
+    }
+
+    /** The first supported primary language of Accept-Language, in the client's order of preference. */
+    private function headerLocale(Request $request): ?string
+    {
+        foreach ($request->getLanguages() as $language) {
+            $primary = strtolower(strtok(str_replace('_', '-', $language), '-'));
+            if (DocumentLocale::isSupported($primary)) {
+                return $primary;
+            }
+        }
+
+        return null;
     }
 }

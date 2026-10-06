@@ -89,11 +89,10 @@ return [
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
     /*
-    | i18n structural preparation: when true, each authenticated API request uses the user's preferred
-    | locale, then the tenant default, then English (App\Http\Middleware\ResolveRequestLocale). Off until
-    | the i18n rollout, so every response stays English.
+    | Request locale resolution (i18n): user preferred locale, then tenant default, then Accept-Language,
+    | then English (App\Http\Middleware\ResolveRequestLocale). Set to false to keep every response English.
     */
-    'runtime_locale_resolution' => (bool) env('APP_RUNTIME_LOCALE_RESOLUTION', false),
+    'runtime_locale_resolution' => (bool) env('APP_RUNTIME_LOCALE_RESOLUTION', true),
 
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
