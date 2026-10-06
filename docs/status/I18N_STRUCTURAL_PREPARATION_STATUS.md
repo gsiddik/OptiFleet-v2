@@ -20,6 +20,7 @@ Continuation checkpoint for the structural i18n preparation defined in
 | S4 | Full sentence templates | FULL_SENTENCE_TEMPLATE (192), RUNTIME_LABEL_GENERATION (remaining 7) | DONE |
 | S5 | Error code decoupling | ERROR_CODE_DECOUPLING (98 of 124) | DONE, 26 rows open (see S5) |
 | S6 | Document generation locale snapshot | PRINT_LOCALE_SNAPSHOT (D1, D3, D4) | DONE |
+| S7 | Laravel validation localization prep | FRAMEWORK_VALIDATION_LOCALIZATION (36) | DONE |
 
 ## S1 — Stable tab IDs
 
@@ -420,3 +421,42 @@ The existing Print buttons are unchanged and now reprint the latest version.
   sequentially in tests; a true concurrent test is NOT RUN (a single-connection test harness).
 - **Template labels.** Document labels inside templates (headings, captions) are still English
   template text. Indonesian bodies are authored per version under `locales.id` at rollout.
+
+## S7 — Laravel validation localization prep
+
+**Change**
+- `backend/lang/en/*.php` publishes the framework defaults unchanged (`lang:publish`). A test asserts
+  that `lang/en/validation.php` is identical to the framework file, so English wording cannot drift.
+- `backend/lang/id/validation.php` holds the 36 Indonesian framework messages from dataset `12`
+  (FRAMEWORK_VALIDATION_LOCALIZATION).
+  - Per-key fallback to English (`app.fallback_locale`) covers any rule not listed.
+  - Empty `custom` (field-specific wording) and `attributes` (field display names) sections are the
+    place for rollout wording. Without them, Laravel derives names from field keys, as in English.
+- Business validation messages are not Laravel rules. They stay in the keyed `Messages` catalog (S4)
+  and `CodedValidationException` (S5), whose dataset keys already have their Indonesian translations.
+- `ResolveRequestLocale` middleware (alias `request.locale`, on every authenticated API route, after
+  `tenant.context`) resolves the request locale with the same chain as documents: user preferred
+  locale → tenant default → English. Browser `Accept-Language` is deliberately not used.
+- **Off by default:** `app.runtime_locale_resolution` (env `APP_RUNTIME_LOCALE_RESOLUTION`) is
+  `false`, so every response stays English until the rollout. The preference columns are also unset
+  everywhere.
+
+**Unchanged**: every validation rule, HTTP status code and the `message` / `errors` shape. Only the
+wording can change, and only when the flag is on.
+
+**Dataset**: FRAMEWORK_VALIDATION_LOCALIZATION 36 of 36.
+
+**Tests** (`Feature/ValidationLocalizationTest`, 5 tests)
+- With the flag off, a user and tenant on `id` still get English.
+- With the flag on: nothing set gives English, the tenant default `id` gives Indonesian, and the
+  user's `en` preference wins over it (and the reverse).
+- A rule without an Indonesian message falls back to English.
+- Every `lang/id` message equals dataset `12`, its English source equals `lang/en`, and it keeps
+  every `:placeholder`. Every dataset framework row is present.
+- `lang/en/validation.php` equals the framework defaults.
+- Full backend regression: 1145 passed. MongoDB suites NOT RUN.
+
+**Remaining risk**: low.
+- Attribute display names (`vehicle id`) are still derived from field keys. Their Indonesian names are
+  rollout content.
+- Switching the flag on is a rollout decision. The frontend still shows mostly English UI.
