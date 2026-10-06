@@ -628,25 +628,24 @@ implementation does not produce a legally immutable historical PDF. The one exce
 Authorization Letter, which renders from its own frozen snapshot columns. A fully immutable archive
 would need stored output (`file_path` / `checksum`) or a data snapshot, which is a separate decision.
 
-### Checkpoint (paused by owner)
+### Final regression
 
-The work is paused at this checkpoint until the owner says "Continue".
-- **Done and pushed:** system role code (`1b9371e`), and this checkpoint commit (rich text, plurals,
-  concurrency test, readiness docs).
-- **Verified in this session:**
-  - targeted backend tests: SystemRoleCode, ReferenceLabels, role suites, the concurrency test with
-    its negative control;
-  - frontend type-check, build, 23 unit tests, lint (0 errors, 27 existing warnings);
-  - browser checks: tabs, status, S3, S4, S5, S6 documents, roles.
-- **Not finished:** the final full backend regression was interrupted at 323 tests passed, 0 failed,
-  for the pause, so it is NOT RUN to completion.
-- **On "Continue":** rerun the full backend suite (`t.sh`). If it is green, confirm the readiness below
-  and deliver the final report. If not, fix and re-evaluate.
+- **Backend:** 1158 passed, 0 failed. The full run completed after resuming from checkpoint `9a0f774`.
+  MongoDB-backed Analytics / Intelligence suites: NOT RUN (no MongoDB in this environment).
+- **Frontend:** type-check, build and 23 unit tests pass. Lint: 0 errors, 27 existing warnings.
+- **Functional browser checks:** all pass.
+  - tab ids, compatibility included;
+  - status registry;
+  - runtime labels and workflow action mapping (S3);
+  - sentence templates (S4);
+  - coded errors (S5);
+  - document generation and reprint (S6);
+  - roles (`PLATFORM_SUPERADMIN` exposed, tenant roles without code, UI shows the display name).
 
 ### Final readiness
 
-**Provisional: READY_FOR_I18N_IMPLEMENTATION_EXCEPT_MONGODB.** It becomes final only after the full
-backend regression above passes. Every condition holds except the MongoDB-backed verification:
+**READY_FOR_I18N_IMPLEMENTATION_EXCEPT_MONGODB.** Every condition holds except the MongoDB-backed
+verification:
 - terminology decisions: 0 unresolved;
 - system-role identifier: stable (`roles.code`);
 - all non-Mongo structural blockers resolved;
