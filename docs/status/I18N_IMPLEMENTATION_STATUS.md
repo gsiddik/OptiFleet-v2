@@ -19,7 +19,7 @@ Continuation checkpoint for the EN / ID rollout planned in `docs/i18n/16-i18n-im
 | 2 | Frontend / backend i18n foundation | DONE |
 | 3 | User / tenant locale preference + language selector | DONE |
 | 4 | Shared / global UI | DONE |
-| 5+ | Business modules | — |
+| 5+ | Business modules | IN PROGRESS |
 | D | Printed documents | — |
 | N | Notifications | — |
 | QA | Hard-coded audit, full regression, report | — |
@@ -287,3 +287,45 @@ user preference → tenant default → browser (`navigator.languages` / `Accept-
   - back to EN;
   - no page errors.
 - Page bodies stay English until their module phase (5+).
+
+## Phase 5 — Business modules (in progress)
+
+**Commits**
+- `5f72296` — helpers and backend message localization.
+- `5353ca1` — platform, access, account, organization.
+- `2a7a4c7` — vehicle, maintenance, work order, inspection.
+- `ccc74f7` — inventory, procurement, partners, component assets.
+- `6b767f2` — tire management (first pass).
+
+**Backend: `ResponseMessageLocalizer` (response boundary, in `ResolveRequestLocale`)**
+- English domain messages in `message` / `errors` are rendered in the request locale, matched by dataset
+  English (exact or `{{param}}` template).
+- 316 of the 322 backend message literals found by scan resolve to Indonesian. The rest are developer
+  guards (immutability, workbook internals).
+- `codes`, statuses and fields are unchanged; English requests are untouched.
+- Ambiguous texts and templates that repeat a placeholder are skipped.
+
+**Frontend patterns**
+- `t('key')` for literals.
+- `withLabels([...])` for option lists, `translatedRecord({...}, keys)` for code → label maps, label
+  getters for nested constants.
+- `TabDef.labelKey`: legacy `?tab=<English>` links still resolve.
+- `workflowButtons`: module defaults translate; tenant renames are shown as configured.
+- Money and dates follow the locale (D3).
+
+**Dataset QA findings (reported; no re-translation)**
+- `platform.modules.fields.no` translates the answer "No" as "No" → `common.fields.no` = Tidak (additions).
+- 11 keys repeat a placeholder name (e.g. `tire.help.approvedValueValueDispositionFinalDisposition`).
+  - They are never used by the codemod or the localizer.
+  - The two screens that needed them use new keys with distinct placeholders.
+
+**Validation**
+- Backend full suite (MongoDB suites excluded): 1174 passed; locale tests re-run after the last
+  localizer change: 20 passed.
+- Frontend: type-check (tsconfig.app.json) clean, 46 unit tests pass, lint 0 errors.
+- Browser checks (ID): platform 13 pages; vehicle / maintenance / WO / inspection crawl — no page errors.
+
+**Remaining**
+- Tire fragments (51).
+- Workshop, workshop invoices, configuration / master data, warranty, analytics UI (non-Mongo).
+- Documents, notifications, plural rows, final audit and report.
