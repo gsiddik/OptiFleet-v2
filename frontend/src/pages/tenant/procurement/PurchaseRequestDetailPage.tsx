@@ -11,6 +11,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PurchaseRequestItem, PurchaseRequestItemLine } from '../../../types';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const LINE_STATUSES: PurchaseRequestItemLine['line_status'][] = ['PENDING', 'APPROVED', 'ON_HOLD', 'REJECTED'];
 
@@ -170,7 +171,7 @@ function ItemRow({
           <select value={lineStatus} onChange={(e) => setLineStatus(e.target.value as PurchaseRequestItemLine['line_status'])} style={{ ...inputStyle, width: 130 }}>
             {LINE_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {statusLabel(s)}
               </option>
             ))}
           </select>

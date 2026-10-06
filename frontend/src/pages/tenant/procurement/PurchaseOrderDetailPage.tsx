@@ -164,7 +164,7 @@ export function PurchaseOrderDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{po.po_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <StatusBadge status={po.status} />
+          <StatusBadge status={po.status} domain="document" />
           {hasPermission('purchase_order.view') && (
             <button className="btn-secondary" disabled={printing} onClick={printPurchaseOrder}>
               {printing ? 'Loading…' : 'Print'}

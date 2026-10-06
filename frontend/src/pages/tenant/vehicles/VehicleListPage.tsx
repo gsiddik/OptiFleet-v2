@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleBrandItem, VehicleItem, VehicleModelItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'];
 
@@ -34,7 +35,7 @@ export function VehicleListPage() {
     { key: 'category', header: 'Category', render: (v) => v.vehicle_category?.name ?? '—' },
     { key: 'odometer', header: 'Odometer', render: (v) => Number(v.current_odometer).toLocaleString() },
     { key: 'status', header: 'Status', render: (v) => <StatusBadge status={v.status} /> },
-    { key: 'operational_status', header: 'Operational', render: (v) => v.operational_status },
+    { key: 'operational_status', header: 'Operational', render: (v) => statusLabel(v.operational_status) },
   ];
 
   return (
@@ -43,7 +44,7 @@ export function VehicleListPage() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s || 'All'}
+            {s ? statusLabel(s) : 'All'}
           </button>
         ))}
       </div>

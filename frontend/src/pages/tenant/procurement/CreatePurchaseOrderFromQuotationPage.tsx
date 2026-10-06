@@ -7,6 +7,7 @@ import { ErrorState, LoadingState } from '../../../components/States';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
 import type { VendorQuotationItem, Warehouse } from '../../../types';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 function today(): string {
   const d = new Date();
@@ -81,7 +82,7 @@ export function CreatePurchaseOrderFromQuotationPage() {
               <Link to={`/app/purchase-orders/${quotation.purchase_order.id}`}>{quotation.purchase_order.po_number}</Link>.
             </>
           ) : (
-            <>This quotation is {quotation.status} — only the selected quotation of an RFQ can be converted to a Purchase Order.</>
+            <>This quotation is {statusLabel(quotation.status)} — only the selected quotation of an RFQ can be converted to a Purchase Order.</>
           )}
         </div>
       </div>

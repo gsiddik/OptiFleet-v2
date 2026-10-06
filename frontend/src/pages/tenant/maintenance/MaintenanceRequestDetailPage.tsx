@@ -10,6 +10,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { INSPECTION_GROUP_CODES } from '../../../types';
 import type { InspectionGroupCode, InspectionGroupStatus, InspectionItem, MaintenanceRequestAssessmentItem, MaintenanceRequestItem } from '../../../types';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 // Reviewer actions are Approve/Reject only — Request Info / NEED_INFORMATION retired
 // at the application level (legacy records remain readable, but no request can enter
@@ -163,7 +164,7 @@ export function AssessmentSection({
                   >
                     {GROUP_STATUSES.map((s) => (
                       <option key={s} value={s}>
-                        {s.replace(/_/g, ' ')}
+                        {statusLabel(s)}
                       </option>
                     ))}
                   </select>

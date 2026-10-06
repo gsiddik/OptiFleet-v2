@@ -8,14 +8,14 @@ Continuation checkpoint for the structural i18n preparation defined in
 - **Scope:** make the source structurally translatable. This is **not** the i18n rollout: no i18n
   library is installed, no `t()` replacement and no language selector.
 - **Progress tracking:** each phase marks its blocker resolved in `12` (`resolved_blockers` column).
-  The per-blocker counts are in `14` → *Structural blocker progress*. The S1 marking lands together with
-  the S2 dataset update (next commit).
+  The per-blocker counts are in `14` → *Structural blocker progress*.
 
 ## Phases
 
 | # | Phase | Blocker | Status |
 |---:|---|---|---|
 | S1 | Stable tab IDs | STABLE_TAB_ID (21 rows) | DONE |
+| S2 | Status display label registry | STATUS_DISPLAY_REGISTRY (46 → 150 rows) | DONE |
 
 ## S1 — Stable tab IDs
 
@@ -51,3 +51,49 @@ Continuation checkpoint for the structural i18n preparation defined in
 **Remaining risk**: low. Tab labels are still English literals; rendering them through translation keys
 is part of the i18n rollout.
 
+## S2 — Status display label registry
+
+**Change**
+- `frontend/src/i18n/statusRegistry.ts`: 148 canonical codes, each mapped to a semantic key
+  (`status.underReview`) and an English label.
+  - `domain` splits ISSUED into `status.document.issued` (PO / RFQ) and `status.stock.issued`
+    (part requests, planned parts).
+  - An unknown code is shown as-is (never reformatted), with a one-time dev warning.
+  - Lowercase legacy values (`active`) resolve too.
+- `StatusBadge` renders `statusLabel(code, domain)`, and the local `SCRAPPED → SCRAP` map is gone. Colours
+  stay keyed by the canonical code.
+- Converted to the registry:
+  - status filter chips on 17 list pages;
+  - status `<option>` lists: Tire Operations, PR line status, MR inspection group;
+  - 9 raw `{x.status}` renders;
+  - the External WO invoice page, whose duplicated label maps were removed. Its badge now receives the
+    code instead of the label, so it gets its proper colour.
+- Dataset `12`:
+  - 104 new `status.*` keys with Indonesian labels;
+  - 44 existing `status.*` rows now carry the readable English label;
+  - `status.paid` fixed from "LUNAS" to "Lunas".
+
+**Not changed**: canonical status values, API filters (`?status=IN_PROGRESS`), workflow codes, the
+database.
+
+**Visible effect (English)**: badges and chips show readable labels instead of raw codes, e.g.
+`UNDER_REVIEW` → "Under Review" (badges remain upper-cased by CSS) and `QC_PENDING` → "QC Pending".
+
+**Tests**
+- `tests/unit/statusRegistry.test.ts`, 5 tests:
+  - every canonical code found in backend constants, workflow/status seeders, migration enums and
+    frontend status lists has a registry entry (the scan is guarded against finding nothing);
+  - every registry key has a final Indonesian translation in `12`;
+  - the ISSUED domain split;
+  - labels come from the registry;
+  - unknown codes pass through unchanged.
+- Browser e2e, 11 checks:
+  - Work Order / Maintenance Request chips show labels;
+  - list badges carry no raw codes;
+  - chip clicks still send `status=IN_PROGRESS` / `status=ISSUED`;
+  - PO and part-request ISSUED badges use their own domain;
+  - External WO invoice badges.
+- `tsc -b` clean; lint 27 pre-existing warnings, 0 errors.
+
+**Remaining risk**: low. Non-status enums shown in badges (severity, event type) still pass through
+unchanged and are handled in S3.

@@ -1,3 +1,5 @@
+import { statusLabel, type StatusDomain } from '../i18n/statusRegistry';
+
 const COLORS: Record<string, string> = {
   ACTIVE: '#15803d',
   RESERVED: '#b45309',
@@ -52,10 +54,11 @@ const COLORS: Record<string, string> = {
   COMPLETED: '#15803d',
 };
 
-/** Stored value → label (SCRAPPED is kept in the database for history; the lifecycle calls it SCRAP). */
-const LABELS: Record<string, string> = { SCRAPPED: 'SCRAP' };
-
-export function StatusBadge({ status }: { status: string }) {
+/**
+ * The badge shows the registry display label of the canonical code (never the reformatted code).
+ * `domain` disambiguates codes such as ISSUED (document vs stock). The canonical value is unchanged.
+ */
+export function StatusBadge({ status, domain }: { status: string; domain?: StatusDomain }) {
   const color = COLORS[status] ?? '#374151';
   return (
     <span
@@ -71,7 +74,7 @@ export function StatusBadge({ status }: { status: string }) {
         letterSpacing: 0.3,
       }}
     >
-      {LABELS[status] ?? status}
+      {statusLabel(status, domain)}
     </span>
   );
 }

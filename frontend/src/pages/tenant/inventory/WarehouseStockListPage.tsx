@@ -15,6 +15,7 @@ import type { WarehouseStockItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const REORDER_STATUSES = ['', 'HEALTHY', 'LOW_STOCK', 'REORDER_REQUIRED', 'OUT_OF_STOCK'];
 
@@ -124,7 +125,7 @@ export function WarehouseStockListPage() {
                 className={reorderStatus === s ? 'btn-primary' : 'btn-secondary'}
                 style={{ padding: '4px 10px', fontSize: 12 }}
               >
-                {s || 'All'}
+                {s ? statusLabel(s) : 'All'}
               </button>
             ))}
           </div>

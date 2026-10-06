@@ -194,7 +194,7 @@ export function RfqDetailPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{rfq.rfq_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <StatusBadge status={rfq.status} />
+          <StatusBadge status={rfq.status} domain="document" />
           {rfq.status === 'ISSUED' && hasPermission('rfq.manage') && (
             <button className="btn-secondary" disabled={busy} onClick={async () => { setBusy(true); try { await apiClient.post(`/app/rfqs/${id}/close`); load(); } finally { setBusy(false); } }}>
               Close RFQ

@@ -1562,7 +1562,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                 {(r.items ?? []).map((i) => `${lineName(i.product?.name ?? i.description, i.stock_condition)} × ${formatQty(i.quantity_approved ?? i.quantity_requested)}`).join(', ')}
                 {r.requested_at && <span style={{ color: '#9ca3af', fontSize: 12 }}> · {new Date(r.requested_at).toLocaleString()}</span>}
               </span>
-              <StatusBadge status={r.status} />
+              <StatusBadge status={r.status} domain="stock" />
             </div>
           ))}
         </div>
@@ -1574,7 +1574,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
         <div key={p.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <StatusBadge status={p.status} />
+              <StatusBadge status={p.status} domain="stock" />
               <strong>{lineName(p.product?.name ?? p.description, p.stock_condition)}</strong>
               <span>— approved {formatQty(p.planned_quantity)}</span>
               {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}

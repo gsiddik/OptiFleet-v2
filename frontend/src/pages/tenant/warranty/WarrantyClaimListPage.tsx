@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleItem, WarrantyClaimItem } from '../../../types';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'REPLACEMENT', 'REPAIR', 'SETTLED', 'CLOSED'];
 
@@ -33,7 +34,7 @@ export function WarrantyClaimListPage() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 11 }}>
-            {s || 'All'}
+            {s ? statusLabel(s) : 'All'}
           </button>
         ))}
       </div>

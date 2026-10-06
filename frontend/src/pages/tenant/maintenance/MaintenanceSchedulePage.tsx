@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { MaintenancePackageItemType, MaintenanceScheduleItem, VehicleItem } from '../../../types';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'UPCOMING', 'DUE_SOON', 'DUE', 'OVERDUE', 'SCHEDULED', 'COMPLETED'];
 
@@ -116,7 +117,7 @@ export function MaintenanceSchedulePage() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s || 'All'}
+            {s ? statusLabel(s) : 'All'}
           </button>
         ))}
       </div>

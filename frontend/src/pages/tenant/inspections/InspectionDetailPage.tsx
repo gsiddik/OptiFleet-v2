@@ -9,6 +9,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InspectionItem, InspectionLogEntry } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 export function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -284,10 +285,10 @@ function InspectionLog({ inspectionId }: { inspectionId: string }) {
             ) : typeof log.new_values?.reviewed_at === 'string' ? (
               <>Inspection reviewed</>
             ) : log.action === 'created' && typeof log.new_values?.status === 'string' ? (
-              <>Inspection created (status: {log.new_values.status})</>
+              <>Inspection created (status: {statusLabel(log.new_values.status)})</>
             ) : typeof log.old_values?.status === 'string' && typeof log.new_values?.status === 'string' ? (
               <>
-                Status changed from {log.old_values.status} to {log.new_values.status}
+                Status changed from {statusLabel(log.old_values.status)} to {statusLabel(log.new_values.status)}
               </>
             ) : (
               log.action

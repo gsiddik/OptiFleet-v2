@@ -11,6 +11,7 @@ import { formatDateTime } from '../../../../utils/date';
 import { bodyStyleFor, truckConfigurationTypeOption, vehicleTypeOption, type VehicleType } from './vehicleTypes';
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
 import { groupPositions, type ConfigurationMaster, type ConfigurationVersion } from './masterTypes';
+import { statusLabel } from '../../../../i18n/statusRegistry';
 
 /**
  * Read-only view of a saved Wheel Configuration: every saved field of the selected version, the
@@ -73,7 +74,7 @@ export function WheelConfigurationDetailPage() {
                   <select aria-label="Version" value={version.id} onChange={(e) => setVersionId(e.target.value)} style={inputStyle}>
                     {versions.map((v) => (
                       <option key={v.id} value={v.id}>
-                        Version {v.version_number} · {v.config_code} · {v.status}
+                        Version {v.version_number} · {v.config_code} · {statusLabel(v.status)}
                       </option>
                     ))}
                   </select>

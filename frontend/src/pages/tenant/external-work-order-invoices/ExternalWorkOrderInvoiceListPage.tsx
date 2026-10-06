@@ -13,23 +13,10 @@ import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney, toMoneyInput } from '../../../utils/money';
 import { formatDate } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'NEW_EXTERNAL_WO', 'DELIVERED', 'IN_PROGRESS', 'CANCELLED', 'BILLED', 'PAID'];
 
-const STATUS_LABELS: Record<string, string> = {
-  NEW_EXTERNAL_WO: 'New External WO',
-  DELIVERED: 'Delivered',
-  IN_PROGRESS: 'In Progress',
-  CANCELLED: 'Cancelled',
-  BILLED: 'Billed',
-  PAID: 'Paid',
-};
-
-const WAL_LABELS: Record<string, string> = {
-  NOT_GENERATED: 'Not Generated',
-  GENERATED: 'Generated',
-  ACKNOWLEDGED: 'Acknowledged',
-};
 
 /**
  * "Perbaikan Tenant Portal - Work Order Status External dan Workshop
@@ -236,8 +223,8 @@ export function ExternalWorkOrderInvoiceListPage() {
       render: (r) => <Link to={`/app/work-orders/${r.work_order_id}`}>{r.work_order?.wo_number ?? r.work_order_id}</Link>,
     },
     { key: 'vehicle', header: 'Vehicle', render: (r) => r.work_order?.vehicle?.registration_number ?? '—' },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={STATUS_LABELS[r.status] ?? r.status} /> },
-    { key: 'work_authorization', header: 'Work Authorization', render: (r) => WAL_LABELS[r.work_authorization_status] ?? r.work_authorization_status },
+    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'work_authorization', header: 'Work Authorization', render: (r) => statusLabel(r.work_authorization_status) },
     { key: 'workshop', header: 'Workshop', render: (r) => r.wal_workshop_name ?? r.work_order?.workshop?.name ?? '—' },
     {
       key: 'action',
@@ -321,7 +308,7 @@ export function ExternalWorkOrderInvoiceListPage() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s ? STATUS_LABELS[s] : 'All'}
+            {s ? statusLabel(s) : 'All'}
           </button>
         ))}
       </div>
@@ -519,7 +506,7 @@ export function ExternalWorkOrderInvoiceListPage() {
                 <div style={{ color: '#6b7280', fontSize: 12 }}>{new Date(entry.created_at).toLocaleString()}</div>
                 <div>
                   <strong>{entry.actor_name ?? 'System'}</strong> — {entry.action}
-                  {entry.new_values?.status ? ` (status: ${entry.new_values.status})` : ''}
+                  {entry.new_values?.status ? ` (status: ${statusLabel(String(entry.new_values.status))})` : ''}
                 </div>
               </div>
             ))}

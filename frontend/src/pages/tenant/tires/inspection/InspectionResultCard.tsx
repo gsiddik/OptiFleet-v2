@@ -3,6 +3,7 @@ import { StatusBadge } from "../../../../components/StatusBadge";
 import { openProtectedFile } from "../../../../utils/protectedFile";
 import type { ApplicationLimits, InspectionRecord } from "./inspectionTypes";
 import { RECOMMENDATION_COLOR } from "./inspectionOptions";
+import { statusLabel } from '../../../../i18n/statusRegistry';
 
 /**
  * Inspection result summary: recommendation and why, minimum tread, required work, stock status,
@@ -81,7 +82,7 @@ export function InspectionResultCard({
           </Row>
         )}
         <Row label="Required Work">{inspection.result.required_work}</Row>
-        <Row label="Stock Status">{inspection.result.stock_status}</Row>
+        <Row label="Stock Status">{statusLabel(inspection.result.stock_status)}</Row>
         <Row label="Requirement Before Returning to Stock">
           {inspection.result.return_requirement}
         </Row>

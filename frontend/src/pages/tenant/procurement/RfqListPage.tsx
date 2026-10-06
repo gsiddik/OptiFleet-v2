@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { RfqItem } from '../../../types';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'DRAFT', 'ISSUED', 'CLOSED', 'CANCELLED'];
 
@@ -22,7 +23,7 @@ export function RfqListPage() {
     { key: 'number', header: 'RFQ #', render: (r) => <Link to={`/app/rfqs/${r.id}`}>{r.rfq_number}</Link> },
     { key: 'warehouse', header: 'Warehouse', render: (r) => r.warehouse?.name ?? r.warehouse_id },
     { key: 'vendors', header: 'Vendors Invited', render: (r) => r.vendors?.length ?? 0 },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} domain="document" /> },
   ];
 
   return (
@@ -36,7 +37,7 @@ export function RfqListPage() {
               setStatus(s);
               setPage(1);
             }} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {s || 'All'}
+            {s ? statusLabel(s, 'document') : 'All'}
           </button>
         ))}
       </div>

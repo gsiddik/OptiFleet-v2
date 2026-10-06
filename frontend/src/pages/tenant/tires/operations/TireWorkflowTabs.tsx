@@ -12,6 +12,7 @@ import { formatDateTime } from '../../../../utils/date';
 import type { TireActivityItem, TireActivityType, TireItem } from '../../../../types';
 import { TireHistoryModal } from './TireHistoryModal';
 import { formatHours, formatKm } from './tireOperationFormat';
+import { statusLabel } from '../../../../i18n/statusRegistry';
 
 export interface WorkflowTab {
   key: string;
@@ -168,7 +169,7 @@ const CYCLE_STAGE_LABELS: Record<string, string> = {
 
 function cycleEvent(e: TireActivityItem): string {
   const stage = e.stage ? (CYCLE_STAGE_LABELS[e.stage] ?? e.stage) : null;
-  const result = e.stage === 'APPROVED' && e.status && e.status !== e.stage ? ` → ${e.status}` : '';
+  const result = e.stage === 'APPROVED' && e.status && e.status !== e.stage ? ` → ${statusLabel(e.status)}` : '';
   return [ACTIVITY_LABELS[e.type], stage].filter(Boolean).join(' · ') + result;
 }
 

@@ -12,6 +12,7 @@ import {
 import { inputStyle } from "../../../components/FormField";
 import { useApiList } from "../../../hooks/useApiList";
 import type { ComponentAssetRegisterRow } from "../../../types";
+import { statusLabel } from "../../../i18n/statusRegistry";
 
 const STATUSES = [
   "",
@@ -132,7 +133,7 @@ export function ComponentAssetListPage() {
             className={status === s ? "btn-primary" : "btn-secondary"}
             style={{ padding: "4px 10px", fontSize: 11 }}
           >
-            {s ? s.replace(/_/g, " ") : "All"}
+            {s ? statusLabel(s) : "All"}
           </button>
         ))}
       </div>

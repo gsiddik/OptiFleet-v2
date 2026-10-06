@@ -14,6 +14,7 @@ import { useAuth } from '../../../../auth/AuthContext';
 import { formatDate } from '../../../../utils/date';
 import { formatHours, formatKm } from './tireOperationFormat';
 import { OPERATION_TYPES, OPERATION_TYPE_LABEL, type TireOperationListItem } from './tireOperationTypes';
+import { statusLabel } from '../../../../i18n/statusRegistry';
 
 const TYPE_PERMISSION = { REPLACEMENT: 'tire.install', ROTATION: 'tire.rotate', INSPECTION: 'tire.inspect' } as const;
 const STATUSES = ['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
@@ -132,7 +133,7 @@ export function TireOperationsLandingPage() {
             <option value="">All statuses</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s.replace('_', ' ')}
+                {statusLabel(s)}
               </option>
             ))}
           </select>

@@ -13,6 +13,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { formatQty } from '../../../utils/quantity';
 import type { PartRequestItem } from '../../../types';
 import { lineName } from '../../../utils/stockCondition';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'REQUESTED', 'APPROVED', 'ISSUED', 'REJECTED', 'CANCELLED'];
 
@@ -76,7 +77,7 @@ export function PartRequestListPage() {
       header: 'Status',
       render: (r) => (
         <div>
-          <StatusBadge status={r.status} />
+          <StatusBadge status={r.status} domain="stock" />
           {r.status === 'ISSUED' && r.warehouse && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>from {r.warehouse.name}</div>}
           {r.status === 'REJECTED' && r.decision_note && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{r.decision_note}</div>}
         </div>
@@ -134,7 +135,7 @@ export function PartRequestListPage() {
             className={status === s ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '6px 12px', fontSize: 13 }}
           >
-            {s || 'All'}
+            {s ? statusLabel(s, 'stock') : 'All'}
           </button>
         ))}
       </div>

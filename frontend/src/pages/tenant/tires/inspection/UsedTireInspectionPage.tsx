@@ -41,6 +41,7 @@ import type {
   InspectionContext,
   Measurement,
 } from "./inspectionTypes";
+import { statusLabel } from '../../../../i18n/statusRegistry';
 
 type Answers = Record<string, string | null>;
 type EvidenceDraft = {
@@ -137,7 +138,7 @@ export function UsedTireInspectionPage() {
         <section className="card" style={{ fontSize: 14 }}>
           {context.can_inspect
             ? "You do not have permission to inspect tires."
-            : `Only a REMOVED or HOLD tire is inspected here — this tire is ${context.tire.current_status}.`}
+            : `Only a REMOVED or HOLD tire is inspected here — this tire is ${statusLabel(context.tire.current_status)}.`}
         </section>
       )}
 

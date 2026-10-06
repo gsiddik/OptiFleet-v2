@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ProductCategoryItem, ProductItem, PurchaseRequestItem, WorkOrderItem, Warehouse } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 const STATUSES = ['', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'PROCUREMENT', 'REJECTED', 'CANCELLED'];
 
@@ -35,7 +36,7 @@ export function PurchaseRequestListPage() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {s || 'All'}
+            {s ? statusLabel(s) : 'All'}
           </button>
         ))}
       </div>
