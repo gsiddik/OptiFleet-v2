@@ -12,7 +12,8 @@ namespace App\Domain\Shared\Support;
  * renamed is their own text and is shown exactly as stored.
  *
  * Generated from the seeded system rows (ModuleSeeder, MasterDataSeeder, ComponentGroupBaseline,
- * ProductReferenceDataSeeder); ReferenceLabelsTest keeps it in step with the seeders and the dataset.
+ * ProductReferenceDataSeeder, PlatformSuperadminRoleSeeder); ReferenceLabelsTest keeps it in step with the
+ * seeders and the dataset.
  */
 final class ReferenceLabels
 {
@@ -117,6 +118,15 @@ final class ReferenceLabels
             'FLAMMABLE_STORAGE' => ['masterData.productReferenceData.flammableStorage', 'Flammable Storage'],
             'VENTILATED_AREA' => ['masterData.productReferenceData.ventilatedArea', 'Ventilated Area'],
         ],
+        // System roles are identified by roles.code, never by their display name.
+        'roles' => [
+            'PLATFORM_SUPERADMIN' => ['roles.system.platformSuperadmin.name', 'Platform Superadmin'],
+        ],
+    ];
+
+    /** @var array<string, array{0: string, 1: string}> system role code => [description key, seeded English description] */
+    public const SYSTEM_ROLE_DESCRIPTIONS = [
+        'PLATFORM_SUPERADMIN' => ['roles.system.platformSuperadmin.description', 'Full platform access.'],
     ];
 
     /** The translation key of a seeded system value while it keeps its seeded name; null otherwise. */

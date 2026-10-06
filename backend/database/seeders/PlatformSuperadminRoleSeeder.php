@@ -24,10 +24,8 @@ class PlatformSuperadminRoleSeeder extends Seeder
 {
     public function run(): void
     {
-        $role = Role::query()->updateOrCreate(
-            ['tenant_id' => null, 'name' => 'Platform Superadmin', 'scope' => 'platform'],
-            ['is_system' => true, 'description' => 'Full platform access.']
-        );
+        // Identified by its canonical code (PLATFORM_SUPERADMIN), never by its display name.
+        $role = Role::ensurePlatformSuperadmin();
         $role->permissions()->sync(Permission::query()->where('scope', 'platform')->pluck('id'));
     }
 }

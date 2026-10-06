@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Shared\Support\ReferenceLabels;
 use Database\Seeders\ComponentGroupSeeder;
 use Database\Seeders\MasterDataSeeder;
+use Database\Seeders\PlatformSuperadminRoleSeeder;
 use Database\Seeders\ProductReferenceDataSeeder;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -19,12 +20,14 @@ class ReferenceLabelsTest extends TestCase
 
     public function test_every_seeded_system_value_has_a_translation_key_matching_its_name(): void
     {
-        $this->seed([MasterDataSeeder::class, ComponentGroupSeeder::class, ProductReferenceDataSeeder::class]);
+        $this->seed([MasterDataSeeder::class, ComponentGroupSeeder::class, ProductReferenceDataSeeder::class, PlatformSuperadminRoleSeeder::class]);
 
         $seeded = [];
         foreach (array_keys(ReferenceLabels::SYSTEM_VALUES) as $table) {
             $query = DB::table($table)->select('code', 'name');
-            if ($table !== 'modules') {
+            if ($table === 'roles') {
+                $query->whereNotNull('code');
+            } elseif ($table !== 'modules') {
                 $query->whereNull('tenant_id')->where('is_system', true);
             }
             foreach ($query->get() as $row) {
@@ -53,7 +56,7 @@ class ReferenceLabelsTest extends TestCase
         }
         fclose($handle);
 
-        foreach (ReferenceLabels::SYSTEM_VALUES as $table => $values) {
+        foreach (ReferenceLabels::SYSTEM_VALUES + ['role descriptions' => ReferenceLabels::SYSTEM_ROLE_DESCRIPTIONS] as $table => $values) {
             foreach ($values as $code => [$key, $name]) {
                 $this->assertArrayHasKey($key, $dataset, "{$table}.{$code}");
                 $this->assertSame($name, $dataset[$key]['source_text_en'], "{$table}.{$code} English");

@@ -206,6 +206,8 @@ export interface ComponentSubcategory {
 
 export interface RoleItem {
   id: string;
+  /** Canonical identifier of a system-defined role (e.g. PLATFORM_SUPERADMIN); null for tenant roles. Never shown. */
+  code?: string | null;
   name: string;
   scope: 'platform' | 'tenant';
   is_system: boolean;

@@ -1,6 +1,6 @@
 # 14 — Final Translation QA Report
 
-Dataset: `12-en-id-translation-dataset-final.csv` — **5452 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **43 terminology + 6 style + 4 correction terms + action verbs + cancel split** (product owner), propagated to 1194 dependent rows. AWAITING_DECISION = **0**.
+Dataset: `12-en-id-translation-dataset-final.csv` — **5454 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **43 terminology + 6 style + 4 correction terms + action verbs + cancel split** (product owner), propagated to 1194 dependent rows. AWAITING_DECISION = **0**.
 
 ## Result
 
@@ -16,32 +16,32 @@ Dataset: `12-en-id-translation-dataset-final.csv` — **5452 rows** (5,240 prepa
 | Unresolved dependency | 0 | PASS (every remaining REVIEW row names its dependency) |
 | Pluralization issue | 0 | PASS (no "(s)" in Indonesian) |
 | Near-collision | 0 | RESOLVED / DOCUMENTED (below) |
-| Structural blocker | 962 | TRACKED (implementation readiness, see 15) |
+| Structural blocker | 964 | TRACKED (implementation readiness, see 15) |
 
 ## Classification and readiness
 
 | Classification | Rows |
 |---|---:|
 | AUTO_TRANSLATE_SAFE | 4424 |
-| STRUCTURAL_PREP_REQUIRED | 962 |
+| STRUCTURAL_PREP_REQUIRED | 964 |
 | DO_NOT_TRANSLATE | 66 |
 
 | Translation status | Rows |
 |---|---:|
-| FINAL | 5386 |
+| FINAL | 5388 |
 | FINAL_UNCHANGED | 66 |
 
 | Implementation status | Rows |
 |---|---:|
-| READY_AFTER_I18N_INFRASTRUCTURE | 5358 |
+| READY_AFTER_I18N_INFRASTRUCTURE | 5362 |
 | NOT_APPLICABLE | 66 |
-| STRUCTURAL_PREP_REQUIRED | 28 |
+| STRUCTURAL_PREP_REQUIRED | 26 |
 
 ## Structural blocker progress
 
 | Blocker | Rows | Resolved in source | Open |
 |---|---:|---:|---:|
-| DATABASE_LOCALIZATION | 420 | 418 | 2 |
+| DATABASE_LOCALIZATION | 422 | 422 | 0 |
 | FULL_SENTENCE_TEMPLATE | 192 | 192 | 0 |
 | STATUS_DISPLAY_REGISTRY | 150 | 150 | 0 |
 | ERROR_CODE_DECOUPLING | 124 | 98 | 26 |

@@ -37,7 +37,7 @@ class CreatePlatformAdminCommand extends Command
 
     public function handle(): int
     {
-        $role = Role::query()->where('tenant_id', null)->where('name', 'Platform Superadmin')->where('scope', 'platform')->first();
+        $role = Role::platformSuperadmin();
         if (! $role) {
             $this->error('The "Platform Superadmin" role does not exist yet. Run "php artisan db:seed" first (PlatformSuperadminRoleSeeder creates it).');
 
