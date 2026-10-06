@@ -43,7 +43,8 @@ class InvoiceController extends Controller
 
     public function downloadPdf(Invoice $invoice)
     {
-        $pdf = $this->pdf->render($invoice);
+        // Document locale: an explicit ?locale=, else the request locale (user → tenant → Accept-Language → en).
+        $pdf = $this->pdf->render($invoice, \App\Domain\DocumentGeneration\Support\DocumentLocale::resolve(request()->query('locale'), null, app()->getLocale()));
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',

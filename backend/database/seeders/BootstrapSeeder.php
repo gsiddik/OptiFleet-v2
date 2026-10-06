@@ -20,6 +20,7 @@ class BootstrapSeeder extends Seeder
             PlatformSuperadminRoleSeeder::class,
             ConfigurationDefaultsSeeder::class,
             AddExternalWorkOrderPrintSectionSeeder::class,
+            AddLocalizedDocumentTemplatesSeeder::class,
             WorkflowDefaultsSeeder::class,
             RetireMaintenanceRequestNeedInformationSeeder::class,
             AddWorkOrderExternalStatusSeeder::class,

@@ -189,6 +189,23 @@ final class StatusLabels
         return self::entry($code, $domain)['key'] ?? null;
     }
 
+    /**
+     * Display label in a locale (documents, notifications): the translation of the status key, its English
+     * when the locale has none; an unknown code is returned unchanged.
+     */
+    public static function localized(?string $code, string $locale, ?string $domain = null): string
+    {
+        $entry = self::entry($code, $domain);
+        if ($entry === null) {
+            return (string) $code;
+        }
+        if ($locale === 'en' || ! \Illuminate\Support\Facades\Lang::has("catalog.{$entry['key']}", $locale, false)) {
+            return $entry['en'];
+        }
+
+        return (string) \Illuminate\Support\Facades\Lang::get("catalog.{$entry['key']}", [], $locale, false);
+    }
+
     /** English display label; an unknown code is returned unchanged (never reformatted). */
     public static function label(?string $code, ?string $domain = null): string
     {

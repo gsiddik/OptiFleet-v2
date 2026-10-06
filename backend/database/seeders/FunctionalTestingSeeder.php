@@ -53,6 +53,7 @@ class FunctionalTestingSeeder extends Seeder
             ModuleSeeder::class,
             ConfigurationDefaultsSeeder::class,
             AddExternalWorkOrderPrintSectionSeeder::class,
+            AddLocalizedDocumentTemplatesSeeder::class,
             WorkflowDefaultsSeeder::class,
             RetireMaintenanceRequestNeedInformationSeeder::class,
             AddWorkOrderExternalStatusSeeder::class,

@@ -1,3 +1,12 @@
+@php
+    // i18n: labels, status, dates and amounts follow the document locale; invoice data is printed as stored.
+    $locale = $locale ?? 'en';
+    $L = fn (string $key, array $params = []) => \App\Domain\Shared\Support\Messages::text('documents.platformInvoice.'.$key, $params, $locale);
+    $date = fn ($value) => \App\Domain\Shared\Support\DisplayFormat::date($value, $locale);
+    $money = fn ($value) => \App\Domain\Shared\Support\DisplayFormat::money($value, $locale);
+    $qty = fn ($value) => \App\Domain\Shared\Support\DisplayFormat::quantity($value, $locale);
+    $statusLabel = fn (?string $code) => \App\Domain\Shared\Support\StatusLabels::localized($code, $locale, 'document');
+@endphp
 <!DOCTYPE html>
 <html>
 <head>
@@ -24,11 +33,11 @@
 <body>
     <div class="header">
         <div>
-            <div class="brand">OptiFleet</div>
-            <div class="muted">Vehicle Maintenance Management Platform</div>
+            <div class="brand">{{ $L('optiFleet') }}</div>
+            <div class="muted">{{ $L('vehicleMaintenanceManagementPlatform') }}</div>
         </div>
         <div style="text-align:right">
-            <div style="font-size:16px;font-weight:bold">INVOICE</div>
+            <div style="font-size:16px;font-weight:bold">{{ $L('invoice') }}</div>
             <div>{{ $invoice->invoice_number }}</div>
         </div>
     </div>
@@ -36,22 +45,22 @@
     <table style="margin-top:0">
         <tr>
             <td style="border:none;width:50%">
-                <strong>Bill To</strong><br>
+                <strong>{{ $L('billTo') }}</strong><br>
                 {{ $invoice->tenant->name }}<br>
                 {{ $invoice->tenant->legal_name ?? '' }}<br>
-                Tenant Code: {{ $invoice->tenant->code }}
+                {{ $L('tenantCodeCode', ['code' => $invoice->tenant->code]) }}
             </td>
             <td style="border:none">
-                <strong>Contract:</strong> {{ $invoice->contract->contract_number }}<br>
-                <strong>Invoice Date:</strong> {{ $invoice->invoice_date->format('d M Y') }}<br>
-                <strong>Due Date:</strong> {{ $invoice->due_date->format('d M Y') }}<br>
-                <strong>Status:</strong>
+                <strong>{{ $L('contract') }}:</strong> {{ $invoice->contract->contract_number }}<br>
+                <strong>{{ $L('invoiceDate') }}:</strong> {{ $date($invoice->invoice_date) }}<br>
+                <strong>{{ $L('dueDate') }}:</strong> {{ $date($invoice->due_date) }}<br>
+                <strong>{{ $L('status') }}:</strong>
                 <span class="status
                     @if($invoice->status === 'PAID') badge-paid
                     @elseif($invoice->status === 'OVERDUE') badge-overdue
                     @elseif($invoice->status === 'VOID') badge-void
                     @else badge-outstanding @endif">
-                    {{ $invoice->status }}
+                    {{ $statusLabel($invoice->status) }}
                 </span>
             </td>
         </tr>
@@ -60,42 +69,42 @@
     <table>
         <thead>
             <tr>
-                <th>Description</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Unit Price</th>
-                <th class="text-right">Discount</th>
-                <th class="text-right">Tax</th>
-                <th class="text-right">Amount</th>
+                <th>{{ $L('description') }}</th>
+                <th class="text-right">{{ $L('qty') }}</th>
+                <th class="text-right">{{ $L('unitPrice') }}</th>
+                <th class="text-right">{{ $L('discount') }}</th>
+                <th class="text-right">{{ $L('tax') }}</th>
+                <th class="text-right">{{ $L('amount') }}</th>
             </tr>
         </thead>
         <tbody>
             @foreach($invoice->items as $item)
             <tr>
                 <td>{{ $item->description }}</td>
-                <td class="text-right">{{ rtrim(rtrim($item->quantity, '0'), '.') }}</td>
-                <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
-                <td class="text-right">{{ number_format($item->discount, 2) }}</td>
-                <td class="text-right">{{ number_format($item->tax, 2) }}</td>
-                <td class="text-right">{{ number_format($item->amount, 2) }}</td>
+                <td class="text-right">{{ $qty($item->quantity) }}</td>
+                <td class="text-right">{{ $money($item->unit_price) }}</td>
+                <td class="text-right">{{ $money($item->discount) }}</td>
+                <td class="text-right">{{ $money($item->tax) }}</td>
+                <td class="text-right">{{ $money($item->amount) }}</td>
             </tr>
             @endforeach
         </tbody>
     </table>
 
     <table class="totals">
-        <tr><td>Subtotal</td><td class="text-right">{{ $invoice->currency }} {{ number_format($invoice->subtotal, 2) }}</td></tr>
-        <tr><td>Discount</td><td class="text-right">- {{ number_format($invoice->discount, 2) }}</td></tr>
-        <tr><td>Tax</td><td class="text-right">{{ number_format($invoice->tax, 2) }}</td></tr>
+        <tr><td>{{ $L('subtotal') }}</td><td class="text-right">{{ $invoice->currency }} {{ $money($invoice->subtotal) }}</td></tr>
+        <tr><td>{{ $L('discount') }}</td><td class="text-right">- {{ $money($invoice->discount) }}</td></tr>
+        <tr><td>{{ $L('tax') }}</td><td class="text-right">{{ $money($invoice->tax) }}</td></tr>
         @if($invoice->adjustment != 0)
-        <tr><td>Adjustment</td><td class="text-right">{{ number_format($invoice->adjustment, 2) }}</td></tr>
+        <tr><td>{{ $L('adjustment') }}</td><td class="text-right">{{ $money($invoice->adjustment) }}</td></tr>
         @endif
-        <tr class="grand"><td>Total</td><td class="text-right">{{ $invoice->currency }} {{ number_format($invoice->total, 2) }}</td></tr>
-        <tr><td>Paid</td><td class="text-right">{{ number_format($invoice->paid_amount, 2) }}</td></tr>
-        <tr><td><strong>Outstanding</strong></td><td class="text-right"><strong>{{ number_format($invoice->outstanding_amount, 2) }}</strong></td></tr>
+        <tr class="grand"><td>{{ $L('total') }}</td><td class="text-right">{{ $invoice->currency }} {{ $money($invoice->total) }}</td></tr>
+        <tr><td>{{ $L('paid') }}</td><td class="text-right">{{ $money($invoice->paid_amount) }}</td></tr>
+        <tr><td><strong>{{ $L('outstanding') }}</strong></td><td class="text-right"><strong>{{ $money($invoice->outstanding_amount) }}</strong></td></tr>
     </table>
 
     <p class="muted" style="margin-top:40px;font-size:10px">
-        This is a system-generated OptiFleet platform invoice. For questions regarding this invoice, contact your OptiFleet account representative.
+        {{ $L('systemGeneratedOptiFleetPlatformInvoice') }}
     </p>
 </body>
 </html>

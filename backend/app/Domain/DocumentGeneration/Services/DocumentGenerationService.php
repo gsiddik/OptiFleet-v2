@@ -12,6 +12,7 @@ use App\Domain\DocumentGeneration\Support\DocumentLocale;
 use App\Domain\DocumentGeneration\Support\DocumentSource;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Shared\Support\DisplayFormat;
+use App\Domain\Shared\Support\StatusLabels;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -81,11 +82,28 @@ class DocumentGenerationService
     /** The HTML of a generation: its pinned template version, rendered in its locale. */
     public function renderHtml(DocumentSource $source, DocumentGeneration $generation): string
     {
-        $context = ($source->context)($generation->locale);
+        $context = self::withStatusLabels(($source->context)($generation->locale), $generation->locale);
         $context['template_version'] = $generation->template_version ?? 'default';
         $context['generated_at'] = DisplayFormat::dateTime($generation->generated_at, $generation->locale);
 
         return $this->renderer->render($this->templateHtml($source, $generation), $context);
+    }
+
+    /**
+     * Beside every `status` code of the context, its display label in the document's language
+     * (`status_label`). The code itself is unchanged, so templates printing {{….status}} keep working.
+     */
+    public static function withStatusLabels(array $context, string $locale): array
+    {
+        foreach ($context as $key => $value) {
+            if (is_array($value)) {
+                $context[$key] = self::withStatusLabels($value, $locale);
+            } elseif ($key === 'status' && is_string($value) && ! array_key_exists('status_label', $context)) {
+                $context['status_label'] = StatusLabels::localized($value, $locale, 'document');
+            }
+        }
+
+        return $context;
     }
 
     public function pdfResponse(DocumentSource $source, DocumentGeneration $generation): Response

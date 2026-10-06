@@ -198,10 +198,15 @@ class TemplateVariableRegistry
         }
 
         $definition = self::DEFINITIONS[$documentType];
+        // i18n: every status also has its display label in the document's language (`….status_label`).
+        $withLabels = fn (array $paths) => array_values(array_unique([
+            ...$paths,
+            ...array_map(fn (string $p) => $p.'_label', array_filter($paths, fn (string $p) => $p === 'status' || str_ends_with($p, '.status'))),
+        ]));
 
         return [
-            'scalars' => [...self::COMMON_SCALARS, ...$definition['scalars']],
-            'sections' => $definition['sections'],
+            'scalars' => $withLabels([...self::COMMON_SCALARS, ...$definition['scalars']]),
+            'sections' => array_map($withLabels, $definition['sections']),
         ];
     }
 
