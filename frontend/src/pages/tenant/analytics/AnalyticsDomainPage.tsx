@@ -7,7 +7,7 @@ import { FreshnessBanner } from '../../../components/analytics/FreshnessBanner';
 import { TrendChart } from '../../../components/analytics/TrendChart';
 import { formatCell, readPath, type AnalyticsDomainConfig, type AnalyticsResponse } from '../../../components/analytics/analyticsTypes';
 import { useAuth } from '../../../auth/AuthContext';
-import { t, withLabels } from '../../../i18n/i18n';
+import { labelText, t, withLabels } from '../../../i18n/i18n';
 
 const RANGE_PRESETS = withLabels([
   { label: '7 days', labelKey: 'analytics.fields.n7Days', days: 7 },
@@ -104,7 +104,7 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
               className={rangeDays === preset.days ? 'btn-primary' : 'btn-secondary'}
               onClick={() => setRangeDays(preset.days)}
             >
-              {preset.label}
+              {labelText(preset)}
             </button>
           ))}
         </div>
@@ -136,7 +136,7 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
 
           {trendField && (
             <div style={{ marginBottom: 16 }}>
-              <TrendChart points={trendPoints} label={trendField.label} />
+              <TrendChart points={trendPoints} label={labelText(trendField)} />
             </div>
           )}
 
@@ -151,7 +151,7 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
                     <th style={{ padding: '8px 12px' }}>{config.dimensionLabel}</th>
                     {config.highlightFields.map((f) => (
                       <th key={f.key} style={{ padding: '8px 12px' }}>
-                        {f.label}
+                        {labelText(f)}
                       </th>
                     ))}
                     <th style={{ padding: '8px 12px' }} />

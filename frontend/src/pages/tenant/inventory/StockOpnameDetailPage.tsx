@@ -10,7 +10,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { StockOpnameItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatQty } from '../../../utils/quantity';
-import { t } from '../../../i18n/i18n';
+import { labelText, t } from '../../../i18n/i18n';
 
 const LIFECYCLE: Record<string, { action: string; label: string; labelKey?: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'counting', label: 'Start Counting', labelKey: 'inventory.fields.startCounting', permission: 'inventory.stock_opname', primary: true }],
@@ -77,7 +77,7 @@ export function StockOpnameDetailPage() {
           <StatusBadge status={opname.status} />
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
-              {a.label}
+              {labelText(a)}
             </button>
           ))}
         </div>

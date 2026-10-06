@@ -39,7 +39,7 @@ import { lineName } from '../../../utils/stockCondition';
 import { ScheduleWorkspaceModal } from './workspace/ScheduleWorkspaceModal';
 import { WorkOrderWorkspaceTab } from './workspace/WorkOrderWorkspaceTab';
 import { SCHEDULABLE_WORK_ORDER_STATUSES, startBlockedReason, canStart } from './workspace/workspaceAssignment';
-import { t as tt, translatedRecord, withLabels } from '../../../i18n/i18n';
+import { labelText, t as tt, translatedRecord, withLabels } from '../../../i18n/i18n';
 
 // Stable tab ids drive state, ?tab= deep links and visibility rules; labels are display only.
 type Tab =
@@ -335,7 +335,7 @@ export function WorkOrderDetailPage() {
               const blocked = a.action === 'start' && wo.status === 'SCHEDULED' && !canStart(wo);
               return (
                 <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy || blocked} title={blocked ? startBlockedReason() : undefined} onClick={() => act(a.action)}>
-                  {a.label}
+                  {labelText(a)}
                 </button>
               );
             })}
@@ -1634,7 +1634,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                     >
                       {RETURN_CONDITIONS.map((c) => (
                         <option key={c.value} value={c.value}>
-                          {c.label}
+                          {labelText(c)}
                         </option>
                       ))}
                     </select>

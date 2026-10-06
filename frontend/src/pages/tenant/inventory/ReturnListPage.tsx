@@ -15,7 +15,7 @@ import type { WorkOrderPartReturnItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatDateTime } from '../../../utils/date';
 import { message } from '../../../i18n/messages';
-import { t, translatedRecord } from '../../../i18n/i18n';
+import { labelText, t, translatedRecord } from '../../../i18n/i18n';
 
 const STATUSES = [
   { value: 'PENDING_PROCESSING', label: 'Pending Processing', labelKey: 'inventory.status.pendingProcessing' },
@@ -93,7 +93,7 @@ export function ReturnListPage() {
             className={status === s.value ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '6px 12px', fontSize: 13 }}
           >
-            {s.label}
+            {labelText(s)}
           </button>
         ))}
         <input
@@ -266,7 +266,7 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
               <option value="">{t('inventory.fields.selectDisposition')}</option>
               {FAULTY_DISPOSITIONS.map((d) => (
                 <option key={d.value} value={d.value}>
-                  {d.label}
+                  {labelText(d)}
                 </option>
               ))}
             </select>

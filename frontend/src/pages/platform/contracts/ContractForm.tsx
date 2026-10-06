@@ -340,7 +340,7 @@ export function ContractForm({
                     <option value="">{tt('platform.contracts.fields.selectCode')}</option>
                     {refOptions.map((o) => (
                       <option key={o.value} value={o.value}>
-                        {o.label}
+                        {labelText(o)}
                       </option>
                     ))}
                   </select>

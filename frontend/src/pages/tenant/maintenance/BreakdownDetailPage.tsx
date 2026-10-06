@@ -9,7 +9,7 @@ import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkf
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { BreakdownItem } from '../../../types';
 import { formatDateTime } from '../../../utils/date';
-import { t } from '../../../i18n/i18n';
+import { labelText, t } from '../../../i18n/i18n';
 
 const ACTIONS: Record<string, { action: string; label: string; labelKey?: string; permission: string }[]> = {
   REPORTED: [{ action: 'verify', label: 'Verify', labelKey: 'platform.payments.actions.verify', permission: 'breakdown.review' }],
@@ -124,7 +124,7 @@ export function BreakdownDetailPage() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {actions.map((a) => (
               <button key={a.action} className="btn-secondary" disabled={busy} onClick={() => act(a.action)}>
-                {a.label}
+                {labelText(a)}
               </button>
             ))}
             {breakdown.status === 'REPAIR_REQUIRED' && hasPermission('breakdown.resolve') && (

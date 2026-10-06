@@ -47,7 +47,7 @@ export function ContractListPage() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {TABS.map((t) => (
           <button
-            key={t.label}
+            key={labelText(t)}
             onClick={() => setTab(t.status)}
             className={tab === t.status ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '6px 12px', fontSize: 13 }}

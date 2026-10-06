@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:unit": "node --experimental-strip-types --import ./tests/unit/register.mjs --test 'tests/unit/**/*.test.ts'",
     "i18n:generate": "node scripts/i18n/generate.mjs",
-    "i18n:check": "node scripts/i18n/generate.mjs --check"
+    "i18n:check": "node scripts/i18n/generate.mjs --check",
+    "i18n:audit": "node scripts/i18n/strings.mjs audit src"
   },
   "dependencies": {
     "@xyflow/react": "^12.12.0",

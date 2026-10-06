@@ -12,7 +12,7 @@ import { formatDate } from '../../../utils/date';
 import { formatMoney } from '../../../utils/money';
 import { openProtectedFile } from '../../../utils/protectedFile';
 import { PaymentProofModal, VendorInvoicePaymentModal } from './VendorInvoicePaymentModal';
-import { t as tt, withLabels } from '../../../i18n/i18n';
+import { labelText, t as tt, withLabels } from '../../../i18n/i18n';
 
 const FILTERS = withLabels([
   { value: '', label: 'All', labelKey: 'procurement.filters.all' },
@@ -114,7 +114,7 @@ export function VendorInvoiceReferenceListPage() {
               setPage(1);
             }}
           >
-            {f.label}
+            {labelText(f)}
           </button>
         ))}
         <input

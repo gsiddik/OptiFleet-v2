@@ -191,6 +191,7 @@ export function analyze(file, index) {
     if (n === 'Cancel') { const key = cancelMeaning(node); match = key ? { key, keys: [key] } : { ambiguous: true, keys: ['common.actions.cancel', 'common.actions.cancelRecord'] }; }
     if (!match && /:$/.test(n)) { match = choose(index.byText.get(n.slice(0, -1).trim()) ?? [], fileRel, index); if (match) suffix = ':'; }
     if (keyedLabel(node)) return; // `label: 'X', labelKey: '…'`: shown through labelText()
+    if (keyedSibling(node)) return; // `note: 'X', noteKey: '…'`: the key is what is shown
     if (inTranslatedRecord(node)) return; // a keyed entry of translatedRecord({ CODE: 'English' }, { CODE: 'key' })
     record({ kind, text: n, start, end, match, suffix, moduleLevel: !insideFunction(node), node });
   };
@@ -238,7 +239,7 @@ export function analyze(file, index) {
   return { file, fileRel, text, sf, found };
 }
 
-export const statusOf = (f) => (f.moduleLevel ? 'moduleLevel' : !f.match ? (f.kind === 'template' ? 'template' : 'unmatched') : f.match.ambiguous ? 'ambiguous' : 'matched');
+export const statusOf = (f) => (EXPECTED_NON_TRANSLATED.test(f.text) ? 'expected' : f.moduleLevel ? 'moduleLevel' : !f.match ? (f.kind === 'template' ? 'template' : 'unmatched') : f.match.ambiguous ? 'ambiguous' : 'matched');
 
 // ----------------------------------------------------------------------------------------- migration
 /** Local bindings named `t` (a parameter, variable or function) — the import is then aliased. */
@@ -320,6 +321,21 @@ function getterCandidate(node) {
   const declInit = (n) => { let p = n.parent; if (p && (ts.isAsExpression(p) || ts.isSatisfiesExpression(p))) p = p.parent; return p && ts.isVariableDeclaration(p); };
   return !(flatMap && declInit(obj));
 }
+
+/** `prop: 'English'` whose object also has `propKey` (the English is the fallback). */
+function keyedSibling(node) {
+  const p = node.parent;
+  if (!p || !ts.isPropertyAssignment(p) || p.initializer !== node || !ts.isObjectLiteralExpression(p.parent)) return false;
+  const name = p.name.getText();
+  return p.parent.properties.some((q) => q.name?.getText() === `${name}Key`);
+}
+
+/**
+ * EXPECTED_NON_TRANSLATED: canonical codes and tokens shown as they are — units (kg, km/h, KB, mo), rule symbols
+ * (D_pull, A_max), status / position codes (FRONT_LEFT, NEW_STATUS), template paths (IN_APP.body), numbering
+ * tokens (SEQ:N) and product codes (CG-TYRE).
+ */
+export const EXPECTED_NON_TRANSLATED = /^(kg|km\/h|KB\)|mo|SEQ:N|CG-[A-Z]+|[A-Z][A-Za-z]*_[A-Za-z0-9_]+|[A-Z_]+\.[a-z]+)$/;
 
 /** A `label: '…'` property whose object already carries a `labelKey`. */
 function keyedLabel(node) {
@@ -403,7 +419,7 @@ function main() {
   const paths = args.slice(1).filter((a) => !a.startsWith('--'));
   const index = buildIndex();
   const files = sourceFiles(paths.length ? paths : ['src']).filter((f) => !f.includes('/src/i18n/'));
-  const totals = { matched: 0, ambiguous: 0, unmatched: 0, moduleLevel: 0, template: 0 };
+  const totals = { matched: 0, ambiguous: 0, unmatched: 0, moduleLevel: 0, template: 0, expected: 0 };
   const rows = [];
   let applied = 0;
   for (const file of files) {

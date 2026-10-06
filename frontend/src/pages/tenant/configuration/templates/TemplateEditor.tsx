@@ -19,7 +19,7 @@ import {
   readEditor,
   variableChip,
 } from "./templateDom";
-import { t as tt } from '../../../../i18n/i18n';
+import { labelText, t as tt } from '../../../../i18n/i18n';
 
 const VAR_DRAG_TYPE = "application/x-optifleet-template-variable";
 
@@ -252,7 +252,7 @@ export function TemplateEditor({
       : null;
     if (block && where !== block) {
       setMessage(
-        `"${variable.label}" belongs to the ${labels.block(block)} block: put the cursor inside a ${labels.block(block)} block (or insert one) first.`,
+        `"${labelText(variable)}" belongs to the ${labels.block(block)} block: put the cursor inside a ${labels.block(block)} block (or insert one) first.`,
       );
       return;
     }
@@ -362,7 +362,7 @@ export function TemplateEditor({
 
   const matches = (v: TemplateVariable) =>
     !search ||
-    `${v.label} ${v.category}`.toLowerCase().includes(search.toLowerCase());
+    `${labelText(v)} ${v.category}`.toLowerCase().includes(search.toLowerCase());
   const categories = useMemo(() => {
     const map = new Map<string, TemplateVariable[]>();
     for (const v of catalog?.variables ?? [])
@@ -398,7 +398,7 @@ export function TemplateEditor({
         fontSize: 12,
       }}
     >
-      <span style={{ fontWeight: 600, color: "#1e3a8a" }}>{v.label}</span>
+      <span style={{ fontWeight: 600, color: "#1e3a8a" }}>{labelText(v)}</span>
       <span style={{ color: "#6b7280", fontSize: 11 }}>{v.type}</span>
     </button>
   );
@@ -489,7 +489,7 @@ export function TemplateEditor({
               <option value="">{tt('common.fields.select')}</option>
               {documentTypes.map((d) => (
                 <option key={d.key} value={d.key}>
-                  {d.label}
+                  {labelText(d)}
                 </option>
               ))}
             </select>
@@ -697,7 +697,7 @@ export function TemplateEditor({
                   <div
                     style={{ fontWeight: 600, fontSize: 13, color: "#6d28d9" }}
                   >
-                    {b.label} {tt('workshop.actions.block')}
+                    {labelText(b)} {tt('workshop.actions.block')}
                     <InfoTip label={tt('configuration.fields.labelBlock', { label: b.label })}>
                       {tt('configuration.tooltips.descriptionFieldsOnlyUsedInsideBlock', { description: b.description })}
                     </InfoTip>
@@ -733,7 +733,7 @@ export function TemplateEditor({
                   >
                     {caretBlock === b.name
                       ? tt('configuration.help.cursorInsideLabelBlockFieldsInserted', { label: b.label })
-                      : `Fields (inside a ${b.label} block):`}
+                      : `Fields (inside a ${labelText(b)} block):`}
                   </div>
                   {b.fields.filter(matches).map((f) => card(f, b.name))}
                 </div>

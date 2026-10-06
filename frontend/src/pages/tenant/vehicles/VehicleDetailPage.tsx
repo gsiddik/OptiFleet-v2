@@ -338,7 +338,7 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
             <option value="">{tt('common.fields.select')}</option>
             {VEHICLE_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
-                {t.label}
+                {labelText(t)}
               </option>
             ))}
             {legacyVehicleType && <option value={legacyVehicleType}>{tt('vehicle.fields.valueLegacy', { value: legacyVehicleType })}</option>}
@@ -586,7 +586,7 @@ function TransferActions({ transfer, onAct }: { transfer: VehicleTransferItem; o
     <>
       {workflowButtons(available, TRANSFER_ACTIONS_BY_TARGET, fallback).map((a) => (
         <button key={a.action} className="btn-link" onClick={() => onAct(a.action)}>
-          {a.label}
+          {labelText(a)}
         </button>
       ))}
     </>

@@ -10,7 +10,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { PartnerItem } from '../../../types';
 import { formatMoney } from '../../../utils/money';
-import { t } from '../../../i18n/i18n';
+import { labelText, t } from '../../../i18n/i18n';
 
 export function PartnerDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -201,7 +201,7 @@ function VendorPerformanceCard({ partnerId }: { partnerId: string }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 16 }}>
           {KPI_LAYOUT[data.category].map((k) => (
             <div key={k.key}>
-              <div style={{ fontSize: 12, color: '#6b7280' }}>{k.label}</div>
+              <div style={{ fontSize: 12, color: '#6b7280' }}>{labelText(k)}</div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{formatKpi(data.kpis[k.key], k.kind)}</div>
             </div>
           ))}

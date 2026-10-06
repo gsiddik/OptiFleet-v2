@@ -16,7 +16,7 @@ import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
 import { statusLabel } from '../../../i18n/statusRegistry';
-import { t, translated, withLabels } from '../../../i18n/i18n';
+import { labelText, t, translated, withLabels } from '../../../i18n/i18n';
 
 const REORDER_STATUSES = ['', 'HEALTHY', 'LOW_STOCK', 'REORDER_REQUIRED', 'OUT_OF_STOCK'];
 
@@ -105,7 +105,7 @@ export function WarehouseStockListPage() {
               cursor: 'pointer',
             }}
           >
-            {g.label}
+            {labelText(g)}
           </button>
         ))}
       </div>

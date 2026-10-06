@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Toolbar } from '../../../../components/Toolbar';
 import type { TireActivityType } from '../../../../types';
 import { TireActivityTable } from './TireWorkflowTabs';
-import { t } from '../../../../i18n/i18n';
+import { labelText, t } from '../../../../i18n/i18n';
 
 const FILTERS: { value: TireActivityType | ''; label: string; labelKey?: string }[] = [
   { value: '', label: 'All', labelKey: 'common.actions.all' },
@@ -24,8 +24,8 @@ export function TireHistoryPage() {
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('tire.titles.tireHistory')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {FILTERS.map((f) => (
-          <button key={f.label} onClick={() => setType(f.value)} className={type === f.value ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {f.label}
+          <button key={labelText(f)} onClick={() => setType(f.value)} className={type === f.value ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
+            {labelText(f)}
           </button>
         ))}
       </div>

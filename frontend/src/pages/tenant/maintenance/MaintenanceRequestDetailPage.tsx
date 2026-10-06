@@ -11,7 +11,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { INSPECTION_GROUP_CODES } from '../../../types';
 import type { InspectionGroupCode, InspectionGroupStatus, InspectionItem, MaintenanceRequestAssessmentItem, MaintenanceRequestItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
-import { t, translatedRecord } from '../../../i18n/i18n';
+import { labelText, t, translatedRecord } from '../../../i18n/i18n';
 
 // Reviewer actions are Approve/Reject only — Request Info / NEED_INFORMATION retired
 // at the application level (legacy records remain readable, but no request can enter
@@ -426,7 +426,7 @@ export function MaintenanceRequestDetailPage() {
                 disabled={busy}
                 onClick={() => (a.action === 'cancel' ? setShowCancelConfirm(true) : act(a.action, a.needsNote))}
               >
-                {a.label}
+                {labelText(a)}
               </button>
             ))}
           </div>

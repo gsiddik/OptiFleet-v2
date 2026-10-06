@@ -8,7 +8,7 @@ import { Table, type Column } from '../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { formatQty } from '../../../utils/quantity';
-import { t as tt, withLabels } from '../../../i18n/i18n';
+import { labelText, t as tt, withLabels } from '../../../i18n/i18n';
 
 interface UsedSparepartRow {
   id: string;
@@ -115,7 +115,7 @@ export function UsedSparepartsTab() {
             className={category === c.value ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '4px 10px', fontSize: 12 }}
           >
-            {c.label}
+            {labelText(c)}
           </button>
         ))}
         <select

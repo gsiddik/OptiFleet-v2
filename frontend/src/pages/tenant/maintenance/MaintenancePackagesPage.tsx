@@ -14,7 +14,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ComponentGroup, MaintenancePackageItemType, VehicleItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
 import { NumericInput } from '../../../components/NumericInput';
-import { t as tt } from '../../../i18n/i18n';
+import { labelText, t as tt } from '../../../i18n/i18n';
 
 const ALL_MAINTENANCE_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECTION', 'CAMPAIGN', 'PERIODIC'];
 // Section 10: the new-package workflow only offers these two — legacy types
@@ -172,7 +172,7 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
         <select value={periodBy} onChange={(e) => setPeriodBy(e.target.value)} style={inputStyle}>
           {periodByOptions.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {labelText(o)}
             </option>
           ))}
         </select>

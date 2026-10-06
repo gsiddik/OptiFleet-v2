@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import type { ConfigurationHistoryRow, ConfigurationType } from '../../../types';
 import { formatDateTime } from '../../../utils/date';
-import { t as tt, withLabels } from '../../../i18n/i18n';
+import { labelText, t as tt, withLabels } from '../../../i18n/i18n';
 
 const TYPES: Array<{ value: ConfigurationType | ''; label: string }> = withLabels([
   { value: '', label: 'All types', labelKey: 'configuration.fields.allTypes' },
@@ -36,7 +36,7 @@ export function ConfigurationHistoryPage() {
         >
           {TYPES.map((t) => (
             <option key={t.value} value={t.value}>
-              {t.label}
+              {labelText(t)}
             </option>
           ))}
         </select>

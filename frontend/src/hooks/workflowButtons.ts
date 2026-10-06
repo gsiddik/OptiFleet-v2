@@ -24,7 +24,8 @@ export function workflowButtons<T extends ModuleAction>(
   byTarget: Record<string, T>,
   fallback: T[],
 ): Array<T & { toStatus?: string }> {
-  if (!available) return fallback.map((a) => ({ ...a, label: labelText(a) }));
+  // The output label is final (translated default or tenant rename): labelKey is dropped so no caller re-translates it.
+  if (!available) return fallback.map((a) => ({ ...a, label: labelText(a), labelKey: undefined }));
   const seen = new Set<string>();
   return available.flatMap((t) => {
     const action = byTarget[t.to_status];
@@ -37,6 +38,7 @@ export function workflowButtons<T extends ModuleAction>(
         ...action,
         // A tenant's own action name is shown as configured; the module default follows the UI language.
         label: renamed && t.action_label ? t.action_label : labelText(action),
+        labelKey: undefined,
         toStatus: t.to_status,
       },
     ];

@@ -18,7 +18,7 @@ import { ReturnToVendorModal } from './ReturnToVendorModal';
 import { ReturnHistory } from './ReturnHistory';
 import { DocumentViewer } from '../../../components/DocumentViewer';
 import { DocumentVersionsButton } from '../../../components/DocumentVersions';
-import { t } from '../../../i18n/i18n';
+import { labelText, t } from '../../../i18n/i18n';
 
 const LIFECYCLE: Record<string, { action: string; label: string; labelKey?: string; permission: string; primary?: boolean }[]> = {
   DRAFT: [{ action: 'submit', label: 'Submit', labelKey: 'common.actions.submit', permission: 'purchase_order.create', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'purchase_order.create' }],
@@ -206,7 +206,7 @@ export function PurchaseOrderDetailPage() {
           {openReturn && <DocumentVersionsButton printPath={`/app/purchase-returns/${openReturn.id}/print`} disabled={busy} />}
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
-              {a.label}
+              {labelText(a)}
             </button>
           ))}
         </div>

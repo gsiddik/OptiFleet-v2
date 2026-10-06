@@ -325,7 +325,33 @@ user preference → tenant default → browser (`navigator.languages` / `Accept-
 - Frontend: type-check (tsconfig.app.json) clean, 46 unit tests pass, lint 0 errors.
 - Browser checks (ID): platform 13 pages; vehicle / maintenance / WO / inspection crawl — no page errors.
 
+**Further commits**
+- `22b317c` — workshop, service invoices, warranty, master data.
+- `b60615b` — configuration and the dataset plural rollout.
+- tire follow-up: rich text through Trans; generator renames void-element tags (`<link>` → `<linkTo>`).
+- analytics UI text (non-MongoDB).
+- render fix: keyed labels through `labelText()`; `workflowButtons` output carries no labelKey.
+
+**Pluralization**
+- Count-based dataset plural rows used by the UI have `_one` / `_other` additions; the Indonesian is the
+  dataset's single form. Unit-tested 0 / 1 / 2+ in EN and ID.
+- Not converted: rows with two independent counts, or with list values ("module(s): A, B"). They keep
+  the dataset wording, and the backend lists are rendered by the response localizer.
+
+**Hard-coded audit (`npm run i18n:audit`, whole `src`)**
+- Outside Intelligence: 0 unmatched, 0 ambiguous, 0 module-level.
+- 24 EXPECTED_NON_TRANSLATED: units (kg, km/h, KB, mo), rule symbols (D_pull, A_max…), codes
+  (FRONT_LEFT, NEW_STATUS, SEQ:N, CG-TYRE) and template paths (IN_APP.body).
+- MONGODB_DEFERRED: `pages/tenant/intelligence` (81 matched, 7 unmatched), left untouched.
+
+**Browser crawl (ID, all tenant routes)**
+- No page errors.
+- English left in UI chrome is either:
+  - USER_GENERATED / tenant data: branch, product, template and worker-type names;
+  - glossary terms kept in English: Work Order, Purchase Order, Purchase Request, Vendor, Workspace,
+    Transfer, Total, Detail.
+
 **Remaining**
-- Tire fragments (51).
-- Workshop, workshop invoices, configuration / master data, warranty, analytics UI (non-Mongo).
-- Documents, notifications, plural rows, final audit and report.
+- Documents (print labels per document locale, print language default).
+- Notifications (per-recipient locale).
+- Final regression, final report.

@@ -12,7 +12,7 @@ import type { PurchaseRequestItem, PurchaseRequestItemLine } from '../../../type
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
 import { statusLabel } from '../../../i18n/statusRegistry';
-import { t } from '../../../i18n/i18n';
+import { labelText, t } from '../../../i18n/i18n';
 
 const LINE_STATUSES: PurchaseRequestItemLine['line_status'][] = ['PENDING', 'APPROVED', 'ON_HOLD', 'REJECTED'];
 
@@ -85,7 +85,7 @@ export function PurchaseRequestDetailPage() {
           <StatusBadge status={pr.status} />
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
-              {a.label}
+              {labelText(a)}
             </button>
           ))}
           {pr.status === 'APPROVED' && hasPermission('rfq.manage') && (

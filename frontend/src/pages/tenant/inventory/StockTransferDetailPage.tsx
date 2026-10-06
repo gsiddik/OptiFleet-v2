@@ -12,7 +12,7 @@ import type { StockTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatQty } from '../../../utils/quantity';
 import { formatDateTime } from '../../../utils/date';
-import { t } from '../../../i18n/i18n';
+import { labelText, t } from '../../../i18n/i18n';
 
 const TH: CSSProperties = { textAlign: 'left', padding: '6px 8px', borderBottom: '1px solid #e5e7eb', color: '#6b7280', fontWeight: 600 };
 const TD: CSSProperties = { padding: '6px 8px', borderBottom: '1px solid #f3f4f6' };
@@ -120,7 +120,7 @@ export function StockTransferDetailPage() {
           <StatusBadge status={transfer.status} />
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
-              {a.label}
+              {labelText(a)}
             </button>
           ))}
         </div>
