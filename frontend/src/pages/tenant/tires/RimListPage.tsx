@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import { CreateProductModal } from '../inventory/CreateProductModal';
+import { ProductImportModal } from '../inventory/ProductImportModal';
 import type { RimProductListItem } from '../../../types';
 import { t } from '../../../i18n/i18n';
 
@@ -23,6 +24,7 @@ export function RimListPage() {
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const { data, meta, loading, error } = useApiList<RimProductListItem>('/app/rim-products', { search: search || undefined, page, per_page: 20 }, reloadKey);
   // Rims recorded in the earlier standalone Rim catalog stay reachable (read / edit) — never migrated silently.
   const legacy = useApiList<{ id: string }>('/app/rims', { per_page: 1 }, 0);
@@ -66,9 +68,14 @@ export function RimListPage() {
         }}
         actions={
           hasPermission('product.create') ? (
-            <button className="btn-primary" onClick={() => setShowCreate(true)} data-new-rim>
-              {t('rim.actions.newRim')}
-            </button>
+            <span style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-secondary" onClick={() => setShowImport(true)} data-rim-product-import>
+                {t('productImport.actions.importProducts')}
+              </button>
+              <button className="btn-primary" onClick={() => setShowCreate(true)} data-new-rim>
+                {t('rim.actions.newRim')}
+              </button>
+            </span>
           ) : null
         }
       />
@@ -86,6 +93,7 @@ export function RimListPage() {
           {t('rim.help.legacyCatalog', { count: legacy.meta?.total ?? 0 })} <Link to="/app/rims/catalog">{t('rim.actions.openLegacyCatalog')}</Link>
         </p>
       )}
+      {showImport && <ProductImportModal initialItemType="RIM" locked onClose={() => setShowImport(false)} onImported={() => setReloadKey((k) => k + 1)} />}
       {showCreate && <CreateProductModal context="RIM" open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />}
     </div>
   );

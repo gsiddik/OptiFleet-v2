@@ -3,6 +3,7 @@
 namespace App\Support\Spreadsheet\Import;
 
 use App\Domain\Shared\Support\Messages;
+use App\Domain\Shared\Support\ResponseMessageLocalizer;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -55,9 +56,17 @@ final class ImportRows
         }
     }
 
-    /** Flattened messages of a ValidationException (for a row reason). */
+    /**
+     * Flattened messages of a ValidationException (for a row reason), in the request locale: domain
+     * services throw dataset English, which is translated the same way as API `errors`.
+     */
     public static function messages(ValidationException $e): array
     {
-        return array_values(array_unique(array_merge(...array_values($e->errors()))));
+        $locale = app()->getLocale();
+
+        return array_values(array_unique(array_map(
+            fn (string $m) => ResponseMessageLocalizer::localize($m, $locale),
+            array_merge(...array_values($e->errors())),
+        )));
     }
 }

@@ -57,28 +57,30 @@ class ProductCreationService
     }
 
     /**
+     * Every Create Product check (StoreProductRequest rules, Item Type ↔ category, classification, dynamic
+     * specification) without any write and without consuming a number — the Excel import preview.
+     *
+     * @param  array<string, mixed>  $input  StoreProductRequest fields plus an optional `spec` array
+     *
+     * @throws ValidationException
+     */
+    public function check(string $tenantId, array $input): void
+    {
+        if ($this->context->tenantId() !== $tenantId) {
+            throw new \LogicException('The tenant context must be set to the tenant the Product is checked for.');
+        }
+        $validated = Validator::make($input, (new StoreProductRequest)->rules())->validate();
+        $this->prepare($validated, (array) ($input['spec'] ?? []));
+    }
+
+    /**
      * @param  array<string, mixed>  $validated  general fields that already passed StoreProductRequest
      * @param  array<string, mixed>  $spec  dynamic specification input for the Item Type
      */
     public function create(string $tenantId, array $validated, array $spec): Product
     {
         $productType = $validated['product_type'];
-
-        if (! empty($validated['product_category_id'])) {
-            $category = ProductCategory::query()->find($validated['product_category_id']);
-            if ($category && $category->item_type && $category->item_type !== $productType) {
-                throw ValidationException::withMessages(['product_category_id' => 'The selected category does not apply to this Item Type.']);
-            }
-        }
-
-        // Component Group -> Category -> Subcategory: hierarchy, effective availability and
-        // Item Type applicability (Category mandatory for Sparepart/Consumable/Tire/Rim).
-        $validated = array_merge($validated, $this->classification->resolveProductClassification($productType, $validated));
-
-        // Validated BEFORE the numbering sequence is touched, so an invalid
-        // spec submission never burns an Item Code.
-        $general = array_intersect_key($validated, array_flip(['brand', 'track_serial_number', 'track_batch', 'product_category_id']));
-        ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate($productType, $general, $spec);
+        [$validated, $generalOverrides, $validatedSpec] = $this->prepare($validated, $spec);
 
         $product = DB::transaction(function () use ($tenantId, $validated, $generalOverrides, $validatedSpec) {
             $number = $this->numbers->generate('product_item', $tenantId);
@@ -102,5 +104,29 @@ class ProductCreationService
         $relation = self::SPEC_RELATIONS[$productType] ?? null;
 
         return $relation ? $product->load($relation) : $product;
+    }
+
+    /**
+     * Item Type ↔ category, Component Group → Category → Subcategory (hierarchy, availability, Item Type
+     * applicability; Category mandatory for Sparepart/Consumable/Tire/Rim) and the dynamic specification —
+     * validated BEFORE the numbering sequence is touched, so an invalid submission never burns an Item Code.
+     *
+     * @return array{0: array, 1: array, 2: array} [validated with classification, general overrides, validated spec]
+     */
+    private function prepare(array $validated, array $spec): array
+    {
+        $productType = $validated['product_type'];
+        if (! empty($validated['product_category_id'])) {
+            $category = ProductCategory::query()->find($validated['product_category_id']);
+            if ($category && $category->item_type && $category->item_type !== $productType) {
+                throw ValidationException::withMessages(['product_category_id' => 'The selected category does not apply to this Item Type.']);
+            }
+        }
+
+        $validated = array_merge($validated, $this->classification->resolveProductClassification($productType, $validated));
+        $general = array_intersect_key($validated, array_flip(['brand', 'track_serial_number', 'track_batch', 'product_category_id']));
+        ['general' => $generalOverrides, 'spec' => $validatedSpec] = $this->specs->validate($productType, $general, $spec);
+
+        return [$validated, $generalOverrides, $validatedSpec];
     }
 }

@@ -56,6 +56,7 @@ use App\Http\Controllers\Api\Tenant\ProductCategoryController;
 use App\Http\Controllers\Api\Tenant\ProductClassificationController;
 use App\Http\Controllers\Api\Tenant\ProductVehicleLookupController;
 use App\Http\Controllers\Api\Tenant\ProductController;
+use App\Http\Controllers\Api\Tenant\ProductImportController;
 use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
 use App\Http\Controllers\Api\Tenant\PurchaseReturnController;
 use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
@@ -546,6 +547,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/product-classification/vehicle-models', [ProductVehicleLookupController::class, 'models'])->middleware('permission:product.view');
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
             Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');
+            Route::get('/products/import-template', [ProductImportController::class, 'template'])->middleware('permission:product.create');
+            Route::post('/products/import/preview', [ProductImportController::class, 'preview'])->middleware('permission:product.create');
+            Route::post('/products/import', [ProductImportController::class, 'import'])->middleware('permission:product.create');
             Route::get('/products/compatible', [ProductController::class, 'compatibleFor'])->middleware('permission:product.view');
             Route::get('/products/{product}', [ProductController::class, 'show'])->middleware('permission:product.view');
             Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:product.update');

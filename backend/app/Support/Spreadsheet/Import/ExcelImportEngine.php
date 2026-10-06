@@ -50,7 +50,7 @@ class ExcelImportEngine
         $columns = $definition->columns();
         $l = fn (string $key, array $params = []) => Messages::text($key, $params, $locale);
 
-        $howTo = [[$definition->title($locale)], ['']];
+        $howTo = [[$definition->title($locale)], [$definition instanceof IdentifiesTemplate ? $definition->marker() : '']];
         $general = [
             $l('excelImport.howTo.fillSheet', ['sheet' => self::SHEET_FILL]),
             $l('excelImport.howTo.doNotRename', ['howTo' => self::SHEET_HOW_TO, 'fill' => self::SHEET_FILL]),
@@ -140,7 +140,7 @@ class ExcelImportEngine
                 try {
                     $created[] = ['row' => $row['row']] + DB::transaction(fn () => $definition->persist($row));
                 } catch (ValidationException $e) {
-                    $failed[] = $this->failure(['status' => self::INVALID, 'errors' => array_values(array_unique(array_merge(...array_values($e->errors()))))] + $row);
+                    $failed[] = $this->failure(['status' => self::INVALID, 'errors' => ImportRows::messages($e)] + $row);
                 } catch (UniqueConstraintViolationException) {
                     $failed[] = $this->failure(['status' => self::DUPLICATE, 'errors' => [Messages::localized('excelImport.errors.duplicateOnSave')]] + $row);
                 }
@@ -153,6 +153,19 @@ class ExcelImportEngine
             'created' => $created,
             'failed' => $failed,
         ];
+    }
+
+    /** Row 2 of "How To" (the template marker of an IdentifiesTemplate definition), or null. */
+    public function markerOf(string $path): ?string
+    {
+        try {
+            $reader = XlsxReader::open($path);
+            $howTo = collect($reader->sheetNames())->first(fn ($n) => trim($n) === self::SHEET_HOW_TO);
+
+            return $howTo === null ? null : (trim((string) ($reader->rows($howTo)[2][0]['value'] ?? '')) ?: null);
+        } catch (XlsxException) {
+            throw ValidationException::withMessages(['file' => Messages::localized('excelImport.errors.fileInvalid')]);
+        }
     }
 
     /** @return list<array{id: string, header: string, required: bool}> */
@@ -195,6 +208,13 @@ class ExcelImportEngine
                 throw ValidationException::withMessages(['file' => Messages::localized('excelImport.errors.sheetMissing', ['sheet' => self::SHEET_FILL])]);
             }
             $name = collect($reader->sheetNames())->first(fn ($n) => trim($n) === self::SHEET_FILL);
+            if ($definition instanceof IdentifiesTemplate) {
+                $howTo = collect($reader->sheetNames())->first(fn ($n) => trim($n) === self::SHEET_HOW_TO);
+                $found = $howTo === null ? null : trim((string) ($reader->rows($howTo)[2][0]['value'] ?? ''));
+                if ($found !== $definition->marker()) {
+                    throw ValidationException::withMessages(['file' => $definition->markerMismatchMessage($found ?: null)]);
+                }
+            }
             $sheet = $reader->rows($name);
         } catch (XlsxException) {
             throw ValidationException::withMessages(['file' => Messages::localized('excelImport.errors.fileInvalid')]);
