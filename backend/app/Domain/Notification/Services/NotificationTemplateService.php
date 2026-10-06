@@ -45,9 +45,15 @@ class NotificationTemplateService
         return $this->resolver->resolve(ConfigurationSet::TYPE_NOTIFICATION, $eventCode, $tenantId, $branchId, $workshopId);
     }
 
-    public function render(ConfigurationVersion $version, string $channel, array $context): array
+    /**
+     * A version may carry wording per locale (`locales.<locale>.channels.<CHANNEL>`, i18n S8); without an
+     * entry for the locale the version's own channel content is used. Callers pass no locale today, so
+     * notifications stay English until the rollout.
+     */
+    public function render(ConfigurationVersion $version, string $channel, array $context, ?string $locale = null): array
     {
-        $content = $version->payload['channels'][$channel] ?? null;
+        $content = ($locale !== null ? ($version->payload['locales'][$locale]['channels'][$channel] ?? null) : null)
+            ?? $version->payload['channels'][$channel] ?? null;
         if (! $content) {
             throw new NotificationException("Template for this rule has no '{$channel}' content.");
         }

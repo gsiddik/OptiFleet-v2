@@ -4,6 +4,7 @@ namespace App\Domain\Notification\Services;
 
 use App\Domain\Configuration\Services\TemplateParser;
 use App\Domain\Configuration\Services\TemplateValidationException;
+use App\Domain\DocumentGeneration\Support\DocumentLocale;
 use App\Domain\Shared\Support\Messages;
 
 /**
@@ -31,6 +32,22 @@ class NotificationTemplateValidator
             throw new TemplateValidationException('A notification template must declare at least one channel.');
         }
 
+        foreach ($payload['locales'] ?? [] as $locale => $localized) {
+            if (! DocumentLocale::isSupported((string) $locale)) {
+                throw new TemplateValidationException("Unsupported notification template locale '{$locale}'.");
+            }
+            foreach (array_keys($localized['channels'] ?? []) as $channel) {
+                if (! isset($channels[$channel])) {
+                    throw new TemplateValidationException("Localized content for channel '{$channel}', which the template does not declare.");
+                }
+            }
+            $this->validateChannels($localized['channels'] ?? [], $definition);
+        }
+        $this->validateChannels($channels, $definition);
+    }
+
+    private function validateChannels(array $channels, array $definition): void
+    {
         foreach ($channels as $channel => $content) {
             if (! in_array($channel, ['IN_APP', 'EMAIL'], true)) {
                 throw new TemplateValidationException("Unsupported notification channel '{$channel}'.");

@@ -21,6 +21,7 @@ Continuation checkpoint for the structural i18n preparation defined in
 | S5 | Error code decoupling | ERROR_CODE_DECOUPLING (98 of 124) | DONE, 26 rows open (see S5) |
 | S6 | Document generation locale snapshot | PRINT_LOCALE_SNAPSHOT (D1, D3, D4) | DONE |
 | S7 | Laravel validation localization prep | FRAMEWORK_VALIDATION_LOCALIZATION (36) | DONE |
+| S8 | Database localization prep | DATABASE_LOCALIZATION (418 of 420) | DONE, 2 rows open (owner decision) |
 
 ## S1 — Stable tab IDs
 
@@ -460,3 +461,77 @@ wording can change, and only when the flag is on.
 - Attribute display names (`vehicle id`) are still derived from field keys. Their Indonesian names are
   rollout content.
 - Switching the flag on is a rollout decision. The frontend still shows mostly English UI.
+
+## S8 — Database localization prep
+
+No generic translation table and no `*_en` / `*_id` columns.
+
+| Data | Strategy | Where |
+|---|---|---|
+| Platform-seeded system values: modules, vehicle categories, component groups, product categories, UoMs, tool / equipment types, storage requirements (83 values) | Canonical code + translation resource | `ReferenceLabels::SYSTEM_VALUES` maps `table → code → [dataset key, seeded English]`. `key()` returns the key only while the stored name is still the seeded default; a renamed value is the administrator's own text and is shown as stored. |
+| Tenant-editable document templates | Localized versioned config | `payload.locales.<locale>.html` (S6) |
+| Tenant-editable workflow action labels | Localized versioned config | `payload.locales.<locale>.action_labels.<action_code>`. `WorkflowLabels::actionLabel()` falls back to the transition's `action_label`, then the code. Validated on publish: supported locale, existing action code, non-empty text. |
+| Tenant-editable notification wording | Localized versioned config | `payload.locales.<locale>.channels.<CHANNEL>.{subject, body}`. `NotificationTemplateService::render(..., ?locale)` falls back to the version's own channel. Validated on publish: supported locale, declared channel, body / subject rules, the event's variable whitelist. |
+| System text written into a record (contract notes, default complaints, inspection condition text, transfer notes) | Preserved as stored | It becomes the record's own text (D2) and is never re-localized. |
+| Configuration change summaries written by seeders | Preserved as stored | Historical metadata. |
+
+**Runtime**
+- Workflow action labels on the available-transitions API and the simulator use `app()->getLocale()`.
+  This is English unless S7 runtime locale resolution is switched on.
+- Notifications are rendered without a locale (English). Passing the recipient's locale is a rollout
+  step.
+- Template / workflow / notification payloads without `locales` behave exactly as before. Existing
+  tenant configurations are untouched; nothing is migrated.
+
+**Dataset**: DATABASE_LOCALIZATION 418 of 420.
+- 91 seeded system-value rows.
+- 269 seeded defaults of tenant-editable configuration. Their Indonesian content is seeded into
+  `locales.id` at rollout.
+- 48 frontend rows reclassified as static UI text or code-mapped labels, not stored in the database.
+- 6 rows of text stored in records, preserved.
+- 4 runtime validation messages reclassified.
+
+**Open (2 rows, owner decision)**
+- `Platform Superadmin` / `Full platform access.`: the seeded platform role.
+- `roles` has no canonical code column; the role is identified by name. Mapping it needs either a
+  `code` column on `roles` (schema change) or treating the seeded name as its identifier. Not decided
+  unilaterally.
+
+**Tests**
+- `Feature/ReferenceLabelsTest` (3 tests):
+  - the registry matches the seeded system rows exactly, with the same names;
+  - every key exists in dataset `12` with the seeded English and an Indonesian text;
+  - a renamed value is shown as stored.
+- `Feature/LocalizedConfigurationTest` (2 tests):
+  - notification and workflow per-locale wording with fallback;
+  - publish-time validation rejects an unsupported locale, an unknown variable, an undeclared channel,
+    an unknown action and an empty label.
+- Workflow and notification suites pass unchanged: WorkflowBuilder, WorkflowEngine,
+  WorkflowDefaultLabels, WorkflowMigration, NotificationEngine, NotificationConfigurationForm.
+- Final full backend regression: 1150 passed. MongoDB suites NOT RUN.
+
+**Remaining risk**
+- No editor UI authors `locales` yet; that is rollout UI work.
+- The workflow builder carries unknown payload keys through a save (`toPayload` spreads `extra`), so
+  `locales` survives a workflow edit.
+- The document template editor saves only `{editor, html}`. A new template version created there has
+  no `locales` until the editor supports them. Earlier versions, and the generations pinned to them,
+  are unaffected.
+
+## Readiness
+
+**STRUCTURAL_I18N_PREPARATION_IN_PROGRESS.** All eight structural phases are implemented and
+committed, but structural blockers remain open:
+
+| Blocker | Open | Why open |
+|---|---:|---|
+| ERROR_CODE_DECOUPLING | 25 | Intelligence services and controllers are MongoDB-backed. MongoDB and the PHP `mongodb` extension are not available here, so their tests cannot run; changing them unverified is not acceptable. |
+| ERROR_CODE_DECOUPLING | 1 | `TireOperationParts.tsx`: a sentence with an inline link. It needs a rich-text (`Trans`) component, which is part of the i18n library rollout. |
+| DATABASE_LOCALIZATION | 2 | Seeded Platform Superadmin role name and description. Mapping them needs an owner decision (a `roles.code` column, or the seeded name as identifier). |
+
+**Next steps to reach READY_FOR_I18N_IMPLEMENTATION**
+1. In an environment with MongoDB: emit `{code, params}` beside the Intelligence texts (the S5
+   pattern) and run the Analytics / Intelligence suites.
+2. Decide the system-role identifier, then add the role to `ReferenceLabels`.
+3. The rich-text row is resolved by the rollout's `Trans` component. It can be accepted as a rollout
+   item if the owner agrees.

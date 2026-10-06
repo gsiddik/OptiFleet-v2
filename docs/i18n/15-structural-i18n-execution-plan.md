@@ -1,6 +1,10 @@
 # 15 — Structural i18n Execution Plan
 
-**This is a plan only. Nothing in it was implemented.** No code, migration, enum, workflow, permission, tab or schema change was made.
+> **Execution status:** all phases below have been implemented (S1–S8). Per-phase changes, tests,
+> remaining risk and the open blockers are recorded in
+> `docs/status/I18N_STRUCTURAL_PREPARATION_STATUS.md`; per-row progress is in `12` / `14`.
+
+**When written, this was a plan only (see the execution status above).** At that point no code, migration, enum, workflow, permission, tab or schema change was made.
 
 ## Inputs
 

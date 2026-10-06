@@ -33,15 +33,15 @@ Dataset: `12-en-id-translation-dataset-final.csv` — **5452 rows** (5,240 prepa
 
 | Implementation status | Rows |
 |---|---:|
-| READY_AFTER_I18N_INFRASTRUCTURE | 4940 |
-| STRUCTURAL_PREP_REQUIRED | 446 |
+| READY_AFTER_I18N_INFRASTRUCTURE | 5358 |
 | NOT_APPLICABLE | 66 |
+| STRUCTURAL_PREP_REQUIRED | 28 |
 
 ## Structural blocker progress
 
 | Blocker | Rows | Resolved in source | Open |
 |---|---:|---:|---:|
-| DATABASE_LOCALIZATION | 420 | 0 | 420 |
+| DATABASE_LOCALIZATION | 420 | 418 | 2 |
 | FULL_SENTENCE_TEMPLATE | 192 | 192 | 0 |
 | STATUS_DISPLAY_REGISTRY | 150 | 150 | 0 |
 | ERROR_CODE_DECOUPLING | 124 | 98 | 26 |
