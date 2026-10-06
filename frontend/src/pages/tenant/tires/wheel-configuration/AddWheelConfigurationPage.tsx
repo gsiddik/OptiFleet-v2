@@ -107,7 +107,7 @@ function WheelConfigurationFormPage({ masterId }: { masterId: string | null }) {
         )}
         {editing && (master?.mapped_vehicle_count ?? 0) > 0 && (
           <p data-mapped-impact style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 8px', margin: '8px 0 0' }}>
-            {master?.mapped_vehicle_count} vehicle(s) are mapped to this configuration. They keep their current version; move them to the new version from Vehicle Mapping when ready.
+            {tt('tire.help.mappedVehicleCountVehicleSMapped', { count: master?.mapped_vehicle_count ?? 0 })}
           </p>
         )}
       </div>

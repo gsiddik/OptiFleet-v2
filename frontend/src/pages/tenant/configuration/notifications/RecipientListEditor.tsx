@@ -3,6 +3,7 @@ import type {
   NotificationMetadata,
   NotificationRecipientRule,
 } from "../../../../types";
+import { t as tt } from '../../../../i18n/i18n';
 
 /** Choices for recipients that name someone: tenant users, roles and permissions. */
 export interface RecipientLookups {
@@ -56,7 +57,7 @@ export function RecipientListEditor({
         aria-label={aria}
         disabled={readOnly}
       >
-        <option value="">— choose —</option>
+        <option value="">{tt('configuration.fields.choose')}</option>
         {/* A saved value that is no longer offered stays selectable, so nothing is lost. */}
         {current && !options.some((o) => o.value === current) && (
           <option value={current}>{current}</option>
@@ -94,7 +95,7 @@ export function RecipientListEditor({
           style={inputStyle}
           aria-label={aria}
           type={kind === "email" ? "email" : "text"}
-          placeholder={kind === "email" ? "name@company.com" : ""}
+          placeholder={kind === "email" ? tt('configuration.placeholders.nameCompanyCom') : ""}
           disabled={readOnly}
         />
       );
@@ -123,7 +124,7 @@ export function RecipientListEditor({
             value={rule.type}
             onChange={(e) => update(index, { type: e.target.value })}
             style={inputStyle}
-            aria-label={`${label} ${index + 1} type`}
+            aria-label={tt('configuration.fields.labelValueType', { label: label, value: index + 1 })}
             disabled={readOnly}
           >
             {!types.some((t) => t.value === rule.type) && (
@@ -141,7 +142,7 @@ export function RecipientListEditor({
               type="button"
               className="btn-secondary"
               onClick={() => onChange(value.filter((_, i) => i !== index))}
-              aria-label={`Remove ${label.toLowerCase()} ${index + 1}`}
+              aria-label={tt('configuration.actions.removeToLowerCaseValue', { toLowerCase: label.toLowerCase(), value: index + 1 })}
               disabled={value.length === 1}
             >
               ×
@@ -157,8 +158,7 @@ export function RecipientListEditor({
             onChange([...value, { type: types[0]?.value ?? "ROLE" }])
           }
         >
-          + Add {label.toLowerCase()}
-        </button>
+          {tt('configuration.actions.addToLowerCase', { toLowerCase: label.toLowerCase() })}</button>
       )}
     </div>
   );

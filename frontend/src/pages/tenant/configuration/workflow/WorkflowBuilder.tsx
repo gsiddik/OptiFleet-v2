@@ -40,6 +40,7 @@ import {
   type EditableTransition,
   type Positions,
 } from "./workflowGraph";
+import { t as tt } from '../../../../i18n/i18n';
 
 export type WorkflowBuilderMode = "edit" | "layout" | "view";
 
@@ -277,7 +278,7 @@ function Builder({
     labelStyle: { fontSize: 11, fill: "#1f2937" },
     labelBgStyle: { fill: "#ffffff" },
     labelBgPadding: [4, 2] as [number, number],
-    ariaLabel: `Transition ${t.action_label || t.action_code} from ${t.from_status} to ${t.to_status}`,
+    ariaLabel: tt('configuration.fields.transitionValueStatusStatus', { value: t.action_label || t.action_code, from_status: t.from_status, to_status: t.to_status }),
     data: { from: t.from_status, to: t.to_status },
   }));
 
@@ -292,18 +293,18 @@ function Builder({
     to: string,
     ignoreId?: string,
   ): string | null => {
-    if (!from || !to) return "Choose both statuses.";
+    if (!from || !to) return tt('configuration.validation.chooseBothStatuses');
     if (from === to)
-      return "A transition cannot start and end at the same status.";
+      return tt('configuration.help.transitionCannotStartEndSameStatus');
     if (targets && !targets.includes(to))
-      return `No action in OptiFleet moves this document into ${to}.`;
+      return tt('configuration.empty.noActionOptiFleetMovesDocument', { to: to });
     if (
       transitions.some(
         (t) =>
           t._id !== ignoreId && t.from_status === from && t.to_status === to,
       )
     )
-      return `There is already a transition from ${from} to ${to}.`;
+      return tt('configuration.help.thereAlreadyTransition', { from: from, to: to });
     return null;
   };
 
@@ -400,13 +401,13 @@ function Builder({
     if (selection.kind === "transition") {
       if (
         window.confirm(
-          "Remove this transition from the draft? The active workflow changes only when the draft is published.",
+          tt('configuration.confirm.removeTransitionDraftActiveWorkflowChanges'),
         )
       )
         removeTransitions([selection.id]);
     } else if (
       window.confirm(
-        `Remove ${selection.code} and its transitions from the draft? The active workflow changes only when the draft is published.`,
+        tt('configuration.confirm.removeCodeTransitionsDraftActiveWorkflow', { code: selection.code }),
       )
     ) {
       removeStatuses([selection.code]);
@@ -459,7 +460,7 @@ function Builder({
   }, [dirty]);
 
   const close = () => {
-    if (dirty && !window.confirm("Leave without saving your changes?")) return;
+    if (dirty && !window.confirm(tt('configuration.confirm.leaveWithoutSavingChanges'))) return;
     onClose();
   };
 
@@ -477,14 +478,14 @@ function Builder({
 
   async function save(publish: boolean) {
     setError(null);
-    if (!code) return setError("Choose the document type.");
-    if (!name.trim() && !target.versionId) return setError("Enter a name.");
+    if (!code) return setError(tt('configuration.validation.chooseTheDocumentType2'));
+    if (!name.trim() && !target.versionId) return setError(tt('configuration.validation.enterAName'));
     if (publish && validation && validation.errors.length > 0)
-      return setError("Fix the errors before publishing.");
+      return setError(tt('configuration.errors.fixErrorsBeforePublishing'));
     if (
       publish &&
       !window.confirm(
-        "Publish this workflow? Documents created from now on follow it; documents already in progress keep their current workflow.",
+        tt('configuration.confirm.publishWorkflowDocumentsCreatedNowFollow'),
       )
     )
       return;
@@ -607,9 +608,9 @@ function Builder({
             value={code}
             onChange={(e) => setCode(e.target.value)}
             style={{ ...inputStyle, width: 220 }}
-            aria-label="Document type"
+            aria-label={tt('configuration.fields.documentType2')}
           >
-            <option value="">Choose document type…</option>
+            <option value="">{tt('configuration.fields.chooseDocumentType')}</option>
             {(meta?.resource_types ?? []).map((r) => (
               <option key={r.code} value={r.code}>
                 {r.name}
@@ -621,8 +622,8 @@ function Builder({
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Name"
-            aria-label="Name"
+            placeholder={tt('configuration.placeholders.name')}
+            aria-label={tt('configuration.placeholders.name')}
             style={{ ...inputStyle, width: 220 }}
           />
         )}
@@ -630,19 +631,19 @@ function Builder({
           <input
             value={changeSummary}
             onChange={(e) => setChangeSummary(e.target.value)}
-            placeholder="Change summary (optional)"
-            aria-label="Change summary"
+            placeholder={tt('configuration.placeholders.changeSummaryOptional')}
+            aria-label={tt('configuration.fields.changeSummary2')}
             style={{ ...inputStyle, width: 220 }}
           />
         )}
         <span style={{ flex: 1 }} />
         {dirty && (
           <span style={{ fontSize: 12, color: "#b45309" }} data-unsaved>
-            Unsaved changes
+            {tt('configuration.warnings.unsavedChanges')}
           </span>
         )}
         <button className="btn-secondary" onClick={close}>
-          {readOnly && !dirty ? "Close" : "Cancel"}
+          {readOnly && !dirty ? tt('common.actions.close') : tt('common.actions.cancel')}
         </button>
         {target.mode === "layout" && (
           <button
@@ -650,7 +651,7 @@ function Builder({
             disabled={saving}
             onClick={() => save(false)}
           >
-            Save Layout
+            {tt('configuration.actions.saveLayout')}
           </button>
         )}
         {target.mode === "edit" && (
@@ -660,7 +661,7 @@ function Builder({
               disabled={saving}
               onClick={() => save(false)}
             >
-              Save Draft
+              {tt('platform.contracts.actions.saveDraft')}
             </button>
             {canPublish && (
               <button
@@ -668,7 +669,7 @@ function Builder({
                 disabled={saving}
                 onClick={() => save(true)}
               >
-                Save &amp; Publish
+                {tt('configuration.actions.saveAndPublish')}
               </button>
             )}
           </>
@@ -677,7 +678,7 @@ function Builder({
 
       <div
         role="toolbar"
-        aria-label="Workflow tools"
+        aria-label={tt('configuration.tooltips.workflowTools')}
         style={{
           display: "flex",
           gap: 6,
@@ -694,13 +695,13 @@ function Builder({
               value={addStatus}
               onChange={(e) => setAddStatus(e.target.value)}
               style={{ ...inputStyle, width: 200 }}
-              aria-label="Status to add"
+              aria-label={tt('configuration.fields.statusToAdd')}
               disabled={missingStatuses.length === 0}
             >
               <option value="">
                 {missingStatuses.length
-                  ? "Add State…"
-                  : "All statuses are in the workflow"}
+                  ? tt('configuration.fields.addState')
+                  : tt('configuration.filters.allStatusesWorkflow')}
               </option>
               {missingStatuses.map((s) => (
                 <option key={s.code} value={s.code}>
@@ -716,7 +717,7 @@ function Builder({
                 setAddStatus("");
               }}
             >
-              Add State
+              {tt('configuration.actions.addState')}
             </button>
           </>
         )}
@@ -730,7 +731,7 @@ function Builder({
                 )
               }
               placeholder="NEW_STATUS"
-              aria-label="New status code"
+              aria-label={tt('configuration.fields.newStatusCode')}
               style={{ ...inputStyle, width: 160 }}
             />
             <button
@@ -743,21 +744,21 @@ function Builder({
                 setNewStatusCode("");
               }}
             >
-              Add State
+              {tt('configuration.actions.addState')}
             </button>
           </>
         )}
         <button
           className="btn-secondary"
           onClick={() => flow.zoomIn()}
-          aria-label="Zoom in"
+          aria-label={tt('configuration.actions.zoomIn')}
         >
           +
         </button>
         <button
           className="btn-secondary"
           onClick={() => flow.zoomOut()}
-          aria-label="Zoom out"
+          aria-label={tt('configuration.actions.zoomOut')}
         >
           −
         </button>
@@ -765,24 +766,24 @@ function Builder({
           className="btn-secondary"
           onClick={() => flow.fitView({ padding: 0.2 })}
         >
-          Fit View
+          {tt('configuration.actions.fitView')}
         </button>
         {target.mode !== "view" && (
           <>
             <button className="btn-secondary" onClick={applyAutoLayout}>
-              Auto Layout
+              {tt('configuration.actions.autoLayout')}
             </button>
             <button className="btn-secondary" onClick={resetLayout}>
-              Reset Layout
+              {tt('configuration.actions.resetLayout')}
             </button>
           </>
         )}
         <span style={{ fontSize: 12, color: "#6b7280", marginLeft: 8 }}>
           {readOnly
             ? target.mode === "layout"
-              ? "Published workflow: you can rearrange the cards; to change transitions create a New Draft."
-              : "System Default: read-only. Use New Draft to change it."
-            : "Drag a card's right dot onto another card to add a transition; drag an arrow's end to move it; select and press Delete to remove."}
+              ? tt('configuration.help.publishedWorkflowLayoutOnly')
+              : tt('configuration.help.systemDefaultReadOnlyUseNew')
+            : tt('configuration.help.workflowBuilderHowTo')}
         </span>
       </div>
 
@@ -850,7 +851,7 @@ function Builder({
           )}
         </div>
         <aside
-          aria-label="Configuration"
+          aria-label={tt('configuration.tooltips.configuration')}
           style={{
             width: 320,
             maxWidth: "40vw",
@@ -880,7 +881,7 @@ function Builder({
               onRemove={() => {
                 if (
                   window.confirm(
-                    `Remove ${labelOf(selectedStatus)} and its transitions from this draft?`,
+                    tt('configuration.confirm.removeValueTransitionsDraft', { value: labelOf(selectedStatus) }),
                   )
                 )
                   removeStatuses([selectedStatus.code]);
@@ -896,15 +897,15 @@ function Builder({
               readOnly={readOnly}
               onChange={updateTransition}
               onDelete={() => {
-                if (window.confirm("Delete this transition from the draft?"))
+                if (window.confirm(tt('configuration.confirm.deleteTransitionDraft')))
                   removeTransitions([selectedTransition._id]);
               }}
             />
           ) : (
             <div>
-              <h3 style={{ fontSize: 15, margin: "0 0 8px" }}>Statuses</h3>
+              <h3 style={{ fontSize: 15, margin: "0 0 8px" }}>{tt('configuration.sections.statuses')}</h3>
               <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 8px" }}>
-                Select a status or an arrow to configure it.
+                {tt('configuration.help.selectStatusArrowConfigure')}
               </p>
               {statuses.map((s) => (
                 <button
@@ -921,7 +922,7 @@ function Builder({
                   onClick={() => setSelection({ kind: "status", code: s.code })}
                 >
                   {labelOf(s)}
-                  {s.is_start ? " · Start" : ""}
+                  {s.is_start ? tt('configuration.actions.start') : ""}
                 </button>
               ))}
             </div>
@@ -933,7 +934,7 @@ function Builder({
               paddingTop: 10,
             }}
           >
-            <h3 style={{ fontSize: 14, margin: "0 0 6px" }}>Validation</h3>
+            <h3 style={{ fontSize: 14, margin: "0 0 6px" }}>{tt('configuration.sections.validation')}</h3>
             <WorkflowValidationPanel
               result={validation}
               transitionIdAt={(i) => transitions[i]?._id}

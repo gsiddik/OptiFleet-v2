@@ -6,14 +6,15 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import type { ConfigurationHistoryRow, ConfigurationType } from '../../../types';
 import { formatDateTime } from '../../../utils/date';
+import { t as tt, withLabels } from '../../../i18n/i18n';
 
-const TYPES: Array<{ value: ConfigurationType | ''; label: string }> = [
-  { value: '', label: 'All types' },
-  { value: 'NUMBERING', label: 'Numbering' },
-  { value: 'TEMPLATE', label: 'Document Template' },
-  { value: 'WORKFLOW', label: 'Workflow' },
-  { value: 'NOTIFICATION', label: 'Notification Template' },
-];
+const TYPES: Array<{ value: ConfigurationType | ''; label: string }> = withLabels([
+  { value: '', label: 'All types', labelKey: 'configuration.fields.allTypes' },
+  { value: 'NUMBERING', label: 'Numbering', labelKey: 'configuration.fields.numbering' },
+  { value: 'TEMPLATE', label: 'Document Template', labelKey: 'configuration.fields.documentTemplate' },
+  { value: 'WORKFLOW', label: 'Workflow', labelKey: 'configuration.fields.workflow' },
+  { value: 'NOTIFICATION', label: 'Notification Template', labelKey: 'configuration.fields.notificationTemplate' },
+]);
 
 /** Section 44: one centralized view across every configuration subsystem. */
 export function ConfigurationHistoryPage() {
@@ -23,7 +24,7 @@ export function ConfigurationHistoryPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Configuration History</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('configuration.titles.configurationHistory')}</h1>
       <Toolbar>
         <select
           value={type}
@@ -42,19 +43,19 @@ export function ConfigurationHistoryPage() {
       </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No configuration history yet." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('configuration.empty.noConfigurationHistoryYet')} />}
       {!error && !loading && data.length > 0 && (
         <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse', border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <thead>
             <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
-              <th style={{ padding: 10 }}>Type</th>
-              <th style={{ padding: 10 }}>Code</th>
-              <th style={{ padding: 10 }}>Name</th>
-              <th style={{ padding: 10 }}>Version</th>
-              <th style={{ padding: 10 }}>Status</th>
-              <th style={{ padding: 10 }}>Published</th>
-              <th style={{ padding: 10 }}>Archived</th>
-              <th style={{ padding: 10 }}>Change Summary</th>
+              <th style={{ padding: 10 }}>{tt('common.fields.type')}</th>
+              <th style={{ padding: 10 }}>{tt('common.fields.code')}</th>
+              <th style={{ padding: 10 }}>{tt('common.fields.name')}</th>
+              <th style={{ padding: 10 }}>{tt('configuration.fields.version')}</th>
+              <th style={{ padding: 10 }}>{tt('common.fields.status')}</th>
+              <th style={{ padding: 10 }}>{tt('configuration.fields.published')}</th>
+              <th style={{ padding: 10 }}>{tt('configuration.fields.archived')}</th>
+              <th style={{ padding: 10 }}>{tt('configuration.fields.changeSummary')}</th>
             </tr>
           </thead>
           <tbody>

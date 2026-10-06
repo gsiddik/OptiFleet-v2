@@ -3,6 +3,7 @@ import { inputStyle } from "../../../../components/FormField";
 import { InfoTip } from "../../../../components/InfoTip";
 import type { WorkflowStatusDef } from "../../../../types";
 import { labelOf, type EditableTransition } from "./workflowGraph";
+import { t as tt } from '../../../../i18n/i18n';
 
 /**
  * The selected status: its name, whether documents may start in it, and its transitions —
@@ -46,18 +47,18 @@ export function StateConfigurationPanel({
 
   return (
     <div data-state-panel={status.code}>
-      <h3 style={{ fontSize: 15, margin: "0 0 10px" }}>Status</h3>
+      <h3 style={{ fontSize: 15, margin: "0 0 10px" }}>{tt('configuration.sections.status')}</h3>
       <label style={labelStyle}>
-        Code
+        {tt('common.fields.code')}
         <input
           value={status.code}
           readOnly
           style={{ ...inputStyle, background: "#f3f4f6" }}
-          aria-label="Status code"
+          aria-label={tt('configuration.fields.statusCode')}
         />
       </label>
       <label style={labelStyle}>
-        Name
+        {tt('common.fields.name')}
         <input
           value={status.display_name ?? ""}
           onChange={(e) =>
@@ -65,7 +66,7 @@ export function StateConfigurationPanel({
           }
           style={inputStyle}
           disabled={readOnly}
-          aria-label="Status name"
+          aria-label={tt('configuration.fields.statusName')}
         />
       </label>
       <div
@@ -85,20 +86,19 @@ export function StateConfigurationPanel({
             }
             disabled={readOnly}
           />{" "}
-          Start status
+          {tt('configuration.fields.startStatus')}
         </label>
-        <InfoTip label="Start status">
-          A document can begin in (or be put into by the system) a start status
-          without a transition leading to it.
+        <InfoTip label={tt('configuration.fields.startStatus')}>
+          {tt('configuration.tooltips.documentBeginPutIntoSystemStart')}
         </InfoTip>
       </div>
       {outgoing.length === 0 && (
         <p style={{ fontSize: 12, color: "#475569", margin: "0 0 10px" }}>
-          End status: no transition leads out of it.
+          {tt('configuration.help.endStatusNoTransitionLeadsOut')}
         </p>
       )}
 
-      <div style={sectionStyle}>Transitions out ({outgoing.length})</div>
+      <div style={sectionStyle}>{tt('configuration.fields.transitionsOutOutgoingCount', { outgoingCount: outgoing.length })}</div>
       {outgoing.map((t) => (
         <button
           key={t._id}
@@ -116,9 +116,9 @@ export function StateConfigurationPanel({
             value={target}
             onChange={(e) => setTarget(e.target.value)}
             style={inputStyle}
-            aria-label="Add transition to"
+            aria-label={tt('configuration.fields.addTransitionTo')}
           >
-            <option value="">Add transition to…</option>
+            <option value="">{tt('configuration.fields.addTransitionTo2')}</option>
             {options.map((s) => (
               <option key={s.code} value={s.code}>
                 {labelOf(s)}
@@ -134,12 +134,12 @@ export function StateConfigurationPanel({
               setTarget("");
             }}
           >
-            Add
+            {tt('common.actions.add2')}
           </button>
         </div>
       )}
 
-      <div style={sectionStyle}>Transitions in ({incoming.length})</div>
+      <div style={sectionStyle}>{tt('configuration.fields.transitionsInIncomingCount', { incomingCount: incoming.length })}</div>
       {incoming.map((t) => (
         <button
           key={t._id}
@@ -159,7 +159,7 @@ export function StateConfigurationPanel({
           style={{ marginTop: 16, color: "#b91c1c" }}
           onClick={onRemove}
         >
-          Remove status from workflow
+          {tt('configuration.actions.removeStatusFromWorkflow')}
         </button>
       )}
     </div>

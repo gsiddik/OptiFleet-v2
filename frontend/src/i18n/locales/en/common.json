@@ -150,6 +150,8 @@
     "componentGroup": "Component Group",
     "componentGroupFilter": "Component Group filter",
     "condition": "Condition",
+    "conditionAnd": "and",
+    "conditionOr": "or",
     "contract": "Contract",
     "contractNumber": "Contract #",
     "cycle": "Cycle",

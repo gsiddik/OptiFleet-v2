@@ -15,6 +15,7 @@ import type {
   ConfigurationVersionItem,
   DocumentTypeOption,
 } from "../../../types";
+import { t } from '../../../i18n/i18n';
 
 /** What the page's editor (numbering builder / template editor) is opened with. */
 export interface EditorRequest {
@@ -139,11 +140,11 @@ export function DocumentConfigList({
                 name: set.name,
                 payload: v.payload,
                 versionId: v.id,
-                title: `Edit Draft — ${label(set.code)}`,
+                title: t('configuration.sections.editDraftValue', { value: label(set.code) }),
               })
             }
           >
-            Edit
+            {t('common.actions.edit')}
           </button>
         )}
         {!isSystem && v.status === "DRAFT" && canPublish && (
@@ -152,14 +153,14 @@ export function DocumentConfigList({
             style={{ marginRight: 6 }}
             onClick={() => act(`/app/configuration/versions/${v.id}/publish`)}
           >
-            Publish
+            {t('configuration.actions.publish')}
           </button>
         )}
         <button
           className="btn-secondary"
           onClick={() => onPreview(set.code, v.payload, { ...v, isSystem })}
         >
-          Preview
+          {t('configuration.actions.preview')}
         </button>
       </td>
     </tr>
@@ -196,7 +197,7 @@ export function DocumentConfigList({
       {error && <ErrorState message={error} />}
       {!error && loading && data.length === 0 && <LoadingState />}
       {!error && !loading && codes.length === 0 && (
-        <EmptyState label="No configurations yet." />
+        <EmptyState label={t('configuration.empty.noConfigurationsYet')} />
       )}
       {codes.map((code) => {
         const { system, custom } = groups.get(code)!;
@@ -229,18 +230,16 @@ export function DocumentConfigList({
               <div>
                 <strong>{label(code)}</strong>
                 <div style={{ fontSize: 12, marginTop: 2 }} data-active-config>
-                  Active:{" "}
+                  {t('common.fields.active')}:{" "}
                   {customActive ? (
                     <span style={{ color: "#1d4ed8", fontWeight: 600 }}>
-                      Custom Configuration — {custom!.name} v
-                      {customActive.version_number}
+                      {t('configuration.help.customConfigurationVersion', { name: custom!.name, version: customActive.version_number })}
                     </span>
                   ) : systemActive ? (
                     <span style={{ color: "#15803d", fontWeight: 600 }}>
-                      System Default v{systemActive.version_number}
-                    </span>
+                      {t('configuration.fields.systemDefaultVVersionNumber', { version_number: systemActive.version_number })}</span>
                   ) : (
-                    <span style={{ color: "#b91c1c" }}>none published</span>
+                    <span style={{ color: "#b91c1c" }}>{t('configuration.fields.nonePublished')}</span>
                   )}
                 </div>
               </div>
@@ -254,15 +253,15 @@ export function DocumentConfigList({
                         onEdit({
                           code,
                           name: custom?.name ?? null,
-                          defaultName: `${label(code)} (custom)`,
+                          defaultName: t('configuration.fields.valueCustom', { value: label(code) }),
                           payload: source.payload,
                           versionId: null,
                           sourceVersionId: source.id,
-                          title: `New Draft — ${label(code)}`,
+                          title: t('configuration.sections.newDraftValue', { value: label(code) }),
                         })
                       }
                     >
-                      + New Draft
+                      {t('configuration.actions.newDraft')}
                     </button>
                   )}
                   {customActive && system && (
@@ -275,7 +274,7 @@ export function DocumentConfigList({
                         )
                       }
                     >
-                      Return to System Default
+                      {t('configuration.actions.returnToSystemDefault')}
                     </button>
                   )}
                 </div>
@@ -302,11 +301,9 @@ export function DocumentConfigList({
                             fontWeight: 600,
                           }}
                         >
-                          System Default
-                          <InfoTip label="System Default">
-                            Provided by the system and protected. It is used
-                            whenever you have no published custom configuration.
-                            Use New Draft to start your own from it.
+                          {t('configuration.help.systemDefault')}
+                          <InfoTip label={t('configuration.help.systemDefault')}>
+                            {t('configuration.tooltips.providedSystemProtectedUsedWheneverYou')}
                           </InfoTip>
                         </td>
                       </tr>
@@ -327,13 +324,9 @@ export function DocumentConfigList({
                             fontWeight: 600,
                           }}
                         >
-                          Custom Configuration — {custom.name}
-                          <InfoTip label="Custom Configuration">
-                            Your own configuration. Its published version
-                            replaces the System Default for new documents;
-                            documents already created keep their number and
-                            layout. Return to System Default stops using it (its
-                            history is kept).
+                          {t('configuration.help.customConfigurationName', { name: custom.name })}
+                          <InfoTip label={t('configuration.tooltips.customConfiguration')}>
+                            {t('configuration.tooltips.ownConfigurationPublishedVersionReplacesSystem')}
                           </InfoTip>
                         </td>
                       </tr>

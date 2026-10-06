@@ -150,6 +150,8 @@
     "componentGroup": "Grup Komponen",
     "componentGroupFilter": "Filter Grup Komponen",
     "condition": "Kondisi",
+    "conditionAnd": "dan",
+    "conditionOr": "atau",
     "contract": "Kontrak",
     "contractNumber": "No. Kontrak",
     "cycle": "Siklus",

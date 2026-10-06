@@ -9,10 +9,10 @@
     "clearDrilldown": "Clear drilldown",
     "completeProcessing": "Complete Processing",
     "confirmScrap": "Confirm Scrap",
-    "createDraftSales_one": "Create {{count}} Sale (Draft)",
-    "createDraftSales_other": "Create {{count}} Sales (Draft)",
     "createSaleDraft": "Create Sale (Draft)",
     "createSellableCountSaleSDraft": "Create {{sellableCount}} Sale(s) (Draft)",
+    "createSellableCountSaleSDraft_one": "Create {{count}} Sale (Draft)",
+    "createSellableCountSaleSDraft_other": "Create {{count}} Sales (Draft)",
     "editProduct": "Edit Product",
     "markInTransit": "Mark In-Transit",
     "markPrepared": "Mark Prepared",
@@ -67,10 +67,6 @@
     "noUsedSparepartReturnsFound": "No used-sparepart returns found.",
     "noUsedSparepartsReuseQuarantineRepair": "No used spareparts in Reuse, Quarantine or Repair.",
     "noUsedTiresStock": "No used tires in stock."
-  },
-  "errors": {
-    "scrappedTiresLeftOut_one": "{{count}} selected tire is no longer scrapped or is outside your data scope and was left out.",
-    "scrappedTiresLeftOut_other": "{{count}} selected tires are no longer scrapped or are outside your data scope and were left out."
   },
   "fields": {
     "actualCondition": "Actual Condition",
@@ -335,6 +331,8 @@
     "leaveFieldBlankNoThreshold": "). Leave a field blank for no threshold.",
     "legacyTextNotLinkedVehicleBrand": "(legacy text — not linked to the Vehicle Brand master)",
     "missingSelectedTireSNoLonger": "{{missing}} selected tire(s) are no longer scrapped or are outside your data scope and were left out.",
+    "missingSelectedTireSNoLonger_one": "{{count}} selected tire is no longer scrapped or is outside your data scope and was left out.",
+    "missingSelectedTireSNoLonger_other": "{{count}} selected tires are no longer scrapped or are outside your data scope and were left out.",
     "newPartsReturnedUnusedWorkOrder": "New parts returned unused from a Work Order. Click a Return Number to inspect it; only an accepted (New Good) return goes back to stock. Faulty returns stay quarantined until routed to Warranty Claim, Repair or Scrap.",
     "noInventoryMovementNeverAvailableStock": "— no inventory movement (was never in available stock).",
     "oldComponentsRemovedVehicleWorkOrder": "Old components removed from a vehicle (Work Order → Issuance & Return → Removed Components) are received into a warehouse, inspected, given a proposed disposition, and approved by someone other than the proposer before they can reach available stock. New parts returned unused are processed under Inventory → Return.",

@@ -94,7 +94,7 @@ export function ScrappedTireSaleForm({
         <>
           {missing > 0 && (
             <p role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>
-              {tt('inventory.errors.scrappedTiresLeftOut', { count: missing })}
+              {tt('inventory.help.missingSelectedTireSNoLonger', { count: missing })}
             </p>
           )}
           <div style={{ overflowX: "auto", marginBottom: 10 }}>
@@ -200,7 +200,7 @@ export function ScrappedTireSaleForm({
               }
               onClick={submit}
             >
-              {tt('inventory.actions.createDraftSales', { count: sellable.length })}
+              {tt('inventory.actions.createSellableCountSaleSDraft', { count: sellable.length })}
             </button>
             <button className="btn-secondary" onClick={onCancel}>
               {tt('common.actions.cancel')}

@@ -156,6 +156,8 @@
     "invoiceAmountAmountDueDueDate": "Invoice amount {{amount}} · due {{due_date}} · full settlement",
     "invoicePaymentSummary": "Invoice amount {{amount}} · due {{due}} · full settlement",
     "leadDaysDaySAfterPo": "{{leadDays}} day(s) after PO",
+    "leadDaysDaySAfterPo_one": "{{count}} day after PO",
+    "leadDaysDaySAfterPo_other": "{{count}} days after PO",
     "maxRemainingRemainingReceivableQty": "Max {{remaining}} (Remaining Receivable Qty)",
     "nameTotalTotalLeadTime": "{{name}} — total {{total}} — lead time",
     "orderDateVendorLeadTimeCalculated": "(Order Date + vendor lead time; calculated by the system)",

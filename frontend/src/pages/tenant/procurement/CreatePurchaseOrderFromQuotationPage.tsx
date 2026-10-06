@@ -107,7 +107,7 @@ export function CreatePurchaseOrderFromQuotationPage() {
               {' '}{t('procurement.fields.rfq')} <strong>{quotation.rfq.rfq_number}</strong>
             </>
           )}
-          {' '}{t('procurement.fields.leadTime')}: <strong>{leadDays !== null ? t('procurement.help.leadDaysDaySAfterPo', { leadDays: leadDays }) : t('procurement.fields.notProvided')}</strong>
+          {' '}{t('procurement.fields.leadTime')}: <strong>{leadDays !== null ? t('procurement.help.leadDaysDaySAfterPo', { count: leadDays }) : t('procurement.fields.notProvided')}</strong>
         </p>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 520 }}>

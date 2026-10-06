@@ -156,6 +156,8 @@
     "invoiceAmountAmountDueDueDate": "Nilai faktur {{amount}} · jatuh tempo {{due_date}} · pelunasan penuh",
     "invoicePaymentSummary": "Jumlah faktur {{amount}} · jatuh tempo {{due}} · pelunasan penuh",
     "leadDaysDaySAfterPo": "{{leadDays}} hari setelah PO",
+    "leadDaysDaySAfterPo_one": "{{count}} hari setelah PO",
+    "leadDaysDaySAfterPo_other": "{{count}} hari setelah PO",
     "maxRemainingRemainingReceivableQty": "Maks {{remaining}} (Sisa Qty yang Dapat Diterima)",
     "nameTotalTotalLeadTime": "{{name}} — total {{total}} — waktu tunggu",
     "orderDateVendorLeadTimeCalculated": "(Tanggal Pesanan + waktu tunggu vendor; dihitung oleh sistem)",

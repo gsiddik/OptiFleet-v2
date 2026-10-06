@@ -9,10 +9,10 @@
     "clearDrilldown": "Hapus drilldown",
     "completeProcessing": "Selesaikan Pemrosesan",
     "confirmScrap": "Konfirmasi Scrap",
-    "createDraftSales_one": "Buat {{count}} Penjualan (Draft)",
-    "createDraftSales_other": "Buat {{count}} Penjualan (Draft)",
     "createSaleDraft": "Buat Penjualan (Draf)",
     "createSellableCountSaleSDraft": "Buat {{sellableCount}} Penjualan (Draf)",
+    "createSellableCountSaleSDraft_one": "Buat {{count}} Penjualan (Draf)",
+    "createSellableCountSaleSDraft_other": "Buat {{count}} Penjualan (Draf)",
     "editProduct": "Ubah Produk",
     "markInTransit": "Tandai Dalam Perjalanan",
     "markPrepared": "Tandai Disiapkan",
@@ -67,10 +67,6 @@
     "noUsedSparepartReturnsFound": "Tidak ada retur suku cadang bekas.",
     "noUsedSparepartsReuseQuarantineRepair": "Tidak ada suku cadang bekas di Guna Ulang, Karantina, atau Perbaikan.",
     "noUsedTiresStock": "Tidak ada stok ban bekas."
-  },
-  "errors": {
-    "scrappedTiresLeftOut_one": "{{count}} ban yang dipilih tidak lagi berstatus scrap atau berada di luar cakupan data Anda dan tidak disertakan.",
-    "scrappedTiresLeftOut_other": "{{count}} ban yang dipilih tidak lagi berstatus scrap atau berada di luar cakupan data Anda dan tidak disertakan."
   },
   "fields": {
     "actualCondition": "Kondisi Aktual",
@@ -335,6 +331,8 @@
     "leaveFieldBlankNoThreshold": "). Kosongkan kolom jika tidak ada ambang batas.",
     "legacyTextNotLinkedVehicleBrand": "(teks lama — tidak terhubung ke master Merek Kendaraan)",
     "missingSelectedTireSNoLonger": "{{missing}} ban yang dipilih tidak lagi berstatus scrap atau berada di luar lingkup data Anda dan tidak disertakan.",
+    "missingSelectedTireSNoLonger_one": "{{count}} ban yang dipilih tidak lagi berstatus scrap atau berada di luar lingkup data Anda dan tidak disertakan.",
+    "missingSelectedTireSNoLonger_other": "{{count}} ban yang dipilih tidak lagi berstatus scrap atau berada di luar lingkup data Anda dan tidak disertakan.",
     "newPartsReturnedUnusedWorkOrder": "Suku cadang baru yang dikembalikan tanpa dipakai dari Work Order. Klik Nomor Retur untuk menginspeksinya; hanya retur yang diterima (Baru Baik) yang kembali ke stok. Retur rusak tetap dikarantina sampai diteruskan ke Klaim Garansi, Perbaikan, atau Scrap.",
     "noInventoryMovementNeverAvailableStock": "— tidak ada pergerakan inventori (tidak pernah ada di stok tersedia).",
     "oldComponentsRemovedVehicleWorkOrder": "Komponen lama yang dilepas dari kendaraan (Work Order → Pengeluaran & Pengembalian → Komponen Terlepas) diterima ke gudang, diinspeksi, diberi usulan disposisi, dan disetujui oleh orang selain pengusul sebelum dapat masuk ke stok tersedia. Suku cadang baru yang dikembalikan tanpa dipakai diproses di Inventori → Retur.",

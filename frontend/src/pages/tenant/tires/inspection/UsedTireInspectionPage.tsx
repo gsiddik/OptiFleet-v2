@@ -730,7 +730,7 @@ function InspectionForm({
           </p>
           {unanswered.length > 0 && (
             <p style={{ fontSize: 12, color: "#b45309" }}>
-              {unanswered.length} question(s) still unanswered.
+              {tt('tire.help.unansweredCountQuestionSStillUnanswered', { count: unanswered.length })}
             </p>
           )}
           {submitError && <ErrorState message={submitError} />}

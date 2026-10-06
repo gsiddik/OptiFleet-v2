@@ -1,4 +1,5 @@
 import type { TemplateCatalog, TemplateEditorNode } from "../../../../types";
+import { t } from '../../../../i18n/i18n';
 
 /**
  * Document Template editor ⇄ stored template. The stored HTML keeps the existing grammar
@@ -88,7 +89,7 @@ export function markSection(
 ) {
   el.dataset.section = name;
   el.dataset.sectionMode = mode;
-  el.dataset.sectionLabel = inverted ? `When there is no ${label}` : label;
+  el.dataset.sectionLabel = inverted ? t('configuration.help.whenThereNoLabel', { label: label }) : label;
   if (inverted) el.dataset.inverted = "1";
   el.classList.add("tpl-section");
 }
@@ -156,7 +157,7 @@ function pairSections(
       }
       if (!close) {
         unsupported.push(
-          `Block "${labels.block(name)}" starts and ends in different places of the layout`,
+          t('configuration.warnings.blockValueStartsEndsDifferentPlaces', { value: labels.block(name) }),
         );
         child = next;
         continue;
@@ -182,7 +183,7 @@ function pairSections(
         );
       } else if (TABLE_PARENTS.has(parent.tagName)) {
         unsupported.push(
-          `Block "${labels.block(name)}" repeats several table parts at once`,
+          t('configuration.warnings.blockValueRepeatsSeveralTableParts', { value: labels.block(name) }),
         );
         child = close.nextSibling;
         continue;

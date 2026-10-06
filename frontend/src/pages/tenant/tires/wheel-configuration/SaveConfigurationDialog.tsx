@@ -129,7 +129,7 @@ export function SaveConfigurationDialog({
 
             {preview.changed && preview.mapped_vehicle_count > 0 && (
               <p data-save-mapped-impact style={{ fontSize: 12, color: '#92400e', margin: '0 0 12px' }}>
-                {preview.mapped_vehicle_count} mapped vehicle(s) stay on their current version until updated in Vehicle Mapping.
+                {t('tire.help.mappedVehicleCountMappedVehicleS', { count: preview.mapped_vehicle_count })}
               </p>
             )}
             {!preview.changed && (

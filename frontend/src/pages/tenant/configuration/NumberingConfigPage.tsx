@@ -6,6 +6,7 @@ import type { NumberingMetadata, NumberingPayload } from "../../../types";
 import { DocumentConfigList, type EditorRequest } from "./DocumentConfigList";
 import { NumberingBuilderModal } from "./numbering/NumberingBuilderModal";
 import { displayFormat, parseFormat } from "./numbering/numberingFormat";
+import { t } from '../../../i18n/i18n';
 
 /**
  * Configuration → Document Numbering: per document type, the System Default and your Custom
@@ -48,12 +49,9 @@ export function NumberingConfigPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Document Numbering</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('configuration.titles.documentNumbering')}</h1>
       <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
-        Choose how document numbers look for each document type. Build the
-        format from your own text and parts such as the year, month or a running
-        number; the preview shows the result. Publishing a new version keeps the
-        running number, and documents already created keep their numbers.
+        {t('configuration.help.chooseHowDocumentNumbersLookEach')}
       </p>
       <DocumentConfigList
         type="NUMBERING"
@@ -61,7 +59,7 @@ export function NumberingConfigPage() {
         publishPermission="numbering.publish"
         documentTypes={meta.document_types}
         reloadKey={reloadKey}
-        newLabel="New Document Type Configuration"
+        newLabel={t('configuration.actions.newDocumentTypeConfiguration')}
         describe={(payload) => (
           <span style={{ fontFamily: "ui-monospace, monospace" }}>
             {displayFormat(
@@ -89,12 +87,11 @@ export function NumberingConfigPage() {
       {preview && (
         <Modal
           open
-          title={`Preview — ${label(preview.code)}`}
+          title={t('configuration.fields.previewValue', { value: label(preview.code) })}
           onClose={() => setPreview(null)}
         >
           <p style={{ color: "#6b7280", fontSize: 13 }}>
-            Sample number this format produces (the real running number is not
-            used):
+            {t('configuration.help.sampleNumberFormatProducesRealRunning')}:
           </p>
           <div
             style={{

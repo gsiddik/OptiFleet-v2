@@ -12,6 +12,7 @@ import type {
   NotificationMetadata,
 } from "../../../../types";
 import type { EditorRequest } from "../DocumentConfigList";
+import { t as tt } from '../../../../i18n/i18n';
 
 type Channel = "IN_APP" | "EMAIL";
 type Field = "IN_APP.body" | "EMAIL.subject" | "EMAIL.body";
@@ -83,16 +84,16 @@ export function NotificationMessageEditor({
   });
 
   const problem = (): string | null => {
-    if (!code) return "Choose the event.";
-    if (!name.trim()) return "Enter a name.";
+    if (!code) return tt('configuration.validation.chooseTheEvent');
+    if (!name.trim()) return tt('configuration.validation.enterAName');
     if (!enabled.IN_APP && !enabled.EMAIL)
-      return "Write a message for at least one channel.";
+      return tt('configuration.validation.writeMessageLeastOneChannel');
     if (enabled.IN_APP && !text["IN_APP.body"].trim())
-      return "Write the In-App message.";
+      return tt('configuration.help.writeAppMessage');
     if (enabled.EMAIL && !text["EMAIL.subject"].trim())
-      return "Write the Email subject.";
+      return tt('configuration.help.writeTheEmailSubject');
     if (enabled.EMAIL && !text["EMAIL.body"].trim())
-      return "Write the Email message.";
+      return tt('configuration.help.writeTheEmailMessage');
     return null;
   };
 
@@ -162,13 +163,13 @@ export function NotificationMessageEditor({
         data-notification-message-editor
       >
         <div style={{ flex: "1 1 420px", minWidth: 0 }}>
-          <FormField label="Event" required>
+          <FormField label={tt('common.fields.event')} required>
             <select
               value={code}
               onChange={(e) => setCode(e.target.value)}
               style={inputStyle}
               disabled={!!target.code}
-              aria-label="Event"
+              aria-label={tt('common.fields.event')}
             >
               {(target.code ? meta.events : configurable).map((e) => (
                 <option key={e.code} value={e.code}>
@@ -177,13 +178,13 @@ export function NotificationMessageEditor({
               ))}
             </select>
           </FormField>
-          <FormField label="Name" required>
+          <FormField label={tt('common.fields.name')} required>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               style={inputStyle}
               disabled={!!target.versionId}
-              aria-label="Name"
+              aria-label={tt('common.fields.name')}
             />
           </FormField>
           <label style={{ fontSize: 14, display: "block", margin: "6px 0" }}>
@@ -194,9 +195,9 @@ export function NotificationMessageEditor({
                 setEnabled({ ...enabled, IN_APP: e.target.checked })
               }
             />{" "}
-            In-App message
+            {tt('configuration.fields.inAppMessage')}
           </label>
-          {enabled.IN_APP && editor("IN_APP.body", "In-App Message", true)}
+          {enabled.IN_APP && editor("IN_APP.body", tt('configuration.fields.inAppMessage2'), true)}
           <label style={{ fontSize: 14, display: "block", margin: "6px 0" }}>
             <input
               type="checkbox"
@@ -205,40 +206,39 @@ export function NotificationMessageEditor({
                 setEnabled({ ...enabled, EMAIL: e.target.checked })
               }
             />{" "}
-            Email
+            {tt('common.fields.email')}
           </label>
           {enabled.EMAIL && (
             <>
-              {editor("EMAIL.subject", "Email Subject", false)}
-              {editor("EMAIL.body", "Email Message", true)}
+              {editor("EMAIL.subject", tt('configuration.fields.emailSubject2'), false)}
+              {editor("EMAIL.body", tt('configuration.fields.emailMessage'), true)}
             </>
           )}
-          <FormField label="Change Summary">
+          <FormField label={tt('configuration.fields.changeSummary')}>
             <input
               value={changeSummary}
               onChange={(e) => setChangeSummary(e.target.value)}
               style={inputStyle}
-              placeholder="What changed (optional)"
-              aria-label="Change Summary"
+              placeholder={tt('configuration.placeholders.whatChangedOptional')}
+              aria-label={tt('configuration.fields.changeSummary')}
             />
           </FormField>
         </div>
         <aside
-          aria-label="Variables"
+          aria-label={tt('configuration.fields.variables')}
           style={{ flex: "1 1 200px", maxWidth: 360 }}
         >
           <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6 }}>
-            Variables
+            {tt('configuration.fields.variables')}
           </div>
           <p style={{ fontSize: 12, color: "#6b7280", margin: "0 0 8px" }}>
-            Click to add at the cursor of the field you are writing, or drag
-            into a field.
+            {tt('configuration.help.clickAddCursorFieldYouWriting')}
           </p>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search variables"
-            aria-label="Search variables"
+            placeholder={tt('configuration.fields.searchVariables')}
+            aria-label={tt('configuration.fields.searchVariables')}
             style={{ ...inputStyle, marginBottom: 8 }}
           />
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -277,10 +277,10 @@ export function NotificationMessageEditor({
           style={{ marginTop: 12, padding: 12, fontSize: 13 }}
           data-message-preview
         >
-          <strong>Preview with sample values</strong>
+          <strong>{tt('configuration.help.previewWithSampleValues')}</strong>
           {preview.IN_APP && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ color: "#6b7280", fontSize: 12 }}>In-App</div>
+              <div style={{ color: "#6b7280", fontSize: 12 }}>{tt('configuration.fields.inApp')}</div>
               <div style={{ whiteSpace: "pre-wrap" }}>
                 {preview.IN_APP.body}
               </div>
@@ -288,7 +288,7 @@ export function NotificationMessageEditor({
           )}
           {preview.EMAIL && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ color: "#6b7280", fontSize: 12 }}>Email</div>
+              <div style={{ color: "#6b7280", fontSize: 12 }}>{tt('common.fields.email')}</div>
               <div style={{ fontWeight: 600 }}>{preview.EMAIL.subject}</div>
               <div style={{ whiteSpace: "pre-wrap" }}>{preview.EMAIL.body}</div>
             </div>
@@ -304,13 +304,13 @@ export function NotificationMessageEditor({
         }}
       >
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-secondary" onClick={showPreview}>
-          Preview
+          {tt('configuration.actions.preview')}
         </button>
         <button className="btn-primary" disabled={saving} onClick={save}>
-          Save Draft
+          {tt('platform.contracts.actions.saveDraft')}
         </button>
       </div>
     </Modal>

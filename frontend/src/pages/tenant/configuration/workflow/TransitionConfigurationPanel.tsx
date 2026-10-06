@@ -3,6 +3,7 @@ import { InfoTip } from "../../../../components/InfoTip";
 import type { WorkflowStatusDef } from "../../../../types";
 import { labelOf, type EditableTransition } from "./workflowGraph";
 import { automatedActionLabel } from "../../../../i18n/workflowAutomatedActions";
+import { t } from '../../../../i18n/i18n';
 
 /**
  * The selected transition (arrow): From / To (the same change as dragging the arrow's ends),
@@ -40,9 +41,9 @@ export function TransitionConfigurationPanel({
     <div
       data-transition-panel={`${transition.from_status}>${transition.to_status}`}
     >
-      <h3 style={{ fontSize: 15, margin: "0 0 10px" }}>Transition</h3>
+      <h3 style={{ fontSize: 15, margin: "0 0 10px" }}>{t('configuration.sections.transition')}</h3>
       <label style={labelStyle}>
-        From
+        {t('common.fields.from')}
         <select
           value={transition.from_status}
           onChange={(e) =>
@@ -50,7 +51,7 @@ export function TransitionConfigurationPanel({
           }
           style={inputStyle}
           disabled={readOnly}
-          aria-label="Transition from"
+          aria-label={t('configuration.fields.transitionFrom')}
         >
           {statuses.map((s) => (
             <option key={s.code} value={s.code}>
@@ -60,7 +61,7 @@ export function TransitionConfigurationPanel({
         </select>
       </label>
       <label style={labelStyle}>
-        To
+        {t('common.fields.to')}
         <select
           value={transition.to_status}
           onChange={(e) =>
@@ -68,7 +69,7 @@ export function TransitionConfigurationPanel({
           }
           style={inputStyle}
           disabled={readOnly}
-          aria-label="Transition to"
+          aria-label={t('configuration.fields.transitionTo')}
         >
           {statuses.map((s) => (
             <option
@@ -78,14 +79,14 @@ export function TransitionConfigurationPanel({
             >
               {labelOf(s)}
               {targets !== null && !targets.includes(s.code)
-                ? " (no action leads here)"
+                ? t('configuration.fields.noActionLeadsHere')
                 : ""}
             </option>
           ))}
         </select>
       </label>
       <label style={labelStyle}>
-        Action name
+        {t('configuration.fields.actionName')}
         <input
           value={transition.action_label ?? ""}
           onChange={(e) =>
@@ -93,11 +94,11 @@ export function TransitionConfigurationPanel({
           }
           style={inputStyle}
           disabled={readOnly}
-          aria-label="Action name"
+          aria-label={t('configuration.fields.actionName')}
         />
       </label>
       <label style={labelStyle}>
-        Action code
+        {t('configuration.fields.actionCode')}
         <input
           value={transition.action_code}
           onChange={(e) =>
@@ -110,14 +111,13 @@ export function TransitionConfigurationPanel({
           }
           style={inputStyle}
           disabled={readOnly}
-          aria-label="Action code"
+          aria-label={t('configuration.fields.actionCode')}
         />
       </label>
       <div style={{ ...labelStyle, display: "flex", alignItems: "center" }}>
-        Required permission
-        <InfoTip label="Required permission">
-          Only users whose role grants this permission are offered the action.
-          Leave empty to rely on the module's own permission.
+        {t('configuration.fields.requiredPermission')}
+        <InfoTip label={t('configuration.fields.requiredPermission')}>
+          {t('configuration.tooltips.onlyUsersWhoseRoleGrantsPermission')}
         </InfoTip>
       </div>
       {permissions ? (
@@ -131,9 +131,9 @@ export function TransitionConfigurationPanel({
           }
           style={{ ...inputStyle, marginBottom: 8 }}
           disabled={readOnly}
-          aria-label="Required permission"
+          aria-label={t('configuration.fields.requiredPermission')}
         >
-          <option value="">— none —</option>
+          <option value="">{t('configuration.fields.none')}</option>
           {permission && !permissions.some((p) => p.name === permission) && (
             <option value={permission}>{permission}</option>
           )}
@@ -154,10 +154,10 @@ export function TransitionConfigurationPanel({
           }
           style={{ ...inputStyle, marginBottom: 8 }}
           disabled={readOnly}
-          aria-label="Required permission"
+          aria-label={t('configuration.fields.requiredPermission')}
         />
       )}
-      <div style={{ ...labelStyle, marginTop: 4 }}>Automated actions</div>
+      <div style={{ ...labelStyle, marginTop: 4 }}>{t('configuration.fields.automatedActions')}</div>
       <div style={{ display: "grid", gap: 2, fontSize: 12, marginBottom: 8 }}>
         {actions.map((code) => (
           <label key={code}>
@@ -191,14 +191,14 @@ export function TransitionConfigurationPanel({
             borderRadius: 6,
           }}
         >
-          {conditionRules > 0 && <>Condition: {conditionRules} rule(s). </>}
+          {conditionRules > 0 && <>{t('configuration.help.conditionConditionRulesRuleS', { count: conditionRules })} </>}
           {transition.approval_rule && (
             <>
-              Approval: {transition.approval_rule.type.toLowerCase()},{" "}
-              {transition.approval_rule.steps.length} step(s).
+              {t('tire.fields.approval')}: {transition.approval_rule.type.toLowerCase()},{" "}
+              {t('configuration.help.stepsCountStepS', { count: transition.approval_rule.steps.length })}
             </>
           )}{" "}
-          Kept as configured.
+          {t('configuration.help.keptAsConfigured')}
         </p>
       )}
       {!readOnly && (
@@ -208,7 +208,7 @@ export function TransitionConfigurationPanel({
           style={{ color: "#b91c1c", marginTop: 8 }}
           onClick={onDelete}
         >
-          Delete transition
+          {t('configuration.actions.deleteTransition')}
         </button>
       )}
     </div>

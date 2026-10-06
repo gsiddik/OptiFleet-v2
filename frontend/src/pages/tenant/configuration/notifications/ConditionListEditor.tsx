@@ -6,6 +6,7 @@ import type {
   NotificationMetadata,
 } from "../../../../types";
 import { describeConditions, isGroup } from "./conditions";
+import { t as tt } from '../../../../i18n/i18n';
 
 const valueText = (value: unknown) =>
   Array.isArray(value)
@@ -57,7 +58,7 @@ export function ConditionListEditor({
       >
         {describeConditions(value, fields, operators)}
         <div style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>
-          This condition has nested groups and is kept exactly as it is.
+          {tt('configuration.help.conditionNestedGroupsKeptExactly')}
         </div>
       </div>
     );
@@ -88,16 +89,16 @@ export function ConditionListEditor({
     <div data-condition-list={label}>
       {rules.length > 1 && (
         <label style={{ fontSize: 13, display: "block", marginBottom: 8 }}>
-          Match{" "}
+          {tt('configuration.fields.match')}{" "}
           <select
             value={(value.operator ?? "AND").toUpperCase()}
             onChange={(e) => onChange({ ...value, operator: e.target.value })}
             style={{ ...inputStyle, width: "auto", display: "inline-block" }}
-            aria-label={`${label} match`}
+            aria-label={tt('configuration.fields.labelMatch', { label: label })}
             disabled={readOnly}
           >
-            <option value="AND">all conditions</option>
-            <option value="OR">any condition</option>
+            <option value="AND">{tt('configuration.fields.allConditions')}</option>
+            <option value="OR">{tt('configuration.fields.anyCondition')}</option>
           </select>
         </label>
       )}
@@ -124,10 +125,10 @@ export function ConditionListEditor({
                 setRule(index, { ...rule, field: e.target.value })
               }
               style={inputStyle}
-              aria-label={`${label} ${index + 1} field`}
+              aria-label={tt('configuration.fields.labelValueField', { label: label, value: index + 1 })}
               disabled={readOnly}
             >
-              <option value="">— choose —</option>
+              <option value="">{tt('configuration.fields.choose')}</option>
               {rule.field && !fields.some((f) => f.key === rule.field) && (
                 <option value={rule.field}>{rule.field}</option>
               )}
@@ -149,7 +150,7 @@ export function ConditionListEditor({
                 })
               }
               style={inputStyle}
-              aria-label={`${label} ${index + 1} comparison`}
+              aria-label={tt('configuration.fields.labelValueComparison', { label: label, value: index + 1 })}
               disabled={readOnly}
             >
               {operators.map((o) => (
@@ -169,11 +170,11 @@ export function ConditionListEditor({
                   });
                 }}
                 placeholder={
-                  op?.multiple ? "e.g. CRITICAL, IMMOBILIZED" : "value"
+                  op?.multiple ? tt('configuration.placeholders.eGCriticalImmobilized') : "value"
                 }
-                title={op?.multiple ? "Separate values with commas" : undefined}
+                title={op?.multiple ? tt('configuration.tooltips.separateValuesWithCommas') : undefined}
                 style={inputStyle}
-                aria-label={`${label} ${index + 1} value`}
+                aria-label={tt('configuration.fields.labelValueValue', { label: label, value: index + 1 })}
                 disabled={readOnly}
               />
             ) : (
@@ -190,7 +191,7 @@ export function ConditionListEditor({
                   });
                   setIds(ids.filter((_, i) => i !== index));
                 }}
-                aria-label={`Remove ${label.toLowerCase()} ${index + 1}`}
+                aria-label={tt('configuration.actions.removeToLowerCaseValue', { toLowerCase: label.toLowerCase(), value: index + 1 })}
               >
                 ×
               </button>
@@ -214,7 +215,7 @@ export function ConditionListEditor({
             setNextId(nextId + 1);
           }}
         >
-          + Add condition
+          {tt('configuration.actions.addCondition')}
         </button>
       )}
     </div>

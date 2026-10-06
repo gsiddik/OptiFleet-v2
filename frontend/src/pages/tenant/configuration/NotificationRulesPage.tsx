@@ -20,6 +20,7 @@ import { describeConditions } from "./notifications/conditions";
 import { NotificationMessageEditor } from "./notifications/NotificationMessageEditor";
 import { NotificationRuleModal } from "./notifications/NotificationRuleModal";
 import type { RecipientLookups } from "./notifications/RecipientListEditor";
+import { t as tt } from '../../../i18n/i18n';
 
 type Tab = "rules" | "messages";
 
@@ -93,7 +94,7 @@ export function NotificationRulesPage() {
         const who =
           type?.identifier === "user"
             ? (lookups.users?.find((u) => u.user_id === r.identifier)?.name ??
-              "a user")
+              tt('configuration.fields.aUser'))
             : r.identifier;
         return who
           ? `${type?.label ?? r.type}: ${who}`
@@ -161,15 +162,13 @@ export function NotificationRulesPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Notification</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{tt('configuration.titles.notification')}</h1>
       <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
-        Choose who is told when something happens (Rules) and what they read
-        (Messages). Subscription and billing notifications are managed by the
-        platform.
+        {tt('configuration.help.chooseWhoToldWhenSomethingHappens')}
       </p>
       <div
         role="tablist"
-        aria-label="Notification configuration"
+        aria-label={tt('configuration.tooltips.notificationConfiguration')}
         style={{
           display: "flex",
           marginBottom: 14,
@@ -177,8 +176,8 @@ export function NotificationRulesPage() {
           flexWrap: "wrap",
         }}
       >
-        {tabButton("rules", "Rules")}
-        {tabButton("messages", "Messages")}
+        {tabButton("rules", tt('configuration.fields.rules'))}
+        {tabButton("messages", tt('configuration.fields.messages'))}
       </div>
       {error && <ErrorState message={error} />}
 
@@ -197,14 +196,14 @@ export function NotificationRulesPage() {
                 onClick={() => setEditingRule("new")}
                 data-new-rule
               >
-                + New Rule
+                {tt('configuration.actions.newRule')}
               </button>
             </div>
           )}
           {listError && <ErrorState message={listError} />}
           {!listError && loading && <LoadingState />}
           {!listError && !loading && rules.length === 0 && (
-            <EmptyState label="No notification rules configured." />
+            <EmptyState label={tt('configuration.empty.noNotificationRulesConfigured')} />
           )}
           {!listError && !loading && rules.length > 0 && (
             <div style={{ overflowX: "auto" }}>
@@ -218,12 +217,12 @@ export function NotificationRulesPage() {
               >
                 <thead>
                   <tr style={{ background: "#f9fafb", textAlign: "left" }}>
-                    <th style={{ padding: 10 }}>Event</th>
-                    <th style={{ padding: 10 }}>Name</th>
-                    <th style={{ padding: 10 }}>Recipients</th>
-                    <th style={{ padding: 10 }}>Send by</th>
-                    <th style={{ padding: 10 }}>Escalation</th>
-                    <th style={{ padding: 10 }}>Status</th>
+                    <th style={{ padding: 10 }}>{tt('common.fields.event')}</th>
+                    <th style={{ padding: 10 }}>{tt('common.fields.name')}</th>
+                    <th style={{ padding: 10 }}>{tt('configuration.fields.recipients')}</th>
+                    <th style={{ padding: 10 }}>{tt('configuration.fields.sendBy')}</th>
+                    <th style={{ padding: 10 }}>{tt('configuration.fields.escalation')}</th>
+                    <th style={{ padding: 10 }}>{tt('common.fields.status')}</th>
                     <th style={{ padding: 10 }} />
                   </tr>
                 </thead>
@@ -257,17 +256,15 @@ export function NotificationRulesPage() {
                                 fontWeight: 600,
                               }}
                             >
-                              System Default
-                              <InfoTip label="System Default rule">
-                                Provided by the system and protected. Add your
-                                own rule to notify other people.
+                              {tt('configuration.help.systemDefault')}
+                              <InfoTip label={tt('configuration.tooltips.systemDefaultRule')}>
+                                {tt('configuration.tooltips.providedSystemProtectedAddOwnRule')}
                               </InfoTip>
                             </span>
                           )}
                           {when && (
                             <div style={{ fontSize: 12, color: "#6b7280" }}>
-                              Only when {when}
-                            </div>
+                              {tt('configuration.help.onlyWhenWhen', { when: when })}</div>
                           )}
                         </td>
                         <td style={{ padding: 10 }}>
@@ -298,14 +295,14 @@ export function NotificationRulesPage() {
                             style={{ marginRight: 6 }}
                             onClick={() => setEditingRule(rule)}
                           >
-                            {canManage && !rule.is_system ? "Edit" : "View"}
+                            {canManage && !rule.is_system ? tt('common.actions.edit') : tt('common.actions.view')}
                           </button>
                           {canManage && !rule.is_system && (
                             <button
                               className="btn-secondary"
                               onClick={() => toggleActive(rule)}
                             >
-                              {rule.is_active ? "Deactivate" : "Activate"}
+                              {rule.is_active ? tt('common.actions.deactivate') : tt('common.actions.activate')}
                             </button>
                           )}
                         </td>
@@ -326,14 +323,14 @@ export function NotificationRulesPage() {
           publishPermission="document_template.publish"
           documentTypes={messageTypes}
           reloadKey={reloadKey}
-          newLabel="New Event Message"
+          newLabel={tt('configuration.actions.newEventMessage')}
           describe={(payload) => {
             const channels = (payload as unknown as NotificationMessagePayload)
               .channels;
             return (
               <span style={{ color: "#374151" }}>
                 {channels?.EMAIL?.subject
-                  ? `Email: ${channels.EMAIL.subject}`
+                  ? tt('configuration.fields.emailSubject', { subject: channels.EMAIL.subject })
                   : (channels?.IN_APP?.body ?? "")}
               </span>
             );
@@ -369,7 +366,7 @@ export function NotificationRulesPage() {
       {preview && (
         <div
           role="dialog"
-          aria-label="Message preview"
+          aria-label={tt('configuration.tooltips.messagePreview')}
           className="card"
           style={{
             position: "fixed",
@@ -384,10 +381,10 @@ export function NotificationRulesPage() {
           data-message-preview
         >
           <div style={{ display: "flex", justifyContent: "space-between" }}>
-            <strong>Preview — {eventLabel(preview.code)}</strong>
+            <strong>{tt('configuration.fields.previewValue', { value: eventLabel(preview.code) })}</strong>
             <button
               onClick={() => setPreview(null)}
-              aria-label="Close preview"
+              aria-label={tt('configuration.actions.closePreview')}
               style={{ background: "none", border: "none", cursor: "pointer" }}
             >
               ×
