@@ -45,6 +45,8 @@ interface Pair {
  *                clicking a paired position again removes its pair
  *   Inspection   every position is selected when the operation is chosen; click to unselect
  */
+type SelectionNotice = { code: 'CHOOSE_OPERATION' | 'POSITION_IN_OPEN_OPERATION' | 'POSITION_NO_TIRE_DATA'; text: string };
+
 export function TireOperationFormPage() {
   const { id } = useParams<{ id: string }>();
   const editing = id !== undefined;
@@ -67,7 +69,8 @@ export function TireOperationFormPage() {
   const [pairs, setPairs] = useState<Pair[]>([]);
   const [pending, setPending] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<Record<string, ReplacementCandidate[]>>({});
-  const [notice, setNotice] = useState<string | null>(null);
+  // The notice carries a code: the UI branches on it (e.g. the Vehicle Details link), never on the English text.
+  const [notice, setNotice] = useState<SelectionNotice | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -180,18 +183,18 @@ export function TireOperationFormPage() {
   function clickPosition(code: string) {
     setNotice(null);
     if (!type) {
-      setNotice('Choose the Tire Operations first.');
+      setNotice({ code: 'CHOOSE_OPERATION', text: 'Choose the Tire Operations first.' });
       return;
     }
     const position = positions.get(code);
     if (!position) return;
     const isSelected = type === 'ROTATION' ? pairs.some((p) => p.from === code || p.to === code) || pending === code : selected.includes(code);
     if (!isSelected && position.open_operation) {
-      setNotice(`${code} is already in an open ${OPERATION_TYPE_LABEL[position.open_operation.operation_type]} (Work Order ${position.open_operation.wo_number ?? '—'}).`);
+      setNotice({ code: 'POSITION_IN_OPEN_OPERATION', text: `${code} is already in an open ${OPERATION_TYPE_LABEL[position.open_operation.operation_type]} (Work Order ${position.open_operation.wo_number ?? '—'}).` });
       return;
     }
     if (!isSelected && !position.tire) {
-      setNotice(`${code} has no tire data yet — complete it in Vehicle Details → Wheels Configuration first.`);
+      setNotice({ code: 'POSITION_NO_TIRE_DATA', text: `${code} has no tire data yet — complete it in Vehicle Details → Wheels Configuration first.` });
       return;
     }
 
@@ -419,8 +422,8 @@ export function TireOperationFormPage() {
               />
               {notice && (
                 <div role="status" data-selection-notice style={{ marginTop: 8, fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px' }}>
-                  {notice}{' '}
-                  {notice.includes('no tire data') && vehicle && <Link to={`/app/vehicles/${vehicle.value}?tab=wheels`}>Open Vehicle Details</Link>}
+                  {notice.text}{' '}
+                  {notice.code === 'POSITION_NO_TIRE_DATA' && vehicle && <Link to={`/app/vehicles/${vehicle.value}?tab=wheels`}>Open Vehicle Details</Link>}
                 </div>
               )}
             </>

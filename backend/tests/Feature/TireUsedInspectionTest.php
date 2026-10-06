@@ -324,4 +324,21 @@ class TireUsedInspectionTest extends TestCase
             ],
         ], $overrides);
     }
+
+    public function test_reasons_are_stored_machine_readable_next_to_the_unchanged_text(): void
+    {
+        $s = $this->scenario();
+        $this->profile($s);
+        $tire = $this->removedTire($s, 'UI-CODES');
+        $hold = $this->inspect($s, $tire, $this->answers(['min_depth' => '4.5']))->json('data');
+
+        // i18n (error / reason code decoupling): every reason has a {code, params} twin whose code is an
+        // EN-ID dataset key, and rendering it gives back exactly the stored English text.
+        $this->assertCount(count($hold['reasons']), $hold['reason_codes']);
+        $this->assertContains('tire.reasons.retreadCandidateCasingAwaitingFinalRetreader', array_column($hold['reason_codes'], 'code'));
+        $this->assertSame($hold['reasons'], array_map(\App\Domain\Shared\Support\Messages::render(...), $hold['reason_codes']));
+        $stored = \App\Domain\Tire\Models\TireUsedInspection::query()->findOrFail($hold['id']);
+        $this->assertSame($hold['reason_codes'], $stored->reason_codes);
+        $this->assertSame($stored->follow_ups, array_map(\App\Domain\Shared\Support\Messages::render(...), $stored->follow_up_codes));
+    }
 }

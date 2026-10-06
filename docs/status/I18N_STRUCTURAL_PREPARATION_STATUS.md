@@ -18,6 +18,7 @@ Continuation checkpoint for the structural i18n preparation defined in
 | S2 | Status display label registry | STATUS_DISPLAY_REGISTRY (46 → 150 rows) | DONE |
 | S3 | Runtime label mapping (+ workflow action verbs) | RUNTIME_LABEL_GENERATION (115 of 122), WORKFLOW_ACTION_LABEL_CORRECTION (33) | DONE |
 | S4 | Full sentence templates | FULL_SENTENCE_TEMPLATE (192), RUNTIME_LABEL_GENERATION (remaining 7) | DONE |
+| S5 | Error code decoupling | ERROR_CODE_DECOUPLING (98 of 124) | DONE, 26 rows open (see S5) |
 
 ## S1 — Stable tab IDs
 
@@ -240,3 +241,69 @@ unchanged and are handled in S3.
   Indonesian strings need no plural forms.
 - System-generated notes stored in records (contract notes, default complaints) are stored as rendered
   English, as before. Storing `{code, params}` instead is S5 / rollout work.
+
+## S5 — Error code decoupling
+
+**Rule**: no logic branches on English text. A machine-readable code is carried next to the
+(unchanged) English text, and code paths read the code.
+
+**Change**
+- `Messages::make(key, params)` returns `{code, params}` (code = dataset key; unknown key throws),
+  and `Messages::render()` turns it back into text. `Messages::text()` accepts nested messages and
+  list parameters, so a composite reason renders from codes alone.
+- Used-tire decision engine (`UsedTireDecisionEngine`):
+  - every reason, open item and follow-up is built as `{code, params}`;
+  - wear patterns, damage types, damage locations, damage fields and grooves map to explicit keys
+    instead of humanized enum strings;
+  - the output adds `reason_codes`, `open_item_codes` and `follow_up_codes`; the existing `reasons`,
+    `open_items` and `follow_ups` text arrays are rendered from the codes and are byte-identical.
+- `tire_used_inspections` gains nullable `reason_codes` and `follow_up_codes` (jsonb). Migration
+  `2026_10_12_000001` is additive and guarded by `hasColumn`. Inspections recorded before it keep
+  `NULL` codes and their stored text; nothing is backfilled or rewritten.
+- `CodedValidationException::forField(field, key, params)` is a `ValidationException` that also
+  carries codes. The API error renderer adds `codes: {field: {code, params}}` beside the unchanged
+  `message` / `errors`. The 422 contract is additive.
+- `TireOperationService`: the three position errors (not a position of the vehicle, no tire data yet,
+  already in an open operation) use coded exceptions.
+- Frontend `TireOperationFormPage`: the selection notice is `{code, text}`. The "Open Vehicle Details"
+  link is shown for `POSITION_NO_TIRE_DATA` instead of `notice.includes('no tire data')`.
+  `ApiErrorShape.codes` is typed.
+- Tire import (`TireImportService`): headers and the sheet name are matched by stable column id. Each
+  column accepts its English or Indonesian header (case-insensitive), and the sheet `Fill Here` or
+  `Isi Di Sini`. The generated template and error texts are unchanged.
+- `UsedTireUsageRestrictions`: the installation warning is one template
+  (`tire.reasons.positionRestrictionWarning`) instead of two fragments.
+
+**Unchanged**: business rules, decision outcomes, thresholds, HTTP status codes, response fields
+already in the contract, and the English wording of every message (asserted in tests).
+
+**Dataset**
+- 26 new code keys with Indonesian translations (damage types, locations, fields, grooves, wear
+  patterns and composite reasons). The two fragments of the restriction warning are superseded.
+- ERROR_CODE_DECOUPLING: 98 of 124 resolved.
+
+**Tests**
+- `Unit/UsedTireDecisionEngineTest`: every reason and follow-up has a code that renders to exactly
+  its text.
+- `Feature/TireUsedInspectionTest`: codes are stored next to the unchanged text.
+- `Feature/TireOperationTest`: position errors carry `codes` with the dataset key and parameters.
+- `Feature/TireImportTest`: an Indonesian-header workbook with the `Isi Di Sini` sheet imports.
+- `Unit/MessagesTest`: the new keys pass the dataset parity check.
+- Browser e2e, 4 checks: the no-tire-data notice text is unchanged; the Vehicle Details link is
+  driven by the code and points to `?tab=wheels`; no page errors.
+- Frontend: `tsc -b`, 23 unit tests and lint (27 pre-existing warnings, 0 errors) pass.
+
+**Open (26 rows)**
+- 25 Intelligence rows (data readiness, RUL, feature extractors, training, diagnostics,
+  recommendations, platform intelligence controllers). These paths are MongoDB-backed. MongoDB and the
+  PHP `mongodb` extension are not available here, so their tests are NOT RUN. They are left
+  unchanged rather than modified without verification. They do not branch on English text; the
+  remaining work is to emit `{code, params}` alongside the text.
+- 1 row in `TireOperationParts.tsx`: a sentence with an inline link (rich text). It needs a
+  `Trans`-style component and belongs to the rollout.
+
+**Remaining risk**: low.
+- `codes` is an additive response field.
+- The migration is additive with nullable columns.
+- Older inspections have no codes. A reader must fall back to the stored text when
+  `reason_codes` is `NULL`.

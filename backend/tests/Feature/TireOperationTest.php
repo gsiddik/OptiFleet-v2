@@ -583,4 +583,36 @@ class TireOperationTest extends TestCase
         $this->assertSame('CANCELLED', TireOperationStatus::derive(null, 'REJECTED'));
         $this->assertSame('CANCELLED', TireOperationStatus::derive(now(), 'DRAFT'));
     }
+
+    public function test_position_errors_carry_a_machine_readable_code(): void
+    {
+        $s = $this->scenario();
+        $post = fn (array $p) => $this->postJson(self::OPS, $p, $s['headers']);
+
+        // Not a position of the configuration.
+        $post($this->payload($s, 'INSPECTION', ['items' => [['position_code' => '9ZZ9']]]))
+            ->assertStatus(422)
+            ->assertJsonPath('codes.items.code', 'validation.tire.codeNotPositionVehicleSWheels')
+            ->assertJsonPath('codes.items.params.code', '9ZZ9')
+            ->assertJsonPath('errors.items.0', "9ZZ9 is not a position of this vehicle's Wheels Configuration (1.1).");
+
+        // Already in an open Tire Operation.
+        $post($this->payload($s, 'INSPECTION', ['items' => [['position_code' => '1FL1']]]))->assertStatus(201);
+        $post($this->payload($s, 'INSPECTION', ['items' => [['position_code' => '1FL1']]]))
+            ->assertStatus(422)->assertJsonPath('codes.items.code', 'validation.tire.positionCodeAlreadyOpenTireOperation');
+
+        // A mapped vehicle whose positions have no tire data yet.
+        $bare = $this->makeVehicle($s['tenant'], $s['branch'], $this->makeVehicleCategory(), [
+            'vehicle_type' => 'Car', 'axle_count' => 2, 'wheel_count' => 5, 'registration_number' => 'B 10 TOP', 'default_workshop_id' => $s['workshop']->id, 'current_odometer' => 10000,
+        ]);
+        $masterId = \App\Domain\Tire\Models\WheelConfigurationMaster::query()->where('tenant_id', $s['tenant']->id)->value('id');
+        $this->putJson("/api/v1/app/wheel-configuration-masters/{$masterId}/vehicle-mappings", ['add_vehicle_ids' => [$bare->id], 'remove_vehicle_ids' => []], $s['admin'])->assertOk();
+        $post($this->payload($s, 'INSPECTION', ['vehicle_id' => $bare->id, 'items' => [['position_code' => '1FL1']]]))
+            ->assertStatus(422)
+            ->assertJsonPath('codes.items.code', 'validation.tire.positionCodeNoTireDataYet')
+            ->assertJsonPath('errors.items.0', 'Position 1FL1 has no tire data yet. Complete it in Vehicle Details → Wheels Configuration first.');
+
+        // Ordinary validation errors keep their shape (no codes key).
+        $this->assertArrayNotHasKey('codes', $post($this->payload($s, 'INSPECTION', ['odometer' => '-5', 'items' => [['position_code' => '1FL1']]]))->assertStatus(422)->json());
+    }
 }

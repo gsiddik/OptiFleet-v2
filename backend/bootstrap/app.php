@@ -69,6 +69,8 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors' => $e->errors(),
+                // Machine-readable error codes (i18n): additive, only for coded validation errors.
+                ...($e instanceof \App\Domain\Shared\Exceptions\CodedValidationException ? ['codes' => $e->codes()] : []),
             ], 422);
         });
 

@@ -100,15 +100,135 @@ final class Messages
         'validation.tire.wheelConfigurationExistsForTruckType' => 'A wheel configuration {{configCode}} already exists for this vehicle type and truck configuration type. Edit that configuration instead.',
         'vehicle.notes.vehicleTransfer' => 'Vehicle transfer {{transferId}}',
         'workflow.defaults.setName' => '{{resourceType}} Workflow',
+        // Used tire decision engine reasons (I18N-S5: returned and stored as {code, params} next to the text).
+        'tire.reasons.tireCategoryUnknownSetVehicleGroup' => 'Tire category is unknown — set the Vehicle Group of the tire product.',
+        'tire.reasons.noActiveInspectionRuleProfileTire' => 'No active inspection rule profile for this tire category — thresholds (D_service, D_pull, ages, repair limits) are required.',
+        'tire.reasons.tireIdentityCategoryManufactureDateNot' => 'Tire identity / category / manufacture date not fully verified',
+        'tire.reasons.interiorNotInspectedAfterRemovalRim' => 'Interior not inspected after removal from the rim',
+        'tire.reasons.wearPatternNotInspected' => 'Wear pattern not inspected',
+        'tire.reasons.bulgeDeformationSeparationSuspectedNotInspected' => 'Bulge / deformation / separation suspected or not inspected',
+        'tire.reasons.cordWireExposureSuspectedNotInspected' => 'Cord / wire exposure suspected or not inspected',
+        'tire.reasons.sidewallNotInspected' => 'Sidewall not inspected',
+        'tire.reasons.beadNotInspected' => 'Bead not inspected',
+        'tire.reasons.innerLinerNotInspected' => 'Inner liner not inspected',
+        'tire.reasons.runFlatLowPressureOverheatHistory' => 'Run-flat / low-pressure / overheat history unknown',
+        'tire.reasons.leakForeignObjectNotTested' => 'Leak / foreign object not tested',
+        'tire.reasons.previousRepairQuestionableNotInspected' => 'Previous repair questionable or not inspected',
+        'tire.reasons.ageChemicalDamageSuspectedNotInspected' => 'Age / chemical damage suspected or not inspected',
+        'tire.reasons.ageRetreadCasingComplianceCannotYet' => 'Age / retread / casing compliance cannot yet be confirmed',
+        'tire.reasons.labelNotAnswered' => '{{label}} (not answered).',
+        'tire.reasons.confirmedBulgeDeformationSeparation' => 'Confirmed bulge / deformation / separation.',
+        'tire.reasons.cordWireExposed' => 'Cord / wire exposed.',
+        'tire.reasons.deepSidewallCutCrack' => 'Deep sidewall cut / crack.',
+        'tire.reasons.physicalSignRunFlatLowPressure' => 'Physical sign of run-flat / low-pressure / overheat damage.',
+        'tire.reasons.previousRepairDoesNotMeetStandard' => 'Previous repair does not meet the standard.',
+        'tire.reasons.permanentChemicalAgeDegradationHardenedBrittle' => 'Permanent chemical / age degradation (hardened, brittle, softened or swollen).',
+        'tire.reasons.tireAgeUnknownManufactureDateCode' => 'Tire age unknown — the manufacture date code cannot be read.',
+        'tire.reasons.tireAgeAgeMonthsExceedsMaximum' => 'Tire age {{age}} months exceeds the maximum service age A_max ({{a_max_months}} months).',
+        'tire.reasons.oneSidedWearCheckWheelAlignment' => 'One-sided wear: check wheel alignment (camber / toe).',
+        'tire.reasons.centerWearCheckTirePressureOver' => 'Center wear: check tire pressure (over-inflation).',
+        'tire.reasons.bothSidesWearCheckTirePressure' => 'Both-sides wear: check tire pressure (under-inflation) and load.',
+        'tire.reasons.cuppingScallopingCheckSuspensionShockAbsorbers' => 'Cupping / scalloping: check suspension (shock absorbers) and wheel balance.',
+        'tire.reasons.flatSpotCheckBrakesWheelLock' => 'Flat spot: check brakes / wheel lock-up and suspension.',
+        'tire.reasons.leakLocalInnerLinerDamageReported' => 'A leak / local inner liner damage was reported — record the damage details.',
+        'tire.reasons.repairEligibilityDamagesNotBeenAnswered' => 'Repair eligibility of the damages has not been answered.',
+        'tire.reasons.damageNotRepairableWithinLimitsTire' => 'Damage is not repairable within the limits for this tire category / model.',
+        'tire.reasons.specialistRejectedRepair' => 'The specialist rejected the repair.',
+        'tire.reasons.specialistDecisionRequiredNoFinalSpecialist' => 'Specialist decision required — no final specialist result yet.',
+        'tire.reasons.casingDoesNotMeetAgeRetread' => 'Casing does not meet the age / retread requirement.',
+        'tire.reasons.casingAgeAgeMonthsExceedsRetread' => 'Casing age {{age}} months exceeds A_retread_max ({{a_retread_max_months}} months).',
+        'tire.reasons.retreadCountRetreadCountReachedN' => 'Retread count {{retread_count}} has reached N_retread_max ({{n_retread_max}}).',
+        'tire.reasons.retreaderSpecialistRejectedCasing' => 'The retreader / specialist rejected the casing.',
+        'tire.reasons.casingAcceptedRetreadRetreaderSpecialist' => 'Casing accepted for retread by the retreader / specialist.',
+        'tire.reasons.casingDamageWithinRepairLimitsRepair' => 'Casing damage within the repair limits: repair it before retreading.',
+        'tire.reasons.retreadCandidateCasingAwaitingFinalRetreader' => 'Retread candidate: the casing is awaiting the final retreader inspection.',
+        'tire.reasons.inspectionCompleteTreadUsableNoDamage' => 'Inspection complete: tread usable, no damage requiring repair, no rejection condition.',
+        'tire.reasons.labelSeparation' => '{{label}}: separation.',
+        'tire.reasons.labelUnknownWhetherReachesReinforcingStructure' => '{{label}}: unknown whether it reaches the reinforcing structure.',
+        'tire.reasons.labelUnknownWhetherOverlapsPreviousRepair' => '{{label}}: unknown whether it overlaps a previous repair.',
+        'tire.reasons.labelRepairsNotPermittedLocation' => '{{label}}: repairs are not permitted in this location.',
+        'tire.reasons.labelReachesReinforcingStructureWhichRepair' => '{{label}}: reaches the reinforcing structure, which the repair limits do not permit.',
+        'tire.reasons.labelOverlapsPreviousRepairWhichRepair' => '{{label}}: overlaps a previous repair, which the repair limits do not permit.',
+        'tire.reasons.labelRepairLimitLimitKeyNot' => '{{label}}: the repair limit {{limitKey}} is not configured in the rule profile.',
+        'tire.reasons.repairLimitMaxRepairsNotConfigured' => 'The repair limit max_repairs is not configured in the rule profile.',
+        'tire.reasons.openItem' => '{{label}}.',
+        'tire.reasons.treadPoint' => 'zone {{zone}} {{groove}}',
+        'tire.grooves.innerMain' => 'inner main',
+        'tire.grooves.outerMain' => 'outer main',
+        'tire.wearPatterns.cuppingScalloping' => 'cupping / scalloping',
+        'tire.wearPatterns.flatSpot' => 'flat spot',
+        'tire.reasons.damageLabel' => 'Damage {{n}} ({{type}} on {{location}})',
+        'tire.damageTypes.puncture' => 'puncture',
+        'tire.damageTypes.cut' => 'cut',
+        'tire.damageTypes.crack' => 'crack',
+        'tire.damageTypes.abrasion' => 'abrasion',
+        'tire.damageTypes.separation' => 'separation',
+        'tire.damageTypes.previousRepairDamage' => 'previous repair damage',
+        'tire.damageTypes.other' => 'other',
+        'tire.damageLocations.tread' => 'tread',
+        'tire.damageLocations.shoulder' => 'shoulder',
+        'tire.damageLocations.sidewall' => 'sidewall',
+        'tire.damageLocations.bead' => 'bead',
+        'tire.damageLocations.innerLiner' => 'inner liner',
+        'tire.damageFields.diameter' => 'diameter',
+        'tire.damageFields.length' => 'length',
+        'tire.damageFields.width' => 'width',
+        'tire.damageFields.depth' => 'depth',
+        'tire.reasons.damageSizeExceedsLimit' => '{{label}}: {{field}} {{value}} mm exceeds the limit of {{limit}} mm.',
+        'tire.reasons.damageCountExceedsMax' => '{{count}} damages exceed the maximum of {{max}} repairs.',
+        // Tire operation position errors (I18N-S5: returned with a machine-readable code)
+        'validation.tire.codeNotPositionVehicleSWheels' => '{{code}} is not a position of this vehicle\'s Wheels Configuration ({{config_code}}).',
+        'validation.tire.positionCodeNoTireDataYet' => 'Position {{code}} has no tire data yet. Complete it in Vehicle Details → Wheels Configuration first.',
+        'validation.tire.positionCodeAlreadyOpenTireOperation' => 'Position {{code}} is already in an open Tire Operation ({{operation_type}}, Work Order {{wo_number}}).',
+        'tire.reasons.positionRestrictionWarning' => 'Serial {{serialNumber}} is restricted to position(s) {{positions}} by its used tire inspection, but is planned for {{position}}. Installation is allowed — check the restriction before fitting.',
     ];
 
     /**
-     * @param  array<string, scalar|null>  $params
+     * Renders a message. A parameter may itself be a message (`['code' => key, 'params' => [...]]`, see
+     * make()) or a list of values / messages (joined with ", "), so a stored machine-readable message can
+     * be rendered again in another language later.
+     *
+     * @param  array<string, scalar|array|null>  $params
      */
     public static function text(string $key, array $params = []): string
     {
         $template = self::EN[$key] ?? throw new InvalidArgumentException("Unknown message key [{$key}].");
 
-        return preg_replace_callback('/\{\{(\w+)\}\}/', fn (array $m) => array_key_exists($m[1], $params) ? (string) $params[$m[1]] : $m[0], $template);
+        return preg_replace_callback('/\{\{(\w+)\}\}/', function (array $m) use ($params) {
+            if (! array_key_exists($m[1], $params)) {
+                return $m[0];
+            }
+            $value = $params[$m[1]];
+
+            if (! is_array($value)) {
+                return (string) $value;
+            }
+
+            // A list parameter (e.g. missing tread points) renders each item and joins them.
+            return array_is_list($value)
+                ? implode(', ', array_map(fn ($item) => is_array($item) ? self::render($item) : (string) $item, $value))
+                : self::render($value);
+        }, $template);
+    }
+
+    /**
+     * A machine-readable message: the code is the dataset key, params are scalars or nested messages.
+     *
+     * @param  array<string, scalar|array|null>  $params
+     * @return array{code: string, params: array<string, scalar|array|null>}
+     */
+    public static function make(string $key, array $params = []): array
+    {
+        if (! array_key_exists($key, self::EN)) {
+            throw new InvalidArgumentException("Unknown message key [{$key}].");
+        }
+
+        return ['code' => $key, 'params' => $params];
+    }
+
+    /** @param  array{code: string, params?: array<string, scalar|array|null>}  $message */
+    public static function render(array $message): string
+    {
+        return self::text($message['code'], $message['params'] ?? []);
     }
 }

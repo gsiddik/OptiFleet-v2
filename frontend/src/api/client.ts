@@ -24,6 +24,11 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 export interface ApiErrorShape {
   message: string;
   errors?: Record<string, string[]>;
+  /**
+   * Machine-readable error per field for coded validation errors ({code, params}; code = EN-ID dataset
+   * key). Branch on this, never on the English message text.
+   */
+  codes?: Record<string, { code: string; params: Record<string, unknown> }>;
 }
 
 export function extractApiError(error: unknown): ApiErrorShape {

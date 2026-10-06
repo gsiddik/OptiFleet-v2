@@ -39,7 +39,7 @@ class TireUsedInspection extends Model
         'bead_condition', 'inner_liner_condition', 'run_flat_overheat', 'leak_foreign_object', 'previous_repair', 'age_chemical',
         'casing_compliance', 'repair_eligibility', 'specialist_result',
         'd_min_mm', 'd_new_mm', 'remaining_tread_percent',
-        'recommendation', 'recommendation_detail', 'additional_work', 'reasons', 'follow_ups', 'variables', 'notes',
+        'recommendation', 'recommendation_detail', 'additional_work', 'reasons', 'reason_codes', 'follow_ups', 'follow_up_codes', 'variables', 'notes',
         'final_disposition', 'return_warehouse_id', 'approved_by', 'approved_at', 'approval_note', 'cancelled_by', 'cancelled_at',
         'tire_inspection_id',
     ];
@@ -49,6 +49,7 @@ class TireUsedInspection extends Model
         return [
             'inspected_at' => 'datetime', 'approved_at' => 'datetime', 'cancelled_at' => 'datetime',
             'thresholds' => 'array', 'tire_snapshot' => 'array', 'reasons' => 'array', 'follow_ups' => 'array', 'variables' => 'array',
+            'reason_codes' => 'array', 'follow_up_codes' => 'array',
             'd_min_mm' => 'decimal:2', 'd_new_mm' => 'decimal:2', 'remaining_tread_percent' => 'decimal:2',
         ];
     }

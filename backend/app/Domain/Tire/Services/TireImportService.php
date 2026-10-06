@@ -36,6 +36,21 @@ class TireImportService
 
     public const HEADERS = ['Serial Number', 'Manufacture Date Code', 'Purchase Date'];
 
+    /**
+     * Stable column ids and the header names accepted for each (i18n structural preparation): a file
+     * whose headers are in English (the generated template) or in Indonesian is read the same way; the
+     * column is identified by position + id, never by one language's wording. Matching ignores case
+     * and surrounding spaces.
+     */
+    public const COLUMNS = [
+        'serial_number' => ['Serial Number', 'Nomor Seri'],
+        'manufacture_date_code' => ['Manufacture Date Code', 'Kode Tanggal Produksi'],
+        'purchase_date' => ['Purchase Date', 'Tanggal Pembelian'],
+    ];
+
+    /** Accepted names of the fill-in sheet (English template name first). */
+    public const SHEET_FILL_NAMES = ['Fill Here', 'Isi Di Sini'];
+
     public const MAX_ROWS = 1000;
 
     public const VALID = 'VALID';
@@ -137,15 +152,45 @@ class TireImportService
         ];
     }
 
+    /** The fill-in sheet's actual name (any accepted language), matched ignoring case and spaces. */
+    private function fillSheetName(array $sheetNames): ?string
+    {
+        $accepted = array_map(fn (string $n) => mb_strtolower(trim($n)), self::SHEET_FILL_NAMES);
+        foreach ($sheetNames as $name) {
+            if (in_array(mb_strtolower(trim((string) $name)), $accepted, true)) {
+                return $name;
+            }
+        }
+
+        return null;
+    }
+
+    /** Exactly the three columns, in order, each named with one of its accepted header names. */
+    private function headersMatch(array $headers): bool
+    {
+        if (count($headers) !== count(self::COLUMNS)) {
+            return false;
+        }
+        foreach (array_values(self::COLUMNS) as $i => $names) {
+            $accepted = array_map(fn (string $n) => mb_strtolower($n), $names);
+            if (! in_array(mb_strtolower(trim($headers[$i])), $accepted, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** @return list<array> normalized rows of "Fill Here" (structure checked) */
     private function readFillSheet(string $path): array
     {
         try {
             $reader = XlsxReader::open($path);
-            if (! in_array(self::SHEET_FILL, $reader->sheetNames(), true)) {
+            $sheetName = $this->fillSheetName($reader->sheetNames());
+            if ($sheetName === null) {
                 throw ValidationException::withMessages(['file' => Messages::text('validation.tire.importSheetMissing', ['sheet' => self::SHEET_FILL])]);
             }
-            $sheet = $reader->rows(self::SHEET_FILL);
+            $sheet = $reader->rows($sheetName);
         } catch (XlsxException $e) {
             throw ValidationException::withMessages(['file' => $e->getMessage()]);
         }
@@ -155,7 +200,7 @@ class TireImportService
         for ($c = 0; $c < max(count(self::HEADERS), $headerRow === [] ? 0 : max(array_keys($headerRow)) + 1); $c++) {
             $headers[] = trim($headerRow[$c]['value'] ?? '');
         }
-        if ($headers !== self::HEADERS) {
+        if (! $this->headersMatch($headers)) {
             throw ValidationException::withMessages(['file' => Messages::text('validation.tire.importHeaderMismatch', ['sheet' => self::SHEET_FILL, 'headers' => implode(', ', self::HEADERS)])]);
         }
         unset($sheet[1]);

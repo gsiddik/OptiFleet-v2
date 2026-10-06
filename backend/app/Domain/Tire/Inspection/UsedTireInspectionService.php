@@ -117,7 +117,10 @@ class UsedTireInspectionService
             'recommendation_detail' => $inspection->recommendation_detail,
             'additional_work' => $inspection->additional_work,
             'reasons' => $inspection->reasons,
+            // Machine-readable reasons ({code, params}); null for inspections recorded before codes were stored.
+            'reason_codes' => $inspection->reason_codes,
             'follow_ups' => $inspection->follow_ups,
+            'follow_up_codes' => $inspection->follow_up_codes,
             'variables' => $inspection->variables,
             'notes' => $inspection->notes,
             'result' => $this->resultTexts($recommendation, $inspection->recommendation_detail, $inspection->additional_work, $inspection->tire_category, $inspection->leak_foreign_object === 'YES', $inspection->thresholds),
@@ -170,6 +173,7 @@ class UsedTireInspectionService
                 'd_min_mm' => $decision['d_min_mm'], 'd_new_mm' => ($input['d_new_mm'] ?? null) ?: null, 'remaining_tread_percent' => $decision['remaining_tread_percent'],
                 'recommendation' => $decision['recommendation'], 'recommendation_detail' => $decision['recommendation_detail'],
                 'additional_work' => $decision['additional_work'], 'reasons' => $decision['reasons'], 'follow_ups' => $decision['follow_ups'],
+                'reason_codes' => $decision['reason_codes'], 'follow_up_codes' => $decision['follow_up_codes'],
                 'variables' => $decision['variables'], 'notes' => $input['notes'] ?? null, 'tire_inspection_id' => $legacy->id,
             ] + collect(TireUsedInspection::ANSWERS)->mapWithKeys(fn ($k) => [$k => $input[$k] ?? null])->all());
 
