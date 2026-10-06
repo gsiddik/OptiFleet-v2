@@ -10,6 +10,7 @@
     "bankName": "Nama Bank",
     "billingCycleBillingCycle": "Siklus Penagihan: {{billing_cycle}}",
     "current": "Saat Ini",
+    "defaultLanguage": "Bahasa Default",
     "endEndDate": "Berakhir: {{end_date}}",
     "fax": "Faks",
     "invoice": "Faktur",

@@ -27,4 +27,17 @@ final class DocumentLocale
 
         return self::FALLBACK;
     }
+
+    /** The first supported primary language of an Accept-Language list (e.g. ['id-ID', 'en'] → id). */
+    public static function fromLanguages(array $languages): ?string
+    {
+        foreach ($languages as $language) {
+            $primary = strtolower((string) strtok(str_replace('_', '-', (string) $language), '-'));
+            if (self::isSupported($primary)) {
+                return $primary;
+            }
+        }
+
+        return null;
+    }
 }

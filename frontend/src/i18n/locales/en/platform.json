@@ -387,6 +387,7 @@
     "fields": {
       "created": "Created",
       "currentUsage": "Current Usage",
+      "defaultLanguage": "Default Language",
       "industry": "Industry",
       "legalName": "Legal Name",
       "maxLimit": "Max Limit",

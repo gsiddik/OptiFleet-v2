@@ -61,6 +61,7 @@ class ValidationLocalizationTest extends TestCase
     public function test_accept_language_applies_when_no_preference_is_stored_and_a_preference_wins_over_it(): void
     {
         [$tenant, $user, $headers] = $this->setUpTenantUser();
+        $tenant->forceFill(['default_locale' => null])->save();
         $post = function (array $h) {
             $this->app['auth']->forgetGuards();
 

@@ -588,6 +588,8 @@ class TireOperationTest extends TestCase
     public function test_a_coded_error_is_localized_while_its_code_stays_the_same(): void
     {
         $s = $this->scenario();
+        // No tenant default, so the request language decides (user → tenant → Accept-Language → en).
+        $s['tenant']->forceFill(['default_locale' => null])->save();
         $payload = $this->payload($s, 'INSPECTION', ['items' => [['position_code' => '9ZZ9']]]);
 
         $en = $this->postJson(self::OPS, $payload, $s['headers'] + ['Accept-Language' => 'en'])->assertStatus(422);

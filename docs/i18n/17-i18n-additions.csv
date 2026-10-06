@@ -1,1 +1,8 @@
 translation_key,source_text_en,translated_text_id,context,module,reason
+common.language.label,Language,Bahasa,Language selector label (header and login page),common,I18N-3 language selector (new UI)
+common.language.en,English,English,Language option — the language's own name (endonym); not translated,common,I18N-3 language selector (new UI)
+common.language.id,Bahasa Indonesia,Bahasa Indonesia,Language option — the language's own name (endonym); not translated,common,I18N-3 language selector (new UI)
+common.language.default,Default,Default,Option: no language chosen (use the tenant default / browser / English),common,I18N-3 language selector (new UI)
+common.language.saveFailed,Your language preference could not be saved.,Preferensi bahasa Anda tidak dapat disimpan.,Error after selecting a language when the preference request fails,common,I18N-3 language selector (new UI)
+account.fields.defaultLanguage,Default Language,Bahasa Default,"Company profile: tenant default language for users who have not chosen one (tenants.default_locale)",account,I18N-3 tenant default locale (new field)
+platform.tenants.fields.defaultLanguage,Default Language,Bahasa Default,"Platform tenant detail: tenant default language (tenants.default_locale)",platform,I18N-3 tenant default locale (new field)

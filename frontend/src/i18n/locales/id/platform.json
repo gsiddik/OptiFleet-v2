@@ -387,6 +387,7 @@
     "fields": {
       "created": "Dibuat",
       "currentUsage": "Pemakaian Saat Ini",
+      "defaultLanguage": "Bahasa Default",
       "industry": "Industri",
       "legalName": "Nama Resmi",
       "maxLimit": "Batas Maks",

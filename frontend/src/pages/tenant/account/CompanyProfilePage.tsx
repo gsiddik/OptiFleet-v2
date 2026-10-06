@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { SUPPORTED_LOCALES } from '../../../i18n/locale';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { ErrorState, LoadingState } from '../../../components/States';
@@ -20,10 +22,12 @@ interface CompanyProfile {
   website: string | null;
   logo_url: string | null;
   workshop_working_days: number | null;
+  default_locale: string | null;
 }
 
 /** G-15: previously a tenant had no self-service way to view or maintain its own company profile. */
 export function CompanyProfilePage() {
+  const { t } = useTranslation();
   const { hasPermission, refresh } = useAuth();
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [legalName, setLegalName] = useState('');
@@ -37,6 +41,7 @@ export function CompanyProfilePage() {
   const [email, setEmail] = useState('');
   const [website, setWebsite] = useState('');
   const [workshopWorkingDays, setWorkshopWorkingDays] = useState<string>('');
+  const [defaultLocale, setDefaultLocale] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [saving, setSaving] = useState(false);
@@ -62,6 +67,7 @@ export function CompanyProfilePage() {
         setEmail(p.email ?? '');
         setWebsite(p.website ?? '');
         setWorkshopWorkingDays(p.workshop_working_days ? String(p.workshop_working_days) : '');
+        setDefaultLocale(p.default_locale ?? '');
       })
       .catch((err) => setError(extractApiError(err).message));
   }
@@ -85,9 +91,12 @@ export function CompanyProfilePage() {
         email: email || null,
         website: website || null,
         workshop_working_days: workshopWorkingDays ? Number(workshopWorkingDays) : null,
+        default_locale: defaultLocale || null,
       });
       setSaved(true);
       load();
+      // The tenant default language applies to users who have not chosen their own.
+      void refresh();
     } catch (err) {
       const apiError: ApiErrorShape = extractApiError(err);
       setErrors(apiError.errors ?? {});
@@ -192,6 +201,16 @@ export function CompanyProfilePage() {
           <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
             Used in the sidebar and browser tab icon for this tenant.
           </div>
+        </FormField>
+        <FormField label={t('account.fields.defaultLanguage')} errors={errors.default_locale}>
+          <select value={defaultLocale} onChange={(e) => setDefaultLocale(e.target.value)} style={inputStyle} disabled={!canEdit} data-default-locale>
+            <option value="">{t('common.language.default')}</option>
+            {SUPPORTED_LOCALES.map((locale) => (
+              <option key={locale} value={locale} lang={locale}>
+                {t(`common.language.${locale}`)}
+              </option>
+            ))}
+          </select>
         </FormField>
         <FormField label="Workshop Working Days" required errors={errors.workshop_working_days}>
           <select

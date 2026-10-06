@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { LanguageSelector } from '../components/LanguageSelector';
 import { Outlet } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -188,6 +189,7 @@ export function TenantLayout() {
                 ))}
               </select>
             )}
+            <LanguageSelector compact />
             <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
             <button className="btn-secondary" onClick={() => logout()}>
               Logout

@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { LanguageSelector } from '../components/LanguageSelector';
 import { useAuth } from '../auth/AuthContext';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { Logo } from '../components/Logo';
@@ -71,6 +72,7 @@ export function PlatformLayout() {
             borderBottom: '1px solid #e5e7eb',
           }}
         >
+          <LanguageSelector compact />
           <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
           <button className="btn-secondary" onClick={() => logout()}>
             Logout

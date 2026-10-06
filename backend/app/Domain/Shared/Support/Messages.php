@@ -2,6 +2,7 @@
 
 namespace App\Domain\Shared\Support;
 
+use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\Facades\Lang;
 use InvalidArgumentException;
 
@@ -227,11 +228,36 @@ final class Messages
         return self::text($key, $params, app()->getLocale());
     }
 
+    /**
+     * English text of a key: the catalog above (whole-sentence templates whose English is asserted by
+     * MessagesTest), else the generated English catalog (any other dataset key, e.g. auth errors).
+     */
+    private static function english(string $key): string
+    {
+        if (isset(self::EN[$key])) {
+            return self::EN[$key];
+        }
+        if (self::hasTranslator() && Lang::has("catalog.{$key}", 'en', false)) {
+            return Lang::get("catalog.{$key}", [], 'en', false);
+        }
+
+        throw new InvalidArgumentException("Unknown message key [{$key}].");
+    }
+
+    /**
+     * Outside a booted application (pure unit tests, or after a test's application was flushed) there is
+     * no translator: only the catalog above is available.
+     */
+    private static function hasTranslator(): bool
+    {
+        return Facade::getFacadeApplication()?->bound('translator') ?? false;
+    }
+
     /** The template in the given locale; English when the locale has no entry for the key. */
     private static function template(string $key, string $locale): string
     {
-        $english = self::EN[$key] ?? throw new InvalidArgumentException("Unknown message key [{$key}].");
-        if ($locale === 'en' || ! Lang::has("catalog.{$key}", $locale, false)) {
+        $english = self::english($key);
+        if ($locale === 'en' || ! self::hasTranslator() || ! Lang::has("catalog.{$key}", $locale, false)) {
             return $english;
         }
 
@@ -246,9 +272,7 @@ final class Messages
      */
     public static function make(string $key, array $params = []): array
     {
-        if (! array_key_exists($key, self::EN)) {
-            throw new InvalidArgumentException("Unknown message key [{$key}].");
-        }
+        self::english($key);
 
         return ['code' => $key, 'params' => $params];
     }

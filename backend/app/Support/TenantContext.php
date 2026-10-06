@@ -18,6 +18,9 @@ class TenantContext
 
     private bool $isPlatformContext = false;
 
+    /** The tenant's default UI language, captured with the tenant row (saves a query per request). */
+    private ?string $tenantDefaultLocale = null;
+
     public function setTenantId(?string $tenantId): void
     {
         $this->tenantId = $tenantId;
@@ -26,6 +29,16 @@ class TenantContext
     public function tenantId(): ?string
     {
         return $this->tenantId;
+    }
+
+    public function setTenantDefaultLocale(?string $locale): void
+    {
+        $this->tenantDefaultLocale = $locale;
+    }
+
+    public function tenantDefaultLocale(): ?string
+    {
+        return $this->tenantDefaultLocale;
     }
 
     public function setUser(?User $user): void

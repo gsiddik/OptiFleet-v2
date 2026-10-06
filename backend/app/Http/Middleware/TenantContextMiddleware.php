@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Domain\DocumentGeneration\Support\DocumentLocale;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
+use App\Domain\Shared\Support\Messages;
 use App\Support\TenantContext;
 use Closure;
 use Illuminate\Http\Request;
@@ -28,11 +30,11 @@ class TenantContextMiddleware
         $user = $request->user();
 
         if (! $user) {
-            return response()->json(['message' => 'Unauthenticated.'], 401);
+            return $this->error($request, 'errors.http.unauthenticated', 401);
         }
 
         if (! $user->isActive()) {
-            return response()->json(['message' => 'This user account is inactive.'], 403);
+            return $this->error($request, 'errors.http.userAccountInactive', 403);
         }
 
         $this->context->setUser($user);
@@ -46,7 +48,7 @@ class TenantContextMiddleware
 
             $tenant = Tenant::query()->find($tenantId);
             if (! $tenant || $tenant->status !== 'ACTIVE') {
-                return response()->json(['message' => 'Tenant is not active.'], 403);
+                return $this->error($request, 'errors.http.tenantIsNotActive', 403);
             }
 
             $membership = TenantUser::query()
@@ -55,17 +57,29 @@ class TenantContextMiddleware
                 ->first();
 
             if (! $membership || ! $membership->isActive()) {
-                return response()->json(['message' => 'Tenant membership is not active.'], 403);
+                return $this->error($request, 'errors.http.tenantMembershipNotActive', 403);
             }
 
             $this->context->setTenantId($tenantId);
+            $this->context->setTenantDefaultLocale($tenant->default_locale);
             $this->context->setPlatformContext(false);
         } elseif (in_array('platform', $abilities, true)) {
             $this->context->setPlatformContext(true);
         } else {
-            return response()->json(['message' => 'Token has no valid scope.'], 403);
+            return $this->error($request, 'errors.http.tokenNoValidScope', 403);
         }
 
         return $next($request);
+    }
+
+    /**
+     * These errors are returned before the request locale is resolved, so their language comes from the
+     * user's own preference, else the request's Accept-Language, else English.
+     */
+    private function error(Request $request, string $key, int $status): Response
+    {
+        $locale = DocumentLocale::resolve($request->user()?->preferred_locale, null, DocumentLocale::fromLanguages($request->getLanguages()));
+
+        return response()->json(['message' => Messages::text($key, [], $locale)], $status);
     }
 }

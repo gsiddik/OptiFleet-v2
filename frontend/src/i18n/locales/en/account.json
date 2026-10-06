@@ -10,6 +10,7 @@
     "bankName": "Bank Name",
     "billingCycleBillingCycle": "Billing Cycle: {{billing_cycle}}",
     "current": "Current",
+    "defaultLanguage": "Default Language",
     "endEndDate": "End: {{end_date}}",
     "fax": "Fax",
     "invoice": "Invoice",

@@ -24,6 +24,10 @@ export interface CurrentUser {
   scope: 'platform' | 'tenant';
   permissions: string[];
   memberships: TenantMembership[];
+  /** i18n: the user's own choice (`en` / `id`), or null to follow the tenant default / browser / English. */
+  preferred_locale?: string | null;
+  /** i18n: the active tenant's default language, if any. */
+  tenant_default_locale?: string | null;
 }
 
 export interface Tenant {

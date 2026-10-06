@@ -283,6 +283,13 @@
   "labels": {
     "workOrder": "Work Order"
   },
+  "language": {
+    "default": "Default",
+    "en": "English",
+    "id": "Bahasa Indonesia",
+    "label": "Language",
+    "saveFailed": "Your language preference could not be saved."
+  },
   "modals": {
     "editCategory": "Edit Category",
     "editComponentGroup": "Edit Component Group",

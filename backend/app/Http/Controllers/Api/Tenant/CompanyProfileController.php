@@ -2,11 +2,13 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\DocumentGeneration\Support\DocumentLocale;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Services\TenantLogoService;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 /**
  * G-15: previously a tenant had no way to view or maintain its own
@@ -40,6 +42,8 @@ class CompanyProfileController extends Controller
             'website' => ['nullable', 'string', 'max:255'],
             'logo_url' => ['nullable', 'string', 'max:255'],
             'workshop_working_days' => ['required', 'integer', 'in:5,6,7'],
+            // i18n: the company's default language for users who have not chosen one.
+            'default_locale' => ['sometimes', 'nullable', Rule::in(DocumentLocale::SUPPORTED)],
         ]);
 
         $tenant = Tenant::query()->findOrFail($this->context->tenantId());

@@ -17,7 +17,7 @@ Continuation checkpoint for the EN / ID rollout planned in `docs/i18n/16-i18n-im
 |---:|---|---|
 | 1 | Locale contract + resource generation | DONE |
 | 2 | Frontend / backend i18n foundation | DONE |
-| 3 | User / tenant locale preference + language selector | — |
+| 3 | User / tenant locale preference + language selector | DONE |
 | 4 | Shared / global UI | — |
 | 5+ | Business modules | — |
 | D | Printed documents | — |
@@ -132,3 +132,88 @@ Continuation checkpoint for the EN / ID rollout planned in `docs/i18n/16-i18n-im
 - Full backend suite: 1164 passed, 1 failed. The failure was the backend `StatusLabels` mirror of the
   `ISSUED` change; it was aligned and re-run green (`StatusLabelsTest`, `WorkflowDefaultLabelsTest`).
   MongoDB suites NOT RUN.
+
+## Phase 3 — Locale preference and language selector
+
+**Data**
+- `users.preferred_locale`: `en` | `id` | null. It existed since S6; null = follow the tenant default.
+- `tenants.default_locale`: migration `2026_10_14_000001`.
+  - Existing tenants are backfilled to `en`, the language they have always used, and the column default
+    is `en`.
+  - It stays nullable: null = no tenant default.
+  - Idempotent; a tenant's own choice is kept.
+- Values are codes, never display names; validated against `en` / `id`.
+
+**API**
+- `PATCH /auth/me/preferences {preferred_locale}`: any signed-in user, for their own preference only.
+- `/auth/me` and the login response add `preferred_locale` and `tenant_default_locale`.
+- The tenant default is set by:
+  - a tenant admin, on `PUT /app/account/company` (`company.update`);
+  - a platform admin, on `PUT /platform/tenants/{id}` (`tenant.update`, also accepted on create).
+
+**Resolution (one contract, frontend `resolveUiLocale` = backend `ResolveRequestLocale`)**
+
+user preference → tenant default → browser (`navigator.languages` / `Accept-Language`) → English.
+
+- Before the first render the last resolved locale is applied from `localStorage` (`optifleet_locale`),
+  or the browser's, so there is no language flash.
+- After sign-in the user / tenant resolution is applied and cached.
+
+**Language selector** (`components/LanguageSelector.tsx`)
+- Placed in the tenant and platform headers and on the login page.
+- Options are English and Bahasa Indonesia, each shown in its own language.
+- Choosing switches the UI at once, with no reload. Signed in, it saves the preference, so it follows
+  the user across reloads, sign-ins and devices.
+- A failed save shows a localized error.
+- **Company Profile:** "Default Language" (Default / English / Bahasa Indonesia). Saving re-applies the
+  resolution.
+- **Platform tenant UI:** a field for the tenant default is scheduled with the platform module
+  migration; the API already accepts it.
+
+**Authentication shell migrated** (first module)
+- Login page: all texts via `t()`; labels associated with their inputs.
+- Sign-in errors (`validation.auth.*`) and access errors in `TenantContextMiddleware`
+  (`errors.http.*`) are localized; statuses are unchanged.
+- The access errors are returned before the request locale is resolved, so they use the user's
+  preference or `Accept-Language`.
+- `Messages` now resolves any generated-catalog key, not only its built-in templates, so backend code
+  can return any dataset message.
+
+**New strings (controlled flow, `docs/i18n/17-i18n-additions.csv`)**
+- `common.language.label`, `.en`, `.id`, `.default`, `.saveFailed`;
+- `account.fields.defaultLanguage`;
+- `platform.tenants.fields.defaultLanguage`.
+- Terminology follows existing dataset usage ("Default", as in "Default Sistem").
+
+**Tests**
+- Backend `LocalePreferenceTest` (6 tests):
+  - set / clear / validate the preference, kept across a new sign-in;
+  - a platform user;
+  - the tenant default via company profile with and without permission, and via platform;
+  - the backfill (null → `en`, a chosen `id` kept, idempotent);
+  - sign-in and access errors in `id` and `en` with unchanged statuses.
+- Existing `AuthTest` and access suites: 49 passed.
+- Frontend `localeResolution.test.ts`: preference wins; case C (tenant default); case D (browser, then
+  English); display names ignored.
+- **Browser `e2e_lang`, 13 checks:**
+  - the login page switches language;
+  - a sign-in error arrives in Indonesian;
+  - A: selecting Indonesian switches at once, is persisted, statuses render in Indonesian, and it is
+    kept after reload;
+  - B: kept after a new sign-in, and switching back to English works;
+  - C: tenant default;
+  - D: browser → English;
+  - no page errors.
+- Frontend 40 unit tests, type-check, build, lint (0 errors, 27 existing warnings).
+- **Backend full suite (MongoDB suites excluded), 1169 passed, 2 failed. Both were fixed and the
+  targeted tests re-run:**
+  - `MessagesTest`: when the test ran after a feature test, the stale facade application had no
+    translator. `Messages` now checks that a translator is bound. The Unit suite run after a feature
+    test passes 109/109.
+  - `MaintenanceHistoryScopeTest` (query count): a pre-existing timing dependency. Sanctum writes
+    `last_used_at` only when the second changes, which adds one UPDATE to a request that crosses a
+    second boundary. The test now freezes time; 6/6 repeats pass.
+    - The locale middleware no longer re-reads the tenant: `TenantContext` keeps
+      `tenantDefaultLocale` from the row already loaded.
+
+

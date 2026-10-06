@@ -36,22 +36,9 @@ class ResolveRequestLocale
 
         $user = $this->context->user() ?? $request->user();
         $tenantId = $this->context->tenantId();
-        $tenantDefault = $tenantId ? Tenant::query()->whereKey($tenantId)->value('default_locale') : null;
-        app()->setLocale(DocumentLocale::resolve($user?->preferred_locale, $tenantDefault, $this->headerLocale($request)));
+        $tenantDefault = $tenantId ? ($this->context->tenantDefaultLocale() ?? Tenant::query()->whereKey($tenantId)->value('default_locale')) : null;
+        app()->setLocale(DocumentLocale::resolve($user?->preferred_locale, $tenantDefault, DocumentLocale::fromLanguages($request->getLanguages())));
 
         return $next($request);
-    }
-
-    /** The first supported primary language of Accept-Language, in the client's order of preference. */
-    private function headerLocale(Request $request): ?string
-    {
-        foreach ($request->getLanguages() as $language) {
-            $primary = strtolower(strtok(str_replace('_', '-', $language), '-'));
-            if (DocumentLocale::isSupported($primary)) {
-                return $primary;
-            }
-        }
-
-        return null;
     }
 }

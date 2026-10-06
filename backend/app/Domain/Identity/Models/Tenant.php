@@ -36,6 +36,7 @@ class Tenant extends Model
         'logo_url',
         'status',
         'timezone',
+        'default_locale',
         'workshop_working_days',
     ];
 
