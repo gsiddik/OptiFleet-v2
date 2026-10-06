@@ -70,6 +70,7 @@ class FunctionalTestingSeeder extends Seeder
         $ops = (new FunctionalTestVehicleWorkshopSeeder)->run($tenant, $masterData);
         $products = (new FunctionalTestProductSeeder)->run($tenant, $masterData);
         (new FunctionalTestInventorySeeder)->run($tenant, $ops, $products);
+        (new FunctionalTestRimSeeder)->run($tenant, $products);
         (new FunctionalTestWorkOrderSeeder)->run($tenant, $ops, $products, $referenceDate);
         (new FunctionalTestExternalWorkOrderSeeder)->run($tenant, $ops, $referenceDate);
 

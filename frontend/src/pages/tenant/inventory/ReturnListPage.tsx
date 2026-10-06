@@ -78,7 +78,7 @@ export function ReturnListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('inventory.titles.return')}</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('inventory.titles.stockReturn')}</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 14 }}>
         {t('inventory.help.newPartsReturnedUnusedWorkOrder')}
       </p>
@@ -109,7 +109,7 @@ export function ReturnListPage() {
       </div>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label={t('inventory.empty.noReturnsFound')} />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('inventory.empty.noStockReturnsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
 

@@ -56,12 +56,14 @@ use App\Http\Controllers\Api\Tenant\ProductCategoryController;
 use App\Http\Controllers\Api\Tenant\ProductClassificationController;
 use App\Http\Controllers\Api\Tenant\ProductVehicleLookupController;
 use App\Http\Controllers\Api\Tenant\ProductController;
+use App\Http\Controllers\Api\Tenant\ProductImportController;
 use App\Http\Controllers\Api\Tenant\PurchaseOrderController;
 use App\Http\Controllers\Api\Tenant\PurchaseReturnController;
 use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
 use App\Http\Controllers\Api\Tenant\QualityControlController;
 use App\Http\Controllers\Api\Tenant\RfqController;
 use App\Http\Controllers\Api\Tenant\RimController;
+use App\Http\Controllers\Api\Tenant\RimProductController;
 use App\Http\Controllers\Api\Tenant\RoleController;
 use App\Http\Controllers\Api\Tenant\SparePartSaleController;
 use App\Http\Controllers\Api\Tenant\StockMovementController;
@@ -75,6 +77,7 @@ use App\Http\Controllers\Api\Tenant\UserController;
 use App\Http\Controllers\Api\Tenant\VehicleBrandController;
 use App\Http\Controllers\Api\Tenant\VehicleCategoryController;
 use App\Http\Controllers\Api\Tenant\VehicleController;
+use App\Http\Controllers\Api\Tenant\VehicleImportController;
 use App\Http\Controllers\Api\Tenant\VehicleDocumentController;
 use App\Http\Controllers\Api\Tenant\VehiclePhotoController;
 use App\Http\Controllers\Api\Tenant\VehicleModelController;
@@ -235,6 +238,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
         Route::middleware('module:VEHICLE')->group(function () {
             Route::get('/vehicles', [VehicleController::class, 'index'])->middleware('permission:vehicle.view');
             Route::post('/vehicles', [VehicleController::class, 'store'])->middleware('permission:vehicle.create');
+            Route::get('/vehicles/import-template', [VehicleImportController::class, 'template'])->middleware('permission:vehicle.create');
+            Route::post('/vehicles/import/preview', [VehicleImportController::class, 'preview'])->middleware('permission:vehicle.create');
+            Route::post('/vehicles/import', [VehicleImportController::class, 'import'])->middleware('permission:vehicle.create');
             Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show'])->middleware('permission:vehicle.view');
             Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update'])->middleware('permission:vehicle.update');
             Route::post('/vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])->middleware('permission:vehicle.status.update');
@@ -541,6 +547,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/product-classification/vehicle-models', [ProductVehicleLookupController::class, 'models'])->middleware('permission:product.view');
             Route::get('/products', [ProductController::class, 'index'])->middleware('permission:product.view');
             Route::post('/products', [ProductController::class, 'store'])->middleware('permission:product.create');
+            Route::get('/products/import-template', [ProductImportController::class, 'template'])->middleware('permission:product.create');
+            Route::post('/products/import/preview', [ProductImportController::class, 'preview'])->middleware('permission:product.create');
+            Route::post('/products/import', [ProductImportController::class, 'import'])->middleware('permission:product.create');
             Route::get('/products/compatible', [ProductController::class, 'compatibleFor'])->middleware('permission:product.view');
             Route::get('/products/{product}', [ProductController::class, 'show'])->middleware('permission:product.view');
             Route::put('/products/{product}', [ProductController::class, 'update'])->middleware('permission:product.update');
@@ -747,6 +756,15 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/tire-products/{tireProduct}/import-template', [TireProductController::class, 'importTemplate'])->middleware('permission:tire.manage');
             Route::post('/tire-products/{tireProduct}/import/preview', [TireProductController::class, 'importPreview'])->middleware('permission:tire.manage');
             Route::post('/tire-products/{tireProduct}/import', [TireProductController::class, 'import'])->middleware('permission:tire.manage');
+            // Tire Management → Rim: Rim Products (Item Type RIM) and their serial-numbered rims.
+            Route::get('/rim-products', [RimProductController::class, 'index'])->middleware('permission:rim.view');
+            Route::get('/rim-products/vehicles/{vehicle}/positions', [RimProductController::class, 'vehiclePositions'])->middleware('permission:rim.manage');
+            Route::get('/rim-products/{rimProduct}', [RimProductController::class, 'show'])->middleware('permission:rim.view');
+            Route::get('/rim-products/{rimProduct}/inventory', [RimProductController::class, 'inventory'])->middleware('permission:rim.view');
+            Route::post('/rim-products/{rimProduct}/rims', [RimProductController::class, 'register'])->middleware('permission:rim.manage');
+            Route::get('/rim-products/{rimProduct}/import-template', [RimProductController::class, 'importTemplate'])->middleware('permission:rim.manage');
+            Route::post('/rim-products/{rimProduct}/import/preview', [RimProductController::class, 'importPreview'])->middleware('permission:rim.manage');
+            Route::post('/rim-products/{rimProduct}/import', [RimProductController::class, 'import'])->middleware('permission:rim.manage');
             Route::get('/tires/{tire}', [TireController::class, 'show'])->middleware('permission:tire.view');
             Route::get('/tires/{tire}/history', [TireController::class, 'history'])->middleware('permission:tire.view');
             // Used Tire Management inspection (REMOVED / HOLD → REUSE / REPAIR / RETREAD / HOLD / SCRAP).

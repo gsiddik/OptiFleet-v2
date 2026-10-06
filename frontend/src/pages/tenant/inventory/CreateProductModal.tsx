@@ -80,8 +80,13 @@ export function gradeSpecificationRequired(
  * rules are re-enforced server-side by ProductSpecificationService — this
  * form mirrors them for UX only, it is never the authority.
  */
-/** Where the form is opened: PRODUCT = Products (any Item Type); TIRE = Tires → "New Tire" (Item Type and Component Group fixed). */
-export type ProductCreationContext = 'PRODUCT' | 'TIRE';
+/**
+ * Where the form is opened: PRODUCT = Products (any Item Type); TIRE = Tires → "New Tire"; RIM = Tire
+ * Management → Rim → "New Rim". TIRE / RIM fix the Item Type and the Component Group (Wheel & Tyre
+ * System); RIM also fixes serial tracking on (a rim is a serialized physical item). The backend enforces
+ * the same locks (StoreProductRequest creation_context).
+ */
+export type ProductCreationContext = 'PRODUCT' | 'TIRE' | 'RIM';
 const TIRE_COMPONENT_GROUP_CODE = 'CG-TYRE';
 
 export function CreateProductModal({
@@ -95,7 +100,8 @@ export function CreateProductModal({
   onCreated: () => void;
   context?: ProductCreationContext;
 }) {
-  const initialItemType: ItemType = context === 'TIRE' ? 'TIRE' : 'SPARE_PART';
+  const lockedContext = context === 'TIRE' || context === 'RIM';
+  const initialItemType: ItemType = context === 'TIRE' ? 'TIRE' : context === 'RIM' ? 'RIM' : 'SPARE_PART';
   const [categories, setCategories] = useState<ProductCategoryItem[]>([]);
   const [subcategories, setSubcategories] = useState<ProductCategoryItem[]>([]);
   const [uoms, setUoms] = useState<UomItem[]>([]);
@@ -123,7 +129,7 @@ export function CreateProductModal({
   const [rackId, setRackId] = useState('');
   const [binId, setBinId] = useState('');
   const [brand, setBrand] = useState('');
-  const [trackSerialNumber, setTrackSerialNumber] = useState(false);
+  const [trackSerialNumber, setTrackSerialNumber] = useState(context === 'RIM');
   const [trackBatch, setTrackBatch] = useState(false);
   const [referenceTreadDepthMm, setReferenceTreadDepthMm] = useState('');
   const [spec, setSpec] = useState<Spec>({});
@@ -144,10 +150,10 @@ export function CreateProductModal({
     setSpec({});
     setCompatibilities([emptyCompatRow()]);
     setBrand('');
-    setTrackSerialNumber(false);
+    setTrackSerialNumber(context === 'RIM'); // a rim is always serial-tracked (locked in the Rim context)
     setTrackBatch(false);
     setReferenceTreadDepthMm('');
-  }, [itemType]);
+  }, [itemType, context]);
 
   useEffect(() => {
     if (!open) return;
@@ -246,7 +252,7 @@ export function CreateProductModal({
     setRackId('');
     setBinId('');
     setBrand('');
-    setTrackSerialNumber(false);
+    setTrackSerialNumber(context === 'RIM'); // a rim is always serial-tracked (locked in the Rim context)
     setTrackBatch(false);
     setReferenceTreadDepthMm('');
     setSpec({});
@@ -285,7 +291,7 @@ export function CreateProductModal({
         reference_tread_depth_mm: itemType === 'TIRE' && referenceTreadDepthMm ? referenceTreadDepthMm : undefined,
         spec: specPayload,
         ...classificationPayload(classification),
-        creation_context: context === 'TIRE' ? 'TIRE' : undefined,
+        creation_context: lockedContext ? context : undefined,
       });
       reset();
       onCreated();
@@ -306,12 +312,12 @@ export function CreateProductModal({
   const canSubmit = name && (subcategoryId || categoryId) && uomId && binId && (!categoryRequired || classification.componentCategoryId) && !submitting;
 
   return (
-    <Modal open={open} title={context === 'TIRE' ? tt('inventory.modals.newTire') : tt('inventory.modals.newProduct')} onClose={onClose} width={680}>
+    <Modal open={open} title={context === 'TIRE' ? tt('inventory.modals.newTire') : context === 'RIM' ? tt('rim.modals.newRim') : tt('inventory.modals.newProduct')} onClose={onClose} width={680}>
       <FormField label={tt('common.fields.code')} errors={errors.code}>
         <input value="Auto-generated on save" disabled style={{ ...inputStyle, color: '#888' }} />
       </FormField>
       <FormField label={tt('common.fields.itemType')} errors={errors.product_type} required>
-        <select aria-label={tt('common.fields.itemType')} value={itemType} disabled={context === 'TIRE'} onChange={(e) => setItemType(e.target.value as ItemType)} style={inputStyle}>
+        <select aria-label={tt('common.fields.itemType')} value={itemType} disabled={lockedContext} onChange={(e) => setItemType(e.target.value as ItemType)} style={inputStyle}>
           {ITEM_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -353,7 +359,7 @@ export function CreateProductModal({
         onChange={setClassification}
         errors={errors}
         requireCategory={categoryRequired}
-        lockedGroupCode={context === 'TIRE' ? TIRE_COMPONENT_GROUP_CODE : undefined}
+        lockedGroupCode={lockedContext ? TIRE_COMPONENT_GROUP_CODE : undefined}
       />
       <FormField label={tt('common.fields.description')} errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
@@ -420,7 +426,7 @@ export function CreateProductModal({
       {needsField('track_serial_number', itemType) && (
         <FormField label={tt('inventory.fields.serialized')} errors={errors.track_serial_number} required>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" checked={trackSerialNumber} onChange={(e) => setTrackSerialNumber(e.target.checked)} /> {tt('inventory.fields.eachUnitRequiresSerialTracking')}
+            <input type="checkbox" checked={trackSerialNumber} disabled={context === 'RIM'} onChange={(e) => setTrackSerialNumber(e.target.checked)} /> {tt('inventory.fields.eachUnitRequiresSerialTracking')}
           </label>
         </FormField>
       )}

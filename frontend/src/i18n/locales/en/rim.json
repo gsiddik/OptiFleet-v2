@@ -1,0 +1,96 @@
+{
+  "actions": {
+    "backToRims": "Back to Rim",
+    "importRim": "Import Rim",
+    "newRim": "New Rim",
+    "openLegacyCatalog": "Open the legacy catalog",
+    "registering": "Registering…",
+    "registerRim": "Register Rim"
+  },
+  "empty": {
+    "noRimProducts": "No rim products yet. Create one with New Rim.",
+    "noRims": "No rims"
+  },
+  "errors": {
+    "contextComponentGroup": "A product created from Rim must be in the Wheel & Tyre System component group.",
+    "contextItemType": "A product created from Rim must have Item Type RIM.",
+    "contextSerialTracked": "A rim is tracked by serial number: Serial Number Tracking must be on.",
+    "invalidPosition": "{{position}} is not a position of the Wheels Configuration of {{vehicle}}.",
+    "noWheelConfiguration": "Vehicle {{vehicle}} has no Wheels Configuration; assign one before registering rims.",
+    "positionOccupied": "Position {{position}} of {{vehicle}} already has rim {{serial}} installed. Remove or replace it first.",
+    "positionRequired": "Select the wheel position on the vehicle.",
+    "productDeleted": "This product was deleted; rims can no longer be added to it.",
+    "productNotRim": "Select a product whose Item Type is Rim.",
+    "serialExists": "Serial number {{serial}} is already registered.",
+    "serialRequired": "Serial Number is required.",
+    "serialTooLong": "Serial Number may not be longer than 100 characters.",
+    "vehicleNotFound": "Vehicle {{vehicle}} was not found.",
+    "vehicleOutOfScope": "Vehicle {{vehicle}} is outside your data scope.",
+    "warehouseNotFound": "Warehouse {{warehouse}} was not found.",
+    "warehouseOutOfScope": "This warehouse is outside your data scope.",
+    "warehouseRequired": "Select the warehouse the rim is stored in."
+  },
+  "fields": {
+    "boltPatternPcd": "Bolt Holes × PCD (mm)",
+    "centerBore": "Center Bore",
+    "diameterXWidth": "Diameter × Width",
+    "installedOn": "Installed On",
+    "offset": "Offset",
+    "positionOccupiedBy": "{{position}} — rim {{serial}} installed",
+    "purchaseDateOptional": "Purchase Date (optional)",
+    "registerAs": "Register as",
+    "rimType": "Rim Type",
+    "valueMm": "{{value}} mm"
+  },
+  "help": {
+    "importInstalledIntro": "Register many installed rims of {{productName}} at once: Serial Number, Vehicle Registration and Position Code per row.",
+    "importNewStockIntro": "Register many New Stock rims of {{productName}} at once: Serial Number and Warehouse Code per row.",
+    "legacyCatalog_one": "{{count}} rim is recorded in the earlier Rim catalog.",
+    "legacyCatalog_other": "{{count}} rims are recorded in the earlier Rim catalog.",
+    "legacyCatalogPage": "Records of the earlier standalone Rim catalog. New rims are Rim Products (Tire Management → Rim) with serial-numbered rims.",
+    "noWheelConfiguration": "This vehicle has no Wheels Configuration yet; assign one in Vehicle Details first.",
+    "positionFromConfiguration": "Positions come from the vehicle's Wheels Configuration. A tire on the same position is not affected.",
+    "productDeleted": "This product was deleted. Its rims and their history stay visible; no new rims can be added.",
+    "registeredSerial": "Rim {{serial}} registered.",
+    "registerFor": "Register a serial-numbered rim of {{productName}}. Most rims are already on vehicles: register them as Installed on their wheel position."
+  },
+  "import": {
+    "columnPositionCode": "Position Code",
+    "columnSerialNumber": "Serial Number",
+    "columnVehicleRegistration": "Vehicle Registration",
+    "columnWarehouseCode": "Warehouse Code",
+    "helpPositionCode": "Wheel position code from the vehicle's Wheels Configuration (e.g. FL, FR, RLO).",
+    "helpSerialNumber": "The serial number of the physical rim, at most 100 characters. Unique in your company.",
+    "helpVehicleRegistration": "Registration number of the vehicle the rim is on (spaces and letter case are ignored).",
+    "helpWarehouseCode": "Code of the warehouse the rim is stored in (Organization → Warehouses).",
+    "positionRepeatedInFile": "Position {{position}} of {{vehicle}} is repeated in the file (first on row {{row}}).",
+    "ruleNewStock": "Imported rims are registered as New Stock, without a vehicle.",
+    "rulePosition": "The position must be a position of that Wheels Configuration without an installed rim, and each vehicle + position may appear only once in the file.",
+    "ruleProduct": "Every row is a rim of product {{productName}}; the specification comes from the product.",
+    "ruleSerialUnique": "A serial number may be registered only once in your company (letter case and surrounding spaces are ignored) and only once in the file.",
+    "ruleTireCoexists": "A tire installed on the same position is not affected: a position holds a tire and a rim.",
+    "ruleVehicle": "The vehicle must exist, be inside your data scope and have a Wheels Configuration.",
+    "titleInstalled": "Rim Serial Number import (Installed) — {{productName}} ({{productCode}})",
+    "titleNewStock": "Rim Serial Number import (New Stock) — {{productName}} ({{productCode}})"
+  },
+  "modals": {
+    "importInstalled": "Import Rim — Installed",
+    "importNewStock": "Import Rim — New Stock",
+    "newRim": "New Rim",
+    "registerRim": "Register Rim"
+  },
+  "placeholders": {
+    "searchVehicle": "Search registration number…"
+  },
+  "rimTypes": {
+    "alloy": "Alloy",
+    "forged": "Forged",
+    "steel": "Steel"
+  },
+  "sections": {
+    "usedStock": "Used Stock"
+  },
+  "titles": {
+    "legacyCatalog": "Legacy Rim Catalog"
+  }
+}

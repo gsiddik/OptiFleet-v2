@@ -68,7 +68,8 @@ export function RimsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('tire.titles.rim')}</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('rim.titles.legacyCatalog')}</h1>
+      <p style={{ fontSize: 13, color: '#6b7280', marginTop: -8 }}>{t('rim.help.legacyCatalogPage')}</p>
       <Toolbar
         search={search}
         onSearchChange={(v) => {

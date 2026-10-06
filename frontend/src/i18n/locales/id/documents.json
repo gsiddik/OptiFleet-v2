@@ -30,6 +30,9 @@
     "totalInvoiceTotal": "Total: {{invoice.total}}",
     "unitPrice": "Harga Satuan"
   },
+  "labels": {
+    "stockTransfer": "Transfer Stok"
+  },
   "maintenanceMemo": {
     "conditionNotesMaintenanceMemoConditionNotes": "Catatan kondisi: {{maintenance_memo.condition_notes}}",
     "contactPartnerContactNamePartnerContact": "Kontak: {{partner.contact_name}} ({{partner.contact_phone}})",

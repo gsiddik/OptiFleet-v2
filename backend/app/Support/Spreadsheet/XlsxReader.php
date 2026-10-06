@@ -70,9 +70,10 @@ class XlsxReader
 
     /**
      * Rows of one sheet, in order, keyed by their 1-based row number; each row maps a 0-based
-     * column index to ['type' => 'n'|'s'|'b', 'value' => string]. Empty cells are omitted.
+     * column index to ['type' => 'n'|'s'|'b', 'value' => string]. Empty cells are omitted. A cell
+     * whose value comes from a formula also carries 'formula' => true (callers may reject it).
      *
-     * @return array<int, array<int, array{type: string, value: string}>>
+     * @return array<int, array<int, array{type: string, value: string, formula?: bool}>>
      */
     public function rows(string $sheetName): array
     {
@@ -88,7 +89,11 @@ class XlsxReader
                 $column = isset($cell->attributes()['r']) ? self::columnIndex((string) $cell->attributes()['r']) : $nextColumn;
                 $nextColumn = $column + 1;
                 $value = $this->cellValue($cell);
-                if ($value !== null && $value['value'] !== '') {
+                if (isset($cell->children(self::MAIN_NS)->f)) {
+                    // A formula cell is kept even with an empty / error result, so it can be rejected.
+                    $value = ['type' => $value['type'] ?? 's', 'value' => $value['value'] ?? '', 'formula' => true];
+                }
+                if ($value !== null && ($value['value'] !== '' || ! empty($value['formula']))) {
                     $cells[$column] = $value;
                 }
             }

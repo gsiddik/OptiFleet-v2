@@ -100,8 +100,8 @@ export const NAV_GROUPS: NavGroup[] = [
       // Physical-asset register (moved from the retired Component Management group; same page,
       // permission and module, so nobody loses access).
       { to: '/app/component-assets', label: 'Component Assets', labelKey: 'nav.items.componentAssets', permission: 'component_asset.view', module: 'COMPONENT' },
-      { to: '/app/returns', label: 'Return', labelKey: 'nav.items.return', permission: 'part_return.view', module: 'INVENTORY' },
-      { to: '/app/stock-transfers', label: 'Transfer', labelKey: 'nav.items.transfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
+      { to: '/app/returns', label: 'Stock Return', labelKey: 'nav.items.stockReturn', permission: 'part_return.view', module: 'INVENTORY' },
+      { to: '/app/stock-transfers', label: 'Stock Transfer', labelKey: 'nav.items.stockTransfer', permission: 'stock_transfer.view', module: 'INVENTORY' },
       // Goods Receipt lives under Inventory (it was listed twice: Procurement → Goods Receipt and
       // Inventory → Receiving, both the same page). Posting stays on the Purchase Order detail;
       // same route, permission and module, so nobody loses access.

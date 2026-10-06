@@ -94,6 +94,7 @@ class FunctionalTestUserSeeder
                 'partner.view', 'partner.manage',
                 'part_request.view', 'part_request.create',
                 'tire.view', 'tire.manage', 'tire.install', 'tire.rotate', 'tire.inspect', 'tire.remove', 'tire.scrap', 'wheel_configuration.map_vehicle',
+                'rim.view', 'rim.manage',
                 'component_asset.view', 'component_asset.manage', 'component_asset.install', 'component_asset.remove', 'component_asset.replace',
                 'warranty.view', 'warranty.manage', 'warranty_claim.create',
             ])->pluck('id')->all());

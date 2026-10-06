@@ -124,6 +124,8 @@ import { AddWheelConfigurationPage } from './pages/tenant/tires/wheel-configurat
 import { WheelConfigurationDetailPage } from './pages/tenant/tires/wheel-configuration/WheelConfigurationDetailPage';
 import { VehicleMappingPage } from './pages/tenant/tires/wheel-configuration/VehicleMappingPage';
 import { RimsPage } from './pages/tenant/tires/RimsPage';
+import { RimListPage } from './pages/tenant/tires/RimListPage';
+import { RimProductDetailPage } from './pages/tenant/tires/RimProductDetailPage';
 import { ComponentAssetListPage } from './pages/tenant/components/ComponentAssetListPage';
 import { ComponentAssetDetailPage } from './pages/tenant/components/ComponentAssetDetailPage';
 import { AnalyticsOverviewPage } from './pages/tenant/analytics/AnalyticsOverviewPage';
@@ -821,7 +823,10 @@ export default function App() {
             <Route path="wheel-configurations/:id/edit" element={<RequirePermission permission="tire.manage"><AddWheelConfigurationPage /></RequirePermission>} />
             <Route path="wheel-configurations/:id" element={<RequirePermission permission="tire.view"><WheelConfigurationDetailPage /></RequirePermission>} />
             <Route path="wheel-configurations/:id/vehicle-mapping" element={<RequirePermission permission="tire.view"><VehicleMappingPage /></RequirePermission>} />
-            <Route path="rims" element={<RequirePermission permission="rim.view"><RimsPage /></RequirePermission>} />
+            <Route path="rims" element={<RequirePermission permission="rim.view"><RimListPage /></RequirePermission>} />
+            <Route path="rims/products" element={<Navigate to="/app/rims" replace />} />
+            <Route path="rims/products/:productId" element={<RequirePermission permission="rim.view"><RimProductDetailPage /></RequirePermission>} />
+            <Route path="rims/catalog" element={<RequirePermission permission="rim.view"><RimsPage /></RequirePermission>} />
 
             <Route path="component-assets" element={<RequirePermission permission="component_asset.view"><ComponentAssetListPage /></RequirePermission>} />
             <Route path="component-assets/:id" element={<RequirePermission permission="component_asset.view"><ComponentAssetDetailPage /></RequirePermission>} />

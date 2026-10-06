@@ -1,0 +1,75 @@
+{
+  "actions": {
+    "deselectAll": "Batalkan semua pilihan",
+    "downloadTemplate": "Unduh Templat",
+    "importing": "Mengimpor…",
+    "importSelected_one": "Impor {{count}} baris terpilih",
+    "importSelected_other": "Impor {{count}} baris terpilih",
+    "reading": "Membaca…",
+    "selectAllValid": "Pilih semua baris valid",
+    "uploadPreview": "Unggah & Pratinjau"
+  },
+  "errors": {
+    "alreadyExists": "{{column}} {{value}} sudah ada.",
+    "duplicateOnSave": "Data ini sudah didaftarkan oleh pengguna lain pada saat yang sama.",
+    "extraValues": "Nilai di luar kolom templat tidak diperbolehkan.",
+    "fileEmpty": "Berkas kosong.",
+    "fileInvalid": "Berkas bukan buku kerja Excel (.xlsx) yang valid.",
+    "fileRequired": "Pilih berkas Excel (.xlsx) untuk diunggah.",
+    "fileTooLarge": "Ukuran berkas tidak boleh lebih dari {{maxMb}} MB.",
+    "formulaNotAllowed": "{{column}} berisi rumus; masukkan nilainya langsung.",
+    "headerMismatch": "Baris judul \"{{sheet}}\" harus persis: {{headers}}. Jangan mengganti nama, menambah, menghapus, atau memindahkan kolom.",
+    "invalidBoolean": "{{column}} harus Yes atau No.",
+    "invalidDate": "{{column}} harus berupa tanggal dengan format YYYY-MM-DD.",
+    "invalidInteger": "{{column}} harus berupa bilangan bulat.",
+    "invalidNumber": "{{column}} harus berupa angka.",
+    "maxRows": "Satu berkas maksimal berisi {{maxRows}} baris.",
+    "noRows": "\"{{sheet}}\" tidak memiliki baris data.",
+    "notFound": "{{column}} {{value}} tidak ditemukan.",
+    "onlyXlsx": "Hanya berkas Excel (.xlsx) yang dapat diimpor.",
+    "repeatedInFile": "{{column}} {{value}} berulang di dalam berkas (pertama pada baris {{row}}).",
+    "required": "{{column}} wajib diisi.",
+    "sheetMissing": "Buku kerja tidak memiliki sheet bernama \"{{sheet}}\". Gunakan templat yang diunduh dan jangan mengganti nama sheet-nya.",
+    "tooLong": "{{column}} tidak boleh lebih dari {{max}} karakter.",
+    "unsafeText": "{{column}} tidak boleh diawali =, +, - atau @."
+  },
+  "fields": {
+    "check": "Pemeriksaan",
+    "excelFile": "Berkas Excel",
+    "reason": "Alasan",
+    "row": "Baris",
+    "selectAllValidRows": "Pilih semua baris valid",
+    "selectRow": "Pilih baris {{row}}"
+  },
+  "help": {
+    "previewSummary": "{{total}} baris: {{valid}} siap, {{duplicate}} duplikat, {{invalid}} tidak valid — {{selected}} dipilih.",
+    "resultFailed_one": "Tidak ada yang diimpor: {{count}} baris gagal.",
+    "resultFailed_other": "Tidak ada yang diimpor: {{count}} baris gagal.",
+    "resultPartial": "{{imported}} berhasil diimpor, {{failed}} tidak diimpor — lihat alasannya di bawah.",
+    "resultSuccess_one": "{{count}} baris berhasil diimpor.",
+    "resultSuccess_other": "{{count}} baris berhasil diimpor.",
+    "sheets": "Hanya sheet \"Fill Here\" yang dibaca. Pertahankan nama sheet \"How To\" dan \"Fill Here\" serta baris judul tanpa perubahan."
+  },
+  "howTo": {
+    "column": "Kolom",
+    "columnsTitle": "Kolom",
+    "description": "Deskripsi",
+    "doNotRename": "Jangan mengganti nama sheet \"{{howTo}}\" dan \"{{fill}}\", dan jangan mengganti nama, menambah, menghapus, atau mengubah urutan kolom judul.",
+    "examplesTitle": "Contoh",
+    "fillSheet": "Isi sheet \"{{sheet}}\": satu data per baris, mulai dari baris 2.",
+    "formats": "Tanggal: YYYY-MM-DD (mis. 2026-07-01). Angka: digit dengan titik sebagai pemisah desimal (mis. 1250.5). Kolom Yes/No: Yes atau No.",
+    "maxRows": "Maksimal {{maxRows}} baris per berkas.",
+    "noFormulas": "Masukkan nilai biasa saja: rumus dan nilai yang diawali =, +, - atau @ ditolak.",
+    "optional": "Opsional",
+    "required": "Wajib",
+    "requiredColumns": "Kolom bertanda \"Wajib\" harus diisi; kolom \"Opsional\" boleh dikosongkan.",
+    "requirement": "Wajib / Opsional",
+    "rulesTitle": "Aturan",
+    "upload": "Simpan berkas sebagai .xlsx, unggah, periksa pratinjau, pilih baris yang akan diimpor, lalu konfirmasi. Baris yang tidak valid atau duplikat dilaporkan dan tidak menghalangi baris yang valid."
+  },
+  "status": {
+    "duplicate": "Duplikat",
+    "invalid": "Tidak Valid",
+    "ready": "Siap"
+  }
+}

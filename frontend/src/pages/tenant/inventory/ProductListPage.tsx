@@ -11,6 +11,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { ComponentCategory, ComponentGroup, ComponentSubcategory, ProductItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
 import { CreateProductModal, ITEM_TYPES as PRODUCT_TYPES } from './CreateProductModal';
+import { ProductImportModal } from './ProductImportModal';
 import { t as tt } from '../../../i18n/i18n';
 
 export function ProductListPage() {
@@ -21,6 +22,7 @@ export function ProductListPage() {
   const [productType, setProductType] = useState(searchParams.get('product_type') ?? '');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [groupId, setGroupId] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [subcategoryId, setSubcategoryId] = useState('');
@@ -90,9 +92,14 @@ export function ProductListPage() {
         onSearchChange={setSearch}
         actions={
           hasPermission('product.create') ? (
-            <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              {tt('inventory.actions.newProduct')}
-            </button>
+            <span style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-secondary" onClick={() => setShowImport(true)} data-product-import>
+                {tt('productImport.actions.importProducts')}
+              </button>
+              <button className="btn-primary" onClick={() => setShowCreate(true)}>
+                {tt('inventory.actions.newProduct')}
+              </button>
+            </span>
           ) : null
         }
       >
@@ -148,6 +155,7 @@ export function ProductListPage() {
       {!error && !loading && data.length === 0 && <EmptyState label={tt('inventory.empty.noProductsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
+      {showImport && <ProductImportModal initialItemType={productType} onClose={() => setShowImport(false)} onImported={() => setReloadKey((k) => k + 1)} />}
       <CreateProductModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
     </div>
   );
