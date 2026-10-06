@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -7,6 +7,8 @@ import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useTabParam } from '../../../hooks/useTabParam';
+import type { TabDef } from '../../../utils/tabs';
 import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
@@ -16,19 +18,27 @@ import { VehicleWheelsConfigurationTab } from '../tires/wheel-configuration/Vehi
 import { formatDate } from '../../../utils/date';
 import { DetailsWithImage, ImageContainer } from '../../../components/ImageContainer';
 
-const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'Wheels Configuration', 'History'] as const;
-type Tab = (typeof TABS)[number];
+type Tab = 'overview' | 'assignment' | 'transfer' | 'documents' | 'wheels' | 'history';
+// Stable ids drive state, ?tab= and permission gating; labels are display only.
+// `wheels` keeps the existing ?tab=wheels deep links; legacy label links still resolve.
+const TABS: readonly TabDef<Tab>[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'assignment', label: 'Assignment' },
+  { id: 'transfer', label: 'Transfer' },
+  { id: 'documents', label: 'Documents' },
+  { id: 'wheels', label: 'Wheels Configuration' },
+  { id: 'history', label: 'History' },
+];
 /** Tabs that need more than vehicle.view. */
-const TAB_PERMISSION: Partial<Record<Tab, string>> = { 'Wheels Configuration': 'tire.view' };
+const TAB_PERMISSION: Partial<Record<Tab, string>> = { wheels: 'tire.view' };
 
 export function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [vehicle, setVehicle] = useState<VehicleItem | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // ?tab=wheels opens a tab directly (e.g. "complete the tire data" links from Tire Operations).
-  const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(() => (searchParams.get('tab') === 'wheels' ? 'Wheels Configuration' : 'Overview'));
+  // ?tab=<id> opens a tab directly (e.g. ?tab=wheels from the Tire Operations "complete the tire data" links).
+  const [tab, setTab] = useTabParam(TABS, 'overview');
 
   function load() {
     apiClient
@@ -43,6 +53,10 @@ export function VehicleDetailPage() {
 
   if (error && !vehicle) return <ErrorState message={error} />;
   if (!vehicle) return <LoadingState />;
+
+  // A deep-linked tab the user may not see (e.g. ?tab=wheels without tire.view) falls back to Overview.
+  const permittedTab = (t: Tab) => !TAB_PERMISSION[t] || hasPermission(TAB_PERMISSION[t]);
+  const activeTab: Tab = permittedTab(tab) ? tab : 'overview';
 
   return (
     <div>
@@ -60,7 +74,7 @@ export function VehicleDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb', overflowX: 'auto' }}>
-        {TABS.filter((t) => !TAB_PERMISSION[t] || hasPermission(TAB_PERMISSION[t])).map((t) => (
+        {TABS.filter(({ id: t }) => permittedTab(t)).map(({ id: t, label }) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -68,26 +82,26 @@ export function VehicleDetailPage() {
               padding: '8px 16px',
               border: 'none',
               background: 'none',
-              borderBottom: tab === t ? '2px solid #1d4ed8' : '2px solid transparent',
-              color: tab === t ? '#1d4ed8' : '#6b7280',
-              fontWeight: tab === t ? 600 : 400,
+              borderBottom: activeTab === t ? '2px solid #1d4ed8' : '2px solid transparent',
+              color: activeTab === t ? '#1d4ed8' : '#6b7280',
+              fontWeight: activeTab === t ? 600 : 400,
               cursor: 'pointer',
               fontSize: 14,
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
           >
-            {t}
+            {label}
           </button>
         ))}
       </div>
 
-      {tab === 'Overview' && <OverviewTab vehicle={vehicle} onChanged={load} />}
-      {tab === 'Assignment' && <AssignmentTab vehicle={vehicle} onChanged={load} />}
-      {tab === 'Transfer' && <TransferTab vehicle={vehicle} onChanged={load} />}
-      {tab === 'Documents' && <DocumentsTab vehicle={vehicle} />}
-      {tab === 'Wheels Configuration' && <VehicleWheelsConfigurationTab vehicleId={vehicle.id} />}
-      {tab === 'History' && <HistoryTab vehicleId={vehicle.id} />}
+      {activeTab === 'overview' && <OverviewTab vehicle={vehicle} onChanged={load} />}
+      {activeTab === 'assignment' && <AssignmentTab vehicle={vehicle} onChanged={load} />}
+      {activeTab === 'transfer' && <TransferTab vehicle={vehicle} onChanged={load} />}
+      {activeTab === 'documents' && <DocumentsTab vehicle={vehicle} />}
+      {activeTab === 'wheels' && <VehicleWheelsConfigurationTab vehicleId={vehicle.id} />}
+      {activeTab === 'history' && <HistoryTab vehicleId={vehicle.id} />}
     </div>
   );
 }

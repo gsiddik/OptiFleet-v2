@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -11,24 +11,27 @@ import { TenantEntitlementsTab } from './tabs/TenantEntitlementsTab';
 import { TenantCapacityTab } from './tabs/TenantCapacityTab';
 import { TenantContractTab } from './tabs/TenantContractTab';
 import { useAuth } from '../../../auth/AuthContext';
+import { useTabParam } from '../../../hooks/useTabParam';
+import type { TabDef } from '../../../utils/tabs';
 
-const TABS = ['Overview', 'Users', 'Module Entitlements', 'Capacity Limits', 'Contract'] as const;
+type TenantTab = 'overview' | 'users' | 'module-entitlements' | 'capacity-limits' | 'contract';
+// Stable ids drive state and ?tab=; labels are display only. Legacy ?tab=Contract links still resolve.
+const TABS: readonly TabDef<TenantTab>[] = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'users', label: 'Users' },
+  { id: 'module-entitlements', label: 'Module Entitlements' },
+  { id: 'capacity-limits', label: 'Capacity Limits' },
+  { id: 'contract', label: 'Contract' },
+];
 
 export function TenantDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (searchParams.get('tab') as (typeof TABS)[number] | null) ?? 'Overview';
-  const [tab, setTab] = useState<(typeof TABS)[number]>(TABS.includes(initialTab) ? initialTab : 'Overview');
+  const [tab, selectTab] = useTabParam(TABS, 'overview');
 
   useBreadcrumbLabel(tenant?.id, tenant ? `${tenant.name} (${tenant.code})` : undefined);
-
-  function selectTab(t: (typeof TABS)[number]) {
-    setTab(t);
-    setSearchParams(t === 'Overview' ? {} : { tab: t }, { replace: true });
-  }
 
   function load() {
     apiClient
@@ -68,7 +71,7 @@ export function TenantDetailPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
-        {TABS.map((t) => (
+        {TABS.map(({ id: t, label }) => (
           <button
             key={t}
             onClick={() => selectTab(t)}
@@ -83,12 +86,12 @@ export function TenantDetailPage() {
               fontWeight: tab === t ? 600 : 400,
             }}
           >
-            {t}
+            {label}
           </button>
         ))}
       </div>
 
-      {tab === 'Overview' && (
+      {tab === 'overview' && (
         <div className="card">
           <p>
             <strong>Legal Name:</strong> {tenant.legal_name ?? '—'}
@@ -101,10 +104,10 @@ export function TenantDetailPage() {
           </p>
         </div>
       )}
-      {tab === 'Users' && <TenantUsersTab tenantId={tenant.id} />}
-      {tab === 'Module Entitlements' && <TenantEntitlementsTab tenantId={tenant.id} />}
-      {tab === 'Capacity Limits' && <TenantCapacityTab tenantId={tenant.id} />}
-      {tab === 'Contract' && <TenantContractTab tenantId={tenant.id} tenantName={tenant.name} tenantCode={tenant.code} />}
+      {tab === 'users' && <TenantUsersTab tenantId={tenant.id} />}
+      {tab === 'module-entitlements' && <TenantEntitlementsTab tenantId={tenant.id} />}
+      {tab === 'capacity-limits' && <TenantCapacityTab tenantId={tenant.id} />}
+      {tab === 'contract' && <TenantContractTab tenantId={tenant.id} tenantName={tenant.name} tenantCode={tenant.code} />}
     </div>
   );
 }

@@ -29,6 +29,8 @@ import { formatMoney, sumMoney } from '../../../utils/money';
 import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
+import { useTabParam } from '../../../hooks/useTabParam';
+import type { TabDef } from '../../../utils/tabs';
 import { SearchableSelect, type SearchableOption } from '../../../components/SearchableSelect';
 import { WorkOrderTireOperationTab } from '../tires/operations/WorkOrderTireOperationTab';
 import type { TireOperationDetail } from '../tires/operations/tireOperationTypes';
@@ -37,18 +39,28 @@ import { ScheduleWorkspaceModal } from './workspace/ScheduleWorkspaceModal';
 import { WorkOrderWorkspaceTab } from './workspace/WorkOrderWorkspaceTab';
 import { SCHEDULABLE_WORK_ORDER_STATUSES, START_BLOCKED_REASON, canStart } from './workspace/workspaceAssignment';
 
-const INTERNAL_TABS = [
-  'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Issuance & Return', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
-] as const;
+// Stable tab ids drive state, ?tab= deep links and visibility rules; labels are display only.
+type Tab =
+  | 'overview' | 'complaint' | 'diagnosis' | 'jobs' | 'mechanic' | 'planned-parts' | 'issuance-return' | 'workspace'
+  | 'qc' | 'road-test' | 'external-services' | 'documents' | 'history' | 'audit' | 'findings' | 'tire-operations';
+const TAB_LABELS: Record<Tab, string> = {
+  overview: 'Overview', complaint: 'Complaint', diagnosis: 'Diagnosis', jobs: 'Jobs', mechanic: 'Mechanic',
+  'planned-parts': 'Planned Parts', 'issuance-return': 'Issuance & Return', workspace: 'Workspace', qc: 'QC',
+  'road-test': 'Road Test', 'external-services': 'External Services', documents: 'Documents', history: 'History',
+  audit: 'Audit', findings: 'Findings', 'tire-operations': 'Tire Operations',
+};
+const ALL_TABS: readonly TabDef<Tab>[] = (Object.keys(TAB_LABELS) as Tab[]).map((id) => ({ id, label: TAB_LABELS[id] }));
+const INTERNAL_TABS: readonly Tab[] = [
+  'overview', 'complaint', 'diagnosis', 'jobs', 'mechanic',
+  'planned-parts', 'issuance-return', 'workspace', 'qc', 'road-test', 'external-services', 'documents', 'history', 'audit',
+];
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
 // as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Issuance
 // & Return, Workspace, QC, Road Test) is hidden, not just its actions. "External Services"
 // (towing / 3rd-party memos) is hidden too, in every status: the External Workshop's own
 // documents (acknowledged WAL, invoice, payment proof) are under Documents instead. The
 // decision is by execution mode, never by status; internal Work Orders keep the tab.
-const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'Documents', 'History', 'Audit'] as const;
-type Tab = (typeof INTERNAL_TABS)[number] | 'Findings' | 'Tire Operations';
+const EXTERNAL_MODE_TABS: readonly Tab[] = ['overview', 'findings', 'documents', 'history', 'audit'];
 
 /**
  * ORPHANED tabs: hidden from the active Work Order UI (owner decision). Their components, APIs,
@@ -56,10 +68,10 @@ type Tab = (typeof INTERNAL_TABS)[number] | 'Findings' | 'Tire Operations';
  * third-party memos) and Documents (read-only viewer; External Workshop documents stay in the
  * External Work Order Invoices flow).
  */
-const ORPHANED_TABS: readonly Tab[] = ['External Services', 'Documents'];
+const ORPHANED_TABS: readonly Tab[] = ['external-services', 'documents'];
 
 /** QC and Road Test belong to the QC step: shown only while the Work Order is pending QC (the API enforces the same). */
-const QC_STEP_TABS: readonly Tab[] = ['QC', 'Road Test'];
+const QC_STEP_TABS: readonly Tab[] = ['qc', 'road-test'];
 
 // Mirrors backend WorkOrderExecutionService — Findings/Diagnosis/Corrective Actions are
 // Draft-only (Add + Delete/Remove hidden afterward); Jobs/Mechanic/Planned Parts stay
@@ -122,7 +134,7 @@ export function WorkOrderDetailPage() {
   const available = useWorkflowTransitions('work_order', id, wo?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>('Overview');
+  const [tab, setTab] = useTabParam(ALL_TABS, 'overview');
   const [showSchedule, setShowSchedule] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -247,15 +259,15 @@ export function WorkOrderDetailPage() {
   const isExternalMode = wo.execution_mode === 'EXTERNAL';
   const baseTabs: readonly Tab[] = (isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS).filter(
     (t) =>
-      (t !== 'Issuance & Return' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status)) &&
+      (t !== 'issuance-return' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status)) &&
       !ORPHANED_TABS.includes(t) &&
       (!QC_STEP_TABS.includes(t) || wo.status === 'QC_PENDING'),
   );
   // Tire Operations sits between Planned Parts and Issuance & Return.
-  const tireOperationsAt = baseTabs.indexOf('Planned Parts') + 1 || baseTabs.length;
-  const visibleTabs: readonly Tab[] = tireOperation ? [...baseTabs.slice(0, tireOperationsAt), 'Tire Operations', ...baseTabs.slice(tireOperationsAt)] : baseTabs;
+  const tireOperationsAt = baseTabs.indexOf('planned-parts') + 1 || baseTabs.length;
+  const visibleTabs: readonly Tab[] = tireOperation ? [...baseTabs.slice(0, tireOperationsAt), 'tire-operations', ...baseTabs.slice(tireOperationsAt)] : baseTabs;
   // A tab that is not offered (orphaned, or QC / Road Test outside QC_PENDING) never renders.
-  const activeTab: Tab = visibleTabs.includes(tab) ? tab : 'Overview';
+  const activeTab: Tab = visibleTabs.includes(tab) ? tab : 'overview';
   const actions = isExternalMode
     ? []
     : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission)).filter(allowedByWorkflow(available, ACTION_TARGET));
@@ -396,27 +408,27 @@ export function WorkOrderDetailPage() {
               fontSize: 13,
             }}
           >
-            {t}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
 
-      {activeTab === 'Overview' && <OverviewTab wo={wo} onChanged={load} />}
-      {activeTab === 'Tire Operations' && tireOperation && <WorkOrderTireOperationTab operation={tireOperation} />}
-      {activeTab === 'Complaint' && <ComplaintTab wo={wo} onChanged={load} />}
-      {activeTab === 'Diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
-      {activeTab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
-      {activeTab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
-      {activeTab === 'Planned Parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
-      {activeTab === 'Issuance & Return' && <IssuanceReturnTab wo={wo} onChanged={load} />}
-      {activeTab === 'Workspace' && <WorkOrderWorkspaceTab wo={wo} onChanged={load} />}
-      {activeTab === 'QC' && <QcTab wo={wo} onChanged={load} />}
-      {activeTab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
-      {activeTab === 'Findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
-      {activeTab === 'External Services' && <ExternalServicesTab wo={wo} onChanged={load} />}
-      {activeTab === 'Documents' && <DocumentsTab workOrderId={wo.id} />}
-      {activeTab === 'History' && <HistoryTab vehicleId={wo.vehicle_id} />}
-      {activeTab === 'Audit' && <AuditTab workOrderId={wo.id} />}
+      {activeTab === 'overview' && <OverviewTab wo={wo} onChanged={load} />}
+      {activeTab === 'tire-operations' && tireOperation && <WorkOrderTireOperationTab operation={tireOperation} />}
+      {activeTab === 'complaint' && <ComplaintTab wo={wo} onChanged={load} />}
+      {activeTab === 'diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
+      {activeTab === 'jobs' && <JobsTab wo={wo} onChanged={load} />}
+      {activeTab === 'mechanic' && <MechanicTab wo={wo} onChanged={load} />}
+      {activeTab === 'planned-parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
+      {activeTab === 'issuance-return' && <IssuanceReturnTab wo={wo} onChanged={load} />}
+      {activeTab === 'workspace' && <WorkOrderWorkspaceTab wo={wo} onChanged={load} />}
+      {activeTab === 'qc' && <QcTab wo={wo} onChanged={load} />}
+      {activeTab === 'road-test' && <RoadTestTab wo={wo} onChanged={load} />}
+      {activeTab === 'findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
+      {activeTab === 'external-services' && <ExternalServicesTab wo={wo} onChanged={load} />}
+      {activeTab === 'documents' && <DocumentsTab workOrderId={wo.id} />}
+      {activeTab === 'history' && <HistoryTab vehicleId={wo.vehicle_id} />}
+      {activeTab === 'audit' && <AuditTab workOrderId={wo.id} />}
 
       <ScheduleWorkspaceModal open={showSchedule} wo={wo} onClose={() => setShowSchedule(false)} onDone={load} />
       <CompleteModal open={showComplete} wo={wo} onClose={() => setShowComplete(false)} onCompleted={load} />

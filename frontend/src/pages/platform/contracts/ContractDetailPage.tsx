@@ -32,7 +32,7 @@ export function ContractDetailPage() {
   // Reached from a Tenant Detail page's Contract tab -> Back must return
   // there (to the Contract tab specifically), not to Contract Management.
   const fromTenantId = searchParams.get('fromTenant');
-  const backFallback = fromTenantId ? `/platform/tenants/${fromTenantId}?tab=Contract` : '/platform/contracts';
+  const backFallback = fromTenantId ? `/platform/tenants/${fromTenantId}?tab=contract` : '/platform/contracts';
   const backLabel = fromTenantId ? '← Back to Tenant Contracts' : '← Back to Contract Management';
 
   function load() {
