@@ -94,7 +94,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   // Inventory / Procurement
   products: 'Products',
   inventory: 'Warehouse Stock',
-  'stock-transfers': 'Stock Transfers',
+  'stock-transfers': 'Stock Transfer',
   'stock-opnames': 'Stock Opname',
   'stock-movements': 'Stock Movements',
   'used-part-returns': 'Used Sparepart Processing',
@@ -140,7 +140,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   inspection: 'Inspection',
   login: 'Login',
   new: 'New',
-  returns: 'Returns',
+  returns: 'Stock Return',
   'tire-history': 'Tire History',
   'tire-inspection-rules': 'Tire Inspection Rules',
   'tire-operations': 'Tire Operations',
@@ -156,9 +156,18 @@ export function isDynamicSegment(segment: string): boolean {
   return UUID_RE.test(segment) || NUMERIC_ID_RE.test(segment);
 }
 
-/** `maintenance-policies` → `breadcrumb.maintenancePolicies`. */
+/**
+ * Segments whose label key is not derived from the URL (the label was renamed while the route — an
+ * internal identifier — stays): Return → Stock Return, Transfer → Stock Transfer.
+ */
+const SEGMENT_KEYS: Record<string, string> = {
+  returns: 'breadcrumb.stockReturn',
+  'stock-transfers': 'breadcrumb.stockTransfer',
+};
+
+/** `maintenance-policies` → `breadcrumb.maintenancePolicies` (unless the segment has an explicit key). */
 export function segmentKey(segment: string): string {
-  return `breadcrumb.${segment.replace(/[-_]([a-z0-9])/g, (_, c: string) => c.toUpperCase())}`;
+  return SEGMENT_KEYS[segment] ?? `breadcrumb.${segment.replace(/[-_]([a-z0-9])/g, (_, c: string) => c.toUpperCase())}`;
 }
 
 /** The label shown for a static segment, in the current language. */

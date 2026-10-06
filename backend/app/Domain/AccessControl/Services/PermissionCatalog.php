@@ -24,9 +24,10 @@ class PermissionCatalog
      * User-facing names that differ from the stored permission keys. The keys stay unchanged (they
      * are referenced by routes, role assignments and history); only the label shown in role
      * management is clarified. `workshop_invoice` is the third-party Service Invoice recorded on an
-     * internal Work Order — not the External Workshop invoice of an External Work Order.
+     * internal Work Order — not the External Workshop invoice of an External Work Order. `part_return` is
+     * the Inventory menu Stock Return (renamed from Return; the permission keys are unchanged).
      */
-    private const FEATURE_NAMES = ['workshop_invoice' => 'Service Invoice'];
+    private const FEATURE_NAMES = ['workshop_invoice' => 'Service Invoice', 'part_return' => 'Stock Return'];
 
     private const ACTION_NAMES = ['work_order.view_workshop_invoice_reference' => 'View External Workshop Invoice Reference'];
 

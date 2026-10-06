@@ -32,7 +32,7 @@ export function StockTransferListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('inventory.titles.stockTransfers')}</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('inventory.titles.stockTransfer')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
@@ -44,14 +44,14 @@ export function StockTransferListPage() {
         actions={
           hasPermission('stock_transfer.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              {tt('inventory.actions.newTransfer')}
+              {tt('inventory.actions.newStockTransfer')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label={tt('inventory.empty.noTransfersFound')} />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('inventory.empty.noStockTransfersFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateTransferModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />

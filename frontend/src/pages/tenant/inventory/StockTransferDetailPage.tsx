@@ -113,7 +113,7 @@ export function StockTransferDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/stock-transfers" label={t('inventory.actions.backToTransfer')} />
+      <BackButton fallbackTo="/app/stock-transfers" label={t('inventory.actions.backToStockTransfer')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{transfer.transfer_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>

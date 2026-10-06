@@ -68,6 +68,8 @@
     "sellSparepart": "Sell Sparepart",
     "stockMovement": "Stock Movement",
     "stockOpname": "Stock Opname",
+    "stockReturn": "Stock Return",
+    "stockTransfer": "Stock Transfer",
     "subscriptions": "Subscriptions",
     "templates": "Templates",
     "tenantManagement": "Tenant Management",
