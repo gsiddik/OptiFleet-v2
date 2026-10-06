@@ -16,6 +16,7 @@ import {
   isApproved,
 } from "./workspaceAssignment";
 import { formatDateTime } from "../../../../utils/date";
+import { t } from '../../../../i18n/i18n';
 
 const cell = { padding: "6px 4px" } as const;
 
@@ -84,13 +85,13 @@ export function WorkOrderWorkspaceTab({
             marginBottom: 10,
           }}
         >
-          <h3 style={{ margin: 0, fontSize: 15 }}>Assigned Workspace</h3>
+          <h3 style={{ margin: 0, fontSize: 15 }}>{t('workOrder.sections.assignedWorkspace')}</h3>
           {canTransfer && (
             <button
               className="btn-secondary"
               onClick={() => setTransferring(true)}
             >
-              Transfer to Another Workspace
+              {t('workOrder.actions.transferToAnotherWorkspace')}
             </button>
           )}
         </div>
@@ -103,36 +104,36 @@ export function WorkOrderWorkspaceTab({
             }}
           >
             {field(
-              "Workspace",
+              t('nav.items.workspace'),
               `${ws?.name ?? approved.workspace_id}${ws?.code ? ` (${ws.code})` : ""}`,
             )}
-            {field("Workshop", ws?.workshop?.name)}
-            {field("Type", ws?.workspace_type?.replaceAll("_", " "))}
+            {field(t('common.fields.workshop'), ws?.workshop?.name)}
+            {field(t('common.fields.type'), ws?.workspace_type?.replaceAll("_", " "))}
             {field(
-              "Capacity",
+              t('common.fields.capacity'),
               ws?.capacity != null
                 ? `${ws.capacity}${ws.capacity_unit ? ` ${ws.capacity_unit}` : ""}`
                 : "1",
             )}
-            {field("Scheduled", formatWindow(approved))}
+            {field(t('analytics.fields.scheduled'), formatWindow(approved))}
             {field(
-              "Assignment Status",
+              t('workOrder.fields.assignmentStatus'),
               <StatusBadge status={approved.status} />,
             )}
             {field(
-              "Approved At",
+              t('workOrder.fields.approvedAt'),
               approved.approved_at
                 ? formatDateTime(approved.approved_at)
                 : "—",
             )}
-            {field("Approved By", approved.approver?.name)}
+            {field(t('workOrder.fields.approvedBy'), approved.approver?.name)}
           </div>
         ) : (
           <EmptyState
             label={
               pending
-                ? "The workspace request is awaiting approval."
-                : "No approved workspace yet. Use Schedule Workspace to request one."
+                ? t('workOrder.empty.workspaceRequestAwaitingApproval')
+                : t('workOrder.empty.noApprovedWorkspaceYetUseSchedule')
             }
           />
         )}
@@ -145,7 +146,7 @@ export function WorkOrderWorkspaceTab({
           data-pending-workspace
         >
           <h3 style={{ marginTop: 0, fontSize: 15 }}>
-            Requested Workspace (awaiting approval)
+            {t('workOrder.sections.requestedWorkspaceAwaitingApproval')}
           </h3>
           <p style={{ fontSize: 13 }}>
             {pending.workspace?.name ?? pending.workspace_id}{" "}
@@ -159,7 +160,7 @@ export function WorkOrderWorkspaceTab({
                 disabled={busy}
                 onClick={() => act(pending.id, "approve")}
               >
-                Approve
+                {t('common.actions.approve')}
               </button>
             )}
             {hasPermission("workspace.reserve") && (
@@ -168,7 +169,7 @@ export function WorkOrderWorkspaceTab({
                 disabled={busy}
                 onClick={() => act(pending.id, "cancel")}
               >
-                Cancel Request
+                {t('workOrder.actions.cancelRequest')}
               </button>
             )}
           </div>
@@ -176,9 +177,9 @@ export function WorkOrderWorkspaceTab({
       )}
 
       <div className="card" data-workspace-history>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Assignment History</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('vehicle.sections.assignmentHistory')}</h3>
         {history.length === 0 ? (
-          <EmptyState label="No earlier workspace assignments." />
+          <EmptyState label={t('workOrder.empty.noEarlierWorkspaceAssignments')} />
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table
@@ -195,11 +196,11 @@ export function WorkOrderWorkspaceTab({
                     borderBottom: "1px solid #e5e7eb",
                   }}
                 >
-                  <th style={cell}>Workspace</th>
-                  <th style={cell}>Scheduled</th>
-                  <th style={cell}>Status</th>
-                  <th style={cell}>Approved</th>
-                  <th style={cell}>Closed</th>
+                  <th style={cell}>{t('nav.items.workspace')}</th>
+                  <th style={cell}>{t('analytics.fields.scheduled')}</th>
+                  <th style={cell}>{t('common.fields.status')}</th>
+                  <th style={cell}>{t('workOrder.fields.approved')}</th>
+                  <th style={cell}>{t('organization.fields.closed')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,11 +225,11 @@ export function WorkOrderWorkspaceTab({
                     </td>
                     <td style={cell}>
                       {r.transferred_at
-                        ? `Transferred ${formatDateTime(r.transferred_at)}${r.transferrer ? ` · ${r.transferrer.name}` : ""}`
+                        ? t('workOrder.help.transferredToLocaleStringValue', { toLocaleString: formatDateTime(r.transferred_at), value: r.transferrer ? ` · ${r.transferrer.name}` : "" })
                         : r.completed_at
-                          ? `Completed ${formatDateTime(r.completed_at)}`
+                          ? t('workOrder.help.completedToLocaleString', { toLocaleString: formatDateTime(r.completed_at) })
                           : r.cancelled_at
-                            ? `Cancelled ${formatDateTime(r.cancelled_at)}`
+                            ? t('workOrder.help.cancelledToLocaleString', { toLocaleString: formatDateTime(r.cancelled_at) })
                             : "—"}
                     </td>
                   </tr>

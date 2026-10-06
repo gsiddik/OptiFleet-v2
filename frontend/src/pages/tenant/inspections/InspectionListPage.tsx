@@ -12,6 +12,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { InspectionItem, InspectionTemplateItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
 import { formatDateTime } from '../../../utils/date';
+import { t as tt } from '../../../i18n/i18n';
 
 const TYPES = ['', 'PRE_TRIP', 'POST_TRIP', 'PERIODIC', 'WORKSHOP', 'MAINTENANCE'];
 const STATUSES = ['', 'CREATED', 'ASSIGNED', 'STARTED', 'SUBMITTED', 'PASSED', 'WARNING', 'FAILED'];
@@ -29,27 +30,27 @@ export function InspectionListPage() {
   }, reloadKey);
 
   const columns: Column<InspectionItem>[] = [
-    { key: 'vehicle', header: 'Vehicle', render: (i) => <Link to={`/app/inspections/${i.id}`}>{i.vehicle?.registration_number ?? i.vehicle_id}</Link> },
-    { key: 'type', header: 'Type', render: (i) => i.inspection_type },
-    { key: 'template', header: 'Template', render: (i) => i.template?.name ?? '—' },
-    { key: 'inspection_date', header: 'Inspection Date', render: (i) => formatDateTime(i.created_at) },
-    { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },
+    { key: 'vehicle', header: tt('common.fields.vehicle'), render: (i) => <Link to={`/app/inspections/${i.id}`}>{i.vehicle?.registration_number ?? i.vehicle_id}</Link> },
+    { key: 'type', header: tt('common.fields.type'), render: (i) => i.inspection_type },
+    { key: 'template', header: tt('configuration.fields.template'), render: (i) => i.template?.name ?? '—' },
+    { key: 'inspection_date', header: tt('inspection.fields.inspectionDate'), render: (i) => formatDateTime(i.created_at) },
+    { key: 'status', header: tt('common.fields.status'), render: (i) => <StatusBadge status={i.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Inspections</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('inspection.titles.inspections')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 10, flexWrap: 'wrap' }}>
         {TYPES.map((t) => (
           <button key={t} onClick={() => setType(t)} className={type === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {t || 'All Types'}
+            {t || tt('inspection.actions.allTypes')}
           </button>
         ))}
       </div>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {s ? statusLabel(s) : 'All Status'}
+            {s ? statusLabel(s) : tt('inspection.actions.allStatus')}
           </button>
         ))}
       </div>
@@ -57,14 +58,14 @@ export function InspectionListPage() {
         actions={
           hasPermission('inspection.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Inspection
+              {tt('inspection.actions.newInspection')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No inspections found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('inspection.empty.noInspectionsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateInspectionModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -102,10 +103,10 @@ function CreateInspectionModal({ open, onClose, onCreated }: { open: boolean; on
   }
 
   return (
-    <Modal open={open} title="New Inspection" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id} required>
+    <Modal open={open} title={tt('inspection.modals.newInspection')} onClose={onClose}>
+      <FormField label={tt('common.fields.vehicle')} errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number}
@@ -113,9 +114,9 @@ function CreateInspectionModal({ open, onClose, onCreated }: { open: boolean; on
           ))}
         </select>
       </FormField>
-      <FormField label="Template" errors={errors.inspection_template_id} required>
+      <FormField label={tt('configuration.fields.template')} errors={errors.inspection_template_id} required>
         <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {templates.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name} ({t.inspection_type})
@@ -125,10 +126,10 @@ function CreateInspectionModal({ open, onClose, onCreated }: { open: boolean; on
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !vehicleId || !templateId} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>

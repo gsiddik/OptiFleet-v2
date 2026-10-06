@@ -11,20 +11,21 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { INSPECTION_GROUP_CODES } from '../../../types';
 import type { InspectionGroupCode, InspectionGroupStatus, InspectionItem, MaintenanceRequestAssessmentItem, MaintenanceRequestItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { t, translatedRecord } from '../../../i18n/i18n';
 
 // Reviewer actions are Approve/Reject only — Request Info / NEED_INFORMATION retired
 // at the application level (legacy records remain readable, but no request can enter
 // or be acted on via NEED_INFORMATION anymore).
-const ACTIONS: Record<string, { action: string; label: string; permission: string; needsNote?: boolean }[]> = {
-  DRAFT: [{ action: 'submit', label: 'Submit', permission: 'maintenance_request.create' }, { action: 'cancel', label: 'Cancel', permission: 'maintenance_request.create' }],
-  SUBMITTED: [{ action: 'review', label: 'Move to Review', permission: 'maintenance_request.review' }],
+const ACTIONS: Record<string, { action: string; label: string; labelKey?: string; permission: string; needsNote?: boolean }[]> = {
+  DRAFT: [{ action: 'submit', label: 'Submit', labelKey: 'common.actions.submit', permission: 'maintenance_request.create' }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'maintenance_request.create' }],
+  SUBMITTED: [{ action: 'review', label: 'Move to Review', labelKey: 'common.actions.moveToReview', permission: 'maintenance_request.review' }],
   UNDER_REVIEW: [
-    { action: 'approve', label: 'Approve', permission: 'maintenance_request.approve' },
-    { action: 'reject', label: 'Reject', permission: 'maintenance_request.reject', needsNote: true },
+    { action: 'approve', label: 'Approve', labelKey: 'common.actions.approve', permission: 'maintenance_request.approve' },
+    { action: 'reject', label: 'Reject', labelKey: 'common.actions.reject', permission: 'maintenance_request.reject', needsNote: true },
   ],
 };
 
-const GROUP_LABELS: Record<InspectionGroupCode, string> = {
+const GROUP_LABELS: Record<InspectionGroupCode, string> = translatedRecord({
   ENGINE: 'Engine',
   LUBRICATION_SYSTEM: 'Lubrication System',
   CLUTCH_TORQUE_CONVERTER: 'Clutch System / Torque Converter',
@@ -39,7 +40,7 @@ const GROUP_LABELS: Record<InspectionGroupCode, string> = {
   BRAKE_SYSTEM: 'Brake System',
   SUSPENSION_SYSTEM: 'Suspension System',
   TYRE_WHEEL: 'Tyre and Wheel',
-};
+}, { ENGINE: 'maintenance.group.engine', LUBRICATION_SYSTEM: 'maintenance.group.lubricationSystem', CLUTCH_TORQUE_CONVERTER: 'maintenance.group.clutchTorqueConverter', COOLING_SYSTEM: 'maintenance.group.coolingSystem', FUEL_SYSTEM: 'maintenance.group.fuelSystem', TRANSMISSION_SYSTEM: 'maintenance.group.transmissionSystem', EXHAUST_SYSTEM: 'maintenance.group.exhaustSystem', STEERING_SYSTEM: 'maintenance.group.steeringSystem', DRIVE_AXLE_ASSEMBLY: 'maintenance.group.driveAxleAssembly', FRAME_CHASSIS: 'maintenance.group.frameChassis', ELECTRICAL_SYSTEM: 'maintenance.group.electricalSystem', BRAKE_SYSTEM: 'maintenance.group.brakeSystem', SUSPENSION_SYSTEM: 'maintenance.group.suspensionSystem', TYRE_WHEEL: 'maintenance.group.tyreWheel' });
 
 const GROUP_STATUSES: InspectionGroupStatus[] = ['GOOD', 'ATTENTION', 'REPAIR_REQUIRED', 'CRITICAL_UNSAFE', 'NOT_APPLICABLE'];
 
@@ -51,12 +52,12 @@ function emptyGroups(): Record<InspectionGroupCode, { status: InspectionGroupSta
 }
 
 /** The module action that moves a request into each status (the workflow decides when it is offered). */
-const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string; needsNote?: boolean }> = {
-  SUBMITTED: { action: 'submit', label: 'Submit', permission: 'maintenance_request.create' },
-  UNDER_REVIEW: { action: 'review', label: 'Move to Review', permission: 'maintenance_request.review' },
-  APPROVED: { action: 'approve', label: 'Approve', permission: 'maintenance_request.approve' },
-  REJECTED: { action: 'reject', label: 'Reject', permission: 'maintenance_request.reject', needsNote: true },
-  CANCELLED: { action: 'cancel', label: 'Cancel', permission: 'maintenance_request.create' },
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; labelKey?: string; permission: string; needsNote?: boolean }> = {
+  SUBMITTED: { action: 'submit', label: 'Submit', labelKey: 'common.actions.submit', permission: 'maintenance_request.create' },
+  UNDER_REVIEW: { action: 'review', label: 'Move to Review', labelKey: 'common.actions.moveToReview', permission: 'maintenance_request.review' },
+  APPROVED: { action: 'approve', label: 'Approve', labelKey: 'common.actions.approve', permission: 'maintenance_request.approve' },
+  REJECTED: { action: 'reject', label: 'Reject', labelKey: 'common.actions.reject', permission: 'maintenance_request.reject', needsNote: true },
+  CANCELLED: { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'maintenance_request.create' },
 };
 
 export function AssessmentSection({
@@ -141,14 +142,14 @@ export function AssessmentSection({
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Initial Assessment &amp; Visual Inspection</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('maintenance.sections.initialAssessmentVisualInspection')}</h3>
       {error && <ErrorState message={error} />}
       <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-            <th style={{ padding: '6px 4px' }}>Inspection Group</th>
-            <th style={{ padding: '6px 4px' }}>Status</th>
-            <th style={{ padding: '6px 4px' }}>Notes</th>
+            <th style={{ padding: '6px 4px' }}>{t('maintenance.fields.inspectionGroup')}</th>
+            <th style={{ padding: '6px 4px' }}>{t('common.fields.status')}</th>
+            <th style={{ padding: '6px 4px' }}>{t('common.fields.notes')}</th>
           </tr>
         </thead>
         <tbody>
@@ -190,7 +191,7 @@ export function AssessmentSection({
       <div style={{ marginTop: 10 }}>
         {showInputs ? (
           <textarea
-            placeholder="Overall assessment notes"
+            placeholder={t('maintenance.placeholders.overallAssessmentNotes')}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             style={{ width: '100%', minHeight: 50, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
@@ -198,7 +199,7 @@ export function AssessmentSection({
         ) : (
           notes && (
             <p style={{ fontSize: 13 }}>
-              <strong>Notes:</strong> {notes}
+              <strong>{t('common.fields.notes')}:</strong> {notes}
             </p>
           )
         )}
@@ -208,15 +209,15 @@ export function AssessmentSection({
           {showInputs ? (
             <>
               <button className="btn-primary" disabled={busy} onClick={save}>
-                Save
+                {t('common.actions.save')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={clear}>
-                Clear
+                {t('common.actions.clear')}
               </button>
             </>
           ) : (
             <button className="btn-secondary" disabled={busy} onClick={() => setEditing(true)}>
-              Edit
+              {t('common.actions.edit')}
             </button>
           )}
         </div>
@@ -248,8 +249,8 @@ export function InspectionSourceSection({ inspectionId }: { inspectionId: string
 
   return (
     <div className="card" style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Checklist &amp; Recorded Findings (from Inspection)</h3>
-      {items.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No checklist items recorded on the source inspection.</p>}
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('maintenance.sections.checklistRecordedFindingsInspection')}</h3>
+      {items.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{t('maintenance.empty.noChecklistItemsRecordedSourceInspection')}</p>}
       {items.map((item) => {
         const existing = inspection.results?.find((r) => r.inspection_template_item_id === item.id);
         return (
@@ -260,8 +261,8 @@ export function InspectionSourceSection({ inspectionId }: { inspectionId: string
                 ? existing?.passed === null || existing?.passed === undefined
                   ? '—'
                   : existing.passed
-                    ? 'Pass'
-                    : 'Fail'
+                    ? t('inspection.fields.pass')
+                    : t('inspection.fields.fail')
                 : item.input_type === 'NUMBER'
                   ? (existing?.value_number ?? '—')
                   : (existing?.value_text ?? '—')}
@@ -271,7 +272,7 @@ export function InspectionSourceSection({ inspectionId }: { inspectionId: string
       })}
       {(inspection.findings?.length ?? 0) > 0 && (
         <div style={{ marginTop: 12 }}>
-          <h4 style={{ fontSize: 13, marginBottom: 6 }}>Recorded Findings</h4>
+          <h4 style={{ fontSize: 13, marginBottom: 6 }}>{t('inspection.sections.recordedFindings')}</h4>
           {inspection.findings!.map((f) => (
             <div key={f.id} style={{ fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
               <strong>{f.severity}</strong> — {f.description}
@@ -309,7 +310,7 @@ export function MaintenanceRequestDetailPage() {
 
   async function act(action: string, needsNote?: boolean) {
     if (needsNote && !note.trim()) {
-      setError('A note is required for this action.');
+      setError(t('maintenance.validation.noteRequiredAction'));
       return;
     }
     setBusy(true);
@@ -361,7 +362,7 @@ export function MaintenanceRequestDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/maintenance-requests" label="← Back to Maintenance Request" />
+      <BackButton fallbackTo="/app/maintenance-requests" label={t('maintenance.actions.backToMaintenanceRequest')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {request.request_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({request.vehicle?.registration_number})</span>
@@ -372,21 +373,21 @@ export function MaintenanceRequestDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Details</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.details')}</h3>
         <p style={{ fontSize: 13 }}>
-          <strong>Source:</strong> {request.source_type} &nbsp; <strong>Priority:</strong> {request.priority}
+          <strong>{t('common.fields.source')}:</strong> {request.source_type} &nbsp; <strong>{t('common.fields.priority')}:</strong> {request.priority}
         </p>
         <p style={{ fontSize: 13 }}>
-          <strong>Complaint:</strong> {request.complaint}
+          <strong>{t('maintenance.fields.complaint')}:</strong> {request.complaint}
         </p>
         {request.review_note && (
           <p style={{ fontSize: 13 }}>
-            <strong>Review Note:</strong> {request.review_note}
+            <strong>{t('maintenance.fields.reviewNote')}:</strong> {request.review_note}
           </p>
         )}
         {request.cancellation_reason && (
           <p style={{ fontSize: 13 }}>
-            <strong>Cancellation Reason:</strong> {request.cancellation_reason}
+            <strong>{t('maintenance.fields.cancellationReason')}:</strong> {request.cancellation_reason}
           </p>
         )}
       </div>
@@ -408,10 +409,10 @@ export function MaintenanceRequestDetailPage() {
           unconditional (matches ACTIONS having no DRAFT-only special case there). */}
       {actions.length > 0 && (request.status !== 'DRAFT' || request.source_type !== 'USER' || hasAssessment) && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Workflow Actions</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('maintenance.sections.workflowActions')}</h3>
           {actions.some((a) => a.needsNote) && (
             <textarea
-              placeholder="Note (required for reject)"
+              placeholder={t('maintenance.placeholders.noteRequiredForReject')}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               style={{ width: '100%', minHeight: 60, marginBottom: 10, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
@@ -432,30 +433,30 @@ export function MaintenanceRequestDetailPage() {
         </div>
       )}
 
-      <Modal open={showCancelConfirm} title="Cancel Maintenance Request" onClose={() => setShowCancelConfirm(false)}>
-        <p style={{ fontSize: 13, color: '#6b7280' }}>Please provide a reason for cancelling this maintenance request.</p>
+      <Modal open={showCancelConfirm} title={t('maintenance.modals.cancelMaintenanceRequest')} onClose={() => setShowCancelConfirm(false)}>
+        <p style={{ fontSize: 13, color: '#6b7280' }}>{t('maintenance.help.pleaseProvideReasonCancellingMaintenanceRequest')}</p>
         <textarea
-          placeholder="Cancellation reason"
+          placeholder={t('maintenance.placeholders.cancellationReason')}
           value={cancelReason}
           onChange={(e) => setCancelReason(e.target.value)}
           style={{ width: '100%', minHeight: 70, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setShowCancelConfirm(false)}>
-            No
+            {t('common.fields.no')}
           </button>
           <button className="btn-primary" disabled={busy || !cancelReason.trim()} onClick={confirmCancel}>
-            Yes, Cancel
+            {t('maintenance.actions.yesCancel')}
           </button>
         </div>
       </Modal>
 
       {request.status === 'APPROVED' && hasPermission('maintenance_request.convert_work_order') && (
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Work Order</h3>
-          <p style={{ fontSize: 13, color: '#6b7280' }}>This request is approved and ready to be converted into a Work Order.</p>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('maintenance.sections.workOrder')}</h3>
+          <p style={{ fontSize: 13, color: '#6b7280' }}>{t('maintenance.help.requestApprovedReadyConvertedIntoWork')}</p>
           <button className="btn-primary" disabled={busy} onClick={convertToWorkOrder}>
-            Create Work Order
+            {t('maintenance.actions.createWorkOrder')}
           </button>
         </div>
       )}
@@ -463,9 +464,9 @@ export function MaintenanceRequestDetailPage() {
       {request.status === 'WORK_ORDER_CREATED' && request.work_order_id && (
         <div className="card">
           <p style={{ fontSize: 13 }}>
-            Work Order created:{' '}
+            {t('maintenance.fields.workOrderCreated')}:{' '}
             <button className="btn-link" onClick={() => navigate(`/app/work-orders/${request.work_order_id}`)}>
-              View Work Order
+              {t('maintenance.actions.viewWorkOrder')}
             </button>
           </p>
         </div>

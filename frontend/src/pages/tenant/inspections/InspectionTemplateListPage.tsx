@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { InspectionTemplateItem } from '../../../types';
+import { t as tt } from '../../../i18n/i18n';
 
 const TYPES = ['PRE_TRIP', 'POST_TRIP', 'PERIODIC', 'WORKSHOP', 'MAINTENANCE'];
 const INPUT_TYPES = ['CHECKBOX', 'PASS_FAIL', 'TEXT', 'NUMBER', 'SELECT', 'PHOTO'];
@@ -21,28 +22,28 @@ export function InspectionTemplateListPage() {
   const { data, loading, error } = useApiList<InspectionTemplateItem>('/app/inspection-templates', {}, reloadKey);
 
   const columns: Column<InspectionTemplateItem>[] = [
-    { key: 'name', header: 'Name', render: (t) => <button className="btn-link" onClick={() => setEditing(t)}>{t.name}</button> },
-    { key: 'type', header: 'Type', render: (t) => t.inspection_type },
-    { key: 'category', header: 'Vehicle Category', render: (t) => t.vehicle_category?.name ?? 'All' },
-    { key: 'items', header: 'Items', render: (t) => t.items_count ?? t.items?.length ?? 0 },
-    { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.status} /> },
+    { key: 'name', header: tt('common.fields.name'), render: (t) => <button className="btn-link" onClick={() => setEditing(t)}>{t.name}</button> },
+    { key: 'type', header: tt('common.fields.type'), render: (t) => t.inspection_type },
+    { key: 'category', header: tt('inspection.fields.vehicleCategory'), render: (t) => t.vehicle_category?.name ?? tt('common.actions.all') },
+    { key: 'items', header: tt('inspection.fields.items'), render: (t) => t.items_count ?? t.items?.length ?? 0 },
+    { key: 'status', header: tt('common.fields.status'), render: (t) => <StatusBadge status={t.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Inspection Templates</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('inspection.titles.inspectionTemplates')}</h1>
       <Toolbar
         actions={
           hasPermission('inspection.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Template
+              {tt('inspection.actions.newTemplate')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No templates found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('inspection.empty.noTemplatesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateTemplateModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -89,11 +90,11 @@ function CreateTemplateModal({ open, onClose, onCreated }: { open: boolean; onCl
   }
 
   return (
-    <Modal open={open} title="New Inspection Template" onClose={onClose}>
-      <FormField label="Name" errors={errors.name} required>
+    <Modal open={open} title={tt('inspection.modals.newInspectionTemplate')} onClose={onClose}>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Inspection Type" errors={errors.inspection_type} required>
+      <FormField label={tt('inspection.fields.inspectionType')} errors={errors.inspection_type} required>
         <select value={inspectionType} onChange={(e) => setInspectionType(e.target.value)} style={inputStyle}>
           {TYPES.map((t) => (
             <option key={t} value={t}>
@@ -102,9 +103,9 @@ function CreateTemplateModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="Vehicle Category (optional — applies to all if blank)">
+      <FormField label={tt('inspection.fields.vehicleCategoryOptionalAppliesAllIf')}>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
-          <option value="">All Categories</option>
+          <option value="">{tt('inspection.filters.allCategories')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -114,10 +115,10 @@ function CreateTemplateModal({ open, onClose, onCreated }: { open: boolean; onCl
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !name} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>
@@ -202,12 +203,12 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
         <StatusBadge status={template.status} />
         {template.status === 'DRAFT' && hasPermission('inspection.create') && (
           <button className="btn-secondary" onClick={activate}>
-            Activate
+            {tt('common.actions.activate')}
           </button>
         )}
         {template.status === 'ACTIVE' && hasPermission('inspection.create') && (
           <button className="btn-secondary" onClick={deactivate}>
-            Deactivate
+            {tt('common.actions.deactivate')}
           </button>
         )}
       </div>
@@ -220,7 +221,7 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
                 {item.item_text}
                 {item.is_system && (
                   <span style={{ marginLeft: 6, fontSize: 10, color: '#6b7280', background: '#f3f4f6', padding: '1px 6px', borderRadius: 4 }}>
-                    System
+                    {tt('inspection.help.system')}
                   </span>
                 )}
               </td>
@@ -228,7 +229,7 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
               <td style={{ padding: '6px 4px', textAlign: 'right' }}>
                 {canEdit && !item.is_system && (
                   <button className="btn-link" disabled={removingId === item.id} onClick={() => removeItem(item.id)}>
-                    {removingId === item.id ? 'Removing…' : 'Remove'}
+                    {removingId === item.id ? tt('inspection.actions.removing') : tt('common.actions.remove')}
                   </button>
                 )}
               </td>
@@ -238,7 +239,7 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
       </table>
       {canEdit && (
         <div style={{ display: 'flex', gap: 8 }}>
-          <input placeholder="Checklist item text" value={itemText} onChange={(e) => setItemText(e.target.value)} style={inputStyle} />
+          <input placeholder={tt('inspection.placeholders.checklistItemText')} value={itemText} onChange={(e) => setItemText(e.target.value)} style={inputStyle} />
           <select value={inputType} onChange={(e) => setInputType(e.target.value)} style={{ ...inputStyle, width: 140 }}>
             {INPUT_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -247,7 +248,7 @@ function TemplateDetailModal({ templateId, onClose, onChanged }: { templateId: s
             ))}
           </select>
           <button className="btn-secondary" disabled={busy || !itemText} onClick={addItem}>
-            {busy ? 'Adding…' : 'Add'}
+            {busy ? tt('common.actions.adding') : tt('common.actions.add2')}
           </button>
         </div>
       )}

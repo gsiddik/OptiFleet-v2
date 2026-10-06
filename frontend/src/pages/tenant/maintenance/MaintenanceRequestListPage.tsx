@@ -12,6 +12,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { MaintenanceRequestItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
 import { formatDateTime } from '../../../utils/date';
+import { t } from '../../../i18n/i18n';
 
 // NEED_INFORMATION is retired (see MaintenanceRequestService docblock) — omitted from the
 // filter bar since no request can be in that status going forward, but the status itself
@@ -38,20 +39,20 @@ export function MaintenanceRequestListPage() {
   }
 
   const columns: Column<MaintenanceRequestItem>[] = [
-    { key: 'request_number', header: 'Request #', render: (r) => <Link to={`/app/maintenance-requests/${r.id}`}>{r.request_number}</Link> },
-    { key: 'vehicle', header: 'Vehicle', render: (r) => r.vehicle?.registration_number ?? r.vehicle_id },
-    { key: 'source_type', header: 'Source', render: (r) => r.source_type },
-    { key: 'priority', header: 'Priority', render: (r) => r.priority },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-    { key: 'created_at', header: 'Created At', render: (r) => formatDateTime(r.created_at) },
-    { key: 'submitted_by', header: 'Submitted by', render: (r) => r.requested_by_user?.name ?? '—' },
+    { key: 'request_number', header: t('maintenance.fields.requestNumber'), render: (r) => <Link to={`/app/maintenance-requests/${r.id}`}>{r.request_number}</Link> },
+    { key: 'vehicle', header: t('common.fields.vehicle'), render: (r) => r.vehicle?.registration_number ?? r.vehicle_id },
+    { key: 'source_type', header: t('common.fields.source'), render: (r) => r.source_type },
+    { key: 'priority', header: t('common.fields.priority'), render: (r) => r.priority },
+    { key: 'status', header: t('common.fields.status'), render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'created_at', header: t('maintenance.fields.createdAt'), render: (r) => formatDateTime(r.created_at) },
+    { key: 'submitted_by', header: t('maintenance.fields.submittedBy'), render: (r) => r.requested_by_user?.name ?? '—' },
     {
       key: 'actions',
-      header: 'Actions',
+      header: t('intelligence.fields.actions'),
       render: (r) =>
         r.status === 'APPROVED' && hasPermission('maintenance_request.convert_work_order') ? (
           <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => convertToWorkOrder(r)}>
-            Create Work Order
+            {t('maintenance.actions.createWorkOrder')}
           </button>
         ) : (
           '—'
@@ -61,11 +62,11 @@ export function MaintenanceRequestListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Maintenance Requests</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('maintenance.titles.maintenanceRequests')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s ? statusLabel(s) : 'All'}
+            {s ? statusLabel(s) : t('common.actions.all')}
           </button>
         ))}
       </div>
@@ -73,7 +74,7 @@ export function MaintenanceRequestListPage() {
         actions={
           hasPermission('maintenance_request.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Request
+              {t('maintenance.actions.newRequest')}
             </button>
           ) : null
         }
@@ -81,7 +82,7 @@ export function MaintenanceRequestListPage() {
       {error && <ErrorState message={error} />}
       {convertError && <ErrorState message={convertError} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No maintenance requests found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('maintenance.empty.noMaintenanceRequestsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateRequestModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -119,10 +120,10 @@ function CreateRequestModal({ open, onClose, onCreated }: { open: boolean; onClo
   }
 
   return (
-    <Modal open={open} title="New Maintenance Request" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id} required>
+    <Modal open={open} title={t('maintenance.modals.newMaintenanceRequest')} onClose={onClose}>
+      <FormField label={t('common.fields.vehicle')} errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{t('common.fields.select')}</option>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number}
@@ -130,7 +131,7 @@ function CreateRequestModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Priority" errors={errors.priority}>
+      <FormField label={t('common.fields.priority')} errors={errors.priority}>
         <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>
           {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
             <option key={p} value={p}>
@@ -139,15 +140,15 @@ function CreateRequestModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Complaint" errors={errors.complaint} required>
+      <FormField label={t('maintenance.fields.complaint')} errors={errors.complaint} required>
         <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !vehicleId || !complaint} onClick={submit}>
-          Create
+          {t('common.actions.create')}
         </button>
       </div>
     </Modal>

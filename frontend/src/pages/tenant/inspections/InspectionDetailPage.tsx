@@ -11,6 +11,7 @@ import type { InspectionItem, InspectionLogEntry } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { statusLabel } from '../../../i18n/statusRegistry';
 import { formatDateTime } from '../../../utils/date';
+import { t } from '../../../i18n/i18n';
 
 export function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -32,7 +33,7 @@ export function InspectionDetailPage() {
 
   useEffect(load, [id]);
 
-  useBreadcrumbLabel(inspection?.id, inspection ? `${inspection.inspection_type} Inspection` : undefined);
+  useBreadcrumbLabel(inspection?.id, inspection ? t('breadcrumb.usebreadcrumblabel', { inspection_type: inspection.inspection_type }) : undefined);
 
   async function start() {
     setBusy(true);
@@ -103,26 +104,26 @@ export function InspectionDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/inspections" label="← Back to Inspections" />
+      <BackButton fallbackTo="/app/inspections" label={t('inspection.actions.backToInspections')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
-          {inspection.inspection_type} Inspection <span style={{ color: '#9ca3af', fontWeight: 400 }}>({inspection.vehicle?.registration_number})</span>
+          {inspection.inspection_type} {t('breadcrumb.inspection')} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({inspection.vehicle?.registration_number})</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <StatusBadge status={inspection.status} />
           {inspection.status === 'CREATED' && hasPermission('inspection.perform') && (
             <button className="btn-primary" disabled={busy} onClick={start}>
-              Start
+              {t('inspection.actions.start')}
             </button>
           )}
           {inspection.status === 'STARTED' && hasPermission('inspection.submit') && (
             <button className="btn-primary" disabled={busy} onClick={submit}>
-              Submit
+              {t('common.actions.submit')}
             </button>
           )}
           {['FAILED', 'WARNING'].includes(inspection.status) && hasPermission('maintenance_request.create') && (
             <button className="btn-secondary" disabled={busy} onClick={createMaintenanceRequest}>
-              Create Maintenance Request
+              {t('inspection.actions.createMaintenanceRequest')}
             </button>
           )}
         </div>
@@ -132,24 +133,24 @@ export function InspectionDetailPage() {
 
       {['PASSED', 'WARNING', 'FAILED'].includes(inspection.status) && (inspection.reviewed_at || hasPermission('inspection.review')) && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Supervisor Review</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inspection.sections.supervisorReview')}</h3>
           {inspection.reviewed_at ? (
             <p style={{ fontSize: 13, margin: 0 }}>
-              Reviewed on {formatDateTime(inspection.reviewed_at)}
+              {t('inspection.help.reviewedOn', { date: formatDateTime(inspection.reviewed_at) })}
               {inspection.review_notes ? <> — {inspection.review_notes}</> : null}
             </p>
           ) : (
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
               <textarea
-                aria-label="Review notes"
-                placeholder="Review notes (optional)"
+                aria-label={t('inspection.fields.reviewNotes')}
+                placeholder={t('inspection.placeholders.reviewNotesOptional')}
                 value={reviewNotes}
                 maxLength={2000}
                 onChange={(e) => setReviewNotes(e.target.value)}
                 style={{ ...inputStyle, flex: 1, minWidth: 240, minHeight: 50 }}
               />
               <button className="btn-primary" disabled={busy} onClick={review}>
-                Mark Reviewed
+                {t('inspection.actions.markReviewed')}
               </button>
             </div>
           )}
@@ -157,8 +158,8 @@ export function InspectionDetailPage() {
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Checklist</h3>
-        {items.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No checklist items on this template.</p>}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inspection.sections.checklist')}</h3>
+        {items.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{t('inspection.empty.noChecklistItemsTemplate')}</p>}
         {items.map((item) => {
           const existing = inspection.results?.find((r) => r.inspection_template_item_id === item.id);
           const editable = inspection.status === 'STARTED';
@@ -173,11 +174,11 @@ export function InspectionDetailPage() {
                     onChange={(e) => setResults((prev) => ({ ...prev, [item.id]: { passed: e.target.value === 'pass' } }))}
                   >
                     <option value="">—</option>
-                    <option value="pass">Pass</option>
-                    <option value="fail">Fail</option>
+                    <option value="pass">{t('inspection.fields.pass')}</option>
+                    <option value="fail">{t('inspection.fields.fail')}</option>
                   </select>
                 ) : (
-                  <span>{existing?.passed === null ? '—' : existing?.passed ? 'Pass' : 'Fail'}</span>
+                  <span>{existing?.passed === null ? '—' : existing?.passed ? t('inspection.fields.pass') : t('inspection.fields.fail')}</span>
                 )
               )}
               {item.input_type === 'NUMBER' && (
@@ -207,7 +208,7 @@ export function InspectionDetailPage() {
 
       {inspection.status === 'STARTED' && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Findings (optional)</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inspection.sections.findingsOptional')}</h3>
           {findings.map((f, idx) => (
             <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <select
@@ -222,25 +223,25 @@ export function InspectionDetailPage() {
                 ))}
               </select>
               <input
-                placeholder="Description"
+                placeholder={t('inspection.placeholders.description')}
                 value={f.description}
                 onChange={(e) => setFindings((prev) => prev.map((x, i) => (i === idx ? { ...x, description: e.target.value } : x)))}
                 style={inputStyle}
               />
               <button className="btn-secondary" onClick={() => setFindings((prev) => prev.filter((_, i) => i !== idx))}>
-                Remove
+                {t('common.actions.remove')}
               </button>
             </div>
           ))}
           <button className="btn-secondary" onClick={() => setFindings((prev) => [...prev, { severity: 'MEDIUM', description: '' }])}>
-            + Add Finding
+            {t('inspection.actions.addFinding')}
           </button>
         </div>
       )}
 
       {(inspection.findings?.length ?? 0) > 0 && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Recorded Findings</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inspection.sections.recordedFindings')}</h3>
           {inspection.findings!.map((f) => (
             <div key={f.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10 }}>
               <StatusBadge status={f.severity} />
@@ -264,38 +265,38 @@ function InspectionLog({ inspectionId }: { inspectionId: string }) {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Log</h3>
-      {logs === null && <p style={{ color: '#9ca3af', fontSize: 13 }}>Loading…</p>}
-      {logs?.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No history yet.</p>}
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inspection.sections.log')}</h3>
+      {logs === null && <p style={{ color: '#9ca3af', fontSize: 13 }}>{t('common.actions.loading')}</p>}
+      {logs?.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{t('inspection.empty.noHistoryYet')}</p>}
       {logs?.map((log) => (
         <div key={log.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 12, alignItems: 'baseline' }}>
           <span style={{ color: '#9ca3af', minWidth: 160 }}>{formatDateTime(log.created_at)}</span>
           <span style={{ flex: 1 }}>
             {log.action === 'maintenance_request_created' ? (
               <>
-                Maintenance Request created from this inspection's result
+                {t('inspection.help.maintenanceRequestCreatedInspectionSResult')}
                 {typeof log.new_values?.maintenance_request_id === 'string' && (
                   <>
                     {' '}
                     (
-                    <Link to={`/app/maintenance-requests/${log.new_values.maintenance_request_id}`}>view</Link>
+                    <Link to={`/app/maintenance-requests/${log.new_values.maintenance_request_id}`}>{t('inspection.actions.view')}</Link>
                     )
                   </>
                 )}
               </>
             ) : typeof log.new_values?.reviewed_at === 'string' ? (
-              <>Inspection reviewed</>
+              <>{t('inspection.fields.inspectionReviewed')}</>
             ) : log.action === 'created' && typeof log.new_values?.status === 'string' ? (
-              <>Inspection created (status: {statusLabel(log.new_values.status)})</>
+              <>{t('inspection.help.inspectionCreatedStatusStatus', { status: statusLabel(log.new_values.status) })}</>
             ) : typeof log.old_values?.status === 'string' && typeof log.new_values?.status === 'string' ? (
               <>
-                Status changed from {statusLabel(log.old_values.status)} to {statusLabel(log.new_values.status)}
+                {t('inspection.help.statusChangedFromTo', { from: statusLabel(log.old_values.status), to: statusLabel(log.new_values.status) })}
               </>
             ) : (
               log.action
             )}
           </span>
-          <span style={{ color: '#6b7280' }}>{log.actor_name ?? 'System'}</span>
+          <span style={{ color: '#6b7280' }}>{log.actor_name ?? t('common.fields.system')}</span>
         </div>
       ))}
     </div>

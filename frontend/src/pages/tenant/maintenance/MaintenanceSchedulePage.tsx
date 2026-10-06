@@ -12,6 +12,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { MaintenancePackageItemType, MaintenanceScheduleItem, VehicleItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
 import { formatNumber } from '../../../utils/number';
+import { t } from '../../../i18n/i18n';
 
 const STATUSES = ['', 'UPCOMING', 'DUE_SOON', 'DUE', 'OVERDUE', 'SCHEDULED', 'COMPLETED'];
 
@@ -72,12 +73,12 @@ export function MaintenanceSchedulePage() {
   }
 
   const columns: Column<MaintenanceScheduleItem>[] = [
-    { key: 'vehicle', header: 'Vehicle', render: (s) => <Link to={`/app/vehicles/${s.vehicle_id}`}>{s.vehicle?.registration_number ?? s.vehicle_id}</Link> },
-    { key: 'package', header: 'Package', render: (s) => s.package?.name ?? '—' },
-    { key: 'schedule_start_date', header: 'Schedule Start', render: (s) => (s.schedule_start_date ? s.schedule_start_date.slice(0, 10) : '—') },
-    { key: 'due_date', header: 'Next Due Date', render: (s) => (s.next_due_date ? s.next_due_date.slice(0, 10) : '—') },
-    { key: 'due_odometer', header: 'Next Due Odometer', render: (s) => (s.next_due_odometer != null ? formatNumber(s.next_due_odometer) : '—') },
-    { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.status} /> },
+    { key: 'vehicle', header: t('common.fields.vehicle'), render: (s) => <Link to={`/app/vehicles/${s.vehicle_id}`}>{s.vehicle?.registration_number ?? s.vehicle_id}</Link> },
+    { key: 'package', header: t('maintenance.fields.package'), render: (s) => s.package?.name ?? '—' },
+    { key: 'schedule_start_date', header: t('maintenance.fields.scheduleStart'), render: (s) => (s.schedule_start_date ? s.schedule_start_date.slice(0, 10) : '—') },
+    { key: 'due_date', header: t('maintenance.fields.nextDueDate'), render: (s) => (s.next_due_date ? s.next_due_date.slice(0, 10) : '—') },
+    { key: 'due_odometer', header: t('maintenance.fields.nextDueOdometer'), render: (s) => (s.next_due_odometer != null ? formatNumber(s.next_due_odometer) : '—') },
+    { key: 'status', header: t('common.fields.status'), render: (s) => <StatusBadge status={s.status} /> },
     {
       key: 'actions',
       header: '',
@@ -85,17 +86,17 @@ export function MaintenanceSchedulePage() {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {hasPermission('maintenance_schedule.manage') && (
             <button className="btn-secondary" disabled={busyId === s.id} onClick={() => refresh(s)}>
-              Recalculate
+              {t('maintenance.actions.recalculate')}
             </button>
           )}
           {['DUE_SOON', 'DUE', 'OVERDUE'].includes(s.status) && hasPermission('maintenance_schedule.convert_work_order') && (
             <button className="btn-secondary" disabled={busyId === s.id} onClick={() => convertToWorkOrder(s)}>
-              Convert to WO
+              {t('maintenance.actions.convertToWo')}
             </button>
           )}
           {['DUE', 'OVERDUE', 'SCHEDULED'].includes(s.status) && hasPermission('maintenance_schedule.convert_maintenance_request') && (
             <button className="btn-primary" disabled={busyId === s.id} onClick={() => convertToMaintenanceRequest(s)}>
-              Convert to Maintenance Request
+              {t('maintenance.actions.convertToMaintenanceRequest')}
             </button>
           )}
         </div>
@@ -105,12 +106,12 @@ export function MaintenanceSchedulePage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Maintenance Planning &amp; Schedule</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('maintenance.titles.maintenancePlanningAndSchedule')}</h1>
       <Toolbar
         actions={
           hasPermission('maintenance_schedule.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + Add New Schedule
+              {t('maintenance.actions.addNewSchedule')}
             </button>
           ) : null
         }
@@ -118,14 +119,14 @@ export function MaintenanceSchedulePage() {
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s ? statusLabel(s) : 'All'}
+            {s ? statusLabel(s) : t('common.actions.all')}
           </button>
         ))}
       </div>
       {error && <ErrorState message={error} />}
       {listError && <ErrorState message={listError} />}
       {!listError && loading && <LoadingState />}
-      {!listError && !loading && data.length === 0 && <EmptyState label="No maintenance schedules found." />}
+      {!listError && !loading && data.length === 0 && <EmptyState label={t('maintenance.empty.noMaintenanceSchedulesFound')} />}
       {!listError && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateScheduleModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -224,10 +225,10 @@ function CreateScheduleModal({ open, onClose, onCreated }: { open: boolean; onCl
   }
 
   return (
-    <Modal open={open} title="New Maintenance Schedule" onClose={onClose} width={520}>
-      <FormField label="Vehicle" errors={errors.vehicle_id} required>
+    <Modal open={open} title={t('maintenance.modals.newMaintenanceSchedule')} onClose={onClose} width={520}>
+      <FormField label={t('common.fields.vehicle')} errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{t('common.fields.select')}</option>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number}
@@ -235,9 +236,9 @@ function CreateScheduleModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="Maintenance Package" errors={errors.maintenance_package_id} required>
+      <FormField label={t('maintenance.fields.maintenancePackage')} errors={errors.maintenance_package_id} required>
         <select value={packageId} onChange={(e) => setPackageId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{t('common.fields.select')}</option>
           {packages.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -247,15 +248,15 @@ function CreateScheduleModal({ open, onClose, onCreated }: { open: boolean; onCl
       </FormField>
       {selectedPackage && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 14 }}>
-          <FormField label="Maintenance Period By">
+          <FormField label={t('maintenance.fields.maintenancePeriodBy')}>
             <input value={PERIOD_BY_LABELS[selectedPackage.period_by ?? ''] ?? selectedPackage.period_by ?? '—'} disabled style={inputStyle} />
           </FormField>
-          <FormField label="Schedule Period">
+          <FormField label={t('maintenance.fields.schedulePeriod')}>
             <input value={selectedPackage.schedule_period ?? ''} disabled style={inputStyle} />
           </FormField>
         </div>
       )}
-      <FormField label="Schedule Start Date" errors={errors.schedule_start_date} required>
+      <FormField label={t('maintenance.fields.scheduleStartDate')} errors={errors.schedule_start_date} required>
         <input
           type="date"
           value={scheduleStartDate}
@@ -264,29 +265,29 @@ function CreateScheduleModal({ open, onClose, onCreated }: { open: boolean; onCl
           disabled={!vehicleId || !packageId}
         />
         {occupiedDates.includes(scheduleStartDate) && (
-          <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>This vehicle already has a schedule on this date.</div>
+          <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>{t('maintenance.help.vehicleAlreadyScheduleDate')}</div>
         )}
       </FormField>
       {workshopWorkingDays === null && (
         <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 10 }}>
-          Workshop Working Days is not set in Company Profile — complete it before creating a periodic schedule.
+          {t('maintenance.help.workshopWorkingDaysNotSetCompany')}
         </div>
       )}
       {preview && (
         <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 10 }}>
-          Preview next due date: <strong>{preview}</strong> (backend recalculates this authoritatively on save).
+          {t('maintenance.fields.previewNextDueDate')}: <strong>{preview}</strong> {t('maintenance.help.backendRecalculatesAuthoritativelySave')}
         </p>
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button
           className="btn-primary"
           disabled={submitting || !vehicleId || !packageId || !scheduleStartDate || occupiedDates.includes(scheduleStartDate) || workshopWorkingDays === null}
           onClick={submit}
         >
-          {submitting ? 'Creating…' : 'Create Schedule'}
+          {submitting ? t('common.actions.creating') : t('maintenance.actions.createSchedule')}
         </button>
       </div>
     </Modal>

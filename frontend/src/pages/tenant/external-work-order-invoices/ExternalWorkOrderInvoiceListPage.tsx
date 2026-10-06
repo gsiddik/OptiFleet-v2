@@ -15,6 +15,7 @@ import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
 import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { t } from '../../../i18n/i18n';
 
 const STATUSES = ['', 'NEW_EXTERNAL_WO', 'DELIVERED', 'IN_PROGRESS', 'CANCELLED', 'BILLED', 'PAID'];
 
@@ -220,62 +221,62 @@ export function ExternalWorkOrderInvoiceListPage() {
   const columns: Column<ExternalWorkOrderInvoiceItem>[] = [
     {
       key: 'wo_number',
-      header: 'WO Number',
+      header: t('externalWorkOrderInvoice.fields.woNumber'),
       render: (r) => <Link to={`/app/work-orders/${r.work_order_id}`}>{r.work_order?.wo_number ?? r.work_order_id}</Link>,
     },
-    { key: 'vehicle', header: 'Vehicle', render: (r) => r.work_order?.vehicle?.registration_number ?? '—' },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-    { key: 'work_authorization', header: 'Work Authorization', render: (r) => statusLabel(r.work_authorization_status) },
-    { key: 'workshop', header: 'Workshop', render: (r) => r.wal_workshop_name ?? r.work_order?.workshop?.name ?? '—' },
+    { key: 'vehicle', header: t('common.fields.vehicle'), render: (r) => r.work_order?.vehicle?.registration_number ?? '—' },
+    { key: 'status', header: t('common.fields.status'), render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'work_authorization', header: t('externalWorkOrderInvoice.fields.workAuthorization'), render: (r) => statusLabel(r.work_authorization_status) },
+    { key: 'workshop', header: t('common.fields.workshop'), render: (r) => r.wal_workshop_name ?? r.work_order?.workshop?.name ?? '—' },
     {
       key: 'action',
-      header: 'Action',
+      header: t('common.fields.action'),
       render: (r) => (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {r.allowed_actions.includes('generate_authorization') && hasPermission('external_work_order_invoice.generate_authorization') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openGenerate(r)}>
-              Generate Work Authorization
+              {t('externalWorkOrderInvoice.actions.generateWorkAuthorization')}
             </button>
           )}
           {r.allowed_actions.includes('view_authorization') && (
-            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setViewing({ path: `/app/external-work-order-invoices/${r.id}/authorization`, title: 'Work Authorization Letter' })}>
-              View Work Authorization
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setViewing({ path: `/app/external-work-order-invoices/${r.id}/authorization`, title: t('externalWorkOrderInvoice.sections.workAuthorizationLetter') })}>
+              {t('externalWorkOrderInvoice.actions.viewWorkAuthorization')}
             </button>
           )}
           {r.allowed_actions.includes('view_authorization') && <DocumentVersionsButton printPath={`/app/external-work-order-invoices/${r.id}/authorization`} disabled={busyId === r.id} />}
           {r.allowed_actions.includes('deliver') && hasPermission('external_work_order_invoice.deliver') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setDeliveringFor(r)}>
-              Deliver
+              {t('externalWorkOrderInvoice.actions.deliver')}
             </button>
           )}
           {r.allowed_actions.includes('acknowledge') && hasPermission('external_work_order_invoice.acknowledge') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setAcknowledgingFor(r)}>
-              Acknowledge
+              {t('externalWorkOrderInvoice.actions.acknowledge')}
             </button>
           )}
           {r.allowed_actions.includes('view_acknowledgement') && (
-            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setViewing({ path: `/app/external-work-order-invoices/${r.id}/acknowledgement`, title: 'Acknowledged Work Authorization' })}>
-              View Acknowledgement
+            <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setViewing({ path: `/app/external-work-order-invoices/${r.id}/acknowledgement`, title: t('externalWorkOrderInvoice.sections.acknowledgedWorkAuthorization') })}>
+              {t('externalWorkOrderInvoice.actions.viewAcknowledgement')}
             </button>
           )}
           {r.allowed_actions.includes('complete') && hasPermission('external_work_order_invoice.complete') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openComplete(r)}>
-              Complete
+              {t('common.actions.complete')}
             </button>
           )}
           {r.allowed_actions.includes('view_bill') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setBillFor(r)}>
-              View Bill
+              {t('externalWorkOrderInvoice.actions.viewBill')}
             </button>
           )}
           {r.allowed_actions.includes('settle') && hasPermission('external_work_order_invoice.settle') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => openSettle(r)}>
-              Settlement
+              {t('externalWorkOrderInvoice.actions.settlement')}
             </button>
           )}
           {r.allowed_actions.includes('view_settlement') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setSettlementFor(r)}>
-              View Settlement
+              {t('externalWorkOrderInvoice.actions.viewSettlement')}
             </button>
           )}
           {r.allowed_actions.includes('cancel') && canCancel && (
@@ -288,12 +289,12 @@ export function ExternalWorkOrderInvoiceListPage() {
                 setCancellingFor(r);
               }}
             >
-              Cancel
+              {t('common.actions.cancel')}
             </button>
           )}
           {r.allowed_actions.includes('view_history') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setHistoryFor(r)}>
-              View History
+              {t('externalWorkOrderInvoice.actions.viewHistory')}
             </button>
           )}
         </div>
@@ -303,26 +304,26 @@ export function ExternalWorkOrderInvoiceListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>External Work Order Invoices</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('externalWorkOrderInvoice.titles.externalWorkOrderInvoices')}</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: -8, marginBottom: 16 }}>
-        Work Orders being carried out by an External Workshop.
+        {t('externalWorkOrderInvoice.help.workOrdersBeingCarriedOutExternal')}
       </p>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s ? statusLabel(s) : 'All'}
+            {s ? statusLabel(s) : t('common.actions.all')}
           </button>
         ))}
       </div>
       {(error || actionError) && <ErrorState message={error ?? actionError ?? ''} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No External Work Order Invoices found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('externalWorkOrderInvoice.empty.noExternalWorkOrderInvoicesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
-      <Modal open={generatingFor !== null} title="Generate Work Authorization" onClose={() => setGeneratingFor(null)}>
-        <p style={{ fontSize: 13 }}>Select the External Workshop that will perform this maintenance.</p>
+      <Modal open={generatingFor !== null} title={t('externalWorkOrderInvoice.actions.generateWorkAuthorization')} onClose={() => setGeneratingFor(null)}>
+        <p style={{ fontSize: 13 }}>{t('externalWorkOrderInvoice.help.selectExternalWorkshopPerformMaintenance')}</p>
         <select value={selectedPartnerId} onChange={(e) => setSelectedPartnerId(e.target.value)} style={{ ...inputStyle, width: '100%' }}>
-          <option value="">Select workshop…</option>
+          <option value="">{t('externalWorkOrderInvoice.fields.selectWorkshop')}</option>
           {partners.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -331,19 +332,19 @@ export function ExternalWorkOrderInvoiceListPage() {
         </select>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setGeneratingFor(null)} disabled={busyId !== null}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={submitGenerate} disabled={busyId !== null || !selectedPartnerId}>
-            Generate
+            {t('externalWorkOrderInvoice.actions.generate')}
           </button>
         </div>
       </Modal>
 
-      <Modal open={cancellingFor !== null} title="Cancel External Work Order" onClose={() => setCancellingFor(null)}>
-        <p style={{ fontSize: 13 }}>This cancels the External Work Order and its External Workshop Invoice. It cannot be undone.</p>
+      <Modal open={cancellingFor !== null} title={t('externalWorkOrderInvoice.modals.cancelExternalWorkOrder')} onClose={() => setCancellingFor(null)}>
+        <p style={{ fontSize: 13 }}>{t('externalWorkOrderInvoice.warnings.cancelsExternalWorkOrderExternalWorkshop')}</p>
         <textarea
-          aria-label="Cancellation reason"
-          placeholder="Reason (required)"
+          aria-label={t('common.fields.cancellationReason')}
+          placeholder={t('externalWorkOrderInvoice.placeholders.reasonRequired')}
           value={cancelReason}
           maxLength={2000}
           onChange={(e) => setCancelReason(e.target.value)}
@@ -351,37 +352,37 @@ export function ExternalWorkOrderInvoiceListPage() {
         />
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setCancellingFor(null)} disabled={busyId !== null}>
-            Back
+            {t('common.actions.back')}
           </button>
           <button className="btn-primary" onClick={submitCancel} disabled={busyId !== null || !cancelReason.trim()}>
-            Confirm Cancel
+            {t('externalWorkOrderInvoice.actions.confirmCancel')}
           </button>
         </div>
       </Modal>
 
-      <Modal open={deliveringFor !== null} title="Deliver" onClose={() => setDeliveringFor(null)}>
+      <Modal open={deliveringFor !== null} title={t('externalWorkOrderInvoice.actions.deliver')} onClose={() => setDeliveringFor(null)}>
         <p style={{ fontSize: 13 }}>
-          Confirm that the Work Order and Work Authorization Letter have been printed and handed over to the External Workshop.
+          {t('externalWorkOrderInvoice.help.confirmWorkOrderWorkAuthorizationLetter')}
         </p>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setDeliveringFor(null)} disabled={busyId !== null}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={submitDeliver} disabled={busyId !== null}>
-            Confirm Deliver
+            {t('externalWorkOrderInvoice.actions.confirmDeliver')}
           </button>
         </div>
       </Modal>
 
       <Modal
         open={acknowledgingFor !== null}
-        title="Acknowledge Work Authorization"
+        title={t('externalWorkOrderInvoice.modals.acknowledgeWorkAuthorization')}
         onClose={() => {
           setAcknowledgingFor(null);
           setAckFile(null);
         }}
       >
-        <p style={{ fontSize: 13 }}>Upload the signed Work Authorization Letter received back from the workshop.</p>
+        <p style={{ fontSize: 13 }}>{t('externalWorkOrderInvoice.help.uploadSignedWorkAuthorizationLetterReceived')}</p>
         <input type="file" accept=".doc,.docx,.pdf" onChange={(e) => setAckFile(e.target.files?.[0] ?? null)} />
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button
@@ -392,122 +393,122 @@ export function ExternalWorkOrderInvoiceListPage() {
             }}
             disabled={busyId !== null}
           >
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={submitAcknowledge} disabled={busyId !== null || !ackFile}>
-            Upload
+            {t('common.actions.upload')}
           </button>
         </div>
       </Modal>
 
-      <Modal open={completingFor !== null} title="Complete" onClose={() => setCompletingFor(null)} width={520}>
-        <p style={{ fontSize: 13 }}>Confirm that the External Workshop has finished the maintenance work.</p>
+      <Modal open={completingFor !== null} title={t('common.actions.complete')} onClose={() => setCompletingFor(null)} width={520}>
+        <p style={{ fontSize: 13 }}>{t('externalWorkOrderInvoice.help.confirmExternalWorkshopFinishedMaintenanceWork')}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <label style={{ fontSize: 12 }}>
-            Completed Work Order (JPG, PNG, or PDF)
+            {t('externalWorkOrderInvoice.fields.completedWorkOrderJpgPngPdf')}
             <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setCompletedWoFile(e.target.files?.[0] ?? null)} />
           </label>
           <label style={{ fontSize: 12 }}>
-            Vendor Invoice (JPG, PNG, or PDF)
+            {t('externalWorkOrderInvoice.fields.vendorInvoiceJpgPngPdf')}
             <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setVendorInvoiceFile(e.target.files?.[0] ?? null)} />
           </label>
           <label style={{ fontSize: 12 }}>
-            Invoice Date
+            {t('common.fields.invoiceDate')}
             <input type="date" value={vendorInvoiceDate} onChange={(e) => setVendorInvoiceDate(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
           </label>
           <label style={{ fontSize: 12 }}>
-            Invoice Amount
+            {t('externalWorkOrderInvoice.fields.invoiceAmount')}
             <NumericInput step="0.01" min="0.01" value={vendorInvoiceAmount} onChange={(e) => setVendorInvoiceAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
           </label>
           <label style={{ fontSize: 12 }}>
-            Payment Term
-            <input placeholder="e.g. NET 30" value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+            {t('externalWorkOrderInvoice.fields.paymentTerm')}
+            <input placeholder={t('externalWorkOrderInvoice.placeholders.eGNet30')} value={paymentTerm} onChange={(e) => setPaymentTerm(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
           </label>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setCompletingFor(null)} disabled={busyId !== null}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button
             className="btn-primary"
             onClick={submitComplete}
             disabled={busyId !== null || !completedWoFile || !vendorInvoiceFile || !vendorInvoiceDate || !vendorInvoiceAmount || !paymentTerm}
           >
-            Confirm Complete
+            {t('externalWorkOrderInvoice.actions.confirmComplete')}
           </button>
         </div>
       </Modal>
 
-      <Modal open={billFor !== null} title="Bill" onClose={() => setBillFor(null)}>
+      <Modal open={billFor !== null} title={t('externalWorkOrderInvoice.modals.bill')} onClose={() => setBillFor(null)}>
         {billFor && (
           <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div>Invoice Date: {formatDate(billFor.vendor_invoice_date)}</div>
-            <div>Invoice Amount: {formatMoney(billFor.vendor_invoice_amount)}</div>
-            <div>Payment Term: {billFor.payment_term ?? '—'}</div>
+            <div>{t('externalWorkOrderInvoice.fields.invoiceDateVendorInvoiceDate', { vendor_invoice_date: formatDate(billFor.vendor_invoice_date) })}</div>
+            <div>{t('externalWorkOrderInvoice.fields.invoiceAmountVendorInvoiceAmount', { vendor_invoice_amount: formatMoney(billFor.vendor_invoice_amount) })}</div>
+            <div>{t('externalWorkOrderInvoice.fields.paymentTerm')}: {billFor.payment_term ?? '—'}</div>
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${billFor.id}/completed-work-order`, title: 'Completed Work Order' })}>
-                Open Completed Work Order
+              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${billFor.id}/completed-work-order`, title: t('externalWorkOrderInvoice.sections.completedWorkOrder') })}>
+                {t('externalWorkOrderInvoice.actions.openCompletedWorkOrder')}
               </button>
-              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${billFor.id}/vendor-invoice`, title: 'Vendor Invoice' })}>
-                Open Vendor Invoice
+              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${billFor.id}/vendor-invoice`, title: t('externalWorkOrderInvoice.sections.vendorInvoice') })}>
+                {t('externalWorkOrderInvoice.actions.openVendorInvoice')}
               </button>
             </div>
           </div>
         )}
       </Modal>
 
-      <Modal open={settlingFor !== null} title="Settlement" onClose={() => setSettlingFor(null)}>
+      <Modal open={settlingFor !== null} title={t('externalWorkOrderInvoice.actions.settlement')} onClose={() => setSettlingFor(null)}>
         <p style={{ fontSize: 13 }}>
-          Paid amount must exactly match the vendor invoice amount ({formatMoney(settlingFor?.vendor_invoice_amount)}) — partial settlement is not supported.
+          {t('externalWorkOrderInvoice.help.paidAmountMustExactlyMatchVendor', { vendor_invoice_amount: formatMoney(settlingFor?.vendor_invoice_amount) })}
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <label style={{ fontSize: 12 }}>
-            Payment Date
+            {t('common.fields.paymentDate')}
             <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
           </label>
           <label style={{ fontSize: 12 }}>
-            Paid Amount
+            {t('externalWorkOrderInvoice.fields.paidAmount')}
             <NumericInput step="0.01" min="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
           </label>
           <label style={{ fontSize: 12 }}>
-            Payment Proof (JPG, PNG, or PDF)
+            {t('externalWorkOrderInvoice.fields.paymentProofJpgPngPdf')}
             <input type="file" accept=".jpg,.jpeg,.png,.pdf" onChange={(e) => setPaymentProofFile(e.target.files?.[0] ?? null)} />
           </label>
         </div>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setSettlingFor(null)} disabled={busyId !== null}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={submitSettle} disabled={busyId !== null || !paymentProofFile || !paymentDate || !paidAmount}>
-            Confirm Settlement
+            {t('externalWorkOrderInvoice.actions.confirmSettlement')}
           </button>
         </div>
       </Modal>
 
-      <Modal open={settlementFor !== null} title="Settlement Details" onClose={() => setSettlementFor(null)}>
+      <Modal open={settlementFor !== null} title={t('externalWorkOrderInvoice.modals.settlementDetails')} onClose={() => setSettlementFor(null)}>
         {settlementFor && (
           <div style={{ fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div>Payment Date: {formatDate(settlementFor.payment_date)}</div>
-            <div>Paid Amount: {formatMoney(settlementFor.paid_amount)}</div>
+            <div>{t('externalWorkOrderInvoice.fields.paymentDatePaymentDate', { payment_date: formatDate(settlementFor.payment_date) })}</div>
+            <div>{t('externalWorkOrderInvoice.fields.paidAmountPaidAmount', { paid_amount: formatMoney(settlementFor.paid_amount) })}</div>
             <div style={{ marginTop: 8 }}>
-              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${settlementFor.id}/payment-proof`, title: 'Payment Proof' })}>
-                Open Payment Proof
+              <button className="btn-secondary" onClick={() => setViewing({ path: `/app/external-work-order-invoices/${settlementFor.id}/payment-proof`, title: t('externalWorkOrderInvoice.sections.paymentProof') })}>
+                {t('externalWorkOrderInvoice.actions.openPaymentProof')}
               </button>
             </div>
           </div>
         )}
       </Modal>
 
-      <Modal open={historyFor !== null} title="History" onClose={() => setHistoryFor(null)} width={560}>
+      <Modal open={historyFor !== null} title={t('externalWorkOrderInvoice.modals.history')} onClose={() => setHistoryFor(null)} width={560}>
         {historyLoading && <LoadingState />}
-        {!historyLoading && historyEntries.length === 0 && <EmptyState label="No history recorded yet." />}
+        {!historyLoading && historyEntries.length === 0 && <EmptyState label={t('externalWorkOrderInvoice.empty.noHistoryRecordedYet')} />}
         {!historyLoading && historyEntries.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {historyEntries.map((entry) => (
               <div key={entry.id} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <div style={{ color: '#6b7280', fontSize: 12 }}>{formatDateTime(entry.created_at)}</div>
                 <div>
-                  <strong>{entry.actor_name ?? 'System'}</strong> — {entry.action}
+                  <strong>{entry.actor_name ?? t('common.fields.system')}</strong> — {entry.action}
                   {entry.new_values?.status ? ` (status: ${statusLabel(String(entry.new_values.status))})` : ''}
                 </div>
               </div>

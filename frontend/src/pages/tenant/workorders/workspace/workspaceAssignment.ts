@@ -4,6 +4,7 @@ import type {
   WorkspaceReservationItem,
 } from "../../../../types";
 import { formatDateTime } from "../../../../utils/date";
+import { t, translatedRecord } from '../../../../i18n/i18n';
 
 /** Mirrors WorkspaceReservationService::SCHEDULABLE_WORK_ORDER_STATUSES (backend re-checks). */
 export const SCHEDULABLE_WORK_ORDER_STATUSES = [
@@ -41,20 +42,22 @@ export const CURRENT_ASSIGNMENT_STATUSES: WorkspaceAssignmentStatus[] = [
   "ACTIVE",
 ];
 
-export const START_BLOCKED_REASON =
-  "Cannot start this Work Order because no approved Workspace and scheduled work date are assigned.";
+/** Why Start is unavailable (in the current language). */
+export function startBlockedReason(): string {
+  return t('workOrder.help.cannotStartWorkOrderBecauseNo');
+}
 
 export const ASSIGNMENT_STATUS_LABELS: Record<
   WorkspaceAssignmentStatus,
   string
-> = {
+> = translatedRecord({
   RESERVED: "Requested",
   APPROVED: "Approved",
   ACTIVE: "Approved",
   TRANSFERRED: "Transferred",
   COMPLETED: "Completed",
   CANCELLED: "Cancelled",
-};
+}, { RESERVED: 'workOrder.status.reserved', APPROVED: 'workOrder.status.approved', ACTIVE: 'workOrder.status.approved', TRANSFERRED: 'workOrder.status.transferred', COMPLETED: 'analytics.fields.completed', CANCELLED: 'externalWorkOrderInvoice.status.cancelled' });
 
 /** The Work Order's current assignment (at most one — the backend enforces it). */
 export function currentAssignment(

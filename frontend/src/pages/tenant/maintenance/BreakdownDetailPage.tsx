@@ -9,18 +9,19 @@ import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkf
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { BreakdownItem } from '../../../types';
 import { formatDateTime } from '../../../utils/date';
+import { t } from '../../../i18n/i18n';
 
-const ACTIONS: Record<string, { action: string; label: string; permission: string }[]> = {
-  REPORTED: [{ action: 'verify', label: 'Verify', permission: 'breakdown.review' }],
-  VERIFIED: [{ action: 'assess', label: 'Mark Assessed', permission: 'breakdown.review' }],
-  ASSESSED: [{ action: 'require-repair', label: 'Require Repair', permission: 'breakdown.review' }],
+const ACTIONS: Record<string, { action: string; label: string; labelKey?: string; permission: string }[]> = {
+  REPORTED: [{ action: 'verify', label: 'Verify', labelKey: 'platform.payments.actions.verify', permission: 'breakdown.review' }],
+  VERIFIED: [{ action: 'assess', label: 'Mark Assessed', labelKey: 'maintenance.actions.markAssessed', permission: 'breakdown.review' }],
+  ASSESSED: [{ action: 'require-repair', label: 'Require Repair', labelKey: 'maintenance.actions.requireRepair', permission: 'breakdown.review' }],
 };
 
 /** The module action that moves a breakdown into each status (the workflow decides when it is offered). */
-const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string }> = {
-  VERIFIED: { action: 'verify', label: 'Verify', permission: 'breakdown.review' },
-  ASSESSED: { action: 'assess', label: 'Mark Assessed', permission: 'breakdown.review' },
-  REPAIR_REQUIRED: { action: 'require-repair', label: 'Require Repair', permission: 'breakdown.review' },
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; labelKey?: string; permission: string }> = {
+  VERIFIED: { action: 'verify', label: 'Verify', labelKey: 'platform.payments.actions.verify', permission: 'breakdown.review' },
+  ASSESSED: { action: 'assess', label: 'Mark Assessed', labelKey: 'maintenance.actions.markAssessed', permission: 'breakdown.review' },
+  REPAIR_REQUIRED: { action: 'require-repair', label: 'Require Repair', labelKey: 'maintenance.actions.requireRepair', permission: 'breakdown.review' },
 };
 
 export function BreakdownDetailPage() {
@@ -43,7 +44,7 @@ export function BreakdownDetailPage() {
 
   useEffect(load, [id]);
 
-  useBreadcrumbLabel(breakdown?.id, breakdown ? `Breakdown (${breakdown.vehicle?.registration_number ?? ''})` : undefined);
+  useBreadcrumbLabel(breakdown?.id, breakdown ? t('breadcrumb.usebreadcrumblabel2', { value: breakdown.vehicle?.registration_number ?? '' }) : undefined);
 
   async function act(action: string) {
     setBusy(true);
@@ -83,10 +84,10 @@ export function BreakdownDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/breakdowns" label="← Back to Breakdown" />
+      <BackButton fallbackTo="/app/breakdowns" label={t('maintenance.actions.backToBreakdown')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
-          Breakdown <span style={{ color: '#9ca3af', fontWeight: 400 }}>({breakdown.vehicle?.registration_number})</span>
+          {t('maintenance.titles.breakdown')} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({breakdown.vehicle?.registration_number})</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <StatusBadge status={breakdown.severity} />
@@ -97,25 +98,25 @@ export function BreakdownDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Details</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.details')}</h3>
         <p style={{ fontSize: 13 }}>
-          <strong>Reported:</strong> {formatDateTime(breakdown.reported_at)} &nbsp; <strong>Location:</strong> {breakdown.location ?? '—'}
+          <strong>{t('maintenance.fields.reported')}:</strong> {formatDateTime(breakdown.reported_at)} &nbsp; <strong>{t('maintenance.fields.location')}:</strong> {breakdown.location ?? '—'}
         </p>
         <p style={{ fontSize: 13 }}>
-          <strong>Description:</strong> {breakdown.description}
+          <strong>{t('common.fields.description')}:</strong> {breakdown.description}
         </p>
         {breakdown.response_notes && (
           <p style={{ fontSize: 13 }}>
-            <strong>Notes:</strong> {breakdown.response_notes}
+            <strong>{t('common.fields.notes')}:</strong> {breakdown.response_notes}
           </p>
         )}
       </div>
 
       {(actions.length > 0 || (breakdown.status === 'REPAIR_REQUIRED' && hasPermission('breakdown.resolve'))) && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Workflow Actions</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('maintenance.sections.workflowActions')}</h3>
           <textarea
-            placeholder="Note (optional)"
+            placeholder={t('inventory.placeholders.noteOptional')}
             value={note}
             onChange={(e) => setNote(e.target.value)}
             style={{ width: '100%', minHeight: 50, marginBottom: 10, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
@@ -128,7 +129,7 @@ export function BreakdownDetailPage() {
             ))}
             {breakdown.status === 'REPAIR_REQUIRED' && hasPermission('breakdown.resolve') && (
               <button className="btn-secondary" disabled={busy} onClick={resolve}>
-                Mark Resolved
+                {t('maintenance.actions.markResolved')}
               </button>
             )}
           </div>
@@ -137,15 +138,15 @@ export function BreakdownDetailPage() {
 
       {breakdown.status === 'REPAIR_REQUIRED' && !breakdown.maintenance_request_id && hasPermission('breakdown.review') && (
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Convert to Maintenance Request</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('maintenance.sections.convertToMaintenanceRequest')}</h3>
           <textarea
-            placeholder="Complaint (defaults to breakdown description)"
+            placeholder={t('maintenance.placeholders.complaintDefaultsBreakdownDescription')}
             value={complaint}
             onChange={(e) => setComplaint(e.target.value)}
             style={{ width: '100%', minHeight: 60, marginBottom: 10, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
           />
           <button className="btn-primary" disabled={busy} onClick={convertToRequest}>
-            Create Maintenance Request
+            {t('inspection.actions.createMaintenanceRequest')}
           </button>
         </div>
       )}
@@ -153,9 +154,9 @@ export function BreakdownDetailPage() {
       {breakdown.maintenance_request_id && (
         <div className="card">
           <p style={{ fontSize: 13 }}>
-            Maintenance Request created:{' '}
+            {t('maintenance.fields.maintenanceRequestCreated')}:{' '}
             <button className="btn-link" onClick={() => navigate(`/app/maintenance-requests/${breakdown.maintenance_request_id}`)}>
-              View Request
+              {t('maintenance.actions.viewRequest')}
             </button>
           </p>
         </div>
@@ -164,9 +165,9 @@ export function BreakdownDetailPage() {
       {breakdown.work_order_id && (
         <div className="card" style={{ marginTop: 16 }}>
           <p style={{ fontSize: 13 }}>
-            Work Order:{' '}
+            {t('common.fields.workOrder')}:{' '}
             <button className="btn-link" onClick={() => navigate(`/app/work-orders/${breakdown.work_order_id}`)}>
-              View Work Order
+              {t('maintenance.actions.viewWorkOrder')}
             </button>
           </p>
         </div>

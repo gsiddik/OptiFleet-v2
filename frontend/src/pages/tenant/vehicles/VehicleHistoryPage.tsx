@@ -6,6 +6,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import type { HistoryEventItem, VehicleItem } from '../../../types';
 import { formatDateTime } from '../../../utils/date';
+import { t } from '../../../i18n/i18n';
 
 export function VehicleHistoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -39,9 +40,9 @@ export function VehicleHistoryPage() {
   return (
     <div>
       {/* Vehicle History: one selected vehicle's timeline (Maintenance History lists every accessible vehicle). */}
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vehicle History</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('vehicle.titles.vehicleHistory')}</h1>
       <div style={{ marginBottom: 16 }}>
-        <select aria-label="Vehicle" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={{ ...inputStyle, width: 280 }}>
+        <select aria-label={t('common.fields.vehicle')} value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={{ ...inputStyle, width: 280 }}>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number} — {v.brand} {v.model}
@@ -52,7 +53,7 @@ export function VehicleHistoryPage() {
 
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && events.length === 0 && <EmptyState label="No history events for this vehicle." />}
+      {!error && !loading && events.length === 0 && <EmptyState label={t('vehicle.empty.noHistoryEventsVehicle')} />}
       {!error && !loading && events.length > 0 && (
         <div className="card">
           {events.map((e) => (

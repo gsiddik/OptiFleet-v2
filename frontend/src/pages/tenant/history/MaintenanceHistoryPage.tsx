@@ -13,6 +13,7 @@ import { useAuth } from "../../../auth/AuthContext";
 import { useApiList } from "../../../hooks/useApiList";
 import type { HistoryEventItem } from "../../../types";
 import { formatDateTime } from "../../../utils/date";
+import { t as tt } from '../../../i18n/i18n';
 
 const TYPES = [
   "",
@@ -81,30 +82,29 @@ export function MaintenanceHistoryPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 6 }}>Maintenance History</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 6 }}>{tt('history.titles.maintenanceHistory')}</h1>
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        Maintenance events of every vehicle in your access scope, newest first.
-        Use Vehicle → History for one vehicle's timeline.
+        {tt('history.help.maintenanceEventsEveryVehicleAccessScope')}
       </p>
       <div
         style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 14 }}
         data-history-filters
       >
         <input
-          aria-label="Search registration"
-          placeholder="Search registration…"
+          aria-label={tt('history.fields.searchRegistration')}
+          placeholder={tt('history.search.searchRegistration')}
           value={search}
           onChange={(e) => reset(setSearch)(e.target.value)}
           style={{ ...inputStyle, width: 200 }}
         />
         {branches.length > 1 && (
           <select
-            aria-label="Branch"
+            aria-label={tt('common.fields.branch')}
             value={branchId}
             onChange={(e) => reset(setBranchId)(e.target.value)}
             style={{ ...inputStyle, width: 200 }}
           >
-            <option value="">All branches</option>
+            <option value="">{tt('history.filters.allBranches')}</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -113,26 +113,26 @@ export function MaintenanceHistoryPage() {
           </select>
         )}
         <select
-          aria-label="Event type"
+          aria-label={tt('history.fields.eventType')}
           value={type}
           onChange={(e) => reset(setType)(e.target.value)}
           style={{ ...inputStyle, width: 200 }}
         >
           {TYPES.map((t) => (
             <option key={t} value={t}>
-              {t ? t.replaceAll("_", " ") : "All event types"}
+              {t ? t.replaceAll("_", " ") : tt('history.filters.allEventTypes')}
             </option>
           ))}
         </select>
         <input
-          aria-label="From date"
+          aria-label={tt('history.fields.fromDate')}
           type="date"
           value={dateFrom}
           onChange={(e) => reset(setDateFrom)(e.target.value)}
           style={{ ...inputStyle, width: 160 }}
         />
         <input
-          aria-label="To date"
+          aria-label={tt('history.fields.toDate')}
           type="date"
           value={dateTo}
           onChange={(e) => reset(setDateTo)(e.target.value)}
@@ -143,7 +143,7 @@ export function MaintenanceHistoryPage() {
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && (
-        <EmptyState label="No maintenance history in your access scope." />
+        <EmptyState label={tt('history.empty.noMaintenanceHistoryAccessScope')} />
       )}
       {!error && !loading && data.length > 0 && (
         <div className="card" style={{ overflowX: "auto", padding: 0 }}>
@@ -153,11 +153,11 @@ export function MaintenanceHistoryPage() {
           >
             <thead>
               <tr style={{ background: "#f9fafb" }}>
-                <th style={cell}>Date</th>
-                <th style={cell}>Vehicle</th>
-                <th style={cell}>Branch</th>
-                <th style={cell}>Event</th>
-                <th style={cell}>Details</th>
+                <th style={cell}>{tt('common.fields.date')}</th>
+                <th style={cell}>{tt('common.fields.vehicle')}</th>
+                <th style={cell}>{tt('common.fields.branch')}</th>
+                <th style={cell}>{tt('common.fields.event')}</th>
+                <th style={cell}>{tt('history.fields.details')}</th>
               </tr>
             </thead>
             <tbody>
