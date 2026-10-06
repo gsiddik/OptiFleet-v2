@@ -73,13 +73,42 @@ class ComponentAssetController extends Controller
             'sale' => $asset->spare_part_sale_id ? DB::table('spare_part_sales')->where('id', $asset->spare_part_sale_id)->first(['id', 'status', 'buyer_name', 'unit_price', 'decided_at']) : null,
             'purchase_return' => $asset->purchase_return_id ? DB::table('purchase_returns')->where('id', $asset->purchase_return_id)->first(['id', 'return_number', 'status']) : null,
             // Status history: the existing audit trail of this asset's status / location changes.
-            'status_history' => DB::table('audit_logs')->where('tenant_id', $asset->tenant_id)->where('resource_type', 'ComponentAsset')->where('resource_id', $asset->id)
+            'status_history' => self::chronological(DB::table('audit_logs')->where('tenant_id', $asset->tenant_id)->where('resource_type', 'ComponentAsset')->where('resource_id', $asset->id)
                 ->orderBy('created_at')->get(['action', 'old_values', 'new_values', 'created_at'])
                 ->map(fn ($log) => ['action' => $log->action, 'at' => $log->created_at,
                     'from' => json_decode((string) $log->old_values, true)['current_status'] ?? null,
                     'to' => json_decode((string) $log->new_values, true)['current_status'] ?? null])
-                ->filter(fn ($h) => $h['action'] === 'created' || $h['to'] !== null)->values(),
+                ->filter(fn ($h) => $h['action'] === 'created' || $h['to'] !== null)->values()->all()),
         ]);
+    }
+
+    /**
+     * audit_logs.created_at has second precision, so changes made within the same second tie. Within a tie the
+     * entries are put in transition order: each one starts from the status the previous one ended in.
+     */
+    private static function chronological(array $history): array
+    {
+        $ordered = [];
+        $previousTo = null;
+        foreach (collect($history)->groupBy('at', preserveKeys: false) as $group) {
+            $remaining = $group->values()->all();
+            while ($remaining !== []) {
+                $created = array_search('created', array_column($remaining, 'action'), true);
+                $index = $created === false ? 0 : $created;
+                foreach ($remaining as $i => $entry) {
+                    if ($entry['from'] !== null && $entry['from'] === $previousTo) {
+                        $index = $i;
+                        break;
+                    }
+                }
+                $entry = $remaining[$index];
+                array_splice($remaining, $index, 1);
+                $ordered[] = $entry;
+                $previousTo = $entry['to'] ?? $previousTo;
+            }
+        }
+
+        return $ordered;
     }
 
     public function install(Request $request, ComponentAsset $componentAsset)

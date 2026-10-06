@@ -213,6 +213,28 @@ class ComponentAssetRegisterTest extends TestCase
         $sell([$inStock->id], 'SCRAP_MATERIAL')->assertStatus(201);
     }
 
+    public function test_status_history_keeps_transition_order_when_changes_share_a_second(): void
+    {
+        $s = $this->scenario();
+        $this->receive($s, 1)->assertStatus(201);
+        $asset = $this->assets($s)->first();
+        DB::table('audit_logs')->where('resource_type', 'ComponentAsset')->where('resource_id', $asset->id)->delete();
+        // Written newest first, all within the same second (audit_logs.created_at has second precision).
+        $at = '2026-10-01 10:00:00';
+        foreach ([['REMOVED', 'SOLD'], ['INSTALLED', 'REMOVED'], ['IN_STOCK', 'INSTALLED']] as [$from, $to]) {
+            DB::table('audit_logs')->insert(['id' => (string) Str::uuid(), 'tenant_id' => $s['tenant']->id, 'resource_type' => 'ComponentAsset',
+                'resource_id' => $asset->id, 'action' => 'updated', 'old_values' => json_encode(['current_status' => $from]),
+                'new_values' => json_encode(['current_status' => $to]), 'created_at' => $at]);
+        }
+        DB::table('audit_logs')->insert(['id' => (string) Str::uuid(), 'tenant_id' => $s['tenant']->id, 'resource_type' => 'ComponentAsset',
+            'resource_id' => $asset->id, 'action' => 'created', 'old_values' => null,
+            'new_values' => json_encode(['current_status' => 'IN_STOCK']), 'created_at' => $at]);
+
+        $history = $this->getJson("/api/v1/app/component-assets/{$asset->id}", $s['headers'])->assertOk()->json('data.status_history');
+        $this->assertSame(['IN_STOCK', 'INSTALLED', 'REMOVED', 'SOLD'], array_column($history, 'to'));
+        $this->assertSame('created', $history[0]['action']);
+    }
+
     public function test_return_to_vendor_takes_the_selected_asset_numbers_and_redelivery_adds_new_units(): void
     {
         $s = $this->scenario(10);
