@@ -1,11 +1,12 @@
 /** API contract of /app/tire-operations (TireOperationController / TireOperationService::present, ::list, ::context). */
 
 import type { ApplicationLimits } from '../inspection/inspectionTypes';
+import { translatedRecord } from '../../../../i18n/i18n';
 
 export type TireOperationType = 'REPLACEMENT' | 'ROTATION' | 'INSPECTION';
 export type TireOperationStatus = 'NEW' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 
-export const OPERATION_TYPE_LABEL: Record<TireOperationType, string> = { REPLACEMENT: 'Replacement', ROTATION: 'Rotation', INSPECTION: 'Inspection' };
+export const OPERATION_TYPE_LABEL: Record<TireOperationType, string> = translatedRecord({ REPLACEMENT: 'Replacement', ROTATION: 'Rotation', INSPECTION: 'Inspection' }, { REPLACEMENT: 'tire.status.replacement', ROTATION: 'tire.activity.rotation', INSPECTION: 'breadcrumb.inspection' });
 export const OPERATION_TYPES: TireOperationType[] = ['REPLACEMENT', 'ROTATION', 'INSPECTION'];
 
 /** The tire on a position, as shown on an operation card (TireFactsService). */

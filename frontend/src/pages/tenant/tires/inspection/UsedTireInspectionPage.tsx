@@ -43,6 +43,7 @@ import type {
 } from "./inspectionTypes";
 import { statusLabel } from '../../../../i18n/statusRegistry';
 import { formatDateTime } from '../../../../utils/date';
+import { t as tt } from '../../../../i18n/i18n';
 
 type Answers = Record<string, string | null>;
 type EvidenceDraft = {
@@ -99,7 +100,7 @@ export function UsedTireInspectionPage() {
     <div data-used-inspection-page>
       <BackButton
         fallbackTo="/app/used-tires?tab=removed"
-        label="← Back to Used Tire Management"
+        label={tt('tire.actions.backUsedTireManagement')}
       />
       <div
         style={{
@@ -112,7 +113,7 @@ export function UsedTireInspectionPage() {
         }}
       >
         <h1 style={{ fontSize: 22, margin: 0 }}>
-          Tire Inspection —{" "}
+          {tt('tire.titles.tireInspection')}{" "}
           <span style={{ fontFamily: "monospace" }}>
             {context.tire.serial_number}
           </span>
@@ -138,8 +139,8 @@ export function UsedTireInspectionPage() {
       ) : (
         <section className="card" style={{ fontSize: 14 }}>
           {context.can_inspect
-            ? "You do not have permission to inspect tires."
-            : `Only a REMOVED or HOLD tire is inspected here — this tire is ${statusLabel(context.tire.current_status)}.`}
+            ? tt('tire.help.youDoNotPermissionInspectTires')
+            : tt('tire.help.onlyRemovedHoldTireInspectedHere', { current_status: statusLabel(context.tire.current_status) })}
         </section>
       )}
 
@@ -150,7 +151,7 @@ export function UsedTireInspectionPage() {
           data-inspection-list
         >
           <h3 style={{ marginTop: 0, fontSize: 15 }}>
-            Inspections of this tire
+            {tt('tire.sections.inspectionsOfThisTire')}
           </h3>
           <div style={{ overflowX: "auto" }}>
             <table
@@ -163,11 +164,11 @@ export function UsedTireInspectionPage() {
               <thead>
                 <tr>
                   {[
-                    "Date",
-                    "Recommendation",
-                    "Status",
-                    "Final Disposition",
-                    "Rule Version",
+                    tt('common.fields.date'),
+                    tt('tire.fields.recommendation'),
+                    tt('common.fields.status'),
+                    tt('tire.fields.finalDisposition'),
+                    tt('tire.fields.ruleVersion'),
                   ].map((h) => (
                     <th
                       key={h}
@@ -198,7 +199,7 @@ export function UsedTireInspectionPage() {
                     >
                       {i.recommendation}
                       {i.recommendation_detail === "RETREAD_CANDIDATE"
-                        ? " — Retread Candidate"
+                        ? tt('tire.fields.retreadCandidate')
                         : ""}
                     </td>
                     <td style={{ padding: "6px 8px" }}>
@@ -342,7 +343,7 @@ function InspectionForm({
   return (
     <div className="split-layout" style={{ alignItems: "start" }}>
       <div style={{ display: "grid", gap: 14, minWidth: 0 }}>
-        <Group n={1} title="Tire Identity">
+        <Group n={1} title={tt('tire.sections.tireIdentity')}>
           <dl
             style={{
               display: "grid",
@@ -355,26 +356,26 @@ function InspectionForm({
             data-auto-filled
           >
             <Fact
-              label="Tire ID / Serial"
+              label={tt('tire.fields.tireIdSerial')}
               value={
                 <span style={{ fontFamily: "monospace" }}>
                   {facts.serial_number}
                 </span>
               }
             />
-            <Fact label="Brand" value={facts.brand} />
-            <Fact label="Model" value={facts.model} />
-            <Fact label="Size" value={facts.size} />
-            <Fact label="Construction" value={facts.construction} />
+            <Fact label={tt('common.fields.brand')} value={facts.brand} />
+            <Fact label={tt('common.fields.model')} value={facts.model} />
+            <Fact label={tt('tire.fields.size')} value={facts.size} />
+            <Fact label={tt('inventory.fields.construction')} value={facts.construction} />
             <Fact
-              label="Tire Category"
+              label={tt('tire.fields.tireCategory')}
               value={
                 facts.category_label ??
-                "Unknown — set the product Vehicle Group"
+                tt('tire.fields.unknownSetProductVehicleGroup')
               }
             />
             <Fact
-              label="Manufacture Date Code"
+              label={tt('tire.fields.manufactureDateCode')}
               value={
                 <ManufactureDateCode
                   tireId={facts.id}
@@ -384,35 +385,35 @@ function InspectionForm({
               }
             />
             <Fact
-              label="Tire Age"
+              label={tt('tire.fields.tireAge')}
               value={
                 facts.age_months != null
                   ? `${facts.age_months} months`
-                  : "Unknown"
+                  : tt('tire.fields.unknown')
               }
             />
-            <Fact label="Retread Count" value={String(facts.retread_count)} />
+            <Fact label={tt('tire.fields.retreadCount')} value={String(facts.retread_count)} />
             <Fact
-              label="Repair History"
+              label={tt('tire.fields.repairHistory')}
               value={
                 facts.repair_history.length
                   ? facts.repair_history.map((r) => r.label).join("; ")
-                  : "None"
+                  : tt('common.fields.none')
               }
             />
-            <Fact label="Last Vehicle" value={facts.last_vehicle} />
+            <Fact label={tt('tire.fields.lastVehicle')} value={facts.last_vehicle} />
             <Fact
-              label="Last Position"
+              label={tt('tire.fields.lastPosition')}
               value={
                 facts.last_position ? (
                   <PositionLabel code={facts.last_position} />
                 ) : null
               }
             />
-            <Fact label="Usage KM" value={formatKm(facts.usage_km)} />
-            <Fact label="Removal Reason" value={facts.removal_reason} />
-            <Fact label="Inspector" value={facts.inspector} />
-            <Fact label="Inspection Date / Time" value={facts.inspection_at} />
+            <Fact label={tt('tire.fields.usageKm')} value={formatKm(facts.usage_km)} />
+            <Fact label={tt('tenantComponents.fields.removalReason')} value={facts.removal_reason} />
+            <Fact label={tt('tire.fields.inspector')} value={facts.inspector} />
+            <Fact label={tt('tire.fields.inspectionDateTime')} value={facts.inspection_at} />
           </dl>
           <div
             style={{
@@ -424,14 +425,14 @@ function InspectionForm({
             }}
           >
             {context.applications.length > 0 && (
-              <FormField label="Application (rule profile)">
+              <FormField label={tt('tire.fields.applicationRuleProfile')}>
                 <select
-                  aria-label="Application"
+                  aria-label={tt('tire.fields.application')}
                   value={application}
                   onChange={(e) => setApplication(e.target.value)}
                   style={{ ...inputStyle, width: 200 }}
                 >
-                  <option value="">General</option>
+                  <option value="">{tt('common.fields.general')}</option>
                   {context.applications.map((a) => (
                     <option key={a} value={a}>
                       {a}
@@ -442,13 +443,13 @@ function InspectionForm({
             )}
             <div style={{ fontSize: 12, color: "#6b7280" }} data-rule-profile>
               {context.rule_profile
-                ? `Rule profile: ${context.rule_profile.name} (v${context.rule_profile.version}) — D_service ${context.rule_profile.d_service_mm} mm, D_pull ${context.rule_profile.d_pull_mm} mm, A_max ${context.rule_profile.a_max_months} mo, A_retread_max ${context.rule_profile.a_retread_max_months} mo, N_retread_max ${context.rule_profile.n_retread_max}`
-                : "No active rule profile for this tire category — the result will be HOLD until one is configured (Tire Management → Inspection Rules)."}
+                ? tt('tire.help.ruleProfileNameVVersionD', { name: context.rule_profile.name, version: context.rule_profile.version, d_service_mm: context.rule_profile.d_service_mm, d_pull_mm: context.rule_profile.d_pull_mm, a_max_months: context.rule_profile.a_max_months, a_retread_max_months: context.rule_profile.a_retread_max_months, n_retread_max: context.rule_profile.n_retread_max })
+                : tt('tire.empty.noActiveRuleProfileTireCategory')}
             </div>
           </div>
         </Group>
 
-        <Group n={2} title="Inspection Completeness">
+        <Group n={2} title={tt('tire.sections.inspectionCompleteness')}>
           <Question
             k="identity_status"
             answers={answers}
@@ -463,11 +464,9 @@ function InspectionForm({
           />
         </Group>
 
-        <Group n={3} title="Tread">
+        <Group n={3} title={tt('tire.sections.tread')}>
           <p style={{ fontSize: 12, color: "#6b7280", marginTop: 0 }}>
-            At least 6 points: 3 circumferential zones × main groove inner /
-            outer (center / most worn optional). Do not measure on the wear
-            indicator.
+            {tt('tire.help.least6Points3CircumferentialZones')}
           </p>
           <div style={{ overflowX: "auto" }}>
             <table
@@ -477,12 +476,12 @@ function InspectionForm({
               <thead>
                 <tr>
                   <th style={{ textAlign: "left", padding: 4 }}>
-                    Tread depth (mm)
+                    {tt('tire.fields.treadDepthMm')}
                   </th>
                   {[1, 2, 3].map((z) => (
                     <th key={z} style={{ padding: 4, whiteSpace: "nowrap" }}>
                       Zone {z}
-                      <InfoTip label={`Zone ${z}`}>{ZONE_HELP[z]}</InfoTip>
+                      <InfoTip label={tt('tire.fields.zoneZ', { z: z })}>{ZONE_HELP[z]}</InfoTip>
                     </th>
                   ))}
                 </tr>
@@ -498,7 +497,7 @@ function InspectionForm({
                     {[1, 2, 3].map((z) => (
                       <td key={z} style={{ padding: 4 }}>
                         <NumericInput
-                          aria-label={`Tread zone ${z} ${g.label}`}
+                          aria-label={tt('tire.fields.treadZoneZLabel', { z: z, label: g.label })}
                           step="0.1"
                           value={depths[`${z}|${g.value}`] ?? ""}
                           onChange={(e) =>
@@ -510,7 +509,7 @@ function InspectionForm({
                           style={{ ...inputStyle, width: 90 }}
                         />{" "}
                         <span style={{ fontSize: 12, color: "#6b7280" }}>
-                          mm
+                          {tt('tire.help.mm')}
                         </span>
                       </td>
                     ))}
@@ -529,11 +528,11 @@ function InspectionForm({
             }}
           >
             <FormField
-              label="D_new (tread when new / after last retread, mm)"
+              label={tt('tire.fields.dNewTreadWhenNewAfter')}
               hint={TREAD_HELP.d_new}
             >
               <NumericInput
-                aria-label="D new"
+                aria-label={tt('tire.fields.dNew')}
                 step="0.1"
                 value={dNew}
                 onChange={(e) => setDNew(e.target.value)}
@@ -541,33 +540,33 @@ function InspectionForm({
               />
             </FormField>
             <div style={{ fontSize: 13 }} data-dmin>
-              D_min (mm)
+              {tt('tire.fields.dMinMm')}
               <InfoTip label="D_min">{TREAD_HELP.d_min}</InfoTip>:{" "}
               <strong>
                 {evaluation?.d_min_mm != null
-                  ? `${evaluation.d_min_mm} mm`
+                  ? tt('tire.help.dPullMmMm', { d_pull_mm: evaluation.d_min_mm })
                   : "—"}
               </strong>
               {evaluation?.remaining_tread_percent != null && (
                 <span style={{ color: "#6b7280" }}>
                   {" "}
                   · Remaining tread {evaluation.remaining_tread_percent}%{" "}
-                  <em>(indicator only — not a safety score)</em>
+                  <em>{tt('tire.help.indicatorOnlyNotSafetyScore')}</em>
                 </span>
               )}
             </div>
             <div style={{ fontSize: 13 }} data-dpull>
-              D_pull (mm)
+              {tt('tire.fields.dPullMm')}
               <InfoTip label="D_pull">{TREAD_HELP.d_pull}</InfoTip>:{" "}
               <strong>
                 {context.rule_profile?.d_pull_mm != null
-                  ? `${context.rule_profile.d_pull_mm} mm`
+                  ? tt('tire.help.dPullMmMm', { d_pull_mm: context.rule_profile.d_pull_mm })
                   : "—"}
               </strong>
               <span style={{ color: "#6b7280" }}>
                 {context.rule_profile
                   ? ` · D_service ${context.rule_profile.d_service_mm} mm`
-                  : " · no active rule profile (Tire Management → Inspection Rules)"}
+                  : tt('tire.help.noActiveRuleProfileTireManagement')}
               </span>
             </div>
           </div>
@@ -578,7 +577,7 @@ function InspectionForm({
           )}
         </Group>
 
-        <Group n={4} title="Structural Condition">
+        <Group n={4} title={tt('tire.sections.structuralCondition')}>
           <Question
             k="wear_pattern"
             answers={answers}
@@ -599,7 +598,7 @@ function InspectionForm({
           />
         </Group>
 
-        <Group n={5} title="Sidewall / Bead / Inner Liner">
+        <Group n={5} title={tt('tire.sections.sidewallBeadInnerLiner')}>
           <Question
             k="sidewall_condition"
             answers={answers}
@@ -620,7 +619,7 @@ function InspectionForm({
           />
         </Group>
 
-        <Group n={6} title="Leakage / Heat / Previous Repair">
+        <Group n={6} title={tt('tire.sections.leakageHeatPreviousRepair')}>
           <Question
             k="run_flat_overheat"
             answers={answers}
@@ -662,7 +661,7 @@ function InspectionForm({
         </Group>
 
         {showDamages && (
-          <Group n={7} title="Damage Details">
+          <Group n={7} title={tt('tire.sections.damageDetails')}>
             {damages.map((d, i) => (
               <DamageRow
                 key={i}
@@ -682,7 +681,7 @@ function InspectionForm({
               onClick={() => setDamages((all) => [...all, { ...EMPTY_DAMAGE }])}
               data-add-damage
             >
-              + Add damage
+              {tt('tire.actions.addDamage')}
             </button>
             {damages.length > 0 && (
               <Question
@@ -695,15 +694,15 @@ function InspectionForm({
           </Group>
         )}
 
-        <Group n={showDamages ? 8 : 7} title="Evidence">
+        <Group n={showDamages ? 8 : 7} title={tt('tire.sections.evidence')}>
           <EvidencePicker
             drafts={evidence}
             damages={damages}
             onChange={setEvidence}
           />
-          <FormField label="Notes">
+          <FormField label={tt('tire.placeholders.notes')}>
             <textarea
-              aria-label="Inspection notes"
+              aria-label={tt('tire.fields.inspectionNotes')}
               value={notes}
               maxLength={2000}
               onChange={(e) => setNotes(e.target.value)}
@@ -722,13 +721,12 @@ function InspectionForm({
           minWidth: 0,
         }}
       >
-        <Group n={showDamages ? 9 : 8} title="Recommendation">
+        <Group n={showDamages ? 9 : 8} title={tt('tire.fields.recommendation')}>
           <RecommendationPanel evaluation={evaluation} />
         </Group>
-        <Group n={showDamages ? 10 : 9} title="Final Disposition">
+        <Group n={showDamages ? 10 : 9} title={tt('tire.fields.finalDisposition')}>
           <p style={{ fontSize: 13, marginTop: 0 }}>
-            Submitting records this inspection with its recommendation. The tire
-            keeps its status until the disposition is approved.
+            {tt('tire.help.submittingRecordsInspectionRecommendationTireKeeps')}
           </p>
           {unanswered.length > 0 && (
             <p style={{ fontSize: 12, color: "#b45309" }}>
@@ -743,7 +741,7 @@ function InspectionForm({
             onClick={submit}
             data-submit-inspection
           >
-            {busy ? "Submitting…" : "Submit inspection"}
+            {busy ? tt('common.actions.submitting') : tt('tire.actions.submitInspection')}
           </button>
         </Group>
       </div>
@@ -759,7 +757,7 @@ function RecommendationPanel({
   if (!evaluation)
     return (
       <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>
-        Answer the questions to see the recommendation.
+        {tt('tire.help.answerQuestionsSeeRecommendation')}
       </p>
     );
   const color = RECOMMENDATION_COLOR[evaluation.recommendation];
@@ -782,21 +780,21 @@ function RecommendationPanel({
             marginBottom: 8,
           }}
         >
-          Inspection incomplete / uncertain — Recommended status:{" "}
-          <strong>HOLD</strong>
+          {tt('tire.help.inspectionIncompleteUncertainRecommendedStatus')}:{" "}
+          <strong>{tt('tire.fields.hold')}</strong>
         </div>
       )}
       <div style={{ fontSize: 18, fontWeight: 700, color }}>
         {evaluation.recommendation}
         {evaluation.recommendation_detail === "RETREAD_CANDIDATE"
-          ? " — Retread Candidate"
+          ? tt('tire.fields.retreadCandidate')
           : ""}
         {evaluation.additional_work === "CASING_REPAIR"
-          ? " + Casing Repair"
+          ? tt('tire.fields.casingRepair')
           : ""}
       </div>
       <div style={{ fontSize: 12, color: "#6b7280", margin: "6px 0 2px" }}>
-        Reason
+        {tt('common.fields.reason')}
       </div>
       <ul
         style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}
@@ -809,7 +807,7 @@ function RecommendationPanel({
       {evaluation.follow_ups.length > 0 && (
         <>
           <div style={{ fontSize: 12, color: "#6b7280", margin: "8px 0 2px" }}>
-            Vehicle follow-up (not fixed by a tire repair)
+            {tt('tire.help.vehicleFollowUpNotFixedTire')}
           </div>
           <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
             {evaluation.follow_ups.map((f) => (
@@ -898,14 +896,14 @@ function OpenInspection({
               }}
             >
               {isReuse && (
-                <FormField label="Return to Warehouse" required>
+                <FormField label={tt('tire.fields.returnToWarehouse')} required>
                   <select
-                    aria-label="Return to warehouse"
+                    aria-label={tt('tire.fields.returnToWarehouse2')}
                     value={warehouseId}
                     onChange={(e) => setWarehouseId(e.target.value)}
                     style={{ ...inputStyle, width: 220 }}
                   >
-                    <option value="">Select…</option>
+                    <option value="">{tt('common.fields.select')}</option>
                     {warehouses.map((w) => (
                       <option key={w.id} value={w.id}>
                         {w.name}
@@ -914,9 +912,9 @@ function OpenInspection({
                   </select>
                 </FormField>
               )}
-              <FormField label="Approval note">
+              <FormField label={tt('tire.fields.approvalNote')}>
                 <input
-                  aria-label="Approval note"
+                  aria-label={tt('tire.fields.approvalNote')}
                   value={note}
                   maxLength={500}
                   onChange={(e) => setNote(e.target.value)}
@@ -930,14 +928,12 @@ function OpenInspection({
                 onClick={() => act("approve")}
                 data-approve
               >
-                Approve disposition: {inspection.recommendation}
-              </button>
+                {tt('tire.actions.approveDispositionRecommendation', { recommendation: inspection.recommendation })}</button>
             </div>
           )}
           {!canApprove && (
             <p style={{ fontSize: 13, margin: 0 }}>
-              Waiting for an approver (permission “Approve used tire inspection
-              dispositions”).
+              {tt('tire.help.waitingApproverPermissionApproveUsedTire')}
             </p>
           )}
           {canInspect && (
@@ -948,7 +944,7 @@ function OpenInspection({
                 disabled={busy}
                 onClick={() => act("cancel")}
               >
-                Cancel inspection (inspect again)
+                {tt('tire.actions.cancelInspectionInspectAgain')}
               </button>
             </div>
           )}
@@ -956,7 +952,7 @@ function OpenInspection({
             to={`/app/tires/${inspection.tire_id}`}
             style={{ fontSize: 13 }}
           >
-            Open tire details
+            {tt('tire.actions.openTireDetails')}
           </Link>
         </div>
       }
@@ -1006,7 +1002,7 @@ function Question({
         onChange={(e) => onChange(k)(e.target.value)}
         style={inputStyle}
       >
-        <option value="">Select…</option>
+        <option value="">{tt('common.fields.select')}</option>
         {q.options.map((opt) => (
           <option key={opt.value} value={opt.value}>
             {opt.label}
@@ -1034,9 +1030,9 @@ function DamageRow({
     key: "diameter_mm" | "length_mm" | "width_mm" | "depth_mm",
     label: string,
   ) => (
-    <FormField label={`${label} (mm)`}>
+    <FormField label={tt('tire.fields.labelMm', { label: label })}>
       <NumericInput
-        aria-label={`Damage ${index + 1} ${label}`}
+        aria-label={tt('tire.fields.damageValueLabel', { value: index + 1, label: label })}
         step="0.1"
         value={damage[key] ?? ""}
         onChange={(e) => set(key, e.target.value)}
@@ -1056,9 +1052,9 @@ function DamageRow({
           marginBottom: 6,
         }}
       >
-        <strong style={{ fontSize: 13 }}>Damage {index + 1}</strong>
+        <strong style={{ fontSize: 13 }}>{tt('tire.fields.damageValue', { value: index + 1 })}</strong>
         <button type="button" className="btn-link" onClick={onRemove}>
-          Remove
+          {tt('common.actions.remove')}
         </button>
       </div>
       <div
@@ -1069,9 +1065,9 @@ function DamageRow({
           alignItems: "flex-end",
         }}
       >
-        <FormField label="Location">
+        <FormField label={tt('maintenance.fields.location')}>
           <select
-            aria-label={`Damage ${index + 1} location`}
+            aria-label={tt('tire.fields.damageValueLocation', { value: index + 1 })}
             value={damage.location}
             onChange={(e) => set("location", e.target.value)}
             style={{ ...inputStyle, width: 140 }}
@@ -1083,9 +1079,9 @@ function DamageRow({
             ))}
           </select>
         </FormField>
-        <FormField label="Type">
+        <FormField label={tt('common.fields.type')}>
           <select
-            aria-label={`Damage ${index + 1} type`}
+            aria-label={tt('tire.fields.damageValueType', { value: index + 1 })}
             value={damage.damage_type}
             onChange={(e) => set("damage_type", e.target.value)}
             style={{ ...inputStyle, width: 180 }}
@@ -1097,17 +1093,17 @@ function DamageRow({
             ))}
           </select>
         </FormField>
-        {damage.damage_type === "PUNCTURE" && num("diameter_mm", "Diameter")}
+        {damage.damage_type === "PUNCTURE" && num("diameter_mm", tt('tire.fields.diameter'))}
         {damage.damage_type === "CUT" && (
           <>
-            {num("length_mm", "Length")}
-            {num("width_mm", "Width")}
-            {num("depth_mm", "Depth")}
+            {num("length_mm", tt('tire.fields.length'))}
+            {num("width_mm", tt('tire.fields.width'))}
+            {num("depth_mm", tt('tire.fields.depth'))}
           </>
         )}
-        <FormField label="Reaches the reinforcing structure?">
+        <FormField label={tt('tire.fields.reachesTheReinforcingStructure')}>
           <select
-            aria-label={`Damage ${index + 1} reinforcement`}
+            aria-label={tt('tire.fields.damageValueReinforcement', { value: index + 1 })}
             value={damage.reaches_reinforcement}
             onChange={(e) => set("reaches_reinforcement", e.target.value)}
             style={{ ...inputStyle, width: 120 }}
@@ -1119,9 +1115,9 @@ function DamageRow({
             ))}
           </select>
         </FormField>
-        <FormField label="Overlaps a previous repair?">
+        <FormField label={tt('tire.fields.overlapsAPreviousRepair')}>
           <select
-            aria-label={`Damage ${index + 1} overlap`}
+            aria-label={tt('tire.fields.damageValueOverlap', { value: index + 1 })}
             value={damage.overlaps_previous_repair}
             onChange={(e) => set("overlaps_previous_repair", e.target.value)}
             style={{ ...inputStyle, width: 120 }}
@@ -1133,9 +1129,9 @@ function DamageRow({
             ))}
           </select>
         </FormField>
-        <FormField label="Notes">
+        <FormField label={tt('tire.placeholders.notes')}>
           <input
-            aria-label={`Damage ${index + 1} notes`}
+            aria-label={tt('tire.fields.damageValueNotes', { value: index + 1 })}
             value={damage.notes ?? ""}
             onChange={(e) => set("notes", e.target.value)}
             style={{ ...inputStyle, width: 200 }}
@@ -1159,7 +1155,7 @@ function EvidencePicker({
     <div style={{ display: "grid", gap: 8 }} data-evidence-picker>
       <input
         type="file"
-        aria-label="Evidence photos"
+        aria-label={tt('tire.fields.evidencePhotos')}
         accept=".jpg,.jpeg,.png,image/jpeg,image/png"
         multiple
         onChange={(e) => {
@@ -1178,7 +1174,7 @@ function EvidencePicker({
         }}
       />
       <span style={{ fontSize: 12, color: "#6b7280" }}>
-        JPG / PNG, max 3 MB each. Uploaded when the inspection is submitted.
+        {tt('tire.help.jpgPngMax3MbEach')}
       </span>
       {drafts.map((d) => (
         <div
@@ -1193,7 +1189,7 @@ function EvidencePicker({
         >
           <span style={{ minWidth: 140 }}>{d.file.name}</span>
           <select
-            aria-label={`Evidence kind ${d.file.name}`}
+            aria-label={tt('tire.fields.evidenceKindName', { name: d.file.name })}
             value={d.kind}
             onChange={(e) =>
               onChange(
@@ -1206,12 +1202,12 @@ function EvidencePicker({
             }
             style={{ ...inputStyle, width: 190 }}
           >
-            <option value="DAMAGE_PHOTO">Damage photo</option>
-            <option value="CLOSE_UP_SCALE">Close-up with scale</option>
+            <option value="DAMAGE_PHOTO">{tt('tire.fields.damagePhoto2')}</option>
+            <option value="CLOSE_UP_SCALE">{tt('tire.fields.closeUpWithScale2')}</option>
           </select>
           {damages.length > 0 && (
             <select
-              aria-label={`Evidence damage ${d.file.name}`}
+              aria-label={tt('tire.fields.evidenceDamageName', { name: d.file.name })}
               value={d.damageIndex ?? ""}
               onChange={(e) =>
                 onChange(
@@ -1230,17 +1226,16 @@ function EvidencePicker({
               }
               style={{ ...inputStyle, width: 140 }}
             >
-              <option value="">Whole tire</option>
+              <option value="">{tt('tire.fields.wholeTire')}</option>
               {damages.map((_, i) => (
                 <option key={i} value={i}>
-                  Damage {i + 1}
-                </option>
+                  {tt('tire.fields.damageValue', { value: i + 1 })}</option>
               ))}
             </select>
           )}
           <input
-            aria-label={`Evidence notes ${d.file.name}`}
-            placeholder="Notes"
+            aria-label={tt('tire.fields.evidenceNotesName', { name: d.file.name })}
+            placeholder={tt('tire.placeholders.notes')}
             value={d.notes}
             onChange={(e) =>
               onChange(
@@ -1256,7 +1251,7 @@ function EvidencePicker({
             className="btn-link"
             onClick={() => onChange(drafts.filter((x) => x.key !== d.key))}
           >
-            Remove
+            {tt('common.actions.remove')}
           </button>
         </div>
       ))}
@@ -1294,7 +1289,7 @@ function ManufactureDateCode({
           onClick={() => setEditing(true)}
           style={{ padding: "1px 8px", fontSize: 12 }}
         >
-          Edit
+          {tt('common.actions.edit')}
         </button>
       </span>
     );
@@ -1320,8 +1315,8 @@ function ManufactureDateCode({
     <span style={{ display: "grid", gap: 4 }} data-mdc-form>
       <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
         <input
-          aria-label="Manufacture Date Code"
-          placeholder="WWYY, e.g. 1225"
+          aria-label={tt('tire.fields.manufactureDateCode')}
+          placeholder={tt('tire.placeholders.wwyyEG1225')}
           value={value}
           maxLength={20}
           autoFocus
@@ -1339,7 +1334,7 @@ function ManufactureDateCode({
           onClick={() => void save()}
           style={{ padding: "2px 8px", fontSize: 12 }}
         >
-          {saving ? "Saving…" : "Save"}
+          {saving ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
         <button
           type="button"
@@ -1351,12 +1346,11 @@ function ManufactureDateCode({
           }}
           style={{ padding: "2px 8px", fontSize: 12 }}
         >
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
       </span>
       <span style={{ fontSize: 11, color: "#6b7280" }}>
-        DOT date code: production week + 2-digit year. Saved on the physical
-        tire; Tire Age is recalculated.
+        {tt('tire.help.dotDateCodeProductionWeek2')}
       </span>
       {error && (
         <span role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>

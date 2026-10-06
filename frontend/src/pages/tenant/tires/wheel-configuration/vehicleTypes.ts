@@ -1,26 +1,27 @@
+import { withLabels } from '../../../../i18n/i18n';
 /**
  * Vehicle types of "Add New Wheels Configuration" — the single source for the dropdowns, the form
  * switch, the preview body and the Config Code prefix (mirrored by the backend
  * WheelConfigurationRules). Every type uses the same axle/wheel form and rules; Truck adds a
  * mandatory Truck Configuration Type that only changes the Config Code prefix and the preview.
  */
-export const VEHICLE_TYPES = [
-  { value: 'PASSENGER_CAR', label: 'Passenger Car' },
-  { value: 'TRUCK', label: 'Truck' },
-  { value: 'BUS', label: 'Bus' },
-  { value: 'FORKLIFT', label: 'Forklift' },
-  { value: 'VAN', label: 'Van' },
-  { value: 'HEAVY_EQUIPMENT', label: 'Heavy Equipment' },
-] as const;
+export const VEHICLE_TYPES = withLabels([
+  { value: 'PASSENGER_CAR', label: 'Passenger Car', labelKey: 'tire.fields.passengerCar' },
+  { value: 'TRUCK', label: 'Truck', labelKey: 'tire.fields.truck' },
+  { value: 'BUS', label: 'Bus', labelKey: 'tire.fields.bus' },
+  { value: 'FORKLIFT', label: 'Forklift', labelKey: 'tire.fields.forklift' },
+  { value: 'VAN', label: 'Van', labelKey: 'tire.fields.van' },
+  { value: 'HEAVY_EQUIPMENT', label: 'Heavy Equipment', labelKey: 'tire.fields.heavyEquipment' },
+] as const);
 
 export type VehicleType = (typeof VEHICLE_TYPES)[number]['value'];
 
 /** Truck Configuration Type → Config Code prefix ("+" Trailer, "-" Semi Trailer, none otherwise). */
-export const TRUCK_CONFIGURATION_TYPES = [
-  { value: 'NON_TRAILER', label: 'Non Trailer', prefix: '' },
-  { value: 'TRAILER', label: 'Trailer', prefix: '+' },
-  { value: 'SEMI_TRAILER', label: 'Semi Trailer', prefix: '-' },
-] as const;
+export const TRUCK_CONFIGURATION_TYPES = withLabels([
+  { value: 'NON_TRAILER', label: 'Non Trailer', labelKey: 'tire.fields.nonTrailer', prefix: '' },
+  { value: 'TRAILER', label: 'Trailer', labelKey: 'tire.fields.trailer', prefix: '+' },
+  { value: 'SEMI_TRAILER', label: 'Semi Trailer', labelKey: 'tire.fields.semiTrailer', prefix: '-' },
+] as const);
 
 export type TruckConfigurationType = (typeof TRUCK_CONFIGURATION_TYPES)[number]['value'];
 

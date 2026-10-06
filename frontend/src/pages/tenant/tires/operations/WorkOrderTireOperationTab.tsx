@@ -9,6 +9,7 @@ import { ReplacementArrow, RotationArrows, TireOperationCard } from './TireOpera
 import { INSPECTION_COLOR, REPLACEMENT_COLOR, ROTATION_PALETTE, formatKm } from './tireOperationFormat';
 import { OPERATION_TYPE_LABEL, type TireOperationDetail } from './tireOperationTypes';
 import { UsageRestrictionWarnings } from './UsageRestrictionWarnings';
+import { t } from '../../../../i18n/i18n';
 
 const TYPE_PERMISSION = { REPLACEMENT: 'tire.install', ROTATION: 'tire.rotate', INSPECTION: 'tire.inspect' } as const;
 
@@ -35,41 +36,41 @@ export function WorkOrderTireOperationTab({ operation }: { operation: TireOperat
     <div data-wo-tire-operation={operation.id}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
         <span style={{ fontSize: 13, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          Tire Operations Status <StatusBadge status={operation.status} />
+          {t('tire.fields.tireOperationsStatus')} <StatusBadge status={operation.status} />
         </span>
         {canEdit && (
           <button type="button" className="btn-primary" onClick={() => navigate(`/app/tire-operations/${operation.id}/edit`)}>
-            Edit
+            {t('common.actions.edit')}
           </button>
         )}
       </div>
       <div className="split-layout">
         <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
           <section className="card">
-            <h3 style={{ marginTop: 0, fontSize: 15 }}>Tire Operations Info</h3>
+            <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tire.sections.tireOperationsInfo')}</h3>
             <fieldset disabled style={{ border: 'none', padding: 0, margin: 0 }}>
-              <FormField label="Registration">
-                <input aria-label="Registration" value={operation.vehicle.registration_number ?? ''} readOnly style={readonly} />
+              <FormField label={t('tire.fields.registration')}>
+                <input aria-label={t('tire.fields.registration')} value={operation.vehicle.registration_number ?? ''} readOnly style={readonly} />
               </FormField>
-              <FormField label="Config Code">
-                <input aria-label="Config Code" value={operation.config_code} readOnly style={{ ...readonly, fontFamily: 'monospace', fontWeight: 700 }} />
+              <FormField label={t('tire.fields.configCode')}>
+                <input aria-label={t('tire.fields.configCode')} value={operation.config_code} readOnly style={{ ...readonly, fontFamily: 'monospace', fontWeight: 700 }} />
               </FormField>
-              <FormField label="Tire Operations">
-                <input aria-label="Tire Operations" value={OPERATION_TYPE_LABEL[operation.operation_type]} readOnly style={readonly} />
+              <FormField label={t('breadcrumb.tireOperations')}>
+                <input aria-label={t('breadcrumb.tireOperations')} value={OPERATION_TYPE_LABEL[operation.operation_type]} readOnly style={readonly} />
               </FormField>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0 12px' }}>
-                <FormField label="Tire Operations Date">
-                  <input aria-label="Tire Operations Date" type="date" value={operation.operated_date} readOnly style={readonly} />
+                <FormField label={t('tire.fields.tireOperationsDate')}>
+                  <input aria-label={t('tire.fields.tireOperationsDate')} type="date" value={operation.operated_date} readOnly style={readonly} />
                 </FormField>
-                <FormField label="Tire Operations Time">
-                  <input aria-label="Tire Operations Time" value={operation.operated_time} readOnly style={readonly} />
+                <FormField label={t('tire.fields.tireOperationsTime')}>
+                  <input aria-label={t('tire.fields.tireOperationsTime')} value={operation.operated_time} readOnly style={readonly} />
                 </FormField>
               </div>
-              <FormField label="KM at Tire Operations">
-                <input aria-label="KM at Tire Operations" value={formatKm(operation.odometer)} readOnly style={readonly} />
+              <FormField label={t('tire.fields.kmAtTireOperations')}>
+                <input aria-label={t('tire.fields.kmAtTireOperations')} value={formatKm(operation.odometer)} readOnly style={readonly} />
               </FormField>
             </fieldset>
-            {operation.cancellation_reason && <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 0 }}>Cancellation reason: {operation.cancellation_reason}</p>}
+            {operation.cancellation_reason && <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 0 }}>{t('tire.fields.cancellationReasonCancellationReason', { cancellation_reason: operation.cancellation_reason })}</p>}
           </section>
           {(operation.warnings ?? []).length > 0 && <UsageRestrictionWarnings warnings={operation.warnings ?? []} />}
           <section className="card">
@@ -79,30 +80,30 @@ export function WorkOrderTireOperationTab({ operation }: { operation: TireOperat
                 ? [...pairs.entries()].map(([n, [a, b]]) => (
                     <div key={n} data-rotation-pair={n}>
                       <strong style={{ fontSize: 13, color: pairColor(n) }}>
-                        Pair {n}: <PositionLabel code={a.position_code} /> ↔ <PositionLabel code={b?.position_code} />
+                        {t('masterData.productReferenceData.pair')} {n}: <PositionLabel code={a.position_code} /> ↔ <PositionLabel code={b?.position_code} />
                       </strong>
-                      <TireOperationCard title="To be Rotated" code={a.position_code} tire={a.tire} accent={pairColor(n)} />
+                      <TireOperationCard title={t('tire.sections.toBeRotated')} code={a.position_code} tire={a.tire} accent={pairColor(n)} />
                       <RotationArrows color={pairColor(n)} />
-                      {b && <TireOperationCard title="Rotating With" code={b.position_code} tire={b.tire} accent={pairColor(n)} />}
+                      {b && <TireOperationCard title={t('tire.sections.rotatingWith')} code={b.position_code} tire={b.tire} accent={pairColor(n)} />}
                     </div>
                   ))
                 : operation.items.map((i) =>
                     operation.operation_type === 'INSPECTION' ? (
-                      <TireOperationCard key={i.id} title="Installed Tire" code={i.position_code} tire={i.tire} accent={INSPECTION_COLOR}>
-                        <FormField label="Tread Depth (mm)">
-                          <input aria-label={`Tread Depth ${i.position_code}`} value={i.tread_depth_mm ?? '—'} readOnly disabled style={readonly} />
+                      <TireOperationCard key={i.id} title={t('tire.sections.installedTire')} code={i.position_code} tire={i.tire} accent={INSPECTION_COLOR}>
+                        <FormField label={t('tire.fields.treadDepthMm2')}>
+                          <input aria-label={t('tire.fields.treadDepthPositionCode', { position_code: i.position_code })} value={i.tread_depth_mm ?? '—'} readOnly disabled style={readonly} />
                         </FormField>
                       </TireOperationCard>
                     ) : (
                       <div key={i.id}>
-                        <TireOperationCard title="Installed Tire" code={i.position_code} tire={i.tire} accent={REPLACEMENT_COLOR} />
+                        <TireOperationCard title={t('tire.sections.installedTire')} code={i.position_code} tire={i.tire} accent={REPLACEMENT_COLOR} />
                         <ReplacementArrow />
                         <section data-replacing-with={i.position_code} style={{ border: `1px dashed ${REPLACEMENT_COLOR}`, borderRadius: 12, padding: '10px 14px' }}>
-                          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: REPLACEMENT_COLOR, textTransform: 'uppercase' }}>Replacing With</h4>
-                          <FormField label="Serial Number">
-                            <input aria-label={`Serial Number ${i.position_code}`} value={i.replacement_tire?.serial_number ?? ''} readOnly disabled style={{ ...readonly, fontFamily: 'monospace' }} />
+                          <h4 style={{ margin: '0 0 8px', fontSize: 13, color: REPLACEMENT_COLOR, textTransform: 'uppercase' }}>{t('tire.sections.replacingWith')}</h4>
+                          <FormField label={t('common.fields.serialNumber')}>
+                            <input aria-label={t('tire.fields.serialNumberPositionCode', { position_code: i.position_code })} value={i.replacement_tire?.serial_number ?? ''} readOnly disabled style={{ ...readonly, fontFamily: 'monospace' }} />
                           </FormField>
-                          {i.applied_at && <span style={{ fontSize: 12, color: '#15803d' }}>Installed</span>}
+                          {i.applied_at && <span style={{ fontSize: 12, color: '#15803d' }}>{t('analytics.fields.installed')}</span>}
                         </section>
                       </div>
                     ),
@@ -111,7 +112,7 @@ export function WorkOrderTireOperationTab({ operation }: { operation: TireOperat
           </section>
         </div>
         <section className="card" style={{ position: 'sticky', top: 12 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Preview</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tire.sections.vehiclePreview')}</h3>
           {configuration && (
             <WheelConfigurationPreview
               readOnly

@@ -3,6 +3,7 @@ import { VehicleBody } from './VehicleBodies';
 import type { BodyStyle } from './vehicleTypes';
 import { describePosition } from './wheelLayout';
 import { WHEEL, buildPreviewGeometry, type PreviewGeometry, type PreviewInput } from './wheelPreviewGeometry';
+import { t } from '../../../../i18n/i18n';
 
 const COLORS = {
   tire: '#1f2937',
@@ -105,7 +106,7 @@ export function WheelConfigurationPreview({
       <svg
         viewBox={`0 0 ${g.width} ${g.height}`}
         role="img"
-        aria-label="Vehicle wheel configuration preview, top view, front at the top"
+        aria-label={t('tire.tooltips.vehicleWheelConfigurationPreviewTopView')}
         data-body-style={g.style}
         style={{ width: '100%', maxWidth: g.width * 1.6, maxHeight: '72vh', display: 'block', margin: '0 auto' }}
       >
@@ -155,7 +156,7 @@ function FrontMarker({ g }: { g: PreviewGeometry }) {
   return (
     <g>
       <text x={g.centerX} y={g.frontMarkerY} textAnchor="middle" fontSize={11} fontWeight={700} fill={COLORS.front} letterSpacing={1}>
-        FRONT
+        {t('tire.fields.front')}
       </text>
       <path d={`M ${g.centerX - 7} ${g.frontMarkerY + 16} L ${g.centerX} ${g.frontMarkerY + 6} L ${g.centerX + 7} ${g.frontMarkerY + 16} Z`} fill={COLORS.front} />
     </g>
@@ -196,7 +197,7 @@ function AxleLabels({ g }: { g: PreviewGeometry }) {
         <g>
           <rect x={g.centerX - 28} y={(g.wheelbase.y1 + g.wheelbase.y2) / 2 - 7} width={56} height={14} rx={7} fill="#ffffff" opacity={0.85} />
           <text x={g.centerX} y={(g.wheelbase.y1 + g.wheelbase.y2) / 2 + 3} textAnchor="middle" fontSize={9} fill={COLORS.label}>
-            wheelbase
+            {t('tire.fields.wheelbase')}
           </text>
         </g>
       )}
@@ -250,12 +251,12 @@ function SpareTires({ g, showCodes, selected, installed, colors, handlers }: { g
     <g>
       {g.spareLabel && (
         <text x={g.spareLabel.x} y={g.spareLabel.y} textAnchor="middle" fontSize={9} fill={COLORS.label}>
-          Spare Tires
+          {t('tire.fields.spareTires')}
         </text>
       )}
       {g.spares.map((s) => (
-        <g key={s.code} data-spare={s.code} data-installed={installed?.has(s.code) ? 'true' : undefined} data-color={colors?.[s.code]} {...handlers(s.code, `Spare tire ${s.code.slice(1)}`)}>
-          <title>{`Spare tire ${s.code}`}</title>
+        <g key={s.code} data-spare={s.code} data-installed={installed?.has(s.code) ? 'true' : undefined} data-color={colors?.[s.code]} {...handlers(s.code, t('tire.fields.spareTireCode', { code: s.code.slice(1) }))}>
+          <title>{t('tire.fields.spareTireCode', { code: s.code })}</title>
           <rect
             x={s.x}
             y={s.y}
@@ -288,7 +289,7 @@ function PositionList({ g }: { g: PreviewGeometry }) {
   });
   return (
     <details data-position-list style={{ marginTop: 8, fontSize: 12 }} onClick={(e) => e.stopPropagation()}>
-      <summary style={{ cursor: 'pointer', color: '#374151', fontWeight: 600 }}>Position list</summary>
+      <summary style={{ cursor: 'pointer', color: '#374151', fontWeight: 600 }}>{t('tire.sections.positionList')}</summary>
       <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 6 }}>
         <tbody>
           {rows.map((r) => (
@@ -300,7 +301,7 @@ function PositionList({ g }: { g: PreviewGeometry }) {
           ))}
           {g.spares.length > 0 && (
             <tr style={{ borderTop: '1px solid #f3f4f6' }}>
-              <td style={{ padding: '4px 6px', color: '#6b7280' }}>Spare</td>
+              <td style={{ padding: '4px 6px', color: '#6b7280' }}>{t('tire.help.spare')}</td>
               <td colSpan={2} style={{ padding: '4px 6px', fontFamily: 'monospace' }}>
                 {g.spares.map((s) => s.code).join(' ')}
               </td>

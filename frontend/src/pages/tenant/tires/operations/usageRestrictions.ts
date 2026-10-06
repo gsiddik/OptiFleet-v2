@@ -1,19 +1,20 @@
 import type { ApplicationLimits } from "../inspection/inspectionTypes";
+import { t } from '../../../../i18n/i18n';
 
 /** Usage restrictions as one line (positions, load, speed, operation, notes). */
 export function restrictionText(limits: ApplicationLimits): string {
   return [
     limits.positions?.length
-      ? `Positions: ${limits.positions.join(", ")}`
+      ? t('tire.fields.positionsValue', { value: limits.positions.join(", ") })
       : null,
     limits.max_load_kg != null && limits.max_load_kg !== ""
-      ? `Max load ${limits.max_load_kg} kg`
+      ? t('tire.help.maxLoadMaxLoadKgKg', { max_load_kg: limits.max_load_kg })
       : null,
     limits.max_speed_kmh != null && limits.max_speed_kmh !== ""
-      ? `Max speed ${limits.max_speed_kmh} km/h`
+      ? t('tire.help.maxSpeedMaxSpeedKmhKm', { max_speed_kmh: limits.max_speed_kmh })
       : null,
     limits.operations?.length
-      ? `Operation: ${limits.operations.join(", ")}`
+      ? t('tire.fields.operationValue', { value: limits.operations.join(", ") })
       : null,
     limits.notes || null,
   ]

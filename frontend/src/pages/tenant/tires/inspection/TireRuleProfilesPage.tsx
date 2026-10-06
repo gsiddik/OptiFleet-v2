@@ -20,6 +20,7 @@ import type {
   RepairLimits,
   TireCategory,
 } from "./inspectionTypes";
+import { t } from '../../../../i18n/i18n';
 
 interface Profile {
   id: string;
@@ -81,27 +82,24 @@ export function TireRuleProfilesPage() {
           marginBottom: 6,
         }}
       >
-        <h1 style={{ fontSize: 22, margin: 0 }}>Inspection Rules</h1>
+        <h1 style={{ fontSize: 22, margin: 0 }}>{t('tire.titles.inspectionRules')}</h1>
         {canManage && (
           <button
             type="button"
             className="btn-primary"
             onClick={() => setEditing("new")}
           >
-            New Rule Profile
+            {t('tire.actions.newRuleProfile')}
           </button>
         )}
       </div>
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        Thresholds for used tire inspection per tire category. Passenger / Light
-        Truck, Truck / Bus and OTR / Heavy Equipment rules are never mixed; a
-        profile for a specific tire product or application takes precedence over
-        the general one.
+        {t('tire.help.thresholdsUsedTireInspectionPerTire')}
       </p>
       {error && <ErrorState message={error} />}
       {!profiles && !error && <LoadingState />}
       {profiles && profiles.length === 0 && (
-        <EmptyState label="No rule profiles yet — used tire inspections stay on HOLD until one exists for the tire category." />
+        <EmptyState label={t('tire.empty.noRuleProfilesYetUsedTire')} />
       )}
       {profiles && profiles.length > 0 && (
         <div className="card" style={{ overflowX: "auto" }}>
@@ -112,17 +110,17 @@ export function TireRuleProfilesPage() {
             <thead>
               <tr>
                 {[
-                  "Category",
-                  "Name",
-                  "Tire Product",
-                  "Application",
+                  t('common.fields.category'),
+                  t('common.fields.name'),
+                  t('inventory.fields.tireProduct'),
+                  t('tire.fields.application'),
                   "D_service",
                   "D_pull",
                   "A_max",
                   "A_retread_max",
                   "N_retread_max",
-                  "Version",
-                  "Status",
+                  t('configuration.fields.version'),
+                  t('common.fields.status'),
                   "",
                 ].map((h) => (
                   <th
@@ -147,11 +145,11 @@ export function TireRuleProfilesPage() {
                   <td style={td}>
                     {p.product
                       ? `${p.product.brand ?? ""} ${p.product.name}`.trim()
-                      : "All"}
+                      : t('tire.help.all')}
                   </td>
-                  <td style={td}>{p.application ?? "General"}</td>
-                  <td style={td}>{p.d_service_mm} mm</td>
-                  <td style={td}>{p.d_pull_mm} mm</td>
+                  <td style={td}>{p.application ?? t('tire.help.general')}</td>
+                  <td style={td}>{p.d_service_mm} {t('tire.help.mm')}</td>
+                  <td style={td}>{p.d_pull_mm} {t('tire.help.mm')}</td>
                   <td style={td}>{p.a_max_months} mo</td>
                   <td style={td}>{p.a_retread_max_months} mo</td>
                   <td style={td}>{p.n_retread_max}</td>
@@ -167,7 +165,7 @@ export function TireRuleProfilesPage() {
                           className="btn-link"
                           onClick={() => setEditing(p)}
                         >
-                          Edit
+                          {t('common.actions.edit')}
                         </button>
                         <button
                           type="button"
@@ -175,7 +173,7 @@ export function TireRuleProfilesPage() {
                           style={{ color: "#b91c1c" }}
                           onClick={() => deactivate(p)}
                         >
-                          Deactivate
+                          {t('common.actions.deactivate')}
                         </button>
                       </>
                     )}
@@ -349,8 +347,8 @@ function ProfileForm({
       open
       title={
         profile
-          ? `Edit Rule Profile (v${profile.version} → v${profile.version + 1})`
-          : "New Rule Profile"
+          ? t('tire.modals.editRuleProfileVVersionV', { version: profile.version, value: profile.version + 1 })
+          : t('tire.actions.newRuleProfile')
       }
       onClose={onClose}
       width={760}
@@ -364,17 +362,17 @@ function ProfileForm({
           gap: "0 14px",
         }}
       >
-        <FormField label="Name" errors={errors.name} required>
+        <FormField label={t('common.fields.name')} errors={errors.name} required>
           <input
-            aria-label="Name"
+            aria-label={t('common.fields.name')}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             style={inputStyle}
           />
         </FormField>
-        <FormField label="Tire Category" errors={errors.tire_category} required>
+        <FormField label={t('tire.fields.tireCategory')} errors={errors.tire_category} required>
           <select
-            aria-label="Tire Category"
+            aria-label={t('tire.fields.tireCategory')}
             value={form.tire_category}
             onChange={(e) =>
               setForm({
@@ -392,16 +390,16 @@ function ProfileForm({
           </select>
         </FormField>
         <FormField
-          label="Tire Product (brand / model)"
+          label={t('tire.fields.tireProductBrandModel')}
           errors={errors.product_id}
         >
           <select
-            aria-label="Tire Product"
+            aria-label={t('inventory.fields.tireProduct')}
             value={form.product_id}
             onChange={(e) => setForm({ ...form, product_id: e.target.value })}
             style={inputStyle}
           >
-            <option value="">All products of the category</option>
+            <option value="">{t('tire.filters.allProductsCategory')}</option>
             {products.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.brand ? `${p.brand} — ` : ""}
@@ -410,10 +408,10 @@ function ProfileForm({
             ))}
           </select>
         </FormField>
-        <FormField label="Application" errors={errors.application}>
+        <FormField label={t('tire.fields.application')} errors={errors.application}>
           <input
-            aria-label="Application"
-            placeholder="General"
+            aria-label={t('tire.fields.application')}
+            placeholder={t('tire.help.general')}
             value={form.application}
             onChange={(e) => setForm({ ...form, application: e.target.value })}
             style={inputStyle}
@@ -421,24 +419,24 @@ function ProfileForm({
         </FormField>
         {field(
           "d_service_mm",
-          "D_service — minimum service tread (mm)",
+          t('tire.help.dServiceMinimumServiceTreadMm'),
           true,
           "0.1",
         )}
         {field(
           "d_pull_mm",
-          "D_pull — planned removal tread (mm, ≥ D_service)",
+          t('tire.help.dPullPlannedRemovalTreadMm'),
           true,
           "0.1",
         )}
-        {field("a_max_months", "A_max — maximum tire age for service (months)")}
+        {field("a_max_months", t('tire.help.maxMaximumTireAgeServiceMonths'))}
         {field(
           "a_retread_max_months",
-          "A_retread_max — maximum casing age for retread (months)",
+          t('tire.help.retreadMaxMaximumCasingAgeRetread'),
         )}
-        {field("n_retread_max", "N_retread_max — maximum retread count")}
+        {field("n_retread_max", t('tire.fields.nRetreadMaxMaximumRetreadCount'))}
       </div>
-      <h4 style={{ margin: "10px 0 6px", fontSize: 14 }}>Repair limits</h4>
+      <h4 style={{ margin: "10px 0 6px", fontSize: 14 }}>{t('tire.sections.repairLimits')}</h4>
       <div
         style={{
           display: "flex",
@@ -478,11 +476,11 @@ function ProfileForm({
           gap: "0 14px",
         }}
       >
-        {limit("max_puncture_diameter_mm", "Max puncture diameter (mm)")}
-        {limit("max_cut_length_mm", "Max cut length (mm)")}
-        {limit("max_cut_width_mm", "Max cut width (mm)")}
-        {limit("max_cut_depth_mm", "Max cut depth (mm)")}
-        {limit("max_repairs", "Max number of repairs")}
+        {limit("max_puncture_diameter_mm", t('tire.fields.maxPunctureDiameterMm'))}
+        {limit("max_cut_length_mm", t('tire.fields.maxCutLengthMm'))}
+        {limit("max_cut_width_mm", t('tire.fields.maxCutWidthMm'))}
+        {limit("max_cut_depth_mm", t('tire.fields.maxCutDepthMm'))}
+        {limit("max_repairs", t('tire.fields.maxNumberOfRepairs'))}
       </div>
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", fontSize: 13 }}>
         <label style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -496,7 +494,7 @@ function ProfileForm({
               })
             }
           />
-          Allow overlap with a previous repair
+          {t('tire.fields.allowOverlapPreviousRepair')}
         </label>
         <label style={{ display: "flex", gap: 4, alignItems: "center" }}>
           <input
@@ -509,11 +507,11 @@ function ProfileForm({
               })
             }
           />
-          Allow repair of damage reaching the reinforcing structure
+          {t('tire.fields.allowRepairDamageReachingReinforcingStructure')}
         </label>
       </div>
       <h4 style={{ margin: "12px 0 6px", fontSize: 14 }}>
-        Application / usage restrictions (shown on the inspection result)
+        {t('tire.sections.applicationUsageRestrictionsShownInspectionResult')}
       </h4>
       <div
         style={{
@@ -523,17 +521,17 @@ function ProfileForm({
           gap: "0 14px",
         }}
       >
-        <FormField label="Positions (comma-separated)">
+        <FormField label={t('tire.fields.positionsCommaSeparated')}>
           <input
-            aria-label="Positions"
+            aria-label={t('tire.fields.positions')}
             value={usage.positions}
             onChange={(e) => setUsage({ ...usage, positions: e.target.value })}
             style={inputStyle}
           />
         </FormField>
-        <FormField label="Max load (kg)">
+        <FormField label={t('tire.fields.maxLoadKg')}>
           <NumericInput
-            aria-label="Max load"
+            aria-label={t('tire.fields.maxLoad')}
             value={usage.max_load_kg}
             onChange={(e) =>
               setUsage({ ...usage, max_load_kg: e.target.value })
@@ -541,9 +539,9 @@ function ProfileForm({
             style={inputStyle}
           />
         </FormField>
-        <FormField label="Max speed (km/h)">
+        <FormField label={t('tire.fields.maxSpeedKmH')}>
           <NumericInput
-            aria-label="Max speed"
+            aria-label={t('tire.fields.maxSpeed')}
             value={usage.max_speed_kmh}
             onChange={(e) =>
               setUsage({ ...usage, max_speed_kmh: e.target.value })
@@ -551,18 +549,18 @@ function ProfileForm({
             style={inputStyle}
           />
         </FormField>
-        <FormField label="Operation / application (comma-separated)">
+        <FormField label={t('tire.fields.operationApplicationCommaSeparated')}>
           <input
-            aria-label="Operations"
+            aria-label={t('tire.fields.operations')}
             value={usage.operations}
             onChange={(e) => setUsage({ ...usage, operations: e.target.value })}
             style={inputStyle}
           />
         </FormField>
       </div>
-      <FormField label="Notes">
+      <FormField label={t('common.fields.notes')}>
         <input
-          aria-label="Usage notes"
+          aria-label={t('tire.fields.usageNotes')}
           value={usage.notes}
           onChange={(e) => setUsage({ ...usage, notes: e.target.value })}
           style={inputStyle}
@@ -577,7 +575,7 @@ function ProfileForm({
         }}
       >
         <button type="button" className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button
           type="button"
@@ -585,7 +583,7 @@ function ProfileForm({
           disabled={busy}
           onClick={save}
         >
-          {busy ? "Saving…" : "Save"}
+          {busy ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>

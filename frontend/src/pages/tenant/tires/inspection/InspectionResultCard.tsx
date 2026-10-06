@@ -4,6 +4,8 @@ import { openProtectedFile } from "../../../../utils/protectedFile";
 import type { ApplicationLimits, InspectionRecord } from "./inspectionTypes";
 import { RECOMMENDATION_COLOR } from "./inspectionOptions";
 import { statusLabel } from '../../../../i18n/statusRegistry';
+import { t } from '../../../../i18n/i18n';
+import { formatDateTime } from '../../../../utils/date';
 
 /**
  * Inspection result summary: recommendation and why, minimum tread, required work, stock status,
@@ -39,14 +41,14 @@ export function InspectionResultCard({
         }}
       >
         <h3 style={{ margin: 0, fontSize: 16 }}>
-          Recommendation:{" "}
+          {t('tire.sections.recommendation')}:{" "}
           <span style={{ color }} data-recommendation>
             {inspection.recommendation}
             {inspection.recommendation_detail === "RETREAD_CANDIDATE"
-              ? " — Retread Candidate"
+              ? t('tire.sections.retreadCandidate')
               : ""}
             {inspection.additional_work === "CASING_REPAIR"
-              ? " + Casing Repair"
+              ? t('tire.sections.casingRepair')
               : ""}
           </span>
         </h3>
@@ -61,36 +63,36 @@ export function InspectionResultCard({
           margin: 0,
         }}
       >
-        <Row label="Reason">
+        <Row label={t('common.fields.reason')}>
           <ul style={{ margin: 0, paddingLeft: 18 }} data-reasons>
             {inspection.reasons.map((r) => (
               <li key={r}>{r}</li>
             ))}
           </ul>
         </Row>
-        <Row label="Minimum Tread Depth">
+        <Row label={t('tire.fields.minimumTreadDepth')}>
           {inspection.d_min_mm != null
-            ? `${inspection.d_min_mm} mm`
+            ? t('tire.help.dPullMmMm', { d_pull_mm: inspection.d_min_mm })
             : "— (incomplete)"}
         </Row>
         {inspection.remaining_tread_percent != null && (
-          <Row label="Remaining Tread">
+          <Row label={t('tire.fields.remainingTread')}>
             {inspection.remaining_tread_percent}%{" "}
             <span style={{ color: "#6b7280", fontSize: 12 }}>
-              (tread life indicator only — not a safety score or remaining KM)
+              {t('tire.help.treadLifeIndicatorOnlyNotSafety')}
             </span>
           </Row>
         )}
-        <Row label="Required Work">{inspection.result.required_work}</Row>
-        <Row label="Stock Status">{statusLabel(inspection.result.stock_status)}</Row>
-        <Row label="Requirement Before Returning to Stock">
+        <Row label={t('tire.fields.requiredWork')}>{inspection.result.required_work}</Row>
+        <Row label={t('tire.fields.stockStatus')}>{statusLabel(inspection.result.stock_status)}</Row>
+        <Row label={t('tire.fields.requirementBeforeReturningStock')}>
           {inspection.result.return_requirement}
         </Row>
-        <Row label="Usage Restrictions">
+        <Row label={t('tire.fields.usageRestrictions')}>
           {restrictions ? <Restrictions limits={restrictions} /> : "—"}
         </Row>
         {inspection.follow_ups.length > 0 && (
-          <Row label="Vehicle Follow-up">
+          <Row label={t('tire.fields.vehicleFollowUp')}>
             <ul style={{ margin: 0, paddingLeft: 18 }} data-follow-ups>
               {inspection.follow_ups.map((f) => (
                 <li key={f}>{f}</li>
@@ -98,7 +100,7 @@ export function InspectionResultCard({
             </ul>
           </Row>
         )}
-        <Row label="Evidence">
+        <Row label={t('tire.fields.evidence')}>
           {inspection.evidence.length === 0
             ? "—"
             : inspection.evidence.map((e) => (
@@ -116,26 +118,26 @@ export function InspectionResultCard({
                   </button>{" "}
                   <span style={{ color: "#6b7280", fontSize: 12 }}>
                     {e.kind === "CLOSE_UP_SCALE"
-                      ? "close-up with scale"
-                      : "damage photo"}
+                      ? t('tire.fields.closeUpWithScale')
+                      : t('tire.fields.damagePhoto')}
                     {e.notes ? ` · ${e.notes}` : ""}
                   </span>
                 </div>
               ))}
         </Row>
-        <Row label="Inspector">{inspection.inspector ?? "—"}</Row>
-        <Row label="Inspection Date">{inspection.inspected_at ?? "—"}</Row>
-        <Row label="Approval">
+        <Row label={t('tire.fields.inspector')}>{inspection.inspector ?? "—"}</Row>
+        <Row label={t('inspection.fields.inspectionDate')}>{inspection.inspected_at ?? "—"}</Row>
+        <Row label={t('tire.fields.approval')}>
           {inspection.status === "APPROVED"
-            ? `Approved by ${inspection.approved_by ?? "—"} on ${inspection.approved_at ?? "—"} — disposition ${inspection.final_disposition}`
+            ? t('tire.help.approvedByOnDisposition', { approver: inspection.approved_by ?? "—", date: inspection.approved_at ? formatDateTime(inspection.approved_at) : "—", final_disposition: inspection.final_disposition })
             : inspection.status === "CANCELLED"
-              ? `Cancelled ${inspection.cancelled_at ?? ""}`
-              : "Waiting for approval — the tire keeps its current status until then."}
+              ? t('tire.fields.cancelledValue', { value: inspection.cancelled_at ?? "" })
+              : t('tire.help.waitingApprovalTireKeepsCurrentStatus')}
         </Row>
-        <Row label="Rule Profile">
+        <Row label={t('tire.fields.ruleProfile')}>
           {inspection.thresholds
             ? `${inspection.thresholds.name} · version ${inspection.rule_profile_version} · D_service ${inspection.thresholds.d_service_mm} mm · D_pull ${inspection.thresholds.d_pull_mm} mm`
-            : "None — no active profile for this tire category"}
+            : t('tire.help.noneNoActiveProfileTireCategory')}
         </Row>
       </dl>
       {actions && <div style={{ marginTop: 14 }}>{actions}</div>}
@@ -146,16 +148,16 @@ export function InspectionResultCard({
 function Restrictions({ limits }: { limits: ApplicationLimits }) {
   const parts = [
     limits.positions?.length
-      ? `Positions: ${limits.positions.join(", ")}`
+      ? t('tire.fields.positionsValue', { value: limits.positions.join(", ") })
       : null,
     limits.max_load_kg != null && limits.max_load_kg !== ""
-      ? `Max load ${limits.max_load_kg} kg`
+      ? t('tire.help.maxLoadMaxLoadKgKg', { max_load_kg: limits.max_load_kg })
       : null,
     limits.max_speed_kmh != null && limits.max_speed_kmh !== ""
-      ? `Max speed ${limits.max_speed_kmh} km/h`
+      ? t('tire.help.maxSpeedMaxSpeedKmhKm', { max_speed_kmh: limits.max_speed_kmh })
       : null,
     limits.operations?.length
-      ? `Operation: ${limits.operations.join(", ")}`
+      ? t('tire.fields.operationValue', { value: limits.operations.join(", ") })
       : null,
     limits.notes || null,
   ].filter(Boolean);

@@ -8,6 +8,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import { CreateProductModal } from '../inventory/CreateProductModal';
 import type { TireProductListItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 /**
  * Tire List: one row per Tire Product (Product of Item Type TIRE) with the counts of its physical
@@ -25,10 +26,10 @@ export function TireListPage() {
 
   const qty = (n: number) => <span style={{ fontVariantNumeric: 'tabular-nums' }}>{n}</span>;
   const columns: Column<TireProductListItem>[] = [
-    { key: 'brand', header: 'Brand', render: (p) => p.brand ?? '—' },
+    { key: 'brand', header: t('common.fields.brand'), render: (p) => p.brand ?? '—' },
     {
       key: 'name',
-      header: 'Product Name',
+      header: t('procurement.fields.productName'),
       render: (p) => (
         <div>
           {/* The product name opens its Tire Detail (no separate View Detail action). */}
@@ -39,16 +40,16 @@ export function TireListPage() {
         </div>
       ),
     },
-    { key: 'rim', header: 'Rim Diameter', render: (p) => (p.rim_diameter_inch != null ? `${p.rim_diameter_inch}"` : '—') },
-    { key: 'new', header: 'New Stock Qty', render: (p) => qty(p.new_qty) },
-    { key: 'used', header: 'Used Stock Qty', render: (p) => qty(p.used_qty) },
-    { key: 'reusable', header: 'Reusable (REUSE)', render: (p) => qty(p.reusable_qty) },
-    { key: 'installed', header: 'Installed Stock Qty', render: (p) => qty(p.installed_qty) },
+    { key: 'rim', header: t('inventory.fields.rimDiameter'), render: (p) => (p.rim_diameter_inch != null ? `${p.rim_diameter_inch}"` : '—') },
+    { key: 'new', header: t('tire.fields.newStockQty'), render: (p) => qty(p.new_qty) },
+    { key: 'used', header: t('tire.fields.usedStockQty'), render: (p) => qty(p.used_qty) },
+    { key: 'reusable', header: t('tire.fields.reusableReuse'), render: (p) => qty(p.reusable_qty) },
+    { key: 'installed', header: t('tire.fields.installedStockQty'), render: (p) => qty(p.installed_qty) },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Tires</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('tire.titles.tires')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(value) => {
@@ -58,14 +59,14 @@ export function TireListPage() {
         actions={
           hasPermission('product.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              New Tire
+              {t('tire.actions.newTire')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No tire products found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('tire.empty.noTireProductsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />

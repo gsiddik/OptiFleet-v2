@@ -1,3 +1,4 @@
+import { t } from '../../../../i18n/i18n';
 /** Usage-restriction warnings: shown, never blocking (enforced once position codes are standardized). */
 export function UsageRestrictionWarnings({ warnings }: { warnings: string[] }) {
   if (warnings.length === 0) return null;
@@ -14,7 +15,7 @@ export function UsageRestrictionWarnings({ warnings }: { warnings: string[] }) {
         fontSize: 13,
       }}
     >
-      <strong>Usage restriction warning</strong>
+      <strong>{t('tire.fields.usageRestrictionWarning')}</strong>
       <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
         {warnings.map((w) => (
           <li key={w}>{w}</li>

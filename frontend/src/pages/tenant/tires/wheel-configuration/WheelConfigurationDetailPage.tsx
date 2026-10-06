@@ -12,6 +12,7 @@ import { bodyStyleFor, truckConfigurationTypeOption, vehicleTypeOption, type Veh
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
 import { groupPositions, type ConfigurationMaster, type ConfigurationVersion } from './masterTypes';
 import { statusLabel } from '../../../../i18n/statusRegistry';
+import { t } from '../../../../i18n/i18n';
 
 /**
  * Read-only view of a saved Wheel Configuration: every saved field of the selected version, the
@@ -48,18 +49,18 @@ export function WheelConfigurationDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/wheel-configurations" label="← Back to Wheel Configuration" />
+      <BackButton fallbackTo="/app/wheel-configurations" label={t('tire.actions.backToWheelConfiguration')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 14 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
-          Wheels Configuration <span style={{ fontFamily: 'monospace' }}>{master.config_code}</span>
+          {t('tire.titles.wheelsConfiguration')} <span style={{ fontFamily: 'monospace' }}>{master.config_code}</span>
         </h1>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-secondary" onClick={() => navigate(`/app/wheel-configurations/${master.id}/vehicle-mapping`)}>
-            Vehicle Mapping
+            {t('breadcrumb.vehicleMapping')}
           </button>
           {hasPermission('tire.manage') && (
             <button className="btn-primary" onClick={() => navigate(`/app/wheel-configurations/${master.id}/edit`)}>
-              Edit
+              {t('common.actions.edit')}
             </button>
           )}
         </div>
@@ -70,35 +71,35 @@ export function WheelConfigurationDetailPage() {
           <div>
             <div className="card" style={{ marginBottom: 16 }}>
               {versions.length > 1 && (
-                <FormField label="Version">
-                  <select aria-label="Version" value={version.id} onChange={(e) => setVersionId(e.target.value)} style={inputStyle}>
+                <FormField label={t('configuration.fields.version')}>
+                  <select aria-label={t('configuration.fields.version')} value={version.id} onChange={(e) => setVersionId(e.target.value)} style={inputStyle}>
                     {versions.map((v) => (
                       <option key={v.id} value={v.id}>
-                        Version {v.version_number} · {v.config_code} · {statusLabel(v.status)}
+                        {t('configuration.fields.version')} {v.version_number} · {v.config_code} · {statusLabel(v.status)}
                       </option>
                     ))}
                   </select>
                 </FormField>
               )}
               <dl data-config-summary style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '6px 16px', fontSize: 13, margin: 0 }}>
-                <Item label="Vehicle Type" value={vehicleTypeOption(master.vehicle_type)?.label ?? master.vehicle_type} />
-                <Item label="Truck Configuration Type" value={truckType ?? '—'} />
-                <Item label="Config Code" value={<strong style={{ fontFamily: 'monospace' }}>{version.config_code}</strong>} />
-                <Item label="Version" value={<span>Version {version.version_number} <StatusBadge status={version.status} /></span>} />
-                <Item label="Number of Front Axles" value={version.front_axles.length} />
-                <Item label="Front Wheels / Side" value={perAxle(version.front_axles)} />
-                <Item label="Number of Rear Axles" value={version.rear_axles.length} />
-                <Item label="Rear Wheels / Side" value={perAxle(version.rear_axles)} />
-                <Item label="Total Axles" value={version.total_axles} />
-                <Item label="Total Wheels" value={version.total_wheels} />
-                <Item label="Spare Tires" value={version.spare_tires} />
-                <Item label="Saved" value={formatDateTime(version.created_at)} />
-                <Item label="Mapped Vehicles" value={master.mapped_vehicle_count ?? 0} />
+                <Item label={t('tire.fields.vehicleType')} value={vehicleTypeOption(master.vehicle_type)?.label ?? master.vehicle_type} />
+                <Item label={t('tire.fields.truckConfigurationType')} value={truckType ?? '—'} />
+                <Item label={t('tire.fields.configCode')} value={<strong style={{ fontFamily: 'monospace' }}>{version.config_code}</strong>} />
+                <Item label={t('configuration.fields.version')} value={<span>{t('configuration.fields.version')} {version.version_number} <StatusBadge status={version.status} /></span>} />
+                <Item label={t('tire.fields.numberOfFrontAxles')} value={version.front_axles.length} />
+                <Item label={t('tire.fields.frontWheelsSide')} value={perAxle(version.front_axles)} />
+                <Item label={t('tire.fields.numberOfRearAxles')} value={version.rear_axles.length} />
+                <Item label={t('tire.fields.rearWheelsSide')} value={perAxle(version.rear_axles)} />
+                <Item label={t('tire.fields.totalAxles')} value={version.total_axles} />
+                <Item label={t('tire.fields.totalWheels')} value={version.total_wheels} />
+                <Item label={t('tire.fields.spareTires')} value={version.spare_tires} />
+                <Item label={t('tire.fields.saved')} value={formatDateTime(version.created_at)} />
+                <Item label={t('tire.fields.mappedVehicles2')} value={master.mapped_vehicle_count ?? 0} />
               </dl>
             </div>
 
             <div className="card">
-              <h3 style={{ marginTop: 0, fontSize: 15 }}>Generated Positions ({version.positions?.length ?? 0})</h3>
+              <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tire.sections.generatedPositionsValue', { value: version.positions?.length ?? 0 })}</h3>
               <table data-version-positions style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
                 <tbody>
                   {groupPositions((version.positions ?? []).map((p) => ({ position_code: p.position_code, group: p.position_group, axle_in_group: p.axle_in_group }))).map((row) => (
@@ -113,13 +114,13 @@ export function WheelConfigurationDetailPage() {
                 <div data-version-diff style={{ fontSize: 12, background: '#f9fafb', borderRadius: 6, padding: 8, marginTop: 10 }}>
                   <div style={{ color: '#6b7280', marginBottom: 4 }}>Changes from version {version.version_number - 1}:</div>
                   <div>
-                    <span style={{ color: '#166534', fontWeight: 600 }}>Added:</span> <code>{version.position_diff.added.join(' ') || '—'}</code>
+                    <span style={{ color: '#166534', fontWeight: 600 }}>{t('tire.fields.added')}:</span> <code>{version.position_diff.added.join(' ') || '—'}</code>
                   </div>
                   <div>
-                    <span style={{ color: '#b45309', fontWeight: 600 }}>Removed:</span> <code>{version.position_diff.removed.join(' ') || '—'}</code>
+                    <span style={{ color: '#b45309', fontWeight: 600 }}>{t('tire.fields.removed')}:</span> <code>{version.position_diff.removed.join(' ') || '—'}</code>
                   </div>
                   <div>
-                    <span style={{ fontWeight: 600 }}>Unchanged:</span> {version.position_diff.unchanged.length} positions
+                    <span style={{ fontWeight: 600 }}>{t('tire.fields.unchanged')}:</span> {version.position_diff.unchanged.length} positions
                   </div>
                 </div>
               )}
@@ -127,7 +128,7 @@ export function WheelConfigurationDetailPage() {
           </div>
 
           <div className="card" style={{ position: 'sticky', top: 12 }}>
-            <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Preview</h3>
+            <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tire.sections.vehiclePreview')}</h3>
             <WheelConfigurationPreview
               bodyStyle={bodyStyleFor(master.vehicle_type as VehicleType, master.truck_configuration_type)}
               input={{ front: version.front_axles, rear: version.rear_axles, spareTires: version.spare_tires }}
@@ -140,7 +141,7 @@ export function WheelConfigurationDetailPage() {
 }
 
 function perAxle(values: number[]): string {
-  return values.length ? values.map((n, i) => `Axle ${i + 1}: ${n}`).join(' · ') : '—';
+  return values.length ? values.map((n, i) => t('tire.fields.axleValueN', { value: i + 1, n: n })).join(' · ') : '—';
 }
 
 function Item({ label, value }: { label: string; value: ReactNode }) {

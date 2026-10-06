@@ -12,6 +12,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import { VEHICLE_TYPES, truckConfigurationTypeOption, vehicleTypeOption } from './wheel-configuration/vehicleTypes';
 import type { ConfigurationMaster } from './wheel-configuration/masterTypes';
+import { t as tt } from '../../../i18n/i18n';
 
 /**
  * Wheel Configuration masters — reusable axle/wheel templates per Vehicle Type (+ Truck
@@ -58,15 +59,15 @@ export function WheelConfigurationListPage() {
   const mappingLink = (masterId: string) => `/app/wheel-configurations/${masterId}/vehicle-mapping${vehicleId ? `?vehicle=${vehicleId}` : ''}`;
 
   const columns: Column<ConfigurationMaster>[] = [
-    { key: 'type', header: 'Vehicle Type', render: (m) => vehicleTypeOption(m.vehicle_type)?.label ?? m.vehicle_type },
-    { key: 'truck', header: 'Truck Configuration Type', render: (m) => (m.truck_configuration_type ? truckConfigurationTypeOption(m.truck_configuration_type)?.label : '—') },
-    { key: 'code', header: 'Config Code', render: (m) => <strong style={{ fontFamily: 'monospace' }}>{m.config_code}</strong> },
-    { key: 'wheels', header: 'Total Wheels', render: (m) => m.current_version?.total_wheels ?? '—' },
-    { key: 'spare', header: 'Spare Tire', render: (m) => m.current_version?.spare_tires ?? '—' },
-    { key: 'version', header: 'Version', render: (m) => m.current_version?.version_number ?? '—' },
+    { key: 'type', header: tt('tire.fields.vehicleType'), render: (m) => vehicleTypeOption(m.vehicle_type)?.label ?? m.vehicle_type },
+    { key: 'truck', header: tt('tire.fields.truckConfigurationType'), render: (m) => (m.truck_configuration_type ? truckConfigurationTypeOption(m.truck_configuration_type)?.label : '—') },
+    { key: 'code', header: tt('tire.fields.configCode'), render: (m) => <strong style={{ fontFamily: 'monospace' }}>{m.config_code}</strong> },
+    { key: 'wheels', header: tt('tire.fields.totalWheels'), render: (m) => m.current_version?.total_wheels ?? '—' },
+    { key: 'spare', header: tt('tire.fields.spareTire'), render: (m) => m.current_version?.spare_tires ?? '—' },
+    { key: 'version', header: tt('configuration.fields.version'), render: (m) => m.current_version?.version_number ?? '—' },
     {
       key: 'vehicles',
-      header: 'Number of Vehicle',
+      header: tt('tire.fields.numberOfVehicle'),
       render: (m) =>
         (m.mapped_vehicle_count ?? 0) > 0 ? (
           <button
@@ -87,22 +88,22 @@ export function WheelConfigurationListPage() {
           <span style={{ color: '#9ca3af' }}>0</span>
         ),
     },
-    { key: 'status', header: 'Status', render: (m) => <StatusBadge status={m.status} /> },
+    { key: 'status', header: tt('common.fields.status'), render: (m) => <StatusBadge status={m.status} /> },
     {
       key: 'actions',
-      header: 'Action',
+      header: tt('common.fields.action'),
       render: (m) => (
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn-link" onClick={() => navigate(`/app/wheel-configurations/${m.id}`)}>
-            View Detail
+            {tt('tire.actions.viewDetail')}
           </button>
           {hasPermission('tire.manage') && (
             <button className="btn-link" onClick={() => navigate(`/app/wheel-configurations/${m.id}/edit`)}>
-              Edit
+              {tt('common.actions.edit')}
             </button>
           )}
           <button className="btn-link" onClick={() => navigate(mappingLink(m.id))}>
-            Vehicle Mapping
+            {tt('tire.actions.vehicleMapping')}
           </button>
         </div>
       ),
@@ -111,7 +112,7 @@ export function WheelConfigurationListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Wheel Configuration</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('tire.titles.wheelConfiguration')}</h1>
       {saved && (
         <div data-save-success role="status" style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '8px 12px', marginBottom: 14 }}>
           Saved configuration {saved.config_code} (version {saved.version_number}).
@@ -120,13 +121,13 @@ export function WheelConfigurationListPage() {
       {vehicleId && (
         <div data-vehicle-context role="status" style={{ fontSize: 13, color: '#1e3a8a', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '8px 12px', marginBottom: 14, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <span>
-            Choosing a configuration for vehicle <strong>{vehicleLabel ?? 'selected vehicle'}</strong> — showing only compatible configurations. Open <em>Vehicle Mapping</em> to assign it.
+            {tt('tire.help.choosingConfigurationVehicle')} <strong>{vehicleLabel ?? tt('tire.fields.selectedVehicle')}</strong> {tt('tire.help.showingOnlyCompatibleConfigurationsOpen')} <em>{tt('tire.actions.vehicleMapping')}</em> {tt('tire.help.toAssignIt')}
           </span>
           <button className="btn-link" onClick={() => navigate(`/app/vehicles/${vehicleId}`)}>
-            Back to vehicle
+            {tt('tire.actions.backToVehicle')}
           </button>
           <button className="btn-link" onClick={() => navigate('/app/wheel-configurations')}>
-            Show all configurations
+            {tt('tire.actions.showAllConfigurations')}
           </button>
         </div>
       )}
@@ -141,13 +142,13 @@ export function WheelConfigurationListPage() {
             // Wheel positions are generated from a wheels configuration (owner decision): there is no
             // manual one-by-one creation.
             <button className="btn-primary" onClick={() => navigate('/app/wheel-configurations/new')}>
-              New Wheels Configuration
+              {tt('tire.actions.newWheelsConfiguration')}
             </button>
           ) : null
         }
       >
         <select
-          aria-label="Vehicle Type filter"
+          aria-label={tt('tire.fields.vehicleTypeFilter')}
           value={typeFilter}
           onChange={(e) => {
             setTypeFilter(e.target.value);
@@ -155,7 +156,7 @@ export function WheelConfigurationListPage() {
           }}
           style={{ ...inputStyle, maxWidth: 220 }}
         >
-          <option value="">All vehicle types</option>
+          <option value="">{tt('tire.filters.allVehicleTypes')}</option>
           {VEHICLE_TYPES.map((t) => (
             <option key={t.value} value={t.value}>
               {t.label}
@@ -166,7 +167,7 @@ export function WheelConfigurationListPage() {
 
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label={vehicleId ? 'No configuration matches this vehicle’s type, axles and wheels.' : 'No wheel configurations yet.'} />}
+      {!error && !loading && data.length === 0 && <EmptyState label={vehicleId ? tt('tire.empty.noConfigurationMatchesVehicleSType') : tt('tire.empty.noWheelConfigurationsYet')} />}
       {!error && !loading && data.length > 0 && (
         <div data-master-list style={{ overflowX: 'auto' }}>
           <Table columns={columns} rows={data} expandedIds={expanded} renderExpanded={(m) => <MappedVehicles masterId={m.id} total={m.mapped_vehicle_count ?? 0} />} />
@@ -222,20 +223,20 @@ function MappedVehicles({ masterId, total }: { masterId: string; total: number }
   return (
     <div id={`mapped-${masterId}`} data-mapped-vehicles={masterId}>
       <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-        Mapped vehicles {rows ? `(${rows.length} of ${total} shown)` : ''}
+        {tt('tire.fields.mappedVehicles')} {rows ? `(${rows.length} of ${total} shown)` : ''}
       </div>
       <ScrollTable
         dataAttr={`mapped-${masterId}`}
         rows={rows ?? []}
         rowKey={(v) => v.mapping_id}
-        emptyLabel={rows === null ? 'Loading…' : 'No mapped vehicles.'}
+        emptyLabel={rows === null ? tt('common.actions.loading') : tt('tire.empty.noMappedVehicles')}
         onReachEnd={() => !loading.current && page < lastPage && fetchPage(page + 1)}
         columns={[
-          { header: 'Registration Number', cell: (v) => <Link to={`/app/vehicles/${v.id}`}>{v.registration_number}</Link> },
-          { header: 'Brand / Model', cell: (v) => [v.brand, v.model].filter(Boolean).join(' ') || '—' },
-          { header: 'Vehicle Type', cell: (v) => v.vehicle_type ?? '—' },
-          { header: 'Branch', cell: (v) => v.branch_name ?? '—' },
-          { header: 'Version', cell: (v) => `v${v.version_number}` },
+          { header: tt('tire.fields.registrationNumber'), cell: (v) => <Link to={`/app/vehicles/${v.id}`}>{v.registration_number}</Link> },
+          { header: tt('inventory.fields.brandModel'), cell: (v) => [v.brand, v.model].filter(Boolean).join(' ') || '—' },
+          { header: tt('tire.fields.vehicleType'), cell: (v) => v.vehicle_type ?? '—' },
+          { header: tt('common.fields.branch'), cell: (v) => v.branch_name ?? '—' },
+          { header: tt('configuration.fields.version'), cell: (v) => `v${v.version_number}` },
         ]}
       />
     </div>

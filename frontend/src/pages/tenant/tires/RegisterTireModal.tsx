@@ -4,6 +4,7 @@ import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/cli
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import type { ProductItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 /**
  * Registers one physical (serial-numbered) tire of a Tire product. Tire creation goes through the
@@ -46,7 +47,7 @@ export function RegisterTireModal({ product, onClose, onRegistered }: { product:
   }
 
   return (
-    <Modal open title="Register Tire" onClose={onClose}>
+    <Modal open title={t('tire.actions.registerTire')} onClose={onClose}>
       <div style={{ fontSize: 13, background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 6, padding: 10, marginBottom: 12 }}>
         <div>
           <strong>{product.name}</strong>
@@ -54,31 +55,31 @@ export function RegisterTireModal({ product, onClose, onRegistered }: { product:
         <div style={{ color: '#6b7280', marginTop: 4 }}>
           {spec
             ? [spec.tire_size_computed, spec.pattern_name, spec.construction_type, spec.tire_type].filter(Boolean).join(' · ')
-            : 'This product has no tire specification yet — complete it with Edit Product first.'}
+            : t('tire.help.productNoTireSpecificationYetComplete')}
         </div>
-        <div style={{ color: '#6b7280', marginTop: 4, fontSize: 12 }}>The specification comes from this product and is applied to the registered tire.</div>
+        <div style={{ color: '#6b7280', marginTop: 4, fontSize: 12 }}>{t('tire.help.specificationComesProductAppliedRegisteredTire')}</div>
       </div>
       {registered && (
         <div style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', borderRadius: 6, padding: 8, marginBottom: 10 }}>
-          Tire <Link to={`/app/tires/${registered.id}`}>{registered.serial_number}</Link> registered. It is now listed in Tire Management → Tire List.
+          {t('masterData.itemType.tire')} <Link to={`/app/tires/${registered.id}`}>{registered.serial_number}</Link> {t('tire.help.registeredNowListedTireManagementTire')}
         </div>
       )}
       {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 8 }}>{error}</div>}
-      <FormField label="Serial Number" errors={errors.serial_number} required>
-        <input aria-label="Serial number" value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={inputStyle} />
+      <FormField label={t('common.fields.serialNumber')} errors={errors.serial_number} required>
+        <input aria-label={t('tire.fields.serialNumber')} value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Manufacture Date Code" errors={errors.manufacture_date_code}>
-        <input aria-label="Manufacture date code" value={manufactureDateCode} onChange={(e) => setManufactureDateCode(e.target.value)} placeholder="e.g. DOT week/year code 2326" style={inputStyle} />
+      <FormField label={t('tire.fields.manufactureDateCode')} errors={errors.manufacture_date_code}>
+        <input aria-label={t('tire.fields.manufactureDateCode2')} value={manufactureDateCode} onChange={(e) => setManufactureDateCode(e.target.value)} placeholder={t('tire.placeholders.eGDotWeekYearCode')} style={inputStyle} />
       </FormField>
-      <FormField label="Purchase Date" errors={errors.purchase_date}>
-        <input type="date" aria-label="Purchase date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} style={inputStyle} />
+      <FormField label={t('tire.fields.purchaseDate')} errors={errors.purchase_date}>
+        <input type="date" aria-label={t('tire.fields.purchaseDate2')} value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Close
+          {t('common.actions.close')}
         </button>
         <button className="btn-primary" disabled={submitting || !serialNumber.trim() || !spec} onClick={submit}>
-          {submitting ? 'Registering…' : 'Register Tire'}
+          {submitting ? t('tire.actions.registering') : t('tire.actions.registerTire')}
         </button>
       </div>
     </Modal>

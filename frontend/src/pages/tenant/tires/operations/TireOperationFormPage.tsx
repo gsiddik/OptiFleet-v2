@@ -27,6 +27,7 @@ import {
 import { UsageRestrictionWarnings } from './UsageRestrictionWarnings';
 import { outsideAllowedPositions, restrictionText } from './usageRestrictions';
 import { message } from '../../../../i18n/messages';
+import { t as tt } from '../../../../i18n/i18n';
 
 interface Pair {
   from: string;
@@ -76,7 +77,7 @@ export function TireOperationFormPage() {
   const [saving, setSaving] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
 
-  useBreadcrumbLabel(id, existing ? `Edit ${existing.work_order?.wo_number ?? ''}` : null);
+  useBreadcrumbLabel(id, existing ? tt('breadcrumb.usebreadcrumblabel3', { value: existing.work_order?.wo_number ?? '' }) : null);
 
   // Edit: load the operation and pre-fill (the vehicle is fixed).
   useEffect(() => {
@@ -183,18 +184,18 @@ export function TireOperationFormPage() {
   function clickPosition(code: string) {
     setNotice(null);
     if (!type) {
-      setNotice({ code: 'CHOOSE_OPERATION', text: 'Choose the Tire Operations first.' });
+      setNotice({ code: 'CHOOSE_OPERATION', text: tt('tire.validation.chooseTireOperationsFirst') });
       return;
     }
     const position = positions.get(code);
     if (!position) return;
     const isSelected = type === 'ROTATION' ? pairs.some((p) => p.from === code || p.to === code) || pending === code : selected.includes(code);
     if (!isSelected && position.open_operation) {
-      setNotice({ code: 'POSITION_IN_OPEN_OPERATION', text: `${code} is already in an open ${OPERATION_TYPE_LABEL[position.open_operation.operation_type]} (Work Order ${position.open_operation.wo_number ?? '—'}).` });
+      setNotice({ code: 'POSITION_IN_OPEN_OPERATION', text: tt('tire.errors.positionInOpenOperation', { code: code, operation: OPERATION_TYPE_LABEL[position.open_operation.operation_type], workOrder: position.open_operation.wo_number ?? '—' }) });
       return;
     }
     if (!isSelected && !position.tire) {
-      setNotice({ code: 'POSITION_NO_TIRE_DATA', text: `${code} has no tire data yet — complete it in Vehicle Details → Wheels Configuration first.` });
+      setNotice({ code: 'POSITION_NO_TIRE_DATA', text: tt('tire.messages.codeNoTireDataYetComplete', { code: code }) });
       return;
     }
 
@@ -297,12 +298,12 @@ export function TireOperationFormPage() {
 
   return (
     <div data-tire-operation-form>
-      <BackButton fallbackTo="/app/tire-operations" label="← Back to Tire Operations" />
+      <BackButton fallbackTo="/app/tire-operations" label={tt('tire.actions.backToTireOperations')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', margin: '8px 0 16px' }}>
-        <h1 style={{ fontSize: 22, margin: 0 }}>{editing ? 'Edit Tire Operation' : 'Add New Tire Operations'}</h1>
+        <h1 style={{ fontSize: 22, margin: 0 }}>{editing ? tt('tire.titles.editTireOperation') : tt('tire.titles.addNewTireOperations')}</h1>
         {existing?.work_order && (
           <span style={{ fontSize: 13, display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-            Work Order <Link to={`/app/work-orders/${existing.work_order.id}`}>{existing.work_order.wo_number}</Link> <StatusBadge status={existing.status} />
+            {tt('common.fields.workOrder')} <Link to={`/app/work-orders/${existing.work_order.id}`}>{existing.work_order.wo_number}</Link> <StatusBadge status={existing.status} />
           </span>
         )}
       </div>
@@ -310,10 +311,10 @@ export function TireOperationFormPage() {
       <div className="split-layout">
         <div style={{ display: 'grid', gap: 16, minWidth: 0 }}>
           <section className="card" data-operation-info>
-            <h3 style={{ marginTop: 0, fontSize: 15 }}>Tire Operations Info</h3>
-            <FormField label="Registration" required errors={errors.vehicle_id}>
+            <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('tire.sections.tireOperationsInfo')}</h3>
+            <FormField label={tt('tire.fields.registration')} required errors={errors.vehicle_id}>
               <SearchableSelect
-                ariaLabel="Registration"
+                ariaLabel={tt('tire.fields.registration')}
                 value={vehicle?.value ?? ''}
                 selectedLabel={vehicle?.label ?? null}
                 onChange={(_, option) => chooseVehicle(option)}
@@ -322,27 +323,27 @@ export function TireOperationFormPage() {
                     .get('/app/vehicles', { params: { search: search || undefined, per_page: 25 } })
                     .then((res) => (res.data.data as { id: string; registration_number: string; brand: string | null; model: string | null }[]).map((v) => ({ value: v.id, label: v.registration_number, hint: [v.brand, v.model].filter(Boolean).join(' ') || null })))
                 }
-                placeholder="Select vehicle registration…"
-                searchPlaceholder="Search registration number…"
+                placeholder={tt('tire.placeholders.selectVehicleRegistration')}
+                searchPlaceholder={tt('tire.search.searchRegistrationNumber')}
                 width="100%"
                 disabled={editing}
               />
             </FormField>
-            <FormField label="Config Code">
+            <FormField label={tt('tire.fields.configCode')}>
               {vehicle && context && !mapping ? (
                 <div role="alert" data-no-configuration style={{ fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 10px' }}>
-                  This vehicle does not have a Wheels Configuration. Please map a Wheels Configuration first.{' '}
-                  <Link to={`/app/wheel-configurations?vehicle=${vehicle.value}`}>Find a configuration</Link>
+                  {tt('tire.help.vehicleDoesNotWheelsConfigurationPlease')}{' '}
+                  <Link to={`/app/wheel-configurations?vehicle=${vehicle.value}`}>{tt('tire.actions.findAConfiguration')}</Link>
                 </div>
               ) : (
-                <input aria-label="Config Code" value={mapping ? `${mapping.config_code} (v${mapping.version_number})` : ''} placeholder="Shown after choosing the vehicle" readOnly disabled style={{ ...inputStyle, background: '#f3f4f6', fontFamily: 'monospace', fontWeight: 700 }} />
+                <input aria-label={tt('tire.fields.configCode')} value={mapping ? `${mapping.config_code} (v${mapping.version_number})` : ''} placeholder={tt('tire.placeholders.shownAfterChoosingVehicle')} readOnly disabled style={{ ...inputStyle, background: '#f3f4f6', fontFamily: 'monospace', fontWeight: 700 }} />
               )}
               {contextError && <ErrorState message={contextError} />}
             </FormField>
             {needsWorkshop && (
-              <FormField label="Workshop" required errors={errors.workshop_id}>
-                <select aria-label="Workshop" value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} style={inputStyle}>
-                  <option value="">Select the workshop for the Work Order…</option>
+              <FormField label={tt('common.fields.workshop')} required errors={errors.workshop_id}>
+                <select aria-label={tt('common.fields.workshop')} value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} style={inputStyle}>
+                  <option value="">{tt('tire.fields.selectWorkshopWorkOrder')}</option>
                   {workshops.map((w) => (
                     <option key={w.id} value={w.id}>
                       {w.name}
@@ -351,9 +352,9 @@ export function TireOperationFormPage() {
                 </select>
               </FormField>
             )}
-            <FormField label="Tire Operations" required errors={errors.operation_type}>
-              <select aria-label="Tire Operations" value={type} disabled={!mapping} onChange={(e) => chooseType(e.target.value as TireOperationType | '')} style={inputStyle}>
-                <option value="">Select…</option>
+            <FormField label={tt('tire.fields.tireOperations')} required errors={errors.operation_type}>
+              <select aria-label={tt('tire.fields.tireOperations')} value={type} disabled={!mapping} onChange={(e) => chooseType(e.target.value as TireOperationType | '')} style={inputStyle}>
+                <option value="">{tt('common.fields.select')}</option>
                 {OPERATION_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {OPERATION_TYPE_LABEL[t]}
@@ -362,15 +363,15 @@ export function TireOperationFormPage() {
               </select>
             </FormField>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0 12px' }}>
-              <FormField label="Tire Operations Date" required errors={fieldErrors('operated_date')}>
-                <input aria-label="Tire Operations Date" type="date" value={date} max={todayIso()} onChange={(e) => setDate(e.target.value)} style={inputStyle} />
+              <FormField label={tt('tire.fields.tireOperationsDate')} required errors={fieldErrors('operated_date')}>
+                <input aria-label={tt('tire.fields.tireOperationsDate')} type="date" value={date} max={todayIso()} onChange={(e) => setDate(e.target.value)} style={inputStyle} />
               </FormField>
-              <FormField label="Tire Operations Time" required errors={fieldErrors('operated_time')}>
-                <input aria-label="Tire Operations Time" type="text" inputMode="numeric" placeholder="HH:mm" maxLength={5} autoComplete="off" value={time} onChange={(e) => setTime(autoColon(e.target.value))} style={inputStyle} />
+              <FormField label={tt('tire.fields.tireOperationsTime')} required errors={fieldErrors('operated_time')}>
+                <input aria-label={tt('tire.fields.tireOperationsTime')} type="text" inputMode="numeric" placeholder={tt('tire.placeholders.hhMm')} maxLength={5} autoComplete="off" value={time} onChange={(e) => setTime(autoColon(e.target.value))} style={inputStyle} />
               </FormField>
             </div>
-            <FormField label="KM at Tire Operations" required errors={errors.odometer}>
-              <NumericInput aria-label="KM at Tire Operations" placeholder="Physical odometer reading, e.g. 15250.5" value={km} onChange={(e) => setKm(e.target.value)} style={inputStyle} />
+            <FormField label={tt('tire.fields.kmAtTireOperations')} required errors={errors.odometer}>
+              <NumericInput aria-label={tt('tire.fields.kmAtTireOperations')} placeholder={tt('tire.placeholders.physicalOdometerReadingEG15250')} value={km} onChange={(e) => setKm(e.target.value)} style={inputStyle} />
             </FormField>
           </section>
 
@@ -402,16 +403,16 @@ export function TireOperationFormPage() {
         </div>
 
         <section className="card" data-operation-preview style={{ position: 'sticky', top: 12 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Preview</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('tire.sections.vehiclePreview')}</h3>
           {mapping ? (
             <>
               {type === 'ROTATION' && (
                 <p data-rotation-step style={{ fontSize: 13, fontWeight: 600, color: pending ? nextColor(pairs) : '#374151', margin: '0 0 8px' }}>
-                  {pending ? `Step 2 — Rotating the tire with… (${pending} selected)` : 'Step 1 — Choose your Tire Position to be rotated'}
+                  {pending ? tt('tire.help.step2RotatingTirePendingSelected', { pending: pending }) : tt('tire.help.step1ChooseTirePositionRotated')}
                 </p>
               )}
-              {type === 'REPLACEMENT' && <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>Click the positions to replace (one or more). Click again to unselect.</p>}
-              {type === 'INSPECTION' && <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>All positions are selected for inspection. Click a position to leave it out.</p>}
+              {type === 'REPLACEMENT' && <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>{tt('tire.help.clickPositionsReplaceOneMoreClick')}</p>}
+              {type === 'INSPECTION' && <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 8px' }}>{tt('tire.help.allPositionsSelectedInspectionClickPosition')}</p>}
               <WheelConfigurationPreview
                 bodyStyle={bodyStyleFor(mapping.vehicle_type as VehicleType, mapping.truck_configuration_type)}
                 input={{ front: mapping.front_axles, rear: mapping.rear_axles, spareTires: mapping.spare_tires }}
@@ -423,12 +424,12 @@ export function TireOperationFormPage() {
               {notice && (
                 <div role="status" data-selection-notice style={{ marginTop: 8, fontSize: 13, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px' }}>
                   {notice.text}{' '}
-                  {notice.code === 'POSITION_NO_TIRE_DATA' && vehicle && <Link to={`/app/vehicles/${vehicle.value}?tab=wheels`}>Open Vehicle Details</Link>}
+                  {notice.code === 'POSITION_NO_TIRE_DATA' && vehicle && <Link to={`/app/vehicles/${vehicle.value}?tab=wheels`}>{tt('tire.actions.openVehicleDetails')}</Link>}
                 </div>
               )}
             </>
           ) : (
-            <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Choose a vehicle with a Wheels Configuration to see its tire positions.</p>
+            <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>{tt('tire.help.chooseVehicleWheelsConfigurationSeeTire')}</p>
           )}
         </section>
       </div>
@@ -440,22 +441,22 @@ export function TireOperationFormPage() {
       )}
       {missingTire.length > 0 && (
         <div role="alert" style={{ color: '#b91c1c', fontSize: 13, marginTop: 12 }}>
-          Positions without tire data: {missingTire.join(', ')}. Complete them in <Link to={`/app/vehicles/${vehicle?.value}?tab=wheels`}>Vehicle Details → Wheels Configuration</Link> or unselect them.
+          {tt('tire.fields.positionsWithoutTireData')}: {missingTire.join(', ')}{tt('tire.help.completeThemIn')} <Link to={`/app/vehicles/${vehicle?.value}?tab=wheels`}>{tt('tire.actions.vehicleDetailsWheelsConfiguration')}</Link> {tt('tire.help.orUnselectThem')}
         </div>
       )}
       <div className="form-action-bar" style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 16 }}>
         <button type="button" className="btn-secondary" onClick={() => setConfirmCancel(true)}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button type="button" className="btn-primary" disabled={!ready || saving} onClick={save}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
       <ConfirmDialog
         open={confirmCancel}
-        title="Discard this Tire Operation?"
-        message="The information entered on this page will be discarded."
-        confirmLabel="Discard"
+        title={tt('tire.confirm.discardThisTireOperation')}
+        message={tt('tire.confirm.informationEnteredPageDiscarded')}
+        confirmLabel={tt('tire.confirm.discard')}
         onCancel={() => setConfirmCancel(false)}
         onConfirm={() => navigate(-1)}
       />
@@ -504,29 +505,29 @@ function OperationSection({
   const empty = (text: string) => <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>{text}</p>;
 
   if (type === 'ROTATION') {
-    if (pairs.length === 0) return empty('Choose the positions on the Vehicle Preview: first the tire to rotate, then the tire it rotates with.');
+    if (pairs.length === 0) return empty(tt('tire.validation.choosePositionsVehiclePreviewFirstTire'));
     return (
       <div style={{ display: 'grid', gap: 18 }}>
         {pairs.map((pair, n) => (
           <div key={`${pair.from}-${pair.to}`} data-rotation-pair={n + 1}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
               <strong style={{ fontSize: 13, color: pair.color }}>
-                Pair {n + 1}: <PositionLabel code={pair.from} /> ↔ <PositionLabel code={pair.to} />
+                {tt('masterData.productReferenceData.pair')} {n + 1}: <PositionLabel code={pair.from} /> ↔ <PositionLabel code={pair.to} />
               </strong>
               <button type="button" className="btn-link" style={{ fontSize: 12 }} onClick={() => onRemovePair(pair)}>
-                Remove pair
+                {tt('tire.actions.removePair')}
               </button>
             </div>
-            <TireOperationCard title="To be Rotated" code={pair.from} tire={positions.get(pair.from)?.tire ?? null} accent={pair.color} vehicleId={vehicleId} />
+            <TireOperationCard title={tt('tire.sections.toBeRotated')} code={pair.from} tire={positions.get(pair.from)?.tire ?? null} accent={pair.color} vehicleId={vehicleId} />
             <RotationArrows color={pair.color} />
-            <TireOperationCard title="Rotating With" code={pair.to} tire={positions.get(pair.to)?.tire ?? null} accent={pair.color} vehicleId={vehicleId} />
+            <TireOperationCard title={tt('tire.sections.rotatingWith')} code={pair.to} tire={positions.get(pair.to)?.tire ?? null} accent={pair.color} vehicleId={vehicleId} />
           </div>
         ))}
       </div>
     );
   }
 
-  if (selected.length === 0) return empty(type === 'REPLACEMENT' ? 'Choose one or more positions to replace on the Vehicle Preview.' : 'No position selected.');
+  if (selected.length === 0) return empty(type === 'REPLACEMENT' ? tt('tire.validation.chooseOneMorePositionsReplaceVehicle') : tt('tire.empty.noPositionSelected'));
 
   return (
     <div style={{ display: 'grid', gap: 18 }}>
@@ -534,10 +535,10 @@ function OperationSection({
         const tire = positions.get(code)?.tire ?? null;
         if (type === 'INSPECTION') {
           return (
-            <TireOperationCard key={code} title="Installed Tire" code={code} tire={tire} accent={INSPECTION_COLOR} vehicleId={vehicleId} onRemove={() => onUnselect(code)}>
+            <TireOperationCard key={code} title={tt('tire.sections.installedTire')} code={code} tire={tire} accent={INSPECTION_COLOR} vehicleId={vehicleId} onRemove={() => onUnselect(code)}>
               {tire && (
-                <FormField label="Tread Depth (mm)">
-                  <NumericInput aria-label={`Tread Depth ${code}`} placeholder="Measured tread depth, e.g. 7.5 (optional)" value={treads[code] ?? ''} onChange={(e) => onTread(code, e.target.value)} style={inputStyle} />
+                <FormField label={tt('tire.fields.treadDepthMm2')}>
+                  <NumericInput aria-label={tt('tire.fields.treadDepthCode', { code: code })} placeholder={tt('tire.placeholders.measuredTreadDepthEG7')} value={treads[code] ?? ''} onChange={(e) => onTread(code, e.target.value)} style={inputStyle} />
                 </FormField>
               )}
             </TireOperationCard>
@@ -546,20 +547,20 @@ function OperationSection({
         const options = tire?.product ? candidates[tire.product.id] : undefined;
         return (
           <div key={code} data-replacement={code}>
-            <TireOperationCard title="Installed Tire" code={code} tire={tire} accent={REPLACEMENT_COLOR} vehicleId={vehicleId} onRemove={() => onUnselect(code)} />
+            <TireOperationCard title={tt('tire.sections.installedTire')} code={code} tire={tire} accent={REPLACEMENT_COLOR} vehicleId={vehicleId} onRemove={() => onUnselect(code)} />
             {tire && (
               <>
                 <ReplacementArrow />
                 <section data-replacing-with={code} style={{ border: `1px dashed ${REPLACEMENT_COLOR}`, borderRadius: 12, padding: '10px 14px', background: '#fff' }}>
-                  <h4 style={{ margin: '0 0 8px', fontSize: 13, color: REPLACEMENT_COLOR, textTransform: 'uppercase', letterSpacing: 0.4 }}>Replacing With</h4>
-                  <FormField label="Serial Number" required>
-                    <select aria-label={`Serial Number ${code}`} value={replacements[code] ?? ''} onChange={(e) => onReplacement(code, e.target.value)} style={inputStyle}>
-                      <option value="">{options === undefined ? 'Loading…' : options.length === 0 ? tire.product?.name ? message('tire.operations.noSerialForProduct', { productName: tire.product.name }) : message('tire.operations.noSerialForThisProduct') : 'Select serial number…'}</option>
+                  <h4 style={{ margin: '0 0 8px', fontSize: 13, color: REPLACEMENT_COLOR, textTransform: 'uppercase', letterSpacing: 0.4 }}>{tt('tire.sections.replacingWith')}</h4>
+                  <FormField label={tt('common.fields.serialNumber')} required>
+                    <select aria-label={tt('tire.fields.serialNumberCode', { code: code })} value={replacements[code] ?? ''} onChange={(e) => onReplacement(code, e.target.value)} style={inputStyle}>
+                      <option value="">{options === undefined ? tt('common.actions.loading') : options.length === 0 ? tire.product?.name ? message('tire.operations.noSerialForProduct', { productName: tire.product.name }) : message('tire.operations.noSerialForThisProduct') : tt('tire.fields.selectSerialNumber')}</option>
                       {(options ?? [])
                         .filter((c) => c.id === replacements[code] || !chosenSerials.includes(c.id))
                         .map((c) => (
                           <option key={c.id} value={c.id}>
-                            {c.serial_number} — {c.source === 'NEW_STOCK' ? 'New Stock' : `Reuse${c.warehouse ? ` · ${c.warehouse}` : ''}`}
+                            {c.serial_number} — {c.source === 'NEW_STOCK' ? tt('tire.fields.newStock') : tt('tire.fields.reuseValue', { value: c.warehouse ? ` · ${c.warehouse}` : '' })}
                           </option>
                         ))}
                     </select>
@@ -570,19 +571,18 @@ function OperationSection({
                     return (
                       <div style={{ marginBottom: 8 }}>
                         <p style={{ fontSize: 12, color: '#374151', margin: '0 0 6px' }}>
-                          Usage restrictions (from its inspection): {restrictionText(limits)}
-                        </p>
+                          {tt('tire.help.usageRestrictionsInspectionValue', { value: restrictionText(limits) })}</p>
                         {outsideAllowedPositions(limits, code) && (
                           <div data-usage-warning={code}>
                             <UsageRestrictionWarnings
-                              warnings={[`This Reuse tire is restricted to position(s) ${(limits.positions ?? []).join(', ')}, not ${code}. You can still save — check the restriction before fitting.`]}
+                              warnings={[tt('tire.warnings.reuseTireRestrictedPositionSValue', { value: (limits.positions ?? []).join(', '), code: code })]}
                             />
                           </div>
                         )}
                       </div>
                     );
                   })()}
-                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>Only serials of {tire.product?.name ?? 'the same tire product'} (New Stock, or Reuse — used tires back in stock after inspection in Used Tire Management) are listed. Both are requested and issued through the Work Order's Part Request (Reuse as a Used line).</p>
+                  <p style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>{tt('tire.fields.onlySerialsOf')} {tire.product?.name ?? tt('tire.help.theSameTireProduct')} {tt('tire.help.newStockReuseUsedTiresBack')}</p>
                 </section>
               </>
             )}

@@ -1,222 +1,221 @@
+// i18n-audit: canonical-english — English fallbacks beside their keys (o(code, English, key) / label getters).
+import { t, translated, translatedRecord, withLabels } from '../../../../i18n/i18n';
 /** Questionnaire wording and option labels (codes are the backend's). */
 
-export type Option = { value: string; label: string };
-const o = (value: string, label: string): Option => ({ value, label });
+export type Option = { value: string; label: string; labelKey?: string };
+/** An option whose label reads in the current language (English when the key is missing). */
+const o = (value: string, label: string, key?: string): Option =>
+  key ? { value, get label() { return translated(key, label); } } : { value, label };
 
 export const QUESTIONS: Record<
   string,
-  { label: string; options: Option[]; help?: string }
+  { label: string; labelKey?: string; options: Option[]; help?: string }
 > = {
   identity_status: {
-    label: "Can the tire identity, category, and manufacture date be verified?",
+    get label() { return translated('tire.fields.tireIdentityCategoryManufactureDateVerified', "Can the tire identity, category, and manufacture date be verified?"); },
     options: [
-      o("COMPLETE", "Complete"),
-      o("PARTIALLY_UNKNOWN", "Partially Unknown"),
-      o("CANNOT_VERIFY", "Cannot Be Verified"),
+      o("COMPLETE", "Complete", 'common.actions.complete'),
+      o("PARTIALLY_UNKNOWN", "Partially Unknown", 'tire.fields.partiallyUnknown'),
+      o("CANNOT_VERIFY", "Cannot Be Verified", 'tire.fields.cannotBeVerified'),
     ],
   },
   internal_inspected: {
-    label:
-      "Have the exterior and interior of the tire been inspected after removal from the rim?",
-    options: [o("YES", "Yes"), o("NOT_YET", "Not Yet")],
+    get label() { return translated('tire.fields.exteriorInteriorTireBeenInspectedAfter', "Have the exterior and interior of the tire been inspected after removal from the rim?"); },
+    options: [o("YES", "Yes", 'common.fields.yes'), o("NOT_YET", "Not Yet", 'tire.fields.notYet')],
   },
   wear_pattern: {
-    label: "Wear pattern",
-    help: "The tread wear pattern — even, one-sided, center, both sides, cupping / scalloping or flat spot. Abnormal wear helps reveal alignment, suspension, inflation pressure or load problems.",
+    get label() { return translated('tire.fields.wearPattern', "Wear pattern"); },
+    get help() { return t('tire.help.treadWearPatternEvenOneSided'); },
     options: [
-      o("EVEN", "Even"),
-      o("ONE_SIDED", "One-Sided Wear"),
-      o("CENTER", "Center Wear"),
-      o("BOTH_SIDES", "Both-Sides Wear"),
-      o("CUPPING_SCALLOPING", "Cupping / Scalloping"),
-      o("FLAT_SPOT", "Flat Spot"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("EVEN", "Even", 'tire.fields.even'),
+      o("ONE_SIDED", "One-Sided Wear", 'tire.fields.oneSidedWear'),
+      o("CENTER", "Center Wear", 'tire.fields.centerWear'),
+      o("BOTH_SIDES", "Both-Sides Wear", 'tire.fields.bothSidesWear'),
+      o("CUPPING_SCALLOPING", "Cupping / Scalloping", 'tire.fields.cuppingScalloping'),
+      o("FLAT_SPOT", "Flat Spot", 'tire.fields.flatSpot'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   bulge_separation: {
-    label: "Bulge / deformation / separation",
-    help: "Check for bulges, deformation or signs that the tire layers are separating. A finding can indicate casing, belt or ply damage.",
+    get label() { return translated('tire.fields.bulgeDeformationSeparation', "Bulge / deformation / separation"); },
+    get help() { return t('tire.help.checkBulgesDeformationSignsTireLayers'); },
     options: [
-      o("NONE", "None"),
-      o("PRESENT", "Present"),
-      o("SUSPECTED", "Suspected"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("NONE", "None", 'common.fields.none'),
+      o("PRESENT", "Present", 'tire.fields.present'),
+      o("SUSPECTED", "Suspected", 'tire.fields.suspected'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   cord_exposure: {
-    label: "Cord / wire exposure",
-    help: "Check whether the reinforcing cords / steel wires are visible, broken or corroded. This concerns the tire's structural integrity.",
+    get label() { return translated('tire.fields.cordWireExposure', "Cord / wire exposure"); },
+    get help() { return t('tire.help.checkWhetherReinforcingCordsSteelWires'); },
     options: [
-      o("NONE", "None"),
-      o("PRESENT", "Present"),
-      o("SUSPECTED", "Suspected"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("NONE", "None", 'common.fields.none'),
+      o("PRESENT", "Present", 'tire.fields.present'),
+      o("SUSPECTED", "Suspected", 'tire.fields.suspected'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   sidewall_condition: {
-    label: "Sidewall",
-    help: "Condition of the tire's side wall: surface abrasion, cracking, cuts and deeper damage.",
+    get label() { return translated('tire.fields.sidewall', "Sidewall"); },
+    get help() { return t('tire.help.conditionTireSSideWallSurface'); },
     options: [
-      o("NORMAL", "Normal"),
-      o("SURFACE_ABRASION", "Surface Abrasion"),
-      o("SURFACE_CRACKING", "Surface Cracking"),
-      o("DEEP_CUT_CRACK", "Deep Cut / Deep Crack"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("NORMAL", "Normal", 'tire.fields.normal'),
+      o("SURFACE_ABRASION", "Surface Abrasion", 'tire.fields.surfaceAbrasion'),
+      o("SURFACE_CRACKING", "Surface Cracking", 'tire.fields.surfaceCracking'),
+      o("DEEP_CUT_CRACK", "Deep Cut / Deep Crack", 'tire.fields.deepCutDeepCrack'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   bead_condition: {
-    label: "Bead",
-    help: "Condition of the bead — the part of the tire that seats on the rim. Check for abrasion, tearing, deformation and an exposed or damaged bead wire.",
+    get label() { return translated('tire.fields.bead', "Bead"); },
+    get help() { return t('tire.help.conditionBeadPartTireSeatsRim'); },
     options: [
-      o("NORMAL", "Normal"),
-      o("MINOR_ABRASION", "Minor Abrasion"),
-      o("TORN", "Torn"),
-      o("DEFORMED", "Deformed"),
-      o("BEAD_WIRE_DAMAGED", "Bead Wire Damaged / Exposed"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("NORMAL", "Normal", 'tire.fields.normal'),
+      o("MINOR_ABRASION", "Minor Abrasion", 'tire.fields.minorAbrasion'),
+      o("TORN", "Torn", 'tire.fields.torn'),
+      o("DEFORMED", "Deformed", 'tire.fields.deformed'),
+      o("BEAD_WIRE_DAMAGED", "Bead Wire Damaged / Exposed", 'tire.fields.beadWireDamagedExposed'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   inner_liner_condition: {
-    label: "Inner liner",
-    help: "Condition of the inner layer that helps hold the air pressure. It can reveal internal damage that is not visible from the outside.",
+    get label() { return translated('tire.fields.innerLiner', "Inner liner"); },
+    get help() { return t('tire.help.conditionInnerLayerHelpsHoldAir'); },
     options: [
-      o("NORMAL", "Normal"),
-      o("LOCAL_DAMAGE", "Local Damage"),
-      o("CRACKED_DELAMINATED", "Cracked / Delaminated"),
-      o("WRINKLED_HEAT_DAMAGE", "Wrinkled / Heat Damage"),
-      o("CORD_EXPOSED", "Cord Exposed"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("NORMAL", "Normal", 'tire.fields.normal'),
+      o("LOCAL_DAMAGE", "Local Damage", 'tire.fields.localDamage'),
+      o("CRACKED_DELAMINATED", "Cracked / Delaminated", 'tire.fields.crackedDelaminated'),
+      o("WRINKLED_HEAT_DAMAGE", "Wrinkled / Heat Damage", 'tire.fields.wrinkledHeatDamage'),
+      o("CORD_EXPOSED", "Cord Exposed", 'tire.fields.cordExposed'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   run_flat_overheat: {
-    label: "Run flat / low pressure / overheat",
-    help: "History or signs that the tire ran with very low pressure, leaking or overheated, which can cause internal casing damage.",
+    get label() { return translated('tire.fields.runFlatLowPressureOverheat', "Run flat / low pressure / overheat"); },
+    get help() { return t('tire.help.historySignsTireRanVeryLow'); },
     options: [
-      o("NO", "No"),
-      o("HISTORY_NO_SIGN", "History Present, No Sign Found"),
-      o("PHYSICAL_SIGN", "Physical Sign Found"),
-      o("UNKNOWN", "Unknown"),
+      o("NO", "No", 'common.fields.no'),
+      o("HISTORY_NO_SIGN", "History Present, No Sign Found", 'tire.fields.historyPresentNoSignFound'),
+      o("PHYSICAL_SIGN", "Physical Sign Found", 'tire.fields.physicalSignFound'),
+      o("UNKNOWN", "Unknown", 'tire.fields.unknown'),
     ],
   },
   leak_foreign_object: {
-    label: "Leak / foreign object",
-    help: "Check for leaks or penetration by a foreign object such as a nail, screw or other object.",
-    options: [o("NO", "No"), o("YES", "Yes"), o("NOT_TESTED", "Not Tested")],
+    get label() { return translated('tire.fields.leakForeignObject', "Leak / foreign object"); },
+    get help() { return t('tire.help.checkLeaksPenetrationForeignObjectSuch'); },
+    options: [o("NO", "No", 'common.fields.no'), o("YES", "Yes", 'common.fields.yes'), o("NOT_TESTED", "Not Tested", 'tire.fields.notTested')],
   },
   previous_repair: {
-    label: "Previous repair",
-    help: "Check repairs done before and whether they still meet the repair standard.",
+    get label() { return translated('tire.fields.previousRepair', "Previous repair"); },
+    get help() { return t('tire.help.checkRepairsDoneBeforeWhetherThey'); },
     options: [
-      o("NONE", "None"),
-      o("MEETS_STANDARD", "Meets Standard"),
-      o("QUESTIONABLE", "Questionable"),
-      o("DOES_NOT_MEET", "Does Not Meet Standard"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("NONE", "None", 'common.fields.none'),
+      o("MEETS_STANDARD", "Meets Standard", 'tire.fields.meetsStandard'),
+      o("QUESTIONABLE", "Questionable", 'tire.fields.questionable'),
+      o("DOES_NOT_MEET", "Does Not Meet Standard", 'tire.fields.doesNotMeetStandard'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   age_chemical: {
-    label: "Age / chemical damage",
-    help: "Degradation from age or chemical exposure, such as rubber hardening, brittleness, softening, swelling or cracking.",
+    get label() { return translated('tire.fields.ageChemicalDamage', "Age / chemical damage"); },
+    get help() { return t('tire.help.degradationAgeChemicalExposureSuchRubber'); },
     options: [
-      o("NONE", "None"),
-      o("SUSPECTED", "Suspected"),
-      o("DEGRADED", "Hardened / Brittle / Softened / Swollen"),
-      o("NOT_INSPECTED", "Not Inspected"),
+      o("NONE", "None", 'common.fields.none'),
+      o("SUSPECTED", "Suspected", 'tire.fields.suspected'),
+      o("DEGRADED", "Hardened / Brittle / Softened / Swollen", 'tire.help.hardenedBrittleSoftenedSwollen'),
+      o("NOT_INSPECTED", "Not Inspected", 'tire.fields.notInspected'),
     ],
   },
   casing_compliance: {
-    label: "Age / retread / casing compliance",
-    help: "Whether the tire's age, retread count and casing condition still meet the limits that apply to this tire category / model (the active Inspection Rules profile).",
+    get label() { return translated('tire.fields.ageRetreadCasingCompliance', "Age / retread / casing compliance"); },
+    get help() { return t('tire.help.whetherTireSAgeRetreadCount'); },
     options: [
-      o("MEETS", "Meets Requirement"),
-      o("DOES_NOT_MEET", "Does Not Meet Requirement"),
-      o("CANNOT_CONFIRM", "Cannot Yet Be Confirmed"),
+      o("MEETS", "Meets Requirement", 'tire.fields.meetsRequirement'),
+      o("DOES_NOT_MEET", "Does Not Meet Requirement", 'tire.fields.doesNotMeetRequirement'),
+      o("CANNOT_CONFIRM", "Cannot Yet Be Confirmed", 'tire.fields.cannotYetBeConfirmed'),
     ],
   },
   repair_eligibility: {
-    label:
-      "Do all damages meet the repair limits applicable to this tire category / model?",
+    get label() { return translated('tire.fields.doAllDamagesMeetRepairLimits', "Do all damages meet the repair limits applicable to this tire category / model?"); },
     options: [
-      o("YES", "Yes"),
-      o("NO", "No"),
-      o("SPECIALIST_REQUIRED", "Specialist Required"),
+      o("YES", "Yes", 'common.fields.yes'),
+      o("NO", "No", 'common.fields.no'),
+      o("SPECIALIST_REQUIRED", "Specialist Required", 'tire.fields.specialistRequired'),
     ],
   },
   specialist_result: {
-    label: "Specialist / retreader result",
-    help: "The result of a further examination by a specialist / retreader, when the decision cannot be made from the fleet inspection alone.",
+    get label() { return translated('tire.fields.specialistRetreaderResult', "Specialist / retreader result"); },
+    get help() { return t('tire.help.resultFurtherExaminationSpecialistRetreaderWhen'); },
     options: [
-      o("NOT_REQUESTED", "Not Requested"),
-      o("PENDING", "Pending"),
-      o("ACCEPTED", "Accepted (final)"),
-      o("REJECTED", "Rejected (final)"),
+      o("NOT_REQUESTED", "Not Requested", 'tire.fields.notRequested'),
+      o("PENDING", "Pending", 'tire.fields.pending'),
+      o("ACCEPTED", "Accepted (final)", 'tire.fields.acceptedFinal'),
+      o("REJECTED", "Rejected (final)", 'tire.fields.rejectedFinal'),
     ],
   },
 };
 
 export const LOCATIONS: Option[] = [
-  o("TREAD", "Tread"),
-  o("SHOULDER", "Shoulder"),
-  o("SIDEWALL", "Sidewall"),
-  o("BEAD", "Bead"),
-  o("INNER_LINER", "Inner Liner"),
+  o("TREAD", "Tread", 'tire.fields.tread'),
+  o("SHOULDER", "Shoulder", 'tire.fields.shoulder'),
+  o("SIDEWALL", "Sidewall", 'tire.fields.sidewall'),
+  o("BEAD", "Bead", 'tire.fields.bead'),
+  o("INNER_LINER", "Inner Liner", 'tire.fields.innerLiner2'),
 ];
 export const DAMAGE_TYPES: Option[] = [
-  o("PUNCTURE", "Puncture"),
-  o("CUT", "Cut"),
-  o("CRACK", "Crack"),
-  o("ABRASION", "Abrasion"),
-  o("SEPARATION", "Separation"),
-  o("PREVIOUS_REPAIR_DAMAGE", "Previous Repair Damage"),
-  o("OTHER", "Other"),
+  o("PUNCTURE", "Puncture", 'tire.fields.puncture'),
+  o("CUT", "Cut", 'tire.fields.cut'),
+  o("CRACK", "Crack", 'tire.fields.crack'),
+  o("ABRASION", "Abrasion", 'tire.fields.abrasion'),
+  o("SEPARATION", "Separation", 'tire.fields.separation'),
+  o("PREVIOUS_REPAIR_DAMAGE", "Previous Repair Damage", 'tire.fields.previousRepairDamage'),
+  o("OTHER", "Other", 'tire.fields.other'),
 ];
 export const TRI_STATE: Option[] = [
-  o("NO", "No"),
-  o("YES", "Yes"),
-  o("UNKNOWN", "Unknown"),
+  o("NO", "No", 'common.fields.no'),
+  o("YES", "Yes", 'common.fields.yes'),
+  o("UNKNOWN", "Unknown", 'tire.fields.unknown'),
 ];
-export const GROOVES = [
+export const GROOVES = withLabels([
   {
     value: "INNER_MAIN",
-    label: "Main groove inner",
+    get label() { return translated('tire.fields.mainGrooveInner', "Main groove inner"); },
     required: true,
-    help: "Tread depth (mm) measured in the main groove on the inner side of the tire. Captures inner-side wear and helps detect uneven wear.",
+    get help() { return t('tire.help.treadDepthMmMeasuredMainGroove'); },
   },
   {
     value: "OUTER_MAIN",
-    label: "Main groove outer",
+    get label() { return translated('tire.fields.mainGrooveOuter', "Main groove outer"); },
     required: true,
-    help: "Tread depth (mm) measured in the main groove on the outer side of the tire. Compared with the inner groove to read the wear pattern.",
+    get help() { return t('tire.help.treadDepthMmMeasuredMainGroove2'); },
   },
   {
     value: "CENTER",
-    label: "Center / most worn",
+    get label() { return translated('tire.fields.centerMostWorn', "Center / most worn"); },
     required: false,
-    help: "Tread depth (mm) at the center of the tread or at the point that visibly looks the most worn. Captures the lowest tread that the inner / outer grooves may miss.",
+    get help() { return t('tire.help.treadDepthMmCenterTreadPoint'); },
   },
-] as const;
+] as const);
 
 /** Tread zones: measurement areas around the tire's circumference. */
-export const ZONE_HELP: Record<number, string> = {
+export const ZONE_HELP: Record<number, string> = translatedRecord({
   1: "Zone 1 — the first measurement area around the tire's circumference. Measuring in 3 different areas (not just one spot) makes sure the reading represents the whole tread.",
   2: "Zone 2 — the second measurement area around the tire's circumference, away from Zone 1.",
   3: "Zone 3 — the third measurement area around the tire's circumference, away from Zones 1 and 2.",
-};
+}, { 1: 'tire.help.zone1FirstMeasurementAreaAround', 2: 'tire.help.zone2SecondMeasurementAreaAround', 3: 'tire.help.zone3ThirdMeasurementAreaAround' });
 
 /** Tread figures (all in mm). D_pull names its real configuration page. */
-export const TREAD_HELP = {
-  d_new:
-    "D_new — the reference tread depth (mm) when the tire was new, or after its last retread. Used as the baseline for the remaining tread percentage when available.",
-  d_min:
-    "D_min — the lowest tread depth (mm) of all measured points: D_min = min(all tread depth measurements). One of the main inputs of the inspection decision.",
-  d_pull:
-    "D_pull — the planned removal tread depth (mm): the threshold at which the fleet pulls a tire from service before it reaches the legal / minimum D_service. D_pull must be ≥ D_service. Adjusted per tire category in Tire Management → Inspection Rules (the active rule profile).",
-} as const;
-export const CATEGORY_LABELS: Record<string, string> = {
+export const TREAD_HELP = translatedRecord({
+  get d_new() { return t('tire.help.dNewReferenceTreadDepthMm'); },
+  get d_min() { return t('tire.help.dMinLowestTreadDepthMm'); },
+  get d_pull() { return t('tire.help.dPullPlannedRemovalTreadDepth'); },
+} as const, { d_new: 'tire.help.dNewReferenceTreadDepthMm', d_min: 'tire.help.dMinLowestTreadDepthMm', d_pull: 'tire.help.dPullPlannedRemovalTreadDepth' });
+export const CATEGORY_LABELS: Record<string, string> = translatedRecord({
   PASSENGER_LT: "Passenger / Light Truck",
   TRUCK_BUS: "Truck / Bus",
   OTR: "OTR / Heavy Equipment",
-};
+}, { PASSENGER_LT: 'tire.category.passengerLt', TRUCK_BUS: 'tire.category.truckBus', OTR: 'inventory.fields.otrHeavyEquipment' });
 
 export const RECOMMENDATION_COLOR: Record<string, string> = {
   REUSE: "#15803d",

@@ -15,6 +15,7 @@ import { formatDate } from '../../../../utils/date';
 import { formatHours, formatKm } from './tireOperationFormat';
 import { OPERATION_TYPES, OPERATION_TYPE_LABEL, type TireOperationListItem } from './tireOperationTypes';
 import { statusLabel } from '../../../../i18n/statusRegistry';
+import { t as tt } from '../../../../i18n/i18n';
 
 const TYPE_PERMISSION = { REPLACEMENT: 'tire.install', ROTATION: 'tire.rotate', INSPECTION: 'tire.inspect' } as const;
 const STATUSES = ['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
@@ -54,37 +55,37 @@ export function TireOperationsLandingPage() {
   );
 
   const columns: Column<TireOperationListItem>[] = [
-    { key: 'date', header: 'Date', render: (r) => <span style={{ whiteSpace: 'nowrap' }}>{formatDate(r.operated_date)} {r.operated_time}</span> },
-    { key: 'wo', header: 'WO#', render: (r) => (r.work_order ? <Link to={`/app/work-orders/${r.work_order.id}`}>{r.work_order.wo_number}</Link> : '—') },
-    { key: 'vehicle', header: 'Registration', render: (r) => <Link to={`/app/vehicles/${r.vehicle.id}`}>{r.vehicle.registration_number}</Link> },
-    { key: 'event', header: 'Events', render: (r) => OPERATION_TYPE_LABEL[r.operation_type] },
+    { key: 'date', header: tt('common.fields.date'), render: (r) => <span style={{ whiteSpace: 'nowrap' }}>{formatDate(r.operated_date)} {r.operated_time}</span> },
+    { key: 'wo', header: tt('tire.fields.woNumber'), render: (r) => (r.work_order ? <Link to={`/app/work-orders/${r.work_order.id}`}>{r.work_order.wo_number}</Link> : '—') },
+    { key: 'vehicle', header: tt('tire.fields.registration'), render: (r) => <Link to={`/app/vehicles/${r.vehicle.id}`}>{r.vehicle.registration_number}</Link> },
+    { key: 'event', header: tt('tire.fields.events'), render: (r) => OPERATION_TYPE_LABEL[r.operation_type] },
     {
       key: 'position',
-      header: 'Position',
+      header: tt('inventory.placeholders.position'),
       render: (r) => lines(r, (i) => (
         <>
-          {r.operation_type === 'ROTATION' && <span style={{ color: '#6b7280', fontSize: 12 }}>Pair {i.pair_number} · </span>}
+          {r.operation_type === 'ROTATION' && <span style={{ color: '#6b7280', fontSize: 12 }}>{tt('masterData.productReferenceData.pair')} {i.pair_number} · </span>}
           <PositionLabel code={i.position_code} />
         </>
       )),
     },
-    { key: 'usage', header: 'Usage KM', render: (r) => lines(r, (i) => formatKm(i.usage_km)) },
-    { key: 'hours', header: 'Usage Time / Hours Meter', render: (r) => lines(r, (i) => formatHours(i.usage_hours)) },
-    { key: 'tread', header: 'Last Tread Depth', render: (r) => lines(r, (i) => (i.last_tread_depth_mm != null ? `${i.last_tread_depth_mm} mm` : '—')) },
-    { key: 'status', header: 'Tire Operations Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'usage', header: tt('tire.fields.usageKm'), render: (r) => lines(r, (i) => formatKm(i.usage_km)) },
+    { key: 'hours', header: tt('tire.fields.usageTimeHoursMeter'), render: (r) => lines(r, (i) => formatHours(i.usage_hours)) },
+    { key: 'tread', header: tt('tire.fields.lastTreadDepth'), render: (r) => lines(r, (i) => (i.last_tread_depth_mm != null ? tt('tire.help.dPullMmMm', { d_pull_mm: i.last_tread_depth_mm }) : '—')) },
+    { key: 'status', header: tt('tire.fields.tireOperationsStatus'), render: (r) => <StatusBadge status={r.status} /> },
     {
       key: 'action',
-      header: 'Action',
+      header: tt('common.fields.action'),
       render: (r) => (
         <div style={{ display: 'flex', gap: 10 }}>
           {r.can_edit && hasPermission('work_order.update') && hasPermission(TYPE_PERMISSION[r.operation_type]) && (
             <button type="button" className="btn-link" onClick={() => navigate(`/app/tire-operations/${r.id}/edit`)}>
-              Edit
+              {tt('common.actions.edit')}
             </button>
           )}
           {r.can_cancel && hasPermission('work_order.cancel') && (
             <button type="button" className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setCancelling(r)}>
-              Cancel
+              {tt('common.actions.cancelRecord')}
             </button>
           )}
           {!r.can_edit && !r.can_cancel && <span style={{ color: '#9ca3af' }}>—</span>}
@@ -95,22 +96,22 @@ export function TireOperationsLandingPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 6 }}>Tire Operations</h1>
-      <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 14 }}>Replacement, rotation and inspection jobs. Each one is carried out through the Work Order created with it.</p>
+      <h1 style={{ fontSize: 22, marginBottom: 6 }}>{tt('tire.titles.tireOperations')}</h1>
+      <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 14 }}>{tt('tire.help.replacementRotationInspectionJobsEachOne')}</p>
       {saved && (
         <div role="status" data-save-success style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '8px 12px', marginBottom: 14 }}>
-          {saved.edited ? 'Tire Operation updated' : 'Tire Operation saved'}
-          {saved.wo_number ? ` — Work Order ${saved.wo_number}` : ''}.
+          {saved.edited ? tt('tire.fields.tireOperationUpdated') : tt('tire.fields.tireOperationSaved')}
+          {saved.wo_number ? tt('tire.help.workOrderWoNumber', { wo_number: saved.wo_number }) : ''}.
         </div>
       )}
       <section className="card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 10 }}>
           <h3 style={{ margin: 0, fontSize: 15 }}>
-            Recent Tire Operations {meta && <span style={{ color: '#6b7280', fontWeight: 400 }}>({meta.total})</span>}
+            {tt('tire.sections.recentTireOperations')} {meta && <span style={{ color: '#6b7280', fontWeight: 400 }}>({meta.total})</span>}
           </h3>
           {canCreate && (
             <button type="button" className="btn-primary" onClick={() => navigate('/app/tire-operations/new')}>
-              New Tire Operations
+              {tt('tire.actions.newTireOperations')}
             </button>
           )}
         </div>
@@ -121,16 +122,16 @@ export function TireOperationsLandingPage() {
             setPage(1);
           }}
         >
-          <select aria-label="Events filter" value={type} onChange={(e) => (setType(e.target.value), setPage(1))} style={inputStyle}>
-            <option value="">All events</option>
+          <select aria-label={tt('tire.fields.eventsFilter')} value={type} onChange={(e) => (setType(e.target.value), setPage(1))} style={inputStyle}>
+            <option value="">{tt('tire.filters.allEvents')}</option>
             {OPERATION_TYPES.map((t) => (
               <option key={t} value={t}>
                 {OPERATION_TYPE_LABEL[t]}
               </option>
             ))}
           </select>
-          <select aria-label="Status filter" value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} style={inputStyle}>
-            <option value="">All statuses</option>
+          <select aria-label={tt('common.fields.statusFilter')} value={status} onChange={(e) => (setStatus(e.target.value), setPage(1))} style={inputStyle}>
+            <option value="">{tt('common.filters.allStatuses')}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
                 {statusLabel(s)}
@@ -140,7 +141,7 @@ export function TireOperationsLandingPage() {
         </Toolbar>
         {error && <ErrorState message={error} />}
         {!error && loading && <LoadingState />}
-        {!error && !loading && data.length === 0 && <EmptyState label="No tire operations yet." />}
+        {!error && !loading && data.length === 0 && <EmptyState label={tt('tire.empty.noTireOperationsYet')} />}
         {!error && !loading && data.length > 0 && (
           <div data-recent-operations style={{ overflowX: 'auto' }}>
             <Table columns={columns} rows={data} />
@@ -182,20 +183,20 @@ export function CancelOperationDialog({ operation, onClose, onCancelled }: { ope
   }
 
   return (
-    <Modal open title="Cancel Tire Operation" onClose={onClose}>
+    <Modal open title={tt('tire.actions.cancelTireOperation')} onClose={onClose}>
       <p style={{ fontSize: 13, marginTop: 0 }}>
-        This cancels the {OPERATION_TYPE_LABEL[operation.operation_type].toLowerCase()} and its Work Order <strong>{operation.work_order?.wo_number ?? ''}</strong>. Requested replacement tires are released.
+        This cancels the {OPERATION_TYPE_LABEL[operation.operation_type].toLowerCase()} and its Work Order <strong>{operation.work_order?.wo_number ?? ''}</strong>{tt('tire.help.requestedReplacementTiresReleased')}
       </p>
-      <FormField label="Reason">
-        <textarea aria-label="Cancellation reason" value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
+      <FormField label={tt('common.fields.reason')}>
+        <textarea aria-label={tt('common.fields.cancellationReason')} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       {error && <ErrorState message={error} />}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
         <button type="button" className="btn-secondary" onClick={onClose}>
-          Keep
+          {tt('tire.actions.keep')}
         </button>
         <button type="button" className="btn-primary" style={{ background: '#b91c1c', borderColor: '#b91c1c' }} disabled={busy} onClick={confirm}>
-          {busy ? 'Cancelling…' : 'Cancel Tire Operation'}
+          {busy ? tt('tire.actions.cancelling') : tt('tire.actions.cancelTireOperation')}
         </button>
       </div>
     </Modal>
