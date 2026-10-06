@@ -1,0 +1,85 @@
+{
+  "actions": {
+    "accept": "Accept",
+    "backVehicleHealthRisk": "← Back to Vehicle Health & Risk",
+    "convertToMr": "Convert to MR",
+    "review": "Review"
+  },
+  "empty": {
+    "noComponentHealthData": "No component health data.",
+    "noComponentHealthDataYet": "No component health data yet.",
+    "noFailureRiskPredictionYet": "No failure risk prediction yet.",
+    "noHealthScoreYet": "No health score yet.",
+    "noIntelligenceDataVehicle": "No intelligence data for this vehicle.",
+    "noIntelligenceDataYet": "No intelligence data yet.",
+    "noOpenRecommendations": "No open recommendations.",
+    "noRecommendations": "No recommendations.",
+    "noTireRulDataYet": "No tire RUL data yet.",
+    "noVehicleHealthRiskDataYet": "No vehicle health/risk data yet — the intelligence pipeline has not run for this tenant."
+  },
+  "fields": {
+    "actions": "Actions",
+    "avgCostKm": "Avg Cost/km",
+    "avgDamage90d": "Avg Damage (90d)",
+    "confidence": "Confidence",
+    "confidenceConfidence": "Confidence: {{confidence}}",
+    "entity": "Entity",
+    "factors": "Factors",
+    "failureRisk": "Failure Risk",
+    "healthScore": "Health Score",
+    "healthStatus": "Health Status",
+    "mainFactors": "Main factors",
+    "modelVModelVersion": "· Model v{{model_version}}",
+    "remainingKm": "Remaining km",
+    "replacementUrgency": "Replacement Urgency",
+    "riskScore": "Risk Score",
+    "score": "Score"
+  },
+  "help": {
+    "basisBasisNotMachineLearnedEstimate": "Basis: {{basis}} (not a machine-learned estimate)",
+    "confidenceConfidenceSourceSource": "Confidence: {{confidence}} · Source: {{source}}",
+    "descriptiveDiagnosticPredictivePrescriptiveInsightDeterministic": "Descriptive, diagnostic, predictive and prescriptive insight — deterministic and explainable, ML only where an active model has passed its own acceptance gate.",
+    "estimatedLowHighDaysRemaining": "Estimated {{low}}–{{high}} days remaining",
+    "estimatedLowHighKmRemaining": "Estimated {{low}}–{{high}} km remaining",
+    "suggestionsOnlyAcceptingConvertsMaintenanceRequest": "Suggestions only — accepting converts to a Maintenance Request through the normal workflow; nothing here is approved or executed automatically.",
+    "youDoNotPermissionViewComponent": "You do not have permission to view component intelligence.",
+    "youDoNotPermissionViewMaintenance": "You do not have permission to view maintenance intelligence.",
+    "youDoNotPermissionViewRecommendations": "You do not have permission to view recommendations.",
+    "youDoNotPermissionViewTire": "You do not have permission to view tire intelligence.",
+    "youDoNotPermissionViewVehicle": "You do not have permission to view vehicle intelligence."
+  },
+  "reasons": {
+    "classImbalance": "class imbalance too severe: majority class ratio {{ratio}}",
+    "componentAssetsAsCa2": "component_assets as ca2",
+    "componentInstallationsAsCi2": "component_installations as ci2",
+    "dataNotReady": "Data readiness NOT_READY: {{reasons}}",
+    "featureMissingness": "feature missingness too high: {{ratio}}"
+  },
+  "sections": {
+    "acceptedRecommendations": "Accepted Recommendations",
+    "componentHealth": "Component Health",
+    "criticalVehicles": "Critical Vehicles",
+    "failureRisk30d": "Failure Risk (30d)",
+    "healthScore": "Health Score",
+    "highRiskComponents": "High-Risk Components",
+    "lowRulItems": "Low RUL Items",
+    "openRecommendations": "Open Recommendations",
+    "predictedFailures30d": "Predicted Failures (30d)",
+    "predictedFailures7d": "Predicted Failures (7d)",
+    "productPerformance": "Product Performance",
+    "recommendations": "Recommendations",
+    "remainingUsefulLife": "Remaining Useful Life",
+    "repeatFailures": "Repeat Failures",
+    "riskHealthHistory": "Risk / Health History",
+    "vehiclesAtRisk": "Vehicles At Risk",
+    "vehiclesHealthy": "Vehicles Healthy"
+  },
+  "titles": {
+    "componentReliability": "Component Reliability",
+    "intelligenceRecommendations": "Intelligence Recommendations",
+    "maintenanceIntelligence": "Maintenance Intelligence",
+    "tireIntelligence": "Tire Intelligence",
+    "vehicleHealthAndRisk": "Vehicle Health & Risk",
+    "vehicleVehicleId": "Vehicle {{vehicle_id}}"
+  }
+}

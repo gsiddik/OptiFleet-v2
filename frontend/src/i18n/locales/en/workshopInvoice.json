@@ -1,0 +1,67 @@
+{
+  "actions": {
+    "confirmPayment": "Confirm Payment",
+    "invoiceAttachment": "Invoice Attachment",
+    "openWorkOrder": "Open Work Order",
+    "paymentEvidence": "Payment Evidence",
+    "requestCancellation": "Request Cancellation",
+    "requestCorrection": "Request Correction",
+    "returnedMemoAttachment": "Returned Memo Attachment",
+    "saveNote": "Save Note",
+    "submitCancellationRequest": "Submit Cancellation Request",
+    "submitCorrectionRequest": "Submit Correction Request",
+    "uploadPaymentEvidence": "Upload Payment Evidence"
+  },
+  "empty": {
+    "noPaymentRecordedYet": "No payment recorded yet."
+  },
+  "fields": {
+    "bankTransactionReferenceOptional": "Bank / Transaction Reference (optional)",
+    "correctedInvoiceDate": "Corrected Invoice Date",
+    "correctedTotalAmount": "Corrected Total Amount",
+    "expected": "Expected",
+    "invoiced": "Invoiced",
+    "maintenanceMemo": "Maintenance Memo",
+    "missingSourceRecords": "Missing source records",
+    "notesNotes": "Notes: {{notes}}",
+    "paid": "Paid",
+    "paidAmountPaymentDate": "{{paid_amount}} on {{payment_date}}",
+    "partnerReference": "Partner Reference",
+    "paymentEvidenceUrlRequired": "Payment Evidence URL (required)",
+    "paymentMethodOptional": "Payment Method (optional)",
+    "pendingCancellation": "Pending Cancellation",
+    "pendingCorrection": "Pending Correction",
+    "reference": "Reference",
+    "requestedValuesValue": "Requested values: {{value}}",
+    "serviceProvider": "Service Provider",
+    "totalAmountTotalAmount": "Total Amount: {{total_amount}}",
+    "unmatchedLineItems": "Unmatched line items",
+    "variance": "Variance",
+    "workOrderEstimate": "Work Order Estimate"
+  },
+  "help": {
+    "payableAmountPayableAmountPartialPayment": "Payable amount: {{payableAmount}}. Partial payment is not supported — the paid amount must match exactly.",
+    "recordedExternallyIssuedDocumentOptiFleet": "Recorded from an externally-issued document — OptiFleet did not issue this invoice.",
+    "requiresApprovalDifferentUserOriginalValues": "Requires approval from a different user. The original values are preserved.",
+    "requiresApprovalDifferentUserPreservesPayment": "Requires approval from a different user. Preserves payment history if any exists."
+  },
+  "modals": {
+    "requestInvoiceCancellation": "Request Invoice Cancellation",
+    "requestInvoiceCorrection": "Request Invoice Correction",
+    "uploadPaymentEvidence": "Upload Payment Evidence"
+  },
+  "placeholders": {
+    "eGBankTransfer": "e.g. Bank Transfer",
+    "reconciliationNoteExceptionReasonOptional": "Reconciliation note / exception reason (optional)"
+  },
+  "sections": {
+    "cancellationHistory": "Cancellation History",
+    "correctionCancellation": "Correction / Cancellation",
+    "correctionHistory": "Correction History",
+    "payment": "Payment",
+    "reconciliation": "Reconciliation"
+  },
+  "titles": {
+    "serviceInvoiceExternalInvoiceNumber": "Service Invoice — {{external_invoice_number}}"
+  }
+}

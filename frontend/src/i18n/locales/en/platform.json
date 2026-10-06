@@ -1,0 +1,419 @@
+{
+  "access": {
+    "actions": {
+      "createUser": "Create User",
+      "newUser": "+ New User"
+    },
+    "empty": {
+      "noPlatformUsersFound": "No platform users found."
+    },
+    "modals": {
+      "newPlatformUser": "New Platform User"
+    },
+    "titles": {
+      "platformRolesAndPermissions": "Platform Roles & Permissions",
+      "platformUsers": "Platform Users"
+    }
+  },
+  "audit": {
+    "titles": {
+      "auditLog": "Audit Log"
+    }
+  },
+  "billing": {
+    "empty": {
+      "noBillingRecordsFound": "No billing records found."
+    },
+    "fields": {
+      "period": "Period"
+    },
+    "titles": {
+      "billing": "Billing"
+    }
+  },
+  "bundles": {
+    "actions": {
+      "backToBundleManagement": "← Back to Bundle Management",
+      "createBundle": "Create Bundle",
+      "newBundle": "+ New Bundle",
+      "publishing": "Publishing…",
+      "publishNewVersion": "Publish New Version",
+      "saveComposition": "Save Composition"
+    },
+    "confirm": {
+      "deactivateBundleNoLongerSelectableNew": "Deactivate this bundle? It will no longer be selectable for new contracts, but existing contracts referencing it are unaffected.",
+      "deleteBundleHiddenBundleManagementNew": "Delete this bundle? It will be hidden from Bundle Management and new contracts, but existing contracts that already reference it keep working — this cannot be undone from here.",
+      "reactivateBundleSoSelectedNewContracts": "Reactivate this bundle so it can be selected for new contracts again?"
+    },
+    "empty": {
+      "noBundlesFound": "No bundles found."
+    },
+    "fields": {
+      "automaticallyAddedByDependency": "Automatically added by dependency",
+      "missingRequiredDependencies": "Missing required dependencies",
+      "modules": "Modules"
+    },
+    "help": {
+      "nameCodeRequiredValue": "{{name}} ({{code}}) — required by {{value}}"
+    },
+    "modals": {
+      "newBundle": "New Bundle"
+    },
+    "placeholders": {
+      "eGOptifleetCustom": "e.g. OPTIFLEET_CUSTOM"
+    },
+    "sections": {
+      "moduleComposition": "Module Composition"
+    },
+    "titles": {
+      "bundles": "Bundles"
+    }
+  },
+  "contracts": {
+    "actions": {
+      "addItem": "+ Add Item",
+      "addItem2": "Add Item",
+      "confirm": "Confirm",
+      "createAmendment": "Create Amendment",
+      "createDraftAmendment": "Create Draft Amendment",
+      "createDraftContract": "Create Draft Contract",
+      "createRenewalDraft": "Create Renewal Draft",
+      "editDraft": "Edit Draft",
+      "newContract": "+ New Contract",
+      "renew": "Renew",
+      "saveDraft": "Save Draft",
+      "submitForApproval": "Submit for Approval",
+      "terminate": "Terminate"
+    },
+    "empty": {
+      "noAmendments": "No amendments.",
+      "noContractsFound": "No contracts found."
+    },
+    "fields": {
+      "activationRequiresPayment": "Activation requires payment",
+      "amendmentNumberAmendmentNumber": "Amendment #{{amendment_number}}",
+      "annual": "Annual",
+      "billingCycle": "Billing Cycle",
+      "billingFrequency": "Billing Frequency",
+      "custom": "Custom",
+      "effectiveDate": "Effective Date",
+      "effectiveEffectiveDate": "Effective: {{effective_date}}",
+      "endDate": "End Date",
+      "gracePeriodDays": "Grace Period (days)",
+      "gracePeriodEnd": "Grace period end",
+      "monthly": "Monthly",
+      "newEndDate": "New End Date",
+      "nextBillingNextBillingDate": "Next billing: {{next_billing_date}}",
+      "notApplicable": "Not applicable",
+      "noteOptional": "Note (optional)",
+      "paymentFrequency": "Payment Frequency",
+      "paymentTermsDays": "Payment Terms (days)",
+      "productReference": "Product Reference",
+      "productReferenceCode": "Product Reference (code)",
+      "productType": "Product Type",
+      "quarterly": "Quarterly",
+      "selectCode": "Select code…",
+      "selectTenant": "Select tenant…",
+      "semiAnnual": "Semi Annual",
+      "startDate": "Start Date",
+      "taxPercent": "Tax %",
+      "totalCurrencyToLocaleString": "Total: {{currency}} {{toLocaleString}}"
+    },
+    "help": {
+      "activePriceToLocaleStringUnit": "Active Price: {{toLocaleString}} (unit price may not go below this)",
+      "backToContractManagement": "← Back to Contract Management",
+      "backToTenantContracts": "← Back to Tenant Contracts",
+      "createsNewDraftContractCarryingOver": "Creates a new draft contract carrying over the current line items. Adjust the end date and items as needed, then submit the new contract for approval separately.",
+      "lookingUpActivePrice": "Looking up Active Price…",
+      "selectTenantFirstActivePriceDepends": "Select a tenant first — Active Price depends on the tenant.",
+      "subtotalToLocaleStringDiscountTo": "Subtotal: {{toLocaleString}} Discount: {{toLocaleString}} Tax"
+    },
+    "messages": {
+      "approve": "approve",
+      "reject": "reject",
+      "terminate": "terminate"
+    },
+    "modals": {
+      "addAmendmentItem": "Add Amendment Item",
+      "approveContract": "Approve Contract",
+      "editContractContractNumber": "Edit Contract — {{contract_number}}",
+      "newAmendment": "New Amendment",
+      "newContract": "New Contract",
+      "rejectContract": "Reject Contract",
+      "renewContractNumber": "Renew {{contract_number}}",
+      "terminateContract": "Terminate Contract"
+    },
+    "sections": {
+      "active": "Active",
+      "all": "All",
+      "amendments": "Amendments",
+      "billingCycle": "Billing Cycle",
+      "draft": "Draft",
+      "endDate": "End Date",
+      "expired": "Expired",
+      "expiring": "Expiring",
+      "itemsCarriedOverCurrentContract": "Items carried over from current contract",
+      "pendingApproval": "Pending Approval",
+      "rejected": "Rejected",
+      "startDate": "Start Date",
+      "subscription": "Subscription",
+      "terminated": "Terminated"
+    },
+    "titles": {
+      "contracts": "Contracts"
+    }
+  },
+  "dashboard": {
+    "empty": {
+      "noRecentActivity": "No recent activity."
+    },
+    "sections": {
+      "activeSubscriptions": "Active Subscriptions",
+      "activeTenants": "Active Tenants",
+      "commercialOverview": "Commercial Overview",
+      "contractsExpiring": "Contracts Expiring",
+      "invoicesOutstanding": "Invoices Outstanding",
+      "invoicesOverdue": "Invoices Overdue",
+      "modules": "Modules",
+      "paymentsPendingVerification": "Payments Pending Verification",
+      "pendingSubscriptions": "Pending Subscriptions",
+      "platformUsers": "Platform Users",
+      "recentActivity": "Recent Activity",
+      "suspendedSubscriptions": "Suspended Subscriptions",
+      "tenantUsers": "Tenant Users",
+      "totalTenants": "Total Tenants"
+    },
+    "titles": {
+      "platformDashboard": "Platform Dashboard"
+    }
+  },
+  "invoices": {
+    "actions": {
+      "backToInvoices": "← Back to Invoices",
+      "downloadPdf": "Download PDF",
+      "void": "Void",
+      "voiding": "Voiding…",
+      "voidInvoice": "Void Invoice"
+    },
+    "empty": {
+      "noInvoicesFound": "No invoices found."
+    },
+    "fields": {
+      "outstanding": "Outstanding",
+      "toLocaleStringPaidToLocale": "{{toLocaleString}} Paid: {{toLocaleString}}"
+    },
+    "modals": {
+      "voidInvoice": "Void Invoice"
+    },
+    "sections": {
+      "dueDate": "Due Date",
+      "invoiceDate": "Invoice Date",
+      "outstanding": "Outstanding"
+    },
+    "titles": {
+      "invoices": "Invoices"
+    }
+  },
+  "masterdata": {
+    "actions": {
+      "newCategory": "+ New Category"
+    },
+    "confirm": {
+      "deleteNameCannotUndone": "Delete \"{{name}}\"? This cannot be undone.",
+      "deleteProductCategory": "Delete Product Category"
+    },
+    "empty": {
+      "noProductCategoriesFound": "No product categories found."
+    },
+    "fields": {
+      "inheritedFromParent": "Inherited from parent",
+      "parentCategory": "Parent Category"
+    },
+    "help": {
+      "sharedBaselineTaxonomyVisibleEveryTenant": "Shared baseline taxonomy visible to every tenant. Edits and deletions here are never reverted by the seeder.",
+      "sharedBaselineVisibleEveryTenantAbbreviations": "Shared baseline visible to every tenant. Abbreviations are 3-letter Product SKU elements: unique, never reused, and locked once Products use the group."
+    },
+    "modals": {
+      "editProductCategory": "Edit Product Category",
+      "newProductCategory": "New Product Category"
+    },
+    "titles": {
+      "productCategories": "Product Categories"
+    }
+  },
+  "modules": {
+    "actions": {
+      "backToModuleCatalog": "← Back to Module Catalog",
+      "createModule": "Create Module",
+      "newModule": "+ New Module",
+      "remove": "remove"
+    },
+    "empty": {
+      "noDescription": "No description.",
+      "noModulesFound": "No modules found."
+    },
+    "fields": {
+      "core": "Core",
+      "no": "No",
+      "selectModule": "Select module…",
+      "sellable": "Sellable"
+    },
+    "modals": {
+      "newModule": "New Module"
+    },
+    "sections": {
+      "directDependencies": "Direct Dependencies",
+      "directDependentsReverse": "Direct Dependents (reverse)",
+      "transitiveDependencies": "Transitive Dependencies",
+      "transitiveDependents": "Transitive Dependents"
+    },
+    "titles": {
+      "moduleCatalog": "Module Catalog"
+    }
+  },
+  "payments": {
+    "actions": {
+      "backToPayments": "← Back to Payments",
+      "verify": "Verify",
+      "viewInvoice": "View Invoice →"
+    },
+    "empty": {
+      "noPaymentsFound": "No payments found.",
+      "noProofFilesUploaded": "No proof files uploaded."
+    },
+    "fields": {
+      "accountName": "Account Name",
+      "note": "Note",
+      "transactionReference": "Transaction Reference",
+      "verificationNoteVerificationNote": "Verification Note: {{verification_note}}"
+    },
+    "modals": {
+      "rejectPayment": "Reject Payment",
+      "verifyPayment": "Verify Payment"
+    },
+    "sections": {
+      "amount": "Amount",
+      "invoice": "Invoice",
+      "method": "Method",
+      "paymentDate": "Payment Date",
+      "proofOfPayment": "Proof of Payment"
+    },
+    "titles": {
+      "payment": "Payment",
+      "payments": "Payments"
+    }
+  },
+  "pricing": {
+    "actions": {
+      "newPricing": "+ New Pricing",
+      "newVersion": "New Version",
+      "publishVersion": "Publish Version"
+    },
+    "confirm": {
+      "deactivatePricingPriceableTypePriceableCode": "Deactivate pricing {{priceable_type}} {{priceable_code}}? It will no longer be selectable for new contracts; existing contracts are unaffected.",
+      "deletePricingPriceableTypePriceableCode": "Delete pricing {{priceable_type}} {{priceable_code}}? It will be hidden from selection but existing contracts referencing it keep working — this cannot be undone from here.",
+      "reactivatePricingPriceableTypePriceableCode": "Reactivate pricing {{priceable_type}} {{priceable_code}} so it can be selected for new contracts again?"
+    },
+    "empty": {
+      "noPricingConfiguredYet": "No pricing configured yet."
+    },
+    "fields": {
+      "activePrice": "Active Price",
+      "amountIdr": "Amount (IDR)",
+      "codeModuleBundleCodeCapacityResource": "Code (module/bundle code or capacity resource type)",
+      "effectiveFrom": "Effective From",
+      "frequency": "Frequency",
+      "priceableType": "Priceable Type",
+      "pricingMethod": "Pricing Method"
+    },
+    "modals": {
+      "newPriceVersionPriceableCode": "New Price Version — {{priceable_code}}",
+      "newPricing": "New Pricing"
+    },
+    "titles": {
+      "pricing": "Pricing"
+    }
+  },
+  "subscriptions": {
+    "actions": {
+      "adjustmentInvoice": "Adjustment Invoice",
+      "generateBilling": "Generate Billing",
+      "issueInvoice": "Issue Invoice",
+      "suspend": "Suspend",
+      "suspending": "Suspending…"
+    },
+    "empty": {
+      "noSubscriptionsFound": "No subscriptions found."
+    },
+    "fields": {
+      "adjustmentInvoiceInvoiceNumberIssued": "Adjustment invoice {{invoice_number}} issued.",
+      "nextBilling": "Next Billing",
+      "subscriptionActivated": "Subscription activated."
+    },
+    "help": {
+      "activatesSubscriptionModuleEntitlementsNowWithout": "Activates the subscription and its module entitlements now, without waiting for the first payment.",
+      "issuesAdditionalInvoiceSubscriptionIssuedInvoices": "Issues an additional invoice for this subscription. Issued invoices cannot be edited — void and re-issue to correct."
+    },
+    "messages": {
+      "billingGenerated": "Billing and invoice generated for {{tenantName}}.",
+      "billingGeneratedNoTenant": "Billing and invoice generated for the subscription.",
+      "billingInvoiceGeneratedValue": "Billing and invoice generated for {{value}}."
+    },
+    "modals": {
+      "activateSubscriptionTenant": "Activate Subscription — {{tenant}}",
+      "adjustmentInvoiceTenant": "Adjustment Invoice — {{tenant}}",
+      "suspendSubscription": "Suspend Subscription"
+    },
+    "titles": {
+      "subscriptions": "Subscriptions"
+    }
+  },
+  "tenants": {
+    "actions": {
+      "addNewContract": "+ Add New Contract",
+      "addUser": "+ Add User",
+      "addUser2": "Add User",
+      "backToTenantManagement": "← Back to Tenant Management",
+      "createTenant": "Create Tenant",
+      "grant": "Grant",
+      "newTenant": "+ New Tenant",
+      "revoke": "Revoke"
+    },
+    "empty": {
+      "noContractsTenantYet": "No contracts for this tenant yet.",
+      "noTenantsFound": "No tenants found.",
+      "noUsersTenant": "No users in this tenant."
+    },
+    "fields": {
+      "created": "Created",
+      "currentUsage": "Current Usage",
+      "industry": "Industry",
+      "legalName": "Legal Name",
+      "maxLimit": "Max Limit",
+      "module": "Module",
+      "suspended": "Suspended"
+    },
+    "help": {
+      "active": "✅ Active",
+      "notEntitled": "⬜ Not entitled"
+    },
+    "modals": {
+      "addTenantUser": "Add Tenant User",
+      "newTenant": "New Tenant"
+    },
+    "placeholders": {
+      "companyName": "Company name",
+      "eGAcme": "e.g. ACME",
+      "unlimited": "unlimited"
+    },
+    "sections": {
+      "capacityLimits": "Capacity Limits",
+      "contract": "Contract",
+      "moduleEntitlements": "Module Entitlements",
+      "users": "Users"
+    },
+    "titles": {
+      "tenantManagement": "Tenant Management"
+    }
+  }
+}

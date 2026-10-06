@@ -1,0 +1,41 @@
+{
+  "empty": {
+    "noMaintenanceHistoryAccessScope": "No maintenance history in your access scope."
+  },
+  "fields": {
+    "details": "Details",
+    "eventType": "Event type",
+    "fromDate": "From date",
+    "searchRegistration": "Search registration",
+    "toDate": "To date"
+  },
+  "filters": {
+    "allBranches": "All branches",
+    "allEventTypes": "All event types"
+  },
+  "help": {
+    "maintenanceEventsEveryVehicleAccessScope": "Maintenance events of every vehicle in your access scope, newest first. Use Vehicle → History for one vehicle's timeline."
+  },
+  "labels": {
+    "breakdownDetailStatus": "Breakdown ({{detail}}) — {{status}}",
+    "castBreakdownsSeverityVarchar": "CAST(breakdowns.severity AS varchar)",
+    "castBreakdownsStatusVarchar": "CAST(breakdowns.status AS varchar)",
+    "castMaintenanceRequestsRequestNumberVarchar": "CAST(maintenance_requests.request_number AS varchar)",
+    "castMaintenanceRequestsStatusVarchar": "CAST(maintenance_requests.status AS varchar)",
+    "castNullAsType": "CAST(NULL AS {{type}})",
+    "castQcInspectionsStatusVarchar": "CAST(qc_inspections.status AS varchar)",
+    "castWorkOrdersMaintenanceTypeVarchar": "CAST(work_orders.maintenance_type AS varchar)",
+    "castWorkOrdersStatusVarchar": "CAST(work_orders.status AS varchar)",
+    "castWorkOrdersWoNumberVarchar": "CAST(work_orders.wo_number AS varchar)",
+    "qcInspectionStatus": "QC inspection — {{status}}",
+    "requestRefStatus": "Request {{ref}} — {{status}}",
+    "vehicleReleased": "Vehicle released",
+    "workOrderRefDetailStatus": "Work Order {{ref}} ({{detail}}) — {{status}}"
+  },
+  "search": {
+    "searchRegistration": "Search registration…"
+  },
+  "titles": {
+    "maintenanceHistory": "Maintenance History"
+  }
+}

@@ -1,0 +1,327 @@
+{
+  "accessControl": {
+    "cannotRemoveManagePermission": "You cannot remove \"{{permission}}\" from a role that is your only source of it — you would lose access to role management.",
+    "invalidPermissions": "{{count}} selected permission(s) do not exist or do not belong to the {{scope}} scope.",
+    "platformSuperadminRoleAlwaysHoldsEvery": "The platform superadmin role always holds every platform permission and cannot be edited."
+  },
+  "after": "The :attribute field must be a date after :date.",
+  "after_or_equal": "The :attribute field must be a date after or equal to :date.",
+  "array": "The :attribute field must be an array.",
+  "auth": {
+    "accountBeenDeactivated": "This account has been deactivated.",
+    "noActiveTenantMembershipFoundAccount": "No active tenant membership found for this account.",
+    "providedCredentialsIncorrect": "The provided credentials are incorrect.",
+    "youDoNotActiveMembershipTenant": "You do not have an active membership for this tenant."
+  },
+  "between": {
+    "numeric": "The :attribute field must be between :min and :max."
+  },
+  "boolean": "The :attribute field must be true or false.",
+  "componentAsset": {
+    "chooseWarehouseRepairedComponentStored": "Choose the warehouse the repaired component is stored in.",
+    "componentMustRemovedRepairDispositionBefore": "Component must be removed with a repair disposition before starting a repair."
+  },
+  "configuration": {
+    "chooseDocumentTypeSupportsDocumentNumbering": "Choose a document type that supports document numbering.",
+    "chooseDocumentTypeSupportsDocumentTemplates": "Choose a document type that supports document templates.",
+    "chooseNotificationEventCompanyConfigure": "Choose a notification event your company can configure.",
+    "sequencePaddingMustIntegerBetween1": "sequence_padding must be an integer between 1 and 12.",
+    "sequenceStartMustPositiveInteger": "sequence_start must be a positive integer."
+  },
+  "contract": {
+    "unitPriceMustNotNegative": "Unit price must not be negative."
+  },
+  "current_password": "The password is incorrect.",
+  "date": "The :attribute field must be a valid date.",
+  "decimal": "The :attribute field must have :decimal decimal places.",
+  "email": "The :attribute field must be a valid email address.",
+  "exists": "The selected :attribute is invalid.",
+  "file": "The :attribute field must be a file.",
+  "goodsReceipt": {
+    "amountMustNumberUp2Decimals": "The amount must be a number with up to 2 decimals.",
+    "invoiceDocumentMustPdfFile": "The invoice document must be a PDF file.",
+    "termsPaymentMustWholeNumberWorking": "Terms of payment must be a whole number of working days."
+  },
+  "gt": {
+    "numeric": "The :attribute field must be greater than :value."
+  },
+  "in": "The selected :attribute is invalid.",
+  "integer": "The :attribute field must be an integer.",
+  "inventory": {
+    "adjustmentDirectionMustPlusMinus": "Adjustment direction must be PLUS or MINUS.",
+    "adjustmentQuantityMustPositive": "Adjustment quantity must be positive.",
+    "consumptionQuantityMustPositive": "Consumption quantity must be positive.",
+    "issueQuantityMustPositive": "Issue quantity must be positive.",
+    "receiptQuantityMustPositive": "Receipt quantity must be positive.",
+    "releaseQuantityMustPositive": "Release quantity must be positive.",
+    "reservationQuantityMustPositive": "Reservation quantity must be positive.",
+    "scrapQuantityMustPositive": "Scrap quantity must be positive."
+  },
+  "invoice": {
+    "adjustmentAmountMustGreaterThanZero": "An adjustment amount must be greater than zero."
+  },
+  "maintenance": {
+    "assessmentGroupsDuplicated": "Each inspection group may only appear once. Duplicated: {{groups}}",
+    "assessmentGroupsMissing": "All 14 inspection groups are required. Missing: {{groups}}"
+  },
+  "maintenancePackage": {
+    "leastOneItemMustSelectedBefore": "At least one item must be selected before activating."
+  },
+  "maintenancePolicy": {
+    "workshopWorkingDaysMustSetCompany": "Workshop Working Days must be set in Company Profile before creating a periodic schedule."
+  },
+  "masterData": {
+    "abbreviationAbbreviationAlreadyUsedAnotherComponent": "The abbreviation \"{{abbreviation}}\" is already used by another Component Group (deleted groups included) and cannot be reused.",
+    "abbreviationCannotChangedBecauseComponentGroup": "Abbreviation cannot be changed because this Component Group has already been used by Products (and to generate Product SKUs).",
+    "anotherActiveComponentGroupAlreadyUses": "Another active Component Group already uses code \"{{code}}\".",
+    "categoryAlreadyUsedProductsCannotMoved": "This Category is already used by Products and cannot be moved to another Component Group. Reclassify the Products explicitly instead.",
+    "codeCodeAlreadyUsedUnderParent": "Code \"{{code}}\" is already used under this parent (deleted records included).",
+    "componentGroupStillActiveSubGroups": "This Component Group still has active sub-groups. Delete or move them first.",
+    "itemTypesStranded": "Existing Products of Item Type {{itemTypes}} use this Subcategory; keep that Item Type allowed or reclassify those Products first.",
+    "selectedCategoryNotAvailableInactiveDeleted": "The selected Category is not available (inactive, deleted, its Component Group is retired, or not visible).",
+    "selectedComponentGroupNotAvailableInactive": "The selected Component Group is not available (inactive, deleted, or not visible).",
+    "selectedVehicleBrandNotAvailable": "The selected Vehicle Brand is not available.",
+    "selectedVehicleModelDoesNotBelong": "The selected Vehicle Model does not belong to the selected Vehicle Brand.",
+    "selectedVehicleModelNotAvailable": "The selected Vehicle Model is not available.",
+    "subcategoryAlreadyUsedProductsCannotMoved": "This Subcategory is already used by Products and cannot be moved to another Category. Reclassify the Products explicitly instead.",
+    "valueAlreadyExistsUnderParent": "\"{{value}}\" already exists under this parent."
+  },
+  "max": {
+    "array": "The :attribute field must not have more than :max items.",
+    "file": "The :attribute field must not be greater than :max kilobytes.",
+    "numeric": "The :attribute field must not be greater than :max.",
+    "string": "The :attribute field must not be greater than :max characters."
+  },
+  "mimes": "The :attribute field must be a file of type: :values.",
+  "min": {
+    "array": "The :attribute field must have at least :min items.",
+    "numeric": "The :attribute field must be at least :min.",
+    "string": "The :attribute field must be at least :min characters."
+  },
+  "not_in": "The selected :attribute is invalid.",
+  "notification": {
+    "chooseKindEachWhat": "Choose the {{kind}} for each {{what}}.",
+    "chooseLeastOneChannelAppEmail": "Choose at least one channel: In-App or Email.",
+    "conditionsMustMatchedAllAny": "Conditions must be matched with All (AND) or Any (OR).",
+    "notificationTemplateMustDeclareLeastOne": "A notification template must declare at least one channel."
+  },
+  "numeric": "The :attribute field must be a number.",
+  "partRequest": {
+    "selectWarehouseTenant": "Select a warehouse of this tenant."
+  },
+  "present": "The :attribute field must be present.",
+  "procurement": {
+    "eachQuotationLineMustDistinctItem": "Each quotation line must be a distinct item of this RFQ.",
+    "eachReturnedLineMustItemPurchase": "Each returned line must be an item of this Purchase Order.",
+    "enterQuantityReturnedVendorLeastOne": "Enter the quantity returned to the vendor for at least one item.",
+    "enterReceivedQuantityGreaterThanZero": "Enter a received quantity greater than zero.",
+    "invalidDecisionDecisionMustApprovedRejected": "Invalid decision '{{decision}}' — must be APPROVED or REJECTED.",
+    "invoiceNumberRequired": "The invoice number is required.",
+    "onlyActiveSupplierSparePartSupplier": "Only an active Supplier, Spare Part Supplier or Tire Supplier can be invited.",
+    "onlyVendorInvitedRfqSubmitQuotation": "Only a vendor invited to this RFQ can submit a quotation.",
+    "orderDateRequiredYyyyMmDd": "The Order Date is required (YYYY-MM-DD).",
+    "partnerAlreadySubmittedQuotationRfq": "{{partner}} has already submitted a quotation for this RFQ.",
+    "productListedMoreThanOnce": "\"{{product}}\" is listed more than once.",
+    "qtyReturnedVendorMustGreaterThan": "Qty Returned to Vendor must be greater than zero.",
+    "quantityMustGreaterThanZero": "Quantity must be greater than zero.",
+    "quotationDocumentMayNotLargerThan": "The quotation document may not be larger than 10 MB.",
+    "quotationDocumentMustPdfMicrosoftWord": "The quotation document must be a PDF or Microsoft Word (DOC/DOCX) file.",
+    "returnOptionMustRefundRequestRedelivery": "Return Option must be Refund Request or Redelivery Request.",
+    "selectActiveProductTenant": "Select an active product of this tenant."
+  },
+  "productMaster": {
+    "calibrationIntervalRequiredWhenCalibrationRequired": "Calibration Interval is required when Calibration is required.",
+    "certificationTypeRequiredWhenCertificationRequired": "Certification Type is required when Certification is required.",
+    "conversionBaseUomRequiredWhenPurchase": "Conversion to Base UOM is required when Purchase UOM differs from Base UOM.",
+    "dualLoadIndexRequiredTruckBus": "Dual Load Index is required for Truck & Bus tires.",
+    "fileExceeds10mbMaximumSize": "File exceeds the 10MB maximum size.",
+    "fileExceeds5mbMaximumSize": "File exceeds the 5MB maximum size.",
+    "intervalRequiredWhenFlagRequired": "Interval is required when {{flag}} is required.",
+    "maintenanceIntervalRequiredWhenMaintenanceRequired": "Maintenance Interval is required when Maintenance is required.",
+    "plyRatingRequiredTruckBusTires": "Ply Rating is required for Truck & Bus tires.",
+    "productCountedWholeUnitsQuantityMust": "\"{{product}}\" is counted in whole units — the quantity must be a whole number.",
+    "safetyDataSheetUploadOnlyApplies": "Safety Data Sheet upload only applies to Consumable products.",
+    "selectedCategoryDoesNotApplyItem": "The selected category does not apply to this Item Type.",
+    "selectedComponentGroupNoAbbreviationYet": "The selected Component Group has no abbreviation yet; set its 3-letter abbreviation before creating Products (it is part of the SKU).",
+    "selectedStarRatingDoesNotBelong": "The selected Star Rating does not belong to the selected TRA Code.",
+    "shelfLifeRequiredWhenExpiryTracking": "Shelf Life is required when Expiry Tracking is enabled.",
+    "starRatingRequiredOnceTraCode": "Star Rating is required once a TRA Code is selected.",
+    "storageRequirementRequiredWhenConsumableMarked": "Storage Requirement is required when the consumable is marked Hazardous.",
+    "tenantContextMustSetTenantProduct": "The tenant context must be set to the tenant the Product is created for.",
+    "unsupportedFileExtensionOnlyJpgJpeg": "Unsupported file extension. Only .jpg, .jpeg, or .png are accepted.",
+    "unsupportedFileTypeOnlyJpegPng": "Unsupported file type. Only JPEG, PNG, WEBP images or PDF are accepted.",
+    "unsupportedFileTypeOnlyJpgPng": "Unsupported file type. Only JPG or PNG images are accepted."
+  },
+  "regex": "The :attribute field format is invalid.",
+  "required": "The :attribute field is required.",
+  "required_if": "The :attribute field is required when :other is :value.",
+  "required_with": "The :attribute field is required when :values is present.",
+  "required_without": "The :attribute field is required when :values is not present.",
+  "shared": {
+    "fileTooLarge": "The {{label}} must not be larger than {{maxMb}} MB.",
+    "labelCouldNotUploadedPleaseTry": "The {{label}} could not be uploaded. Please try again.",
+    "labelMust": "The {{label}} must be a",
+    "labelMustNotLargerThan": "The {{label}} must not be larger than"
+  },
+  "size": {
+    "array": "The :attribute field must contain :size items.",
+    "numeric": "The :attribute field must be :size.",
+    "string": "The :attribute field must be :size characters."
+  },
+  "string": "The :attribute field must be a string.",
+  "tire": {
+    "andTruckConfigurationType": "and truck configuration type",
+    "approvalDispositionMustReturnServiceScrap": "Approval disposition must be RETURN_TO_SERVICE, SCRAP, or QUARANTINE.",
+    "assignWheelsConfigurationVehicleBeforeRegistering": "Assign a wheels configuration to this vehicle before registering tires.",
+    "bothTiresMustCurrentlyInstalledSwap": "Both tires must be currently installed to swap positions.",
+    "bothTiresMustInstalledSameVehicle": "Both tires must be installed on the same vehicle to swap positions.",
+    "chooseSerialNumberReplacingTireCode": "Choose the serial number replacing the tire on {{code}}.",
+    "chooseWarehouseReuseTireReturned": "Choose the warehouse the REUSE tire is returned to.",
+    "codeNotPositionVehicleSWheels": "{{code}} is not a position of this vehicle's Wheels Configuration ({{config_code}}).",
+    "configCodeClientCodeDoesNot": "Config Code '{{clientCode}}' does not match the configuration; the server generated '{{config_code}}'.",
+    "dispositionMustOneReuseRetreadRepair": "Disposition must be one of: REUSE, RETREAD, REPAIR, SCRAP.",
+    "estimatedPriceMustGreaterThanZero": "Estimated Price must be greater than zero with at most 2 decimals.",
+    "estimatedPriceMustNumber": "Estimated Price must be a number.",
+    "finalInspectionResultMustSafeUnsafe": "Final inspection result must be SAFE or UNSAFE.",
+    "importHeaderMismatch": "The header row of \"{{sheet}}\" must be exactly: {{headers}}.",
+    "importMaxRows": "At most {{maxRows}} tire rows can be imported per file.",
+    "importNoRows": "The sheet \"{{sheet}}\" has no tire rows. Fill one tire per row below the header.",
+    "importSerialRepeated": "This serial number is repeated in the file (row {{row}}).",
+    "importSheetMissing": "The workbook has no sheet named \"{{sheet}}\". Download the template and fill that sheet.",
+    "installationDateTimeCannotFuture": "The installation date and time cannot be in the future.",
+    "installedAtSourceMustKnownEstimated": "installedAtSource must be KNOWN, ESTIMATED, or UNKNOWN.",
+    "kmTireOperationsCannotLowerThan": "KM at Tire Operations cannot be lower than the last recorded KM of the selected tires ({{floor}}).",
+    "leastOneFrontAxleRequired": "At least one front axle is required.",
+    "leastOneRearAxleRequired": "At least one rear axle is required.",
+    "pairBSelectedTwice": "The pair {{a}} ↔ {{b}} is selected twice.",
+    "positionCannotRotatedItself": "Position {{a}} cannot be rotated with itself.",
+    "positionCodeAlreadyAnotherRotationPair": "Position {{code}} is already in another rotation pair.",
+    "positionCodeAlreadyOpenTireOperation": "Position {{code}} is already in an open Tire Operation ({{operation_type}}, Work Order {{wo_number}}).",
+    "positionCodeNoTireDataYet": "Position {{code}} has no tire data yet. Complete it in Vehicle Details → Wheels Configuration first.",
+    "positionCodeNotPositionVehicleS": "{{position_code}} is not a position of this vehicle's wheels configuration.",
+    "positionCodeSelectedTwice": "Position {{code}} is selected twice.",
+    "positionPositionCodeAlreadyTireSerial": "Position {{position_code}} already has tire {{serial_number}} installed.",
+    "replacementCodeMustNewStockReuse": "The replacement for {{code}} must be New Stock or a REUSE tire. A removed tire must pass inspection in Used Tire Management first.",
+    "replacementCodeMustSameTireProduct": "The replacement for {{code}} must be the same Tire Product as the installed tire.",
+    "reuseSerialSerialNumberNoWarehouse": "REUSE serial {{serial_number}} is in no warehouse: it is issued through the Part Request from the used tire quantity of its warehouse.",
+    "sameSerialNumberCannotReplaceTwo": "The same serial number cannot replace two positions.",
+    "selectLeastOneTirePosition": "Select at least one tire position.",
+    "selectProductWhoseItemTypeTire": "Select a product whose Item Type is Tire.",
+    "sellTypeMustSellOperationalReuse": "sellType must be SELL_FOR_OPERATIONAL_REUSE, SELL_AS_RETREADABLE_CASING, or SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL.",
+    "serialNumberCaseWhitespaceInsensitiveAlready": "This serial number (case/whitespace-insensitive) is already registered for this tenant.",
+    "serialNumberSerialNumberAlreadyRegistered": "Serial number {{serial_number}} is already registered for another tire product.",
+    "serialSerialNumberAlreadyChosenAnother": "Serial {{serial_number}} is already chosen in another open Tire Operation.",
+    "tireMustRepairStatusRemovedRepair": "Tire must be in REPAIR status (removed with a repair disposition) before sending it for repair.",
+    "tireMustRetreadStatusRemovedRetread": "Tire must be in RETREAD status (removed with a retread disposition) before sending it for retreading.",
+    "tireOperationsDateTimeCannotEarlier": "The Tire Operations date and time cannot be earlier than the last installation or Tire Operation of the selected tires ({{local}}).",
+    "tireOperationsDateTimeCannotFuture": "The Tire Operations date and time cannot be in the future.",
+    "tireSerialNumberAlreadyInstalledRegistration": "Tire {{serial_number}} is already installed on {{registration_number}} at {{current_position}}.",
+    "tireSerialNumberCurrentStatusCannot": "Tire {{serial_number}} is {{current_status}} and cannot be registered on a vehicle.",
+    "tireSerialNumberWarehouseStockInstall": "Tire {{serial_number}} is in warehouse stock; install it through the warehouse issue flow.",
+    "tiresOnlyRegisteredProductWhoseItem": "Tires can only be registered for a product whose Item Type is Tire.",
+    "uploadAtMostPhotos": "Upload at most {{max}} photos.",
+    "uploadPhotoRange": "Upload 1 to {{max}} photos.",
+    "vehicleAppearOnlyOnceAmongAdded": "A vehicle can appear only once among added, removed and updated vehicles.",
+    "vehicleDoesNotWheelsConfigurationPlease": "This vehicle does not have a Wheels Configuration. Please map a Wheels Configuration first.",
+    "vehicleNoDefaultWorkshopChooseWorkshop": "This vehicle has no default workshop: choose the workshop that carries out the Work Order.",
+    "vehiclesNotFound": "Some vehicles were not found: {{vehicles}}.",
+    "vehicleTireOperationCannotChanged": "The vehicle of a Tire Operation cannot be changed.",
+    "vehicleTypeTruckConfigurationTypeSaved": "The Vehicle Type and Truck Configuration Type of a saved configuration cannot be changed. Create a new configuration instead.",
+    "wheelConfigurationAlreadyExistsEditConfiguration": "This wheel configuration already exists. Edit that configuration instead.",
+    "wheelConfigurationConfigCodeAlreadyExists": "A wheel configuration {{config_code}} already exists for this vehicle type",
+    "wheelConfigurationExistsForTruckType": "A wheel configuration {{configCode}} already exists for this vehicle type and truck configuration type. Edit that configuration instead."
+  },
+  "tireCycle": {
+    "uploadLeastOnePhoto": "Upload at least one photo."
+  },
+  "tireOperation": {
+    "enterKmTireOperationsPhysicalOdometer": "Enter the KM at Tire Operations (physical odometer reading).",
+    "enterNumberKilometres0MoreUp": "Enter a number of kilometres (0 or more, up to 2 decimals), for example 12500.75.",
+    "enterTreadDepthMm0More": "Enter a tread depth in mm (0 or more, up to 2 decimals), for example 8.5.",
+    "selectAVehicle": "Select a vehicle.",
+    "use24HourFormatHhMm": "Use the 24-hour format HH:mm, for example 07:30 or 14:05."
+  },
+  "tireProduct": {
+    "productDeletedTiresNoLongerAdded": "This product was deleted; tires can no longer be added to it.",
+    "productNoTireSpecificationYetComplete": "This product has no tire specification yet — complete it with Edit Product first."
+  },
+  "tireRuleProfile": {
+    "activeProfileAlreadyExistsCategoryTire": "An active profile already exists for this category, tire product and application.",
+    "dPullMustGreaterThanEqual": "D_pull must be greater than or equal to D_service."
+  },
+  "tireUsedInspection": {
+    "eachZoneGroovePointMeasuredOnce": "Each zone / groove point can be measured once.",
+    "warehouseOutsideDataScope": "This warehouse is outside your data scope."
+  },
+  "unique": "The :attribute has already been taken.",
+  "usedPartDisposition": {
+    "evidencePhotoMayNotLargerThan": "The evidence photo may not be larger than 3 MB.",
+    "onlyJpgPngImagesAccepted": "Only JPG or PNG images are accepted."
+  },
+  "uuid": "The :attribute field must be a valid UUID.",
+  "validatesComponentClassification": {
+    "codeMustUpperSnakeCaseLetters": "Code must be UPPER_SNAKE_CASE (letters, digits and single underscores), e.g. DISC_BRAKE."
+  },
+  "validatesComponentGroupAbbreviation": {
+    "abbreviationMustContainLettersZOnly": "The abbreviation must contain letters A-Z only (e.g. ENG, BRK, HYD).",
+    "abbreviationMustExactly3Letters": "The abbreviation must be exactly 3 letters."
+  },
+  "vehicleBrand": {
+    "selectOnlyActiveVehicleCategories": "Select only active Vehicle Categories."
+  },
+  "vehicleDocument": {
+    "expiryDateRequiredWhenExpiryDate": "Expiry Date is required when \"Have an Expiry Date?\" is checked.",
+    "extensionDeadlineRequiredWhenNeedExtended": "Extension Deadline is required when \"Need to be extended?\" is checked."
+  },
+  "vehicleWheelConfiguration": {
+    "enterLastKnownInstallationKmEstimate": "Enter the last known installation KM (an estimate is fine)."
+  },
+  "vendorInvoiceReference": {
+    "paymentProofMustJpgJpegPng": "The payment proof must be a JPG, JPEG, PNG or PDF file."
+  },
+  "workflow": {
+    "codeNotStatusDocument": "'{{code}}' is not a status this document can have.",
+    "displayNameNotWorkflowDocumentAlready": "{{display_name}} is not in this workflow: a document already in that status cannot move on.",
+    "earlierApprovalStepsMustDecidedFirst": "Earlier approval steps must be decided first.",
+    "everyStatusMustUniqueNonEmpty": "Every status must have a unique, non-empty code.",
+    "noActionOptiFleetMovesDocument": "No action in OptiFleet moves this document into {{to}}; the transition could never run.",
+    "statusCodeNotConnectedAnyOther": "Status '{{code}}' is not connected to any other status.",
+    "statusCodeUnreachableNoPathStart": "Status '{{code}}' is unreachable — no path from a start status leads to it.",
+    "statusCodeUnreachableNoTransitionLeads": "Status '{{code}}' is unreachable — no transition leads to it.",
+    "thereAlreadyTransition": "There is already a transition from {{from}} to {{to}}.",
+    "transitionCannotStartEndSameStatus": "A transition cannot start and end at the same status ({{from}}).",
+    "transitionMissingRequiredFieldField": "Transition is missing required field '{{field}}'.",
+    "transitionReferencesUnknownActionCode": "Transition references unknown action '{{code}}'.",
+    "transitionReferencesUnknownPermissionRequiredPermission": "Transition references unknown permission '{{required_permission}}'.",
+    "transitionReferencesUnknownStatus": "Transition references unknown from_status '{{from}}'.",
+    "transitionReferencesUnknownStatus2": "Transition references unknown to_status '{{to}}'.",
+    "twoTransitionsUseSameActionAction": "Two transitions from {{from}} use the same action '{{action}}'.",
+    "workflowMustDeclareLeastOneStatus": "A workflow must declare at least one status.",
+    "workflowNoStartStatus": "The workflow has no start status."
+  },
+  "workOrder": {
+    "acceptedQuantityMustPositiveCannotExceed": "Accepted quantity must be positive and cannot exceed the originally returned quantity.",
+    "actualConditionMustNewGoodNew": "Actual condition must be New Good or New Faulty.",
+    "approvedQuantityLineDescriptionMustBetween": "Approved quantity for line \"{{description}}\" must be between 0 and the requested quantity.",
+    "dispositionMustWarrantyClaimRepairScrap": "Disposition must be Warranty Claim, Repair or Scrap.",
+    "eachPartRequestLineMustQuantity": "Each part request line must have a quantity greater than zero.",
+    "inspectionConditionMustUsedGoodUsed": "Inspection condition must be USED_GOOD or USED_FAULTY.",
+    "invalidDecisionDecisionMustApproveReject": "Invalid decision '{{decision}}' — must be APPROVE or REJECT.",
+    "invoiceTotalAmountMustGreaterThan": "Invoice total_amount must be greater than zero.",
+    "leastOneLineMustApprovedQuantity": "At least one line must be approved with a quantity greater than zero — use reject() otherwise.",
+    "partRequestMustIncludeLeastOne": "A part request must include at least one line item.",
+    "quantityMustBePositive": "Quantity must be positive.",
+    "removedQuantityMustPositive": "Removed quantity must be positive.",
+    "returnQuantityMustPositive": "Return quantity must be positive.",
+    "saleQuantityMustPositive": "Sale quantity must be positive.",
+    "selectedWorkshopMustActiveExternalWorkshop": "The selected workshop must be an active External Workshop partner.",
+    "selectLeastOneComponentAssetSell": "Select at least one component asset to sell.",
+    "selectLeastOneScrappedTireSell": "Select at least one scrapped tire to sell.",
+    "unitPriceMustNumber": "Unit price must be a number.",
+    "vendorInvoiceAmountMustGreaterThan": "Vendor invoice amount must be greater than zero."
+  },
+  "workshop": {
+    "chooseDifferentWorkspaceWorkOrderAlready": "Choose a different workspace — the Work Order is already assigned to this one.",
+    "reservationStartMustBeforeEnd": "Reservation start must be before its end."
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "actions": {
+    "accept": "Terima",
+    "backVehicleHealthRisk": "← Kembali ke Kesehatan & Risiko Kendaraan",
+    "convertToMr": "Konversi ke MR",
+    "review": "Tinjau"
+  },
+  "empty": {
+    "noComponentHealthData": "Tidak ada data kesehatan komponen.",
+    "noComponentHealthDataYet": "Belum ada data kesehatan komponen.",
+    "noFailureRiskPredictionYet": "Belum ada prediksi risiko kerusakan.",
+    "noHealthScoreYet": "Belum ada skor kesehatan.",
+    "noIntelligenceDataVehicle": "Tidak ada data kecerdasan untuk kendaraan ini.",
+    "noIntelligenceDataYet": "Belum ada data kecerdasan.",
+    "noOpenRecommendations": "Tidak ada rekomendasi terbuka.",
+    "noRecommendations": "Tidak ada rekomendasi.",
+    "noTireRulDataYet": "Belum ada data RUL ban.",
+    "noVehicleHealthRiskDataYet": "Belum ada data kesehatan/risiko kendaraan — pipeline kecerdasan belum berjalan untuk penyewa ini."
+  },
+  "fields": {
+    "actions": "Aksi",
+    "avgCostKm": "Rata-rata Biaya/km",
+    "avgDamage90d": "Rata-rata Kerusakan (90h)",
+    "confidence": "Tingkat Keyakinan",
+    "confidenceConfidence": "Tingkat keyakinan: {{confidence}}",
+    "entity": "Entitas",
+    "factors": "Faktor",
+    "failureRisk": "Risiko Kerusakan",
+    "healthScore": "Skor Kesehatan",
+    "healthStatus": "Status Kesehatan",
+    "mainFactors": "Faktor utama",
+    "modelVModelVersion": "· Model v{{model_version}}",
+    "remainingKm": "Sisa km",
+    "replacementUrgency": "Urgensi Penggantian",
+    "riskScore": "Skor Risiko",
+    "score": "Skor"
+  },
+  "help": {
+    "basisBasisNotMachineLearnedEstimate": "Dasar: {{basis}} (bukan estimasi machine learning)",
+    "confidenceConfidenceSourceSource": "Tingkat keyakinan: {{confidence}} · Sumber: {{source}}",
+    "descriptiveDiagnosticPredictivePrescriptiveInsightDeterministic": "Wawasan deskriptif, diagnostik, prediktif, dan preskriptif — deterministik dan dapat dijelaskan, ML hanya digunakan bila model aktif telah lulus gerbang penerimaannya sendiri.",
+    "estimatedLowHighDaysRemaining": "Perkiraan sisa {{low}}–{{high}} hari",
+    "estimatedLowHighKmRemaining": "Perkiraan sisa {{low}}–{{high}} km",
+    "suggestionsOnlyAcceptingConvertsMaintenanceRequest": "Hanya saran — menerima akan mengonversinya menjadi Permintaan Pemeliharaan melalui alur kerja normal; tidak ada yang disetujui atau dijalankan otomatis di sini.",
+    "youDoNotPermissionViewComponent": "Anda tidak memiliki izin untuk melihat kecerdasan komponen.",
+    "youDoNotPermissionViewMaintenance": "Anda tidak memiliki izin untuk melihat kecerdasan pemeliharaan.",
+    "youDoNotPermissionViewRecommendations": "Anda tidak memiliki izin untuk melihat rekomendasi.",
+    "youDoNotPermissionViewTire": "Anda tidak memiliki izin untuk melihat kecerdasan ban.",
+    "youDoNotPermissionViewVehicle": "Anda tidak memiliki izin untuk melihat kecerdasan kendaraan."
+  },
+  "reasons": {
+    "classImbalance": "ketidakseimbangan kelas terlalu besar: rasio kelas mayoritas {{ratio}}",
+    "componentAssetsAsCa2": "component_assets as ca2",
+    "componentInstallationsAsCi2": "component_installations as ci2",
+    "dataNotReady": "Kesiapan data NOT_READY: {{reasons}}",
+    "featureMissingness": "tingkat data fitur yang hilang terlalu tinggi: {{ratio}}"
+  },
+  "sections": {
+    "acceptedRecommendations": "Rekomendasi yang Diterima",
+    "componentHealth": "Kesehatan Komponen",
+    "criticalVehicles": "Kendaraan Kritis",
+    "failureRisk30d": "Risiko Kerusakan (30h)",
+    "healthScore": "Skor Kesehatan",
+    "highRiskComponents": "Komponen Berisiko Tinggi",
+    "lowRulItems": "Item dengan RUL Rendah",
+    "openRecommendations": "Rekomendasi Terbuka",
+    "predictedFailures30d": "Prediksi Kerusakan (30h)",
+    "predictedFailures7d": "Prediksi Kerusakan (7h)",
+    "productPerformance": "Kinerja Produk",
+    "recommendations": "Rekomendasi",
+    "remainingUsefulLife": "Sisa Umur Pakai",
+    "repeatFailures": "Kerusakan Berulang",
+    "riskHealthHistory": "Riwayat Risiko / Kesehatan",
+    "vehiclesAtRisk": "Kendaraan Berisiko",
+    "vehiclesHealthy": "Kendaraan Sehat"
+  },
+  "titles": {
+    "componentReliability": "Keandalan Komponen",
+    "intelligenceRecommendations": "Rekomendasi Kecerdasan",
+    "maintenanceIntelligence": "Kecerdasan Pemeliharaan",
+    "tireIntelligence": "Kecerdasan Ban",
+    "vehicleHealthAndRisk": "Kesehatan & Risiko Kendaraan",
+    "vehicleVehicleId": "Kendaraan {{vehicle_id}}"
+  }
+}

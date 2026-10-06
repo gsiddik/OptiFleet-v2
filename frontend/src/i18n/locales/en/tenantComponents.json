@@ -1,0 +1,66 @@
+{
+  "actions": {
+    "backToComponentAssets": "← Back to Component Assets",
+    "completeRepair": "Complete Repair",
+    "createSale": "Create Sale",
+    "install": "Install",
+    "inventorySellSparepart": "Inventory → Sell Sparepart",
+    "removeFromVehicle": "Remove From Vehicle",
+    "startRepair": "Start Repair",
+    "tireSerialNumberAssetNumber": "Tire · Serial Number = Asset#"
+  },
+  "empty": {
+    "noComponentAssetsFound": "No component assets found.",
+    "noInstallationsYet": "No installations yet.",
+    "noRemovalsYet": "No removals yet.",
+    "noStatusChangesRecorded": "No status changes recorded."
+  },
+  "fields": {
+    "assetNumber": "Asset#",
+    "assetType": "Asset type",
+    "backInWarehouse": "Back in Warehouse",
+    "buyer": "Buyer",
+    "buyerName": "Buyer Name",
+    "buyerType": "Buyer Type",
+    "components": "Components",
+    "disposition": "Disposition",
+    "external": "External",
+    "goodsReceiptGrNumber": "Goods Receipt {{gr_number}}",
+    "installedToLocaleDateString": "— installed {{toLocaleDateString}}",
+    "locationVehicle": "Location / Vehicle",
+    "operationalReuse": "Operational Reuse",
+    "outcome": "Outcome",
+    "positionLocation": "Position / Location",
+    "registered": "Registered",
+    "removalReason": "Removal Reason",
+    "returnedToVendor": "Returned to Vendor",
+    "returnOrderReturnNumberValue": "Return Order {{return_number}} ({{value}})",
+    "saleSummary": "{{status}} · {{buyerName}} · {{decidedAt}}",
+    "saleType": "Sale Type",
+    "scrapMaterial": "Scrap Material",
+    "serialsAssetNumber": "Serials / Asset#",
+    "storeInWarehouse": "Store in Warehouse",
+    "tires": "Tires"
+  },
+  "filters": {
+    "allAssets": "All assets"
+  },
+  "help": {
+    "approvalMarksAssetSold": "; approval marks this asset SOLD.",
+    "draftSaleCreatedSubmitApproval": "Draft sale created. Submit it for approval in",
+    "physicalItemsTrackedIndividuallyAssetNumber": "Physical items tracked individually. Asset# is generated automatically by Goods Receipt for products with Track Serial Number; a tire's Serial Number is its Asset#."
+  },
+  "sections": {
+    "install": "Install",
+    "installationHistory": "Installation History",
+    "removalRepairHistory": "Removal / Repair History",
+    "removeReplace": "Remove / Replace",
+    "repair": "Repair",
+    "sell": "Sell",
+    "statusHistory": "Status History"
+  },
+  "titles": {
+    "componentAsset": "Component Asset",
+    "componentAssets": "Component Assets"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "actions": {
+    "done": "Done",
+    "manageAccess": "Manage Access"
+  },
+  "empty": {
+    "noRolesAssigned": "No roles assigned",
+    "noScopeAssignedNoAccess": "No scope assigned (no access).",
+    "noUsersFound": "No users found."
+  },
+  "errors": {
+    "userCreatedButLinkingWorkerFailed": "User created, but linking the worker failed: {{message}}"
+  },
+  "fields": {
+    "assignRoleOptional": "Assign Role (optional)",
+    "branch": "BRANCH",
+    "donTAssign": "Don't assign",
+    "donTLink": "Don't link",
+    "linkToWorkerOptional": "Link to Worker (optional)",
+    "own": "OWN",
+    "selectResource": "Select resource…",
+    "selectRoleToAssign": "Select role to assign…",
+    "tenant": "TENANT",
+    "warehouse": "WAREHOUSE",
+    "workshop": "WORKSHOP"
+  },
+  "help": {
+    "userCreatedButAssigningRoleFailed": "User created, but assigning the role failed: {{message}}"
+  },
+  "modals": {
+    "addUser": "Add User",
+    "manageAccessName": "Manage Access — {{name}}"
+  },
+  "sections": {
+    "dataScope": "Data Scope",
+    "roles": "Roles"
+  },
+  "titles": {
+    "rolesAndPermissions": "Roles & Permissions",
+    "users": "Users"
+  }
+}

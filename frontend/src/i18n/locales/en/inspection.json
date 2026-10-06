@@ -1,0 +1,70 @@
+{
+  "actions": {
+    "addFinding": "+ Add Finding",
+    "allStatus": "All Status",
+    "allTypes": "All Types",
+    "backToInspections": "← Back to Inspections",
+    "createMaintenanceRequest": "Create Maintenance Request",
+    "markReviewed": "Mark Reviewed",
+    "newInspection": "+ New Inspection",
+    "newTemplate": "+ New Template",
+    "removing": "Removing…",
+    "start": "Start",
+    "view": "view"
+  },
+  "defaults": {
+    "issuesFound": "Issues found during inspection {{inspectionId}}"
+  },
+  "empty": {
+    "noChecklistItemsTemplate": "No checklist items on this template.",
+    "noHistoryYet": "No history yet.",
+    "noInspectionsFound": "No inspections found.",
+    "noTemplatesFound": "No templates found."
+  },
+  "fields": {
+    "fail": "Fail",
+    "inspectionDate": "Inspection Date",
+    "inspectionReviewed": "Inspection reviewed",
+    "inspectionType": "Inspection Type",
+    "items": "Items",
+    "pass": "Pass",
+    "reviewedOnToLocaleString": "Reviewed on {{toLocaleString}}",
+    "reviewNotes": "Review notes",
+    "vehicleCategory": "Vehicle Category",
+    "vehicleCategoryOptionalAppliesAllIf": "Vehicle Category (optional — applies to all if blank)"
+  },
+  "filters": {
+    "allCategories": "All Categories"
+  },
+  "help": {
+    "inspectionCreatedStatusStatus": "Inspection created (status: {{status}})",
+    "maintenanceRequestCreatedInspectionSResult": "Maintenance Request created from this inspection's result",
+    "statusChangedStatusStatus": "Status changed from {{status}} to {{status}}",
+    "system": "System"
+  },
+  "labels": {
+    "inspection": "Inspection",
+    "odometer": "Odometer"
+  },
+  "modals": {
+    "newInspection": "New Inspection",
+    "newInspectionTemplate": "New Inspection Template"
+  },
+  "placeholders": {
+    "checklistItemText": "Checklist item text",
+    "description": "Description",
+    "reviewNotesOptional": "Review notes (optional)"
+  },
+  "sections": {
+    "checklist": "Checklist",
+    "findingsOptional": "Findings (optional)",
+    "log": "Log",
+    "recordedFindings": "Recorded Findings",
+    "supervisorReview": "Supervisor Review"
+  },
+  "titles": {
+    "inspections": "Inspections",
+    "inspectionTemplates": "Inspection Templates",
+    "inspectionTypeInspection": "{{inspection_type}} Inspection"
+  }
+}

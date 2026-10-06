@@ -1,0 +1,14 @@
+{
+  "labels": {
+    "accessManagement": "Access Management",
+    "accountAndSubscription": "Account & Subscription",
+    "analytics": "Analytics",
+    "commercial": "Commercial",
+    "configuration": "Configuration",
+    "maintenanceIntelligence": "Maintenance Intelligence",
+    "masterData": "Master Data",
+    "permissionsUserIdTenant": "permissions:user:{{id}}:tenant",
+    "serviceInvoice": "Service Invoice",
+    "viewExternalWorkshopInvoiceReference": "View External Workshop Invoice Reference"
+  }
+}

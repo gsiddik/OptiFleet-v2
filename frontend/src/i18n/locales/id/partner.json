@@ -1,0 +1,69 @@
+{
+  "actions": {
+    "backToVendor": "← Kembali ke Vendor",
+    "newVendor": "+ Vendor Baru"
+  },
+  "empty": {
+    "noSuppliersFound": "Tidak ada pemasok.",
+    "noVendorsFound": "Tidak ada vendor."
+  },
+  "fields": {
+    "accountHolder": "Pemilik Rekening",
+    "accountNumber": "Nomor Rekening",
+    "contact": "Kontak",
+    "contactEmail": "Email Kontak",
+    "contactName": "Nama Kontak",
+    "contactPhone": "Telepon Kontak",
+    "paymentTerms": "Syarat Pembayaran",
+    "performanceFrom": "Kinerja dari",
+    "performanceTo": "Kinerja sampai",
+    "provinceCity": "Provinsi/Kota",
+    "vendorType": "Jenis vendor"
+  },
+  "filters": {
+    "allSuppliers": "Semua Pemasok"
+  },
+  "help": {
+    "rejectedExternalWorkshopWorkflowNoRejection": "Ditolak: alur kerja Bengkel Eksternal tidak memiliki tahap penolakan — Otorisasi Kerja yang ditolak akan dibatalkan dan dihitung sebagai Dibatalkan."
+  },
+  "labels": {
+    "externalServicesRequestedPeriod": "Layanan eksternal yang diminta dalam periode",
+    "purchaseOrdersOrderedPeriod": "Purchase Order yang dipesan dalam periode"
+  },
+  "modals": {
+    "newVendor": "Vendor Baru"
+  },
+  "sections": {
+    "acknowledged": "Dikonfirmasi",
+    "acknowledgementRate": "Tingkat Konfirmasi",
+    "avgAcknowledgementTime": "Rata-rata Waktu Konfirmasi",
+    "avgCompletionTime": "Rata-rata Waktu Penyelesaian",
+    "avgLeadTime": "Rata-rata Waktu Tunggu",
+    "cancellationRate": "Tingkat Pembatalan",
+    "cancelled": "Dibatalkan",
+    "completed": "Selesai",
+    "completionRate": "Tingkat Penyelesaian",
+    "deliveries": "Pengiriman",
+    "estimatedCost": "Estimasi Biaya",
+    "invoiceAmount": "Nilai Faktur",
+    "lateDeliveries": "Pengiriman Terlambat",
+    "onTimeDeliveries": "Pengiriman Tepat Waktu",
+    "onTimeRate": "Tingkat Ketepatan Waktu",
+    "outstandingAmount": "Jumlah Belum Lunas",
+    "paidAmount": "Jumlah Dibayar",
+    "performance": "Kinerja",
+    "posCancelled": "PO Dibatalkan",
+    "posFullyReceived": "PO Diterima Penuh",
+    "posIssued": "PO Diterbitkan",
+    "poValue": "Nilai PO",
+    "qtyAccepted": "Qty Diterima Baik",
+    "qtyDamaged": "Qty Rusak",
+    "qtyRejected": "Qty Ditolak",
+    "rejectionRate": "Tingkat Penolakan",
+    "servicesRequested": "Layanan yang Diminta",
+    "workOrdersAssigned": "Work Order yang Ditugaskan"
+  },
+  "titles": {
+    "vendorsPartners": "Vendor / Mitra"
+  }
+}

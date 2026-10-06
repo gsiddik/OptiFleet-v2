@@ -1,0 +1,82 @@
+{
+  "actions": {
+    "addSkill": "Tambah Keahlian",
+    "block": "Blok",
+    "link": "Tautkan",
+    "newWorker": "+ Pekerja Baru",
+    "newWorkspace": "+ Workspace Baru",
+    "nextWeek": "Minggu Berikutnya →",
+    "previousWeek": "← Minggu Sebelumnya",
+    "requested": "· Diminta",
+    "reserved": "Dipesan",
+    "today": "Hari Ini",
+    "unblock": "Buka Blokir",
+    "unlink": "Lepas Tautan"
+  },
+  "empty": {
+    "noActiveWorkersFound": "Tidak ada pekerja aktif.",
+    "noReservationsFound": "Tidak ada reservasi.",
+    "noVehicleCategoriesAvailable": "Tidak ada kategori kendaraan yang tersedia.",
+    "noWorkersFound": "Tidak ada pekerja.",
+    "noWorkshop": "Tanpa bengkel",
+    "noWorkspacesFound": "Tidak ada workspace.",
+    "noWorkspacesFoundWorkshop": "Tidak ada workspace untuk bengkel ini."
+  },
+  "fields": {
+    "activeJobs": "Pekerjaan Aktif",
+    "addressAddress": "Alamat: {{address}}",
+    "addressOptional": "Alamat (opsional)",
+    "dToday": "{{d}} (Hari Ini)",
+    "emailOptional": "Email (opsional)",
+    "employeeCode": "Kode Karyawan",
+    "hourlyRateOptional": "Tarif per Jam (opsional)",
+    "levelL": "Level {{l}}",
+    "linkedTo": "Ditautkan ke",
+    "monthlyRateOptional": "Tarif Bulanan (opsional)",
+    "noWorkshop": "Tanpa bengkel",
+    "phoneOptional": "Telepon (opsional)",
+    "selectALoginAccount": "Pilih akun masuk…",
+    "selectBranch": "Pilih cabang…",
+    "selectComponentGroup": "Pilih grup komponen…",
+    "skills": "Keahlian",
+    "vehicleCategories": "Kategori Kendaraan",
+    "worker": "Pekerja",
+    "workerType": "Jenis Pekerja",
+    "workshopOptional": "Bengkel (opsional)"
+  },
+  "help": {
+    "capacityValue": "Kapasitas {{value}}",
+    "countActiveNonCompletedWorkOrder": "Jumlah pekerjaan Work Order aktif (belum selesai) yang saat ini ditugaskan ke setiap mekanik aktif, diurutkan dari yang paling sibuk.",
+    "freeSlot": "Slot kosong",
+    "full": "· Penuh",
+    "leaveAllUncheckedAllowAnyVehicle": "Biarkan semua tidak dicentang untuk mengizinkan semua kategori kendaraan.",
+    "level": "Level",
+    "monthlyRateMonthlyRateHourlyRate": "Tarif Bulanan: {{monthly_rate}} Tarif per Jam: {{hourly_rate}}",
+    "occupiedOccupiedCapacity": "Terisi {{occupied}} / {{capacity}}"
+  },
+  "modals": {
+    "editWorkspaceCode": "Ubah Workspace — {{code}}",
+    "newWorker": "Pekerja Baru",
+    "newWorkspace": "Workspace Baru"
+  },
+  "placeholders": {
+    "address": "Alamat",
+    "email": "Email",
+    "hourlyRate": "Tarif per Jam",
+    "monthlyRate": "Tarif Bulanan",
+    "phone": "Telepon"
+  },
+  "sections": {
+    "contactAndCompensation": "Kontak & Kompensasi",
+    "loginAccount": "Akun Masuk",
+    "reassign": "Tugaskan Ulang",
+    "skills": "Keahlian"
+  },
+  "titles": {
+    "mechanicWorkload": "Beban Kerja Mekanik",
+    "workersMechanics": "Pekerja / Mekanik",
+    "workshopScheduler": "Penjadwal Bengkel",
+    "workspaceAssignments": "Penugasan Workspace",
+    "workspacesServiceBays": "Workspace / Bay Servis"
+  }
+}

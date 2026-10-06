@@ -1,0 +1,22 @@
+{
+  "labels": {
+    "averageUsageCountKmDay": "rata-rata pemakaian: {{count}} km/hari",
+    "contentDisposition": "Content-Disposition",
+    "countBreakdownSLast30Days": "{{count}} kerusakan dalam 30 hari terakhir",
+    "countBreakdownSLast90Days": "{{count}} kerusakan dalam 90 hari terakhir",
+    "countComponentReplacementSLast90": "{{count}} penggantian komponen dalam 90 hari terakhir",
+    "countCriticalInspectionFindingSLast": "{{count}} temuan inspeksi kritis dalam 90 hari terakhir",
+    "countDaySDowntimeLast90": "{{count}} hari downtime dalam 90 hari terakhir",
+    "countMinuteSDowntimeLast90": "{{count}} menit downtime dalam 90 hari terakhir",
+    "countOverdueMaintenanceItemS": "{{count}} item pemeliharaan terlambat",
+    "countRepeatRepairSSameComponent": "{{count}} perbaikan berulang pada grup komponen yang sama dalam 90 hari terakhir",
+    "countTireReplacementSLast90": "{{count}} penggantian ban dalam 90 hari terakhir",
+    "countWarrantyClaimSLast90": "{{count}} klaim garansi dalam 90 hari terakhir",
+    "displayAnInspiringQuote": "Tampilkan kutipan inspiratif",
+    "example": "Contoh",
+    "laravel": "Laravel",
+    "laravelLog": "Laravel Log",
+    "notification": "Notifikasi",
+    "vehicleAgeCountDayS": "usia kendaraan: {{count}} hari"
+  }
+}

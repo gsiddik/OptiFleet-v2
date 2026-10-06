@@ -1,0 +1,47 @@
+{
+  "empty": {
+    "noModulesEntitled": "Tidak ada modul yang menjadi hak akses."
+  },
+  "fields": {
+    "breakdown": "Kerusakan",
+    "componentAssetsInstalled": "Aset Komponen Terpasang",
+    "due": "Jatuh Tempo",
+    "dueSoon": "Segera Jatuh Tempo",
+    "inMaintenance": "Dalam Pemeliharaan",
+    "inTransitTransfers": "Transfer Dalam Perjalanan",
+    "lowStock": "Stok Rendah",
+    "openPurchaseOrders": "Purchase Order Terbuka",
+    "openPurchaseRequests": "Purchase Request Terbuka",
+    "openRequests": "Permintaan Terbuka",
+    "openTransfers": "Transfer Terbuka",
+    "outOfStock": "Stok Habis",
+    "overdue": "Terlambat",
+    "pendingGoodsReceipt": "Menunggu Goods Receipt",
+    "pendingQc": "Menunggu QC",
+    "reservedStock": "Stok Dipesan",
+    "tiresDueReplacement": "Ban Jatuh Tempo Penggantian",
+    "tiresInUse": "Ban Terpakai",
+    "totalInventoryValue": "Total Nilai Inventori",
+    "totalVehicles": "Total Kendaraan",
+    "upcoming": "Akan Datang",
+    "workspacesAvailable": "Workspace Tersedia",
+    "workspacesOccupied": "Workspace Terisi"
+  },
+  "sections": {
+    "activeModules": "Modul Aktif",
+    "activeUsers": "Pengguna Aktif",
+    "assetLifecycle": "Siklus Hidup Aset",
+    "branches": "Cabang",
+    "fleet": "Armada",
+    "maintenance": "Pemeliharaan",
+    "supplyChainInventory": "Rantai Pasok — Inventori",
+    "supplyChainProcurement": "Rantai Pasok — Pengadaan",
+    "warehouses": "Gudang",
+    "workOrders": "Work Order",
+    "workshopOperations": "Operasional Bengkel",
+    "workshops": "Bengkel"
+  },
+  "titles": {
+    "dashboard": "Dasbor"
+  }
+}

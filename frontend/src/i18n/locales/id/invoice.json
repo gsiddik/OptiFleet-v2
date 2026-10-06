@@ -1,0 +1,5 @@
+{
+  "labels": {
+    "insertIntoCommercialNumberSequencesSequence": "INSERT INTO commercial_number_sequences (sequence_key, last_number) VALUES (?, ?) ON CONFLICT (sequence_key) DO NOTHING"
+  }
+}

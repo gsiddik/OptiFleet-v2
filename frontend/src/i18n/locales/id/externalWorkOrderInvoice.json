@@ -1,0 +1,92 @@
+{
+  "actions": {
+    "acknowledge": "Konfirmasi Diterima",
+    "confirmCancel": "Konfirmasi Pembatalan",
+    "confirmComplete": "Konfirmasi Selesai",
+    "confirmDeliver": "Konfirmasi Penyerahan",
+    "confirmSettlement": "Konfirmasi Penyelesaian",
+    "deliver": "Serahkan",
+    "generate": "Buat",
+    "generateWorkAuthorization": "Buat Otorisasi Kerja",
+    "openCompletedWorkOrder": "Buka Work Order yang Selesai",
+    "openPaymentProof": "Buka Bukti Pembayaran",
+    "openVendorInvoice": "Buka Faktur Vendor",
+    "settlement": "Penyelesaian",
+    "viewAcknowledgement": "Lihat Tanda Terima",
+    "viewBill": "Lihat Tagihan",
+    "viewHistory": "Lihat Riwayat",
+    "viewSettlement": "Lihat Penyelesaian",
+    "viewWorkAuthorization": "Lihat Otorisasi Kerja"
+  },
+  "empty": {
+    "noExternalWorkOrderInvoicesFound": "Tidak ada Faktur Work Order Eksternal.",
+    "noHistoryRecordedYet": "Belum ada riwayat yang tercatat."
+  },
+  "fields": {
+    "completedWorkOrderJpgPngPdf": "Work Order Selesai (JPG, PNG, atau PDF)",
+    "invoiceAmount": "Nilai Faktur",
+    "invoiceAmountVendorInvoiceAmount": "Nilai Faktur: {{vendor_invoice_amount}}",
+    "invoiceDateVendorInvoiceDate": "Tanggal Faktur: {{vendor_invoice_date}}",
+    "paidAmount": "Jumlah Dibayar",
+    "paidAmountPaidAmount": "Jumlah Dibayar: {{paid_amount}}",
+    "paymentDatePaymentDate": "Tanggal Pembayaran: {{payment_date}}",
+    "paymentProofJpgPngPdf": "Bukti Pembayaran (JPG, PNG, atau PDF)",
+    "paymentTerm": "Termin Pembayaran",
+    "selectWorkshop": "Pilih bengkel…",
+    "vendorInvoiceJpgPngPdf": "Faktur Vendor (JPG, PNG, atau PDF)",
+    "woNumber": "Nomor WO",
+    "workAuthorization": "Otorisasi Kerja"
+  },
+  "help": {
+    "confirmExternalWorkshopFinishedMaintenanceWork": "Konfirmasi bahwa Bengkel Eksternal telah menyelesaikan pekerjaan pemeliharaan.",
+    "confirmWorkOrderWorkAuthorizationLetter": "Konfirmasi bahwa Work Order dan Work Authorization Letter telah dicetak dan diserahkan ke Bengkel Eksternal.",
+    "paidAmountMustExactlyMatchVendor": "Jumlah yang dibayar harus sama persis dengan nilai faktur vendor ({{vendor_invoice_amount}}) — pelunasan sebagian tidak didukung.",
+    "selectExternalWorkshopPerformMaintenance": "Pilih Bengkel Eksternal yang akan melaksanakan pemeliharaan ini.",
+    "uploadSignedWorkAuthorizationLetterReceived": "Unggah Work Authorization Letter yang sudah ditandatangani dan diterima kembali dari bengkel.",
+    "workOrdersBeingCarriedOutExternal": "Work Order yang dikerjakan oleh Bengkel Eksternal."
+  },
+  "labels": {
+    "workOrderExternalInvoice": "WorkOrderExternalInvoice"
+  },
+  "modals": {
+    "acknowledgeWorkAuthorization": "Konfirmasi Otorisasi Kerja",
+    "bill": "Tagihan",
+    "cancelExternalWorkOrder": "Batalkan Work Order Eksternal",
+    "complete": "Selesaikan",
+    "deliver": "Serahkan",
+    "generateWorkAuthorization": "Buat Otorisasi Kerja",
+    "history": "Riwayat",
+    "settlement": "Penyelesaian",
+    "settlementDetails": "Detail Penyelesaian"
+  },
+  "placeholders": {
+    "eGNet30": "mis. NET 30",
+    "reasonRequired": "Alasan (wajib)"
+  },
+  "sections": {
+    "acknowledgedWorkAuthorization": "Otorisasi Kerja yang Dikonfirmasi",
+    "completedWorkOrder": "Work Order Selesai",
+    "paymentProof": "Bukti Pembayaran",
+    "vendorInvoice": "Faktur Vendor",
+    "workAuthorizationLetter": "Work Authorization Letter"
+  },
+  "status": {
+    "billed": "Sudah Ditagih",
+    "cancelled": "Dibatalkan",
+    "delivered": "Terkirim",
+    "inProgress": "Dalam Proses",
+    "newExternalWo": "WO Eksternal Baru",
+    "paid": "Lunas"
+  },
+  "titles": {
+    "externalWorkOrderInvoices": "Faktur Work Order Eksternal"
+  },
+  "wal": {
+    "acknowledged": "Dikonfirmasi",
+    "generated": "Dibuat",
+    "notGenerated": "Belum Dibuat"
+  },
+  "warnings": {
+    "cancelsExternalWorkOrderExternalWorkshop": "Tindakan ini membatalkan Work Order Eksternal beserta Faktur Bengkel Eksternalnya. Tindakan ini tidak dapat dibatalkan."
+  }
+}

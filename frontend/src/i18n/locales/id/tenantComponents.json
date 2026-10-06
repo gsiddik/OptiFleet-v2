@@ -1,0 +1,66 @@
+{
+  "actions": {
+    "backToComponentAssets": "← Kembali ke Aset Komponen",
+    "completeRepair": "Selesaikan Perbaikan",
+    "createSale": "Buat Penjualan",
+    "install": "Pasang",
+    "inventorySellSparepart": "Inventori → Jual Suku Cadang",
+    "removeFromVehicle": "Lepas dari Kendaraan",
+    "startRepair": "Mulai Perbaikan",
+    "tireSerialNumberAssetNumber": "Ban · Nomor Seri = Asset#"
+  },
+  "empty": {
+    "noComponentAssetsFound": "Tidak ada aset komponen.",
+    "noInstallationsYet": "Belum ada pemasangan.",
+    "noRemovalsYet": "Belum ada pelepasan.",
+    "noStatusChangesRecorded": "Tidak ada perubahan status yang tercatat."
+  },
+  "fields": {
+    "assetNumber": "Asset#",
+    "assetType": "Jenis aset",
+    "backInWarehouse": "Kembali di Gudang",
+    "buyer": "Pembeli",
+    "buyerName": "Nama Pembeli",
+    "buyerType": "Jenis Pembeli",
+    "components": "Komponen",
+    "disposition": "Disposisi",
+    "external": "Eksternal",
+    "goodsReceiptGrNumber": "Goods Receipt {{gr_number}}",
+    "installedToLocaleDateString": "— dipasang {{toLocaleDateString}}",
+    "locationVehicle": "Lokasi / Kendaraan",
+    "operationalReuse": "Guna Ulang Operasional",
+    "outcome": "Hasil",
+    "positionLocation": "Posisi / Lokasi",
+    "registered": "Terdaftar",
+    "removalReason": "Alasan Pelepasan",
+    "returnedToVendor": "Diretur ke Vendor",
+    "returnOrderReturnNumberValue": "Retur Pemesanan {{return_number}} ({{value}})",
+    "saleSummary": "{{status}} · {{buyerName}} · {{decidedAt}}",
+    "saleType": "Jenis Penjualan",
+    "scrapMaterial": "Material Scrap",
+    "serialsAssetNumber": "Nomor Seri / Asset#",
+    "storeInWarehouse": "Simpan di Gudang",
+    "tires": "Ban"
+  },
+  "filters": {
+    "allAssets": "Semua aset"
+  },
+  "help": {
+    "approvalMarksAssetSold": "; persetujuan menandai aset ini SOLD.",
+    "draftSaleCreatedSubmitApproval": "Draf penjualan dibuat. Ajukan untuk persetujuan di",
+    "physicalItemsTrackedIndividuallyAssetNumber": "Barang fisik yang dilacak satu per satu. Asset# dibuat otomatis oleh Goods Receipt untuk produk dengan Lacak Nomor Seri; Nomor Seri ban adalah Asset#-nya."
+  },
+  "sections": {
+    "install": "Pasang",
+    "installationHistory": "Riwayat Pemasangan",
+    "removalRepairHistory": "Riwayat Pelepasan / Perbaikan",
+    "removeReplace": "Hapus / Ganti",
+    "repair": "Perbaikan",
+    "sell": "Jual",
+    "statusHistory": "Riwayat Status"
+  },
+  "titles": {
+    "componentAsset": "Aset Komponen",
+    "componentAssets": "Aset Komponen"
+  }
+}

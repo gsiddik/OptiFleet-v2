@@ -1,0 +1,55 @@
+{
+  "actions": {
+    "newBranch": "+ Cabang Baru",
+    "newWarehouse": "+ Gudang Baru",
+    "newWorkshop": "+ Bengkel Baru",
+    "rename": "Ganti Nama",
+    "storageLayout": "Tata Letak Penyimpanan"
+  },
+  "confirm": {
+    "deleteCode": "Hapus {{code}}?"
+  },
+  "empty": {
+    "noBranchesFound": "Tidak ada cabang.",
+    "noneYet": "Belum ada.",
+    "noWarehousesFound": "Tidak ada gudang.",
+    "noWorkshopsFound": "Tidak ada bengkel.",
+    "selectARack": "Pilih Rak",
+    "selectAZone": "Pilih Zona"
+  },
+  "fields": {
+    "closed": "Ditutup",
+    "internal": "Internal",
+    "mobile": "Ponsel",
+    "renameCode": "Ganti nama {{code}}",
+    "satellite": "Satelit",
+    "serviceBays": "Bay Servis",
+    "titleCode": "Kode {{title}}",
+    "titleName": "Nama {{title}}"
+  },
+  "help": {
+    "productsStoredBinWarehouseZoneRack": "Produk disimpan di Bin (Gudang → Zona → Rak → Bin). Pilih Zona untuk melihat Raknya, dan Rak untuk melihat Bin-nya."
+  },
+  "modals": {
+    "editBranch": "Ubah Cabang",
+    "editWarehouse": "Ubah Gudang",
+    "editWorkshop": "Ubah Bengkel",
+    "newBranch": "Cabang Baru",
+    "newWarehouse": "Gudang Baru",
+    "newWorkshop": "Bengkel Baru",
+    "storageLayoutName": "Tata Letak Penyimpanan — {{name}}"
+  },
+  "placeholders": {
+    "code": "Kode"
+  },
+  "sections": {
+    "bins": "Bin",
+    "racks": "Rak",
+    "zones": "Zona"
+  },
+  "titles": {
+    "branches": "Cabang",
+    "warehouses": "Gudang",
+    "workshops": "Bengkel"
+  }
+}

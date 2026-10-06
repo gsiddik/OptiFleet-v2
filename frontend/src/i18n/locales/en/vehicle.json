@@ -1,0 +1,107 @@
+{
+  "actions": {
+    "backToList": "← Back to List",
+    "changeStatus": "Change Status",
+    "createVehicle": "Create Vehicle",
+    "dispatch": "Dispatch",
+    "editSpecifications": "Edit Specifications",
+    "newVehicle": "+ New Vehicle",
+    "reassign": "Reassign"
+  },
+  "confirm": {
+    "deleteDocumentCannotUndone": "Delete this document? This cannot be undone."
+  },
+  "documentType": {
+    "inspectionCertificate": "Inspection Certificate",
+    "insurance": "Insurance",
+    "permit": "Permit",
+    "vehicleTax": "Vehicle Tax",
+    "warranty": "Warranty"
+  },
+  "empty": {
+    "noAssignmentHistoryYet": "No assignment history yet.",
+    "noDocumentsUploaded": "No documents uploaded.",
+    "noHistoryEventsVehicle": "No history events for this vehicle.",
+    "noTransfersYet": "No transfers yet.",
+    "noVehiclesFound": "No vehicles found.",
+    "noVehicleTransfersFound": "No vehicle transfers found."
+  },
+  "errors": {
+    "onlyJpgJpegPngImagesAccepted": "Only JPG, JPEG, or PNG images are accepted."
+  },
+  "fields": {
+    "chassisNumber": "Chassis Number",
+    "color": "Color",
+    "currentOdometer": "Current Odometer",
+    "defaultWorkshop": "Default Workshop",
+    "documentFile": "Document file",
+    "doors": "Doors",
+    "effectiveUntil": "Effective Until",
+    "emptyWeightKg": "Empty Weight (kg)",
+    "engineCapacityCc": "Engine Capacity (cc)",
+    "engineNumber": "Engine Number",
+    "expiryDate": "Expiry Date",
+    "expiryExpiryDate": "Expiry: {{expiry_date}}",
+    "extensionDeadline": "Extension Deadline",
+    "extensionDeadlineExtensionDeadline": "Extension deadline: {{extension_deadline}}",
+    "fromBranch": "From Branch",
+    "fuelTankL": "Fuel Tank (L)",
+    "fuelType": "Fuel Type",
+    "haveAnExpiryDate": "Have an Expiry Date?",
+    "legacyVehicleTypeLegacy": "{{legacyVehicleType}} (legacy)",
+    "loadWeightKg": "Load Weight (kg)",
+    "needToBeExtended": "Need to be extended?",
+    "newBranch": "New Branch",
+    "operational": "Operational",
+    "operationalStatus": "Operational Status",
+    "overview": "Overview",
+    "purchaseMonth": "Purchase Month",
+    "purchaseYear": "Purchase Year",
+    "seats": "Seats",
+    "suspension": "Suspension",
+    "toBranch": "To Branch",
+    "transmission": "Transmission",
+    "vinOptional": "VIN (optional)",
+    "wheelsConfiguration": "Wheels Configuration",
+    "wheelsInclSpare": "Wheels (incl. spare)",
+    "year": "Year"
+  },
+  "help": {
+    "emptyLoadWeightKg": "Empty / Load Weight (kg)",
+    "fillDateEveryCheckedBoxBefore": "Fill in the date for every checked box before choosing the file.",
+    "fleetWideViewVehicleTransfersOpen": "Fleet-wide view of vehicle transfers. Open a vehicle to create or act on its Transfer.",
+    "fuelTankCapacityL": "Fuel Tank Capacity (L)"
+  },
+  "modals": {
+    "changeVehicleStatus": "Change Vehicle Status",
+    "editVehicleSpecifications": "Edit Vehicle Specifications",
+    "newVehicle": "New Vehicle",
+    "newVehicleTransfer": "New Vehicle Transfer",
+    "reassignVehicle": "Reassign Vehicle"
+  },
+  "notes": {
+    "vehicleTransfer": "Vehicle transfer {{transferId}}"
+  },
+  "placeholders": {
+    "clickUploadPhotoJpgPng": "Click to upload photo (JPG/PNG)",
+    "noPhoto": "No photo"
+  },
+  "sections": {
+    "assignment": "Assignment",
+    "assignmentHistory": "Assignment History",
+    "documents": "Documents",
+    "history": "History",
+    "maintenanceHistory": "Maintenance History",
+    "transfer": "Transfer",
+    "transfers": "Transfers",
+    "wheelsConfiguration": "Wheels Configuration"
+  },
+  "titles": {
+    "vehicleHistory": "Vehicle History",
+    "vehicles": "Vehicles",
+    "vehicleTransfers": "Vehicle Transfers"
+  },
+  "tooltips": {
+    "registrationNumberPhoto": "{{registration_number}} photo"
+  }
+}

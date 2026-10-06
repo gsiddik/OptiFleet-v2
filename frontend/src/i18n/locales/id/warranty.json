@@ -1,0 +1,46 @@
+{
+  "actions": {
+    "backToClaims": "← Kembali ke Klaim",
+    "backToWarranty": "← Kembali ke Garansi",
+    "checkEligibility": "Periksa Kelayakan",
+    "newClaim": "+ Klaim Baru",
+    "newWarranty": "+ Garansi Baru",
+    "resolveViaRepair": "Selesaikan dengan Perbaikan",
+    "resolveViaReplacement": "Selesaikan dengan Penggantian",
+    "settle": "Selesaikan"
+  },
+  "empty": {
+    "noWarrantiesFound": "Tidak ada garansi.",
+    "noWarrantyClaimsFound": "Tidak ada klaim garansi."
+  },
+  "fields": {
+    "claimNumber": "No. Klaim",
+    "coverage": "Cakupan",
+    "coverageBasis": "Dasar Cakupan",
+    "currentOdometerOptional": "Odometer Saat Ini (opsional)",
+    "duration": "Durasi",
+    "durationKm": "Durasi (km)",
+    "durationMonths": "Durasi (bulan)",
+    "engineHrs": "engine hour",
+    "failureDate": "Tanggal Kerusakan",
+    "km": "km /",
+    "months": "bulan /",
+    "resolveViaRepair": "Selesaikan dengan Perbaikan",
+    "resolveViaReplacement": "Selesaikan dengan Penggantian",
+    "settle": "Selesaikan",
+    "starts": "Mulai",
+    "startsAt": "Mulai Pada"
+  },
+  "modals": {
+    "newWarranty": "Garansi Baru",
+    "newWarrantyClaim": "Klaim Garansi Baru"
+  },
+  "sections": {
+    "eligibilityCheck": "Pemeriksaan Kelayakan"
+  },
+  "titles": {
+    "coverageBasisWarranty": "Garansi {{coverage_basis}}",
+    "warranties": "Garansi",
+    "warrantyClaims": "Klaim Garansi"
+  }
+}
