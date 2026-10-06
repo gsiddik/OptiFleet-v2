@@ -18,10 +18,11 @@ Continuation checkpoint for the structural i18n preparation defined in
 | S2 | Status display label registry | STATUS_DISPLAY_REGISTRY (46 → 150 rows) | DONE |
 | S3 | Runtime label mapping (+ workflow action verbs) | RUNTIME_LABEL_GENERATION (115 of 122), WORKFLOW_ACTION_LABEL_CORRECTION (33) | DONE |
 | S4 | Full sentence templates | FULL_SENTENCE_TEMPLATE (192), RUNTIME_LABEL_GENERATION (remaining 7) | DONE |
-| S5 | Error code decoupling | ERROR_CODE_DECOUPLING (98 of 124) | DONE, 26 rows open (see S5) |
+| S5 | Error code decoupling | ERROR_CODE_DECOUPLING (98 of 125) | DONE; 25 rows BLOCKED_BY_MONGODB_TEST_ENVIRONMENT, rich-text rows ACCEPTED_I18N_ROLLOUT_ITEM |
 | S6 | Document generation locale snapshot | PRINT_LOCALE_SNAPSHOT (D1, D3, D4) | DONE |
 | S7 | Laravel validation localization prep | FRAMEWORK_VALIDATION_LOCALIZATION (36) | DONE |
-| S8 | Database localization prep | DATABASE_LOCALIZATION (418 of 420) | DONE, 2 rows open (owner decision) |
+| S8 | Database localization prep | DATABASE_LOCALIZATION (422 of 422 after the system role code) | DONE |
+| — | Readiness closure | System role code, rich text / plural rollout items, concurrency test | DONE; 25 MongoDB rows BLOCKED |
 
 ## S1 — Stable tab IDs
 
@@ -418,8 +419,9 @@ The existing Print buttons are unchanged and now reprint the latest version.
 - **Live data.** A generation pins locale and template, not data. A reprint renders the document's
   current data, exactly as before; the WAL already prints from its own frozen snapshot columns. Storing
   rendered output would need the `file_path`/`checksum` columns, which were left out as not needed now.
-- **Concurrency.** The advisory lock serializes generation creation per document. It is exercised
-  sequentially in tests; a true concurrent test is NOT RUN (a single-connection test harness).
+- **Concurrency.** The advisory lock serializes generation creation per document. Covered since the
+  readiness closure by a true-parallel multi-process test (`DocumentGenerationConcurrencyTest`, see
+  *Readiness closure*).
 - **Template labels.** Document labels inside templates (headings, captions) are still English
   template text. Indonesian bodies are authored per version under `locales.id` at rollout.
 
@@ -518,20 +520,137 @@ No generic translation table and no `*_en` / `*_id` columns.
   no `locales` until the editor supports them. Earlier versions, and the generations pinned to them,
   are unaffected.
 
-## Readiness
+## Readiness closure
 
-**STRUCTURAL_I18N_PREPARATION_IN_PROGRESS.** All eight structural phases are implemented and
-committed, but structural blockers remain open:
+Work to close the blockers left after S8, per product owner decisions.
 
-| Blocker | Open | Why open |
+### Resolved blockers
+
+| Blocker | Rows | Resolution |
 |---|---:|---|
-| ERROR_CODE_DECOUPLING | 25 | Intelligence services and controllers are MongoDB-backed. MongoDB and the PHP `mongodb` extension are not available here, so their tests cannot run; changing them unverified is not acceptable. |
-| ERROR_CODE_DECOUPLING | 1 | `TireOperationParts.tsx`: a sentence with an inline link. It needs a rich-text (`Trans`) component, which is part of the i18n library rollout. |
-| DATABASE_LOCALIZATION | 2 | Seeded Platform Superadmin role name and description. Mapping them needs an owner decision (a `roles.code` column, or the seeded name as identifier). |
+| DATABASE_LOCALIZATION | 2 (Platform Superadmin name / description) | Canonical `roles.code` (see *System role result*). Semantic keys `roles.system.platformSuperadmin.name` / `.description` supersede the name-derived keys; `ReferenceLabels` maps `roles.PLATFORM_SUPERADMIN`. DATABASE_LOCALIZATION 422 of 422. |
+| Plural "(s)", count-free | 1 | `Allowed Item Type(s)` → `Allowed Item Types` (column header listing types, no count). Indonesian unchanged. |
 
-**Next steps to reach READY_FOR_I18N_IMPLEMENTATION**
-1. In an environment with MongoDB: emit `{code, params}` beside the Intelligence texts (the S5
-   pattern) and run the Analytics / Intelligence suites.
-2. Decide the system-role identifier, then add the role to `ReferenceLabels`.
-3. The rich-text row is resolved by the rollout's `Trans` component. It can be accepted as a rollout
-   item if the owner agrees.
+### Accepted rollout items
+
+| Item | Rows | Decision |
+|---|---:|---|
+| Rich text in `TireOperationParts.tsx` (`MissingTireNotice`) | 1 (+3 superseded fragments) | **ACCEPTED_I18N_ROLLOUT_ITEM** (owner). The dataset now holds one complete sentence, `tire.help.missingTireDataNotice`: `<position>{{position}}</position> has no tire data yet. Complete it in <link>Vehicle Details → Wheels Configuration</link> before continuing.` / `… belum memiliki data ban. Lengkapi di <link>Detail Kendaraan → Konfigurasi Roda</link> sebelum melanjutkan.` `<position>` is the `PositionLabel` component and `<link>` the router link (plain text without a vehicle). Rendered at rollout with the library's rich-text mechanism (e.g. `<Trans components={{ position, link }} />`). Not split, no concatenation workaround, no `Trans` installed now. |
+| English plurals "(s)" | 31 dataset rows | **I18N_PLURALIZATION_ROLLOUT_ITEM** (flag on each row). Every remaining user-facing "(s)" depends on a count or list length (e.g. `{{count}} repairable damage(s)…`, `missing required module(s): {{modules}}`). English moves to ICU `_one` / `_other` with the i18n library; Indonesian already has its single form. Rewriting them now would be a grammar workaround. Out of scope: operator console output (`php artisan …` commands) and text stored into records (`n damage(s) recorded`, preserved as stored text, D2). The other `(s)` hits in the source are code (`(s) =>` lambdas). |
+
+### Mongo blocker status
+
+**BLOCKED_BY_MONGODB_TEST_ENVIRONMENT** (25 ERROR_CODE_DECOUPLING rows).
+- Checked in this session: there is no `mongod` / `mongosh` binary, the PHP `mongodb` extension is not
+  loaded, and `127.0.0.1:27017` refuses connections. The Analytics / Intelligence suites cannot run.
+- The Intelligence code is therefore not modified, and no row is marked done from static inspection.
+  Each row carries the note `BLOCKED_BY_MONGODB_TEST_ENVIRONMENT`. Report `14` shows them in the
+  *Blocked (MongoDB test environment)* column.
+- To finish, in an environment with MongoDB and `ext-mongodb`, add a stable UPPER_SNAKE_CASE code next
+  to the unchanged English text (e.g. `INSUFFICIENT_TIRE_DATA`, `MODEL_NOT_READY`). Do not change
+  scoring, prediction, aggregation, query semantics or thresholds. Then run the Analytics,
+  Intelligence and full backend suites.
+
+### System role result
+
+- **Migration `2026_10_13_000001_add_code_to_roles`**
+  - Adds `roles.code`: nullable, `string(64)`.
+  - Partial unique index `roles_code_unique` on `(COALESCE(tenant_id, ''), code) WHERE code IS NOT
+    NULL`: unique within the platform and within each tenant (a future per-tenant `TENANT_ADMIN` can
+    exist once per tenant).
+  - Idempotent and non-destructive.
+  - Backfills `PLATFORM_SUPERADMIN` only when exactly one platform-scoped system role named
+    "Platform Superadmin" has no code; otherwise nothing is guessed.
+- **Model `Role`**
+  - `code` must be UPPER_SNAKE_CASE and is immutable once set.
+  - `Role::platformSuperadmin()` finds the role by code.
+  - `Role::ensurePlatformSuperadmin()` adopts a pre-code role in place, so no duplicate is created.
+- **Identity by name → by code**
+  - `PlatformSuperadminRoleSeeder` and `DemoDataSeeder` use `ensurePlatformSuperadmin()`.
+  - The `platform:create-admin` command uses `platformSuperadmin()`.
+- **API**
+  - Role responses add a read-only `code`.
+  - The store / update requests do not accept `code`, so tenant roles stay `null`.
+  - Frontend type `RoleItem.code`.
+- **Dependency audit**
+  - Locked-role checks in `RolePermissionService` and the role controllers use
+    `scope = platform && is_system`, not the name; unchanged.
+  - `ApprovalResolver` resolves `ROLE` approvers by tenant role **name**. That is tenant workflow
+    configuration and is not changed: changing it would alter workflow semantics.
+  - Tenant "Tenant Admin" roles (seeders only, one per tenant) are not backfilled.
+- **Tests: `Feature/SystemRoleCodeTest`** (7 tests)
+  - A: seeded with its code; reseeding creates no duplicate.
+  - B: a tenant custom role has code `null`; the API cannot set one.
+  - C: a duplicate `PLATFORM_SUPERADMIN` is rejected; the same tenant code is allowed in two tenants
+    and rejected twice in one.
+  - D / E: the backfill keeps name, permissions and user assignments, and is idempotent; the seeder
+    adopts the existing role.
+  - An ambiguous match is not backfilled.
+  - The code is immutable and must be UPPER_SNAKE_CASE; renaming the display name keeps the identity.
+  - `platform:create-admin` finds a renamed role by code.
+- **Role regression**
+  - DeploymentSeeder, DemoDatasetSeeder, RoleTenantIsolation, RolePermissionManagement,
+    RewiredPermissions and ReferenceLabels pass.
+
+### Workflow action labels
+
+- **Status / action separation:** done. 34 legacy status-form label rows point to their
+  `workflow.actionVerb.*` key. The two other action labels, "Revise" and "Close (External Invoice
+  Paid)", are already verbs. Together these are the 36 reviewed.
+- **Seeders:** every seeded transition label is the verb (Approve, Reject, Cancel, Complete, Hold, …).
+  `WorkflowDefaultLabelsTest` asserts it, and workflow state codes are unchanged.
+- **Remaining legacy entries:** none in source or seeds. Workflow versions already published in a
+  tenant keep their stored labels, because pinned versions are never rewritten. The UI maps the legacy
+  status-form default label to the verb (`isDefaultActionLabel`), and a tenant-customized label is
+  shown as stored.
+
+### Concurrency test result
+
+`Feature/DocumentGenerationConcurrencyTest`: **PASS**.
+- **Setup:** 8 separate PHP processes (`tests/Concurrency/first_print_worker.php`), each with its own
+  database connection, are released at a shared start time.
+  - All 8 request the first print of a never-printed document.
+  - 3 rounds.
+  - The tenant is committed through a separate connection and removed afterwards.
+- **Expected and observed:** in each round there is exactly one generation, and all 8 workers receive
+  its id.
+- **Measured:** workers started within 13 ms of each other, and their completions were serialized by
+  the advisory lock.
+- **Negative control:** with the lock temporarily removed, the test failed with 8 distinct
+  generations. So the test detects the race; the change was reverted.
+
+### Document reprint characteristic
+
+A reprint is **TEMPLATE/LOCALE HISTORICAL, TRANSACTION DATA CURRENT**. The generation pins the locale
+and the template version; the business data shown is the document's current data at reprint time.
+This is not a fully immutable document snapshot: no PDF or data snapshot is stored, so the
+implementation does not produce a legally immutable historical PDF. The one exception is the Work
+Authorization Letter, which renders from its own frozen snapshot columns. A fully immutable archive
+would need stored output (`file_path` / `checksum`) or a data snapshot, which is a separate decision.
+
+### Checkpoint (paused by owner)
+
+The work is paused at this checkpoint until the owner says "Continue".
+- **Done and pushed:** system role code (`1b9371e`), and this checkpoint commit (rich text, plurals,
+  concurrency test, readiness docs).
+- **Verified in this session:**
+  - targeted backend tests: SystemRoleCode, ReferenceLabels, role suites, the concurrency test with
+    its negative control;
+  - frontend type-check, build, 23 unit tests, lint (0 errors, 27 existing warnings);
+  - browser checks: tabs, status, S3, S4, S5, S6 documents, roles.
+- **Not finished:** the final full backend regression was interrupted at 323 tests passed, 0 failed,
+  for the pause, so it is NOT RUN to completion.
+- **On "Continue":** rerun the full backend suite (`t.sh`). If it is green, confirm the readiness below
+  and deliver the final report. If not, fix and re-evaluate.
+
+### Final readiness
+
+**Provisional: READY_FOR_I18N_IMPLEMENTATION_EXCEPT_MONGODB.** It becomes final only after the full
+backend regression above passes. Every condition holds except the MongoDB-backed verification:
+- terminology decisions: 0 unresolved;
+- system-role identifier: stable (`roles.code`);
+- all non-Mongo structural blockers resolved;
+- rich text and plurals explicitly accepted as rollout items.
+
+The only remaining structural blocker is the 25 Intelligence rows: **BLOCKED_BY_MONGODB_TEST_ENVIRONMENT**.
+The implementation plan is `docs/i18n/16-i18n-implementation-plan.md`.

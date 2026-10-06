@@ -1,6 +1,6 @@
 # 14 — Final Translation QA Report
 
-Dataset: `12-en-id-translation-dataset-final.csv` — **5454 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **43 terminology + 6 style + 4 correction terms + action verbs + cancel split** (product owner), propagated to 1194 dependent rows. AWAITING_DECISION = **0**.
+Dataset: `12-en-id-translation-dataset-final.csv` — **5455 rows** (5,240 preparation rows + 2 domain status keys + 33 workflow verb proposals). Owner decisions applied: **43 terminology + 6 style + 4 correction terms + action verbs + cancel split** (product owner), propagated to 1194 dependent rows. AWAITING_DECISION = **0**.
 
 ## Result
 
@@ -16,39 +16,40 @@ Dataset: `12-en-id-translation-dataset-final.csv` — **5454 rows** (5,240 prepa
 | Unresolved dependency | 0 | PASS (every remaining REVIEW row names its dependency) |
 | Pluralization issue | 0 | PASS (no "(s)" in Indonesian) |
 | Near-collision | 0 | RESOLVED / DOCUMENTED (below) |
-| Structural blocker | 964 | TRACKED (implementation readiness, see 15) |
+| Structural blocker | 965 | TRACKED (implementation readiness, see 15) |
 
 ## Classification and readiness
 
 | Classification | Rows |
 |---|---:|
 | AUTO_TRANSLATE_SAFE | 4424 |
-| STRUCTURAL_PREP_REQUIRED | 964 |
+| STRUCTURAL_PREP_REQUIRED | 965 |
 | DO_NOT_TRANSLATE | 66 |
 
 | Translation status | Rows |
 |---|---:|
-| FINAL | 5388 |
+| FINAL | 5389 |
 | FINAL_UNCHANGED | 66 |
 
 | Implementation status | Rows |
 |---|---:|
 | READY_AFTER_I18N_INFRASTRUCTURE | 5362 |
 | NOT_APPLICABLE | 66 |
-| STRUCTURAL_PREP_REQUIRED | 26 |
+| STRUCTURAL_PREP_REQUIRED | 25 |
+| ACCEPTED_I18N_ROLLOUT_ITEM | 2 |
 
 ## Structural blocker progress
 
-| Blocker | Rows | Resolved in source | Open |
-|---|---:|---:|---:|
-| DATABASE_LOCALIZATION | 422 | 422 | 0 |
-| FULL_SENTENCE_TEMPLATE | 192 | 192 | 0 |
-| STATUS_DISPLAY_REGISTRY | 150 | 150 | 0 |
-| ERROR_CODE_DECOUPLING | 124 | 98 | 26 |
-| RUNTIME_LABEL_GENERATION | 122 | 122 | 0 |
-| FRAMEWORK_VALIDATION_LOCALIZATION | 36 | 36 | 0 |
-| WORKFLOW_ACTION_LABEL_CORRECTION | 33 | 33 | 0 |
-| STABLE_TAB_ID | 21 | 21 | 0 |
+| Blocker | Rows | Resolved in source | Accepted rollout item | Blocked (MongoDB test environment) | Open |
+|---|---:|---:|---:|---:|---:|
+| DATABASE_LOCALIZATION | 422 | 422 | 0 | 0 | 0 |
+| FULL_SENTENCE_TEMPLATE | 192 | 192 | 0 | 0 | 0 |
+| STATUS_DISPLAY_REGISTRY | 150 | 150 | 0 | 0 | 0 |
+| ERROR_CODE_DECOUPLING | 125 | 98 | 2 | 25 | 0 |
+| RUNTIME_LABEL_GENERATION | 122 | 122 | 0 | 0 | 0 |
+| FRAMEWORK_VALIDATION_LOCALIZATION | 36 | 36 | 0 | 0 | 0 |
+| WORKFLOW_ACTION_LABEL_CORRECTION | 33 | 33 | 0 | 0 | 0 |
+| STABLE_TAB_ID | 21 | 21 | 0 | 0 | 0 |
 
 Translation readiness and implementation readiness are separate: a STRUCTURAL_PREP_REQUIRED row has a final Indonesian text (`translation_status = FINAL`) but stays `implementation_status = STRUCTURAL_PREP_REQUIRED` until its blocker is removed.
 

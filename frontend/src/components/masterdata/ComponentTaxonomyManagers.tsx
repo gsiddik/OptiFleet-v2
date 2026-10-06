@@ -388,7 +388,7 @@ export function ComponentSubcategoryManager({ endpoints, canManageRow, intro }: 
     { key: 'category', header: 'Category', render: (s) => (s.category ? s.category.name + deletedSuffix(s.category) : '—') },
     {
       key: 'item_types',
-      header: 'Allowed Item Type(s)',
+      header: 'Allowed Item Types',
       render: (s) => ((s.item_types ?? []).length ? (s.item_types ?? []).map((t) => ITEM_TYPE_LABELS[t]).join(', ') : <span style={muted}>Any</span>),
     },
     { key: 'description', header: 'Description', render: (s) => <span style={muted}>{s.description || '—'}</span> },
