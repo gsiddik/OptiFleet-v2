@@ -30,6 +30,9 @@
     "totalInvoiceTotal": "Total: {{invoice.total}}",
     "unitPrice": "Unit Price"
   },
+  "labels": {
+    "stockTransfer": "Stock Transfer"
+  },
   "maintenanceMemo": {
     "conditionNotesMaintenanceMemoConditionNotes": "Condition notes: {{maintenance_memo.condition_notes}}",
     "contactPartnerContactNamePartnerContact": "Contact: {{partner.contact_name}} ({{partner.contact_phone}})",

@@ -1163,6 +1163,7 @@ return [
     'documents.invoice.subtotalInvoiceSubtotalTaxInvoiceTax' => 'Subtotal: {{invoice.subtotal}} | Tax: {{invoice.tax_total}}',
     'documents.invoice.totalInvoiceTotal' => 'Total: {{invoice.total}}',
     'documents.invoice.unitPrice' => 'Unit Price',
+    'documents.labels.stockTransfer' => 'Stock Transfer',
     'documents.maintenanceMemo.conditionNotesMaintenanceMemoConditionNotes' => 'Condition notes: {{maintenance_memo.condition_notes}}',
     'documents.maintenanceMemo.contactPartnerContactNamePartnerContact' => 'Contact: {{partner.contact_name}} ({{partner.contact_phone}})',
     'documents.maintenanceMemo.estimatedCostMaintenanceMemoCost' => 'Estimated cost: {{maintenance_memo.cost}}',

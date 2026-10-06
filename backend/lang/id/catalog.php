@@ -1163,6 +1163,7 @@ return [
     'documents.invoice.subtotalInvoiceSubtotalTaxInvoiceTax' => 'Subtotal: {{invoice.subtotal}} | Pajak: {{invoice.tax_total}}',
     'documents.invoice.totalInvoiceTotal' => 'Total: {{invoice.total}}',
     'documents.invoice.unitPrice' => 'Harga Satuan',
+    'documents.labels.stockTransfer' => 'Transfer Stok',
     'documents.maintenanceMemo.conditionNotesMaintenanceMemoConditionNotes' => 'Catatan kondisi: {{maintenance_memo.condition_notes}}',
     'documents.maintenanceMemo.contactPartnerContactNamePartnerContact' => 'Kontak: {{partner.contact_name}} ({{partner.contact_phone}})',
     'documents.maintenanceMemo.estimatedCostMaintenanceMemoCost' => 'Estimasi biaya: {{maintenance_memo.cost}}',
