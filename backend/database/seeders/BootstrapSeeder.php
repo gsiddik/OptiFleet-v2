@@ -27,6 +27,7 @@ class BootstrapSeeder extends Seeder
             CorrectWorkOrderExternalTransitionsSeeder::class,
             AddWorkOrderExternalClosedTransitionSeeder::class,
             NotificationDefaultsSeeder::class,
+            AddLocalizedNotificationTemplatesSeeder::class,
 
             // --- Reference / master data (Vehicle Category, Component Group, Product Category, UOM, Tire/Tool/Equipment reference, Storage Requirement) ---
             MasterDataSeeder::class,

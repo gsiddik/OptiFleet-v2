@@ -20,8 +20,8 @@ Continuation checkpoint for the EN / ID rollout planned in `docs/i18n/16-i18n-im
 | 3 | User / tenant locale preference + language selector | DONE |
 | 4 | Shared / global UI | DONE |
 | 5+ | Business modules | IN PROGRESS |
-| D | Printed documents | — |
-| N | Notifications | — |
+| D | Printed documents | DONE |
+| N | Notifications | DONE |
 | QA | Hard-coded audit, full regression, report | — |
 
 ## Phase 1 — Locale contract and resource generation
@@ -351,7 +351,48 @@ user preference → tenant default → browser (`navigator.languages` / `Accept-
   - glossary terms kept in English: Work Order, Purchase Order, Purchase Request, Vendor, Workspace,
     Transfer, Total, Detail.
 
+## Phase D — Printed documents
+
+- **Language of a print:** explicit choice in the Print dialog → user preference → tenant default → `en`
+  (`DocumentGenerationService::resolveLocale`). The dialog's default option sends no locale, so the server
+  resolves it.
+- **Template bodies:** `AddLocalizedDocumentTemplatesSeeder` publishes a NEW version of every platform
+  default print template with `payload.locales.id.html`.
+  - The body comes from `DocumentTemplateLocalizer`: text segments that are dataset English (tier 1
+    `documents.*`, tier 2 any key with one translation) are replaced; markup and variables are unchanged.
+  - A template whose English is not fully covered is left as it is (no half-translated body).
+  - Tenant templates and published history are untouched. Idempotent.
+- **Status values:** `{{x.status}}` → `{{x.status_label}}` (`StatusLabels::localized`, per document
+  locale). The code stays available as `{{x.status}}`.
+- **Dates and numbers:** formatted for the generation's locale (`15.000,50` in `id`, `15,000.50` in `en`).
+- **Reprint:** a generation keeps its locale and template version (TEMPLATE/LOCALE HISTORICAL,
+  TRANSACTION DATA CURRENT). A later change of the user's preference does not change a reprint.
+- **Platform invoice PDF:** `documents.platformInvoice.*` labels, status label and number formatting per
+  locale (`?locale=`, else the request locale).
+- **Tests:** `DocumentLocalizationTest` (3 tests), plus the document / print / template suites (124) and
+  invoice / billing / payment suites (93) — PASS.
+
+## Phase N — Notifications
+
+- **Language per recipient:** `RecipientLocaleResolver`: user `preferred_locale` → tenant `default_locale`
+  → `en`. A recipient addressed by email only (vendor contact, custom email) gets the tenant default.
+- **Recorded:** `notification_delivery_logs.locale` (nullable, additive migration). Rows queued before it
+  existed resolve the language when they are sent.
+- **Escalations:** each escalation target gets their own language.
+- **Rendering:** `SendNotificationJob` renders `payload.locales.<locale>.channels.<CHANNEL>` and falls back
+  to the version's own channels. Email subject and body and in-app text are all per recipient. The
+  fallback email subject is `app.labels.notification`.
+- **Templates:** `AddLocalizedNotificationTemplatesSeeder` publishes a NEW version of every platform
+  default notification template with `locales.id.channels` (exact `notifications.*` dataset English).
+  - Edited wording without a translation is left as it is.
+  - Tenant templates and published history are untouched. Idempotent.
+  - All 6 platform defaults are covered.
+- **Unchanged:** event codes, variables, canonical values in the context (e.g. severity `CRITICAL`) and
+  tenant-entered data.
+- **Tests:** `NotificationLocalizationTest` (6 tests) and the notification engine / form suites — 25
+  passed.
+
 **Remaining**
-- Documents (print labels per document locale, print language default).
-- Notifications (per-recipient locale).
-- Final regression, final report.
+- Editors for `locales.<locale>` (template, workflow labels, notification form) — plan step 11, not
+  started.
+- Final full regression, final report.

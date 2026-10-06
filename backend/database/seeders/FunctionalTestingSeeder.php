@@ -60,6 +60,7 @@ class FunctionalTestingSeeder extends Seeder
             CorrectWorkOrderExternalTransitionsSeeder::class,
             AddWorkOrderExternalClosedTransitionSeeder::class,
             NotificationDefaultsSeeder::class,
+            AddLocalizedNotificationTemplatesSeeder::class,
             MasterDataSeeder::class,
         ]);
 

@@ -47,8 +47,8 @@ class NotificationTemplateService
 
     /**
      * A version may carry wording per locale (`locales.<locale>.channels.<CHANNEL>`, i18n S8); without an
-     * entry for the locale the version's own channel content is used. Callers pass no locale today, so
-     * notifications stay English until the rollout.
+     * entry for the locale the version's own channel content is used. SendNotificationJob passes the
+     * recipient's locale (RecipientLocaleResolver).
      */
     public function render(ConfigurationVersion $version, string $channel, array $context, ?string $locale = null): array
     {
