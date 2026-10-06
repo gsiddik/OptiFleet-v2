@@ -5,17 +5,24 @@ import { Modal } from '../../../components/Modal';
 import type { BundleItem, ContractItem, PricingItem, Tenant } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
+import { labelText, t as tt } from '../../../i18n/i18n';
 
 const BILLING_CYCLES = [
-  { value: 'MONTHLY', label: 'Monthly' },
-  { value: 'QUARTERLY', label: 'Quarterly' },
-  { value: 'SEMIANNUAL', label: 'Semi Annual' },
-  { value: 'ANNUAL', label: 'Annual' },
-  { value: 'CUSTOM', label: 'Custom' },
+  { value: 'MONTHLY', label: 'Monthly', labelKey: 'platform.contracts.fields.monthly' },
+  { value: 'QUARTERLY', label: 'Quarterly', labelKey: 'platform.contracts.fields.quarterly' },
+  { value: 'SEMIANNUAL', label: 'Semi Annual', labelKey: 'platform.contracts.fields.semiAnnual' },
+  { value: 'ANNUAL', label: 'Annual', labelKey: 'platform.contracts.fields.annual' },
+  { value: 'CUSTOM', label: 'Custom', labelKey: 'platform.contracts.fields.custom' },
 ];
 const ITEM_TYPES = ['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY', 'SETUP_FEE', 'OTHER'] as const;
 const PRICED_TYPES = new Set(['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY']);
 type ItemType = (typeof ITEM_TYPES)[number];
+
+/** The shown name of a billing cycle code (MONTHLY → Monthly / Bulanan); unknown codes as stored. */
+export function billingCycleLabel(code: string | null | undefined): string {
+  const cycle = BILLING_CYCLES.find((c) => c.value === code);
+  return cycle ? labelText(cycle) : (code ?? '—');
+}
 
 interface DraftItem {
   product_type: ItemType;
@@ -260,14 +267,14 @@ export function ContractForm({
   const canSubmit = !!effectiveTenantId && !!endDate && !submitting;
 
   return (
-    <Modal open={open} title={contract ? `Edit Contract — ${contract.contract_number}` : 'New Contract'} onClose={onClose} width={760}>
+    <Modal open={open} title={contract ? tt('platform.contracts.modals.editContractContractNumber', { contract_number: contract.contract_number }) : tt('platform.contracts.modals.newContract')} onClose={onClose} width={760}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Tenant" errors={errors.tenant_id} required>
+        <FormField label={tt('common.fields.tenant')} errors={errors.tenant_id} required>
           {lockedTenant ? (
             <input value={`${lockedTenant.name} (${lockedTenant.code})`} disabled style={inputStyle} />
           ) : (
             <select value={tenantId} onChange={(e) => setTenantId(e.target.value)} style={inputStyle}>
-              <option value="">Select tenant…</option>
+              <option value="">{tt('platform.contracts.fields.selectTenant')}</option>
               {tenants.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.code})
@@ -276,39 +283,39 @@ export function ContractForm({
             </select>
           )}
         </FormField>
-        <FormField label="Billing Cycle" errors={errors.billing_cycle} required>
+        <FormField label={tt('platform.contracts.fields.billingCycle')} errors={errors.billing_cycle} required>
           <select value={billingCycle} onChange={(e) => setBillingCycle(e.target.value)} style={inputStyle}>
             {BILLING_CYCLES.map((f) => (
               <option key={f.value} value={f.value}>
-                {f.label}
+                {labelText(f)}
               </option>
             ))}
           </select>
         </FormField>
-        <FormField label="Start Date" errors={errors.start_date} required>
+        <FormField label={tt('platform.contracts.fields.startDate')} errors={errors.start_date} required>
           <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="End Date" errors={errors.end_date} required>
+        <FormField label={tt('platform.contracts.fields.endDate')} errors={errors.end_date} required>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Payment Terms (days)" errors={errors.payment_terms_days}>
+        <FormField label={tt('platform.contracts.fields.paymentTermsDays')} errors={errors.payment_terms_days}>
           <NumericInput min={0} value={paymentTermsDays} onChange={(e) => setPaymentTermsDays(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Grace Period (days)" errors={errors.grace_period_days}>
+        <FormField label={tt('platform.contracts.fields.gracePeriodDays')} errors={errors.grace_period_days}>
           <NumericInput min={0} value={gracePeriodDays} onChange={(e) => setGracePeriodDays(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, marginBottom: 14 }}>
         <input type="checkbox" checked={activationRequiresPayment} onChange={(e) => setActivationRequiresPayment(e.target.checked)} />
-        Activation requires payment
+        {tt('platform.contracts.fields.activationRequiresPayment')}
       </label>
-      <FormField label="Notes" errors={errors.notes}>
+      <FormField label={tt('common.fields.notes')} errors={errors.notes}>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} style={{ ...inputStyle, minHeight: 50 }} />
       </FormField>
 
-      <h4 style={{ fontSize: 14, marginBottom: 8 }}>Line Items</h4>
+      <h4 style={{ fontSize: 14, marginBottom: 8 }}>{tt('common.sections.lineItems')}</h4>
       {!effectiveTenantId && (
-        <p style={{ fontSize: 12, color: '#a16207', marginTop: -4 }}>Select a tenant first — Active Price depends on the tenant.</p>
+        <p style={{ fontSize: 12, color: '#a16207', marginTop: -4 }}>{tt('platform.contracts.help.selectTenantFirstActivePriceDepends')}</p>
       )}
       {items.map((it, idx) => {
         const refOptions = productReferenceOptions(it.product_type);
@@ -318,7 +325,7 @@ export function ContractForm({
         return (
           <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, marginBottom: 8 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 8, marginBottom: 8, alignItems: 'end' }}>
-              <FormField label="Item Type" errors={itemErrors('product_type')} required>
+              <FormField label={tt('common.fields.itemType')} errors={itemErrors('product_type')} required>
                 <select value={it.product_type} onChange={(e) => changeItemType(idx, e.target.value as ItemType)} style={inputStyle}>
                   {ITEM_TYPES.map((p) => (
                     <option key={p} value={p}>
@@ -327,10 +334,10 @@ export function ContractForm({
                   ))}
                 </select>
               </FormField>
-              <FormField label="Product Reference" errors={itemErrors('product_reference')} required={isPriced}>
+              <FormField label={tt('platform.contracts.fields.productReference')} errors={itemErrors('product_reference')} required={isPriced}>
                 {isPriced ? (
                   <select value={it.product_reference} onChange={(e) => updateItem(idx, { product_reference: e.target.value })} style={inputStyle}>
-                    <option value="">Select code…</option>
+                    <option value="">{tt('platform.contracts.fields.selectCode')}</option>
                     {refOptions.map((o) => (
                       <option key={o.value} value={o.value}>
                         {o.label}
@@ -341,39 +348,39 @@ export function ContractForm({
                   <input value="Not applicable" disabled style={inputStyle} />
                 )}
               </FormField>
-              <FormField label="Payment Frequency" errors={itemErrors('billing_frequency')} required>
+              <FormField label={tt('platform.contracts.fields.paymentFrequency')} errors={itemErrors('billing_frequency')} required>
                 <select value={it.billing_frequency} onChange={(e) => updateItem(idx, { billing_frequency: e.target.value })} style={inputStyle}>
                   {BILLING_CYCLES.map((f) => (
                     <option key={f.value} value={f.value}>
-                      {f.label}
+                      {labelText(f)}
                     </option>
                   ))}
                 </select>
               </FormField>
               <button className="btn-secondary" onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))} disabled={items.length === 1}>
-                Remove
+                {tt('common.actions.remove')}
               </button>
             </div>
-            <FormField label="Description" errors={itemErrors('description')} required>
+            <FormField label={tt('common.fields.description')} errors={itemErrors('description')} required>
               <input value={it.description} onChange={(e) => updateItem(idx, { description: e.target.value })} style={inputStyle} />
             </FormField>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-              <FormField label="Qty" errors={itemErrors('quantity')} required>
+              <FormField label={tt('common.fields.qty')} errors={itemErrors('quantity')} required>
                 <NumericInput min={0.01} step="0.01" value={it.quantity} onChange={(e) => updateItem(idx, { quantity: e.target.value })} style={inputStyle} />
               </FormField>
-              <FormField label="Unit Price" errors={itemErrors('unit_price')} required>
+              <FormField label={tt('common.fields.unitPrice')} errors={itemErrors('unit_price')} required>
                 <NumericInput min={0} value={it.unit_price} onChange={(e) => updateItem(idx, { unit_price: e.target.value })} style={inputStyle} />
               </FormField>
-              <FormField label="Discount">
+              <FormField label={tt('common.fields.discount')}>
                 <NumericInput min={0} value={it.discount} onChange={(e) => updateItem(idx, { discount: e.target.value })} style={inputStyle} />
               </FormField>
-              <FormField label="Tax %">
+              <FormField label={tt('platform.contracts.fields.taxPercent')}>
                 <NumericInput min={0} max={100} value={it.tax_rate_percent} onChange={(e) => updateItem(idx, { tax_rate_percent: e.target.value })} style={inputStyle} />
               </FormField>
             </div>
-            {isPriced && it.priceStatus === 'loading' && <p style={{ fontSize: 12, color: '#6b7280' }}>Looking up Active Price…</p>}
+            {isPriced && it.priceStatus === 'loading' && <p style={{ fontSize: 12, color: '#6b7280' }}>{tt('platform.contracts.help.lookingUpActivePrice')}</p>}
             {isPriced && it.priceStatus === 'ok' && it.activePrice && (
-              <p style={{ fontSize: 12, color: '#059669' }}>Active Price: {formatMoney(it.activePrice)} (unit price may not go below this)</p>
+              <p style={{ fontSize: 12, color: '#059669' }}>{tt('platform.contracts.help.activePriceFloor', { price: formatMoney(it.activePrice) })}</p>
             )}
             {isPriced && it.priceStatus === 'error' && it.priceError && <p style={{ fontSize: 12, color: '#b91c1c' }}>{it.priceError}</p>}
           </div>
@@ -381,7 +388,7 @@ export function ContractForm({
       })}
       {errors.items && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 8 }}>{errors.items.join(', ')}</div>}
       <button className="btn-secondary" onClick={() => setItems((prev) => [...prev, blankItem()])}>
-        + Add Item
+        {tt('platform.contracts.actions.addItem')}
       </button>
 
       {formError && (
@@ -398,10 +405,10 @@ export function ContractForm({
             onClose();
           }}
         >
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={!canSubmit} onClick={submit}>
-          {contract ? (submitting ? 'Saving…' : 'Save Draft') : submitting ? 'Creating…' : 'Create Draft Contract'}
+          {contract ? (submitting ? tt('common.actions.saving') : tt('platform.contracts.actions.saveDraft')) : submitting ? tt('common.actions.creating') : tt('platform.contracts.actions.createDraftContract')}
         </button>
       </div>
     </Modal>

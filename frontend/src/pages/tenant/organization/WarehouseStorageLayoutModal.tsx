@@ -5,20 +5,22 @@ import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { ErrorState } from '../../../components/States';
 import type { Warehouse, WarehouseBinItem, WarehouseRackItem, WarehouseZoneItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 type Node = WarehouseZoneItem | WarehouseRackItem | WarehouseBinItem;
 
 interface Level {
   key: 'zone' | 'rack' | 'bin';
-  title: string;
+  /** Translation key of the column title. */
+  titleKey: string;
   endpoint: string;
   parentField: 'warehouse_id' | 'warehouse_zone_id' | 'warehouse_rack_id';
 }
 
 const LEVELS: Level[] = [
-  { key: 'zone', title: 'Zones', endpoint: '/app/warehouse-zones', parentField: 'warehouse_id' },
-  { key: 'rack', title: 'Racks', endpoint: '/app/warehouse-racks', parentField: 'warehouse_zone_id' },
-  { key: 'bin', title: 'Bins', endpoint: '/app/warehouse-bins', parentField: 'warehouse_rack_id' },
+  { key: 'zone', titleKey: 'organization.sections.zones', endpoint: '/app/warehouse-zones', parentField: 'warehouse_id' },
+  { key: 'rack', titleKey: 'organization.sections.racks', endpoint: '/app/warehouse-racks', parentField: 'warehouse_zone_id' },
+  { key: 'bin', titleKey: 'organization.sections.bins', endpoint: '/app/warehouse-bins', parentField: 'warehouse_rack_id' },
 ];
 
 /**
@@ -32,19 +34,19 @@ export function WarehouseStorageLayoutModal({ warehouse, canManage, onClose }: {
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <Modal open title={`Storage Layout — ${warehouse.name}`} onClose={onClose} width={980}>
+    <Modal open title={t('organization.modals.storageLayoutName', { name: warehouse.name })} onClose={onClose} width={980}>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0 }}>
-        Products are stored in a Bin (Warehouse → Zone → Rack → Bin). Select a Zone to see its Racks, and a Rack to see its Bins.
+        {t('organization.help.productsStoredBinWarehouseZoneRack')}
       </p>
       {error && <ErrorState message={error} />}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 12 }}>
         <LevelColumn level={LEVELS[0]} parentId={warehouse.id} selectedId={zoneId} onSelect={(id) => { setZoneId(id); setRackId(''); }} canManage={canManage} onError={setError} />
-        <LevelColumn level={LEVELS[1]} parentId={zoneId} selectedId={rackId} onSelect={setRackId} canManage={canManage} onError={setError} emptyHint="Select a Zone" />
-        <LevelColumn level={LEVELS[2]} parentId={rackId} canManage={canManage} onError={setError} emptyHint="Select a Rack" />
+        <LevelColumn level={LEVELS[1]} parentId={zoneId} selectedId={rackId} onSelect={setRackId} canManage={canManage} onError={setError} emptyHint={t('organization.empty.selectAZone')} />
+        <LevelColumn level={LEVELS[2]} parentId={rackId} canManage={canManage} onError={setError} emptyHint={t('organization.empty.selectARack')} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Close
+          {t('common.actions.close')}
         </button>
       </div>
     </Modal>
@@ -114,19 +116,19 @@ function LevelColumn({
   }
 
   function rename(row: Node) {
-    const next = window.prompt(`Rename ${row.code}`, row.name);
+    const next = window.prompt(t('organization.fields.renameCode', { code: row.code }), row.name);
     if (next && next !== row.name) run(() => apiClient.put(`${level.endpoint}/${row.id}`, { name: next }));
   }
 
   return (
     <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 10, minWidth: 0 }}>
-      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>{level.title}</div>
+      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>{t(level.titleKey)}</div>
       {!parentId ? (
         <div style={{ fontSize: 12, color: '#9ca3af' }}>{emptyHint}</div>
       ) : (
         <>
           <div style={{ maxHeight: 280, overflowY: 'auto' }}>
-            {visible.length === 0 && <div style={{ fontSize: 12, color: '#9ca3af', padding: '4px 0' }}>None yet.</div>}
+            {visible.length === 0 && <div style={{ fontSize: 12, color: '#9ca3af', padding: '4px 0' }}>{t('organization.empty.noneYet')}</div>}
             {visible.map((row) => (
               <div
                 key={row.id}
@@ -144,22 +146,22 @@ function LevelColumn({
                 {canManage && (
                   <span style={{ display: 'flex', gap: 8, fontSize: 12 }} onClick={(e) => e.stopPropagation()}>
                     <button className="btn-link" disabled={busy} onClick={() => rename(row)}>
-                      Rename
+                      {t('organization.actions.rename')}
                     </button>
                     <button
                       className="btn-link"
                       disabled={busy}
                       onClick={() => run(() => apiClient.put(`${level.endpoint}/${row.id}`, { status: row.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' }))}
                     >
-                      {row.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+                      {row.status === 'ACTIVE' ? t('common.actions.deactivate') : t('common.actions.activate')}
                     </button>
                     <button
                       className="btn-link"
                       style={{ color: '#b91c1c' }}
                       disabled={busy}
-                      onClick={() => window.confirm(`Delete ${row.code}?`) && run(() => apiClient.delete(`${level.endpoint}/${row.id}`))}
+                      onClick={() => window.confirm(t('organization.confirm.deleteCode', { code: row.code })) && run(() => apiClient.delete(`${level.endpoint}/${row.id}`))}
                     >
-                      Delete
+                      {t('common.actions.delete')}
                     </button>
                   </span>
                 )}
@@ -168,10 +170,10 @@ function LevelColumn({
           </div>
           {canManage && (
             <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-              <input aria-label={`${level.title} code`} placeholder="Code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} style={{ ...inputStyle, width: 90, borderColor: fieldErrors.code ? '#b91c1c' : undefined }} />
-              <input aria-label={`${level.title} name`} placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 100, borderColor: fieldErrors.name ? '#b91c1c' : undefined }} />
+              <input aria-label={t('organization.fields.titleCode', { title: t(level.titleKey) })} placeholder={t('organization.placeholders.code')} value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} style={{ ...inputStyle, width: 90, borderColor: fieldErrors.code ? '#b91c1c' : undefined }} />
+              <input aria-label={t('organization.fields.titleName', { title: t(level.titleKey) })} placeholder={t('common.fields.name')} value={name} onChange={(e) => setName(e.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 100, borderColor: fieldErrors.name ? '#b91c1c' : undefined }} />
               <button className="btn-secondary" disabled={busy || !code || !name} onClick={add}>
-                {busy ? '…' : 'Add'}
+                {busy ? '…' : t('common.actions.add2')}
               </button>
             </div>
           )}

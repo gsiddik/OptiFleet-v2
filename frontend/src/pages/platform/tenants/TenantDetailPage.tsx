@@ -14,15 +14,16 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useTabParam } from '../../../hooks/useTabParam';
 import type { TabDef } from '../../../utils/tabs';
 import { formatDateTime } from '../../../utils/date';
+import { labelText, t as tt } from '../../../i18n/i18n';
 
 type TenantTab = 'overview' | 'users' | 'module-entitlements' | 'capacity-limits' | 'contract';
 // Stable ids drive state and ?tab=; labels are display only. Legacy ?tab=Contract links still resolve.
 const TABS: readonly TabDef<TenantTab>[] = [
-  { id: 'overview', label: 'Overview' },
-  { id: 'users', label: 'Users' },
-  { id: 'module-entitlements', label: 'Module Entitlements' },
-  { id: 'capacity-limits', label: 'Capacity Limits' },
-  { id: 'contract', label: 'Contract' },
+  { id: 'overview', label: 'Overview', labelKey: 'common.sections.overview' },
+  { id: 'users', label: 'Users', labelKey: 'platform.tenants.sections.users' },
+  { id: 'module-entitlements', label: 'Module Entitlements', labelKey: 'platform.tenants.sections.moduleEntitlements' },
+  { id: 'capacity-limits', label: 'Capacity Limits', labelKey: 'platform.tenants.sections.capacityLimits' },
+  { id: 'contract', label: 'Contract', labelKey: 'platform.tenants.sections.contract' },
 ];
 
 export function TenantDetailPage() {
@@ -43,6 +44,16 @@ export function TenantDetailPage() {
 
   useEffect(load, [id]);
 
+  async function changeDefaultLocale(value: string) {
+    if (!tenant) return;
+    try {
+      await apiClient.put(`/platform/tenants/${id}`, { default_locale: value || null });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
+  }
+
   async function toggleStatus() {
     if (!tenant) return;
     const action = tenant.status === 'ACTIVE' ? 'deactivate' : 'activate';
@@ -56,7 +67,7 @@ export function TenantDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/platform/tenants" label="← Back to Tenant Management" />
+      <BackButton fallbackTo="/platform/tenants" label={tt('platform.tenants.actions.backToTenantManagement')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {tenant.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({tenant.code})</span>
@@ -65,14 +76,14 @@ export function TenantDetailPage() {
           <StatusBadge status={tenant.status} />
           {(hasPermission('tenant.activate') || hasPermission('tenant.deactivate')) && (
             <button className="btn-secondary" onClick={toggleStatus}>
-              {tenant.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+              {tenant.status === 'ACTIVE' ? tt('common.actions.deactivate') : tt('common.actions.activate')}
             </button>
           )}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
-        {TABS.map(({ id: t, label }) => (
+        {TABS.map(({ id: t, ...tabDef }) => (
           <button
             key={t}
             onClick={() => selectTab(t)}
@@ -87,7 +98,7 @@ export function TenantDetailPage() {
               fontWeight: tab === t ? 600 : 400,
             }}
           >
-            {label}
+            {labelText(tabDef)}
           </button>
         ))}
       </div>
@@ -95,14 +106,27 @@ export function TenantDetailPage() {
       {tab === 'overview' && (
         <div className="card">
           <p>
-            <strong>Legal Name:</strong> {tenant.legal_name ?? '—'}
+            <strong>{tt('platform.tenants.fields.legalName')}:</strong> {tenant.legal_name ?? '—'}
           </p>
           <p>
-            <strong>Industry:</strong> {tenant.industry ?? '—'}
+            <strong>{tt('platform.tenants.fields.industry')}:</strong> {tenant.industry ?? '—'}
           </p>
           <p>
-            <strong>Created:</strong> {formatDateTime(tenant.created_at)}
+            <strong>{tt('platform.tenants.fields.created')}:</strong> {formatDateTime(tenant.created_at)}
           </p>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <strong>{tt('platform.tenants.fields.defaultLanguage')}:</strong>
+            <select
+              value={tenant.default_locale ?? ''}
+              disabled={!hasPermission('tenant.update')}
+              onChange={(e) => changeDefaultLocale(e.target.value)}
+              data-tenant-default-locale
+            >
+              <option value="">—</option>
+              <option value="en">{tt('common.language.en')}</option>
+              <option value="id">{tt('common.language.id')}</option>
+            </select>
+          </label>
         </div>
       )}
       {tab === 'users' && <TenantUsersTab tenantId={tenant.id} />}

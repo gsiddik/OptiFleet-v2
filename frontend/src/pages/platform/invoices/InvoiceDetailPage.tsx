@@ -11,6 +11,8 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InvoiceItem } from '../../../types';
 import { formatQty } from '../../../utils/quantity';
 import { formatMoney } from '../../../utils/money';
+import { t } from '../../../i18n/i18n';
+import { formatDate } from '../../../utils/date';
 
 export function InvoiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -51,7 +53,7 @@ export function InvoiceDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/platform/invoices" label="← Back to Invoices" />
+      <BackButton fallbackTo="/platform/invoices" label={t('platform.invoices.actions.backToInvoices')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {invoice.invoice_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({invoice.tenant?.name})</span>
@@ -59,11 +61,11 @@ export function InvoiceDetailPage() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <StatusBadge status={invoice.status} />
           <button className="btn-secondary" disabled={downloading} onClick={downloadPdf}>
-            {downloading ? 'Loading…' : 'Download PDF'}
+            {downloading ? t('common.actions.loading') : t('platform.invoices.actions.downloadPdf')}
           </button>
           {canVoid && (
             <button className="btn-secondary" style={{ color: '#b91c1c' }} onClick={() => setShowVoid(true)}>
-              Void
+              {t('platform.invoices.actions.void')}
             </button>
           )}
         </div>
@@ -72,23 +74,23 @@ export function InvoiceDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-        <SummaryCard label="Invoice Date" value={invoice.invoice_date} />
-        <SummaryCard label="Due Date" value={invoice.due_date} />
-        <SummaryCard label="Total" value={`${invoice.currency} ${formatMoney(invoice.total)}`} />
-        <SummaryCard label="Outstanding" value={`${invoice.currency} ${formatMoney(invoice.outstanding_amount)}`} />
+        <SummaryCard label={t('platform.invoices.sections.invoiceDate')} value={formatDate(invoice.invoice_date)} />
+        <SummaryCard label={t('platform.invoices.sections.dueDate')} value={formatDate(invoice.due_date)} />
+        <SummaryCard label={t('common.fields.total')} value={`${invoice.currency} ${formatMoney(invoice.total)}`} />
+        <SummaryCard label={t('platform.invoices.sections.outstanding')} value={`${invoice.currency} ${formatMoney(invoice.outstanding_amount)}`} />
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Line Items</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.lineItems')}</h3>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: '6px 8px' }}>Description</th>
-              <th style={{ padding: '6px 8px' }}>Qty</th>
-              <th style={{ padding: '6px 8px' }}>Unit Price</th>
-              <th style={{ padding: '6px 8px' }}>Discount</th>
-              <th style={{ padding: '6px 8px' }}>Tax</th>
-              <th style={{ padding: '6px 8px' }}>Amount</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.description')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.qty')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.unitPrice')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.discount')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.tax')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.amount')}</th>
             </tr>
           </thead>
           <tbody>
@@ -105,10 +107,10 @@ export function InvoiceDetailPage() {
           </tbody>
         </table>
         <div style={{ textAlign: 'right', marginTop: 10, fontSize: 13, color: '#374151' }}>
-          Subtotal: {formatMoney(invoice.subtotal)} &nbsp; Discount: {formatMoney(invoice.discount)} &nbsp; Tax:{' '}
-          {formatMoney(invoice.tax)} &nbsp; Paid: {formatMoney(invoice.paid_amount)} &nbsp;{' '}
+          {t('documents.platformInvoice.subtotal')}: {formatMoney(invoice.subtotal)} {t('common.fields.discount')}: {formatMoney(invoice.discount)} {t('common.fields.tax')}:{' '}
+          {formatMoney(invoice.tax)} {t('documents.platformInvoice.paid')}: {formatMoney(invoice.paid_amount)} &nbsp;{' '}
           <strong>
-            Total: {invoice.currency} {formatMoney(invoice.total)}
+            {t('common.fields.total')}: {invoice.currency} {formatMoney(invoice.total)}
           </strong>
         </div>
       </div>
@@ -155,17 +157,17 @@ function VoidModal({ invoiceId, onClose, onDone }: { invoiceId: string; onClose:
   }
 
   return (
-    <Modal open title="Void Invoice" onClose={onClose}>
+    <Modal open title={t('platform.invoices.actions.voidInvoice')} onClose={onClose}>
       {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-      <FormField label="Reason">
+      <FormField label={t('common.fields.reason')}>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Voiding…' : 'Void Invoice'}
+          {submitting ? t('platform.invoices.actions.voiding') : t('platform.invoices.actions.voidInvoice')}
         </button>
       </div>
     </Modal>

@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ItemType, ProductCategoryItem } from '../../../types';
+import { t as tt } from '../../../i18n/i18n';
 
 const ITEM_TYPES: ItemType[] = ['SPARE_PART', 'TOOL', 'TIRE', 'CONSUMABLE', 'EQUIPMENT', 'RIM', 'OTHER'];
 
@@ -49,11 +50,11 @@ export function ProductCategoriesPage() {
   }
 
   const columns: Column<ProductCategoryItem>[] = [
-    { key: 'code', header: 'Code', render: (c) => c.code },
-    { key: 'name', header: 'Name', render: (c) => c.name },
-    { key: 'parent_id', header: 'Parent', render: (c) => (c.parent_id ? data.find((d) => d.id === c.parent_id)?.name ?? '—' : '—') },
-    { key: 'item_type', header: 'Item Type', render: (c) => c.item_type ?? 'Any' },
-    { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.status} /> },
+    { key: 'code', header: tt('common.fields.code'), render: (c) => c.code },
+    { key: 'name', header: tt('common.fields.name'), render: (c) => c.name },
+    { key: 'parent_id', header: tt('common.fields.parent'), render: (c) => (c.parent_id ? data.find((d) => d.id === c.parent_id)?.name ?? '—' : '—') },
+    { key: 'item_type', header: tt('common.fields.itemType'), render: (c) => c.item_type ?? tt('common.fields.any') },
+    { key: 'status', header: tt('common.fields.status'), render: (c) => <StatusBadge status={c.status} /> },
     {
       key: 'actions',
       header: '',
@@ -61,12 +62,12 @@ export function ProductCategoriesPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {hasPermission('product_category.update') && (
             <button className="btn-link" onClick={() => setEditing(c)}>
-              Edit
+              {tt('common.actions.edit')}
             </button>
           )}
           {hasPermission('product_category.delete') && (
             <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(c)}>
-              Delete
+              {tt('common.actions.delete')}
             </button>
           )}
         </div>
@@ -76,7 +77,7 @@ export function ProductCategoriesPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Product Categories</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('platform.masterdata.titles.productCategories')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -86,14 +87,14 @@ export function ProductCategoriesPage() {
         actions={
           hasPermission('product_category.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Category
+              {tt('platform.masterdata.actions.newCategory')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No product categories found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('platform.masterdata.empty.noProductCategoriesFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -117,9 +118,9 @@ export function ProductCategoriesPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Delete Product Category"
-        message={deleteError ?? `Delete "${deleting?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={tt('platform.masterdata.confirm.deleteProductCategory')}
+        message={deleteError ?? tt('platform.masterdata.confirm.deleteNameCannotUndone', { name: deleting?.name })}
+        confirmLabel={tt('common.actions.delete')}
         onCancel={() => {
           setDeleting(null);
           setDeleteError(null);
@@ -175,17 +176,17 @@ function CategoryFormModal({
   }
 
   return (
-    <Modal open={open} title={category ? 'Edit Product Category' : 'New Product Category'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required={!category}>
+    <Modal open={open} title={category ? tt('platform.masterdata.modals.editProductCategory') : tt('platform.masterdata.modals.newProductCategory')} onClose={onClose}>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required={!category}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!category} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       {!category && (
-        <FormField label="Parent Category" errors={errors.parent_id}>
+        <FormField label={tt('platform.masterdata.fields.parentCategory')} errors={errors.parent_id}>
           <select value={parentId} onChange={(e) => setParentId(e.target.value)} style={inputStyle}>
-            <option value="">— None (top-level) —</option>
+            <option value="">{tt('common.fields.noneTopLevel')}</option>
             {topLevelOptions.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -194,12 +195,12 @@ function CategoryFormModal({
           </select>
         </FormField>
       )}
-      <FormField label="Item Type" errors={errors.item_type}>
+      <FormField label={tt('common.fields.itemType')} errors={errors.item_type}>
         {isSubcategory ? (
-          <input value={category?.item_type ?? 'Inherited from parent'} disabled style={{ ...inputStyle, color: '#888' }} />
+          <input value={category?.item_type ?? tt('platform.masterdata.fields.inheritedFromParent')} disabled style={{ ...inputStyle, color: '#888' }} />
         ) : (
           <select value={itemType} onChange={(e) => setItemType(e.target.value)} style={inputStyle}>
-            <option value="">Any Item Type</option>
+            <option value="">{tt('common.filters.anyItemType')}</option>
             {ITEM_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -208,15 +209,15 @@ function CategoryFormModal({
           </select>
         )}
       </FormField>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label={tt('common.fields.description')} errors={errors.description}>
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !name || (!category && !code)} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
     </Modal>

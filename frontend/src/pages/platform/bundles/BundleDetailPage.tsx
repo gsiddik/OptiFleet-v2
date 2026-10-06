@@ -8,6 +8,7 @@ import { useBackNavigation } from '../../../navigation/useBackNavigation';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { useAuth } from '../../../auth/AuthContext';
 import type { BundleItem, ModuleCatalogItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 export function BundleDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -78,8 +79,8 @@ export function BundleDetailPage() {
     const action = bundle.is_active ? 'deactivate' : 'reactivate';
     const confirmed = window.confirm(
       bundle.is_active
-        ? 'Deactivate this bundle? It will no longer be selectable for new contracts, but existing contracts referencing it are unaffected.'
-        : 'Reactivate this bundle so it can be selected for new contracts again?',
+        ? t('platform.bundles.confirm.deactivateBundleNoLongerSelectableNew')
+        : t('platform.bundles.confirm.reactivateBundleSoSelectedNewContracts'),
     );
     if (!confirmed) return;
     setStatusBusy(true);
@@ -96,7 +97,7 @@ export function BundleDetailPage() {
 
   async function deleteBundle() {
     const confirmed = window.confirm(
-      'Delete this bundle? It will be hidden from Bundle Management and new contracts, but existing contracts that already reference it keep working — this cannot be undone from here.',
+      t('platform.bundles.confirm.deleteBundleHiddenBundleManagementNew'),
     );
     if (!confirmed) return;
     setStatusBusy(true);
@@ -115,7 +116,7 @@ export function BundleDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/platform/bundles" label="← Back to Bundle Management" />
+      <BackButton fallbackTo="/platform/bundles" label={t('platform.bundles.actions.backToBundleManagement')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {bundle.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({bundle.code})</span>
@@ -125,17 +126,17 @@ export function BundleDetailPage() {
           <StatusBadge status={bundle.is_active ? 'ACTIVE' : 'INACTIVE'} />
           {hasPermission('bundle.publish') && (
             <button className="btn-primary" disabled={publishing} onClick={publish}>
-              {publishing ? 'Publishing…' : 'Publish New Version'}
+              {publishing ? t('platform.bundles.actions.publishing') : t('platform.bundles.actions.publishNewVersion')}
             </button>
           )}
           {hasPermission(bundle.is_active ? 'bundle.deactivate' : 'bundle.activate') && (
             <button className="btn-secondary" disabled={statusBusy} onClick={toggleActive}>
-              {bundle.is_active ? 'Deactivate' : 'Reactivate'}
+              {bundle.is_active ? t('common.actions.deactivate') : t('common.actions.reactivate')}
             </button>
           )}
           {hasPermission('bundle.delete') && (
             <button className="btn-danger" disabled={statusBusy} onClick={deleteBundle}>
-              Delete
+              {t('common.actions.delete')}
             </button>
           )}
         </div>
@@ -144,18 +145,18 @@ export function BundleDetailPage() {
       {error && <ErrorState message={error} />}
       {missing.length > 0 && (
         <div style={{ background: '#fef2f2', color: '#b91c1c', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
-          Missing required dependencies: {missing.join(', ')}
+          {t('platform.bundles.fields.missingRequiredDependencies')}: {missing.join(', ')}
         </div>
       )}
       {autoAdded.length > 0 && (
         <div style={{ background: '#eff6ff', color: '#1d4ed8', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
-          Automatically added by dependency:{' '}
-          {autoAdded.map((a) => `${a.module.name} (${a.module.code}) — required by ${a.required_by.join(', ')}`).join('; ')}
+          {t('platform.bundles.fields.automaticallyAddedByDependency')}:{' '}
+          {autoAdded.map((a) => t('platform.bundles.help.nameCodeRequiredValue', { name: a.module.name, code: a.module.code, value: a.required_by.join(', ') })).join('; ')}
         </div>
       )}
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Module Composition</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('platform.bundles.sections.moduleComposition')}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 4 }}>
           {allModules.map((m) => (
             <label key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0' }}>
@@ -171,7 +172,7 @@ export function BundleDetailPage() {
         </div>
         {hasPermission('bundle.update') && (
           <button className="btn-secondary" style={{ marginTop: 16 }} disabled={saving} onClick={saveComposition}>
-            {saving ? 'Saving…' : 'Save Composition'}
+            {saving ? t('common.actions.saving') : t('platform.bundles.actions.saveComposition')}
           </button>
         )}
       </div>

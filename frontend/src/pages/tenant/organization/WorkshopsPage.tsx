@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Branch, Workshop } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { t } from '../../../i18n/i18n';
 
 export function WorkshopsPage() {
   const { hasPermission } = useAuth();
@@ -36,11 +37,11 @@ export function WorkshopsPage() {
   const branchName = (id: string | null) => branches.find((b) => b.id === id)?.name ?? '—';
 
   const columns: Column<Workshop>[] = [
-    { key: 'code', header: 'Code', render: (w) => w.code },
-    { key: 'name', header: 'Name', render: (w) => w.name },
-    { key: 'branch_id', header: 'Branch', render: (w) => branchName(w.branch_id) },
-    { key: 'workshop_type', header: 'Type', render: (w) => w.workshop_type },
-    { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
+    { key: 'code', header: t('common.fields.code'), render: (w) => w.code },
+    { key: 'name', header: t('common.fields.name'), render: (w) => w.name },
+    { key: 'branch_id', header: t('common.fields.branch'), render: (w) => branchName(w.branch_id) },
+    { key: 'workshop_type', header: t('common.fields.type'), render: (w) => w.workshop_type },
+    { key: 'status', header: t('common.fields.status'), render: (w) => <StatusBadge status={w.status} /> },
     {
       key: 'actions',
       header: '',
@@ -48,12 +49,12 @@ export function WorkshopsPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {hasPermission('workshop.update') && (
             <button className="btn-link" onClick={() => setEditing(w)}>
-              Edit
+              {t('common.actions.edit')}
             </button>
           )}
           {(hasPermission('workshop.activate') || hasPermission('workshop.deactivate')) && (
             <button className="btn-link" onClick={() => toggleStatus(w)}>
-              {w.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+              {w.status === 'ACTIVE' ? t('common.actions.deactivate') : t('common.actions.activate')}
             </button>
           )}
         </div>
@@ -63,7 +64,7 @@ export function WorkshopsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Workshops</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('organization.titles.workshops')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -73,14 +74,14 @@ export function WorkshopsPage() {
         actions={
           hasPermission('workshop.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Workshop
+              {t('organization.actions.newWorkshop')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No workshops found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('organization.empty.noWorkshopsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -159,16 +160,16 @@ function WorkshopFormModal({
   }
 
   return (
-    <Modal open={open} title={workshop ? 'Edit Workshop' : 'New Workshop'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required={!workshop}>
+    <Modal open={open} title={workshop ? t('organization.modals.editWorkshop') : t('organization.modals.newWorkshop')} onClose={onClose}>
+      <FormField label={t('common.fields.code')} errors={errors.code} required={!workshop}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!workshop} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required={!workshop}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required={!workshop}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Branch" errors={errors.branch_id}>
+      <FormField label={t('common.fields.branch')} errors={errors.branch_id}>
         <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={inputStyle}>
-          <option value="">— None —</option>
+          <option value="">{t('masterData.fields.none')}</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -176,25 +177,25 @@ function WorkshopFormModal({
           ))}
         </select>
       </FormField>
-      <FormField label="Type" errors={errors.workshop_type}>
+      <FormField label={t('common.fields.type')} errors={errors.workshop_type}>
         <select value={type} onChange={(e) => setType(e.target.value as Workshop['workshop_type'])} style={inputStyle}>
-          <option value="INTERNAL">Internal</option>
-          <option value="SATELLITE">Satellite</option>
-          <option value="MOBILE">Mobile</option>
+          <option value="INTERNAL">{t('organization.fields.internal')}</option>
+          <option value="SATELLITE">{t('organization.fields.satellite')}</option>
+          <option value="MOBILE">{t('organization.fields.mobile')}</option>
         </select>
       </FormField>
-      <FormField label="Capacity" errors={errors.capacity}>
+      <FormField label={t('common.fields.capacity')} errors={errors.capacity}>
         <NumericInput value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Service Bays" errors={errors.number_of_service_bays}>
+      <FormField label={t('organization.fields.serviceBays')} errors={errors.number_of_service_bays}>
         <NumericInput value={bays} onChange={(e) => setBays(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>

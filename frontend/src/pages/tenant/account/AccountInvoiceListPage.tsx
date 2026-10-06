@@ -6,6 +6,8 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import type { InvoiceItem } from '../../../types';
 import { formatMoney } from '../../../utils/money';
+import { t as tt } from '../../../i18n/i18n';
+import { formatDate } from '../../../utils/date';
 
 const TABS = ['', 'ISSUED', 'OUTSTANDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'VOID'];
 
@@ -14,27 +16,27 @@ export function AccountInvoiceListPage() {
   const { data, loading, error } = useApiList<InvoiceItem>('/app/account/invoices', { status: tab || undefined });
 
   const columns: Column<InvoiceItem>[] = [
-    { key: 'invoice_number', header: 'Invoice #', render: (i) => <Link to={`/app/account/invoices/${i.id}`}>{i.invoice_number}</Link> },
-    { key: 'invoice_date', header: 'Invoice Date', render: (i) => i.invoice_date },
-    { key: 'due_date', header: 'Due Date', render: (i) => i.due_date },
-    { key: 'total', header: 'Total', render: (i) => `${i.currency} ${formatMoney(i.total)}` },
-    { key: 'outstanding', header: 'Outstanding', render: (i) => formatMoney(i.outstanding_amount) },
-    { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },
+    { key: 'invoice_number', header: tt('common.fields.invoiceNumber'), render: (i) => <Link to={`/app/account/invoices/${i.id}`}>{i.invoice_number}</Link> },
+    { key: 'invoice_date', header: tt('common.fields.invoiceDate'), render: (i) => formatDate(i.invoice_date) },
+    { key: 'due_date', header: tt('common.fields.dueDate'), render: (i) => formatDate(i.due_date) },
+    { key: 'total', header: tt('common.fields.total'), render: (i) => `${i.currency} ${formatMoney(i.total)}` },
+    { key: 'outstanding', header: tt('documents.platformInvoice.outstanding'), render: (i) => formatMoney(i.outstanding_amount) },
+    { key: 'status', header: tt('common.fields.status'), render: (i) => <StatusBadge status={i.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Invoices</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('common.fields.invoices')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)} className={tab === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {t || 'All'}
+            {t || tt('common.actions.all')}
           </button>
         ))}
       </div>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No invoices found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('platform.invoices.empty.noInvoicesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
     </div>
   );

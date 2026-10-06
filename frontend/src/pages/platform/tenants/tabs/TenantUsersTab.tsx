@@ -7,6 +7,7 @@ import { Table, type Column } from '../../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../../components/States';
 import { useApiList } from '../../../../hooks/useApiList';
 import { useAuth } from '../../../../auth/AuthContext';
+import { t } from '../../../../i18n/i18n';
 
 interface TenantMembershipRow {
   id: string;
@@ -30,17 +31,17 @@ export function TenantUsersTab({ tenantId }: { tenantId: string }) {
   }
 
   const columns: Column<TenantMembershipRow>[] = [
-    { key: 'name', header: 'Name', render: (r) => r.name },
-    { key: 'email', header: 'Email', render: (r) => r.email },
-    { key: 'roles', header: 'Roles', render: (r) => r.roles.join(', ') || '—' },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'name', header: t('common.fields.name'), render: (r) => r.name },
+    { key: 'email', header: t('common.fields.email'), render: (r) => r.email },
+    { key: 'roles', header: t('common.fields.roles'), render: (r) => r.roles.join(', ') || '—' },
+    { key: 'status', header: t('common.fields.status'), render: (r) => <StatusBadge status={r.status} /> },
     {
       key: 'actions',
       header: '',
       render: (r) =>
         hasPermission('user.update') ? (
           <button className="btn-link" onClick={() => toggleStatus(r)}>
-            {r.status === 'active' ? 'Deactivate' : 'Activate'}
+            {r.status === 'active' ? t('common.actions.deactivate') : t('common.actions.activate')}
           </button>
         ) : null,
     },
@@ -51,13 +52,13 @@ export function TenantUsersTab({ tenantId }: { tenantId: string }) {
       {hasPermission('user.create') && (
         <div style={{ marginBottom: 12, textAlign: 'right' }}>
           <button className="btn-primary" onClick={() => setShowInvite(true)}>
-            + Add User
+            {t('platform.tenants.actions.addUser')}
           </button>
         </div>
       )}
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No users in this tenant." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('platform.tenants.empty.noUsersTenant')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data.map((d) => ({ ...d, id: d.id }))} />}
 
       <InviteUserModal
@@ -106,22 +107,22 @@ function InviteUserModal({
   }
 
   return (
-    <Modal open={open} title="Add Tenant User" onClose={onClose}>
-      <FormField label="Name" errors={errors.name} required>
+    <Modal open={open} title={t('platform.tenants.modals.addTenantUser')} onClose={onClose}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Email" errors={errors.email} required>
+      <FormField label={t('common.fields.email')} errors={errors.email} required>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Password" errors={errors.password} required>
+      <FormField label={t('common.fields.password')} errors={errors.password} required>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Adding…' : 'Add User'}
+          {submitting ? t('common.actions.adding') : t('platform.tenants.actions.addUser2')}
         </button>
       </div>
     </Modal>

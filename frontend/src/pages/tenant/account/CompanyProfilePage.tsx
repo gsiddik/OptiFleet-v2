@@ -107,7 +107,7 @@ export function CompanyProfilePage() {
 
   async function uploadLogo(file: File) {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setLogoError('Only JPG or PNG images are accepted.');
+      setLogoError(t('common.errors.onlyJpgPngImagesAccepted'));
       return;
     }
     setUploadingLogo(true);
@@ -133,53 +133,53 @@ export function CompanyProfilePage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Company Profile</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 20 }}>{t('account.titles.companyProfile')}</h1>
       <div className="card" style={{ maxWidth: 640 }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
           <div>
-            <div style={{ fontSize: 12, color: '#9ca3af' }}>Code</div>
+            <div style={{ fontSize: 12, color: '#9ca3af' }}>{t('common.fields.code')}</div>
             <div style={{ fontSize: 14 }}>{profile.code}</div>
           </div>
           <div>
-            <div style={{ fontSize: 12, color: '#9ca3af' }}>Name</div>
+            <div style={{ fontSize: 12, color: '#9ca3af' }}>{t('common.fields.name')}</div>
             <div style={{ fontSize: 14 }}>{profile.name}</div>
           </div>
         </div>
-        <FormField label="Legal Name" errors={errors.legal_name}>
+        <FormField label={t('platform.tenants.fields.legalName')} errors={errors.legal_name}>
           <input value={legalName} onChange={(e) => setLegalName(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>
-        <FormField label="Industry" errors={errors.industry}>
+        <FormField label={t('platform.tenants.fields.industry')} errors={errors.industry}>
           <input value={industry} onChange={(e) => setIndustry(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>
-        <FormField label="Tax ID" errors={errors.tax_id}>
+        <FormField label={t('account.fields.taxId')} errors={errors.tax_id}>
           <input value={taxId} onChange={(e) => setTaxId(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>
-        <FormField label="Address" errors={errors.address}>
+        <FormField label={t('common.fields.address')} errors={errors.address}>
           <textarea value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} disabled={!canEdit} />
         </FormField>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <FormField label="Province" errors={errors.province}>
+          <FormField label={t('common.fields.province')} errors={errors.province}>
             <input value={province} onChange={(e) => setProvince(e.target.value)} style={inputStyle} disabled={!canEdit} />
           </FormField>
-          <FormField label="City" errors={errors.city}>
+          <FormField label={t('common.fields.city')} errors={errors.city}>
             <input value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle} disabled={!canEdit} />
           </FormField>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <FormField label="Phone" errors={errors.phone}>
+          <FormField label={t('account.fields.phone')} errors={errors.phone}>
             <input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} disabled={!canEdit} />
           </FormField>
-          <FormField label="Fax" errors={errors.fax}>
+          <FormField label={t('account.fields.fax')} errors={errors.fax}>
             <input value={fax} onChange={(e) => setFax(e.target.value)} style={inputStyle} disabled={!canEdit} />
           </FormField>
         </div>
-        <FormField label="Email" errors={errors.email}>
+        <FormField label={t('common.fields.email')} errors={errors.email}>
           <input value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>
-        <FormField label="Website" errors={errors.website}>
+        <FormField label={t('account.fields.website')} errors={errors.website}>
           <input value={website} onChange={(e) => setWebsite(e.target.value)} style={inputStyle} disabled={!canEdit} />
         </FormField>
-        <FormField label="Logo (JPG or PNG)" errors={logoError ? [logoError] : undefined}>
+        <FormField label={t('account.fields.logoJpgOrPng')} errors={logoError ? [logoError] : undefined}>
           {profile.logo_url && (
             <img src={profile.logo_url} alt={profile.name} style={{ maxWidth: 160, display: 'block', marginBottom: 8, borderRadius: 6 }} />
           )}
@@ -195,11 +195,11 @@ export function CompanyProfilePage() {
                   if (file) uploadLogo(file);
                 }}
               />
-              {uploadingLogo && <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>Uploading…</span>}
+              {uploadingLogo && <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 8 }}>{t('account.help.uploading')}</span>}
             </>
           )}
           <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-            Used in the sidebar and browser tab icon for this tenant.
+            {t('account.help.usedSidebarBrowserTabIconTenant')}
           </div>
         </FormField>
         <FormField label={t('account.fields.defaultLanguage')} errors={errors.default_locale}>
@@ -212,29 +212,28 @@ export function CompanyProfilePage() {
             ))}
           </select>
         </FormField>
-        <FormField label="Workshop Working Days" required errors={errors.workshop_working_days}>
+        <FormField label={t('account.fields.workshopWorkingDays')} required errors={errors.workshop_working_days}>
           <select
             value={workshopWorkingDays}
             onChange={(e) => setWorkshopWorkingDays(e.target.value)}
             style={inputStyle}
             disabled={!canEdit}
           >
-            <option value="">Select…</option>
-            <option value="5">5 days (Monday–Friday)</option>
-            <option value="6">6 days (Monday–Saturday)</option>
-            <option value="7">7 days (Monday–Sunday)</option>
+            <option value="">{t('common.fields.select')}</option>
+            <option value="5">{t('account.fields.n5DaysMondayFriday')}</option>
+            <option value="6">{t('account.fields.n6DaysMondaySaturday')}</option>
+            <option value="7">{t('account.fields.n7DaysMondaySunday')}</option>
           </select>
           <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-            Drives working-day calculations for Planning &amp; Schedule. Must be completed before a periodic
-            maintenance schedule can be created.
+            {t('account.help.drivesWorkingDayCalculationsPlanningSchedule')}
           </div>
         </FormField>
         {canEdit && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12 }}>
             <button className="btn-primary" disabled={saving} onClick={save}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? t('common.actions.saving') : t('common.actions.save')}
             </button>
-            {saved && <span style={{ color: '#16a34a', fontSize: 13 }}>Saved.</span>}
+            {saved && <span style={{ color: '#16a34a', fontSize: 13 }}>{t('account.help.saved')}</span>}
           </div>
         )}
       </div>

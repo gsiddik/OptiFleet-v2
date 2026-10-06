@@ -12,6 +12,8 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { InvoiceItem, PaymentItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
+import { t as tt } from '../../../i18n/i18n';
+import { formatDate } from '../../../utils/date';
 
 const TABS = ['', 'SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'REJECTED', 'REVERSED'];
 const PAYMENT_METHODS = ['BANK_TRANSFER', 'VIRTUAL_ACCOUNT', 'CREDIT_CARD', 'E_WALLET', 'CASH', 'OTHER'];
@@ -24,21 +26,21 @@ export function AccountPaymentListPage() {
   const { data, loading, error } = useApiList<PaymentItem>('/app/account/payments', { status: tab || undefined }, reloadKey);
 
   const columns: Column<PaymentItem>[] = [
-    { key: 'invoice', header: 'Invoice #', render: (p) => p.invoice?.invoice_number ?? '—' },
-    { key: 'payment_date', header: 'Payment Date', render: (p) => p.payment_date },
-    { key: 'amount', header: 'Amount', render: (p) => formatMoney(p.amount) },
-    { key: 'method', header: 'Method', render: (p) => p.payment_method },
-    { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
-    { key: 'actions', header: '', render: (p) => <Link to={`/app/account/payments/${p.id}`}>View</Link> },
+    { key: 'invoice', header: tt('common.fields.invoiceNumber'), render: (p) => p.invoice?.invoice_number ?? '—' },
+    { key: 'payment_date', header: tt('common.fields.paymentDate'), render: (p) => formatDate(p.payment_date) },
+    { key: 'amount', header: tt('common.fields.amount'), render: (p) => formatMoney(p.amount) },
+    { key: 'method', header: tt('common.fields.method'), render: (p) => p.payment_method },
+    { key: 'status', header: tt('common.fields.status'), render: (p) => <StatusBadge status={p.status} /> },
+    { key: 'actions', header: '', render: (p) => <Link to={`/app/account/payments/${p.id}`}>{tt('common.actions.view')}</Link> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Payments</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('common.fields.payments')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {TABS.map((t) => (
           <button key={t} onClick={() => setTab(t)} className={tab === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {t || 'All'}
+            {t || tt('common.actions.all')}
           </button>
         ))}
       </div>
@@ -46,14 +48,14 @@ export function AccountPaymentListPage() {
         actions={
           hasPermission('account.payment.submit') ? (
             <button className="btn-primary" onClick={() => setShowSubmit(true)}>
-              + Submit Payment
+              {tt('account.actions.submitPayment')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No payments found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('platform.payments.empty.noPaymentsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       {showSubmit && (
@@ -118,25 +120,25 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
   }
 
   return (
-    <Modal open title="Submit Payment" onClose={onClose} width={560}>
-      <FormField label="Invoice" errors={errors.invoice_id} required>
+    <Modal open title={tt('account.actions.submitPayment2')} onClose={onClose} width={560}>
+      <FormField label={tt('account.fields.invoice')} errors={errors.invoice_id} required>
         <select value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} style={inputStyle}>
-          <option value="">Select an outstanding invoice…</option>
+          <option value="">{tt('account.fields.selectAnOutstandingInvoice')}</option>
           {invoices.map((inv) => (
             <option key={inv.id} value={inv.id}>
-              {inv.invoice_number} — {inv.currency} {formatMoney(inv.outstanding_amount)} outstanding
+              {tt('account.fields.invoiceNumberCurrencyOutstandingAmountOutstanding', { invoice_number: inv.invoice_number, currency: inv.currency, outstanding_amount: formatMoney(inv.outstanding_amount) })}
             </option>
           ))}
         </select>
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Payment Date" errors={errors.payment_date} required>
+        <FormField label={tt('common.fields.paymentDate')} errors={errors.payment_date} required>
           <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Amount" errors={errors.amount} required>
+        <FormField label={tt('common.fields.amount')} errors={errors.amount} required>
           <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Payment Method" errors={errors.payment_method} required>
+        <FormField label={tt('account.fields.paymentMethod')} errors={errors.payment_method} required>
           <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={inputStyle}>
             {PAYMENT_METHODS.map((m) => (
               <option key={m} value={m}>
@@ -145,28 +147,28 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
             ))}
           </select>
         </FormField>
-        <FormField label="Bank Name" errors={errors.bank_name}>
+        <FormField label={tt('account.fields.bankName')} errors={errors.bank_name}>
           <input value={bankName} onChange={(e) => setBankName(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Account Name" errors={errors.account_name}>
+        <FormField label={tt('platform.payments.fields.accountName')} errors={errors.account_name}>
           <input value={accountName} onChange={(e) => setAccountName(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Transaction Reference" errors={errors.transaction_reference}>
+        <FormField label={tt('platform.payments.fields.transactionReference')} errors={errors.transaction_reference}>
           <input value={transactionReference} onChange={(e) => setTransactionReference(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
-      <FormField label="Note" errors={errors.note}>
+      <FormField label={tt('documents.inspectionReport.note')} errors={errors.note}>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
       </FormField>
-      <FormField label="Proof of Payment (optional, JPG/PNG/WEBP/PDF, max 5MB)" errors={errors.file}>
+      <FormField label={tt('account.fields.proofPaymentOptionalJpgPngWebp')} errors={errors.file}>
         <input type="file" accept=".jpg,.jpeg,.png,.webp,.pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !invoiceId} onClick={submit}>
-          {submitting ? 'Submitting…' : 'Submit Payment'}
+          {submitting ? tt('common.actions.submitting') : tt('account.actions.submitPayment2')}
         </button>
       </div>
     </Modal>

@@ -7,6 +7,8 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PaymentItem } from '../../../types';
 import { formatMoney } from '../../../utils/money';
+import { t } from '../../../i18n/i18n';
+import { formatDate } from '../../../utils/date';
 
 export function AccountPaymentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -57,53 +59,52 @@ export function AccountPaymentDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/account/payments" label="← Back to Payments" />
+      <BackButton fallbackTo="/app/account/payments" label={t('platform.payments.actions.backToPayments')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, margin: 0 }}>Payment</h1>
+        <h1 style={{ fontSize: 22, margin: 0 }}>{t('platform.payments.titles.payment')}</h1>
         <StatusBadge status={payment.status} />
       </div>
 
       {error && <ErrorState message={error} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-        <SummaryCard label="Invoice" value={payment.invoice ? payment.invoice.invoice_number : '—'} />
-        <SummaryCard label="Payment Date" value={payment.payment_date} />
-        <SummaryCard label="Amount" value={formatMoney(payment.amount)} />
-        <SummaryCard label="Method" value={payment.payment_method} />
+        <SummaryCard label={t('account.fields.invoice')} value={payment.invoice ? payment.invoice.invoice_number : '—'} />
+        <SummaryCard label={t('common.fields.paymentDate')} value={formatDate(payment.payment_date)} />
+        <SummaryCard label={t('common.fields.amount')} value={formatMoney(payment.amount)} />
+        <SummaryCard label={t('common.fields.method')} value={payment.payment_method} />
       </div>
 
       {payment.status === 'REJECTED' && (
         <div style={{ background: '#fef2f2', color: '#b91c1c', padding: 14, borderRadius: 8, marginBottom: 16, fontSize: 14 }}>
-          This payment was rejected{payment.verification_note ? `: ${payment.verification_note}` : '.'} Please submit a new payment for
-          this invoice from the Payments list.
+          {t('account.help.thisPaymentWasRejected')}{payment.verification_note ? `: ${payment.verification_note}` : '.'} {t('account.help.pleaseSubmitNewPaymentInvoicePayments')}
         </div>
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Details</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.details')}</h3>
         <div style={{ fontSize: 13, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, color: '#374151' }}>
-          <div>Bank: {payment.bank_name ?? '—'}</div>
-          <div>Account Name: {payment.account_name ?? '—'}</div>
-          <div>Transaction Reference: {payment.transaction_reference ?? '—'}</div>
-          <div>Note: {payment.note ?? '—'}</div>
+          <div>{t('common.fields.bank')}: {payment.bank_name ?? '—'}</div>
+          <div>{t('platform.payments.fields.accountName')}: {payment.account_name ?? '—'}</div>
+          <div>{t('platform.payments.fields.transactionReference')}: {payment.transaction_reference ?? '—'}</div>
+          <div>{t('documents.inspectionReport.note')}: {payment.note ?? '—'}</div>
         </div>
         {payment.invoice && (
           <div style={{ marginTop: 10 }}>
-            <Link to={`/app/account/invoices/${payment.invoice_id}`}>View Invoice →</Link>
+            <Link to={`/app/account/invoices/${payment.invoice_id}`}>{t('platform.payments.actions.viewInvoice')}</Link>
           </div>
         )}
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Proof of Payment</h3>
-        {(payment.proofs ?? []).length === 0 && <p style={{ fontSize: 13, color: '#9ca3af' }}>No proof files uploaded.</p>}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('platform.payments.sections.proofOfPayment')}</h3>
+        {(payment.proofs ?? []).length === 0 && <p style={{ fontSize: 13, color: '#9ca3af' }}>{t('platform.payments.empty.noProofFilesUploaded')}</p>}
         {(payment.proofs ?? []).map((p) => (
           <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: 13, borderBottom: '1px solid #f3f4f6' }}>
             <span>
               {p.original_filename} <span style={{ color: '#9ca3af' }}>({(p.size / 1024).toFixed(0)} KB)</span>
             </span>
             <button className="btn-link" onClick={() => viewProof(p.id, p.original_filename)}>
-              Download
+              {t('common.actions.download')}
             </button>
           </div>
         ))}

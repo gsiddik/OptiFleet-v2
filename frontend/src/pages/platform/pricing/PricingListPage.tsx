@@ -11,6 +11,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { PricingItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
+import { t as tt } from '../../../i18n/i18n';
 
 const PRICING_METHODS = ['FLAT', 'PER_VEHICLE', 'PER_USER', 'PER_BRANCH', 'PER_WORKSHOP', 'PER_WAREHOUSE', 'TIERED', 'CUSTOM'];
 const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'CUSTOM'];
@@ -24,19 +25,19 @@ export function PricingListPage() {
   const { data, loading, error } = useApiList<PricingItem>('/platform/pricing', {}, reloadKey);
 
   const columns: Column<PricingItem>[] = [
-    { key: 'priceable_type', header: 'Type', render: (p) => p.priceable_type },
-    { key: 'priceable_code', header: 'Code', render: (p) => p.priceable_code },
-    { key: 'pricing_method', header: 'Method', render: (p) => p.pricing_method },
-    { key: 'billing_frequency', header: 'Frequency', render: (p) => p.billing_frequency },
+    { key: 'priceable_type', header: tt('common.fields.type'), render: (p) => p.priceable_type },
+    { key: 'priceable_code', header: tt('common.fields.code'), render: (p) => p.priceable_code },
+    { key: 'pricing_method', header: tt('common.fields.method'), render: (p) => p.pricing_method },
+    { key: 'billing_frequency', header: tt('platform.pricing.fields.frequency'), render: (p) => p.billing_frequency },
     {
       key: 'active_amount',
-      header: 'Active Price',
+      header: tt('platform.pricing.fields.activePrice'),
       render: (p) => {
         const active = p.versions?.find((v) => v.status === 'ACTIVE');
         return active ? `${p.currency} ${formatMoney(active.amount)}` : '—';
       },
     },
-    { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
+    { key: 'status', header: tt('common.fields.status'), render: (p) => <StatusBadge status={p.status} /> },
     {
       key: 'actions',
       header: '',
@@ -44,22 +45,22 @@ export function PricingListPage() {
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {hasPermission('pricing.publish') && (
             <button className="btn-link" onClick={() => setVersioning(p)}>
-              New Version
+              {tt('platform.pricing.actions.newVersion')}
             </button>
           )}
           {p.status === 'ACTIVE' && hasPermission('pricing.deactivate') && (
             <button className="btn-link" onClick={() => toggleActive(p)}>
-              Deactivate
+              {tt('common.actions.deactivate')}
             </button>
           )}
           {p.status === 'ARCHIVED' && hasPermission('pricing.activate') && (
             <button className="btn-link" onClick={() => toggleActive(p)}>
-              Reactivate
+              {tt('common.actions.reactivate')}
             </button>
           )}
           {hasPermission('pricing.delete') && (
             <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => deletePricing(p)}>
-              Delete
+              {tt('common.actions.delete')}
             </button>
           )}
         </div>
@@ -71,8 +72,8 @@ export function PricingListPage() {
     const action = p.status === 'ACTIVE' ? 'deactivate' : 'reactivate';
     const confirmed = window.confirm(
       action === 'deactivate'
-        ? `Deactivate pricing ${p.priceable_type} ${p.priceable_code}? It will no longer be selectable for new contracts; existing contracts are unaffected.`
-        : `Reactivate pricing ${p.priceable_type} ${p.priceable_code} so it can be selected for new contracts again?`,
+        ? tt('platform.pricing.confirm.deactivatePricingPriceableTypePriceableCode', { priceable_type: p.priceable_type, priceable_code: p.priceable_code })
+        : tt('platform.pricing.confirm.reactivatePricingPriceableTypePriceableCode', { priceable_type: p.priceable_type, priceable_code: p.priceable_code }),
     );
     if (!confirmed) return;
     await apiClient.post(`/platform/pricing/${p.id}/${action}`);
@@ -81,7 +82,7 @@ export function PricingListPage() {
 
   async function deletePricing(p: PricingItem) {
     const confirmed = window.confirm(
-      `Delete pricing ${p.priceable_type} ${p.priceable_code}? It will be hidden from selection but existing contracts referencing it keep working — this cannot be undone from here.`,
+      tt('platform.pricing.confirm.deletePricingPriceableTypePriceableCode', { priceable_type: p.priceable_type, priceable_code: p.priceable_code }),
     );
     if (!confirmed) return;
     await apiClient.delete(`/platform/pricing/${p.id}`);
@@ -90,19 +91,19 @@ export function PricingListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Pricing</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('platform.pricing.titles.pricing')}</h1>
       <Toolbar
         actions={
           hasPermission('pricing.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Pricing
+              {tt('platform.pricing.actions.newPricing')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No pricing configured yet." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('platform.pricing.empty.noPricingConfiguredYet')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreatePricingModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -155,8 +156,8 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
   }
 
   return (
-    <Modal open={open} title="New Pricing" onClose={onClose}>
-      <FormField label="Priceable Type" errors={errors.priceable_type} required>
+    <Modal open={open} title={tt('platform.pricing.modals.newPricing')} onClose={onClose}>
+      <FormField label={tt('platform.pricing.fields.priceableType')} errors={errors.priceable_type} required>
         <select value={priceableType} onChange={(e) => setPriceableType(e.target.value)} style={inputStyle}>
           {PRICEABLE_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -165,10 +166,10 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Code (module/bundle code or capacity resource type)" errors={errors.priceable_code} required>
+      <FormField label={tt('platform.pricing.fields.codeModuleBundleCodeCapacityResource')} errors={errors.priceable_code} required>
         <input value={priceableCode} onChange={(e) => setPriceableCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Pricing Method" errors={errors.pricing_method} required>
+      <FormField label={tt('platform.pricing.fields.pricingMethod')} errors={errors.pricing_method} required>
         <select value={pricingMethod} onChange={(e) => setPricingMethod(e.target.value)} style={inputStyle}>
           {PRICING_METHODS.map((m) => (
             <option key={m} value={m}>
@@ -177,7 +178,7 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Billing Frequency" errors={errors.billing_frequency} required>
+      <FormField label={tt('platform.contracts.fields.billingFrequency')} errors={errors.billing_frequency} required>
         <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} style={inputStyle}>
           {FREQUENCIES.map((f) => (
             <option key={f} value={f}>
@@ -186,18 +187,18 @@ function CreatePricingModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Amount (IDR)" errors={errors.amount} required>
+      <FormField label={tt('platform.pricing.fields.amountIdr')} errors={errors.amount} required>
         <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Effective From" errors={errors.effective_from} required>
+      <FormField label={tt('platform.pricing.fields.effectiveFrom')} errors={errors.effective_from} required>
         <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Creating…' : 'Create'}
+          {submitting ? tt('common.actions.creating') : tt('common.actions.create')}
         </button>
       </div>
     </Modal>
@@ -225,19 +226,19 @@ function VersionModal({ pricing, onClose, onCreated }: { pricing: PricingItem; o
   }
 
   return (
-    <Modal open title={`New Price Version — ${pricing.priceable_code}`} onClose={onClose}>
-      <FormField label="Amount (IDR)" errors={errors.amount} required>
+    <Modal open title={tt('platform.pricing.modals.newPriceVersionPriceableCode', { priceable_code: pricing.priceable_code })} onClose={onClose}>
+      <FormField label={tt('platform.pricing.fields.amountIdr')} errors={errors.amount} required>
         <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Effective From" errors={errors.effective_from} required>
+      <FormField label={tt('platform.pricing.fields.effectiveFrom')} errors={errors.effective_from} required>
         <input type="date" value={effectiveFrom} onChange={(e) => setEffectiveFrom(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Publishing…' : 'Publish Version'}
+          {submitting ? tt('platform.bundles.actions.publishing') : tt('platform.pricing.actions.publishVersion')}
         </button>
       </div>
     </Modal>

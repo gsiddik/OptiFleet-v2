@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Branch, Warehouse, Workshop } from '../../../types';
 import { WarehouseStorageLayoutModal } from './WarehouseStorageLayoutModal';
+import { t as tt } from '../../../i18n/i18n';
 
 const TYPES: Warehouse['warehouse_type'][] = ['CENTRAL', 'BRANCH', 'WORKSHOP', 'TIRE', 'CONSUMABLE', 'SCRAP', 'QUARANTINE'];
 
@@ -39,26 +40,26 @@ export function WarehousesPage() {
   }
 
   const columns: Column<Warehouse>[] = [
-    { key: 'code', header: 'Code', render: (w) => w.code },
-    { key: 'name', header: 'Name', render: (w) => w.name },
-    { key: 'warehouse_type', header: 'Type', render: (w) => w.warehouse_type },
-    { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
+    { key: 'code', header: tt('common.fields.code'), render: (w) => w.code },
+    { key: 'name', header: tt('common.fields.name'), render: (w) => w.name },
+    { key: 'warehouse_type', header: tt('common.fields.type'), render: (w) => w.warehouse_type },
+    { key: 'status', header: tt('common.fields.status'), render: (w) => <StatusBadge status={w.status} /> },
     {
       key: 'actions',
       header: '',
       render: (w) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn-link" onClick={() => setLayoutFor(w)}>
-            Storage Layout
+            {tt('organization.actions.storageLayout')}
           </button>
           {hasPermission('warehouse.update') && (
             <button className="btn-link" onClick={() => setEditing(w)}>
-              Edit
+              {tt('common.actions.edit')}
             </button>
           )}
           {(hasPermission('warehouse.activate') || hasPermission('warehouse.deactivate')) && (
             <button className="btn-link" onClick={() => toggleStatus(w)}>
-              {w.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+              {w.status === 'ACTIVE' ? tt('common.actions.deactivate') : tt('common.actions.activate')}
             </button>
           )}
         </div>
@@ -68,7 +69,7 @@ export function WarehousesPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Warehouses</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('organization.titles.warehouses')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -78,14 +79,14 @@ export function WarehousesPage() {
         actions={
           hasPermission('warehouse.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Warehouse
+              {tt('organization.actions.newWarehouse')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No warehouses found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('organization.empty.noWarehousesFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -161,16 +162,16 @@ function WarehouseFormModal({
   }
 
   return (
-    <Modal open={open} title={warehouse ? 'Edit Warehouse' : 'New Warehouse'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required={!warehouse}>
+    <Modal open={open} title={warehouse ? tt('organization.modals.editWarehouse') : tt('organization.modals.newWarehouse')} onClose={onClose}>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required={!warehouse}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!warehouse} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required={!warehouse}>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required={!warehouse}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Branch" errors={errors.branch_id}>
+      <FormField label={tt('common.fields.branch')} errors={errors.branch_id}>
         <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={inputStyle}>
-          <option value="">— None —</option>
+          <option value="">{tt('masterData.fields.none')}</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -178,9 +179,9 @@ function WarehouseFormModal({
           ))}
         </select>
       </FormField>
-      <FormField label="Workshop" errors={errors.workshop_id}>
+      <FormField label={tt('common.fields.workshop')} errors={errors.workshop_id}>
         <select value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} style={inputStyle}>
-          <option value="">— None —</option>
+          <option value="">{tt('masterData.fields.none')}</option>
           {workshops.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -188,7 +189,7 @@ function WarehouseFormModal({
           ))}
         </select>
       </FormField>
-      <FormField label="Type" errors={errors.warehouse_type}>
+      <FormField label={tt('common.fields.type')} errors={errors.warehouse_type}>
         <select value={type} onChange={(e) => setType(e.target.value as Warehouse['warehouse_type'])} style={inputStyle}>
           {TYPES.map((t) => (
             <option key={t} value={t}>
@@ -199,10 +200,10 @@ function WarehouseFormModal({
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
     </Modal>

@@ -9,6 +9,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Branch, RoleItem, Warehouse, Workshop, WorkerItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 interface TenantUserRow {
   id: string;
@@ -33,10 +34,10 @@ export function TenantUsersPage() {
   }
 
   const columns: Column<TenantUserRow>[] = [
-    { key: 'name', header: 'Name', render: (r) => r.name },
-    { key: 'email', header: 'Email', render: (r) => r.email },
-    { key: 'roles', header: 'Roles', render: (r) => r.roles.join(', ') || '—' },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'name', header: t('common.fields.name'), render: (r) => r.name },
+    { key: 'email', header: t('common.fields.email'), render: (r) => r.email },
+    { key: 'roles', header: t('access.sections.roles'), render: (r) => r.roles.join(', ') || '—' },
+    { key: 'status', header: t('common.fields.status'), render: (r) => <StatusBadge status={r.status} /> },
     {
       key: 'actions',
       header: '',
@@ -44,12 +45,12 @@ export function TenantUsersPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {hasPermission('user.assign') && (
             <button className="btn-link" onClick={() => setManaging(r)}>
-              Manage Access
+              {t('access.actions.manageAccess')}
             </button>
           )}
           {hasPermission('user.update') && (
             <button className="btn-link" onClick={() => toggleStatus(r)}>
-              {r.status === 'active' ? 'Deactivate' : 'Activate'}
+              {r.status === 'active' ? t('common.actions.deactivate') : t('common.actions.activate')}
             </button>
           )}
         </div>
@@ -59,21 +60,21 @@ export function TenantUsersPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Users</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('access.titles.users')}</h1>
       <Toolbar
         search={search}
         onSearchChange={setSearch}
         actions={
           hasPermission('user.create') ? (
             <button className="btn-primary" onClick={() => setShowInvite(true)}>
-              + Add User
+              {t('platform.tenants.actions.addUser')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No users found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('access.empty.noUsersFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <InviteModal
@@ -147,14 +148,14 @@ function InviteModal({
         try {
           await apiClient.post(`/app/workers/${workerId}/link-user`, { user_id: userId });
         } catch (err) {
-          setFollowUpError(`User created, but linking the worker failed: ${extractApiError(err).message}`);
+          setFollowUpError(t('access.errors.userCreatedButLinkingWorkerFailed', { message: extractApiError(err).message }));
         }
       }
       if (roleId) {
         try {
           await apiClient.post(`/app/users/${membershipId}/roles`, { role_id: roleId });
         } catch (err) {
-          setFollowUpError((prev) => prev ?? `User created, but assigning the role failed: ${extractApiError(err).message}`);
+          setFollowUpError((prev) => prev ?? t('access.help.userCreatedButAssigningRoleFailed', { message: extractApiError(err).message }));
         }
       }
 
@@ -174,20 +175,20 @@ function InviteModal({
   }
 
   return (
-    <Modal open={open} title="Add User" onClose={onClose}>
-      <FormField label="Name" errors={errors.name} required>
+    <Modal open={open} title={t('access.modals.addUser')} onClose={onClose}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Email" errors={errors.email} required>
+      <FormField label={t('common.fields.email')} errors={errors.email} required>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Password" errors={errors.password} required>
+      <FormField label={t('common.fields.password')} errors={errors.password} required>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
       </FormField>
       {canLinkWorker && (
-        <FormField label="Link to Worker (optional)">
+        <FormField label={t('access.fields.linkToWorkerOptional')}>
           <select value={workerId} onChange={(e) => setWorkerId(e.target.value)} style={inputStyle}>
-            <option value="">Don't link</option>
+            <option value="">{t('access.fields.donTLink')}</option>
             {workers.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -197,9 +198,9 @@ function InviteModal({
         </FormField>
       )}
       {canAssignRole && (
-        <FormField label="Assign Role (optional)">
+        <FormField label={t('access.fields.assignRoleOptional')}>
           <select value={roleId} onChange={(e) => setRoleId(e.target.value)} style={inputStyle}>
-            <option value="">Don't assign</option>
+            <option value="">{t('access.fields.donTAssign')}</option>
             {roles.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
@@ -211,10 +212,10 @@ function InviteModal({
       {followUpError && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 8 }}>{followUpError}</div>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          {followUpError ? 'Close' : 'Cancel'}
+          {followUpError ? t('common.actions.close') : t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Adding…' : 'Add User'}
+          {submitting ? t('common.actions.adding') : t('access.modals.addUser')}
         </button>
       </div>
     </Modal>
@@ -281,14 +282,14 @@ function ManageAccessModal({ row, onClose, onSaved }: { row: TenantUserRow; onCl
     scopeType === 'BRANCH' ? branches : scopeType === 'WORKSHOP' ? workshops : scopeType === 'WAREHOUSE' ? warehouses : [];
 
   return (
-    <Modal open title={`Manage Access — ${row.name}`} onClose={onClose} width={520}>
+    <Modal open title={t('access.modals.manageAccessName', { name: row.name })} onClose={onClose} width={520}>
       {loading ? (
         <LoadingState />
       ) : (
         <>
-          <h4 style={{ fontSize: 13, marginBottom: 6 }}>Roles</h4>
+          <h4 style={{ fontSize: 13, marginBottom: 6 }}>{t('access.sections.roles')}</h4>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
-            {row.roles.length === 0 && <span style={{ color: '#9ca3af', fontSize: 13 }}>No roles assigned</span>}
+            {row.roles.length === 0 && <span style={{ color: '#9ca3af', fontSize: 13 }}>{t('access.empty.noRolesAssigned')}</span>}
             {row.roles.map((r) => (
               <span key={r} style={{ background: '#eff6ff', padding: '3px 8px', borderRadius: 6, fontSize: 12 }}>
                 {r}
@@ -297,7 +298,7 @@ function ManageAccessModal({ row, onClose, onSaved }: { row: TenantUserRow; onCl
           </div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
             <select value={selectedRoleId} onChange={(e) => setSelectedRoleId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-              <option value="">Select role to assign…</option>
+              <option value="">{t('access.fields.selectRoleToAssign')}</option>
               {roles.map((r) => (
                 <option key={r.id} value={r.id}>
                   {r.name}
@@ -305,13 +306,13 @@ function ManageAccessModal({ row, onClose, onSaved }: { row: TenantUserRow; onCl
               ))}
             </select>
             <button className="btn-secondary" onClick={assignRole}>
-              Assign
+              {t('common.actions.assign')}
             </button>
           </div>
 
-          <h4 style={{ fontSize: 13, marginBottom: 6 }}>Data Scope</h4>
+          <h4 style={{ fontSize: 13, marginBottom: 6 }}>{t('access.sections.dataScope')}</h4>
           <div style={{ marginBottom: 8 }}>
-            {scopes.length === 0 && <div style={{ color: '#9ca3af', fontSize: 13 }}>No scope assigned (no access).</div>}
+            {scopes.length === 0 && <div style={{ color: '#9ca3af', fontSize: 13 }}>{t('access.empty.noScopeAssignedNoAccess')}</div>}
             {scopes.map((s) => (
               <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}>
                 <span>
@@ -319,22 +320,22 @@ function ManageAccessModal({ row, onClose, onSaved }: { row: TenantUserRow; onCl
                   {s.scope_resource_id ? ` — ${s.scope_resource_id}` : ''}
                 </span>
                 <button className="btn-link" onClick={() => removeScope(s.id)}>
-                  remove
+                  {t('platform.modules.actions.remove')}
                 </button>
               </div>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
             <select value={scopeType} onChange={(e) => setScopeType(e.target.value)} style={{ ...inputStyle, width: 130 }}>
-              <option value="TENANT">TENANT</option>
-              <option value="BRANCH">BRANCH</option>
-              <option value="WORKSHOP">WORKSHOP</option>
-              <option value="WAREHOUSE">WAREHOUSE</option>
-              <option value="OWN">OWN</option>
+              <option value="TENANT">{t('access.fields.tenant')}</option>
+              <option value="BRANCH">{t('access.fields.branch')}</option>
+              <option value="WORKSHOP">{t('access.fields.workshop')}</option>
+              <option value="WAREHOUSE">{t('access.fields.warehouse')}</option>
+              <option value="OWN">{t('access.fields.own')}</option>
             </select>
             {!['TENANT', 'OWN'].includes(scopeType) && (
               <select value={scopeResourceId} onChange={(e) => setScopeResourceId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                <option value="">Select resource…</option>
+                <option value="">{t('access.fields.selectResource')}</option>
                 {resourceOptions.map((o) => (
                   <option key={o.id} value={o.id}>
                     {o.name}
@@ -343,14 +344,14 @@ function ManageAccessModal({ row, onClose, onSaved }: { row: TenantUserRow; onCl
               </select>
             )}
             <button className="btn-secondary" onClick={addScope}>
-              Add
+              {t('common.actions.add2')}
             </button>
           </div>
         </>
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
         <button className="btn-primary" onClick={onClose}>
-          Done
+          {t('access.actions.done')}
         </button>
       </div>
     </Modal>

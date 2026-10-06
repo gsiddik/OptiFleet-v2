@@ -12,6 +12,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Tenant } from '../../../types';
 import { formatTimestampDate } from '../../../utils/date';
+import { t as tt } from '../../../i18n/i18n';
 
 export function TenantListPage() {
   const { hasPermission } = useAuth();
@@ -30,15 +31,15 @@ export function TenantListPage() {
   );
 
   const columns: Column<Tenant>[] = [
-    { key: 'code', header: 'Code', sortable: true, render: (t) => <Link to={`/platform/tenants/${t.id}`}>{t.code}</Link> },
-    { key: 'name', header: 'Name', sortable: true, render: (t) => t.name },
-    { key: 'status', header: 'Status', sortable: true, render: (t) => <StatusBadge status={t.status} /> },
-    { key: 'created_at', header: 'Created', sortable: true, render: (t) => formatTimestampDate(t.created_at) },
+    { key: 'code', header: tt('common.fields.code'), sortable: true, render: (t) => <Link to={`/platform/tenants/${t.id}`}>{t.code}</Link> },
+    { key: 'name', header: tt('common.fields.name'), sortable: true, render: (t) => t.name },
+    { key: 'status', header: tt('common.fields.status'), sortable: true, render: (t) => <StatusBadge status={t.status} /> },
+    { key: 'created_at', header: tt('platform.tenants.fields.created'), sortable: true, render: (t) => formatTimestampDate(t.created_at) },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Tenant Management</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('platform.tenants.titles.tenantManagement')}</h1>
 
       <Toolbar
         search={search}
@@ -49,7 +50,7 @@ export function TenantListPage() {
         actions={
           hasPermission('tenant.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Tenant
+              {tt('platform.tenants.actions.newTenant')}
             </button>
           ) : null
         }
@@ -62,17 +63,17 @@ export function TenantListPage() {
           }}
           style={{ ...inputStyle, width: 160 }}
         >
-          <option value="">All statuses</option>
-          <option value="DRAFT">Draft</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-          <option value="SUSPENDED">Suspended</option>
+          <option value="">{tt('common.filters.allStatuses')}</option>
+          <option value="DRAFT">{tt('common.fields.draft')}</option>
+          <option value="ACTIVE">{tt('common.fields.active')}</option>
+          <option value="INACTIVE">{tt('common.fields.inactive')}</option>
+          <option value="SUSPENDED">{tt('platform.tenants.fields.suspended')}</option>
         </select>
       </Toolbar>
 
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No tenants found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('platform.tenants.empty.noTenantsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table
@@ -126,19 +127,19 @@ function CreateTenantModal({ open, onClose, onCreated }: { open: boolean; onClos
   }
 
   return (
-    <Modal open={open} title="New Tenant" onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required>
-        <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} placeholder="e.g. ACME" />
+    <Modal open={open} title={tt('platform.tenants.modals.newTenant')} onClose={onClose}>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required>
+        <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} placeholder={tt('platform.tenants.placeholders.eGAcme')} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required>
-        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder="Company name" />
+      <FormField label={tt('common.fields.name')} errors={errors.name} required>
+        <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} placeholder={tt('platform.tenants.placeholders.companyName')} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Creating…' : 'Create Tenant'}
+          {submitting ? tt('common.actions.creating') : tt('platform.tenants.actions.createTenant')}
         </button>
       </div>
     </Modal>

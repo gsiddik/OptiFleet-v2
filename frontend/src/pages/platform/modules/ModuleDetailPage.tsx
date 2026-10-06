@@ -7,6 +7,7 @@ import { inputStyle } from '../../../components/FormField';
 import { useAuth } from '../../../auth/AuthContext';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ModuleCatalogItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 interface DependencyData {
   direct_dependencies: ModuleCatalogItem[];
@@ -68,23 +69,23 @@ export function ModuleDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/platform/modules" label="← Back to Module Catalog" />
+      <BackButton fallbackTo="/platform/modules" label={t('platform.modules.actions.backToModuleCatalog')} />
       <h1 style={{ fontSize: 22, marginBottom: 4 }}>
         {module.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({module.code})</span>
       </h1>
-      <p style={{ color: '#6b7280', marginBottom: 24 }}>{module.description ?? 'No description.'}</p>
+      <p style={{ color: '#6b7280', marginBottom: 24 }}>{module.description ?? t('platform.modules.empty.noDescription')}</p>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Direct Dependencies</h3>
-          {deps.direct_dependencies.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>None</p>}
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('platform.modules.sections.directDependencies')}</h3>
+          {deps.direct_dependencies.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{t('common.fields.none')}</p>}
           <ul style={{ paddingLeft: 18, fontSize: 14 }}>
             {deps.direct_dependencies.map((d) => (
               <li key={d.id} style={{ marginBottom: 4 }}>
                 {d.name} ({d.code})
                 {hasPermission('module.manage') && (
                   <button className="btn-link" onClick={() => removeDependency(d.id)}>
-                    remove
+                    {t('platform.modules.actions.remove')}
                   </button>
                 )}
               </li>
@@ -94,7 +95,7 @@ export function ModuleDetailPage() {
           {hasPermission('module.manage') && (
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <select value={selected} onChange={(e) => setSelected(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                <option value="">Select module…</option>
+                <option value="">{t('platform.modules.fields.selectModule')}</option>
                 {availableToAdd.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name} ({m.code})
@@ -102,18 +103,18 @@ export function ModuleDetailPage() {
                 ))}
               </select>
               <button className="btn-secondary" onClick={addDependency}>
-                Add
+                {t('common.actions.add2')}
               </button>
             </div>
           )}
 
-          <h4 style={{ fontSize: 13, color: '#6b7280', marginTop: 16 }}>Transitive Dependencies</h4>
+          <h4 style={{ fontSize: 13, color: '#6b7280', marginTop: 16 }}>{t('platform.modules.sections.transitiveDependencies')}</h4>
           <div style={{ fontSize: 13 }}>{deps.transitive_dependencies.map((d) => d.code).join(', ') || '—'}</div>
         </div>
 
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Direct Dependents (reverse)</h3>
-          {deps.direct_dependents.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>None</p>}
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('platform.modules.sections.directDependentsReverse')}</h3>
+          {deps.direct_dependents.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{t('common.fields.none')}</p>}
           <ul style={{ paddingLeft: 18, fontSize: 14 }}>
             {deps.direct_dependents.map((d) => (
               <li key={d.id}>
@@ -121,7 +122,7 @@ export function ModuleDetailPage() {
               </li>
             ))}
           </ul>
-          <h4 style={{ fontSize: 13, color: '#6b7280', marginTop: 16 }}>Transitive Dependents</h4>
+          <h4 style={{ fontSize: 13, color: '#6b7280', marginTop: 16 }}>{t('platform.modules.sections.transitiveDependents')}</h4>
           <div style={{ fontSize: 13 }}>{deps.transitive_dependents.map((d) => d.code).join(', ') || '—'}</div>
         </div>
       </div>
