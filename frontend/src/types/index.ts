@@ -2637,3 +2637,78 @@ export interface AvailableWorkflowTransition {
   to_status: string;
   requires_approval: boolean;
 }
+
+/** Tire Management → Rim: a Rim Product (Item Type RIM) with its spec and serialized rim counts. */
+export interface RimProductListItem {
+  id: string;
+  tenant_id: string | null;
+  code: string;
+  sku: string | null;
+  name: string;
+  brand: string | null;
+  status: string;
+  model: string | null;
+  rim_type: string | null;
+  diameter_inch: string | null;
+  width_inch: string | null;
+  bolt_holes: number | null;
+  pcd_mm: string | null;
+  offset_mm: string | null;
+  center_bore_mm: string | null;
+  material: string | null;
+  new_qty: number;
+  installed_qty: number;
+  used_qty: number;
+}
+
+export type RimInventoryCategory = 'NEW' | 'INSTALLED' | 'USED';
+
+export interface RimInventorySummary {
+  new_qty: number;
+  installed_qty: number;
+  used_qty: number;
+}
+
+/** One physical rim (Component Asset of a Rim Product). */
+export interface RimInventoryRow {
+  id: string;
+  serial_number: string | null;
+  asset_number: string | null;
+  current_status: string;
+  purchase_date: string | null;
+  vehicle_id: string | null;
+  registration_number: string | null;
+  position_code: string | null;
+  installed_at: string | null;
+  warehouse_id: string | null;
+  warehouse_name: string | null;
+}
+
+/** Shared Excel import (Rim serials, Vehicles, Products): preview / result payloads. */
+export type ExcelImportRowStatus = 'VALID' | 'DUPLICATE' | 'INVALID';
+
+export interface ExcelImportColumn {
+  id: string;
+  header: string;
+  required: boolean;
+}
+
+export interface ExcelImportPreviewRow {
+  row: number;
+  values: Record<string, string | number | boolean | null>;
+  status: ExcelImportRowStatus;
+  errors: string[];
+}
+
+export interface ExcelImportPreview {
+  columns: ExcelImportColumn[];
+  rows: ExcelImportPreviewRow[];
+  summary: { total: number; valid: number; duplicate: number; invalid: number };
+}
+
+export interface ExcelImportResult {
+  status: 'SUCCESS' | 'PARTIAL' | 'FAILED';
+  imported: number;
+  created: { row: number; id: string; label: string }[];
+  failed: { row: number; values: Record<string, string | number | boolean | null>; status: ExcelImportRowStatus; reason: string }[];
+}

@@ -1,0 +1,96 @@
+{
+  "actions": {
+    "backToRims": "Kembali ke Velg",
+    "importRim": "Impor Velg",
+    "newRim": "Velg Baru",
+    "openLegacyCatalog": "Buka katalog lama",
+    "registering": "Mendaftarkan…",
+    "registerRim": "Daftarkan Velg"
+  },
+  "empty": {
+    "noRimProducts": "Belum ada produk velg. Buat dengan Velg Baru.",
+    "noRims": "Tidak ada velg"
+  },
+  "errors": {
+    "contextComponentGroup": "Produk yang dibuat dari Velg harus berada di grup komponen Sistem Roda & Ban.",
+    "contextItemType": "Produk yang dibuat dari Velg harus memiliki Jenis Item RIM.",
+    "contextSerialTracked": "Velg dilacak berdasarkan nomor seri: Lacak Nomor Seri harus aktif.",
+    "invalidPosition": "{{position}} bukan posisi pada Konfigurasi Roda {{vehicle}}.",
+    "noWheelConfiguration": "Kendaraan {{vehicle}} belum memiliki Konfigurasi Roda; tetapkan terlebih dahulu sebelum mendaftarkan velg.",
+    "positionOccupied": "Posisi {{position}} pada {{vehicle}} sudah terpasang velg {{serial}}. Lepas atau ganti terlebih dahulu.",
+    "positionRequired": "Pilih posisi roda pada kendaraan.",
+    "productDeleted": "Produk ini sudah dihapus; velg tidak dapat lagi ditambahkan.",
+    "productNotRim": "Pilih produk dengan Jenis Item Velg.",
+    "serialExists": "Nomor seri {{serial}} sudah terdaftar.",
+    "serialRequired": "Nomor Seri wajib diisi.",
+    "serialTooLong": "Nomor Seri tidak boleh lebih dari 100 karakter.",
+    "vehicleNotFound": "Kendaraan {{vehicle}} tidak ditemukan.",
+    "vehicleOutOfScope": "Kendaraan {{vehicle}} berada di luar lingkup data Anda.",
+    "warehouseNotFound": "Gudang {{warehouse}} tidak ditemukan.",
+    "warehouseOutOfScope": "Gudang ini berada di luar lingkup data Anda.",
+    "warehouseRequired": "Pilih gudang tempat velg disimpan."
+  },
+  "fields": {
+    "boltPatternPcd": "Lubang Baut × PCD (mm)",
+    "centerBore": "Lubang Tengah",
+    "diameterXWidth": "Diameter × Lebar",
+    "installedOn": "Dipasang Pada",
+    "offset": "Offset",
+    "positionOccupiedBy": "{{position}} — velg {{serial}} terpasang",
+    "purchaseDateOptional": "Tanggal Pembelian (opsional)",
+    "registerAs": "Daftarkan sebagai",
+    "rimType": "Jenis Velg",
+    "valueMm": "{{value}} mm"
+  },
+  "help": {
+    "importInstalledIntro": "Daftarkan banyak velg terpasang dari {{productName}} sekaligus: Nomor Seri, Registrasi Kendaraan, dan Kode Posisi per baris.",
+    "importNewStockIntro": "Daftarkan banyak velg Stok Baru dari {{productName}} sekaligus: Nomor Seri dan Kode Gudang per baris.",
+    "legacyCatalog_one": "{{count}} velg tercatat di katalog Velg sebelumnya.",
+    "legacyCatalog_other": "{{count}} velg tercatat di katalog Velg sebelumnya.",
+    "legacyCatalogPage": "Data katalog Velg mandiri sebelumnya. Velg baru adalah Produk Velg (Manajemen Ban → Velg) dengan velg bernomor seri.",
+    "noWheelConfiguration": "Kendaraan ini belum memiliki Konfigurasi Roda; tetapkan terlebih dahulu di Detail Kendaraan.",
+    "positionFromConfiguration": "Posisi diambil dari Konfigurasi Roda kendaraan. Ban pada posisi yang sama tidak terpengaruh.",
+    "productDeleted": "Produk ini sudah dihapus. Velg dan riwayatnya tetap terlihat; velg baru tidak dapat ditambahkan.",
+    "registeredSerial": "Velg {{serial}} berhasil didaftarkan.",
+    "registerFor": "Daftarkan velg bernomor seri dari {{productName}}. Sebagian besar velg sudah terpasang di kendaraan: daftarkan sebagai Terpasang pada posisi rodanya."
+  },
+  "import": {
+    "columnPositionCode": "Kode Posisi",
+    "columnSerialNumber": "Nomor Seri",
+    "columnVehicleRegistration": "Registrasi Kendaraan",
+    "columnWarehouseCode": "Kode Gudang",
+    "helpPositionCode": "Kode posisi roda dari Konfigurasi Roda kendaraan (mis. FL, FR, RLO).",
+    "helpSerialNumber": "Nomor seri fisik velg, maksimal 100 karakter. Unik di perusahaan Anda.",
+    "helpVehicleRegistration": "Nomor registrasi kendaraan tempat velg terpasang (spasi dan huruf besar/kecil diabaikan).",
+    "helpWarehouseCode": "Kode gudang tempat velg disimpan (Organisasi → Gudang).",
+    "positionRepeatedInFile": "Posisi {{position}} pada {{vehicle}} berulang di dalam berkas (pertama pada baris {{row}}).",
+    "ruleNewStock": "Velg yang diimpor didaftarkan sebagai Stok Baru, tanpa kendaraan.",
+    "rulePosition": "Posisi harus merupakan posisi pada Konfigurasi Roda tersebut yang belum terpasang velg, dan setiap kendaraan + posisi hanya boleh muncul satu kali di dalam berkas.",
+    "ruleProduct": "Setiap baris adalah velg dari produk {{productName}}; spesifikasi diambil dari produk.",
+    "ruleSerialUnique": "Nomor seri hanya boleh didaftarkan satu kali di perusahaan Anda (huruf besar/kecil dan spasi di awal/akhir diabaikan) dan satu kali di dalam berkas.",
+    "ruleTireCoexists": "Ban yang terpasang pada posisi yang sama tidak terpengaruh: satu posisi memuat satu ban dan satu velg.",
+    "ruleVehicle": "Kendaraan harus ada, berada di dalam lingkup data Anda, dan memiliki Konfigurasi Roda.",
+    "titleInstalled": "Impor Nomor Seri Velg (Terpasang) — {{productName}} ({{productCode}})",
+    "titleNewStock": "Impor Nomor Seri Velg (Stok Baru) — {{productName}} ({{productCode}})"
+  },
+  "modals": {
+    "importInstalled": "Impor Velg — Terpasang",
+    "importNewStock": "Impor Velg — Stok Baru",
+    "newRim": "Velg Baru",
+    "registerRim": "Daftarkan Velg"
+  },
+  "placeholders": {
+    "searchVehicle": "Cari nomor registrasi…"
+  },
+  "rimTypes": {
+    "alloy": "Alloy",
+    "forged": "Tempa",
+    "steel": "Baja"
+  },
+  "sections": {
+    "usedStock": "Stok Bekas"
+  },
+  "titles": {
+    "legacyCatalog": "Katalog Velg Lama"
+  }
+}

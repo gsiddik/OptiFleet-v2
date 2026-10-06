@@ -115,6 +115,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   tires: 'Tires',
   'wheel-configurations': 'Wheel Configurations',
   rims: 'Rims',
+  catalog: 'Catalog',
   'component-assets': 'Component Assets',
   warranties: 'Warranties',
   'warranty-claims': 'Warranty Claims',

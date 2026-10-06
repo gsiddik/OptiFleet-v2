@@ -62,6 +62,7 @@ use App\Http\Controllers\Api\Tenant\PurchaseRequestController;
 use App\Http\Controllers\Api\Tenant\QualityControlController;
 use App\Http\Controllers\Api\Tenant\RfqController;
 use App\Http\Controllers\Api\Tenant\RimController;
+use App\Http\Controllers\Api\Tenant\RimProductController;
 use App\Http\Controllers\Api\Tenant\RoleController;
 use App\Http\Controllers\Api\Tenant\SparePartSaleController;
 use App\Http\Controllers\Api\Tenant\StockMovementController;
@@ -747,6 +748,15 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/tire-products/{tireProduct}/import-template', [TireProductController::class, 'importTemplate'])->middleware('permission:tire.manage');
             Route::post('/tire-products/{tireProduct}/import/preview', [TireProductController::class, 'importPreview'])->middleware('permission:tire.manage');
             Route::post('/tire-products/{tireProduct}/import', [TireProductController::class, 'import'])->middleware('permission:tire.manage');
+            // Tire Management → Rim: Rim Products (Item Type RIM) and their serial-numbered rims.
+            Route::get('/rim-products', [RimProductController::class, 'index'])->middleware('permission:rim.view');
+            Route::get('/rim-products/vehicles/{vehicle}/positions', [RimProductController::class, 'vehiclePositions'])->middleware('permission:rim.manage');
+            Route::get('/rim-products/{rimProduct}', [RimProductController::class, 'show'])->middleware('permission:rim.view');
+            Route::get('/rim-products/{rimProduct}/inventory', [RimProductController::class, 'inventory'])->middleware('permission:rim.view');
+            Route::post('/rim-products/{rimProduct}/rims', [RimProductController::class, 'register'])->middleware('permission:rim.manage');
+            Route::get('/rim-products/{rimProduct}/import-template', [RimProductController::class, 'importTemplate'])->middleware('permission:rim.manage');
+            Route::post('/rim-products/{rimProduct}/import/preview', [RimProductController::class, 'importPreview'])->middleware('permission:rim.manage');
+            Route::post('/rim-products/{rimProduct}/import', [RimProductController::class, 'import'])->middleware('permission:rim.manage');
             Route::get('/tires/{tire}', [TireController::class, 'show'])->middleware('permission:tire.view');
             Route::get('/tires/{tire}/history', [TireController::class, 'history'])->middleware('permission:tire.view');
             // Used Tire Management inspection (REMOVED / HOLD → REUSE / REPAIR / RETREAD / HOLD / SCRAP).

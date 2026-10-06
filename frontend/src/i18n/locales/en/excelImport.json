@@ -1,0 +1,75 @@
+{
+  "actions": {
+    "deselectAll": "Deselect all",
+    "downloadTemplate": "Download Template",
+    "importing": "Importing…",
+    "importSelected_one": "Import {{count}} selected row",
+    "importSelected_other": "Import {{count}} selected rows",
+    "reading": "Reading…",
+    "selectAllValid": "Select all valid rows",
+    "uploadPreview": "Upload & Preview"
+  },
+  "errors": {
+    "alreadyExists": "{{column}} {{value}} already exists.",
+    "duplicateOnSave": "This record was registered by someone else in the meantime.",
+    "extraValues": "Values outside the template columns are not allowed.",
+    "fileEmpty": "The file is empty.",
+    "fileInvalid": "The file is not a valid Excel (.xlsx) workbook.",
+    "fileRequired": "Choose an Excel (.xlsx) file to upload.",
+    "fileTooLarge": "The file may not be larger than {{maxMb}} MB.",
+    "formulaNotAllowed": "{{column}} contains a formula; enter the value itself.",
+    "headerMismatch": "The header row of \"{{sheet}}\" must be exactly: {{headers}}. Do not rename, add, remove or move columns.",
+    "invalidBoolean": "{{column}} must be Yes or No.",
+    "invalidDate": "{{column}} must be a date in YYYY-MM-DD format.",
+    "invalidInteger": "{{column}} must be a whole number.",
+    "invalidNumber": "{{column}} must be a number.",
+    "maxRows": "A file may contain at most {{maxRows}} rows.",
+    "noRows": "\"{{sheet}}\" has no data rows.",
+    "notFound": "{{column}} {{value}} was not found.",
+    "onlyXlsx": "Only Excel files (.xlsx) can be imported.",
+    "repeatedInFile": "{{column}} {{value}} is repeated in the file (first on row {{row}}).",
+    "required": "{{column}} is required.",
+    "sheetMissing": "The workbook has no sheet named \"{{sheet}}\". Use the downloaded template and do not rename its sheets.",
+    "tooLong": "{{column}} may not be longer than {{max}} characters.",
+    "unsafeText": "{{column}} must not start with =, +, - or @."
+  },
+  "fields": {
+    "check": "Check",
+    "excelFile": "Excel file",
+    "reason": "Reason",
+    "row": "Row",
+    "selectAllValidRows": "Select all valid rows",
+    "selectRow": "Select row {{row}}"
+  },
+  "help": {
+    "previewSummary": "{{total}} rows: {{valid}} ready, {{duplicate}} duplicate, {{invalid}} invalid — {{selected}} selected.",
+    "resultFailed_one": "Nothing was imported: {{count}} row failed.",
+    "resultFailed_other": "Nothing was imported: {{count}} rows failed.",
+    "resultPartial": "{{imported}} imported, {{failed}} not imported — see the reasons below.",
+    "resultSuccess_one": "{{count}} row imported.",
+    "resultSuccess_other": "{{count}} rows imported.",
+    "sheets": "Only the sheet \"Fill Here\" is read. Keep the sheet names \"How To\" and \"Fill Here\" and the header row unchanged."
+  },
+  "howTo": {
+    "column": "Column",
+    "columnsTitle": "Columns",
+    "description": "Description",
+    "doNotRename": "Do not rename the sheets \"{{howTo}}\" and \"{{fill}}\", and do not rename, add, remove or reorder the header columns.",
+    "examplesTitle": "Examples",
+    "fillSheet": "Fill the sheet \"{{sheet}}\": one record per row, starting on row 2.",
+    "formats": "Dates: YYYY-MM-DD (e.g. 2026-07-01). Numbers: digits with a dot as decimal separator (e.g. 1250.5). Yes/No columns: Yes or No.",
+    "maxRows": "At most {{maxRows}} rows per file.",
+    "noFormulas": "Enter plain values only: formulas and values starting with =, +, - or @ are rejected.",
+    "optional": "Optional",
+    "required": "Required",
+    "requiredColumns": "Columns marked \"Required\" must be filled; \"Optional\" columns may be left empty.",
+    "requirement": "Required / Optional",
+    "rulesTitle": "Rules",
+    "upload": "Save the file as .xlsx, upload it, review the preview, select the rows to import and confirm. Invalid or duplicate rows are reported and never block the valid rows."
+  },
+  "status": {
+    "duplicate": "Duplicate",
+    "invalid": "Invalid",
+    "ready": "Ready"
+  }
+}
