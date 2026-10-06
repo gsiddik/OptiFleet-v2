@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../../api/client';
 import { ErrorState, LoadingState } from '../../components/States';
+import { formatDateTime } from '../../utils/date';
 
 interface DashboardData {
   tenants_total: number;
@@ -77,7 +78,7 @@ export function PlatformDashboardPage() {
         {data.recent_audit_logs.length === 0 && <div style={{ color: '#9ca3af' }}>No recent activity.</div>}
         {data.recent_audit_logs.map((log) => (
           <div key={log.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            <strong>{log.resource_type}</strong> {log.action} — {new Date(log.created_at).toLocaleString()}
+            <strong>{log.resource_type}</strong> {log.action} — {formatDateTime(log.created_at)}
           </div>
         ))}
       </div>

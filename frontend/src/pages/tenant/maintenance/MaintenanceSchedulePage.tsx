@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { MaintenancePackageItemType, MaintenanceScheduleItem, VehicleItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatNumber } from '../../../utils/number';
 
 const STATUSES = ['', 'UPCOMING', 'DUE_SOON', 'DUE', 'OVERDUE', 'SCHEDULED', 'COMPLETED'];
 
@@ -75,7 +76,7 @@ export function MaintenanceSchedulePage() {
     { key: 'package', header: 'Package', render: (s) => s.package?.name ?? '—' },
     { key: 'schedule_start_date', header: 'Schedule Start', render: (s) => (s.schedule_start_date ? s.schedule_start_date.slice(0, 10) : '—') },
     { key: 'due_date', header: 'Next Due Date', render: (s) => (s.next_due_date ? s.next_due_date.slice(0, 10) : '—') },
-    { key: 'due_odometer', header: 'Next Due Odometer', render: (s) => (s.next_due_odometer != null ? Number(s.next_due_odometer).toLocaleString() : '—') },
+    { key: 'due_odometer', header: 'Next Due Odometer', render: (s) => (s.next_due_odometer != null ? formatNumber(s.next_due_odometer) : '—') },
     { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.status} /> },
     {
       key: 'actions',

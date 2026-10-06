@@ -1,3 +1,4 @@
+import { formatDateTime } from '../../utils/date';
 export interface Freshness {
   data_as_of: string | null;
   last_successful_etl_at: string | null;
@@ -15,7 +16,7 @@ export function FreshnessBanner({ freshness }: { freshness: Freshness }) {
     );
   }
 
-  const asOf = new Date(freshness.last_successful_etl_at).toLocaleString();
+  const asOf = formatDateTime(freshness.last_successful_etl_at);
 
   return (
     <div

@@ -6,6 +6,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import type { WorkspaceItem, WorkspaceReservationItem } from '../../../types';
 import { peakConcurrency, reservationsOnDay } from './schedulerOccupancy';
+import { formatTime } from '../../../utils/date';
 
 function toDateInput(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -159,8 +160,8 @@ export function WorkshopSchedulerPage() {
                             <div style={{ fontWeight: 600 }}>{r.work_order?.wo_number ?? 'Reserved'}</div>
                             <div style={{ color: '#6b7280' }}>{r.work_order?.vehicle?.registration_number ?? ''}</div>
                             <div style={{ color: '#6b7280' }}>
-                              {new Date(r.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–
-                              {new Date(r.end_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              {formatTime(r.start_at)}–
+                              {formatTime(r.end_at)}
                               {r.status === 'RESERVED' ? ' · Requested' : ''}
                             </div>
                           </Link>

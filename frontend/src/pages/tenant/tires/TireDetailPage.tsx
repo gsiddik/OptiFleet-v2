@@ -11,6 +11,7 @@ import type { TireItem, VehicleItem, WheelConfigurationItem } from '../../../typ
 import { NumericInput } from '../../../components/NumericInput';
 import { InstalledTireSection } from './InstalledTireSection';
 import { RetreadHistory } from './retread/RetreadHistory';
+import { formatTimestampDate } from '../../../utils/date';
 
 export function TireDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -210,9 +211,9 @@ export function TireDetailPage() {
         {(tire.installations ?? []).length === 0 && <EmptyState label="No installations yet." />}
         {(tire.installations ?? []).map((i) => (
           <div key={i.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {i.vehicle?.registration_number ?? i.vehicle_id} — {i.wheel_position} — installed {new Date(i.installed_at).toLocaleDateString()}
+            {i.vehicle?.registration_number ?? i.vehicle_id} — {i.wheel_position} — installed {formatTimestampDate(i.installed_at)}
             {i.installation_date_source !== 'KNOWN' && ` (${i.installation_date_source})`}
-            {i.removed_at && ` — removed ${new Date(i.removed_at).toLocaleDateString()}`}
+            {i.removed_at && ` — removed ${formatTimestampDate(i.removed_at)}`}
           </div>
         ))}
       </div>
@@ -222,7 +223,7 @@ export function TireDetailPage() {
         {(tire.rotations ?? []).length === 0 && <EmptyState label="No rotations yet." />}
         {(tire.rotations ?? []).map((r) => (
           <div key={r.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {r.from_position ?? '—'} → {r.to_position} — {new Date(r.occurred_at).toLocaleDateString()}
+            {r.from_position ?? '—'} → {r.to_position} — {formatTimestampDate(r.occurred_at)}
           </div>
         ))}
       </div>
@@ -232,7 +233,7 @@ export function TireDetailPage() {
         {(tire.inspections ?? []).length === 0 && <EmptyState label="No inspections yet." />}
         {(tire.inspections ?? []).map((i) => (
           <div key={i.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {new Date(i.inspected_at).toLocaleDateString()} — tread {i.tread_depth_mm ?? '—'}mm — pressure {i.pressure_psi ?? '—'}psi
+            {formatTimestampDate(i.inspected_at)} — tread {i.tread_depth_mm ?? '—'}mm — pressure {i.pressure_psi ?? '—'}psi
             {i.recommendation && ` — ${i.recommendation}`}
           </div>
         ))}

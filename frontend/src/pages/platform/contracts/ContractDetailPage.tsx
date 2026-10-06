@@ -122,7 +122,7 @@ export function ContractDetailPage() {
         <SummaryCard label="Start Date" value={contract.start_date} />
         <SummaryCard label="End Date" value={contract.end_date} />
         <SummaryCard label="Billing Cycle" value={contract.billing_cycle} />
-        <SummaryCard label="Total" value={`${contract.currency} ${Number(contract.total).toLocaleString()}`} />
+        <SummaryCard label="Total" value={`${contract.currency} ${formatMoney(contract.total)}`} />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
@@ -147,18 +147,18 @@ export function ContractDetailPage() {
                 </td>
                 <td style={{ padding: '6px 8px' }}>{it.description}</td>
                 <td style={{ padding: '6px 8px' }}>{formatQty(it.quantity)}</td>
-                <td style={{ padding: '6px 8px' }}>{Number(it.unit_price).toLocaleString()}</td>
-                <td style={{ padding: '6px 8px' }}>{Number(it.discount).toLocaleString()}</td>
-                <td style={{ padding: '6px 8px' }}>{Number(it.tax).toLocaleString()}</td>
-                <td style={{ padding: '6px 8px', fontWeight: 600 }}>{Number(it.final_amount).toLocaleString()}</td>
+                <td style={{ padding: '6px 8px' }}>{formatMoney(it.unit_price)}</td>
+                <td style={{ padding: '6px 8px' }}>{formatMoney(it.discount)}</td>
+                <td style={{ padding: '6px 8px' }}>{formatMoney(it.tax)}</td>
+                <td style={{ padding: '6px 8px', fontWeight: 600 }}>{formatMoney(it.final_amount)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div style={{ textAlign: 'right', marginTop: 10, fontSize: 13, color: '#374151' }}>
-          Subtotal: {Number(contract.subtotal).toLocaleString()} &nbsp; Discount: {Number(contract.discount).toLocaleString()} &nbsp; Tax:{' '}
-          {Number(contract.tax).toLocaleString()} &nbsp;{' '}
-          <strong>Total: {contract.currency} {Number(contract.total).toLocaleString()}</strong>
+          Subtotal: {formatMoney(contract.subtotal)} &nbsp; Discount: {formatMoney(contract.discount)} &nbsp; Tax:{' '}
+          {formatMoney(contract.tax)} &nbsp;{' '}
+          <strong>Total: {contract.currency} {formatMoney(contract.total)}</strong>
         </div>
       </div>
 

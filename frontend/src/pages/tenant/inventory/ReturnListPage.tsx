@@ -13,6 +13,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { formatQty } from '../../../utils/quantity';
 import type { WorkOrderPartReturnItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { formatDateTime } from '../../../utils/date';
 
 const STATUSES = [
   { value: 'PENDING_PROCESSING', label: 'Pending Processing' },
@@ -70,7 +71,7 @@ export function ReturnListPage() {
     { key: 'product', header: 'Returned Product', render: (r) => r.product?.name ?? r.product_id },
     { key: 'quantity', header: 'Returned Quantity', render: (r) => formatQty(r.quantity) },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.disposition_status} /> },
-    { key: 'created_at', header: 'Returned At', render: (r) => new Date(r.created_at).toLocaleString() },
+    { key: 'created_at', header: 'Returned At', render: (r) => formatDateTime(r.created_at) },
   ];
 
   return (
@@ -196,7 +197,7 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
         {row('Work Order Number', item.work_order?.wo_number ?? '—')}
         {row('Product', item.product?.name ?? item.product_id)}
         {row('Returned Quantity', formatQty(item.quantity))}
-        {row('Returned By / At', `${item.returner?.name ?? '—'} · ${new Date(item.created_at).toLocaleString()}`)}
+        {row('Returned By / At', `${item.returner?.name ?? '—'} · ${formatDateTime(item.created_at)}`)}
         {row('Reported Condition', CONDITION_LABEL[item.condition] ?? item.condition)}
         {row('Return Warehouse', item.warehouse?.name ?? '—')}
         {item.reason && row('Reason', item.reason)}
@@ -247,9 +248,9 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
                   ? `Faulty — routed to ${DISPOSITION_LABEL[item.disposition_status]}; not added to available stock`
                   : item.disposition_status,
           )}
-          {row('Inspected By / At', `${item.inspector?.name ?? '—'} · ${item.inspected_at ? new Date(item.inspected_at).toLocaleString() : '—'}`)}
+          {row('Inspected By / At', `${item.inspector?.name ?? '—'} · ${item.inspected_at ? formatDateTime(item.inspected_at) : '—'}`)}
           {item.inspection_notes && row('Notes', item.inspection_notes)}
-          {item.routed_at && row('Routed By / At', `${item.router?.name ?? '—'} · ${new Date(item.routed_at).toLocaleString()}`)}
+          {item.routed_at && row('Routed By / At', `${item.router?.name ?? '—'} · ${formatDateTime(item.routed_at)}`)}
           {item.routed_at && item.disposition_reason && row('Disposition Reason', item.disposition_reason)}
         </div>
       )}

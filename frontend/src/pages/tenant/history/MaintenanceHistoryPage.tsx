@@ -12,6 +12,7 @@ import {
 import { useAuth } from "../../../auth/AuthContext";
 import { useApiList } from "../../../hooks/useApiList";
 import type { HistoryEventItem } from "../../../types";
+import { formatDateTime } from "../../../utils/date";
 
 const TYPES = [
   "",
@@ -168,7 +169,7 @@ export function MaintenanceHistoryPage() {
                     data-history-row={e.vehicle?.registration_number}
                   >
                     <td style={{ ...cell, whiteSpace: "nowrap" }}>
-                      {new Date(e.at).toLocaleString()}
+                      {formatDateTime(e.at)}
                     </td>
                     <td style={cell}>
                       <Link

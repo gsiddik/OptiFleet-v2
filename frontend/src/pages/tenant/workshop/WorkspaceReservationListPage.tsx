@@ -8,6 +8,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WorkspaceReservationItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
 
 // RESERVED = requested; ACTIVE is legacy (counts as approved). Completion comes only from the Work Order.
 const STATUSES = ['', 'RESERVED', 'APPROVED', 'ACTIVE', 'TRANSFERRED', 'COMPLETED', 'CANCELLED'];
@@ -38,10 +39,10 @@ export function WorkspaceReservationListPage() {
     { key: 'workspace', header: 'Workspace', render: (r) => `${r.workspace?.name ?? r.workspace_id} (${r.workspace?.workshop?.name ?? '—'})` },
     { key: 'work_order', header: 'Work Order', render: (r) => r.work_order?.wo_number ?? '—' },
     { key: 'vehicle', header: 'Vehicle', render: (r) => r.work_order?.vehicle?.registration_number ?? '—' },
-    { key: 'start_at', header: 'Start', render: (r) => new Date(r.start_at).toLocaleString() },
-    { key: 'end_at', header: 'End', render: (r) => new Date(r.end_at).toLocaleString() },
+    { key: 'start_at', header: 'Start', render: (r) => formatDateTime(r.start_at) },
+    { key: 'end_at', header: 'End', render: (r) => formatDateTime(r.end_at) },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-    { key: 'approved', header: 'Approved', render: (r) => (r.approved_at ? `${new Date(r.approved_at).toLocaleString()}${r.approver ? ` · ${r.approver.name}` : ''}` : '—') },
+    { key: 'approved', header: 'Approved', render: (r) => (r.approved_at ? `${formatDateTime(r.approved_at)}${r.approver ? ` · ${r.approver.name}` : ''}` : '—') },
     {
       key: 'actions',
       header: '',

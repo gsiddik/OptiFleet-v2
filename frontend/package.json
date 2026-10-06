@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:unit": "node --experimental-strip-types --test 'tests/unit/**/*.test.ts'"
+    "test:unit": "node --experimental-strip-types --import ./tests/unit/register.mjs --test 'tests/unit/**/*.test.ts'"
   },
   "dependencies": {
     "@xyflow/react": "^12.12.0",

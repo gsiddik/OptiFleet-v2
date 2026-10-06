@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiClient } from "../api/client";
 import type { AvailableWorkflowTransition } from "../types";
+import { isDefaultActionLabel } from "../i18n/workflowActionVerbs";
 
 /**
  * The transitions the record's published workflow allows the current user right now
@@ -48,7 +49,6 @@ export interface ModuleAction {
   needsNote?: boolean;
 }
 
-const humanize = (code: string) => code.replace(/_/g, " ").toLowerCase();
 
 /**
  * The buttons to show: one per transition the workflow allows, for each target status the module
@@ -66,14 +66,11 @@ export function workflowButtons<T extends ModuleAction>(
     const action = byTarget[t.to_status];
     if (!action || seen.has(action.action)) return [];
     seen.add(action.action);
-    const renamed =
-      t.action_label &&
-      humanize(t.action_label) !== humanize(t.to_status) &&
-      t.action_label !== t.action_code;
+    const renamed = !isDefaultActionLabel(t);
     return [
       {
         ...action,
-        label: renamed ? t.action_label : action.label,
+        label: renamed && t.action_label ? t.action_label : action.label,
         toStatus: t.to_status,
       },
     ];

@@ -3,6 +3,7 @@ import type {
   WorkspaceAssignmentStatus,
   WorkspaceReservationItem,
 } from "../../../../types";
+import { formatDateTime } from "../../../../utils/date";
 
 /** Mirrors WorkspaceReservationService::SCHEDULABLE_WORK_ORDER_STATUSES (backend re-checks). */
 export const SCHEDULABLE_WORK_ORDER_STATUSES = [
@@ -108,5 +109,5 @@ export function defaultWindow(): { start: string; end: string } {
 export function formatWindow(
   r: Pick<WorkspaceReservationItem, "start_at" | "end_at">,
 ): string {
-  return `${new Date(r.start_at).toLocaleString()} – ${new Date(r.end_at).toLocaleString()}`;
+  return `${formatDateTime(r.start_at)} – ${formatDateTime(r.end_at)}`;
 }

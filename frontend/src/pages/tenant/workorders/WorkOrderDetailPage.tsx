@@ -518,11 +518,11 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     ['Estimated Labor Cost', formatMoney(laborCost)],
     ['Estimated Parts Cost', formatMoney(partsCost)],
     ['Estimated Total Cost', formatMoney(totalCost)],
-    ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
-    ['Target Completion', wo.target_completion_at ? new Date(wo.target_completion_at).toLocaleString() : '—'],
-    ['Started At', wo.started_at ? new Date(wo.started_at).toLocaleString() : '—'],
-    ['Completed At', wo.completed_at ? new Date(wo.completed_at).toLocaleString() : '—'],
-    ['Closed At', wo.closed_at ? new Date(wo.closed_at).toLocaleString() : '—'],
+    ['Target Start', wo.target_start_at ? formatDateTime(wo.target_start_at) : '—'],
+    ['Target Completion', wo.target_completion_at ? formatDateTime(wo.target_completion_at) : '—'],
+    ['Started At', wo.started_at ? formatDateTime(wo.started_at) : '—'],
+    ['Completed At', wo.completed_at ? formatDateTime(wo.completed_at) : '—'],
+    ['Closed At', wo.closed_at ? formatDateTime(wo.closed_at) : '—'],
     ['Result Summary', wo.result_summary ?? '—'],
   ];
 
@@ -1560,7 +1560,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
             <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
               <span>
                 {(r.items ?? []).map((i) => `${lineName(i.product?.name ?? i.description, i.stock_condition)} × ${formatQty(i.quantity_approved ?? i.quantity_requested)}`).join(', ')}
-                {r.requested_at && <span style={{ color: '#9ca3af', fontSize: 12 }}> · {new Date(r.requested_at).toLocaleString()}</span>}
+                {r.requested_at && <span style={{ color: '#9ca3af', fontSize: 12 }}> · {formatDateTime(r.requested_at)}</span>}
               </span>
               <StatusBadge status={r.status} domain="stock" />
             </div>
@@ -2193,7 +2193,7 @@ function RoadTestTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
       <div className="card">
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Release</h3>
         {release ? (
-          <p style={{ fontSize: 13 }}>Released at {new Date(release.released_at).toLocaleString()}.</p>
+          <p style={{ fontSize: 13 }}>Released at {formatDateTime(release.released_at)}.</p>
         ) : wo.status === 'COMPLETED' && hasPermission('vehicle_release.perform') ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <NumericInput placeholder="Release odometer (optional)" value={releaseOdometer} onChange={(e) => setReleaseOdometer(e.target.value)} style={{ ...inputStyle, width: 180 }} />
@@ -2513,7 +2513,7 @@ function HistoryTab({ vehicleId }: { vehicleId: string }) {
       {events.map((e) => (
         <div key={`${e.type}-${e.id}`} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10 }}>
           <StatusBadge status={e.type} />
-          <span style={{ color: '#9ca3af' }}>{new Date(e.at).toLocaleString()}</span>
+          <span style={{ color: '#9ca3af' }}>{formatDateTime(e.at)}</span>
           <span>{e.summary}</span>
         </div>
       ))}
@@ -2650,7 +2650,7 @@ function AuditTab({ workOrderId }: { workOrderId: string }) {
       {logs.map((l) => (
         <div key={l.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div>
-            <strong>{l.action}</strong> by {l.actor_name ?? 'system'} — {new Date(l.created_at).toLocaleString()}
+            <strong>{l.action}</strong> by {l.actor_name ?? 'system'} — {formatDateTime(l.created_at)}
           </div>
         </div>
       ))}

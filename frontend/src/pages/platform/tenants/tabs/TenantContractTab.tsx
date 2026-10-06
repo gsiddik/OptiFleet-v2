@@ -8,6 +8,7 @@ import { useApiList } from '../../../../hooks/useApiList';
 import { useAuth } from '../../../../auth/AuthContext';
 import type { ContractItem } from '../../../../types';
 import { ContractForm } from '../../contracts/ContractForm';
+import { formatMoney } from '../../../../utils/money';
 
 /**
  * Section 6.1: contracts belonging only to the tenant currently open in
@@ -32,7 +33,7 @@ export function TenantContractTab({ tenantId, tenantName, tenantCode }: { tenant
   const columns: Column<ContractItem>[] = [
     { key: 'contract_number', header: 'Contract #', render: (c) => c.contract_number },
     { key: 'billing_cycle', header: 'Cycle', render: (c) => c.billing_cycle },
-    { key: 'total', header: 'Total', render: (c) => `${c.currency} ${Number(c.total).toLocaleString()}` },
+    { key: 'total', header: 'Total', render: (c) => `${c.currency} ${formatMoney(c.total)}` },
     { key: 'start_date', header: 'Start', render: (c) => c.start_date },
     { key: 'end_date', header: 'End', render: (c) => c.end_date },
     { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.status} /> },

@@ -13,6 +13,7 @@ import { TenantContractTab } from './tabs/TenantContractTab';
 import { useAuth } from '../../../auth/AuthContext';
 import { useTabParam } from '../../../hooks/useTabParam';
 import type { TabDef } from '../../../utils/tabs';
+import { formatDateTime } from '../../../utils/date';
 
 type TenantTab = 'overview' | 'users' | 'module-entitlements' | 'capacity-limits' | 'contract';
 // Stable ids drive state and ?tab=; labels are display only. Legacy ?tab=Contract links still resolve.
@@ -100,7 +101,7 @@ export function TenantDetailPage() {
             <strong>Industry:</strong> {tenant.industry ?? '—'}
           </p>
           <p>
-            <strong>Created:</strong> {new Date(tenant.created_at).toLocaleString()}
+            <strong>Created:</strong> {formatDateTime(tenant.created_at)}
           </p>
         </div>
       )}

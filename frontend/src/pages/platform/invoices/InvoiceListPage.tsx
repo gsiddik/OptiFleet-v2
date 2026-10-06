@@ -18,7 +18,7 @@ export function InvoiceListPage() {
     { key: 'tenant', header: 'Tenant', render: (i) => i.tenant?.name ?? '—' },
     { key: 'invoice_date', header: 'Invoice Date', render: (i) => i.invoice_date },
     { key: 'due_date', header: 'Due Date', render: (i) => i.due_date },
-    { key: 'total', header: 'Total', render: (i) => `${i.currency} ${Number(i.total).toLocaleString()}` },
+    { key: 'total', header: 'Total', render: (i) => `${i.currency} ${formatMoney(i.total)}` },
     { key: 'outstanding', header: 'Outstanding', render: (i) => formatMoney(i.outstanding_amount) },
     { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },
   ];

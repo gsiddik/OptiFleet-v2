@@ -6,6 +6,7 @@ import { EmptyState, ErrorState, LoadingState } from './States';
 import { useApiList } from '../hooks/useApiList';
 import { inputStyle } from './FormField';
 import type { AuditLogEntry } from '../types';
+import { formatDateTime } from '../utils/date';
 
 export function AuditLogTable({ endpoint, showTenantColumn = false }: { endpoint: string; showTenantColumn?: boolean }) {
   const [resourceType, setResourceType] = useState('');
@@ -14,7 +15,7 @@ export function AuditLogTable({ endpoint, showTenantColumn = false }: { endpoint
   const { data, meta, loading, error } = useApiList<AuditLogEntry>(endpoint, { resource_type: resourceType, action, page });
 
   const columns: Column<AuditLogEntry>[] = [
-    { key: 'created_at', header: 'When', render: (l) => new Date(l.created_at).toLocaleString() },
+    { key: 'created_at', header: 'When', render: (l) => formatDateTime(l.created_at) },
     { key: 'actor_name', header: 'Actor', render: (l) => l.actor_name ?? 'System' },
     ...(showTenantColumn ? [{ key: 'tenant_id', header: 'Tenant', render: (l: AuditLogEntry) => l.tenant_id ?? '—' } as Column<AuditLogEntry>] : []),
     { key: 'resource_type', header: 'Resource', render: (l) => l.resource_type },

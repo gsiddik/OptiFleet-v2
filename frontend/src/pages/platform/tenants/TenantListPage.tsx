@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Tenant } from '../../../types';
+import { formatTimestampDate } from '../../../utils/date';
 
 export function TenantListPage() {
   const { hasPermission } = useAuth();
@@ -32,7 +33,7 @@ export function TenantListPage() {
     { key: 'code', header: 'Code', sortable: true, render: (t) => <Link to={`/platform/tenants/${t.id}`}>{t.code}</Link> },
     { key: 'name', header: 'Name', sortable: true, render: (t) => t.name },
     { key: 'status', header: 'Status', sortable: true, render: (t) => <StatusBadge status={t.status} /> },
-    { key: 'created_at', header: 'Created', sortable: true, render: (t) => new Date(t.created_at).toLocaleDateString() },
+    { key: 'created_at', header: 'Created', sortable: true, render: (t) => formatTimestampDate(t.created_at) },
   ];
 
   return (

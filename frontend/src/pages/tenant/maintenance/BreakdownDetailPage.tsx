@@ -8,6 +8,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { BreakdownItem } from '../../../types';
+import { formatDateTime } from '../../../utils/date';
 
 const ACTIONS: Record<string, { action: string; label: string; permission: string }[]> = {
   REPORTED: [{ action: 'verify', label: 'Verify', permission: 'breakdown.review' }],
@@ -98,7 +99,7 @@ export function BreakdownDetailPage() {
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginTop: 0, fontSize: 15 }}>Details</h3>
         <p style={{ fontSize: 13 }}>
-          <strong>Reported:</strong> {new Date(breakdown.reported_at).toLocaleString()} &nbsp; <strong>Location:</strong> {breakdown.location ?? '—'}
+          <strong>Reported:</strong> {formatDateTime(breakdown.reported_at)} &nbsp; <strong>Location:</strong> {breakdown.location ?? '—'}
         </p>
         <p style={{ fontSize: 13 }}>
           <strong>Description:</strong> {breakdown.description}

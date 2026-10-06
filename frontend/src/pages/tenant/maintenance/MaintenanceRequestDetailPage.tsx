@@ -169,7 +169,7 @@ export function AssessmentSection({
                     ))}
                   </select>
                 ) : (
-                  groups[code].status.replace(/_/g, ' ')
+                  statusLabel(groups[code].status)
                 )}
               </td>
               <td style={{ padding: '6px 4px' }}>

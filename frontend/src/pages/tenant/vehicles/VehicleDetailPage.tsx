@@ -15,8 +15,9 @@ import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, Vehi
 import { NumericInput } from '../../../components/NumericInput';
 import { VEHICLE_TYPES, resolveVehicleType, vehicleTypeOption } from '../tires/wheel-configuration/vehicleTypes';
 import { VehicleWheelsConfigurationTab } from '../tires/wheel-configuration/VehicleWheelsConfigurationTab';
-import { formatDate } from '../../../utils/date';
+import { formatDate, formatDateTime } from '../../../utils/date';
 import { DetailsWithImage, ImageContainer } from '../../../components/ImageContainer';
+import { formatNumber } from '../../../utils/number';
 
 type Tab = 'overview' | 'assignment' | 'transfer' | 'documents' | 'wheels' | 'history';
 // Stable ids drive state, ?tab= and permission gating; labels are display only.
@@ -212,7 +213,7 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
     ['Year', vehicle.year ? String(vehicle.year) : '—'],
     ['Fuel Type', vehicle.fuel_type ?? '—'],
     ['Transmission', vehicle.transmission_type ?? '—'],
-    ['Current Odometer', Number(vehicle.current_odometer).toLocaleString()],
+    ['Current Odometer', formatNumber(vehicle.current_odometer)],
     ['Engine Hour', vehicle.engine_hour ?? '—'],
     ['Operational Status', vehicle.operational_status],
     ['Color', vehicle.color ?? '—'],
@@ -899,7 +900,7 @@ function HistoryTab({ vehicleId }: { vehicleId: string }) {
       <h3 style={{ marginTop: 0, fontSize: 15 }}>Maintenance History</h3>
       {events.map((e) => (
         <div key={`${e.type}-${e.id}`} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-          <span style={{ color: '#9ca3af', minWidth: 140 }}>{e.at ? new Date(e.at).toLocaleString() : '—'}</span>
+          <span style={{ color: '#9ca3af', minWidth: 140 }}>{e.at ? formatDateTime(e.at) : '—'}</span>
           <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 6, fontSize: 11, height: 'fit-content' }}>{e.type}</span>
           <span>{e.summary}</span>
         </div>

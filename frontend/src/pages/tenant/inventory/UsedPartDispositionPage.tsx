@@ -12,6 +12,7 @@ import type { WorkOrderPartReturnItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { ImageUploadField } from '../../../components/ImageUploadField';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
+import { formatDateTime } from '../../../utils/date';
 
 /** Evidence Photo: JPG/PNG only, max 3 MB — validated here and again by the backend. */
 const EVIDENCE_MAX_BYTES = 3 * 1024 * 1024;
@@ -153,7 +154,7 @@ function RowCard({
       </div>
       <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
         {item.return_source === 'REMOVED_COMPONENT' ? 'Removed component' : 'Used-part return (legacy)'}
-        {item.removed_component && ` · removed ${new Date(item.removed_component.removed_at).toLocaleString()}`}
+        {item.removed_component && ` · removed ${formatDateTime(item.removed_component.removed_at)}`}
         {item.returner && ` by ${item.returner.name}`}
         {item.warehouse && ` · at ${item.warehouse.name}`}
       </div>
@@ -252,7 +253,7 @@ function RowCard({
 
       {item.repair_completed_at && (
         <div style={{ fontSize: 12, color: '#374151', marginBottom: 6 }}>
-          Repair completed {new Date(item.repair_completed_at).toLocaleString()}
+          Repair completed {formatDateTime(item.repair_completed_at)}
           {item.repair_notes && ` — ${item.repair_notes}`}
         </div>
       )}

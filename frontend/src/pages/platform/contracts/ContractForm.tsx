@@ -4,6 +4,7 @@ import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import type { BundleItem, ContractItem, PricingItem, Tenant } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 const BILLING_CYCLES = [
   { value: 'MONTHLY', label: 'Monthly' },
@@ -372,7 +373,7 @@ export function ContractForm({
             </div>
             {isPriced && it.priceStatus === 'loading' && <p style={{ fontSize: 12, color: '#6b7280' }}>Looking up Active Price…</p>}
             {isPriced && it.priceStatus === 'ok' && it.activePrice && (
-              <p style={{ fontSize: 12, color: '#059669' }}>Active Price: {Number(it.activePrice).toLocaleString()} (unit price may not go below this)</p>
+              <p style={{ fontSize: 12, color: '#059669' }}>Active Price: {formatMoney(it.activePrice)} (unit price may not go below this)</p>
             )}
             {isPriced && it.priceStatus === 'error' && it.priceError && <p style={{ fontSize: 12, color: '#b91c1c' }}>{it.priceError}</p>}
           </div>

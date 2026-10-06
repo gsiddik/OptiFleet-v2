@@ -15,6 +15,7 @@ import {
   formatWindow,
   isApproved,
 } from "./workspaceAssignment";
+import { formatDateTime } from "../../../../utils/date";
 
 const cell = { padding: "6px 4px" } as const;
 
@@ -121,7 +122,7 @@ export function WorkOrderWorkspaceTab({
             {field(
               "Approved At",
               approved.approved_at
-                ? new Date(approved.approved_at).toLocaleString()
+                ? formatDateTime(approved.approved_at)
                 : "—",
             )}
             {field("Approved By", approved.approver?.name)}
@@ -218,16 +219,16 @@ export function WorkOrderWorkspaceTab({
                     </td>
                     <td style={cell}>
                       {r.approved_at
-                        ? `${new Date(r.approved_at).toLocaleString()}${r.approver ? ` · ${r.approver.name}` : ""}`
+                        ? `${formatDateTime(r.approved_at)}${r.approver ? ` · ${r.approver.name}` : ""}`
                         : "—"}
                     </td>
                     <td style={cell}>
                       {r.transferred_at
-                        ? `Transferred ${new Date(r.transferred_at).toLocaleString()}${r.transferrer ? ` · ${r.transferrer.name}` : ""}`
+                        ? `Transferred ${formatDateTime(r.transferred_at)}${r.transferrer ? ` · ${r.transferrer.name}` : ""}`
                         : r.completed_at
-                          ? `Completed ${new Date(r.completed_at).toLocaleString()}`
+                          ? `Completed ${formatDateTime(r.completed_at)}`
                           : r.cancelled_at
-                            ? `Cancelled ${new Date(r.cancelled_at).toLocaleString()}`
+                            ? `Cancelled ${formatDateTime(r.cancelled_at)}`
                             : "—"}
                     </td>
                   </tr>

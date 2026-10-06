@@ -16,6 +16,7 @@ Continuation checkpoint for the structural i18n preparation defined in
 |---:|---|---|---|
 | S1 | Stable tab IDs | STABLE_TAB_ID (21 rows) | DONE |
 | S2 | Status display label registry | STATUS_DISPLAY_REGISTRY (46 → 150 rows) | DONE |
+| S3 | Runtime label mapping (+ workflow action verbs) | RUNTIME_LABEL_GENERATION (115 of 122), WORKFLOW_ACTION_LABEL_CORRECTION (33) | DONE |
 
 ## S1 — Stable tab IDs
 
@@ -97,3 +98,84 @@ database.
 
 **Remaining risk**: low. Non-status enums shown in badges (severity, event type) still pass through
 unchanged and are handled in S3.
+
+## S3 — Runtime label mapping
+
+**Frontend**
+- `i18n/locale.ts`: `AppLocale` (`en` | `id`), the system fallback `en`, `intlTag()`, and a cached
+  `monthNames()` from `Intl`.
+  - The resolution chain is not wired to any UI: no language selector and no i18n library.
+- Formatters take an explicit locale instead of the browser's:
+  - `utils/date.ts`: `formatDate`, `formatDateTime`, plus the new `formatTimestampDate` and `formatTime`;
+  - `utils/number.ts`: `formatNumber` (new);
+  - `utils/quantity.ts`: `formatQty` (now locale-aware).
+- 82 `toLocaleString` / `toLocaleDateString` / `toLocaleTimeString` calls replaced, so output no
+  longer depends on the browser locale:
+  - timestamps go through `formatDateTime` / `formatTimestampDate` / `formatTime`;
+  - odometers and KPI counts go through `formatNumber`;
+  - platform contract, invoice, payment and pricing amounts go through the existing decimal-safe
+    `formatMoney`. They used float `Number()` before.
+- The hard-coded English month arrays are replaced by `Intl` (`date.ts`, Vehicle purchase month).
+- Removed `replace(/_/g, ' ')` humanizers:
+  - workflow automated actions now use the new `i18n/workflowAutomatedActions.ts`;
+  - MR inspection group status, component asset status history and return status now use
+    `statusLabel`;
+  - document type now falls back to the code;
+  - breadcrumb: the 11 segments without a label now have explicit labels.
+- `i18n/workflowActionVerbs.ts` holds the owner-approved verb per target status.
+  `isDefaultActionLabel()` replaces the old humanize comparison in `workflowButtons()`:
+  - The legacy status-form label, the default verb and the action code all count as "not renamed".
+  - It is a strict superset of the old rule, so existing tenants see the same buttons. A tenant's
+    real rename still wins.
+
+**Backend**
+- `App\Domain\Shared\Support\StatusLabels`: mirror of the frontend status registry (key + English,
+  ISSUED domains).
+- `App\Domain\Workflow\Support\WorkflowActionVerbs`: verb per target status.
+- Seeders:
+  - `WorkflowDefaultsSeeder`: status `display_name` comes from `StatusLabels` (e.g. "QC Pending", no
+    longer "Qc Pending"), and the default `action_label` is the verb (e.g. "Approve", no longer
+    "Approved");
+  - set names come from an explicit resource map, with identical text;
+  - `AddWorkOrderExternalStatusSeeder` and `CorrectWorkOrderExternalTransitionsSeeder` were changed the
+    same way.
+
+**Historical integrity**
+- The seeders publish only when no published version exists, so existing tenants' published and pinned
+  configurations are unchanged. Only fresh installs get the new default labels.
+- Canonical status codes, action codes and transitions are unchanged.
+
+**Dataset**
+- New keys: 11 `breadcrumb.*` and 10 `workflow.automatedAction.*`.
+- RUNTIME_LABEL_GENERATION: 115 of 122 rows resolved. The other 7 are sentence templates, handled in
+  S4.
+- WORKFLOW_ACTION_LABEL_CORRECTION: 33 of 33 resolved.
+
+**Tests**
+- Frontend unit tests (20 in total across the four files):
+  - `formatting.test.ts`: dates, months, numbers and quantities in `en` and `id`, with `en` output
+    unchanged;
+  - `breadcrumbLabels.test.ts`: every static route segment in `App.tsx` has a label;
+  - `workflowLabels.test.ts`: verbs, rename detection, every backend automated action has a label, and
+    every key exists in `12`.
+- Backend:
+  - `Unit/StatusLabelsTest` (7 tests): parity with the frontend status and verb registries, the domain
+    split, and no reformatting;
+  - `Feature/WorkflowDefaultLabelsTest` (3 tests): seeded display names come from the registry, default
+    action labels are verbs, codes are canonical, and set names are unchanged;
+  - existing workflow suites (Builder / Engine / Migration) green.
+- Browser e2e, 7 checks:
+  - Work Order IN_PROGRESS buttons keep their module labels on legacy configurations;
+  - no browser-locale date strings;
+  - Intl month list;
+  - grouped odometer;
+  - explicit breadcrumb;
+  - platform date format;
+  - no page errors.
+- `npm run build` passes. Lint: 27 pre-existing warnings, 0 errors.
+
+**Visible effect (English)**
+- Timestamps that used the browser format now read "06 Oct 2026, 14:05".
+- Scheduler times are 24-hour.
+- Platform money shows two decimals.
+- Automated action checkboxes read "Send notification".

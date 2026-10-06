@@ -42,6 +42,7 @@ import type {
   Measurement,
 } from "./inspectionTypes";
 import { statusLabel } from '../../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../../utils/date';
 
 type Answers = Record<string, string | null>;
 type EvidenceDraft = {
@@ -186,7 +187,7 @@ export function UsedTireInspectionPage() {
                   <tr key={i.id}>
                     <td style={{ padding: "6px 8px" }}>
                       {i.inspected_at
-                        ? new Date(i.inspected_at).toLocaleString()
+                        ? formatDateTime(i.inspected_at)
                         : "—"}
                     </td>
                     <td

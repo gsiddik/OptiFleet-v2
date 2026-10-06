@@ -2,6 +2,7 @@ import { inputStyle } from "../../../../components/FormField";
 import { InfoTip } from "../../../../components/InfoTip";
 import type { WorkflowStatusDef } from "../../../../types";
 import { labelOf, type EditableTransition } from "./workflowGraph";
+import { automatedActionLabel } from "../../../../i18n/workflowAutomatedActions";
 
 /**
  * The selected transition (arrow): From / To (the same change as dragging the arrow's ends),
@@ -176,7 +177,7 @@ export function TransitionConfigurationPanel({
                 })
               }
             />{" "}
-            {code.replace(/_/g, " ").toLowerCase()}
+            {automatedActionLabel(code)}
           </label>
         ))}
       </div>

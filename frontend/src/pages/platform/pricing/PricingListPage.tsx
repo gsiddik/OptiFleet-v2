@@ -10,6 +10,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PricingItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { formatMoney } from '../../../utils/money';
 
 const PRICING_METHODS = ['FLAT', 'PER_VEHICLE', 'PER_USER', 'PER_BRANCH', 'PER_WORKSHOP', 'PER_WAREHOUSE', 'TIERED', 'CUSTOM'];
 const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'CUSTOM'];
@@ -32,7 +33,7 @@ export function PricingListPage() {
       header: 'Active Price',
       render: (p) => {
         const active = p.versions?.find((v) => v.status === 'ACTIVE');
-        return active ? `${p.currency} ${Number(active.amount).toLocaleString()}` : '—';
+        return active ? `${p.currency} ${formatMoney(active.amount)}` : '—';
       },
     },
     { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },

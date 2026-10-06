@@ -8,6 +8,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ContractItem } from '../../../types';
 import { ContractForm } from './ContractForm';
+import { formatMoney } from '../../../utils/money';
 
 const TABS: { label: string; status: string }[] = [
   { label: 'All', status: '' },
@@ -31,7 +32,7 @@ export function ContractListPage() {
     { key: 'contract_number', header: 'Contract #', render: (c) => <Link to={`/platform/contracts/${c.id}`}>{c.contract_number}</Link> },
     { key: 'tenant', header: 'Tenant', render: (c) => c.tenant?.name ?? '—' },
     { key: 'billing_cycle', header: 'Cycle', render: (c) => c.billing_cycle },
-    { key: 'total', header: 'Total', render: (c) => `${c.currency} ${Number(c.total).toLocaleString()}` },
+    { key: 'total', header: 'Total', render: (c) => `${c.currency} ${formatMoney(c.total)}` },
     { key: 'start_date', header: 'Start', render: (c) => c.start_date },
     { key: 'end_date', header: 'End', render: (c) => c.end_date },
     { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.status} /> },

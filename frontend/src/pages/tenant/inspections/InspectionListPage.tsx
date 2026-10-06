@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { InspectionItem, InspectionTemplateItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
 
 const TYPES = ['', 'PRE_TRIP', 'POST_TRIP', 'PERIODIC', 'WORKSHOP', 'MAINTENANCE'];
 const STATUSES = ['', 'CREATED', 'ASSIGNED', 'STARTED', 'SUBMITTED', 'PASSED', 'WARNING', 'FAILED'];
@@ -31,7 +32,7 @@ export function InspectionListPage() {
     { key: 'vehicle', header: 'Vehicle', render: (i) => <Link to={`/app/inspections/${i.id}`}>{i.vehicle?.registration_number ?? i.vehicle_id}</Link> },
     { key: 'type', header: 'Type', render: (i) => i.inspection_type },
     { key: 'template', header: 'Template', render: (i) => i.template?.name ?? '—' },
-    { key: 'inspection_date', header: 'Inspection Date', render: (i) => new Date(i.created_at).toLocaleString() },
+    { key: 'inspection_date', header: 'Inspection Date', render: (i) => formatDateTime(i.created_at) },
     { key: 'status', header: 'Status', render: (i) => <StatusBadge status={i.status} /> },
   ];
 

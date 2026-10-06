@@ -10,7 +10,8 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { NumericInput } from '../../../components/NumericInput';
 import type { ComponentAssetItem, PartnerItem, VehicleItem, Warehouse } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
-import { formatDateTime } from '../../../utils/date';
+import { formatDateTime, formatTimestampDate } from '../../../utils/date';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 /** Statuses a Sell Sparepart sale may be raised for (backend ComponentAsset::SELLABLE). */
 const SELLABLE = ['SCRAPPED', 'REMOVED'];
@@ -163,7 +164,7 @@ export function ComponentAssetDetailPage() {
               ) : null
             }
           />
-          {asset.purchase_return && <Fact label="Returned to Vendor" value={`Return Order ${asset.purchase_return.return_number} (${asset.purchase_return.status.replace(/_/g, ' ')})`} />}
+          {asset.purchase_return && <Fact label="Returned to Vendor" value={`Return Order ${asset.purchase_return.return_number} (${statusLabel(asset.purchase_return.status)})`} />}
           {asset.sale && <Fact label="Sale" value={`${asset.sale.status} · ${asset.sale.buyer_name ?? 'Partner'} · ${formatDateTime(asset.sale.decided_at)}`} />}
         </dl>
       </div>
@@ -255,8 +256,8 @@ export function ComponentAssetDetailPage() {
         {(asset.installations ?? []).length === 0 && <EmptyState label="No installations yet." />}
         {(asset.installations ?? []).map((i) => (
           <div key={i.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {i.vehicle?.registration_number ?? i.vehicle_id} — {i.position_location ?? '—'} — installed {new Date(i.installed_at).toLocaleDateString()}
-            {i.removed_at && ` — removed ${new Date(i.removed_at).toLocaleDateString()}`}
+            {i.vehicle?.registration_number ?? i.vehicle_id} — {i.position_location ?? '—'} — installed {formatTimestampDate(i.installed_at)}
+            {i.removed_at && ` — removed ${formatTimestampDate(i.removed_at)}`}
           </div>
         ))}
       </div>
@@ -266,7 +267,7 @@ export function ComponentAssetDetailPage() {
         {(asset.removals ?? []).length === 0 && <EmptyState label="No removals yet." />}
         {(asset.removals ?? []).map((r) => (
           <div key={r.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {new Date(r.removed_at).toLocaleDateString()} — {r.removal_reason} — {r.disposition}
+            {formatTimestampDate(r.removed_at)} — {r.removal_reason} — {r.disposition}
           </div>
         ))}
       </div>
@@ -276,7 +277,7 @@ export function ComponentAssetDetailPage() {
         {(asset.status_history ?? []).length === 0 && <EmptyState label="No status changes recorded." />}
         {(asset.status_history ?? []).map((h, i) => (
           <div key={i} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {formatDateTime(h.at)} — {h.action === 'created' ? 'Registered' : `${(h.from ?? '—').replace(/_/g, ' ')} → ${(h.to ?? '—').replace(/_/g, ' ')}`}
+            {formatDateTime(h.at)} — {h.action === 'created' ? 'Registered' : `${h.from ? statusLabel(h.from) : '—'} → ${h.to ? statusLabel(h.to) : '—'}`}
           </div>
         ))}
       </div>

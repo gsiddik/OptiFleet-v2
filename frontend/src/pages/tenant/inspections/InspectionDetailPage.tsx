@@ -10,6 +10,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { InspectionItem, InspectionLogEntry } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
 
 export function InspectionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -134,7 +135,7 @@ export function InspectionDetailPage() {
           <h3 style={{ marginTop: 0, fontSize: 15 }}>Supervisor Review</h3>
           {inspection.reviewed_at ? (
             <p style={{ fontSize: 13, margin: 0 }}>
-              Reviewed on {new Date(inspection.reviewed_at).toLocaleString()}
+              Reviewed on {formatDateTime(inspection.reviewed_at)}
               {inspection.review_notes ? <> — {inspection.review_notes}</> : null}
             </p>
           ) : (
@@ -268,7 +269,7 @@ function InspectionLog({ inspectionId }: { inspectionId: string }) {
       {logs?.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No history yet.</p>}
       {logs?.map((log) => (
         <div key={log.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 12, alignItems: 'baseline' }}>
-          <span style={{ color: '#9ca3af', minWidth: 160 }}>{new Date(log.created_at).toLocaleString()}</span>
+          <span style={{ color: '#9ca3af', minWidth: 160 }}>{formatDateTime(log.created_at)}</span>
           <span style={{ flex: 1 }}>
             {log.action === 'maintenance_request_created' ? (
               <>

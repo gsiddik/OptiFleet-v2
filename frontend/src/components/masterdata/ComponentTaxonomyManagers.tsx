@@ -13,6 +13,7 @@ import { useAuth } from '../../auth/AuthContext';
 import type { ComponentCategory, ComponentGroup, ComponentItemType, ComponentSubcategory } from '../../types';
 import { componentGroupLabel } from '../../utils/componentGroup';
 import { NumericInput } from '../NumericInput';
+import { formatTimestampDate } from '../../utils/date';
 
 /**
  * Category / Assembly and Subcategory / Component Family management, shared by
@@ -142,7 +143,7 @@ export function ComponentCategoryManager({ endpoints, canManageRow, intro }: { e
     { key: 'is_system', header: 'Source', render: (c) => (c.is_system ? 'System' : 'Tenant') },
     { key: 'status', header: 'Status', sortable: true, render: (c) => <StatusCell row={c} /> },
     { key: 'usage', header: 'Usage', render: (c) => (c.is_used ? 'Used' : <span style={muted}>Unused</span>) },
-    { key: 'updated_at', header: 'Updated', sortable: true, render: (c) => (c.updated_at ? new Date(c.updated_at).toLocaleDateString() : '—') },
+    { key: 'updated_at', header: 'Updated', sortable: true, render: (c) => (c.updated_at ? formatTimestampDate(c.updated_at) : '—') },
     {
       key: 'actions',
       header: '',
@@ -393,7 +394,7 @@ export function ComponentSubcategoryManager({ endpoints, canManageRow, intro }: 
     { key: 'description', header: 'Description', render: (s) => <span style={muted}>{s.description || '—'}</span> },
     { key: 'status', header: 'Status', sortable: true, render: (s) => <StatusCell row={s} /> },
     { key: 'usage', header: 'Usage', render: (s) => (s.is_used ? 'Used' : <span style={muted}>Unused</span>) },
-    { key: 'updated_at', header: 'Updated', sortable: true, render: (s) => (s.updated_at ? new Date(s.updated_at).toLocaleDateString() : '—') },
+    { key: 'updated_at', header: 'Updated', sortable: true, render: (s) => (s.updated_at ? formatTimestampDate(s.updated_at) : '—') },
     {
       key: 'actions',
       header: '',

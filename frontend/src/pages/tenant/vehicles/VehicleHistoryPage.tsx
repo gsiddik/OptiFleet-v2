@@ -5,6 +5,7 @@ import { inputStyle } from '../../../components/FormField';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import type { HistoryEventItem, VehicleItem } from '../../../types';
+import { formatDateTime } from '../../../utils/date';
 
 export function VehicleHistoryPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,7 +58,7 @@ export function VehicleHistoryPage() {
           {events.map((e) => (
             <div key={`${e.type}-${e.id}`} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10, alignItems: 'center' }}>
               <StatusBadge status={e.type} />
-              <span style={{ color: '#9ca3af', minWidth: 160 }}>{new Date(e.at).toLocaleString()}</span>
+              <span style={{ color: '#9ca3af', minWidth: 160 }}>{formatDateTime(e.at)}</span>
               <span>{e.summary}</span>
             </div>
           ))}

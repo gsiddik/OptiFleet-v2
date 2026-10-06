@@ -14,6 +14,7 @@ import { formatQty } from '../../../utils/quantity';
 import type { PartRequestItem } from '../../../types';
 import { lineName } from '../../../utils/stockCondition';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
 
 const STATUSES = ['', 'REQUESTED', 'APPROVED', 'ISSUED', 'REJECTED', 'CANCELLED'];
 
@@ -71,7 +72,7 @@ export function PartRequestListPage() {
     { key: 'vehicle', header: 'Vehicle', render: (r) => r.work_order?.vehicle?.registration_number ?? '—' },
     { key: 'product', header: 'Product', render: (r) => lines(r).map((l) => <div key={l.name}>{l.name}</div>) },
     { key: 'qty', header: 'Qty', render: (r) => lines(r).map((l) => <div key={l.name}>{formatQty(l.qty)}</div>) },
-    { key: 'requested_at', header: 'Requested', render: (r) => (r.requested_at ? new Date(r.requested_at).toLocaleString() : '—') },
+    { key: 'requested_at', header: 'Requested', render: (r) => (r.requested_at ? formatDateTime(r.requested_at) : '—') },
     {
       key: 'status',
       header: 'Status',

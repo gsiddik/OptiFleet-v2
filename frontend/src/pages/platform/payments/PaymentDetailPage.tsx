@@ -8,6 +8,7 @@ import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PaymentItem } from '../../../types';
+import { formatMoney } from '../../../utils/money';
 
 export function PaymentDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -72,7 +73,7 @@ export function PaymentDetailPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
         <SummaryCard label="Invoice" value={payment.invoice ? payment.invoice.invoice_number : '—'} />
         <SummaryCard label="Payment Date" value={payment.payment_date} />
-        <SummaryCard label="Amount" value={Number(payment.amount).toLocaleString()} />
+        <SummaryCard label="Amount" value={formatMoney(payment.amount)} />
         <SummaryCard label="Method" value={payment.payment_method} />
       </div>
 

@@ -9,6 +9,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import type { StockMovementItem, ProductItem, Warehouse } from '../../../types';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { formatDateTime } from '../../../utils/date';
 
 const MOVEMENT_TYPES = [
   '', 'OPENING', 'RECEIPT', 'RESERVATION', 'RELEASE_RESERVATION', 'ISSUE', 'RETURN',
@@ -63,7 +64,7 @@ export function StockMovementListPage() {
   const rows = isDrilldown ? [...withBalance].reverse() : withBalance;
 
   const columns: Column<StockMovementItem & { __balance: number }>[] = [
-    { key: 'occurred_at', header: 'Date', render: (m) => new Date(m.occurred_at).toLocaleString() },
+    { key: 'occurred_at', header: 'Date', render: (m) => formatDateTime(m.occurred_at) },
     { key: 'warehouse', header: 'Warehouse', render: (m) => m.warehouse?.name ?? m.warehouse_id },
     { key: 'product', header: 'Product', render: (m) => m.product?.name ?? m.product_id },
     { key: 'type', header: 'Type', render: (m) => <StatusBadge status={m.movement_type} /> },

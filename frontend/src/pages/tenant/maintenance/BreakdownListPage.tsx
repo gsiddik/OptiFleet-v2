@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { BreakdownItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
 
 const STATUSES = ['', 'REPORTED', 'VERIFIED', 'ASSESSED', 'REPAIR_REQUIRED', 'WORK_ORDER_CREATED', 'RESOLVED'];
 
@@ -24,7 +25,7 @@ export function BreakdownListPage() {
   const columns: Column<BreakdownItem>[] = [
     { key: 'vehicle', header: 'Vehicle', render: (b) => <Link to={`/app/breakdowns/${b.id}`}>{b.vehicle?.registration_number ?? b.vehicle_id}</Link> },
     { key: 'severity', header: 'Severity', render: (b) => <StatusBadge status={b.severity} /> },
-    { key: 'reported_at', header: 'Reported At', render: (b) => new Date(b.reported_at).toLocaleString() },
+    { key: 'reported_at', header: 'Reported At', render: (b) => formatDateTime(b.reported_at) },
     { key: 'location', header: 'Location', render: (b) => b.location ?? '—' },
     { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
   ];

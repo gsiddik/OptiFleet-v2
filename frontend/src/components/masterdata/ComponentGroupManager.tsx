@@ -13,6 +13,7 @@ import { useAuth } from '../../auth/AuthContext';
 import type { ComponentGroup } from '../../types';
 import { abbreviationError, componentGroupLabel, normalizeAbbreviationInput } from '../../utils/componentGroup';
 import { NumericInput } from '../NumericInput';
+import { formatTimestampDate } from '../../utils/date';
 
 type View = 'active' | 'deleted' | 'all';
 
@@ -133,7 +134,7 @@ export function ComponentGroupManager({
       header: 'Usage',
       render: (g) => (g.is_used ? <span title="Used by Products — abbreviation locked">Used</span> : <span style={muted}>Unused</span>),
     },
-    { key: 'updated_at', header: 'Updated', sortable: true, render: (g) => (g.updated_at ? new Date(g.updated_at).toLocaleDateString() : '—') },
+    { key: 'updated_at', header: 'Updated', sortable: true, render: (g) => (g.updated_at ? formatTimestampDate(g.updated_at) : '—') },
     {
       key: 'actions',
       header: '',

@@ -5,6 +5,7 @@ import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import type { ConfigurationHistoryRow, ConfigurationType } from '../../../types';
+import { formatDateTime } from '../../../utils/date';
 
 const TYPES: Array<{ value: ConfigurationType | ''; label: string }> = [
   { value: '', label: 'All types' },
@@ -66,8 +67,8 @@ export function ConfigurationHistoryPage() {
                 <td style={{ padding: 10 }}>
                   <StatusBadge status={row.status} />
                 </td>
-                <td style={{ padding: 10 }}>{row.published_at ? new Date(row.published_at).toLocaleString() : '—'}</td>
-                <td style={{ padding: 10 }}>{row.archived_at ? new Date(row.archived_at).toLocaleString() : '—'}</td>
+                <td style={{ padding: 10 }}>{row.published_at ? formatDateTime(row.published_at) : '—'}</td>
+                <td style={{ padding: 10 }}>{row.archived_at ? formatDateTime(row.archived_at) : '—'}</td>
                 <td style={{ padding: 10, color: '#6b7280' }}>{row.change_summary ?? '—'}</td>
               </tr>
             ))}

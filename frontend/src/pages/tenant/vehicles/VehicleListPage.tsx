@@ -12,13 +12,11 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleBrandItem, VehicleItem, VehicleModelItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatNumber } from '../../../utils/number';
+import { monthNames } from '../../../i18n/locale';
 
 const STATUSES = ['', 'ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'];
 
-const MONTHS = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
 
 export function VehicleListPage() {
   const { hasPermission } = useAuth();
@@ -33,7 +31,7 @@ export function VehicleListPage() {
     { key: 'brand', header: 'Vehicle', render: (v) => `${v.brand} ${v.model}` },
     { key: 'branch', header: 'Branch', render: (v) => v.branch?.name ?? '—' },
     { key: 'category', header: 'Category', render: (v) => v.vehicle_category?.name ?? '—' },
-    { key: 'odometer', header: 'Odometer', render: (v) => Number(v.current_odometer).toLocaleString() },
+    { key: 'odometer', header: 'Odometer', render: (v) => formatNumber(v.current_odometer) },
     { key: 'status', header: 'Status', render: (v) => <StatusBadge status={v.status} /> },
     { key: 'operational_status', header: 'Operational', render: (v) => statusLabel(v.operational_status) },
   ];
@@ -191,7 +189,7 @@ function CreateVehicleModal({ open, onClose, onCreated }: { open: boolean; onClo
         <FormField label="Purchase Month" errors={errors.purchase_month}>
           <select value={purchaseMonth} onChange={(e) => setPurchaseMonth(e.target.value)} style={inputStyle}>
             <option value="">Select…</option>
-            {MONTHS.map((m, i) => (
+            {monthNames('long').map((m, i) => (
               <option key={m} value={i + 1}>
                 {m}
               </option>

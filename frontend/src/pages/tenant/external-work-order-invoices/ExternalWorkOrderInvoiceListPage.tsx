@@ -11,7 +11,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { ExternalWorkOrderInvoiceItem, InspectionLogEntry, PartnerItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney, toMoneyInput } from '../../../utils/money';
-import { formatDate } from '../../../utils/date';
+import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
 import { statusLabel } from '../../../i18n/statusRegistry';
 
@@ -503,7 +503,7 @@ export function ExternalWorkOrderInvoiceListPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {historyEntries.map((entry) => (
               <div key={entry.id} style={{ fontSize: 13, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
-                <div style={{ color: '#6b7280', fontSize: 12 }}>{new Date(entry.created_at).toLocaleString()}</div>
+                <div style={{ color: '#6b7280', fontSize: 12 }}>{formatDateTime(entry.created_at)}</div>
                 <div>
                   <strong>{entry.actor_name ?? 'System'}</strong> — {entry.action}
                   {entry.new_values?.status ? ` (status: ${statusLabel(String(entry.new_values.status))})` : ''}

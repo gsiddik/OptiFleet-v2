@@ -71,7 +71,7 @@ export function DocumentConfigList({
   const canManage = hasPermission(managePermission);
   const canPublish = hasPermission(publishPermission);
   const label = (code: string) =>
-    documentTypes.find((d) => d.key === code)?.label ?? code.replace(/_/g, " ");
+    documentTypes.find((d) => d.key === code)?.label ?? code;
 
   const groups = new Map<
     string,

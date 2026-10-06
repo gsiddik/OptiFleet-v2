@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { MaintenanceRequestItem } from '../../../types';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
 
 // NEED_INFORMATION is retired (see MaintenanceRequestService docblock) — omitted from the
 // filter bar since no request can be in that status going forward, but the status itself
@@ -42,7 +43,7 @@ export function MaintenanceRequestListPage() {
     { key: 'source_type', header: 'Source', render: (r) => r.source_type },
     { key: 'priority', header: 'Priority', render: (r) => r.priority },
     { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
-    { key: 'created_at', header: 'Created At', render: (r) => new Date(r.created_at).toLocaleString() },
+    { key: 'created_at', header: 'Created At', render: (r) => formatDateTime(r.created_at) },
     { key: 'submitted_by', header: 'Submitted by', render: (r) => r.requested_by_user?.name ?? '—' },
     {
       key: 'actions',

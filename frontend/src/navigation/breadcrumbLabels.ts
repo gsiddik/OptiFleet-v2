@@ -1,8 +1,9 @@
 /**
  * Static path-segment -> human label lookup for the Breadcrumb component.
  * Keyed by the raw URL segment (not the full path), so one entry covers a
- * segment wherever it appears in the tree. Anything not listed here falls
- * back to a humanized version of the segment (see humanizeSegment below) —
+ * segment wherever it appears in the tree. Every static route segment has an
+ * entry (enforced by tests/unit/breadcrumbLabels.test.ts); humanizeSegment is
+ * only a last-resort fallback for an unexpected segment —
  * the breadcrumb is always derived from the real route, this dictionary
  * only improves wording, it never invents links that don't exist.
  */
@@ -126,6 +127,19 @@ export const SEGMENT_LABELS: Record<string, string> = {
   warranty: 'Warranty',
   intelligence: 'Maintenance Intelligence',
   recommendations: 'Recommendations',
+  // Explicit labels for segments that previously relied on the humanize fallback (i18n structural
+  // preparation: every static route segment has a label, so it can be translated by key).
+  edit: 'Edit',
+  inspection: 'Inspection',
+  login: 'Login',
+  new: 'New',
+  returns: 'Returns',
+  'tire-history': 'Tire History',
+  'tire-inspection-rules': 'Tire Inspection Rules',
+  'tire-operations': 'Tire Operations',
+  'tire-scoring': 'Tire Scoring',
+  'used-tires': 'Used Tires',
+  'vehicle-mapping': 'Vehicle Mapping',
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
