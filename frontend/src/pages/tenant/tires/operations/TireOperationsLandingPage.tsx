@@ -16,6 +16,7 @@ import { formatHours, formatKm } from './tireOperationFormat';
 import { OPERATION_TYPES, OPERATION_TYPE_LABEL, type TireOperationListItem } from './tireOperationTypes';
 import { statusLabel } from '../../../../i18n/statusRegistry';
 import { t as tt } from '../../../../i18n/i18n';
+import { Trans } from 'react-i18next';
 
 const TYPE_PERMISSION = { REPLACEMENT: 'tire.install', ROTATION: 'tire.rotate', INSPECTION: 'tire.inspect' } as const;
 const STATUSES = ['NEW', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
@@ -185,7 +186,7 @@ export function CancelOperationDialog({ operation, onClose, onCancelled }: { ope
   return (
     <Modal open title={tt('tire.actions.cancelTireOperation')} onClose={onClose}>
       <p style={{ fontSize: 13, marginTop: 0 }}>
-        This cancels the {OPERATION_TYPE_LABEL[operation.operation_type].toLowerCase()} and its Work Order <strong>{operation.work_order?.wo_number ?? ''}</strong>{tt('tire.help.requestedReplacementTiresReleased')}
+        <Trans i18nKey="tire.help.cancelOperationNotice" values={{ operation: OPERATION_TYPE_LABEL[operation.operation_type].toLowerCase(), workOrder: operation.work_order?.wo_number ?? '' }} components={{ strong: <strong /> }} />
       </p>
       <FormField label={tt('common.fields.reason')}>
         <textarea aria-label={tt('common.fields.cancellationReason')} value={reason} maxLength={500} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />

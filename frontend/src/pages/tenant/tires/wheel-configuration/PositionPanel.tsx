@@ -53,7 +53,7 @@ function TireRegistrationForm({ vehicleId, positionCode, onSaved }: { vehicleId:
 
   // Client checks are for quick feedback only; the backend validates everything again.
   const clientErrors: Record<string, string[]> = {};
-  if (time && !TIME_PATTERN.test(time)) clientErrors.installed_time = ['Use HH:mm (24-hour), e.g. 07:30.'];
+  if (time && !TIME_PATTERN.test(time)) clientErrors.installed_time = [t('common.validation.timeFormatHHmm')];
   const ready = date !== '' && TIME_PATTERN.test(time) && km.trim() !== '' && product !== null && serial.trim() !== '';
 
   async function submit() {

@@ -7,6 +7,7 @@ import { downloadProtectedFile } from '../../../utils/protectedFile';
 import type { ProductItem } from '../../../types';
 import { message } from '../../../i18n/messages';
 import { t } from '../../../i18n/i18n';
+import { Trans } from 'react-i18next';
 
 type RowStatus = 'VALID' | 'DUPLICATE' | 'INVALID';
 
@@ -190,8 +191,11 @@ export function ImportTiresModal({ product, onClose, onImported }: { product: Pr
         <div data-import-preview>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13, marginBottom: 6 }}>
             <span>
-              {rows.length} rows — <span style={{ color: STATUS_COLOR.VALID }}>{counts.VALID} ready</span>, <span style={{ color: STATUS_COLOR.DUPLICATE }}>{counts.DUPLICATE} duplicate</span>,{' '}
-              <span style={{ color: STATUS_COLOR.INVALID }}>{counts.INVALID} invalid</span> · {selected.size} selected
+              <Trans
+                i18nKey="tire.help.importSummary"
+                values={{ rows: rows.length, ready: counts.VALID, duplicate: counts.DUPLICATE, invalid: counts.INVALID, selected: selected.size }}
+                components={{ ready: <span style={{ color: STATUS_COLOR.VALID }} />, duplicate: <span style={{ color: STATUS_COLOR.DUPLICATE }} />, invalid: <span style={{ color: STATUS_COLOR.INVALID }} /> }}
+              />
             </span>
             <span style={{ display: 'flex', gap: 10 }}>
               <button type="button" className="btn-link" onClick={() => setSelected(new Set(rows.map((r) => r.row)))}>

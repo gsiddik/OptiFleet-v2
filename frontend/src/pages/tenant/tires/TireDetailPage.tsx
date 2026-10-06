@@ -212,7 +212,7 @@ export function TireDetailPage() {
         {(tire.installations ?? []).length === 0 && <EmptyState label={t('tenantComponents.empty.noInstallationsYet')} />}
         {(tire.installations ?? []).map((i) => (
           <div key={i.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {i.vehicle?.registration_number ?? i.vehicle_id} — {i.wheel_position} — installed {formatTimestampDate(i.installed_at)}
+            {t('tire.help.valueWheelPositionInstalledToLocale', { value: i.vehicle?.registration_number ?? i.vehicle_id, wheel_position: i.wheel_position, toLocaleDateString: formatTimestampDate(i.installed_at) })}
             {i.installation_date_source !== 'KNOWN' && ` (${i.installation_date_source})`}
             {i.removed_at && ` — removed ${formatTimestampDate(i.removed_at)}`}
           </div>
@@ -234,7 +234,7 @@ export function TireDetailPage() {
         {(tire.inspections ?? []).length === 0 && <EmptyState label={t('tire.empty.noInspectionsYet')} />}
         {(tire.inspections ?? []).map((i) => (
           <div key={i.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {formatTimestampDate(i.inspected_at)} — tread {i.tread_depth_mm ?? '—'}{t('tire.fields.mmPressure')} {i.pressure_psi ?? '—'}{t('tire.fields.psi')}
+            {t('tire.help.inspectionReadingLine', { date: formatTimestampDate(i.inspected_at), tread: i.tread_depth_mm ?? '—', pressure: i.pressure_psi ?? '—' })}
             {i.recommendation && ` — ${i.recommendation}`}
           </div>
         ))}

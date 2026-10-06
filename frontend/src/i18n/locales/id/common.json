@@ -363,6 +363,7 @@
     "abbreviationIsRequired": "Singkatan wajib diisi.",
     "fileMustNotLargerThanMax": "Ukuran file tidak boleh lebih dari {{maxBytes}}.",
     "mustExactly3LettersZ": "Harus tepat 3 huruf (A-Z).",
+    "timeFormatHHmm": "Gunakan format HH:mm (24 jam), mis. 07:30.",
     "useAuthMustUsedWithinAuth": "useAuth must be used within AuthProvider"
   },
   "warnings": {

@@ -5,6 +5,7 @@ import { formatDate } from '../../../../utils/date';
 import type { TireCard } from './tireOperationTypes';
 import { REPLACEMENT_COLOR, ROTATION_RETURN_COLOR, formatHours, formatKm } from './tireOperationFormat';
 import { t } from '../../../../i18n/i18n';
+import { Trans } from 'react-i18next';
 
 /**
  * Rounded card with the facts of the tire on one position (Installed Tire / To be Rotated /
@@ -60,8 +61,11 @@ export function TireOperationCard({
 export function MissingTireNotice({ code, vehicleId }: { code: string; vehicleId?: string }) {
   return (
     <div role="alert" data-missing-tire={code} style={{ fontSize: 13, color: '#991b1b', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 10px' }}>
-      <PositionLabel code={code} /> has no tire data yet. Complete it in{' '}
-      {vehicleId ? <Link to={`/app/vehicles/${vehicleId}?tab=wheels`}>{t('tire.actions.vehicleDetailsWheelsConfiguration')}</Link> : t('tire.actions.vehicleDetailsWheelsConfiguration')} before continuing.
+      <Trans
+        i18nKey="tire.help.missingTireDataNotice"
+        values={{ position: code }}
+        components={{ position: <PositionLabel code={code} />, linkTo: vehicleId ? <Link to={`/app/vehicles/${vehicleId}?tab=wheels`} /> : <span /> }}
+      />
     </div>
   );
 }

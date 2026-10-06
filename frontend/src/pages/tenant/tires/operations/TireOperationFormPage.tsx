@@ -293,7 +293,7 @@ export function TireOperationFormPage() {
   if (editing && !existing) return <LoadingState />;
 
   const mapping = context?.mapping ?? null;
-  const fieldErrors = (key: string) => errors[key] ?? (key === 'operated_time' && time && !TIME_PATTERN.test(time) ? ['Use HH:mm (24-hour), e.g. 07:30.'] : undefined);
+  const fieldErrors = (key: string) => errors[key] ?? (key === 'operated_time' && time && !TIME_PATTERN.test(time) ? [tt('common.validation.timeFormatHHmm')] : undefined);
   const selectionErrors = [...(errors.items ?? []), ...(errors.rotation_pairs ?? [])];
 
   return (

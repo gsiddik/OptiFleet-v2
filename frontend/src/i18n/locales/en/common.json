@@ -363,6 +363,7 @@
     "abbreviationIsRequired": "Abbreviation is required.",
     "fileMustNotLargerThanMax": "The file must not be larger than {{maxBytes}}.",
     "mustExactly3LettersZ": "Must be exactly 3 letters (A-Z).",
+    "timeFormatHHmm": "Use HH:mm (24-hour), e.g. 07:30.",
     "useAuthMustUsedWithinAuth": "useAuth must be used within AuthProvider"
   },
   "warnings": {

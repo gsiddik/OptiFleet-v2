@@ -68,7 +68,7 @@ export function RetreadHistory({ tireId }: { tireId: string }) {
                 }}
               >
                 <td style={{ padding: 6 }}>
-                  {c.kind === "REPAIR" ? "Repair" : t('tire.filters.retread')} #{c.cycle_number}
+                  {c.kind === "REPAIR" ? t('inventory.fields.repair') : t('tire.filters.retread')} #{c.cycle_number}
                   <div style={{ fontSize: 11, color: "#6b7280" }}>
                     {c.state.replace("_", " ")}
                   </div>

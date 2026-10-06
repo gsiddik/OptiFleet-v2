@@ -202,7 +202,7 @@ export function VehicleMappingPage() {
           <div style={{ fontWeight: 600 }}>{saveError.blockers.length ? t('tire.help.vehicleCannotRemappedBecauseActiveTires') : saveError.message}</div>
           {saveError.blockers.map((b) => (
             <div key={`${b.vehicle_registration_number}-${b.position_code}`} style={{ fontFamily: 'monospace' }}>
-              {b.vehicle_registration_number} · {b.position_code} — Tire {b.tire_serial_number}
+              {t('tire.help.vehicleRegistrationNumberPositionCodeTire', { vehicle_registration_number: b.vehicle_registration_number, position_code: b.position_code, tire_serial_number: b.tire_serial_number })}
             </div>
           ))}
           {saveError.details.map((d) => (
@@ -248,7 +248,7 @@ export function VehicleMappingPage() {
 
       {(data.excluded.incomplete_vehicle_data > 0 || data.excluded.mapped_to_other_configuration > 0) && (
         <p data-mapping-excluded style={{ fontSize: 12, color: '#6b7280', marginTop: 12 }}>
-          Not listed: {data.excluded.incomplete_vehicle_data} vehicle(s) without Vehicle Type, Axles or Wheels on their Vehicle Detail, and {data.excluded.mapped_to_other_configuration} vehicle(s) mapped to another configuration (remove them there first).
+          {t('tire.help.notListedIncompleteVehicleDataVehicle', { incomplete_vehicle_data: data.excluded.incomplete_vehicle_data, mapped_to_other_configuration: data.excluded.mapped_to_other_configuration })}
         </p>
       )}
 

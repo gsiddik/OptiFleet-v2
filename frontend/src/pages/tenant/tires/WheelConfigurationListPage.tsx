@@ -115,7 +115,7 @@ export function WheelConfigurationListPage() {
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('tire.titles.wheelConfiguration')}</h1>
       {saved && (
         <div data-save-success role="status" style={{ fontSize: 13, color: '#166534', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 6, padding: '8px 12px', marginBottom: 14 }}>
-          Saved configuration {saved.config_code} (version {saved.version_number}).
+          {tt('tire.help.savedConfigurationConfigCodeVersionVersion', { config_code: saved.config_code, version_number: saved.version_number })}
         </div>
       )}
       {vehicleId && (

@@ -112,7 +112,7 @@ export function WheelConfigurationDetailPage() {
               </table>
               {version.version_number > 1 && (
                 <div data-version-diff style={{ fontSize: 12, background: '#f9fafb', borderRadius: 6, padding: 8, marginTop: 10 }}>
-                  <div style={{ color: '#6b7280', marginBottom: 4 }}>Changes from version {version.version_number - 1}:</div>
+                  <div style={{ color: '#6b7280', marginBottom: 4 }}>{t('tire.fields.changesFromVersionValue', { value: version.version_number - 1 })}:</div>
                   <div>
                     <span style={{ color: '#166534', fontWeight: 600 }}>{t('tire.fields.added')}:</span> <code>{version.position_diff.added.join(' ') || '—'}</code>
                   </div>
@@ -120,7 +120,7 @@ export function WheelConfigurationDetailPage() {
                     <span style={{ color: '#b45309', fontWeight: 600 }}>{t('tire.fields.removed')}:</span> <code>{version.position_diff.removed.join(' ') || '—'}</code>
                   </div>
                   <div>
-                    <span style={{ fontWeight: 600 }}>{t('tire.fields.unchanged')}:</span> {version.position_diff.unchanged.length} positions
+                    <span style={{ fontWeight: 600 }}>{t('tire.fields.unchanged')}:</span> {t('tire.fields.unchangedCountPositions', { unchangedCount: version.position_diff.unchanged.length })}
                   </div>
                 </div>
               )}

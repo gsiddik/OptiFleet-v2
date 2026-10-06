@@ -74,7 +74,7 @@ export function VehicleWheelsConfigurationTab({ vehicleId }: { vehicleId: string
         </div>
         {!mapping.is_current_version && (
           <p style={{ fontSize: 12, color: '#92400e', margin: '10px 0 0' }}>
-            This configuration has a newer version ({master.config_code}). The vehicle stays on v{version.version_number} until it is updated in Vehicle Mapping.
+            {t('tire.help.configurationNewerVersionConfigCodeVehicle', { config_code: master.config_code, version_number: version.version_number })}
           </p>
         )}
       </div>
@@ -90,7 +90,7 @@ export function VehicleWheelsConfigurationTab({ vehicleId }: { vehicleId: string
             installedCodes={installed}
           />
           <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 0 }}>
-            {t('tire.help.tapTireViewRegister')} <span style={{ color: '#16a34a' }}>●</span> green outline = tire registered ({installed.size} of {version.positions.length} positions).
+            {t('tire.help.tapTireViewRegister')} <span style={{ color: '#16a34a' }}>●</span> {t('tire.help.greenOutlineTireRegisteredInstalledCount', { installedCount: installed.size, positionsCount: version.positions.length })}
           </p>
         </div>
         <div className="card" data-position-panel-card>

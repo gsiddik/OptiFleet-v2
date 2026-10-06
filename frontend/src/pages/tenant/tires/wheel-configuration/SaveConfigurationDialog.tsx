@@ -139,7 +139,7 @@ export function SaveConfigurationDialog({
             )}
             {preview.duplicate && (
               <div data-save-duplicate role="alert" style={{ fontSize: 13, color: '#b91c1c', marginBottom: 12 }}>
-                {t('accessControl.labels.configuration')} {preview.duplicate.config_code} already exists for this vehicle type. <Link to={`/app/wheel-configurations/${preview.duplicate.id}/edit`}>{t('tire.actions.editThatConfiguration')}</Link> {t('tire.help.instead')}
+                {t('tire.help.configurationConfigCodeAlreadyExistsVehicle', { config_code: preview.duplicate.config_code })} <Link to={`/app/wheel-configurations/${preview.duplicate.id}/edit`}>{t('tire.actions.editThatConfiguration')}</Link> {t('tire.help.instead')}
               </div>
             )}
           </>

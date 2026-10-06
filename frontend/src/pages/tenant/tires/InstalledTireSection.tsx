@@ -6,6 +6,7 @@ import { formatHours, formatKm } from './operations/tireOperationFormat';
 import { WheelConfigurationPreview } from './wheel-configuration/WheelConfigurationPreview';
 import { bodyStyleFor, type VehicleType } from './wheel-configuration/vehicleTypes';
 import { t } from '../../../i18n/i18n';
+import { Trans } from 'react-i18next';
 
 const HIGHLIGHT = '#a8321f';
 
@@ -65,7 +66,7 @@ export function InstalledTireSection({ installed }: { installed: TireInstalledSu
               positionColors={{ [installed.position_code]: HIGHLIGHT }}
             />
             <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 0 }}>
-              {t('tire.titles.wheelsConfiguration')} {configuration.config_code} (v{configuration.version_number}) — this tire is on <strong style={{ color: HIGHLIGHT }}>{installed.position_code}</strong>.
+              <Trans i18nKey="tire.help.installedOnPosition" values={{ config_code: configuration.config_code, version_number: configuration.version_number, position: installed.position_code }} components={{ strong: <strong style={{ color: HIGHLIGHT }} /> }} />
             </p>
           </>
         ) : (

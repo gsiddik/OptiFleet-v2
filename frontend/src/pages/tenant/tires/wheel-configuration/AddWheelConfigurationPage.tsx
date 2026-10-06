@@ -102,7 +102,7 @@ function WheelConfigurationFormPage({ masterId }: { masterId: string | null }) {
         )}
         {editing && current && (
           <p data-editing-version style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
-            Editing version {current.version_number} ({current.config_code}). Saving a change creates version {current.version_number + 1}. Vehicle Type and Truck Configuration Type identify this configuration and cannot be changed — create a new configuration for another type.
+            {tt('tire.help.editingVersionVersionNumberConfigCode', { version_number: current.version_number, config_code: current.config_code, value: current.version_number + 1 })}
           </p>
         )}
         {editing && (master?.mapped_vehicle_count ?? 0) > 0 && (

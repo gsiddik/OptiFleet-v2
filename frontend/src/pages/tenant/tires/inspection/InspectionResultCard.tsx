@@ -73,7 +73,7 @@ export function InspectionResultCard({
         <Row label={t('tire.fields.minimumTreadDepth')}>
           {inspection.d_min_mm != null
             ? t('tire.help.dPullMmMm', { d_pull_mm: inspection.d_min_mm })
-            : "— (incomplete)"}
+            : t('tire.help.incompleteValue')}
         </Row>
         {inspection.remaining_tread_percent != null && (
           <Row label={t('tire.fields.remainingTread')}>

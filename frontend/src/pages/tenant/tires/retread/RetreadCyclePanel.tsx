@@ -176,7 +176,7 @@ export function RetreadCyclePanel() {
                     {row.tire.product?.name ?? "—"}
                   </td>
                   <td style={{ padding: 8 }}>
-                    {row.kind === "REPAIR" ? "Repair" : t('tire.help.retread')}
+                    {row.kind === "REPAIR" ? t('inventory.fields.repair') : t('tire.help.retread')}
                   </td>
                   <td style={{ padding: 8 }}>
                     {row.cycle ? (

@@ -116,7 +116,7 @@ export function TireProductDetailPage() {
         count={product.inventory.used_qty}
         action={
           <span data-reusable-count style={{ fontSize: 12, color: '#166534' }} title={t('tire.tooltips.onlyReuseTiresAvailableInstallationRemoved')}>
-            {product.inventory.reusable_qty} reusable (REUSE)
+            {t('tire.fields.reusableQtyReusableReuse', { reusable_qty: product.inventory.reusable_qty })}
           </span>
         }
       >

@@ -97,6 +97,14 @@ export function validate(entries, additionRows) {
 }
 
 /** Nested JSON per namespace (first key segment) and a flat backend catalog, per locale. */
+/**
+ * Rich-text tags for <Trans>: a tag named like an HTML void element (<link>) would be parsed as self-closing
+ * and lose its text, so the frontend resources rename it (<link>…</link> → <linkTo>…</linkTo>). The dataset
+ * and the backend catalog keep the original text.
+ */
+const VOID_TAGS = { link: 'linkTo', input: 'inputTo', img: 'imgTo', br: 'brTo', hr: 'hrTo', meta: 'metaTo' };
+export const reactTags = (text) => text.replace(/<(\/?)(link|input|img|br|hr|meta)>/g, (m, slash, tag) => `<${slash}${VOID_TAGS[tag]}>`);
+
 export function build(entries) {
   const frontend = Object.fromEntries(LOCALES.map((l) => [l, {}]));
   const backend = Object.fromEntries(LOCALES.map((l) => [l, {}]));
@@ -105,7 +113,7 @@ export function build(entries) {
     for (const l of LOCALES) {
       let node = (frontend[l][ns] ??= {});
       path.slice(0, -1).forEach((p) => { node = node[p] ??= {}; });
-      node[path.at(-1)] = e[l];
+      node[path.at(-1)] = reactTags(e[l]);
       backend[l][e.key] = e[l];
     }
   }

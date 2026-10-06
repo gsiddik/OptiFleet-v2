@@ -150,8 +150,8 @@ export function TireRuleProfilesPage() {
                   <td style={td}>{p.application ?? t('tire.help.general')}</td>
                   <td style={td}>{p.d_service_mm} {t('tire.help.mm')}</td>
                   <td style={td}>{p.d_pull_mm} {t('tire.help.mm')}</td>
-                  <td style={td}>{p.a_max_months} mo</td>
-                  <td style={td}>{p.a_retread_max_months} mo</td>
+                  <td style={td}>{t('tire.help.aMaxMonthsMo', { a_max_months: p.a_max_months })}</td>
+                  <td style={td}>{t('tire.help.retreadMaxMonthsMo', { a_retread_max_months: p.a_retread_max_months })}</td>
                   <td style={td}>{p.n_retread_max}</td>
                   <td style={td}>v{p.version}</td>
                   <td style={td}>
@@ -464,7 +464,7 @@ function ProfileForm({
                 })
               }
             />
-            Repairs allowed on {l.label}
+            {t('tire.fields.repairsAllowedOnLabel', { label: l.label })}
           </label>
         ))}
       </div>

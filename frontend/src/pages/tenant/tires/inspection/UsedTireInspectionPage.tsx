@@ -480,7 +480,7 @@ function InspectionForm({
                   </th>
                   {[1, 2, 3].map((z) => (
                     <th key={z} style={{ padding: 4, whiteSpace: "nowrap" }}>
-                      Zone {z}
+                      {tt('tire.fields.zoneZ', { z })}
                       <InfoTip label={tt('tire.fields.zoneZ', { z: z })}>{ZONE_HELP[z]}</InfoTip>
                     </th>
                   ))}
@@ -490,7 +490,7 @@ function InspectionForm({
                 {GROOVES.map((g) => (
                   <tr key={g.value}>
                     <td style={{ padding: 4, whiteSpace: "nowrap" }}>
-                      {g.label} (mm)
+                      {tt('tire.fields.labelMm', { label: g.label })}
                       {g.required ? " *" : ""}
                       <InfoTip label={g.label}>{g.help}</InfoTip>
                     </td>
@@ -550,7 +550,7 @@ function InspectionForm({
               {evaluation?.remaining_tread_percent != null && (
                 <span style={{ color: "#6b7280" }}>
                   {" "}
-                  · Remaining tread {evaluation.remaining_tread_percent}%{" "}
+                  {tt('tire.help.remainingTreadRemainingTreadPercentPercent', { remaining_tread_percent: evaluation.remaining_tread_percent })}{" "}
                   <em>{tt('tire.help.indicatorOnlyNotSafetyScore')}</em>
                 </span>
               )}
