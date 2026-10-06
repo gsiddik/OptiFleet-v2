@@ -7,13 +7,14 @@ import { FreshnessBanner } from '../../../components/analytics/FreshnessBanner';
 import { TrendChart } from '../../../components/analytics/TrendChart';
 import { formatCell, readPath, type AnalyticsDomainConfig, type AnalyticsResponse } from '../../../components/analytics/analyticsTypes';
 import { useAuth } from '../../../auth/AuthContext';
+import { labelText, t, withLabels } from '../../../i18n/i18n';
 
-const RANGE_PRESETS = [
-  { label: '7 days', days: 7 },
-  { label: '30 days', days: 30 },
-  { label: '90 days', days: 90 },
-  { label: '365 days', days: 365 },
-];
+const RANGE_PRESETS = withLabels([
+  { label: '7 days', labelKey: 'analytics.fields.n7Days', days: 7 },
+  { label: '30 days', labelKey: 'analytics.fields.n30Days', days: 30 },
+  { label: '90 days', labelKey: 'analytics.fields.n90Days', days: 90 },
+  { label: '365 days', labelKey: 'analytics.fields.n365Days', days: 365 },
+]);
 
 function isoDaysAgo(days: number): string {
   const d = new Date();
@@ -59,7 +60,7 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
   }, [config.endpoint, config.permission, params, hasPermission]);
 
   if (!hasPermission(config.permission)) {
-    return <div style={{ padding: 32, color: '#b91c1c' }}>You do not have permission ({config.permission}) to view this page.</div>;
+    return <div style={{ padding: 32, color: '#b91c1c' }}>{t('analytics.help.youDoNotPermissionPermissionView', { permission: config.permission })}</div>;
   }
 
   async function exportCsv() {
@@ -103,19 +104,19 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
               className={rangeDays === preset.days ? 'btn-primary' : 'btn-secondary'}
               onClick={() => setRangeDays(preset.days)}
             >
-              {preset.label}
+              {labelText(preset)}
             </button>
           ))}
         </div>
         <input
-          placeholder={`${config.dimensionLabel} ID (optional)`}
+          placeholder={t('analytics.placeholders.dimensionLabelIdOptional', { dimensionLabel: config.dimensionLabel })}
           value={dimensionValue}
           onChange={(e) => setDimensionValue(e.target.value)}
           style={{ padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: 6, fontSize: 13, minWidth: 220 }}
         />
         {hasPermission('analytics.export') && (
           <button className="btn-secondary" onClick={exportCsv} disabled={exporting}>
-            {exporting ? 'Exporting…' : 'Export CSV'}
+            {exporting ? t('analytics.actions.exporting') : t('analytics.actions.exportCsv')}
           </button>
         )}
       </div>
@@ -135,22 +136,22 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
 
           {trendField && (
             <div style={{ marginBottom: 16 }}>
-              <TrendChart points={trendPoints} label={trendField.label} />
+              <TrendChart points={trendPoints} label={labelText(trendField)} />
             </div>
           )}
 
-          {response.metrics.length === 0 && <EmptyState label="No analytics data for this period." />}
+          {response.metrics.length === 0 && <EmptyState label={t('analytics.empty.noAnalyticsDataPeriod')} />}
 
           {response.metrics.length > 0 && (
             <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8 }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
-                    <th style={{ padding: '8px 12px' }}>Date</th>
+                    <th style={{ padding: '8px 12px' }}>{t('common.fields.date')}</th>
                     <th style={{ padding: '8px 12px' }}>{config.dimensionLabel}</th>
                     {config.highlightFields.map((f) => (
                       <th key={f.key} style={{ padding: '8px 12px' }}>
-                        {f.label}
+                        {labelText(f)}
                       </th>
                     ))}
                     <th style={{ padding: '8px 12px' }} />
@@ -160,7 +161,7 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
                   {response.metrics.map((row, i) => (
                     <tr key={i} style={{ borderTop: '1px solid #f3f4f6' }}>
                       <td style={{ padding: '8px 12px' }}>{String(row.snapshot_date ?? '')}</td>
-                      <td style={{ padding: '8px 12px' }}>{String(row[config.dimensionField] ?? 'All')}</td>
+                      <td style={{ padding: '8px 12px' }}>{String(row[config.dimensionField] ?? t('common.fields.all'))}</td>
                       {config.highlightFields.map((f) => (
                         <td key={f.key} style={{ padding: '8px 12px' }}>
                           {formatCell(readPath(row, f.key))}
@@ -168,7 +169,7 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
                       ))}
                       <td style={{ padding: '8px 12px' }}>
                         <button className="btn-secondary" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => setDetailRow(row)}>
-                          Details
+                          {t('analytics.actions.details')}
                         </button>
                       </td>
                     </tr>
@@ -180,7 +181,7 @@ export function AnalyticsDomainPage({ config }: { config: AnalyticsDomainConfig 
         </>
       )}
 
-      <Modal open={detailRow !== null} title="Raw metrics" onClose={() => setDetailRow(null)}>
+      <Modal open={detailRow !== null} title={t('analytics.modals.rawMetrics')} onClose={() => setDetailRow(null)}>
         <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', maxHeight: '60vh', overflowY: 'auto' }}>
           {JSON.stringify(detailRow, null, 2)}
         </pre>

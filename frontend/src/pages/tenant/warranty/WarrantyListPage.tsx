@@ -11,6 +11,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PartnerItem, ProductItem, WarrantyItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { t } from '../../../i18n/i18n';
 
 export function WarrantyListPage() {
   const { hasPermission } = useAuth();
@@ -19,29 +20,29 @@ export function WarrantyListPage() {
   const { data, loading, error } = useApiList<WarrantyItem>('/app/warranties', {}, reloadKey);
 
   const columns: Column<WarrantyItem>[] = [
-    { key: 'coverage', header: 'Coverage', render: (w) => <Link to={`/app/warranties/${w.id}`}>{w.coverage_basis}</Link> },
-    { key: 'product', header: 'Product', render: (w) => w.product?.name ?? '—' },
-    { key: 'partner', header: 'Vendor', render: (w) => w.partner?.name ?? '—' },
-    { key: 'duration', header: 'Duration', render: (w) => `${w.duration_months ?? '—'}mo / ${w.duration_km ?? '—'}km` },
-    { key: 'starts_at', header: 'Starts', render: (w) => w.starts_at },
-    { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
+    { key: 'coverage', header: t('warranty.fields.coverage'), render: (w) => <Link to={`/app/warranties/${w.id}`}>{w.coverage_basis}</Link> },
+    { key: 'product', header: t('common.fields.product'), render: (w) => w.product?.name ?? '—' },
+    { key: 'partner', header: t('common.fields.vendor'), render: (w) => w.partner?.name ?? '—' },
+    { key: 'duration', header: t('warranty.fields.duration'), render: (w) => `${w.duration_months ?? '—'}mo / ${w.duration_km ?? '—'}km` },
+    { key: 'starts_at', header: t('warranty.fields.starts'), render: (w) => w.starts_at },
+    { key: 'status', header: t('common.fields.status'), render: (w) => <StatusBadge status={w.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Warranties</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('warranty.titles.warranties')}</h1>
       <Toolbar
         actions={
           hasPermission('warranty.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Warranty
+              {t('warranty.actions.newWarranty')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No warranties found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('warranty.empty.noWarrantiesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -86,8 +87,8 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
   }
 
   return (
-    <Modal open={open} title="New Warranty" onClose={onClose}>
-      <FormField label="Coverage Basis" errors={errors.coverage_basis} required>
+    <Modal open={open} title={t('warranty.modals.newWarranty')} onClose={onClose}>
+      <FormField label={t('warranty.fields.coverageBasis')} errors={errors.coverage_basis} required>
         <select value={coverageBasis} onChange={(e) => setCoverageBasis(e.target.value)} style={inputStyle}>
           {['DATE', 'MILEAGE', 'ENGINE_HOUR', 'COMBINATION'].map((c) => (
             <option key={c} value={c}>
@@ -96,18 +97,18 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
           ))}
         </select>
       </FormField>
-      <FormField label="Duration (months)" errors={errors.duration_months}>
+      <FormField label={t('warranty.fields.durationMonths')} errors={errors.duration_months}>
         <NumericInput value={durationMonths} onChange={(e) => setDurationMonths(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Duration (km)" errors={errors.duration_km}>
+      <FormField label={t('warranty.fields.durationKm')} errors={errors.duration_km}>
         <NumericInput value={durationKm} onChange={(e) => setDurationKm(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Starts At" errors={errors.starts_at} required>
+      <FormField label={t('warranty.fields.startsAt')} errors={errors.starts_at} required>
         <input type="date" value={startsAt} onChange={(e) => setStartsAt(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Product" errors={errors.product_id}>
+      <FormField label={t('common.fields.product')} errors={errors.product_id}>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} style={inputStyle}>
-          <option value="">None</option>
+          <option value="">{t('common.fields.none')}</option>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -115,9 +116,9 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
           ))}
         </select>
       </FormField>
-      <FormField label="Vendor" errors={errors.partner_id}>
+      <FormField label={t('common.fields.vendor')} errors={errors.partner_id}>
         <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={inputStyle}>
-          <option value="">None</option>
+          <option value="">{t('common.fields.none')}</option>
           {partners.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -127,10 +128,10 @@ function CreateModal({ open, onClose, onCreated }: { open: boolean; onClose: () 
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !startsAt} onClick={submit}>
-          Create
+          {t('common.actions.create')}
         </button>
       </div>
     </Modal>

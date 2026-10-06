@@ -1,0 +1,648 @@
+{
+  "analytics": {
+    "noAnalyticsDatasetExtractorRegisteredKey": "Tidak ada extractor dataset analitik yang terdaftar untuk kunci [{{key}}].",
+    "unknownKpiCodeCode": "Kode KPI tidak dikenal [{{code}}]."
+  },
+  "analyticsDomain": {
+    "dimensionValueOutsideAssignedDataScope": "Nilai dimensi ini berada di luar lingkup data Anda."
+  },
+  "app": {
+    "appDeliveryRequiresRecipientUser": "Pengiriman IN_APP memerlukan pengguna penerima.",
+    "noEmailAddressCouldResolvedRecipient": "Alamat email untuk penerima ini tidak dapat ditentukan.",
+    "noPublishedNotificationTemplateFoundEvent": "Tidak ditemukan templat notifikasi terbit untuk event ini.",
+    "unsupportedDeliveryChannelChannel": "Kanal pengiriman '{{channel}}' tidak didukung."
+  },
+  "billing": {
+    "customBillingCycleRequiresExplicitPeriod": "Siklus penagihan CUSTOM memerlukan akhir periode yang eksplisit."
+  },
+  "breakdown": {
+    "breakdownOutsideAssignedDataScope": "Kerusakan ini berada di luar lingkup data Anda.",
+    "cannotTransitionBreakdownStatus": "Tidak dapat mengubah status kerusakan dari {{status}} ke {{to}}.",
+    "onlyBreakdownAssessedRepairRequiredConverted": "Hanya kerusakan yang dinilai perlu perbaikan yang dapat dikonversi menjadi permintaan pemeliharaan."
+  },
+  "common": {
+    "andCountMoreErrors": "(dan {{count}} kesalahan lainnya)",
+    "branchOutsideAssignedDataScope": "Cabang ini berada di luar lingkup data Anda.",
+    "fileExceeds5mbMaximumSize": "File melebihi ukuran maksimum 5MB.",
+    "missingRequiredPermissionPermission": "Izin yang diperlukan tidak dimiliki: {{permission}}",
+    "systemMasterDataCannotDeletedTenant": "Data master sistem tidak dapat dihapus oleh penyewa.",
+    "systemMasterDataCannotModifiedTenant": "Data master sistem tidak dapat diubah oleh penyewa.",
+    "unsupportedFileExtensionOnlyJpgJpeg": "Ekstensi file tidak didukung. Hanya .jpg, .jpeg, atau .png yang diterima.",
+    "unsupportedFileTypeOnlyJpgPng": "Jenis file tidak didukung. Hanya gambar JPG atau PNG yang diterima.",
+    "vehicleOutsideAssignedDataScope": "Kendaraan ini berada di luar lingkup data Anda.",
+    "warehouseOutsideAssignedDataScope": "Gudang ini berada di luar lingkup data Anda.",
+    "workOrderOutsideAssignedDataScope": "Work Order ini berada di luar lingkup data Anda.",
+    "workshopOutsideAssignedDataScope": "Bengkel ini berada di luar lingkup data Anda."
+  },
+  "componentAsset": {
+    "assetAssetNumberCurrentStatusNot": "Aset {{asset_number}} berstatus {{current_status}} dan tidak ada di stok gudang pengiriman; aset tidak dapat diretur.",
+    "componentAssetAlreadyActivelyInstalledVehicle": "Aset komponen ini sudah terpasang aktif pada kendaraan.",
+    "componentAssetAlreadyInstalledVehicle": "Aset komponen ini sudah terpasang pada kendaraan.",
+    "componentAssetNotCurrentlyInstalledVehicle": "Aset komponen ini sedang tidak terpasang pada kendaraan.",
+    "componentAssetOpenSaleSellSparepart": "Aset komponen ini ada dalam penjualan terbuka (Jual Suku Cadang) dan tidak dapat dipasang.",
+    "componentAssetOutsideAssignedDataScope": "Aset komponen ini berada di luar lingkup data Anda.",
+    "componentCurrentStatusCannotRemovedVehicle": "Komponen berstatus {{current_status}} dan tidak dapat dilepas dari kendaraan.",
+    "currentStatusComponentAssetCannotInstalled": "Aset komponen berstatus {{current_status}} tidak dapat dipasang.",
+    "itemNoComponentAssetsSelect": "Item ini tidak memiliki Aset Komponen untuk dipilih.",
+    "noActiveInstallationFoundComponentAsset": "Tidak ditemukan pemasangan aktif untuk aset komponen ini.",
+    "productTrackedSerialNumberReceiveWhole": "{{product}} dilacak berdasarkan nomor seri: terima dalam satuan utuh.",
+    "selectedAssetNumberNotReceivedPurchase": "Asset# yang dipilih tidak diterima pada item Purchase Order ini.",
+    "selectExactAssets": "Pilih tepat {{quantity}} Asset# yang diretur untuk item ini (dipilih {{selectedCount}}).",
+    "unknownWarehouse": "Gudang tidak dikenal.",
+    "warehouseOutsideDataScope": "Gudang ini berada di luar lingkup data Anda."
+  },
+  "componentGroup": {
+    "systemMasterDataCannotRestoredTenant": "Data master sistem tidak dapat dipulihkan oleh penyewa."
+  },
+  "configuration": {
+    "configurationTypeRetiredNoLongerChanged": "Jenis konfigurasi ini sudah dihentikan dan tidak dapat diubah lagi.",
+    "configurationTypeTypeCodeAlreadyExists": "Konfigurasi dengan jenis {{type}}/{{code}} sudah ada untuk cakupan ini.",
+    "documentContainsInvalidWhatReference": "Dokumen memuat referensi {{what}} yang tidak valid.",
+    "documentContainsUnsupportedElement": "Dokumen memuat elemen yang tidak didukung.",
+    "documentNestedTooDeeply": "Struktur dokumen terlalu dalam.",
+    "formatContainsIncompleteMalformedToken": "Format memuat token yang tidak lengkap atau salah bentuk.",
+    "initialTextInvalid": "{{field}} harus berupa teks maksimal 30 karakter tanpa kurung kurawal.",
+    "invalidConfigurationType": "Jenis konfigurasi tidak valid.",
+    "invalidResetRuleResetRule": "reset_rule tidak valid: {{resetRule}}.",
+    "mismatchedClosingTagToken": "Tag penutup tidak cocok {{/{{token}}}}.",
+    "noPublishedDocumentTemplateFoundType": "Tidak ditemukan templat dokumen terbit untuk jenis {{documentType}}.",
+    "noPublishedNumberingConfigurationFoundDocument": "Tidak ditemukan konfigurasi penomoran terbit untuk jenis dokumen {{documentType}}.",
+    "noPublishedWorkflowFoundResourceType": "Tidak ditemukan alur kerja terbit untuk jenis resource ini.",
+    "numberingFormatIsRequired": "Format penomoran wajib diisi.",
+    "numberingFormatMustIncludeSeqSeq": "Format penomoran harus memuat token urutan {{SEQ}} atau {SEQ:N}.",
+    "onlyDraftVersionEdited": "Hanya versi berstatus DRAFT yang dapat diubah.",
+    "onlyDraftVersionPublished": "Hanya versi berstatus DRAFT yang dapat diterbitkan.",
+    "onlyPublishedVersionArchived": "Hanya versi PUBLISHED yang dapat diarsipkan.",
+    "previewNotSupportedConfigurationType": "Pratinjau tidak didukung untuk jenis konfigurasi ini.",
+    "sequenceDigitRange": "Digit Urutan harus bilangan bulat antara 1 dan {{max}}.",
+    "systemDefaultAlready": "Ini sudah merupakan default sistem.",
+    "systemDefaultAlreadyUse": "Default sistem sudah digunakan.",
+    "thereNoSystemDefaultDocumentType": "Tidak ada default sistem untuk jenis dokumen ini sebagai tujuan pengembalian.",
+    "tokenTokenDoesNotTakeNumber": "Token {{{token}}} tidak menerima angka.",
+    "unclosedSectionNumberClosingSection": "Bagian tidak ditutup {{#{{closingSection}}}}.",
+    "unexpectedClosingSectionTag": "Tag penutup bagian tidak terduga.",
+    "unknownMetadataType": "Jenis metadata tidak dikenal.",
+    "unknownNotificationEvent": "Event notifikasi tidak dikenal.",
+    "unknownNumberingTokenToken": "Token penomoran tidak dikenal: {{{token}}}.",
+    "unknownTemplateDocumentTypeDocumentType": "Jenis dokumen templat tidak dikenal '{{documentType}}'."
+  },
+  "contract": {
+    "amendmentNoLongerDraftStatus": "Amendemen ini tidak lagi berstatus DRAFT.",
+    "bundleProductReferenceNotAvailableNew": "Bundel '{{product_reference}}' tidak tersedia untuk kontrak baru.",
+    "bundleProductReferenceNotBeenPublished": "Bundel '{{product_reference}}' belum diterbitkan.",
+    "cannotRemoveModuleModuleCodeStill": "Tidak dapat menghapus modul {{moduleCode}}: masih diwajibkan oleh modul aktif pada kontrak ini",
+    "cannotSubmitAmendmentNoChanges": "Tidak dapat mengajukan amendemen tanpa perubahan.",
+    "cannotSubmitContractNoItems": "Tidak dapat mengajukan kontrak tanpa item.",
+    "onlyActiveContractAmended": "Hanya kontrak aktif yang dapat diamendemen.",
+    "onlyActiveContractTerminated": "Hanya kontrak aktif yang dapat diakhiri.",
+    "onlyActiveExpiringExpiredContractRenewed": "Hanya kontrak aktif, akan berakhir, atau sudah berakhir yang dapat diperpanjang.",
+    "onlyAmendmentPendingApprovalApproved": "Hanya amendemen yang menunggu persetujuan yang dapat disetujui.",
+    "onlyAmendmentPendingApprovalRejected": "Hanya amendemen yang menunggu persetujuan yang dapat ditolak.",
+    "onlyContractPendingApprovalApproved": "Hanya kontrak yang menunggu persetujuan yang dapat disetujui.",
+    "onlyContractPendingApprovalRejected": "Hanya kontrak yang menunggu persetujuan yang dapat ditolak.",
+    "onlyDraftContractEdited": "Hanya kontrak berstatus DRAFT yang dapat diubah.",
+    "onlyDraftContractItemsAdded": "Item hanya dapat ditambahkan ke kontrak berstatus DRAFT.",
+    "onlyDraftContractSubmittedApproval": "Hanya kontrak berstatus DRAFT yang dapat diajukan untuk persetujuan.",
+    "productReferencePricingCodeRequiredProduct": "Referensi produk (kode harga) wajib diisi untuk baris item {{productType}}.",
+    "unitPriceRequiredProductTypeLine": "Harga satuan wajib diisi untuk baris item {{productType}}.",
+    "unitPriceUnitPriceProductType": "Harga satuan ({{unitPrice}}) untuk {{productType}} '{{product_reference}}' tidak boleh lebih rendah dari harga aktif ({{activePrice}}).",
+    "unsupportedProductTypeProductType": "Jenis produk tidak didukung: {{productType}}."
+  },
+  "entitlement": {
+    "cannotDisableModuleWithList": "Tidak dapat menonaktifkan modul {{moduleCode}}: masih diwajibkan oleh modul aktif: {{modules}}",
+    "cannotEnableModuleWithList": "Tidak dapat mengaktifkan modul {{moduleCode}}: modul yang diwajibkan belum ada: {{modules}}",
+    "capacityLimitReachedResourceTypeMaximum": "Batas kapasitas tercapai untuk {{resourceType}}: maksimum {{limit}} yang diizinkan."
+  },
+  "exportAnalytics": {
+    "unknownAnalyticsDomain": "Domain analitik tidak dikenal."
+  },
+  "externalWorkOrderInvoice": {
+    "externalWorkOrderInvoiceOutsideAssigned": "Faktur Work Order Eksternal ini berada di luar lingkup data Anda.",
+    "noWorkAuthorizationLetterBeenGenerated": "Work Authorization Letter belum dibuat."
+  },
+  "http": {
+    "forbidden": "Akses ditolak.",
+    "moduleNotEntitledModuleCode": "Modul tidak termasuk hak akses: {{moduleCode}}",
+    "platformAccessRequired": "Diperlukan akses platform.",
+    "resourceNotFound": "Data tidak ditemukan.",
+    "subscriptionSuspendedDueOutstandingBalancePlease": "Langganan Anda ditangguhkan karena ada tagihan yang belum dibayar. Silakan lunasi faktur Anda untuk memulihkan akses.",
+    "tenantAccessRequired": "Diperlukan akses penyewa.",
+    "tenantContextRequired": "Diperlukan konteks penyewa.",
+    "tenantIsNotActive": "Penyewa tidak aktif.",
+    "tenantMembershipNotActive": "Keanggotaan penyewa tidak aktif.",
+    "tokenNoValidScope": "Token tidak memiliki cakupan yang valid.",
+    "unauthenticated": "Belum terautentikasi.",
+    "userAccountInactive": "Akun pengguna ini tidak aktif."
+  },
+  "inspection": {
+    "inspectionAlreadyBeenReviewed": "Inspeksi ini sudah ditinjau.",
+    "inspectionOutsideAssignedDataScope": "Inspeksi ini berada di luar lingkup data Anda.",
+    "onlyCreatedAssignedInspectionStarted": "Hanya inspeksi yang baru dibuat atau sudah ditugaskan yang dapat dimulai.",
+    "onlyCreatedInspectionAssigned": "Hanya inspeksi yang baru dibuat yang dapat ditugaskan.",
+    "onlyStartedInspectionSubmitted": "Hanya inspeksi yang sudah dimulai yang dapat dikirim.",
+    "onlySubmittedInspectionReviewed": "Hanya inspeksi yang sudah dikirim yang dapat ditinjau."
+  },
+  "inspectionTemplate": {
+    "systemRequiredItemCannotRemoved": "Ini adalah item wajib sistem dan tidak dapat dihapus."
+  },
+  "intelligence": {
+    "cannotTransitionRecommendationStatus": "Tidak dapat mengubah status rekomendasi dari {{status}} ke {{to}}.",
+    "modelDoesNotMeetAcceptanceCriteria": "Model tidak memenuhi kriteria penerimaan: {{metricName}}={{actual}} di bawah minimum yang disyaratkan {{minimum}}.",
+    "noDeterministicRiskScorerRegisteredTarget": "Tidak ada penilai risiko deterministik yang terdaftar untuk target [{{target}}].",
+    "noLabelBuilderRegisteredTargetTarget": "Tidak ada pembuat label yang terdaftar untuk target [{{target}}].",
+    "onlyAcceptedRecommendationConvertedMaintenanceRequest": "Hanya rekomendasi ACCEPTED yang dapat dikonversi menjadi Permintaan Pemeliharaan.",
+    "onlyEvaluatedModelActivatedCurrentStatus": "Hanya model EVALUATED yang dapat diaktifkan (status saat ini: {{status}}).",
+    "onlyVehicleEntityRecommendationsConvertedMaintenance": "Hanya rekomendasi untuk entitas kendaraan yang dapat dikonversi menjadi Permintaan Pemeliharaan.",
+    "unknownModelTargetTarget": "Target model tidak dikenal [{{target}}]."
+  },
+  "inventory": {
+    "cannotAdjustBelowZeroHandStock": "Tidak dapat menyesuaikan stok di tangan menjadi di bawah nol.",
+    "cannotScrapMoreThanHandStock": "Tidak dapat melakukan scrap melebihi stok di tangan.",
+    "cannotTransitionStockOpnameStatus": "Tidak dapat mengubah status Stok Opname dari {{status}} ke {{to}}.",
+    "cannotTransitionStockTransferStatus": "Tidak dapat mengubah status Transfer Stok dari {{status}} ke {{to}}.",
+    "discrepancyReasonRequiredWhenReceivedDamaged": "Alasan selisih wajib diisi jika jumlah diterima+rusak+hilang kurang dari jumlah yang dikirim untuk {{product_id}}.",
+    "insufficientStockDispatchTransfer": "Stok tidak cukup untuk mengirim transfer.",
+    "insufficientStockRequestedQuantityAvailableAvailable": "Stok tidak cukup: diminta {{quantity}}, tersedia {{available}}.",
+    "insufficientStockWarehouseReturnQuantityAvailable": "Stok di {{warehouse}} tidak cukup untuk mengembalikan {{quantity}}: tersedia {{available}}.",
+    "invalidReceiptMovementType": "Jenis pergerakan penerimaan tidak valid.",
+    "missingReceiptDataTransferItemId": "Data penerimaan untuk item transfer {{id}} tidak ada.",
+    "onlyApprovedStockOpnamePosted": "Hanya Stok Opname yang disetujui yang dapat diposting.",
+    "onlyPreparedTransferDispatched": "Hanya transfer yang sudah disiapkan yang dapat dikirim.",
+    "onlySubmittedStockOpnameApproved": "Hanya Stok Opname yang sudah diajukan yang dapat disetujui.",
+    "onlyTransitTransferReceived": "Hanya transfer dalam perjalanan yang dapat diterima.",
+    "receivedDamagedLostProductIdExceeds": "Jumlah diterima+rusak+hilang untuk {{product_id}} melebihi jumlah yang dikirim.",
+    "sourceDestinationWarehouseMustDiffer": "Gudang asal dan tujuan harus berbeda.",
+    "stockOpnameVarianceWouldDriveHand": "Selisih stok opname akan membuat stok di tangan di bawah nol.",
+    "transferNeedsLeastOneItem": "Transfer memerlukan minimal satu item."
+  },
+  "invoice": {
+    "cannotRaiseAdjustmentStatusSubscription": "Tidak dapat mengajukan penyesuaian untuk langganan berstatus {{status}}.",
+    "fullyPaidInvoiceCannotVoidedReverse": "Faktur yang sudah lunas tidak dapat dibatalkan (void); batalkan pembayarannya terlebih dahulu."
+  },
+  "maintenancePackage": {
+    "onlyActivePackageSItemsEdited": "Hanya item paket aktif yang dapat diubah dengan cara ini.",
+    "onlyDraftInactivePackageActivated": "Hanya paket berstatus draf atau nonaktif yang dapat diaktifkan.",
+    "primaryThresholdRequiredMustGreaterThan": "Ambang batas utama wajib diisi dan harus lebih dari 0.",
+    "schedulePeriodRequiredPeriodicPackageMust": "Periode Jadwal wajib diisi untuk paket periodik dan harus lebih dari 0."
+  },
+  "maintenancePolicy": {
+    "onlyActivePeriodicPackageUsedCreate": "Hanya paket periodik aktif yang dapat digunakan untuk membuat jadwal.",
+    "packageSMaintenancePeriodNotCompatible": "Periode Pemeliharaan Berdasarkan pada paket ini tidak kompatibel dengan penjadwalan periodik.",
+    "vehicleAlreadyScheduleDate": "Kendaraan ini sudah memiliki jadwal pada tanggal ini."
+  },
+  "maintenanceRequest": {
+    "cannotTransitionMaintenanceRequestStatus": "Tidak dapat mengubah status permintaan pemeliharaan dari {{status}} ke {{to}}.",
+    "initialAssessmentOnlyCreatedEditedCleared": "Penilaian Awal hanya dapat dibuat, diubah, atau dihapus saat permintaan masih Draf.",
+    "maintenanceRequestAlreadyBeenConvertedWork": "Permintaan pemeliharaan ini sudah dikonversi menjadi Work Order.",
+    "maintenanceRequestOutsideAssignedDataScope": "Permintaan pemeliharaan ini berada di luar lingkup data Anda.",
+    "onlyApprovedMaintenanceRequestConvertedWork": "Hanya permintaan pemeliharaan yang disetujui yang dapat dikonversi menjadi Work Order."
+  },
+  "maintenanceSchedule": {
+    "onlyDueOverdueScheduledScheduleConverted": "Hanya jadwal berstatus Jatuh Tempo, Terlambat, atau Terjadwal yang dapat dikonversi menjadi Permintaan Pemeliharaan.",
+    "scheduleOutsideAssignedDataScope": "Jadwal ini berada di luar lingkup data Anda."
+  },
+  "masterData": {
+    "categoryRequiredWhenSubcategorySelected": "Kategori wajib diisi jika Subkategori dipilih.",
+    "componentCategoryRequiredItemTypeProduct": "Kategori Komponen wajib diisi untuk Jenis Item {{productType}}.",
+    "componentGroupNotDeleted": "Grup Komponen ini tidak dalam keadaan terhapus.",
+    "componentGroupRequiredItemTypeProduct": "Grup Komponen wajib diisi untuk Jenis Item {{productType}}.",
+    "componentGroupRequiredWhenCategorySelected": "Grup Komponen wajib diisi jika Kategori dipilih.",
+    "recordNotDeleted": "Data ini tidak dalam keadaan terhapus.",
+    "selectedCategoryNotAvailable": "Kategori yang dipilih tidak tersedia.",
+    "selectedComponentGroupNotAvailable": "Grup Komponen yang dipilih tidak tersedia.",
+    "selectedSubcategoryNotAvailable": "Subkategori yang dipilih tidak tersedia."
+  },
+  "notification": {
+    "addLeastOneWhat": "Tambahkan minimal satu {{what}}.",
+    "channelChannelMissingBody": "Kanal '{{channel}}' tidak memiliki isi pesan.",
+    "channelChannelMissingSubject": "Kanal '{{channel}}' tidak memiliki subjek.",
+    "eachConditionNeedsField": "Setiap kondisi memerlukan kolom.",
+    "escalationNeedsWaitingTimeLeast1": "Eskalasi memerlukan waktu tunggu minimal 1 menit.",
+    "eventEventCodePlatformControlledCannot": "Event '{{eventCode}}' dikendalikan oleh platform dan tidak dapat dikonfigurasi oleh penyewa.",
+    "identifierNotValidEmailAddress": "'{{identifier}}' bukan alamat email yang valid.",
+    "platformControlledNotificationRuleCannotModified": "Ini adalah aturan notifikasi yang dikendalikan platform dan tidak dapat diubah oleh penyewa.",
+    "templateRuleNoChannelContent": "Templat untuk aturan ini tidak memiliki konten '{{channel}}'.",
+    "unknownConditionOperator": "Operator kondisi tidak dikenal.",
+    "unknownNotificationEventEventCode": "Event notifikasi tidak dikenal '{{eventCode}}'.",
+    "unknownVariables": "Templat merujuk variabel yang tidak dikenal: {{variables}}",
+    "unknownWhatType": "Jenis {{what}} tidak dikenal.",
+    "unsupportedNotificationChannelChannel": "Kanal notifikasi '{{channel}}' tidak didukung."
+  },
+  "partRequest": {
+    "partRequestOutsideAssignedDataScope": "Permintaan suku cadang ini berada di luar lingkup data Anda."
+  },
+  "partReturn": {
+    "returnOutsideAssignedDataScope": "Retur ini berada di luar lingkup data Anda."
+  },
+  "payment": {
+    "cannotSubmitPaymentAgainstInvoiceStatus": "Tidak dapat mengirim pembayaran untuk faktur berstatus {{status}}.",
+    "onlyRejectedPaymentResubmitted": "Hanya pembayaran yang ditolak yang dapat dikirim ulang.",
+    "onlySubmittedPaymentUnderReviewRejected": "Hanya pembayaran terkirim yang sedang ditinjau yang dapat ditolak.",
+    "onlySubmittedPaymentUnderReviewVerified": "Hanya pembayaran terkirim yang sedang ditinjau yang dapat diverifikasi."
+  },
+  "predictionHistory": {
+    "entityOutsideAssignedDataScope": "Entitas ini berada di luar lingkup data Anda."
+  },
+  "pricing": {
+    "noActivePricingFoundPriceableType": "Tidak ditemukan harga aktif untuk {{priceableType}} {{priceableCode}} ({{billingFrequency}}).",
+    "noActivePricingVersionFoundPriceable": "Tidak ditemukan versi harga aktif untuk {{priceableType}} {{priceableCode}} pada {{date}}.",
+    "onlyActivePricingDeactivated": "Hanya harga ACTIVE yang dapat dinonaktifkan.",
+    "onlyArchivedPricingReactivated": "Hanya harga ARCHIVED yang dapat diaktifkan kembali."
+  },
+  "procurement": {
+    "cannotCancelRfqAlreadyStatus": "Tidak dapat membatalkan RFQ yang sudah {{status}}.",
+    "cannotDecideApprovalPurchaseOrderStatus": "Tidak dapat memutuskan persetujuan untuk Purchase Order berstatus {{status}} (harus PENDING_APPROVAL).",
+    "cannotTransitionPurchaseOrderStatus": "Tidak dapat mengubah status Purchase Order dari {{status}} ke {{to}}.",
+    "cannotTransitionPurchaseOrderStatusApproved": "Tidak dapat mengubah status Purchase Order dari {{status}} ke APPROVED.",
+    "cannotTransitionPurchaseRequestStatus": "Tidak dapat mengubah status Purchase Request dari {{status}} ke {{to}}.",
+    "eachPurchaseOrderItemAppearOnly": "Setiap item Purchase Order hanya boleh muncul satu kali pada Retur Pemesanan.",
+    "goodsReceiptNeedsLeastOneLine": "Goods Receipt memerlukan minimal satu baris.",
+    "invoiceNumberVendorAlreadyRecordedReceive": "Faktur {{number}} dari vendor ini sudah tercatat. Untuk menerima barang tambahan atas faktur tersebut, gunakan faktur yang sama dengan Goods Receipt sebelumnya.",
+    "invoiceVendorInvoiceNumberAlreadyPaid": "Faktur {{vendor_invoice_number}} sudah lunas.",
+    "invoiceVendorInvoiceNumberAlreadyPaid2": "Faktur {{vendor_invoice_number}} sudah lunas dan tidak dapat digunakan untuk Goods Receipt lain. Catat faktur baru.",
+    "onlyIssuedPartiallyReceivedPurchaseOrder": "Hanya Purchase Order yang sudah diterbitkan (atau diterima sebagian) yang dapat menerima barang.",
+    "onlyIssuedRfqClosed": "Hanya RFQ yang sudah diterbitkan yang dapat ditutup.",
+    "onlyPartiallyReceivedPurchaseOrderReturn": "Hanya Purchase Order yang diterima sebagian yang dapat mengembalikan barang ke vendor (status saat ini {{status}}).",
+    "paymentDateCannotFuture": "Tanggal pembayaran tidak boleh di masa depan.",
+    "paymentMustEqualInvoice": "Jumlah pembayaran harus sama dengan nilai faktur ({{amount}}); pembayaran sebagian tidak didukung.",
+    "printReturnOrderFirstRedeliveryReceived": "Cetak Retur Pemesanan terlebih dahulu — pengiriman ulang baru dapat diterima setelah Retur Pemesanan dicetak.",
+    "purchaseOrderAlreadyOpenReturnOrder": "Purchase Order ini sudah memiliki Retur Pemesanan yang terbuka — selesaikan terlebih dahulu.",
+    "purchaseOrderNeedsLeastOneItem": "Purchase order memerlukan minimal satu item.",
+    "purchaseRequestNeedsLeastOneItem": "Purchase Request memerlukan minimal satu item.",
+    "qtyReturnedVendorQuantityExceedsReceived": "Qty Diretur ke Vendor ({{quantity}}) melebihi jumlah diterima yang masih tersimpan untuk item ini ({{returnable}}).",
+    "quotationAlreadyBeenConvertedPurchaseOrder": "Penawaran ini sudah dikonversi menjadi Purchase Order.",
+    "quotationNeedsLeastOneItem": "Penawaran memerlukan minimal satu item.",
+    "quotationsOnlyRecordedWhileRfqIssued": "Penawaran hanya dapat dicatat saat RFQ sudah diterbitkan.",
+    "quotationStatusCannotSelected": "Penawaran ini berstatus {{status}} dan tidak dapat dipilih.",
+    "quotationStatusOnlySelectedQuotationConverted": "Penawaran ini berstatus {{status}}: hanya penawaran terpilih yang dapat dikonversi menjadi Purchase Order.",
+    "receivingExceedsRemaining": "Penerimaan {{quantity}} melebihi Sisa Qty yang Dapat Diterima pada baris ini ({{remaining}}).",
+    "refundRequestCoverMostRemainingQuantity": "Permintaan Refund paling banyak mencakup sisa jumlah item ini ({{remaining}}); kembalikan sisanya sebagai Permintaan Pengiriman Ulang.",
+    "returnOrderReturnNumberWaitingVendor": "Retur Pemesanan {{return_number}} sedang menunggu pengiriman ulang dari vendor — catat \"Terima Pengiriman Ulang\" sebelum memposting Goods Receipt.",
+    "returnOrderStatusNoRedeliveryAwaited": "Retur Pemesanan ini berstatus {{status}}; tidak ada pengiriman ulang yang ditunggu.",
+    "returnOrderStatusOnlyRequestedRefund": "Retur Pemesanan ini berstatus {{status}}; hanya refund yang diminta yang dapat di-{{verb}} oleh vendor.",
+    "rfqNeedsLeastOneItem": "RFQ memerlukan minimal satu item.",
+    "rfqStatusVendorOnlySelectedWhile": "RFQ ini berstatus {{status}}: vendor hanya dapat dipilih saat RFQ berstatus ISSUED.",
+    "selectedInvoiceNotReceivedAgainstEarlier": "Faktur yang dipilih tidak diterima pada Goods Receipt sebelumnya dari Purchase Order ini.",
+    "userWhoSubmittedPurchaseOrderApproval": "Pengguna yang mengajukan Purchase Order ini untuk persetujuan tidak boleh juga memutuskan tahap persetujuannya.",
+    "vendorsCannotInvitedRfqStatus": "Vendor tidak dapat diundang ke RFQ berstatus {{status}}."
+  },
+  "product": {
+    "productCreatedTiresMustItemType": "Produk yang dibuat dari Ban harus memiliki Jenis Item TIRE.",
+    "productCreatedTiresMustWheelTyre": "Produk yang dibuat dari Ban harus berada di grup komponen Wheel & Tyre System.",
+    "systemProductsCannotModifiedTenant": "Produk sistem tidak dapat diubah oleh penyewa."
+  },
+  "productCatalog": {
+    "cannotPublishBundleNoModules": "Tidak dapat menerbitkan bundel tanpa modul.",
+    "circularDependency": "Terdeteksi dependensi modul yang melingkar: {{path}}",
+    "dependencyWouldCreateCircularDependency": "Dependensi ini akan menimbulkan dependensi melingkar.",
+    "moduleCannotDependItself": "Modul tidak dapat bergantung pada dirinya sendiri.",
+    "onlyDraftBundleModuleCompositionEdited": "Hanya bundel berstatus DRAFT yang komposisi modulnya dapat diubah. Lakukan amendemen dengan membuat versi bundel baru.",
+    "unresolvedDependencies": "Tidak dapat menerbitkan bundel: dependensi modul belum terpenuhi: {{modules}}"
+  },
+  "productCategory": {
+    "categorySubcategoriesCannotDeleted": "Kategori ini memiliki subkategori dan tidak dapat dihapus.",
+    "productCategoryUsedOneMoreProducts": "Kategori produk ini digunakan oleh satu atau lebih produk dan tidak dapat dihapus."
+  },
+  "productMaster": {
+    "couldNotIssueFreeSkuPrefix": "Tidak dapat menerbitkan SKU yang tersedia untuk prefiks {{ITEMTYPE}}-{{CG}} setelah"
+  },
+  "purchaseRequest": {
+    "purchaseRequestOutsideAssignedDataScope": "Purchase Request ini berada di luar lingkup data Anda."
+  },
+  "purchaseReturn": {
+    "purchaseOrderOutsideAssignedDataScope": "Purchase order ini berada di luar lingkup data Anda."
+  },
+  "qualityControl": {
+    "findingAlreadyResolved": "Temuan ini sudah diselesaikan.",
+    "onlyPassedQcInspectionCompleted": "Hanya inspeksi QC yang lulus yang dapat diselesaikan.",
+    "onlyStartedQcInspectionFailed": "Hanya inspeksi QC yang sudah dimulai yang dapat dinyatakan gagal.",
+    "onlyStartedQcInspectionPassed": "Hanya inspeksi QC yang sudah dimulai yang dapat dinyatakan lulus.",
+    "qcOnlyStartOnceWorkOrder": "QC baru dapat dimulai setelah Work Order menunggu QC.",
+    "roadTestNotAvailableExternalWork": "Uji Jalan tidak tersedia untuk Work Order Eksternal.",
+    "roadTestOnlyRecordedWhileWork": "Uji Jalan hanya dapat dicatat saat Work Order menunggu QC (status saat ini {{status}}).",
+    "workerWhoPerformedWorkOrderCannot": "Pekerja yang mengerjakan Work Order ini tidak boleh juga melakukan QC-nya."
+  },
+  "recommendation": {
+    "recommendationOutsideAssignedDataScope": "Rekomendasi ini berada di luar lingkup data Anda."
+  },
+  "rfq": {
+    "rfqOutsideAssignedDataScope": "RFQ ini berada di luar lingkup data Anda."
+  },
+  "role": {
+    "nameSystemRoleCannotChanged": "Nama peran sistem tidak dapat diubah."
+  },
+  "shared": {
+    "couldNotWriteDirectoryFilenameDisk": "Tidak dapat menulis {{directory}}/{{filename}} ke disk"
+  },
+  "sparePartSale": {
+    "selectedComponentAssetOutsideAssignedData": "Aset komponen yang dipilih berada di luar lingkup data Anda.",
+    "selectedTireOutsideAssignedDataScope": "Ban yang dipilih berada di luar lingkup data Anda."
+  },
+  "stockTransfer": {
+    "sourceWarehouseOutsideAssignedDataScope": "Gudang asal berada di luar lingkup data Anda."
+  },
+  "subscription": {
+    "cannotActivateSubscriptionStatusStatus": "Tidak dapat mengaktifkan langganan berstatus {{status}}.",
+    "onlyPendingSubscriptionActivatedUseReactivate": "Hanya langganan PENDING yang dapat diaktifkan; gunakan Aktifkan Kembali untuk langganan yang ditangguhkan.",
+    "onlySuspendedSubscriptionReactivated": "Hanya langganan yang ditangguhkan yang dapat diaktifkan kembali."
+  },
+  "tenantUser": {
+    "invalidStatus": "Status tidak valid."
+  },
+  "tire": {
+    "actorWhoReceivedTireBackCannot": "Pengguna yang menerima kembali ban ini tidak boleh juga menyetujui disposisi akhirnya.",
+    "approvalReasonRequiredPersistedDecision": "Alasan persetujuan wajib diisi dan disimpan bersama keputusan.",
+    "bothTiresAlreadySamePositionNothing": "Kedua ban sudah berada di posisi yang sama — tidak ada yang perlu ditukar.",
+    "bothTiresMustActiveInstallationSwap": "Kedua ban harus memiliki pemasangan aktif untuk ditukar posisinya.",
+    "cannotApproveCycleStatusMustFinal": "Tidak dapat menyetujui siklus berstatus {{status}} (harus FINAL_INSPECTED).",
+    "cannotCompleteWorkOrderReplacementTire": "Tidak dapat menyelesaikan Work Order: ban pengganti untuk {{position_code}} belum dipakai (dipasang).",
+    "cannotReceiveCycleStatusMustSent": "Tidak dapat menerima siklus berstatus {{status}} (harus SENT).",
+    "cannotRecordFinalInspectionCycleStatus": "Tidak dapat mencatat inspeksi akhir untuk siklus berstatus {{status}} (harus RECEIVED).",
+    "cannotSwapTireItself": "Tidak dapat menukar ban dengan dirinya sendiri.",
+    "cycleClosedInspectingTireAgainTire": "Siklus ini ditutup dengan menginspeksi ulang ban (Inspeksi Ban) — bukan dengan hasil inspeksi akhir.",
+    "cycleOpenedOnlyTireWaitingRetread": "Siklus hanya dapat dibuka untuk ban yang menunggu vulkanisir atau perbaikan (status ban ini {{current_status}}).",
+    "cycleStatusOnlyCycleProcessReceived": "Siklus ini berstatus {{status}}; hanya siklus yang sedang diproses yang dapat diterima.",
+    "damageDoesNotBelongInspection": "Kerusakan ini bukan bagian dari inspeksi ini.",
+    "evidenceOnlyAddedWhileInspectionWaits": "Bukti hanya dapat ditambahkan saat inspeksi menunggu persetujuan.",
+    "inspectionStatusOnlySubmittedInspectionApproved": "Inspeksi ini berstatus {{status}}; hanya inspeksi yang sudah dikirim yang dapat disetujui.",
+    "inspectionStatusOnlySubmittedInspectionCancelled": "Inspeksi ini berstatus {{status}}; hanya inspeksi yang sudah dikirim yang dapat dibatalkan.",
+    "inspectRemovedTireUsedTireManagement": "Inspeksi ban yang dilepas ini di Manajemen Ban Bekas terlebih dahulu; Scrap adalah salah satu hasil inspeksi.",
+    "installationDateCannotFuture": "Tanggal pemasangan tidak boleh di masa depan.",
+    "installationDateCannotPredateTireS": "Tanggal pemasangan tidak boleh sebelum tanggal pembelian ban yang tercatat.",
+    "insufficientUsedTireStockTireSerial": "Stok ban bekas tidak cukup untuk ban {{serial_number}}.",
+    "mdcAlreadySet": "Ban ini sudah memiliki Kode Tanggal Produksi ({{code}}); kode hanya diisi di sini jika belum ada.",
+    "noActiveInstallationFoundTire": "Tidak ditemukan pemasangan aktif untuk ban ini.",
+    "onlyCurrentlyInstalledTireRotated": "Hanya ban yang sedang terpasang yang dapat dirotasi.",
+    "onlyJpgPngPhotosAccepted": "Hanya foto JPG atau PNG yang diterima.",
+    "onlyPendingReplacementTireSProduct": "Hanya tersisa {{pending}} ban pengganti dari produk ini yang belum dipasang untuk Operasi Ban.",
+    "onlyRemovedHoldTireTireReceived": "Hanya ban REMOVED atau HOLD, atau ban yang diterima kembali dari siklus vulkanisir / perbaikan, yang dapat diinspeksi di sini; status ban ini {{current_status}}.",
+    "onlyTiresReuseReplacementTireS": "Hanya tersisa {{tires}} ban pengganti REUSE dari produk ini yang belum dikeluarkan untuk Operasi Ban.",
+    "openRepairCycleAlreadyExistsTire": "Siklus perbaikan yang masih terbuka sudah ada untuk ban ini — terima dan setujui siklus tersebut sebelum mengirim lagi.",
+    "openRetreadCycleAlreadyExistsTire": "Siklus vulkanisir yang masih terbuka sudah ada untuk ban ini — terima dan setujui siklus tersebut sebelum mengirim lagi.",
+    "partnerNotActiveCannotReceiveTires": "Mitra ini tidak ACTIVE dan tidak dapat menerima ban untuk diservis.",
+    "partnerNotFoundTenant": "Mitra tidak ditemukan untuk penyewa ini.",
+    "partnerTypeNotEligibleTireRetread": "Jenis mitra ini tidak memenuhi syarat untuk pekerjaan vulkanisir/perbaikan ban (harus EXTERNAL_WORKSHOP atau TIRE_SUPPLIER).",
+    "partTireOperationAlreadyBeenCarried": "Sebagian Operasi Ban ini sudah dilaksanakan; operasi tidak dapat di-{{verb}}.",
+    "photoExceeds3MbMaximumSize": "Foto melebihi ukuran maksimum 3 MB.",
+    "positionNotConfiguredWheelPositionVehicle": "'{{position}}' bukan posisi roda yang dikonfigurasi untuk kategori kendaraan ini.",
+    "positionNotPositionVehicleSWheel": "'{{position}}' bukan posisi pada konfigurasi roda kendaraan ini.",
+    "registrationNumberAlreadyMappedConfiguration": "{{registration_number}} sudah dipetakan ke konfigurasi ini.",
+    "registrationNumberAlreadyUsesVersionVersion": "{{registration_number}} sudah menggunakan versi {{version_number}}.",
+    "remapBlocked": "Pemetaan kendaraan tidak dapat diubah karena ada ban aktif terpasang pada posisi yang dihapus oleh konfigurasi tujuan: {{positions}}. Lepas atau pindahkan ban ini terlebih dahulu.",
+    "removeTireVehicleBeforeScrapping": "Lepas ban dari kendaraannya sebelum melakukan scrap.",
+    "removeTireVehicleBeforeSelling": "Lepas ban dari kendaraannya sebelum menjualnya.",
+    "replacementTiresAlreadyApprovedPartRequests": "Ban pengganti sudah disetujui di Permintaan Suku Cadang; keluarkan dan kembalikan ban tersebut sebelum membatalkan Operasi Ban ini.",
+    "replacementTiresConsumedPerSerialNumber": "Ban pengganti dipakai per nomor seri: gunakan jumlah bulat.",
+    "replacementTiresIssuedWorkOrderReturn": "Ban pengganti sudah dikeluarkan untuk Work Order; kembalikan sebelum membatalkan Operasi Ban ini.",
+    "replacementTiresPartRequestAlreadyStatus": "Permintaan suku cadang untuk ban pengganti sudah {{status}}: produk ban dan jumlah nomor seri tidak dapat diubah lagi.",
+    "saleReasonRequired": "Alasan penjualan wajib diisi.",
+    "sellOperationalReuseRequiresApprovedUsed": "SELL_FOR_OPERATIONAL_REUSE memerlukan inspeksi ban bekas yang disetujui — ban ini belum diinspeksi.",
+    "serialSerialNumberCurrentStatusNot": "Seri {{serial_number}} berstatus {{current_status}}, tidak tersedia untuk dipasang; ubah Operasi Ban dan pilih seri lain.",
+    "statusTireOperationCannotVerb": "Operasi Ban berstatus {{status}} tidak dapat di-{{verb}}.",
+    "targetWheelPositionAlreadyActiveTire": "Posisi roda tujuan sudah memiliki ban aktif.",
+    "tireAlreadyActivelyInstalledWheelPosition": "Ban ini sudah terpasang aktif, atau posisi roda ini sudah memiliki ban aktif.",
+    "tireAlreadyBeenSold": "Ban ini sudah terjual.",
+    "tireAlreadyInspectionWaitingApprovalApprove": "Ban ini sudah memiliki inspeksi yang menunggu persetujuan — setujui atau batalkan terlebih dahulu.",
+    "tireChangedStatusSinceInspectedTire": "Status ban berubah sejak diinspeksi ({{tire_status_before}} → {{current_status}}); batalkan inspeksi ini dan inspeksi ulang.",
+    "tireCurrentStatusCannotInstalledOnly": "Ban berstatus {{current_status}} dan tidak dapat dipasang (hanya stok baru atau ban REUSE).",
+    "tireCurrentStatusCannotRemovedVehicle": "Ban berstatus {{current_status}} dan tidak dapat dilepas dari kendaraan.",
+    "tireCurrentStatusCannotReplaced": "Ban berstatus {{current_status}} dan tidak dapat diganti.",
+    "tireOperationCancelledReplacementTiresCannot": "Operasi Ban ini sudah dibatalkan; ban penggantinya tidak dapat dipasang.",
+    "tireOutsideAssignedDataScope": "Ban ini berada di luar lingkup data Anda.",
+    "tireSerialNumberNoLongerPosition": "Ban {{serial_number}} tidak lagi berada di {{position_code}}; rotasi tidak dapat diselesaikan sesuai rencana.",
+    "tireSerialNumberNoLongerPosition2": "Ban {{serial_number}} tidak lagi berada di {{position_code}} pada kendaraan ini; ubah Operasi Ban terlebih dahulu.",
+    "tireSLatestInspectionDisposedFinal": "Inspeksi terakhir ban ini menetapkan disposisi {{final_disposition}}; hanya ban yang diinspeksi dan dipertahankan sebagai REUSE yang dapat dijual untuk penggunaan operasional ulang.",
+    "tireUnsafeFinalInspectionResultCannot": "Ban dengan hasil inspeksi akhir UNSAFE tidak dapat disetujui untuk RETURN_TO_SERVICE — pilih SCRAP atau QUARANTINE.",
+    "usedTireLineIssuedOnlyTire": "Baris ban bekas hanya dikeluarkan dari permintaan penggantian Operasi Ban.",
+    "usedTireSerialNumberNotWarehouse": "Ban bekas {{serial_number}} tidak ada di stok bekas gudang ini.",
+    "vehicleRegistrationNumberOutsideAssignedData": "Kendaraan {{registration_number}} berada di luar lingkup data Anda.",
+    "workOrderStatusNoLongerCancelled": "Work Order berstatus {{status}} dan tidak dapat dibatalkan lagi."
+  },
+  "tireOperation": {
+    "actionRequiresPermissionPermission": "Aksi ini memerlukan izin {{permission}}."
+  },
+  "uom": {
+    "unitMeasureUsedOneMoreProducts": "Satuan ukuran ini digunakan oleh satu atau lebih produk dan tidak dapat dihapus."
+  },
+  "usedPartDisposition": {
+    "onlyRemovedComponentReceivedHere": "Hanya komponen terlepas yang diterima di sini.",
+    "recordOutsideAssignedDataScope": "Data ini berada di luar lingkup data Anda."
+  },
+  "vehicle": {
+    "cannotTransitionTransferStatus": "Tidak dapat mengubah status transfer dari {{status}} ke {{to}}.",
+    "fileExceeds10mbMaximumSize": "File melebihi ukuran maksimum 10MB.",
+    "targetBranchOutsideAssignedDataScope": "Cabang tujuan berada di luar lingkup data Anda.",
+    "unsupportedFileTypeOnlyJpegPng": "Jenis file tidak didukung. Hanya gambar JPEG, PNG, WEBP, atau PDF yang diterima.",
+    "unsupportedFileTypeOnlyJpgJpeg": "Jenis file tidak didukung. Hanya gambar JPG, JPEG, atau PNG yang diterima.",
+    "vehicleAlreadyProgressTransfer": "Kendaraan ini sudah memiliki transfer yang sedang berjalan."
+  },
+  "vehicleBrand": {
+    "brandUsedOneMoreVehiclesCannot": "Merek ini digunakan oleh satu atau lebih kendaraan dan tidak dapat dihapus."
+  },
+  "vehicleModel": {
+    "modelUsedOneMoreVehiclesCannot": "Model ini digunakan oleh satu atau lebih kendaraan dan tidak dapat dihapus."
+  },
+  "vehicleRelease": {
+    "onlyCompletedWorkOrderReleaseVehicle": "Hanya Work Order yang sudah selesai yang dapat melepas kendaraannya.",
+    "vehicleAnotherActiveWorkOrderCannot": "Kendaraan ini memiliki Work Order aktif lain dan belum dapat dilepas.",
+    "workOrderSVehicleAlreadyBeen": "Kendaraan dari Work Order ini sudah dilepas."
+  },
+  "vehicleTransfer": {
+    "transferOutsideAssignedDataScope": "Transfer ini berada di luar lingkup data Anda."
+  },
+  "vendorQuotation": {
+    "quotationNoDocumentAttached": "Penawaran ini tidak memiliki dokumen terlampir."
+  },
+  "warehouseBin": {
+    "binAssignedProductDefaultStorageLocation": "Bin ini ditetapkan sebagai lokasi penyimpanan default produk dan tidak dapat dihapus.",
+    "binCodeAlreadyExistsRack": "Bin dengan kode ini sudah ada di rak ini."
+  },
+  "warehouseRack": {
+    "rackCodeAlreadyExistsZone": "Rak dengan kode ini sudah ada di zona ini.",
+    "rackStillBinsCannotDeleted": "Rak ini masih memiliki bin dan tidak dapat dihapus."
+  },
+  "warehouseZone": {
+    "zoneCodeAlreadyExistsWarehouse": "Zona dengan kode ini sudah ada di gudang ini.",
+    "zoneStillRacksCannotDeleted": "Zona ini masih memiliki rak dan tidak dapat dihapus."
+  },
+  "warranty": {
+    "cannotTransitionWarrantyClaimStatus": "Tidak dapat mengubah status Klaim Garansi dari {{status}} ke {{to}}."
+  },
+  "warrantyClaim": {
+    "warrantyClaimOutsideAssignedDataScope": "Klaim garansi ini berada di luar lingkup data Anda."
+  },
+  "worker": {
+    "userNotActiveMemberTenant": "Pengguna ini bukan anggota aktif penyewa ini."
+  },
+  "workerType": {
+    "workerTypeAssignedOneMoreWorkers": "Jenis pekerja ini ditetapkan pada satu atau lebih pekerja dan tidak dapat dihapus."
+  },
+  "workflow": {
+    "approvalRequestNoLongerPending": "Permintaan persetujuan ini tidak lagi tertunda.",
+    "approvalRuleMustDeclareLeastOne": "Aturan persetujuan harus memiliki minimal satu tahap.",
+    "approvalStepAlreadyBeenDecided": "Tahap persetujuan ini sudah diputuskan.",
+    "approvalStepMissingApproverIdentifier": "Tahap persetujuan tidak memiliki approver_identifier.",
+    "approvalStepsMustUniqueStepNumber": "Tahap persetujuan harus memiliki nilai step_number yang unik.",
+    "invalidApprovalRuleType": "Jenis aturan persetujuan tidak valid.",
+    "invalidApprovalStepApproverType": "approver_type pada tahap persetujuan tidak valid.",
+    "invalidConditionRuleEachRuleNeeds": "Aturan kondisi tidak valid: setiap aturan memerlukan kolom dan operator yang dikenali.",
+    "invalidDecisionDecision": "Keputusan '{{decision}}' tidak valid.",
+    "youNotEligibleApproverStep": "Anda bukan pemberi persetujuan yang berwenang untuk tahap ini."
+  },
+  "workflowBuilder": {
+    "unknownWorkflowResourceType": "Jenis resource alur kerja tidak dikenal."
+  },
+  "workOrder": {
+    "actionActionNotAllowedWhileExternal": "Aksi \"{{action}}\" tidak diizinkan saat Faktur Eksternal ini berstatus {{status}} / {{work_authorization_status}}.",
+    "actionNotAvailableExternalModeWork": "Aksi ini tidak tersedia untuk Work Order mode Eksternal.",
+    "assetAssetNumberCurrentStatusNo": "Aset {{asset_number}} berstatus {{current_status}}; aset tidak dapat dijual lagi.",
+    "assetAssetNumberCurrentStatusOnly": "Aset {{asset_number}} berstatus {{current_status}}; hanya aset komponen SCRAPPED atau REMOVED yang dapat dijual.",
+    "assetAssetNumberScrappedOnlySold": "Aset {{asset_number}} sudah di-scrap: hanya dapat dijual sebagai SCRAP_MATERIAL.",
+    "buyerTypeMustBeOneOf": "Jenis pembeli harus salah satu dari: {{values}}.",
+    "cannotCancelExternalServiceStatus": "Tidak dapat membatalkan layanan eksternal berstatus {{status}}.",
+    "cannotCompleteCloseWorkOrderFinding": "Tidak dapat menyelesaikan/menutup Work Order: temuan '{{description}}' masih OPEN — selesaikan terlebih dahulu.",
+    "cannotCompleteCloseWorkOrderPlanned": "Tidak dapat menyelesaikan/menutup Work Order: suku cadang terencana '{{description}}' masih {{status}} — pakai, kembalikan, atau batalkan terlebih dahulu.",
+    "cannotCompleteCloseWorkOrderQc": "Tidak dapat menyelesaikan/menutup Work Order: temuan QC '{{description}}' belum diselesaikan — selesaikan terlebih dahulu.",
+    "cannotCompleteCloseWorkOrderTire": "Tidak dapat menyelesaikan/menutup Work Order: ban seri '{{serial_number}}' yang dilepas pada Work Order ini masih {{status}} — selesaikan vulkanisir/inspeksinya terlebih dahulu.",
+    "cannotCompleteExternalServiceStatus": "Tidak dapat menyelesaikan layanan eksternal berstatus {{status}}.",
+    "cannotConsumeMoreThanOutstandingIssued": "Tidak dapat memakai melebihi jumlah yang sudah dikeluarkan dan belum dipakai.",
+    "cannotDecideCancellationAgainstInvoiceStatus": "Tidak dapat memutuskan pembatalan untuk faktur berstatus {{status}} (harus CANCELLATION_REQUESTED).",
+    "cannotDecideCancellationStatusMustPending": "Tidak dapat memutuskan pembatalan berstatus {{status}} (harus PENDING).",
+    "cannotDecideCorrectionAgainstInvoiceStatus": "Tidak dapat memutuskan koreksi untuk faktur berstatus {{status}} (harus CORRECTION_REQUESTED).",
+    "cannotDecideCorrectionStatusMustPending": "Tidak dapat memutuskan koreksi berstatus {{status}} (harus PENDING).",
+    "cannotDecideDispositionDispositionStatusMust": "Tidak dapat memutuskan disposisi berstatus {{disposition_status}} (harus PENDING_APPROVAL).",
+    "cannotDecideSaleStatusMustPending": "Tidak dapat memutuskan penjualan berstatus {{status}} (harus PENDING_APPROVAL).",
+    "cannotEstimateCostOnceWorkOrder": "Tidak dapat mengestimasi biaya setelah Work Order berstatus {{status}} — biaya aktual dicatat sejak saat itu.",
+    "cannotInspectReturnDispositionStatusMust": "Tidak dapat menginspeksi retur berstatus {{disposition_status}} (harus PENDING_INSPECTION).",
+    "cannotProposeDispositionReturnDispositionStatus": "Tidak dapat mengusulkan disposisi untuk retur berstatus {{disposition_status}} (harus INSPECTED atau REJECTED).",
+    "cannotRecordPaymentInvoiceStatusMust": "Tidak dapat mencatat pembayaran untuk faktur berstatus {{status}} (harus RECORDED, tanpa koreksi/pembatalan yang tertunda).",
+    "cannotRecordPaymentRelatedMaintenanceMemo": "Tidak dapat mencatat pembayaran — Memo Pemeliharaan terkait berstatus {{status}} (harus BILLED).",
+    "cannotRecordServiceInvoiceAgainstMemo": "Tidak dapat mencatat Faktur Layanan untuk memo berstatus {{status}} (harus COMPLETED).",
+    "cannotRequestCancellationInvoiceStatusMust": "Tidak dapat mengajukan pembatalan untuk faktur berstatus {{status}} (harus RECORDED).",
+    "cannotRequestCorrectionInvoiceStatusMust": "Tidak dapat mengajukan koreksi untuk faktur berstatus {{status}} (harus RECORDED).",
+    "cannotSellMoreThanRemainingEligible": "Tidak dapat menjual melebihi sisa jumlah yang memenuhi syarat ({{remainingEligibleQuantity}}).",
+    "cannotSubmitSaleStatusMustDraft": "Tidak dapat mengajukan penjualan berstatus {{status}} (harus DRAFT).",
+    "cannotTransitionMaintenanceJobStatusStatus": "Tidak dapat mengubah status pekerjaan pemeliharaan dari {{status}} ke {{status}}.",
+    "cannotTransitionWorkOrderStatus": "Tidak dapat mengubah status Work Order dari {{status}} ke {{to}}.",
+    "conditionMustBeOneOf": "Kondisi harus salah satu dari: {{values}}.",
+    "consumedPartsCannotReturnedThroughIssuance": "Suku cadang yang sudah dipakai tidak dapat dikembalikan melalui Pengeluaran & Pengembalian. Gunakan Komponen Terlepas untuk mengembalikan komponen yang dilepas dari unit.",
+    "dispositionMustBeOneOf": "Disposisi harus salah satu dari: {{values}}.",
+    "eachPartRequestLineMustReference": "Setiap baris permintaan suku cadang harus merujuk ke Produk yang aktif.",
+    "evidenceAlreadyAttachedConfirmedReturnNo": "Bukti ini sudah dilampirkan pada retur yang dikonfirmasi dan tidak dapat dihapus lagi.",
+    "evidenceAlreadyReturnedRemovedComponentCannot": "Bukti pada komponen terlepas yang sudah dikembalikan tidak dapat dihapus.",
+    "evidencePhotosOnlyChangedWhileItem": "Foto bukti hanya dapat diubah saat item menunggu inspeksi.",
+    "externalSaleRequiresBuyerName": "Penjualan EXTERNAL memerlukan buyer_name.",
+    "externalWorkshopModeOnlySelectedWhile": "Mode Bengkel Eksternal hanya dapat dipilih saat Work Order berstatus Draf.",
+    "fileExceeds3MbMaximumSize": "File melebihi ukuran maksimum 3 MB.",
+    "findingsDiagnosisOnlyAddedRemovedWhile": "Temuan dan Diagnosis hanya dapat ditambahkan atau dihapus saat status Draf (saat ini {{status}}).",
+    "findingsOnlyManagedWhileWorkOrder": "Temuan hanya dapat dikelola saat Work Order ini berstatus Draf dalam mode Eksternal.",
+    "jobsMechanicPlannedPartsCannotAdded": "Pekerjaan, Mekanik, dan Suku Cadang Terencana tidak dapat ditambahkan saat status {{status}}.",
+    "leastOneFindingRequiredBeforeFinalizing": "Minimal satu Temuan wajib ada sebelum Work Order ini difinalisasi sebagai Eksternal.",
+    "lineDescriptionGetMessage": "Baris \"{{description}}\": {{getMessage}}",
+    "lineDescriptionHoldsSerialNumbersChosen": "Baris \"{{description}}\" memuat nomor seri yang dipilih di Operasi Ban: setujui seluruh jumlahnya ({{requested}}) atau tolak permintaan.",
+    "lineDescriptionReservedAnotherWarehouseIssue": "Baris \"{{description}}\" dipesan di gudang lain — keluarkan dari gudang tersebut.",
+    "maintenanceMemoAlreadyServiceInvoiceRecorded": "Memo Pemeliharaan ini sudah memiliki Faktur Layanan yang tercatat.",
+    "maintenanceScheduleAlreadyOpenWorkOrder": "Jadwal pemeliharaan ini sudah memiliki Work Order yang terbuka.",
+    "maintenanceScheduleStatusNotYetReady": "Jadwal pemeliharaan ini berstatus {{status}} dan belum siap dikonversi menjadi Work Order.",
+    "makerWhoProposedDispositionCannotAlso": "Pembuat yang mengusulkan disposisi ini tidak boleh juga menyetujui atau menolaknya.",
+    "makerWhoRequestedCancellationCannotAlso": "Pembuat yang mengajukan pembatalan ini tidak boleh juga memverifikasinya.",
+    "makerWhoRequestedCorrectionCannotAlso": "Pembuat yang mengajukan koreksi ini tidak boleh juga memverifikasinya.",
+    "makerWhoSubmittedSaleCannotAlso": "Pembuat yang mengajukan penjualan ini tidak boleh juga menyetujui atau menolaknya.",
+    "noPublishedSparepartSaleWorkflowConfiguration": "Tidak ada konfigurasi alur kerja penjualan suku cadang yang terbit untuk penyewa ini.",
+    "noPublishedUsedPartDispositionWorkflow": "Tidak ada konfigurasi alur kerja disposisi suku cadang bekas yang terbit untuk penyewa ini.",
+    "nothingLeftConsumePlannedPart": "Tidak ada sisa yang dapat dipakai untuk suku cadang terencana ini.",
+    "nothingLeftIssuePlannedPart": "Tidak ada sisa yang dapat dikeluarkan untuk suku cadang terencana ini.",
+    "onlyApprovedRepairStillPendingCompleted": "Hanya REPAIR yang disetujui dan masih tertunda yang dapat diselesaikan.",
+    "onlyDraftWorkOrderEdited": "Hanya Work Order berstatus DRAFT yang dapat diubah.",
+    "onlyDraftWorkOrderExternalMode": "Hanya Work Order Draf dalam mode Eksternal yang dapat difinalisasi sebagai Eksternal.",
+    "onlyFinalizedExternalWorkOrderCancelled": "Hanya Work Order Eksternal yang sudah difinalisasi yang dapat dibatalkan melalui aksi ini.",
+    "onlyFinalizedExternalWorkOrderRevised": "Hanya Work Order Eksternal yang sudah difinalisasi yang dapat direvisi.",
+    "onlyPartConsumedWorkOrderRecorded": "Hanya suku cadang yang dipakai pada Work Order ini yang dapat dicatat sebagai komponen terlepas.",
+    "onlyPartNotUsedReturnedHere": "Hanya suku cadang yang tidak digunakan yang dapat dikembalikan di sini (Baru Baik / Baru Rusak). Catat komponen yang dilepas dari kendaraan di Komponen Terlepas.",
+    "onlyQuarantinedReturnRoutedDispositionCurrent": "Hanya retur yang dikarantina yang dapat diteruskan ke disposisi (status saat ini: {{disposition_status}}).",
+    "onlyRequestedAdditionalWorkItemDecided": "Hanya pekerjaan tambahan yang diminta yang dapat diputuskan.",
+    "onlyReturnedNewPartProcessedHere": "Hanya suku cadang baru yang dikembalikan yang diproses di sini; komponen terlepas diproses melalui Pemrosesan Suku Cadang Bekas.",
+    "onlyReturnedNewPartRoutedHere": "Hanya suku cadang baru yang dikembalikan yang diteruskan di sini; komponen terlepas diproses melalui Pemrosesan Suku Cadang Bekas.",
+    "onlyReturnFinalizedDispositionSellEligible": "Hanya retur yang difinalisasi dengan disposisi SELL_ELIGIBLE yang dapat dijual.",
+    "onlySparepartTireConsumableProductsPlanned": "Hanya produk Suku Cadang, Ban, atau Bahan Habis Pakai yang dapat direncanakan di sini.",
+    "onlyTiresIssuedUsedTireS": "Hanya {{tires}} ban bekas yang dikeluarkan dari baris ini yang belum dipasang.",
+    "paidAmountPaidAmountDoesNot": "Jumlah yang dibayar ({{paidAmount}}) tidak sama dengan total faktur ({{payableAmount}}). Pembayaran sebagian tidak didukung — ajukan koreksi terlebih dahulu jika total faktur salah.",
+    "paidAmountPaidMustExactlyMatch": "Jumlah yang dibayar ({{paid}}) harus sama persis dengan nilai faktur vendor ({{invoiceAmount}}) — pelunasan sebagian tidak didukung.",
+    "partnerSaleRequiresPartnerId": "Penjualan PARTNER memerlukan partner_id.",
+    "partRequestAlreadyBeenIssued": "Permintaan suku cadang ini sudah dikeluarkan.",
+    "partRequestMustApprovedBeforeIssued": "Permintaan suku cadang ini harus disetujui sebelum dapat dikeluarkan.",
+    "partRequestOnlyRequestedApprove": "Hanya permintaan suku cadang berstatus Diminta yang dapat disetujui.",
+    "partRequestOnlyRequestedCancel": "Hanya permintaan suku cadang berstatus Diminta yang dapat dibatalkan.",
+    "partRequestOnlyRequestedReject": "Hanya permintaan suku cadang berstatus Diminta yang dapat ditolak.",
+    "paymentAlreadyBeenRecordedServiceInvoice": "Pembayaran untuk Faktur Layanan ini sudah dicatat.",
+    "plannedPartNoProductWarehouseResolved": "Suku cadang terencana ini belum memiliki produk/gudang — pesan terlebih dahulu.",
+    "reasonRequiredRejectPartRequest": "Alasan wajib diisi untuk menolak permintaan suku cadang.",
+    "receivedQtyExceedsReturned": "Jumlah diterima harus lebih dari nol dan tidak boleh melebihi jumlah yang diretur ({{returned}}).",
+    "removedComponentAlreadyBeenReturned": "Komponen terlepas ini sudah dikembalikan.",
+    "removedQuantityCannotExceedConsumedQuantity": "Jumlah yang dilepas tidak boleh melebihi jumlah produk ini yang dipakai pada Work Order (sisa: {{remaining}}).",
+    "replacementTiresPartRequestAlreadyStatus": "Permintaan suku cadang untuk ban pengganti sudah {{status}}; produk dan jumlahnya tidak dapat diubah lagi.",
+    "returnAlreadyBeenProcessedDispositionStatus": "Retur ini sudah diproses ({{disposition_status}}).",
+    "returnedRemovedComponentRecordCannotDeleted": "Catatan komponen terlepas yang sudah dikembalikan tidak dapat dihapus.",
+    "returnExceedsReturnable": "Tidak dapat mengembalikan melebihi jumlah yang dapat dikembalikan ({{returnable}}): jumlah yang sudah dipakai tidak pernah dapat dikembalikan.",
+    "saleTypeMustBeOneOf": "Jenis penjualan harus salah satu dari: {{values}}.",
+    "scrappedTireOnlySoldScrapMaterial": "Ban yang sudah di-scrap hanya dapat dijual sebagai SCRAP_MATERIAL.",
+    "selectedComponentAssetAlreadyOpenApproved": "Aset komponen yang dipilih sudah ada dalam penjualan yang terbuka atau disetujui.",
+    "selectedComponentAssetNotFound": "Aset komponen yang dipilih tidak ditemukan.",
+    "selectedTireAlreadyOpenApprovedSale": "Ban yang dipilih sudah ada dalam penjualan yang terbuka atau disetujui.",
+    "selectedTireNotFound": "Ban yang dipilih tidak ditemukan.",
+    "serviceInvoiceNumberedExternalInvoiceNumber": "Faktur Layanan bernomor '{{external_invoice_number}}' sudah tercatat untuk penyedia jasa ini.",
+    "statusPartRequestCannotIssued": "Permintaan suku cadang berstatus {{status}} tidak dapat dikeluarkan.",
+    "tireSerialNumberCurrentStatusOnly": "Ban {{serial_number}} berstatus {{current_status}}; hanya ban scrap (Baru Di-scrap) yang dapat dijual.",
+    "tireSerialNumberCurrentStatusOnly2": "Ban {{serial_number}} berstatus {{current_status}}; hanya ban scrap yang dapat dijual.",
+    "unitPriceCannotNegative": "Harga satuan tidak boleh negatif.",
+    "unknownFileRoleRole": "Peran file tidak dikenal: {{role}}.",
+    "unsupportedFileExtensionOnlyJpgJpeg": "Ekstensi file tidak didukung. Hanya .jpg, .jpeg, atau .png yang diterima.",
+    "unsupportedFileTypeUploadCheckAccepted": "Jenis file tidak didukung untuk unggahan ini — periksa format yang diterima.",
+    "usedFaultyItemCannotProposedReuse": "Item USED_FAULTY tidak dapat diusulkan untuk REUSE atau SELL_ELIGIBLE — usulkan REPAIR, QUARANTINE, atau SCRAP.",
+    "usedFaultySourcedItemCannotSold": "Item yang berasal dari USED_FAULTY tidak dapat dijual sebagai OPERATIONAL_REUSE.",
+    "usedTiresIssuedPerSerialNumber": "Ban bekas dikeluarkan per nomor seri: gunakan jumlah bulat.",
+    "usedTiresReturnedPerSerialNumber": "Ban bekas dikembalikan per nomor seri: gunakan jumlah bulat.",
+    "useExternalWorkOrderCancelAction": "Gunakan aksi pembatalan Work Order Eksternal, yang memerlukan alasan.",
+    "workOrderExecutionActionsNotAllowed": "Aksi pelaksanaan Work Order tidak diizinkan saat status {{status}}.",
+    "workOrderNoLongerRevisedExternal": "Work Order ini tidak dapat direvisi lagi — Faktur Eksternalnya sudah melewati tahap New External WO.",
+    "workOrderSExternalInvoiceAlready": "Faktur Eksternal untuk Work Order ini sudah {{status}} dan tidak dapat dibatalkan lagi."
+  },
+  "workshop": {
+    "activateNoLongerAvailableApproveWorkspace": "Aktivasi tidak lagi tersedia — setujui Penugasan Workspace sebagai gantinya.",
+    "cannotAssignWorkerAnotherTenant": "Tidak dapat menugaskan pekerja dari penyewa lain.",
+    "cannotAssignWorkerOutsideWorkOrder": "Tidak dapat menugaskan pekerja di luar bengkel Work Order.",
+    "cannotCancelReservationAlreadyStatus": "Tidak dapat membatalkan reservasi yang sudah {{status}}.",
+    "cannotStartWorkOrderBecauseNo": "Work Order ini tidak dapat dimulai karena belum ada Workspace yang disetujui dan tanggal kerja yang dijadwalkan.",
+    "onlyApprovedAssignmentTransferredOneStatus": "Hanya penugasan yang disetujui yang dapat dipindahkan; status penugasan ini {{status}}.",
+    "onlyPausedLaborLogResumed": "Hanya log kerja yang dijeda yang dapat dilanjutkan.",
+    "onlyRequestedReservedAssignmentApprovedOne": "Hanya penugasan yang diminta (RESERVED) yang dapat disetujui; status penugasan ini {{status}}.",
+    "onlyRunningLaborLogPaused": "Hanya log kerja yang sedang berjalan yang dapat dijeda.",
+    "onlyRunningPausedLaborLogFinished": "Hanya log kerja yang sedang berjalan atau dijeda yang dapat diselesaikan.",
+    "targetWorkspaceMustBelongSameWorkshop": "Workspace tujuan harus berada di bengkel yang sama.",
+    "targetWorkspaceNotFound": "Workspace tujuan tidak ditemukan.",
+    "workerAlreadyOpenLaborLogJob": "Pekerja ini sudah memiliki log kerja terbuka untuk pekerjaan ini.",
+    "workOrderAlreadyCurrentWorkspaceAssignment": "Work Order ini sudah memiliki penugasan workspace aktif — pindahkan ke workspace lain.",
+    "workOrderNotFound": "Work Order tidak ditemukan.",
+    "workOrderStatusStatusCannotTransferred": "Work Order dengan status {{status}} tidak dapat dipindahkan ke workspace lain.",
+    "workOrderStatusWorkspaceNoLonger": "Work Order berstatus {{status}}; area kerjanya tidak dapat disetujui lagi.",
+    "workspaceAlreadyOverlappingReservationTimeWindow": "Workspace ini sudah memiliki reservasi yang tumpang tindih pada rentang waktu tersebut.",
+    "workspaceAssignmentCompletesAutomaticallyWhenWork": "Penugasan Workspace selesai otomatis saat Work Order-nya selesai.",
+    "workspaceCannotScheduledWorkOrderStatus": "Workspace tidak dapat dijadwalkan untuk Work Order dengan status {{status}}.",
+    "workspaceReservationsNotAvailableExternalWork": "Reservasi workspace tidak tersedia untuk Work Order Eksternal.",
+    "workspaceWorkspaceBelongsAnotherWorkshopThan": "Workspace {{workspace}} milik bengkel yang berbeda dengan Work Order ini.",
+    "workspaceWorkspaceDoesNotAcceptVehicle": "Workspace {{workspace}} tidak menerima kategori kendaraan ini.",
+    "workspaceWorkspaceFullTimeWindowCapacity": "Workspace {{workspace}} penuh pada rentang waktu tersebut (kapasitas {{capacity}}).",
+    "workspaceWorkspaceStatusCannotScheduled": "Workspace {{workspace}} berstatus {{status}} dan tidak dapat dijadwalkan.",
+    "workWorkOrderStartedTransferWorkspace": "Pekerjaan pada Work Order ini sudah dimulai — pindahkan area kerjanya alih-alih membatalkan."
+  },
+  "workshopInvoice": {
+    "serviceInvoiceOutsideAssignedDataScope": "Faktur Layanan ini berada di luar lingkup data Anda."
+  },
+  "workspace": {
+    "workspaceOutsideAssignedDataScope": "Workspace ini berada di luar lingkup data Anda."
+  },
+  "workspaceReservation": {
+    "reservationOutsideAssignedDataScope": "Reservasi ini berada di luar lingkup data Anda.",
+    "targetWorkspaceOutsideAssignedDataScope": "Workspace tujuan berada di luar lingkup data Anda."
+  }
+}

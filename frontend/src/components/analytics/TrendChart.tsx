@@ -1,3 +1,4 @@
+import { t } from '../../i18n/i18n';
 interface Point {
   date: string;
   value: number | null;
@@ -9,7 +10,7 @@ interface Point {
 export function TrendChart({ points, label }: { points: Point[]; label: string }) {
   const values = points.map((p) => p.value).filter((v): v is number => v !== null);
   if (values.length === 0) {
-    return <div style={{ fontSize: 13, color: '#9ca3af', padding: 16 }}>No trend data for this period.</div>;
+    return <div style={{ fontSize: 13, color: '#9ca3af', padding: 16 }}>{t('common.empty.noTrendDataPeriod')}</div>;
   }
 
   const width = 640;
@@ -34,7 +35,7 @@ export function TrendChart({ points, label }: { points: Point[]; label: string }
   return (
     <div className="card" style={{ padding: 16 }}>
       <div style={{ fontSize: 13, color: '#374151', marginBottom: 8, fontWeight: 600 }}>{label}</div>
-      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height }} role="img" aria-label={`${label} trend`}>
+      <svg viewBox={`0 0 ${width} ${height}`} style={{ width: '100%', height }} role="img" aria-label={t('common.tooltips.labelTrend', { label: label })}>
         <line x1={padding} y1={height - padding} x2={width - padding} y2={height - padding} stroke="#e5e7eb" />
         <path d={linePath} fill="none" stroke="#2563eb" strokeWidth={2} />
         {coords.map(

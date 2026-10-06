@@ -3,21 +3,23 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
-use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
-use App\Domain\Configuration\Services\DocumentTemplateRenderService;
+use App\Domain\DocumentGeneration\Support\DocumentSource;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\Partner\Models\Partner;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\VendorQuotation;
 use App\Domain\Procurement\Services\PurchaseOrderService;
 use App\Domain\Procurement\Services\PurchaseReturnService;
+use App\Http\Controllers\Concerns\PrintsDocuments;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
 
 class PurchaseOrderController extends Controller
 {
+    use PrintsDocuments;
+
     public function __construct(
         private readonly PurchaseOrderService $orders,
         private readonly DataScopeService $scope,
@@ -117,17 +119,34 @@ class PurchaseOrderController extends Controller
      * template into a PDF, preserving the document number/numbering config
      * version/template version used at generation time.
      */
-    public function print(PurchaseOrder $purchaseOrder, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    public function print(Request $request, PurchaseOrder $purchaseOrder)
     {
         $this->authorizeScope($purchaseOrder);
 
-        $context = DocumentTemplateContextBuilder::forPurchaseOrder($purchaseOrder);
-        $rendered = $templates->render('purchase_order', $context, $purchaseOrder->tenant_id, null, null, $purchaseOrder->delivery_warehouse_id);
+        return $this->printDocument($request, $this->purchaseOrderDocument($purchaseOrder));
+    }
 
-        return response($pdf->fromHtml($rendered['html']), 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.$purchaseOrder->po_number.'.pdf"',
-        ]);
+    public function printGenerations(PurchaseOrder $purchaseOrder)
+    {
+        $this->authorizeScope($purchaseOrder);
+
+        return $this->documentGenerations($this->purchaseOrderDocument($purchaseOrder));
+    }
+
+    public function generatePrint(Request $request, PurchaseOrder $purchaseOrder)
+    {
+        $this->authorizeScope($purchaseOrder);
+
+        return $this->generateDocument($request, $this->purchaseOrderDocument($purchaseOrder));
+    }
+
+    private function purchaseOrderDocument(PurchaseOrder $purchaseOrder): DocumentSource
+    {
+        return new DocumentSource(
+            'purchase_order', 'purchase_order', $purchaseOrder->id, $purchaseOrder->tenant_id, $purchaseOrder->po_number.'.pdf',
+            fn (string $locale) => DocumentTemplateContextBuilder::forPurchaseOrder($purchaseOrder, $locale),
+            warehouseId: $purchaseOrder->delivery_warehouse_id,
+        );
     }
 
     public function submit(PurchaseOrder $purchaseOrder)

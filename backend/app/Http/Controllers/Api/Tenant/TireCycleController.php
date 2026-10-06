@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\PermissionService;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireCyclePhoto;
 use App\Domain\Tire\Services\TireCycleService;
@@ -44,7 +45,7 @@ class TireCycleController extends Controller
             'notes' => ['nullable', 'string', 'max:2000'],
         ], [
             'photos.required' => 'Upload at least one photo.',
-            'photos.max' => 'Upload at most '.TireCycleService::MAX_PHOTOS.' photos.',
+            'photos.max' => Messages::text('validation.tire.uploadAtMostPhotos', ['max' => TireCycleService::MAX_PHOTOS]),
         ]);
 
         $cycle = $this->cycles->open($tire, $validated['partner_id'], (string) $request->input('estimated_price'), $request->file('photos'), $validated['notes'] ?? null, $this->context->user()->id);

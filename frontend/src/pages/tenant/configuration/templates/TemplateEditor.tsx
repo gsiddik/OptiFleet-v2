@@ -19,6 +19,7 @@ import {
   readEditor,
   variableChip,
 } from "./templateDom";
+import { labelText, t as tt } from '../../../../i18n/i18n';
 
 const VAR_DRAG_TYPE = "application/x-optifleet-template-variable";
 
@@ -56,61 +57,61 @@ const EDITOR_CSS = `
 [data-template-editor] td, [data-template-editor] th { border:1px solid #d1d5db; min-width:40px; padding:4px; }
 `;
 
-const TOOLBAR: { label: string; title: string; run: () => void }[] = [
-  { label: "B", title: "Bold", run: () => document.execCommand("bold") },
-  { label: "I", title: "Italic", run: () => document.execCommand("italic") },
+const TOOLBAR: { label: string; labelKey?: string; title: string; run: () => void }[] = [
+  { label: "B", get title() { return tt('configuration.tooltips.bold'); }, run: () => document.execCommand("bold") },
+  { label: "I", get title() { return tt('configuration.tooltips.italic'); }, run: () => document.execCommand("italic") },
   {
     label: "U",
-    title: "Underline",
+    get title() { return tt('configuration.tooltips.underline'); },
     run: () => document.execCommand("underline"),
   },
   {
     label: "H1",
-    title: "Heading 1",
+    get title() { return tt('configuration.tooltips.heading1'); },
     run: () => document.execCommand("formatBlock", false, "h1"),
   },
   {
     label: "H2",
-    title: "Heading 2",
+    get title() { return tt('configuration.tooltips.heading2'); },
     run: () => document.execCommand("formatBlock", false, "h2"),
   },
   {
     label: "H3",
-    title: "Heading 3",
+    get title() { return tt('configuration.tooltips.heading3'); },
     run: () => document.execCommand("formatBlock", false, "h3"),
   },
   {
     label: "¶",
-    title: "Paragraph",
+    get title() { return tt('configuration.tooltips.paragraph'); },
     run: () => document.execCommand("formatBlock", false, "p"),
   },
   {
     label: "⯇",
-    title: "Align left",
+    get title() { return tt('configuration.tooltips.alignLeft'); },
     run: () => document.execCommand("justifyLeft"),
   },
   {
     label: "≡",
-    title: "Align center",
+    get title() { return tt('configuration.tooltips.alignCenter'); },
     run: () => document.execCommand("justifyCenter"),
   },
   {
     label: "⯈",
-    title: "Align right",
+    get title() { return tt('configuration.tooltips.alignRight'); },
     run: () => document.execCommand("justifyRight"),
   },
   {
-    label: "• List",
-    title: "Bulleted list",
+    label: "• List", labelKey: 'configuration.tooltips.list',
+    get title() { return tt('configuration.tooltips.bulletedList'); },
     run: () => document.execCommand("insertUnorderedList"),
   },
   {
-    label: "1. List",
-    title: "Numbered list",
+    label: "1. List", labelKey: 'configuration.tooltips.n1List',
+    get title() { return tt('configuration.tooltips.numberedList'); },
     run: () => document.execCommand("insertOrderedList"),
   },
-  { label: "↶", title: "Undo", run: () => document.execCommand("undo") },
-  { label: "↷", title: "Redo", run: () => document.execCommand("redo") },
+  { label: "↶", get title() { return tt('configuration.tooltips.undo'); }, run: () => document.execCommand("undo") },
+  { label: "↷", get title() { return tt('configuration.tooltips.redo'); }, run: () => document.execCommand("redo") },
 ];
 
 /**
@@ -251,7 +252,7 @@ export function TemplateEditor({
       : null;
     if (block && where !== block) {
       setMessage(
-        `"${variable.label}" belongs to the ${labels.block(block)} block: put the cursor inside a ${labels.block(block)} block (or insert one) first.`,
+        `"${labelText(variable)}" belongs to the ${labels.block(block)} block: put the cursor inside a ${labels.block(block)} block (or insert one) first.`,
       );
       return;
     }
@@ -328,13 +329,13 @@ export function TemplateEditor({
 
   async function save() {
     setSaveError(null);
-    if (!code) return setSaveError("Choose the Document Type.");
-    if (!name.trim()) return setSaveError("Name is required.");
+    if (!code) return setSaveError(tt('configuration.validation.chooseTheDocumentType'));
+    if (!name.trim()) return setSaveError(tt('configuration.validation.nameIsRequired'));
     if (
       !editor.current?.textContent?.trim() &&
       !editor.current?.querySelector("[data-var]")
     )
-      return setSaveError("The document is empty.");
+      return setSaveError(tt('configuration.errors.theDocumentIsEmpty'));
     setSaving(true);
     try {
       const payload = { editor: document_() };
@@ -361,7 +362,7 @@ export function TemplateEditor({
 
   const matches = (v: TemplateVariable) =>
     !search ||
-    `${v.label} ${v.category}`.toLowerCase().includes(search.toLowerCase());
+    `${labelText(v)} ${v.category}`.toLowerCase().includes(search.toLowerCase());
   const categories = useMemo(() => {
     const map = new Map<string, TemplateVariable[]>();
     for (const v of catalog?.variables ?? [])
@@ -397,7 +398,7 @@ export function TemplateEditor({
         fontSize: 12,
       }}
     >
-      <span style={{ fontWeight: 600, color: "#1e3a8a" }}>{v.label}</span>
+      <span style={{ fontWeight: 600, color: "#1e3a8a" }}>{labelText(v)}</span>
       <span style={{ color: "#6b7280", fontSize: 11 }}>{v.type}</span>
     </button>
   );
@@ -445,21 +446,21 @@ export function TemplateEditor({
           <h1 style={{ fontSize: 20, margin: 0 }}>{target.title}</h1>
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn-secondary" onClick={onClose}>
-              Cancel
+              {tt('common.actions.cancel')}
             </button>
             <button
               className="btn-secondary"
               onClick={showPreview}
               disabled={!catalog}
             >
-              Preview
+              {tt('configuration.actions.preview')}
             </button>
             <button
               className="btn-primary"
               onClick={save}
               disabled={saving || !catalog || unsupported.length > 0}
             >
-              {saving ? "Saving…" : "Save Draft"}
+              {saving ? tt('common.actions.saving') : tt('platform.contracts.actions.saveDraft')}
             </button>
           </div>
         </div>
@@ -474,44 +475,44 @@ export function TemplateEditor({
           }}
         >
           <FormField
-            label="Document Type"
+            label={tt('configuration.fields.documentType')}
             required
-            hint="The printed document this template is for. The list contains every document the system can print."
+            hint={tt('configuration.help.printedDocumentTemplateListContainsEvery')}
           >
             <select
-              aria-label="Document Type"
+              aria-label={tt('configuration.fields.documentType')}
               value={code}
               disabled={!!target.code}
               onChange={(e) => setCode(e.target.value)}
               style={inputStyle}
             >
-              <option value="">Select…</option>
+              <option value="">{tt('common.fields.select')}</option>
               {documentTypes.map((d) => (
                 <option key={d.key} value={d.key}>
-                  {d.label}
+                  {labelText(d)}
                 </option>
               ))}
             </select>
           </FormField>
           <FormField
-            label="Name"
+            label={tt('common.fields.name')}
             required
-            hint="A name for this template, e.g. Work Order with company logo text."
+            hint={tt('configuration.help.nameTemplateEGWorkOrder')}
           >
             <input
-              aria-label="Name"
+              aria-label={tt('common.fields.name')}
               value={name}
               disabled={!!target.name}
               onChange={(e) => setName(e.target.value)}
               style={inputStyle}
             />
           </FormField>
-          <FormField label="Change Summary">
+          <FormField label={tt('configuration.fields.changeSummary')}>
             <input
-              aria-label="Change Summary"
+              aria-label={tt('configuration.fields.changeSummary')}
               value={changeSummary}
               onChange={(e) => setChangeSummary(e.target.value)}
-              placeholder="What changed and why (optional)"
+              placeholder={tt('configuration.placeholders.whatChangedWhyOptional')}
               style={inputStyle}
             />
           </FormField>
@@ -530,9 +531,9 @@ export function TemplateEditor({
             data-unsupported-template
           >
             <strong>
-              This template uses a layout the visual editor cannot show exactly.
+              {tt('configuration.help.templateUsesLayoutVisualEditorCannot')}
             </strong>{" "}
-            To avoid changing it by accident, it cannot be saved from here:
+            {tt('configuration.help.avoidChangingAccidentCannotSavedHere')}:
             <ul style={{ margin: "6px 0 0" }}>
               {unsupported.map((u) => (
                 <li key={u}>{u}</li>
@@ -551,7 +552,7 @@ export function TemplateEditor({
         )}
         {!code ? (
           <div className="card" style={{ fontSize: 14 }}>
-            Choose the Document Type to start.
+            {tt('configuration.help.chooseDocumentTypeStart')}
           </div>
         ) : !catalog ? (
           <LoadingState />
@@ -567,7 +568,7 @@ export function TemplateEditor({
           <div style={{ flex: "1 1 560px", minWidth: 0 }}>
             <div
               role="toolbar"
-              aria-label="Formatting"
+              aria-label={tt('configuration.tooltips.formatting')}
               style={{
                 display: "flex",
                 flexWrap: "wrap",
@@ -576,7 +577,7 @@ export function TemplateEditor({
               }}
             >
               {TOOLBAR.map((t) => toolbarButton(t.label, t.title, t.run))}
-              {toolbarButton("Table", "Insert table", insertTable)}
+              {toolbarButton(tt('configuration.fields.table'), tt('configuration.fields.insertTable'), insertTable)}
             </div>
             <div
               ref={editor}
@@ -584,7 +585,7 @@ export function TemplateEditor({
               suppressContentEditableWarning
               role="textbox"
               aria-multiline
-              aria-label="Document Editor"
+              aria-label={tt('configuration.tooltips.documentEditor')}
               data-template-editor
               onMouseUp={(e) => {
                 // A click on a chip puts the cursor right after it (chips are not editable inside).
@@ -651,21 +652,19 @@ export function TemplateEditor({
           </div>
           <aside
             style={{ flex: "0 1 300px", minWidth: 0, maxWidth: "100%" }}
-            aria-label="Variables"
+            aria-label={tt('configuration.fields.variables')}
             data-variable-panel
           >
             <div className="card" style={{ padding: 12 }}>
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
-                Variables
-                <InfoTip label="Variables">
-                  Click a card to insert it at the cursor, or drag it into the
-                  document. In the printed document it is replaced by the real
-                  value.
+                {tt('configuration.fields.variables')}
+                <InfoTip label={tt('configuration.fields.variables')}>
+                  {tt('configuration.tooltips.clickCardInsertCursorDragInto')}
                 </InfoTip>
               </div>
               <input
-                aria-label="Search variables"
-                placeholder="Search…"
+                aria-label={tt('configuration.fields.searchVariables')}
+                placeholder={tt('common.search.search')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 style={{ ...inputStyle, marginBottom: 8 }}
@@ -698,10 +697,9 @@ export function TemplateEditor({
                   <div
                     style={{ fontWeight: 600, fontSize: 13, color: "#6d28d9" }}
                   >
-                    {b.label} Block
-                    <InfoTip label={`${b.label} Block`}>
-                      {b.description} Its fields can only be used inside the
-                      block.
+                    {labelText(b)} {tt('workshop.actions.block')}
+                    <InfoTip label={tt('configuration.fields.labelBlock', { label: b.label })}>
+                      {tt('configuration.tooltips.descriptionFieldsOnlyUsedInsideBlock', { description: b.description })}
                     </InfoTip>
                   </div>
                   <div style={{ display: "flex", gap: 6, margin: "6px 0" }}>
@@ -713,7 +711,7 @@ export function TemplateEditor({
                       onClick={() => insertBlock(b.name, true)}
                       data-insert-block-table={b.name}
                     >
-                      + {b.label} table
+                      {tt('configuration.actions.labelTable', { label: b.label })}
                     </button>
                     <button
                       type="button"
@@ -723,7 +721,7 @@ export function TemplateEditor({
                       onClick={() => insertBlock(b.name, false)}
                       data-insert-block={b.name}
                     >
-                      + {b.label} block
+                      {tt('configuration.actions.labelBlock', { label: b.label })}
                     </button>
                   </div>
                   <div
@@ -734,8 +732,8 @@ export function TemplateEditor({
                     }}
                   >
                     {caretBlock === b.name
-                      ? `Cursor is inside a ${b.label} block — fields can be inserted.`
-                      : `Fields (inside a ${b.label} block):`}
+                      ? tt('configuration.help.cursorInsideLabelBlockFieldsInserted', { label: b.label })
+                      : `Fields (inside a ${labelText(b)} block):`}
                   </div>
                   {b.fields.filter(matches).map((f) => card(f, b.name))}
                 </div>
@@ -747,12 +745,12 @@ export function TemplateEditor({
       {preview !== null && (
         <Modal
           open
-          title="Preview (sample data)"
+          title={tt('configuration.modals.previewSampleData')}
           onClose={() => setPreview(null)}
           width={860}
         >
           <iframe
-            title="Template preview"
+            title={tt('configuration.tooltips.templatePreview')}
             sandbox=""
             srcDoc={preview}
             style={{

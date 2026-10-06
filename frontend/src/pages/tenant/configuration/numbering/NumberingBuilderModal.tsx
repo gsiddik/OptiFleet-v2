@@ -21,6 +21,7 @@ import {
   usedTokens,
   validateBuilder,
 } from "./numberingFormat";
+import { t as tt } from '../../../../i18n/i18n';
 
 const INITIAL_KEYS: Record<string, string> = {
   TENANT: "tenant_initial",
@@ -119,7 +120,7 @@ export function NumberingBuilderModal({
     const mine = ++seq.current;
     if (errors.length > 0 || !code) {
       setPreview("");
-      setPreviewError(errors[0] ?? (code ? null : "Choose the Document Type."));
+      setPreviewError(errors[0] ?? (code ? null : tt('configuration.validation.chooseTheDocumentType')));
       return;
     }
     const timer = setTimeout(() => {
@@ -149,9 +150,9 @@ export function NumberingBuilderModal({
     if (!code || !name.trim() || errors.length > 0) {
       setSaveError(
         !code
-          ? "Choose the Document Type."
+          ? tt('configuration.validation.chooseTheDocumentType')
           : !name.trim()
-            ? "Name is required."
+            ? tt('configuration.validation.nameIsRequired')
             : errors[0],
       );
       return;
@@ -203,18 +204,18 @@ export function NumberingBuilderModal({
           }}
         >
           <FormField
-            label="Document Type"
+            label={tt('configuration.fields.documentType')}
             required
-            hint="The document this numbering is used for. The list contains every document the system numbers."
+            hint={tt('configuration.help.documentNumberingUsedListContainsEvery')}
           >
             <select
-              aria-label="Document Type"
+              aria-label={tt('configuration.fields.documentType')}
               value={code}
               disabled={!!target.code}
               onChange={(e) => setCode(e.target.value)}
               style={inputStyle}
             >
-              <option value="">Select…</option>
+              <option value="">{tt('common.fields.select')}</option>
               {meta.document_types.map((d) => (
                 <option key={d.key} value={d.key}>
                   {d.label}
@@ -223,12 +224,12 @@ export function NumberingBuilderModal({
             </select>
           </FormField>
           <FormField
-            label="Name"
+            label={tt('common.fields.name')}
             required
-            hint="A name for this numbering configuration, e.g. Purchase Order Jakarta."
+            hint={tt('configuration.help.nameNumberingConfigurationEGPurchase')}
           >
             <input
-              aria-label="Name"
+              aria-label={tt('common.fields.name')}
               value={name}
               disabled={!!target.name}
               onChange={(e) => setName(e.target.value)}
@@ -238,9 +239,9 @@ export function NumberingBuilderModal({
         </div>
 
         <FormField
-          label="Format"
+          label={tt('configuration.fields.format')}
           required
-          hint="Type your own text (e.g. RPO-) and add the parts below. Click a card to insert it where the cursor is, or drag it into the Format. A part can be used more than once."
+          hint={tt('configuration.help.typeOwnTextEGRpo')}
         >
           <FormatEditor
             ref={editor}
@@ -252,7 +253,7 @@ export function NumberingBuilderModal({
         </FormField>
         <div
           role="group"
-          aria-label="Format parts"
+          aria-label={tt('configuration.tooltips.formatParts')}
           style={{
             display: "flex",
             flexWrap: "wrap",
@@ -308,41 +309,41 @@ export function NumberingBuilderModal({
           {tokens.has("DOC") &&
             param(
               "doc_code",
-              "Doc Code Name",
-              "The code the DOC part shows, e.g. PO.",
+              tt('configuration.fields.docCodeName'),
+              tt('configuration.help.codeDocPartShowsEG'),
             )}
           {tokens.has("TENANT") &&
             param(
               "tenant_initial",
-              "Tenant Initial",
-              "Shown by TENANT, e.g. ALP. Leave empty to use the tenant code.",
+              tt('configuration.fields.tenantInitial'),
+              tt('configuration.help.shownTenantEGAlpLeave'),
             )}
           {tokens.has("BRANCH") &&
             param(
               "branch_initial",
-              "Branch Initial",
-              "Shown by BRANCH. Leave empty to use the code of the branch each document belongs to.",
+              tt('configuration.fields.branchInitial'),
+              tt('configuration.help.shownBranchLeaveEmptyUseCode'),
             )}
           {tokens.has("WORKSHOP") &&
             param(
               "workshop_initial",
-              "Workshop Initial",
-              "Shown by WORKSHOP, e.g. WSBDG. Leave empty to use the code of the workshop each document belongs to.",
+              tt('configuration.fields.workshopInitial'),
+              tt('configuration.help.shownWorkshopEGWsbdgLeave'),
             )}
           {tokens.has("WAREHOUSE") &&
             param(
               "warehouse_initial",
-              "Warehouse Initial",
-              "Shown by WAREHOUSE. Leave empty to use the code of the warehouse each document belongs to.",
+              tt('configuration.fields.warehouseInitial'),
+              tt('configuration.help.shownWarehouseLeaveEmptyUseCode'),
             )}
           {tokens.has("SEQ:N") && (
             <FormField
-              label="Sequential Digit"
+              label={tt('configuration.fields.sequentialDigit')}
               required
-              hint={`Number of digits of the running number (1–${meta.max_sequence_digits}); 6 gives 000001.`}
+              hint={tt('configuration.help.numberDigitsRunningNumber1Max', { max_sequence_digits: meta.max_sequence_digits })}
             >
               <NumericInput
-                aria-label="Sequential Digit"
+                aria-label={tt('configuration.fields.sequentialDigit')}
                 integer
                 value={digits}
                 onChange={(e) => setDigits(e.target.value)}
@@ -351,11 +352,11 @@ export function NumberingBuilderModal({
             </FormField>
           )}
           <FormField
-            label="Restart Numbering"
-            hint="When the running number starts again from the beginning."
+            label={tt('configuration.fields.restartNumbering')}
+            hint={tt('configuration.help.whenRunningNumberStartsAgainBeginning')}
           >
             <select
-              aria-label="Restart Numbering"
+              aria-label={tt('configuration.fields.restartNumbering')}
               value={resetRule}
               onChange={(e) => setResetRule(e.target.value)}
               style={inputStyle}
@@ -370,11 +371,11 @@ export function NumberingBuilderModal({
         </div>
 
         <FormField
-          label="Format Preview"
-          hint="Example of the first number with today's date. Real numbers are created by the system when a document is saved."
+          label={tt('configuration.fields.formatPreview')}
+          hint={tt('configuration.help.exampleFirstNumberTodaySDate')}
         >
           <input
-            aria-label="Format Preview"
+            aria-label={tt('configuration.fields.formatPreview')}
             readOnly
             value={preview || "—"}
             style={{
@@ -401,17 +402,17 @@ export function NumberingBuilderModal({
           </div>
         )}
         <div style={{ fontSize: 12, color: "#6b7280", marginBottom: 10 }}>
-          Format:{" "}
+          {tt('configuration.fields.format')}:{" "}
           <span style={{ fontFamily: "ui-monospace, monospace" }}>
             {displayFormat(segments) || "—"}
           </span>
         </div>
-        <FormField label="Change Summary">
+        <FormField label={tt('configuration.fields.changeSummary')}>
           <input
-            aria-label="Change Summary"
+            aria-label={tt('configuration.fields.changeSummary')}
             value={changeSummary}
             onChange={(e) => setChangeSummary(e.target.value)}
-            placeholder="What changed and why (optional)"
+            placeholder={tt('configuration.placeholders.whatChangedWhyOptional')}
             style={inputStyle}
           />
         </FormField>
@@ -425,10 +426,10 @@ export function NumberingBuilderModal({
         )}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button className="btn-secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            {tt('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save Draft"}
+            {saving ? tt('common.actions.saving') : tt('platform.contracts.actions.saveDraft')}
           </button>
         </div>
       </div>

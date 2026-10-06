@@ -1,22 +1,23 @@
 import { AnalyticsDomainPage } from './AnalyticsDomainPage';
+import { t } from '../../../i18n/i18n';
 
 export function ProcurementAnalyticsPage() {
   return (
     <AnalyticsDomainPage
       config={{
-        title: 'Procurement Analytics',
-        description: 'PR/PO volume and value, receipt timing, and lead time.',
+        title: t('analytics.sections.procurementAnalytics'),
+        description: t('analytics.help.prPoVolumeValueReceiptTiming'),
         endpoint: '/app/analytics/procurement',
         exportSlug: 'procurement',
         permission: 'analytics.procurement.view',
         dimensionField: 'branch_id',
-        dimensionLabel: 'Branch',
+        dimensionLabel: t('common.fields.branch'),
         highlightFields: [
-          { key: 'procurement_lead_time.avg_days', label: 'Avg Lead Time (days)' },
-          { key: 'pr_count', label: 'PRs' },
-          { key: 'po_count', label: 'POs' },
-          { key: 'po_value', label: 'PO Value' },
-          { key: 'late_receipt', label: 'Late Receipts' },
+          { key: 'procurement_lead_time.avg_days', label: t('analytics.fields.avgLeadTimeDays') },
+          { key: 'pr_count', label: t('analytics.fields.prs') },
+          { key: 'po_count', label: t('analytics.fields.pos') },
+          { key: 'po_value', label: t('analytics.fields.poValue') },
+          { key: 'late_receipt', label: t('analytics.fields.lateReceipts') },
         ],
       }}
     />

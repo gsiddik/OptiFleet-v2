@@ -2,6 +2,8 @@
 
 namespace App\Domain\Configuration\Services;
 
+use App\Domain\Shared\Support\Messages;
+
 /**
  * Section 3/4: whitelist-only token validation — never eval()/interpolate
  * arbitrary PHP. A format string may only contain literal characters plus
@@ -36,7 +38,7 @@ class NumberingFormatValidator
             }
             if ($matches[2][$i] !== '' && ($token !== 'SEQ' || (int) $matches[3][$i] < 1 || (int) $matches[3][$i] > self::MAX_SEQUENCE_DIGITS)) {
                 throw new NumberingException($token === 'SEQ'
-                    ? 'Sequential Digit must be a whole number between 1 and '.self::MAX_SEQUENCE_DIGITS.'.'
+                    ? Messages::text('errors.configuration.sequenceDigitRange', ['max' => self::MAX_SEQUENCE_DIGITS])
                     : "Token {{$token}} does not take a number.");
             }
         }
@@ -49,7 +51,7 @@ class NumberingFormatValidator
                 continue;
             }
             if (! is_string($payload[$key]) || mb_strlen($payload[$key]) > 30 || preg_match('/[{}]/', $payload[$key])) {
-                throw new NumberingException(str_replace('_', ' ', ucfirst($key)).' must be text of at most 30 characters without braces.');
+                throw new NumberingException(Messages::text('errors.configuration.initialTextInvalid', ['field' => str_replace('_', ' ', ucfirst($key))]));
             }
         }
 

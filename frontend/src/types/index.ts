@@ -24,6 +24,10 @@ export interface CurrentUser {
   scope: 'platform' | 'tenant';
   permissions: string[];
   memberships: TenantMembership[];
+  /** i18n: the user's own choice (`en` / `id`), or null to follow the tenant default / browser / English. */
+  preferred_locale?: string | null;
+  /** i18n: the active tenant's default language, if any. */
+  tenant_default_locale?: string | null;
 }
 
 export interface Tenant {
@@ -32,6 +36,8 @@ export interface Tenant {
   name: string;
   legal_name?: string | null;
   industry?: string | null;
+  /** Default UI / document language for the tenant's users ('en' | 'id'); null = none. */
+  default_locale?: 'en' | 'id' | null;
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   created_at: string;
 }
@@ -206,6 +212,8 @@ export interface ComponentSubcategory {
 
 export interface RoleItem {
   id: string;
+  /** Canonical identifier of a system-defined role (e.g. PLATFORM_SUPERADMIN); null for tenant roles. Never shown. */
+  code?: string | null;
   name: string;
   scope: 'platform' | 'tenant';
   is_system: boolean;

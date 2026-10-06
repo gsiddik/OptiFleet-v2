@@ -5,6 +5,7 @@ import { ErrorState, LoadingState } from '../../../../components/States';
 import { StatusBadge } from '../../../../components/StatusBadge';
 import { PositionLabel } from '../../../../components/tires/PositionLabel';
 import { formatKm } from './tireOperationFormat';
+import { t } from '../../../../i18n/i18n';
 
 interface TireHistory {
   tire: { id: string; serial_number: string; current_status: string };
@@ -31,17 +32,17 @@ export function TireHistoryModal({ tireId, serial, onClose }: { tireId: string; 
   const empty = history && history.installations.length + history.rotations.length + history.inspections.length === 0;
 
   return (
-    <Modal open title={`Tire History — ${serial}`} onClose={onClose} width={860}>
+    <Modal open title={t('tire.modals.tireHistorySerial', { serial: serial })} onClose={onClose} width={860}>
       {error && <ErrorState message={error} />}
       {!error && !history && <LoadingState />}
       {history && (
         <div data-tire-history style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
           <div style={{ fontSize: 13 }}>
-            Current status: <StatusBadge status={history.tire.current_status} />
+            {t('tire.fields.currentStatus')}: <StatusBadge status={history.tire.current_status} />
           </div>
-          {empty && <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>No history has been recorded for this tire yet.</p>}
+          {empty && <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>{t('tire.empty.noHistoryBeenRecordedTireYet')}</p>}
           {history.installations.length > 0 && (
-            <HistorySection title="Installation History" kind="installations" headers={['Vehicle', 'Position', 'Installed', 'Install KM', 'Removed', 'Removal KM', 'Removal Reason']}>
+            <HistorySection title={t('tenantComponents.sections.installationHistory')} kind="installations" headers={[t('common.fields.vehicle'), t('inventory.placeholders.position'), t('analytics.fields.installed'), t('tire.fields.installKm'), t('tire.fields.removed'), t('tire.fields.removalKm'), t('tenantComponents.fields.removalReason')]}>
               {history.installations.map((i) => (
                 <tr key={i.id}>
                   <Td>{i.vehicle?.registration_number ?? '—'}</Td>
@@ -50,7 +51,7 @@ export function TireHistoryModal({ tireId, serial, onClose }: { tireId: string; 
                   </Td>
                   <Td>{i.installed_at ?? '—'}</Td>
                   <Td>{formatKm(i.installation_odometer)}</Td>
-                  <Td>{i.removed_at ?? 'Still installed'}</Td>
+                  <Td>{i.removed_at ?? t('tire.fields.stillInstalled')}</Td>
                   <Td>{formatKm(i.removal_odometer)}</Td>
                   <Td>{i.removal_reason ?? '—'}</Td>
                 </tr>
@@ -58,7 +59,7 @@ export function TireHistoryModal({ tireId, serial, onClose }: { tireId: string; 
             </HistorySection>
           )}
           {history.rotations.length > 0 && (
-            <HistorySection title="Rotation History" kind="rotations" headers={['Date', 'Vehicle', 'From', 'To', 'KM']}>
+            <HistorySection title={t('tire.sections.rotationHistory')} kind="rotations" headers={[t('common.fields.date'), t('common.fields.vehicle'), t('common.fields.from'), t('common.fields.to'), 'KM']}>
               {history.rotations.map((r) => (
                 <tr key={r.id}>
                   <Td>{r.occurred_at ?? '—'}</Td>
@@ -75,11 +76,11 @@ export function TireHistoryModal({ tireId, serial, onClose }: { tireId: string; 
             </HistorySection>
           )}
           {history.inspections.length > 0 && (
-            <HistorySection title="Inspection History" kind="inspections" headers={['Date', 'Tread Depth', 'Condition', 'Damage / Notes', 'Inspector']}>
+            <HistorySection title={t('tire.sections.inspectionHistory')} kind="inspections" headers={[t('common.fields.date'), t('tire.fields.treadDepth'), t('common.fields.condition'), t('tire.fields.damageNotes'), t('tire.fields.inspector')]}>
               {history.inspections.map((i) => (
                 <tr key={i.id}>
                   <Td>{i.inspected_at ?? '—'}</Td>
-                  <Td>{i.tread_depth_mm != null ? `${i.tread_depth_mm} mm` : '—'}</Td>
+                  <Td>{i.tread_depth_mm != null ? t('tire.help.dPullMmMm', { d_pull_mm: i.tread_depth_mm }) : '—'}</Td>
                   <Td>{i.condition ?? '—'}</Td>
                   <Td>{[i.damage, i.recommendation].filter(Boolean).join(' · ') || '—'}</Td>
                   <Td>{i.inspector ?? '—'}</Td>

@@ -15,6 +15,7 @@ import {
   RecipientListEditor,
   type RecipientLookups,
 } from "./RecipientListEditor";
+import { t as tt } from '../../../../i18n/i18n';
 
 const emptyConditions = (): NotificationConditionSet => ({
   operator: "AND",
@@ -27,11 +28,11 @@ function recipientProblem(
   types: NotificationMetadata["recipient_types"],
   what: string,
 ): string | null {
-  if (rules.length === 0) return `Add at least one ${what}.`;
+  if (rules.length === 0) return tt('configuration.validation.addLeastOneWhat', { what: what });
   for (const rule of rules) {
     const kind = types.find((t) => t.value === rule.type)?.identifier;
     if (kind && !(rule.identifier ?? "").trim())
-      return `Choose the ${kind} for each ${what}.`;
+      return tt('configuration.validation.chooseKindEachWhat', { kind: kind, what: what });
   }
   return null;
 }
@@ -39,7 +40,7 @@ function recipientProblem(
 function conditionProblem(set: NotificationConditionSet): string | null {
   for (const rule of set.rules)
     if (!isGroup(rule) && !rule.field)
-      return "Choose a field for each condition.";
+      return tt('configuration.validation.chooseFieldEachCondition');
   return null;
 }
 
@@ -111,28 +112,28 @@ export function NotificationRuleModal({
   const minutesNumber = Number(minutes);
 
   const problem = (): string | null => {
-    if (!eventCode) return "Choose the event.";
-    if (!name.trim()) return "Enter a name.";
-    if (channels.length === 0) return "Choose at least one channel.";
+    if (!eventCode) return tt('configuration.validation.chooseTheEvent');
+    if (!name.trim()) return tt('configuration.validation.enterAName');
+    if (channels.length === 0) return tt('configuration.validation.chooseLeastOneChannel');
     const r = recipientProblem(recipients, meta.recipient_types, "recipient");
     if (r) return r;
     if (useConditions) {
       if (conditions.rules.length === 0)
-        return "Add a condition or untick “Only send when”.";
+        return tt('configuration.help.addConditionUntickOnlySendWhen');
       const c = conditionProblem(conditions);
       if (c) return c;
     }
     if (useEscalation) {
       if (!/^\d+$/.test(minutes) || minutesNumber < 1)
-        return "Enter the escalation waiting time in whole minutes (at least 1).";
+        return tt('configuration.validation.enterEscalationWaitingTimeWholeMinutes');
       const e = recipientProblem(
         escalationRecipients,
         meta.recipient_types,
-        "escalation recipient",
+        tt('configuration.fields.escalationRecipient'),
       );
       if (e) return e;
       if (useUnresolved && unresolved.rules.length === 0)
-        return "Add a status condition or untick “Only escalate while”.";
+        return tt('configuration.help.addStatusConditionUntickOnlyEscalate');
     }
     return null;
   };
@@ -199,10 +200,10 @@ export function NotificationRuleModal({
       open
       title={
         readOnly
-          ? `System Default Rule — ${rule!.name}`
+          ? tt('configuration.modals.systemDefaultRuleName', { name: rule!.name })
           : rule
-            ? `Edit Notification Rule — ${rule.name}`
-            : "New Notification Rule"
+            ? tt('configuration.modals.editNotificationRuleName', { name: rule.name })
+            : tt('configuration.modals.newNotificationRule')
       }
       onClose={onClose}
       width={760}
@@ -210,14 +211,13 @@ export function NotificationRuleModal({
       <div data-notification-rule-form>
         {readOnly && (
           <p style={{ fontSize: 13, color: "#a16207", marginTop: 0 }}>
-            Provided by the system and protected — it cannot be changed. Create
-            your own rule for the same event to notify other people.
+            {tt('configuration.help.providedSystemProtectedCannotChangedCreate')}
           </p>
         )}
         <FormField
-          label="Event"
+          label={tt('common.fields.event')}
           required
-          hint="What happens in the system that sends this notification."
+          hint={tt('configuration.help.whatHappensSystemSendsNotification')}
         >
           <select
             value={eventCode}
@@ -228,7 +228,7 @@ export function NotificationRuleModal({
             }}
             style={inputStyle}
             disabled={!!rule}
-            aria-label="Event"
+            aria-label={tt('common.fields.event')}
           >
             {(rule ? meta.events : configurable).map((e) => (
               <option key={e.code} value={e.code}>
@@ -237,20 +237,20 @@ export function NotificationRuleModal({
             ))}
           </select>
         </FormField>
-        <FormField label="Name" required>
+        <FormField label={tt('common.fields.name')} required>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             style={inputStyle}
-            placeholder="e.g. Critical breakdown alert"
+            placeholder={tt('configuration.placeholders.eGCriticalBreakdownAlert')}
             disabled={readOnly}
-            aria-label="Name"
+            aria-label={tt('common.fields.name')}
           />
         </FormField>
         <FormField
-          label="Send by"
+          label={tt('configuration.fields.sendBy')}
           required
-          hint="In-App shows in the bell menu; Email is sent to the recipient's email address."
+          hint={tt('configuration.help.appShowsBellMenuEmailSent')}
         >
           <div style={{ display: "flex", gap: 16 }}>
             {meta.channels.map((c) => (
@@ -274,21 +274,21 @@ export function NotificationRuleModal({
         </FormField>
 
         {section(
-          "Recipients",
-          "Who receives the notification. Several rows are combined; each person receives it once.",
+          tt('configuration.fields.recipients'),
+          tt('configuration.help.recipientsHint'),
         )}
         <RecipientListEditor
           value={recipients}
           onChange={setRecipients}
           types={meta.recipient_types}
           lookups={lookups}
-          label="Recipient"
+          label={tt('configuration.fields.recipient')}
           readOnly={readOnly}
         />
 
         {section(
-          "Conditions",
-          "Without conditions the notification is sent every time the event happens.",
+          tt('configuration.fields.conditions'),
+          tt('configuration.help.withoutConditionsNotificationSentEveryTime'),
         )}
         <label style={{ fontSize: 14, display: "block", marginBottom: 8 }}>
           <input
@@ -304,7 +304,7 @@ export function NotificationRuleModal({
                 });
             }}
           />{" "}
-          Only send when…
+          {tt('configuration.fields.onlySendWhen')}
         </label>
         {useConditions && (
           <ConditionListEditor
@@ -313,14 +313,14 @@ export function NotificationRuleModal({
             onChange={setConditions}
             fields={fields}
             operators={meta.operators}
-            label="Condition"
+            label={tt('common.fields.condition')}
             readOnly={readOnly}
           />
         )}
 
         {section(
-          "Escalation",
-          "If the record is still open after the waiting time, the escalation recipients are notified once.",
+          tt('configuration.fields.escalation'),
+          tt('configuration.help.ifRecordStillOpenAfterWaiting'),
         )}
         <label style={{ fontSize: 14, display: "block", marginBottom: 8 }}>
           <input
@@ -329,14 +329,14 @@ export function NotificationRuleModal({
             disabled={readOnly}
             onChange={(e) => setUseEscalation(e.target.checked)}
           />{" "}
-          Escalate if not handled
+          {tt('configuration.fields.escalateIfNotHandled')}
         </label>
         {useEscalation && (
           <div
             style={{ borderLeft: "3px solid #e5e7eb", paddingLeft: 12 }}
             data-escalation
           >
-            <FormField label="Wait (minutes)" required>
+            <FormField label={tt('configuration.fields.waitMinutes')} required>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <input
                   value={minutes}
@@ -346,7 +346,7 @@ export function NotificationRuleModal({
                     )
                   }
                   inputMode="numeric"
-                  aria-label="Wait (minutes)"
+                  aria-label={tt('configuration.fields.waitMinutes')}
                   style={{ ...inputStyle, width: 120 }}
                   disabled={readOnly}
                 />
@@ -356,14 +356,14 @@ export function NotificationRuleModal({
               </div>
             </FormField>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-              Escalate to
+              {tt('configuration.fields.escalateTo')}
             </div>
             <RecipientListEditor
               value={escalationRecipients}
               onChange={setEscalationRecipients}
               types={meta.recipient_types}
               lookups={lookups}
-              label="Escalation recipient"
+              label={tt('configuration.fields.escalationRecipient2')}
               readOnly={readOnly}
             />
             <div
@@ -381,11 +381,10 @@ export function NotificationRuleModal({
                   disabled={readOnly}
                   onChange={(e) => setUseUnresolved(e.target.checked)}
                 />{" "}
-                Only escalate while…
+                {tt('configuration.fields.onlyEscalateWhile')}
               </label>
-              <InfoTip label="Only escalate while">
-                Checked when the waiting time is over, against the record's
-                current status (e.g. Status is not RESOLVED).
+              <InfoTip label={tt('configuration.tooltips.onlyEscalateWhile')}>
+                {tt('configuration.tooltips.checkedWhenWaitingTimeOverAgainst')}
               </InfoTip>
             </div>
             {useUnresolved && (
@@ -394,7 +393,7 @@ export function NotificationRuleModal({
                 onChange={setUnresolved}
                 fields={meta.unresolved_fields}
                 operators={meta.operators}
-                label="Escalation condition"
+                label={tt('configuration.fields.escalationCondition')}
                 readOnly={readOnly}
               />
             )}
@@ -419,11 +418,11 @@ export function NotificationRuleModal({
           }}
         >
           <button className="btn-secondary" onClick={onClose}>
-            {readOnly ? "Close" : "Cancel"}
+            {readOnly ? tt('common.actions.close') : tt('common.actions.cancel')}
           </button>
           {!readOnly && (
             <button className="btn-primary" disabled={saving} onClick={save}>
-              {rule ? "Save Changes" : "Create Rule"}
+              {rule ? tt('configuration.actions.saveChanges') : tt('configuration.actions.createRule')}
             </button>
           )}
         </div>

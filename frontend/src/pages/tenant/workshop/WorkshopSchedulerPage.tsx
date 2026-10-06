@@ -6,6 +6,8 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import type { WorkspaceItem, WorkspaceReservationItem } from '../../../types';
 import { peakConcurrency, reservationsOnDay } from './schedulerOccupancy';
+import { formatTime } from '../../../utils/date';
+import { t } from '../../../i18n/i18n';
 
 function toDateInput(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -82,7 +84,7 @@ export function WorkshopSchedulerPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Workshop Scheduler</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('workshop.titles.workshopScheduler')}</h1>
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
         <select value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
           {workshops.map((w) => (
@@ -92,31 +94,31 @@ export function WorkshopSchedulerPage() {
           ))}
         </select>
         <button className="btn-secondary" onClick={() => setFrom((d) => addDays(d, -7))}>
-          ← Previous Week
+          {t('workshop.actions.previousWeek')}
         </button>
         <span style={{ fontSize: 13, color: '#374151' }}>
           {from} – {to}
         </span>
         <button className="btn-secondary" onClick={() => setFrom((d) => addDays(d, 7))}>
-          Next Week →
+          {t('workshop.actions.nextWeek')}
         </button>
         <button className="btn-secondary" onClick={() => setFrom(todayDateInput())}>
-          Today
+          {t('workshop.actions.today')}
         </button>
       </div>
 
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && workspaces.length === 0 && <EmptyState label="No workspaces found for this workshop." />}
+      {!error && !loading && workspaces.length === 0 && <EmptyState label={t('workshop.empty.noWorkspacesFoundWorkshop')} />}
       {!error && !loading && workspaces.length > 0 && (
         <div className="card" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr>
-                <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e5e7eb', minWidth: 160 }}>Workspace</th>
+                <th style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e5e7eb', minWidth: 160 }}>{t('nav.items.workspace')}</th>
                 {days.map((d) => (
                   <th key={d} style={{ textAlign: 'left', padding: 8, borderBottom: '1px solid #e5e7eb', minWidth: 160 }}>
-                    {d === todayDateInput() ? `${d} (Today)` : d}
+                    {d === todayDateInput() ? t('workshop.fields.dToday', { d: d }) : d}
                   </th>
                 ))}
               </tr>
@@ -128,8 +130,7 @@ export function WorkshopSchedulerPage() {
                     <div style={{ fontWeight: 600 }}>{ws.name}</div>
                     <div style={{ color: '#9ca3af' }}>{ws.code}</div>
                     <div style={{ color: '#374151', margin: '2px 0' }} data-capacity>
-                      Capacity {ws.effective_capacity ?? ws.capacity ?? 1}
-                    </div>
+                      {t('workshop.help.capacityValue', { value: ws.effective_capacity ?? ws.capacity ?? 1 })}</div>
                     <StatusBadge status={ws.status} />
                   </td>
                   {days.map((d) => {
@@ -142,8 +143,8 @@ export function WorkshopSchedulerPage() {
                     return (
                       <td key={d} style={{ padding: 6, borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }} data-day={d}>
                         <div style={{ fontSize: 11, fontWeight: 600, color: full ? '#b91c1c' : '#6b7280', marginBottom: 4 }} data-occupancy={`${occupied}/${capacity}`}>
-                          Occupied {occupied} / {capacity}
-                          {full ? ' · Full' : ''}
+                          {t('workshop.help.occupiedOfCapacity', { occupied, capacity })}
+                          {full ? t('workshop.help.full') : ''}
                         </div>
                         {dayReservations.map((r) => (
                           <Link
@@ -156,12 +157,12 @@ export function WorkshopSchedulerPage() {
                               border: r.status === 'RESERVED' ? '1px dashed #b45309' : '1px solid transparent',
                             }}
                           >
-                            <div style={{ fontWeight: 600 }}>{r.work_order?.wo_number ?? 'Reserved'}</div>
+                            <div style={{ fontWeight: 600 }}>{r.work_order?.wo_number ?? t('workshop.actions.reserved')}</div>
                             <div style={{ color: '#6b7280' }}>{r.work_order?.vehicle?.registration_number ?? ''}</div>
                             <div style={{ color: '#6b7280' }}>
-                              {new Date(r.start_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–
-                              {new Date(r.end_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                              {r.status === 'RESERVED' ? ' · Requested' : ''}
+                              {formatTime(r.start_at)}–
+                              {formatTime(r.end_at)}
+                              {r.status === 'RESERVED' ? t('workshop.actions.requested') : ''}
                             </div>
                           </Link>
                         ))}
@@ -171,7 +172,7 @@ export function WorkshopSchedulerPage() {
                             data-free-slot
                             style={{ border: '1px dashed #d1d5db', borderRadius: 6, padding: '4px 6px', marginBottom: 4, color: '#9ca3af' }}
                           >
-                            Free slot
+                            {t('workshop.help.freeSlot')}
                           </div>
                         ))}
                       </td>

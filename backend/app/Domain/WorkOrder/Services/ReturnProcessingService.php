@@ -7,6 +7,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Services\UsedTireStockService;
 use App\Domain\Tire\Support\TireStatus;
@@ -54,7 +55,7 @@ class ReturnProcessingService
             }
             QuantityPolicy::assertValidForProductId($locked->product_id, $receivedQuantity, 'received_quantity');
             if ($receivedQuantity <= 0 || $receivedQuantity > (float) $locked->quantity) {
-                throw new WorkOrderException('Received quantity must be greater than zero and cannot exceed the returned quantity ('.(float) $locked->quantity.').');
+                throw new WorkOrderException(Messages::text('errors.workOrder.receivedQtyExceedsReturned', ['returned' => (float) $locked->quantity]));
             }
 
             $matches = $actualCondition === $locked->condition && $receivedQuantity === (float) $locked->quantity;

@@ -16,6 +16,8 @@ import type { PartnerItem } from "../../../../types";
 import { formatDate } from "../../../../utils/date";
 import { formatMoney } from "../../../../utils/money";
 import type { CycleListRow } from "./retreadTypes";
+import { message } from "../../../../i18n/messages";
+import { t } from '../../../../i18n/i18n';
 
 const MAX_PHOTOS = 3;
 const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
@@ -74,7 +76,7 @@ export function RetreadCyclePanel() {
             style={{ padding: "4px 10px", fontSize: 12 }}
             onClick={() => setOpening(row)}
           >
-            Open Cycle
+            {t('tire.actions.openCycle')}
           </button>
         )
       );
@@ -87,7 +89,7 @@ export function RetreadCyclePanel() {
             disabled={busy === row.tire.id}
             onClick={() => receive(row)}
           >
-            Receive
+            {t('tire.actions.receive')}
           </button>
         )
       );
@@ -97,7 +99,7 @@ export function RetreadCyclePanel() {
         className="btn-secondary"
         style={{ padding: "4px 10px", fontSize: 12, textDecoration: "none" }}
       >
-        {state === "RECEIVED" ? "Inspect" : "Review Inspection"}
+        {state === "RECEIVED" ? t('tire.actions.inspect') : t('tire.actions.reviewInspection')}
       </Link>
     );
   }
@@ -110,7 +112,7 @@ export function RetreadCyclePanel() {
       data-retread-cycles
     >
       <h3 style={{ marginTop: 0, fontSize: 15 }}>
-        Tires in Retread / Repair Cycle{" "}
+        {t('tire.sections.tiresRetreadRepairCycle')}{" "}
         {rows && (
           <span style={{ color: "#6b7280", fontWeight: 400 }}>
             ({rows.length})
@@ -121,7 +123,7 @@ export function RetreadCyclePanel() {
       {error && <ErrorState message={error} />}
       {!rows && !error && <LoadingState />}
       {rows && rows.length === 0 && (
-        <EmptyState label="No tires waiting for or in a retread / repair cycle." />
+        <EmptyState label={t('tire.empty.noTiresWaitingRetreadRepairCycle')} />
       )}
       {rows && rows.length > 0 && (
         <div style={{ overflowX: "auto" }}>
@@ -138,15 +140,15 @@ export function RetreadCyclePanel() {
                 style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}
               >
                 {[
-                  "Serial",
-                  "Product",
-                  "Type",
-                  "Cycle",
-                  "Processed At",
-                  "Estimated Price",
-                  "Opened",
-                  "Received",
-                  "Action",
+                  t('tire.fields.serial'),
+                  t('common.fields.product'),
+                  t('common.fields.type'),
+                  t('common.fields.cycle'),
+                  t('tire.fields.processedAt'),
+                  t('tire.fields.estimatedPrice'),
+                  t('tire.fields.opened'),
+                  t('documents.stockTransfer.received'),
+                  t('common.fields.action'),
                 ].map((h) => (
                   <th key={h} style={{ padding: 8 }}>
                     {h}
@@ -174,13 +176,13 @@ export function RetreadCyclePanel() {
                     {row.tire.product?.name ?? "—"}
                   </td>
                   <td style={{ padding: 8 }}>
-                    {row.kind === "REPAIR" ? "Repair" : "Retread"}
+                    {row.kind === "REPAIR" ? t('inventory.fields.repair') : t('tire.help.retread')}
                   </td>
                   <td style={{ padding: 8 }}>
                     {row.cycle ? (
                       <StatusBadge status={row.cycle.state} />
                     ) : (
-                      <span style={{ color: "#6b7280" }}>Waiting</span>
+                      <span style={{ color: "#6b7280" }}>{t('tire.help.waiting')}</span>
                     )}
                   </td>
                   <td style={{ padding: 8 }}>
@@ -265,26 +267,26 @@ function RetreadFormModal({
     const accepted: File[] = [];
     for (const f of Array.from(files)) {
       if (!["image/jpeg", "image/png"].includes(f.type)) {
-        setError("Photos must be JPG or PNG images.");
+        setError(t('tire.validation.photosMustJpgPngImages'));
         continue;
       }
       if (f.size > PHOTO_MAX_BYTES) {
-        setError(`"${f.name}" exceeds the 3 MB maximum size.`);
+        setError(t('tire.errors.nameExceeds3MbMaximumSize', { name: f.name }));
         continue;
       }
       accepted.push(f);
     }
     const next = [...photos, ...accepted];
-    if (next.length > MAX_PHOTOS) setError(`At most ${MAX_PHOTOS} photos.`);
+    if (next.length > MAX_PHOTOS) setError(t('tire.validation.mostMaxPhotosPhotos', { MAX_PHOTOS: MAX_PHOTOS }));
     setPhotos(next.slice(0, MAX_PHOTOS));
   }
 
   async function save() {
     setError(null);
     if (!partnerId)
-      return setError("Choose where the tire is processed (Processed At).");
-    if (!(Number(price) > 0)) return setError("Estimated Price is required.");
-    if (photos.length === 0) return setError("Upload at least one photo.");
+      return setError(t('tire.validation.chooseWhereTireProcessedProcessed'));
+    if (!(Number(price) > 0)) return setError(t('tire.validation.estimatedPriceIsRequired'));
+    if (photos.length === 0) return setError(t('tire.validation.uploadLeastOnePhoto'));
     const form = new FormData();
     form.append("partner_id", partnerId);
     form.append("estimated_price", price);
@@ -307,19 +309,19 @@ function RetreadFormModal({
   return (
     <Modal
       open
-      title={`${row.kind === "REPAIR" ? "Repair" : "Retread"} Form — ${row.tire.serial_number}`}
+      title={message(row.kind === "REPAIR" ? "tire.retread.repairFormTitle" : "tire.retread.retreadFormTitle", { serialNumber: row.tire.serial_number })}
       onClose={onClose}
       width={620}
     >
       <div data-retread-form style={{ display: "grid", gap: 12 }}>
-        <FormField label="Processed At" required>
+        <FormField label={t('tire.fields.processedAt')} required>
           <select
-            aria-label="Processed At"
+            aria-label={t('tire.fields.processedAt')}
             value={partnerId}
             onChange={(e) => setPartnerId(e.target.value)}
             style={inputStyle}
           >
-            <option value="">Select vendor…</option>
+            <option value="">{t('procurement.fields.selectVendor')}</option>
             {vendors.map((v) => (
               <option key={v.id} value={v.id}>
                 {v.name}
@@ -327,9 +329,9 @@ function RetreadFormModal({
             ))}
           </select>
         </FormField>
-        <FormField label="Estimated Price" required>
+        <FormField label={t('tire.fields.estimatedPrice')} required>
           <NumericInput
-            aria-label="Estimated Price"
+            aria-label={t('tire.fields.estimatedPrice')}
             step="0.01"
             min="0.01"
             value={price}
@@ -337,10 +339,10 @@ function RetreadFormModal({
             style={inputStyle}
           />
         </FormField>
-        <FormField label={`Photo (required, up to ${MAX_PHOTOS})`} required>
+        <FormField label={t('tire.fields.photoRequiredUpMaxPhotos', { MAX_PHOTOS: MAX_PHOTOS })} required>
           <div>
             <input
-              aria-label="Photos"
+              aria-label={t('tire.fields.photos')}
               type="file"
               accept=".jpg,.jpeg,.png,image/jpeg,image/png"
               multiple
@@ -376,7 +378,7 @@ function RetreadFormModal({
                     />
                     <button
                       type="button"
-                      aria-label={`Remove ${p.name}`}
+                      aria-label={t('tire.actions.removeName', { name: p.name })}
                       onClick={() =>
                         setPhotos(photos.filter((_, j) => j !== i))
                       }
@@ -402,9 +404,9 @@ function RetreadFormModal({
             )}
           </div>
         </FormField>
-        <FormField label="Notes">
+        <FormField label={t('common.fields.notes')}>
           <textarea
-            aria-label="Notes"
+            aria-label={t('common.fields.notes')}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={3}
@@ -418,10 +420,10 @@ function RetreadFormModal({
         )}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button className="btn-secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t('common.actions.saving') : t('common.actions.save')}
           </button>
         </div>
       </div>

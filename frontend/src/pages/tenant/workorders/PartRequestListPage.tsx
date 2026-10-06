@@ -13,6 +13,10 @@ import { useAuth } from '../../../auth/AuthContext';
 import { formatQty } from '../../../utils/quantity';
 import type { PartRequestItem } from '../../../types';
 import { lineName } from '../../../utils/stockCondition';
+import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
+import { message } from '../../../i18n/messages';
+import { t } from '../../../i18n/i18n';
 
 const STATUSES = ['', 'REQUESTED', 'APPROVED', 'ISSUED', 'REJECTED', 'CANCELLED'];
 
@@ -64,20 +68,20 @@ export function PartRequestListPage() {
   const columns: Column<PartRequestItem>[] = [
     {
       key: 'work_order',
-      header: 'Work Order',
+      header: t('common.fields.workOrder'),
       render: (r) => <Link to={`/app/work-orders/${r.work_order_id}`}>{r.work_order?.wo_number ?? r.work_order_id}</Link>,
     },
-    { key: 'vehicle', header: 'Vehicle', render: (r) => r.work_order?.vehicle?.registration_number ?? '—' },
-    { key: 'product', header: 'Product', render: (r) => lines(r).map((l) => <div key={l.name}>{l.name}</div>) },
-    { key: 'qty', header: 'Qty', render: (r) => lines(r).map((l) => <div key={l.name}>{formatQty(l.qty)}</div>) },
-    { key: 'requested_at', header: 'Requested', render: (r) => (r.requested_at ? new Date(r.requested_at).toLocaleString() : '—') },
+    { key: 'vehicle', header: t('common.fields.vehicle'), render: (r) => r.work_order?.vehicle?.registration_number ?? '—' },
+    { key: 'product', header: t('common.fields.product'), render: (r) => lines(r).map((l) => <div key={l.name}>{l.name}</div>) },
+    { key: 'qty', header: t('common.fields.qty'), render: (r) => lines(r).map((l) => <div key={l.name}>{formatQty(l.qty)}</div>) },
+    { key: 'requested_at', header: t('workOrder.fields.requested'), render: (r) => (r.requested_at ? formatDateTime(r.requested_at) : '—') },
     {
       key: 'status',
-      header: 'Status',
+      header: t('common.fields.status'),
       render: (r) => (
         <div>
-          <StatusBadge status={r.status} />
-          {r.status === 'ISSUED' && r.warehouse && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>from {r.warehouse.name}</div>}
+          <StatusBadge status={r.status} domain="stock" />
+          {r.status === 'ISSUED' && r.warehouse && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{t('workOrder.fields.fromName', { name: r.warehouse.name })}</div>}
           {r.status === 'REJECTED' && r.decision_note && <div style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>{r.decision_note}</div>}
         </div>
       ),
@@ -89,22 +93,22 @@ export function PartRequestListPage() {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {r.status === 'REQUESTED' && hasPermission('part_request.approve') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setConfirming({ request: r, action: 'approve' })}>
-              Approve
+              {t('workOrder.confirm.approve')}
             </button>
           )}
           {r.status === 'REQUESTED' && hasPermission('part_request.reject') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setRejecting(r)}>
-              Reject
+              {t('common.actions.reject')}
             </button>
           )}
           {r.status === 'REQUESTED' && hasPermission('part_request.cancel') && (
             <button className="btn-secondary" disabled={busyId === r.id} onClick={() => setConfirming({ request: r, action: 'cancel' })}>
-              Cancel
+              {t('common.actions.cancelRecord')}
             </button>
           )}
           {r.status === 'APPROVED' && hasPermission('part_request.issue') && (
             <button className="btn-primary" disabled={busyId === r.id} onClick={() => setIssuing(r)}>
-              Issue
+              {t('workOrder.actions.issue')}
             </button>
           )}
         </div>
@@ -114,12 +118,12 @@ export function PartRequestListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Part Requests</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('workOrder.titles.partRequests')}</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 14 }}>
-        Parts reserved from a Work Order (Issuance &amp; Return) are approved and issued here.
+        {t('workOrder.help.partsReservedWorkOrderIssuanceReturn')}
         {workOrderId && (
           <>
-            {' '}Showing one Work Order — <Link to="/app/part-requests">show all</Link>.
+            {' '}{t('workOrder.help.showingOneWorkOrder')} <Link to="/app/part-requests">{t('workOrder.actions.showAll')}</Link>.
           </>
         )}
       </p>
@@ -134,28 +138,32 @@ export function PartRequestListPage() {
             className={status === s ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '6px 12px', fontSize: 13 }}
           >
-            {s || 'All'}
+            {s ? statusLabel(s, 'stock') : t('common.actions.all')}
           </button>
         ))}
       </div>
       {actionError && <ErrorState message={actionError} />}
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No part requests found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('workOrder.empty.noPartRequestsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
 
       <ConfirmDialog
         open={confirming !== null}
-        title={confirming?.action === 'approve' ? 'Approve Part Request' : 'Cancel Part Request'}
+        title={confirming?.action === 'approve' ? t('workOrder.confirm.approvePartRequest') : t('workOrder.confirm.cancelPartRequest')}
         message={
           confirming
-            ? `${confirming.action === 'approve' ? 'Approve' : 'Cancel'} ${lines(confirming.request)
-                .map((l) => `${l.name} × ${formatQty(l.qty)}`)
-                .join(', ')} for ${confirming.request.work_order?.wo_number ?? 'this Work Order'}?`
+            ? partRequestDecisionMessage(
+                confirming.action,
+                lines(confirming.request)
+                  .map((l) => `${l.name} × ${formatQty(l.qty)}`)
+                  .join(', '),
+                confirming.request.work_order?.wo_number,
+              )
             : ''
         }
-        confirmLabel={confirming?.action === 'approve' ? 'Approve' : 'Cancel Request'}
+        confirmLabel={confirming?.action === 'approve' ? t('workOrder.confirm.approve') : t('workOrder.confirm.cancelRequest')}
         onCancel={() => setConfirming(null)}
         onConfirm={async () => {
           if (!confirming) return;
@@ -195,16 +203,16 @@ export function PartRequestListPage() {
 function RejectModal({ request, onClose, onSubmit }: { request: PartRequestItem; onClose: () => void; onSubmit: (reason: string) => void }) {
   const [reason, setReason] = useState('');
   return (
-    <Modal open title={`Reject Part Request — ${request.work_order?.wo_number ?? ''}`} onClose={onClose}>
-      <FormField label="Reason" required>
+    <Modal open title={t('workOrder.modals.rejectPartRequestValue', { value: request.work_order?.wo_number ?? '' })} onClose={onClose}>
+      <FormField label={t('common.fields.reason')} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Back
+          {t('common.actions.back')}
         </button>
         <button className="btn-primary" disabled={!reason.trim()} onClick={() => onSubmit(reason)}>
-          Reject
+          {t('common.actions.reject')}
         </button>
       </div>
     </Modal>
@@ -237,7 +245,7 @@ function IssueModal({
   }, []);
 
   return (
-    <Modal open title={`Issue Parts — ${request.work_order?.wo_number ?? ''}`} onClose={onClose}>
+    <Modal open title={t('workOrder.modals.issuePartsValue', { value: request.work_order?.wo_number ?? '' })} onClose={onClose}>
       {error && <ErrorState message={error} />}
       <div style={{ fontSize: 13, marginBottom: 12 }}>
         {lines.map((l) => (
@@ -246,9 +254,9 @@ function IssueModal({
           </div>
         ))}
       </div>
-      <FormField label="Issue from warehouse" required>
-        <select aria-label="Warehouse" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
-          <option value="">{warehouses === null ? 'Loading…' : 'Select warehouse…'}</option>
+      <FormField label={t('workOrder.fields.issueFromWarehouse')} required>
+        <select aria-label={t('common.fields.warehouse')} value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
+          <option value="">{warehouses === null ? t('common.actions.loading') : t('procurement.fields.selectWarehouse')}</option>
           {(warehouses ?? []).map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -256,15 +264,27 @@ function IssueModal({
           ))}
         </select>
       </FormField>
-      <p style={{ fontSize: 12, color: '#6b7280' }}>Stock is deducted once for every line; if any line lacks stock nothing is issued.</p>
+      <p style={{ fontSize: 12, color: '#6b7280' }}>{t('workOrder.help.stockDeductedOnceEveryLineIf')}</p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <button className="btn-secondary" onClick={onClose} disabled={busy}>
-          Back
+          {t('common.actions.back')}
         </button>
         <button className="btn-primary" disabled={busy || !warehouseId} onClick={() => onSubmit(warehouseId)}>
-          {busy ? 'Issuing…' : 'Confirm Issue'}
+          {busy ? t('workOrder.actions.issuing') : t('workOrder.actions.confirmIssue')}
         </button>
       </div>
     </Modal>
   );
+}
+
+/** Approve / cancel confirmation as one whole sentence per case (no verb or fallback passed as a fragment). */
+function partRequestDecisionMessage(action: 'approve' | 'cancel', lineSummary: string, woNumber: string | null | undefined): string {
+  if (action === 'approve') {
+    return woNumber
+      ? message('workOrder.confirm.partRequestApprove', { lines: lineSummary, woNumber })
+      : message('workOrder.confirm.partRequestApproveNoWorkOrder', { lines: lineSummary });
+  }
+  return woNumber
+    ? message('workOrder.confirm.partRequestCancel', { lines: lineSummary, woNumber })
+    : message('workOrder.confirm.partRequestCancelNoWorkOrder', { lines: lineSummary });
 }

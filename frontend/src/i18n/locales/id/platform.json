@@ -1,0 +1,421 @@
+{
+  "access": {
+    "actions": {
+      "createUser": "Buat Pengguna",
+      "newUser": "+ Pengguna Baru"
+    },
+    "empty": {
+      "noPlatformUsersFound": "Tidak ada pengguna platform."
+    },
+    "modals": {
+      "newPlatformUser": "Pengguna Platform Baru"
+    },
+    "titles": {
+      "platformRolesAndPermissions": "Peran & Izin Platform",
+      "platformUsers": "Pengguna Platform"
+    }
+  },
+  "audit": {
+    "titles": {
+      "auditLog": "Log Audit"
+    }
+  },
+  "billing": {
+    "empty": {
+      "noBillingRecordsFound": "Tidak ada catatan penagihan."
+    },
+    "fields": {
+      "period": "Periode"
+    },
+    "titles": {
+      "billing": "Penagihan"
+    }
+  },
+  "bundles": {
+    "actions": {
+      "backToBundleManagement": "← Kembali ke Manajemen Bundel",
+      "createBundle": "Buat Bundel",
+      "newBundle": "+ Bundel Baru",
+      "publishing": "Menerbitkan…",
+      "publishNewVersion": "Terbitkan Versi Baru",
+      "saveComposition": "Simpan Komposisi"
+    },
+    "confirm": {
+      "deactivateBundleNoLongerSelectableNew": "Nonaktifkan bundel ini? Bundel ini tidak dapat dipilih lagi untuk kontrak baru, tetapi kontrak yang sudah merujuknya tidak terpengaruh.",
+      "deleteBundleHiddenBundleManagementNew": "Hapus bundel ini? Bundel akan disembunyikan dari Manajemen Bundel dan kontrak baru, tetapi kontrak yang sudah merujuknya tetap berjalan — tindakan ini tidak dapat dibatalkan dari sini.",
+      "reactivateBundleSoSelectedNewContracts": "Aktifkan kembali bundel ini agar dapat dipilih lagi untuk kontrak baru?"
+    },
+    "empty": {
+      "noBundlesFound": "Tidak ada bundel."
+    },
+    "fields": {
+      "automaticallyAddedByDependency": "Ditambahkan otomatis karena dependensi",
+      "missingRequiredDependencies": "Dependensi wajib belum terpenuhi",
+      "modules": "Modul"
+    },
+    "help": {
+      "nameCodeRequiredValue": "{{name}} ({{code}}) — diwajibkan oleh {{value}}"
+    },
+    "modals": {
+      "newBundle": "Bundel Baru"
+    },
+    "placeholders": {
+      "eGOptifleetCustom": "mis. OPTIFLEET_CUSTOM"
+    },
+    "sections": {
+      "moduleComposition": "Komposisi Modul"
+    },
+    "titles": {
+      "bundles": "Bundel"
+    }
+  },
+  "contracts": {
+    "actions": {
+      "addItem": "+ Tambah Item",
+      "addItem2": "Tambah Item",
+      "confirm": "Konfirmasi",
+      "createAmendment": "Buat Amendemen",
+      "createDraftAmendment": "Buat Draf Amendemen",
+      "createDraftContract": "Buat Draf Kontrak",
+      "createRenewalDraft": "Buat Draf Perpanjangan",
+      "editDraft": "Ubah Draf",
+      "newContract": "+ Kontrak Baru",
+      "renew": "Perpanjang",
+      "saveDraft": "Simpan Draf",
+      "submitForApproval": "Ajukan untuk Persetujuan",
+      "terminate": "Akhiri"
+    },
+    "empty": {
+      "noAmendments": "Tidak ada amendemen.",
+      "noContractsFound": "Tidak ada kontrak."
+    },
+    "fields": {
+      "activationRequiresPayment": "Aktivasi memerlukan pembayaran",
+      "amendmentNumberAmendmentNumber": "Amendemen #{{amendment_number}}",
+      "annual": "Tahunan",
+      "billingCycle": "Siklus Penagihan",
+      "billingFrequency": "Frekuensi Penagihan",
+      "custom": "Kustom",
+      "effectiveDate": "Tanggal Berlaku",
+      "effectiveEffectiveDate": "Berlaku: {{effective_date}}",
+      "endDate": "Tanggal Berakhir",
+      "gracePeriodDays": "Masa Tenggang (hari)",
+      "gracePeriodEnd": "Akhir masa tenggang",
+      "monthly": "Bulanan",
+      "newEndDate": "Tanggal Berakhir Baru",
+      "nextBillingNextBillingDate": "Penagihan berikutnya: {{next_billing_date}}",
+      "notApplicable": "Tidak berlaku",
+      "noteOptional": "Catatan (opsional)",
+      "paymentFrequency": "Frekuensi Pembayaran",
+      "paymentTermsDays": "Termin Pembayaran (hari)",
+      "productReference": "Referensi Produk",
+      "productReferenceCode": "Referensi Produk (kode)",
+      "productType": "Jenis Produk",
+      "quarterly": "Triwulanan",
+      "selectCode": "Pilih kode…",
+      "selectTenant": "Pilih penyewa…",
+      "semiAnnual": "Semesteran",
+      "startDate": "Tanggal Mulai",
+      "taxPercent": "Pajak %",
+      "totalCurrencyToLocaleString": "Total: {{currency}} {{toLocaleString}}"
+    },
+    "help": {
+      "activePriceFloor": "Harga aktif: {{price}} (harga satuan tidak boleh di bawah harga ini)",
+      "activePriceToLocaleStringUnit": "Harga Aktif: {{toLocaleString}} (harga satuan tidak boleh di bawah nilai ini)",
+      "backToContractManagement": "← Kembali ke Manajemen Kontrak",
+      "backToTenantContracts": "← Kembali ke Kontrak Penyewa",
+      "createsNewDraftContractCarryingOver": "Membuat draf kontrak baru dengan membawa baris item saat ini. Sesuaikan tanggal berakhir dan item sesuai kebutuhan, lalu ajukan kontrak baru untuk persetujuan secara terpisah.",
+      "lookingUpActivePrice": "Mencari Harga Aktif…",
+      "selectTenantFirstActivePriceDepends": "Pilih penyewa terlebih dahulu — Harga Aktif bergantung pada penyewa.",
+      "subtotalToLocaleStringDiscountTo": "Subtotal: {{toLocaleString}} Diskon: {{toLocaleString}} Pajak"
+    },
+    "messages": {
+      "approve": "setujui",
+      "reject": "tolak",
+      "terminate": "akhiri"
+    },
+    "modals": {
+      "addAmendmentItem": "Tambah Item Amendemen",
+      "approveContract": "Setujui Kontrak",
+      "editContractContractNumber": "Ubah Kontrak — {{contract_number}}",
+      "newAmendment": "Amendemen Baru",
+      "newContract": "Kontrak Baru",
+      "rejectContract": "Tolak Kontrak",
+      "renewContractNumber": "Perpanjang {{contract_number}}",
+      "terminateContract": "Akhiri Kontrak"
+    },
+    "sections": {
+      "active": "Aktif",
+      "all": "Semua",
+      "amendments": "Amendemen",
+      "billingCycle": "Siklus Penagihan",
+      "draft": "Draf",
+      "endDate": "Tanggal Berakhir",
+      "expired": "Kedaluwarsa",
+      "expiring": "Akan Berakhir",
+      "itemsCarriedOverCurrentContract": "Item yang dibawa dari kontrak saat ini",
+      "pendingApproval": "Menunggu Persetujuan",
+      "rejected": "Ditolak",
+      "startDate": "Tanggal Mulai",
+      "subscription": "Langganan",
+      "terminated": "Diakhiri"
+    },
+    "titles": {
+      "contracts": "Kontrak"
+    }
+  },
+  "dashboard": {
+    "empty": {
+      "noRecentActivity": "Tidak ada aktivitas terbaru."
+    },
+    "sections": {
+      "activeSubscriptions": "Langganan Aktif",
+      "activeTenants": "Penyewa Aktif",
+      "commercialOverview": "Ringkasan Komersial",
+      "contractsExpiring": "Kontrak Akan Berakhir",
+      "invoicesOutstanding": "Faktur Belum Lunas",
+      "invoicesOverdue": "Faktur Terlambat",
+      "modules": "Modul",
+      "paymentsPendingVerification": "Pembayaran Menunggu Verifikasi",
+      "pendingSubscriptions": "Langganan Tertunda",
+      "platformUsers": "Pengguna Platform",
+      "recentActivity": "Aktivitas Terbaru",
+      "suspendedSubscriptions": "Langganan Ditangguhkan",
+      "tenantUsers": "Pengguna Penyewa",
+      "totalTenants": "Total Penyewa"
+    },
+    "titles": {
+      "platformDashboard": "Dasbor Platform"
+    }
+  },
+  "invoices": {
+    "actions": {
+      "backToInvoices": "← Kembali ke Faktur",
+      "downloadPdf": "Unduh PDF",
+      "void": "Batalkan (Void)",
+      "voiding": "Membatalkan (void)…",
+      "voidInvoice": "Batalkan Faktur (Void)"
+    },
+    "empty": {
+      "noInvoicesFound": "Tidak ada faktur."
+    },
+    "fields": {
+      "outstanding": "Belum Lunas",
+      "toLocaleStringPaidToLocale": "{{toLocaleString}} Dibayar: {{toLocaleString}}"
+    },
+    "modals": {
+      "voidInvoice": "Batalkan Faktur (Void)"
+    },
+    "sections": {
+      "dueDate": "Jatuh Tempo",
+      "invoiceDate": "Tanggal Faktur",
+      "outstanding": "Belum Lunas"
+    },
+    "titles": {
+      "invoices": "Faktur"
+    }
+  },
+  "masterdata": {
+    "actions": {
+      "newCategory": "+ Kategori Baru"
+    },
+    "confirm": {
+      "deleteNameCannotUndone": "Hapus \"{{name}}\"? Tindakan ini tidak dapat dibatalkan.",
+      "deleteProductCategory": "Hapus Kategori Produk"
+    },
+    "empty": {
+      "noProductCategoriesFound": "Tidak ada kategori produk."
+    },
+    "fields": {
+      "inheritedFromParent": "Diwarisi dari induk",
+      "parentCategory": "Kategori Induk"
+    },
+    "help": {
+      "sharedBaselineTaxonomyVisibleEveryTenant": "Taksonomi dasar bersama yang terlihat oleh setiap penyewa. Perubahan dan penghapusan di sini tidak pernah dikembalikan oleh seeder.",
+      "sharedBaselineVisibleEveryTenantAbbreviations": "Data dasar bersama yang terlihat oleh setiap penyewa. Singkatan adalah elemen SKU Produk 3 huruf: unik, tidak pernah digunakan ulang, dan terkunci setelah Produk menggunakan grup tersebut."
+    },
+    "modals": {
+      "editProductCategory": "Ubah Kategori Produk",
+      "newProductCategory": "Kategori Produk Baru"
+    },
+    "titles": {
+      "productCategories": "Kategori Produk"
+    }
+  },
+  "modules": {
+    "actions": {
+      "backToModuleCatalog": "← Kembali ke Katalog Modul",
+      "createModule": "Buat Modul",
+      "newModule": "+ Modul Baru",
+      "remove": "hapus"
+    },
+    "empty": {
+      "noDescription": "Tidak ada deskripsi.",
+      "noModulesFound": "Tidak ada modul."
+    },
+    "fields": {
+      "core": "Inti",
+      "no": "No",
+      "selectModule": "Pilih modul…",
+      "sellable": "Dapat Dijual"
+    },
+    "modals": {
+      "newModule": "Modul Baru"
+    },
+    "sections": {
+      "directDependencies": "Dependensi Langsung",
+      "directDependentsReverse": "Dependen Langsung (kebalikan)",
+      "transitiveDependencies": "Dependensi Transitif",
+      "transitiveDependents": "Dependen Transitif"
+    },
+    "titles": {
+      "moduleCatalog": "Katalog Modul"
+    }
+  },
+  "payments": {
+    "actions": {
+      "backToPayments": "← Kembali ke Pembayaran",
+      "verify": "Verifikasi",
+      "viewInvoice": "Lihat Faktur →"
+    },
+    "empty": {
+      "noPaymentsFound": "Tidak ada pembayaran.",
+      "noProofFilesUploaded": "Belum ada file bukti yang diunggah."
+    },
+    "fields": {
+      "accountName": "Nama Rekening",
+      "note": "Catatan",
+      "transactionReference": "Referensi Transaksi",
+      "verificationNoteVerificationNote": "Catatan Verifikasi: {{verification_note}}"
+    },
+    "modals": {
+      "rejectPayment": "Tolak Pembayaran",
+      "verifyPayment": "Verifikasi Pembayaran"
+    },
+    "sections": {
+      "amount": "Nominal",
+      "invoice": "Faktur",
+      "method": "Metode",
+      "paymentDate": "Tanggal Pembayaran",
+      "proofOfPayment": "Bukti Pembayaran"
+    },
+    "titles": {
+      "payment": "Pembayaran",
+      "payments": "Pembayaran"
+    }
+  },
+  "pricing": {
+    "actions": {
+      "newPricing": "+ Harga Baru",
+      "newVersion": "Versi Baru",
+      "publishVersion": "Terbitkan Versi"
+    },
+    "confirm": {
+      "deactivatePricingPriceableTypePriceableCode": "Nonaktifkan harga {{priceable_type}} {{priceable_code}}? Harga ini tidak dapat dipilih lagi untuk kontrak baru; kontrak yang ada tidak terpengaruh.",
+      "deletePricingPriceableTypePriceableCode": "Hapus harga {{priceable_type}} {{priceable_code}}? Harga akan disembunyikan dari pilihan, tetapi kontrak yang sudah merujuknya tetap berjalan — tindakan ini tidak dapat dibatalkan dari sini.",
+      "reactivatePricingPriceableTypePriceableCode": "Aktifkan kembali harga {{priceable_type}} {{priceable_code}} agar dapat dipilih lagi untuk kontrak baru?"
+    },
+    "empty": {
+      "noPricingConfiguredYet": "Belum ada harga yang dikonfigurasi."
+    },
+    "fields": {
+      "activePrice": "Harga Aktif",
+      "amountIdr": "Nominal (IDR)",
+      "codeModuleBundleCodeCapacityResource": "Kode (kode modul/bundel atau jenis resource kapasitas)",
+      "effectiveFrom": "Berlaku Sejak",
+      "frequency": "Frekuensi",
+      "priceableType": "Jenis Objek Harga",
+      "pricingMethod": "Metode Penetapan Harga"
+    },
+    "modals": {
+      "newPriceVersionPriceableCode": "Versi Harga Baru — {{priceable_code}}",
+      "newPricing": "Harga Baru"
+    },
+    "titles": {
+      "pricing": "Harga"
+    }
+  },
+  "subscriptions": {
+    "actions": {
+      "adjustmentInvoice": "Faktur Penyesuaian",
+      "generateBilling": "Buat Tagihan",
+      "issueInvoice": "Terbitkan Faktur",
+      "suspend": "Tangguhkan",
+      "suspending": "Menangguhkan…"
+    },
+    "empty": {
+      "noSubscriptionsFound": "Tidak ada langganan."
+    },
+    "fields": {
+      "adjustmentInvoiceInvoiceNumberIssued": "Faktur penyesuaian {{invoice_number}} diterbitkan.",
+      "nextBilling": "Penagihan Berikutnya",
+      "subscriptionActivated": "Langganan diaktifkan."
+    },
+    "help": {
+      "activatesSubscriptionModuleEntitlementsNowWithout": "Mengaktifkan langganan beserta entitlement modulnya sekarang, tanpa menunggu pembayaran pertama.",
+      "issuesAdditionalInvoiceSubscriptionIssuedInvoices": "Menerbitkan faktur tambahan untuk langganan ini. Faktur yang sudah terbit tidak dapat diubah — batalkan (void) dan terbitkan ulang untuk mengoreksi."
+    },
+    "messages": {
+      "billingGenerated": "Penagihan dan faktur dibuat untuk {{tenantName}}.",
+      "billingGeneratedNoTenant": "Penagihan dan faktur dibuat untuk langganan ini.",
+      "billingInvoiceGeneratedValue": "Penagihan dan faktur dibuat untuk {{value}}."
+    },
+    "modals": {
+      "activateSubscriptionTenant": "Aktifkan Langganan — {{tenant}}",
+      "adjustmentInvoiceTenant": "Faktur Penyesuaian — {{tenant}}",
+      "suspendSubscription": "Tangguhkan Langganan"
+    },
+    "titles": {
+      "subscriptions": "Langganan"
+    }
+  },
+  "tenants": {
+    "actions": {
+      "addNewContract": "+ Tambah Kontrak Baru",
+      "addUser": "+ Tambah Pengguna",
+      "addUser2": "Tambah Pengguna",
+      "backToTenantManagement": "← Kembali ke Manajemen Penyewa",
+      "createTenant": "Buat Penyewa",
+      "grant": "Berikan",
+      "newTenant": "+ Penyewa Baru",
+      "revoke": "Cabut"
+    },
+    "empty": {
+      "noContractsTenantYet": "Belum ada kontrak untuk penyewa ini.",
+      "noTenantsFound": "Tidak ada penyewa.",
+      "noUsersTenant": "Tidak ada pengguna di penyewa ini."
+    },
+    "fields": {
+      "created": "Dibuat",
+      "currentUsage": "Pemakaian Saat Ini",
+      "defaultLanguage": "Bahasa Default",
+      "industry": "Industri",
+      "legalName": "Nama Resmi",
+      "maxLimit": "Batas Maks",
+      "module": "Modul",
+      "suspended": "Ditangguhkan"
+    },
+    "help": {
+      "active": "✅ Aktif",
+      "notEntitled": "⬜ Tidak termasuk hak akses"
+    },
+    "modals": {
+      "addTenantUser": "Tambah Pengguna Penyewa",
+      "newTenant": "Penyewa Baru"
+    },
+    "placeholders": {
+      "companyName": "Nama perusahaan",
+      "eGAcme": "mis. ACME",
+      "unlimited": "tidak terbatas"
+    },
+    "sections": {
+      "capacityLimits": "Batas Kapasitas",
+      "contract": "Kontrak",
+      "moduleEntitlements": "Entitlement",
+      "users": "Pengguna"
+    },
+    "titles": {
+      "tenantManagement": "Manajemen Penyewa"
+    }
+  }
+}

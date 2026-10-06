@@ -1,0 +1,72 @@
+{
+  "actions": {
+    "addFinding": "+ Tambah Temuan",
+    "allStatus": "Semua Status",
+    "allTypes": "Semua Jenis",
+    "backToInspections": "← Kembali ke Inspeksi",
+    "createMaintenanceRequest": "Buat Permintaan Pemeliharaan",
+    "markReviewed": "Tandai Ditinjau",
+    "newInspection": "+ Inspeksi Baru",
+    "newTemplate": "+ Templat Baru",
+    "removing": "Menghapus…",
+    "start": "Mulai",
+    "view": "lihat"
+  },
+  "defaults": {
+    "issuesFound": "Masalah yang ditemukan saat inspeksi {{inspectionId}}"
+  },
+  "empty": {
+    "noChecklistItemsTemplate": "Tidak ada item checklist pada templat ini.",
+    "noHistoryYet": "Belum ada riwayat.",
+    "noInspectionsFound": "Tidak ada inspeksi.",
+    "noTemplatesFound": "Tidak ada templat."
+  },
+  "fields": {
+    "fail": "Gagal",
+    "inspectionDate": "Tanggal Inspeksi",
+    "inspectionReviewed": "Inspeksi ditinjau",
+    "inspectionType": "Jenis Inspeksi",
+    "items": "Item",
+    "pass": "Lulus",
+    "reviewedOnToLocaleString": "Ditinjau pada {{toLocaleString}}",
+    "reviewNotes": "Catatan tinjauan",
+    "vehicleCategory": "Kategori Kendaraan",
+    "vehicleCategoryOptionalAppliesAllIf": "Kategori Kendaraan (opsional — berlaku untuk semua jika kosong)"
+  },
+  "filters": {
+    "allCategories": "Semua Kategori"
+  },
+  "help": {
+    "inspectionCreatedStatusStatus": "Inspeksi dibuat (status: {{status}})",
+    "maintenanceRequestCreatedInspectionSResult": "Permintaan Pemeliharaan dibuat dari hasil inspeksi ini",
+    "reviewedOn": "Ditinjau pada {{date}}",
+    "statusChangedFromTo": "Status berubah dari {{from}} menjadi {{to}}",
+    "statusChangedStatusStatus": "Status berubah dari {{status}} menjadi {{status}}",
+    "system": "Sistem"
+  },
+  "labels": {
+    "inspection": "Inspeksi",
+    "odometer": "Odometer"
+  },
+  "modals": {
+    "newInspection": "Inspeksi Baru",
+    "newInspectionTemplate": "Templat Inspeksi Baru"
+  },
+  "placeholders": {
+    "checklistItemText": "Teks item checklist",
+    "description": "Deskripsi",
+    "reviewNotesOptional": "Catatan tinjauan (opsional)"
+  },
+  "sections": {
+    "checklist": "Checklist",
+    "findingsOptional": "Temuan (opsional)",
+    "log": "Log",
+    "recordedFindings": "Temuan Tercatat",
+    "supervisorReview": "Tinjauan Supervisor"
+  },
+  "titles": {
+    "inspections": "Inspeksi",
+    "inspectionTemplates": "Templat Inspeksi",
+    "inspectionTypeInspection": "Inspeksi {{inspection_type}}"
+  }
+}

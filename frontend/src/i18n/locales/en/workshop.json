@@ -1,0 +1,83 @@
+{
+  "actions": {
+    "addSkill": "Add Skill",
+    "block": "Block",
+    "link": "Link",
+    "newWorker": "+ New Worker",
+    "newWorkspace": "+ New Workspace",
+    "nextWeek": "Next Week →",
+    "previousWeek": "← Previous Week",
+    "requested": "· Requested",
+    "reserved": "Reserved",
+    "today": "Today",
+    "unblock": "Unblock",
+    "unlink": "Unlink"
+  },
+  "empty": {
+    "noActiveWorkersFound": "No active workers found.",
+    "noReservationsFound": "No reservations found.",
+    "noVehicleCategoriesAvailable": "No vehicle categories available.",
+    "noWorkersFound": "No workers found.",
+    "noWorkshop": "No workshop",
+    "noWorkspacesFound": "No workspaces found.",
+    "noWorkspacesFoundWorkshop": "No workspaces found for this workshop."
+  },
+  "fields": {
+    "activeJobs": "Active Jobs",
+    "addressAddress": "Address: {{address}}",
+    "addressOptional": "Address (optional)",
+    "dToday": "{{d}} (Today)",
+    "emailOptional": "Email (optional)",
+    "employeeCode": "Employee Code",
+    "hourlyRateOptional": "Hourly Rate (optional)",
+    "levelL": "Level {{l}}",
+    "linkedTo": "Linked to",
+    "monthlyRateOptional": "Monthly Rate (optional)",
+    "noWorkshop": "No workshop",
+    "phoneOptional": "Phone (optional)",
+    "selectALoginAccount": "Select a login account…",
+    "selectBranch": "Select branch…",
+    "selectComponentGroup": "Select component group…",
+    "skills": "Skills",
+    "vehicleCategories": "Vehicle Categories",
+    "worker": "Worker",
+    "workerType": "Worker Type",
+    "workshopOptional": "Workshop (optional)"
+  },
+  "help": {
+    "capacityValue": "Capacity {{value}}",
+    "countActiveNonCompletedWorkOrder": "Count of active (non-completed) Work Order jobs currently assigned to each active mechanic, sorted busiest first.",
+    "freeSlot": "Free slot",
+    "full": "· Full",
+    "leaveAllUncheckedAllowAnyVehicle": "Leave all unchecked to allow any vehicle category.",
+    "level": "Level",
+    "monthlyRateMonthlyRateHourlyRate": "Monthly Rate: {{monthly_rate}} Hourly Rate: {{hourly_rate}}",
+    "occupiedOccupiedCapacity": "Occupied {{occupied}} / {{capacity}}",
+    "occupiedOfCapacity": "Occupied {{occupied}} / {{capacity}}"
+  },
+  "modals": {
+    "editWorkspaceCode": "Edit Workspace — {{code}}",
+    "newWorker": "New Worker",
+    "newWorkspace": "New Workspace"
+  },
+  "placeholders": {
+    "address": "Address",
+    "email": "Email",
+    "hourlyRate": "Hourly Rate",
+    "monthlyRate": "Monthly Rate",
+    "phone": "Phone"
+  },
+  "sections": {
+    "contactAndCompensation": "Contact & Compensation",
+    "loginAccount": "Login Account",
+    "reassign": "Reassign",
+    "skills": "Skills"
+  },
+  "titles": {
+    "mechanicWorkload": "Mechanic Workload",
+    "workersMechanics": "Workers / Mechanics",
+    "workshopScheduler": "Workshop Scheduler",
+    "workspaceAssignments": "Workspace Assignments",
+    "workspacesServiceBays": "Workspaces / Service Bays"
+  }
+}

@@ -18,6 +18,8 @@ import {
   toIso,
   toLocalInput,
 } from "./workspaceAssignment";
+import { t } from '../../../../i18n/i18n';
+import { Trans } from 'react-i18next';
 
 /** Workspaces with a free capacity slot in the window (the backend re-checks on save). */
 function useAvailableWorkspaces(
@@ -54,7 +56,7 @@ function useAvailableWorkspaces(
 
   return {
     rows: valid ? rows : null,
-    error: valid ? error : "End must be after start.",
+    error: valid ? error : t('workOrder.validation.endMustAfterStart'),
     valid,
   };
 }
@@ -81,14 +83,14 @@ function WorkspaceSelect({
       >
         <option value="">
           {rows === null
-            ? "Loading available workspaces…"
+            ? t('workOrder.fields.loadingAvailableWorkspaces')
             : rows.length === 0
-              ? "No workspace available for this window"
-              : "Select workspace…"}
+              ? t('workOrder.fields.noWorkspaceAvailableWindow')
+              : t('workOrder.fields.selectWorkspace')}
         </option>
         {(rows ?? []).map((w) => (
           <option key={w.id} value={w.id}>
-            {w.name} ({w.code}) — occupied {w.occupied} / {w.capacity}
+            {t('workOrder.help.workspaceOccupancyOption', { name: w.name, code: w.code, occupied: w.occupied, capacity: w.capacity })}
           </option>
         ))}
       </select>
@@ -110,9 +112,9 @@ function WindowFields({
   return (
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
       <div style={{ flex: "1 1 200px" }}>
-        <FormField label="Work Date — Start">
+        <FormField label={t('workOrder.fields.workDateStart')}>
           <input
-            aria-label="Work start"
+            aria-label={t('workOrder.fields.workStart')}
             type="datetime-local"
             value={start}
             onChange={(e) => onStart(e.target.value)}
@@ -121,9 +123,9 @@ function WindowFields({
         </FormField>
       </div>
       <div style={{ flex: "1 1 200px" }}>
-        <FormField label="Work Date — End">
+        <FormField label={t('workOrder.fields.workDateEnd')}>
           <input
-            aria-label="Work end"
+            aria-label={t('workOrder.fields.workEnd')}
             type="datetime-local"
             value={end}
             onChange={(e) => onEnd(e.target.value)}
@@ -186,13 +188,13 @@ export function TransferWorkspaceForm({
         style={{ background: "#f9fafb", marginBottom: 12, fontSize: 13 }}
       >
         <div>
-          <strong>Current Assigned Workspace:</strong>{" "}
+          <strong>{t('workOrder.fields.currentAssignedWorkspace')}:</strong>{" "}
           {current.workspace?.name ?? current.workspace_id}
           {current.workspace?.code ? ` (${current.workspace.code})` : ""}{" "}
           <StatusBadge status={current.status} />
         </div>
         <div style={{ color: "#6b7280", marginTop: 4 }}>
-          <strong>Scheduled:</strong> {formatWindow(current)}
+          <strong>{t('analytics.fields.scheduled')}:</strong> {formatWindow(current)}
         </div>
       </div>
       <WindowFields start={start} end={end} onStart={setStart} onEnd={setEnd} />
@@ -200,14 +202,13 @@ export function TransferWorkspaceForm({
         <p style={{ fontSize: 12, color: "#b91c1c" }}>{available.error}</p>
       )}
       <WorkspaceSelect
-        label="Target Workspace"
+        label={t('workOrder.fields.targetWorkspace')}
         rows={available.rows}
         value={target}
         onChange={setTarget}
       />
       <p style={{ fontSize: 12, color: "#6b7280" }}>
-        The current assignment is kept in the history as Transferred; the new
-        one is approved immediately.
+        {t('workOrder.help.currentAssignmentKeptHistoryTransferredNew')}
       </p>
       <div
         style={{
@@ -218,14 +219,14 @@ export function TransferWorkspaceForm({
         }}
       >
         <button className="btn-secondary" onClick={onCancel}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button
           className="btn-primary"
           disabled={busy || !target || !available.valid}
           onClick={save}
         >
-          Transfer
+          {t('workOrder.actions.transfer')}
         </button>
       </div>
     </div>
@@ -246,7 +247,7 @@ export function TransferWorkspaceModal({
   onDone: () => void;
 }) {
   return (
-    <Modal open={open} title="Transfer Workspace" onClose={onClose}>
+    <Modal open={open} title={t('workOrder.modals.transferWorkspace')} onClose={onClose}>
       {open && (
         <TransferWorkspaceForm
           workOrderId={workOrderId}
@@ -305,13 +306,13 @@ function NewScheduleForm({
         <p style={{ fontSize: 12, color: "#b91c1c" }}>{available.error}</p>
       )}
       <WorkspaceSelect
-        label="Workspace"
+        label={t('workOrder.fields.workspace')}
         rows={available.rows}
         value={workspaceId}
         onChange={setWorkspaceId}
       />
       <p style={{ fontSize: 12, color: "#6b7280" }}>
-        The workspace is requested; it must be approved before work can start.
+        {t('workOrder.help.workspaceRequestedMustApprovedBeforeWork')}
       </p>
       <div
         style={{
@@ -322,14 +323,14 @@ function NewScheduleForm({
         }}
       >
         <button className="btn-secondary" onClick={onCancel}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button
           className="btn-primary"
           disabled={busy || !workspaceId || !available.valid}
           onClick={save}
         >
-          Schedule
+          {t('workOrder.actions.schedule')}
         </button>
       </div>
     </div>
@@ -378,13 +379,13 @@ export function ScheduleWorkspaceModal({
   }
 
   return (
-    <Modal open={open} title="Schedule Work Order" onClose={onClose}>
+    <Modal open={open} title={t('workOrder.modals.scheduleWorkOrder')} onClose={onClose}>
       {open && !current && (
         <>
           <p style={{ fontSize: 13, marginTop: 0 }} data-schedule-state="none">
             {wo.status === "QC_PENDING"
-              ? "No current workspace — schedule one for the QC stage."
-              : "No workspace scheduled yet."}
+              ? t('workOrder.empty.noCurrentWorkspaceScheduleOneQc')
+              : t('workOrder.empty.noWorkspaceScheduledYet')}
           </p>
           <NewScheduleForm wo={wo} onDone={finish} onCancel={onClose} />
         </>
@@ -393,9 +394,11 @@ export function ScheduleWorkspaceModal({
         <div data-schedule-state="pending">
           {error && <ErrorState message={error} />}
           <p style={{ fontSize: 13, marginTop: 0 }}>
-            Workspace{" "}
-            <strong>{current.workspace?.name ?? current.workspace_id}</strong>{" "}
-            is requested for {formatWindow(current)} and awaits approval.
+            <Trans
+              i18nKey="workOrder.help.workspaceRequestedAwaitingApproval"
+              values={{ workspace: current.workspace?.name ?? current.workspace_id, window: formatWindow(current) }}
+              components={{ strong: <strong /> }}
+            />
           </p>
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
             {hasPermission("workspace.reserve") && (
@@ -404,7 +407,7 @@ export function ScheduleWorkspaceModal({
                 disabled={busy}
                 onClick={() => act("cancel")}
               >
-                Cancel Request
+                {t('workOrder.actions.cancelRequest')}
               </button>
             )}
             {hasPermission("workspace.approve") && (
@@ -413,7 +416,7 @@ export function ScheduleWorkspaceModal({
                 disabled={busy}
                 onClick={() => act("approve")}
               >
-                Approve
+                {t('common.actions.approve')}
               </button>
             )}
           </div>
@@ -423,8 +426,8 @@ export function ScheduleWorkspaceModal({
         <div data-schedule-state="approved">
           <p style={{ fontSize: 13, marginTop: 0 }}>
             {wo.status === "QC_PENDING"
-              ? "The Work Order has an approved workspace. Transfer it to another workspace for the QC stage if needed."
-              : "The Work Order already has an approved workspace. Transfer it to reschedule."}
+              ? t('workOrder.help.workOrderApprovedWorkspaceTransferAnother')
+              : t('workOrder.help.workOrderAlreadyApprovedWorkspaceTransfer')}
           </p>
           {hasPermission("workspace.approve") ? (
             <TransferWorkspaceForm
@@ -435,8 +438,7 @@ export function ScheduleWorkspaceModal({
             />
           ) : (
             <p style={{ fontSize: 12, color: "#b45309" }}>
-              Transferring a workspace requires the workspace approval
-              permission.
+              {t('workOrder.help.transferringWorkspaceRequiresWorkspaceApprovalPermission')}
             </p>
           )}
         </div>

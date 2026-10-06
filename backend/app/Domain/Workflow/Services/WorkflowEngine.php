@@ -6,6 +6,7 @@ use App\Domain\AccessControl\Services\PermissionService;
 use App\Domain\Configuration\Models\ConfigurationSet;
 use App\Domain\Configuration\Models\ConfigurationVersion;
 use App\Domain\Configuration\Services\EffectiveConfigurationResolver;
+use App\Domain\Workflow\Support\WorkflowLabels;
 use App\Models\User;
 
 /**
@@ -103,7 +104,7 @@ class WorkflowEngine
     {
         return array_map(fn ($t) => [
             'action_code' => $t['action_code'],
-            'action_label' => $t['action_label'] ?? $t['action_code'],
+            'action_label' => WorkflowLabels::actionLabel($version->payload ?? [], $t, app()->getLocale()),
             'to_status' => $t['to_status'],
             'requires_approval' => ! empty($t['approval_rule']),
             'approval_rule' => $t['approval_rule'] ?? null,

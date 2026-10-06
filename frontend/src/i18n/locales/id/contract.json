@@ -1,0 +1,9 @@
+{
+  "labels": {
+    "amendmentNumberAmendmentNumberProratedAdjustment": "Penyesuaian prorata Amendemen #{{amendment_number}} sampai {{toDateString}}"
+  },
+  "notes": {
+    "amendmentRejected": "Ditolak: {{note}}",
+    "contractTerminated": "Diakhiri: {{reason}}"
+  }
+}

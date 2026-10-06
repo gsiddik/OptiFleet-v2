@@ -4,6 +4,7 @@ import { apiClient, extractApiError } from '../../../../api/client';
 import { Modal } from '../../../../components/Modal';
 import { groupPositions, type ConfigurationMaster, type ConfigurationVersion, type GeneratedPosition, type PositionDiff, type SaveRequest } from './masterTypes';
 import { truckConfigurationTypeOption, vehicleTypeOption } from './vehicleTypes';
+import { t } from '../../../../i18n/i18n';
 
 interface PreviewResult {
   configuration: { config_code: string; total_axles: number; total_wheels: number; positions: GeneratedPosition[] };
@@ -68,44 +69,44 @@ export function SaveConfigurationDialog({
   const canSave = preview !== null && preview.changed && !preview.duplicate && !saving;
 
   return (
-    <Modal open title="Save Wheels Configuration" onClose={onClose} width={560}>
+    <Modal open title={t('tire.modals.saveWheelsConfiguration')} onClose={onClose} width={560}>
       <div data-save-dialog>
         <dl style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '4px 14px', fontSize: 13, margin: '0 0 12px' }}>
-          <dt style={{ color: '#6b7280' }}>Vehicle Type</dt>
+          <dt style={{ color: '#6b7280' }}>{t('tire.fields.vehicleType')}</dt>
           <dd style={{ margin: 0 }}>{vehicleTypeOption(request.vehicle_type)?.label ?? request.vehicle_type}</dd>
           {truckType && (
             <>
-              <dt style={{ color: '#6b7280' }}>Configuration Type</dt>
+              <dt style={{ color: '#6b7280' }}>{t('tire.fields.configurationType')}</dt>
               <dd style={{ margin: 0 }}>{truckType}</dd>
             </>
           )}
-          <dt style={{ color: '#6b7280' }}>Config Code</dt>
+          <dt style={{ color: '#6b7280' }}>{t('tire.fields.configCode')}</dt>
           <dd data-save-code style={{ margin: 0, fontWeight: 700 }}>
             {preview?.configuration.config_code ?? request.config_code}
           </dd>
           {preview && (
             <>
-              <dt style={{ color: '#6b7280' }}>Total Axles</dt>
+              <dt style={{ color: '#6b7280' }}>{t('tire.fields.totalAxles')}</dt>
               <dd style={{ margin: 0 }}>{preview.configuration.total_axles}</dd>
-              <dt style={{ color: '#6b7280' }}>Total Wheels</dt>
+              <dt style={{ color: '#6b7280' }}>{t('tire.fields.totalWheels')}</dt>
               <dd style={{ margin: 0 }}>{preview.configuration.total_wheels}</dd>
             </>
           )}
           {preview?.current_version && (
             <>
-              <dt style={{ color: '#6b7280' }}>Current Version</dt>
+              <dt style={{ color: '#6b7280' }}>{t('tire.fields.currentVersion')}</dt>
               <dd style={{ margin: 0 }}>
-                Version {preview.current_version.version_number} ({preview.current_version.config_code}){preview.changed ? ` → Version ${preview.current_version.version_number + 1}` : ''}
+                {t('configuration.fields.version')} {preview.current_version.version_number} ({preview.current_version.config_code}){preview.changed ? t('tire.fields.versionValue', { value: preview.current_version.version_number + 1 }) : ''}
               </dd>
             </>
           )}
         </dl>
 
-        {loading && <p style={{ fontSize: 13, color: '#6b7280' }}>Generating positions…</p>}
+        {loading && <p style={{ fontSize: 13, color: '#6b7280' }}>{t('tire.help.generatingPositions')}</p>}
 
         {preview && (
           <>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Generated Positions ({preview.configuration.positions.length})</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t('tire.fields.generatedPositionsPositionsCount', { positionsCount: preview.configuration.positions.length })}</div>
             <table data-generated-positions style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginBottom: 12 }}>
               <tbody>
                 {groupPositions(preview.configuration.positions).map((row) => (
@@ -119,26 +120,26 @@ export function SaveConfigurationDialog({
 
             {preview.diff && preview.changed && (
               <div data-save-diff style={{ display: 'grid', gap: 6, marginBottom: 12, padding: 10, background: '#f9fafb', borderRadius: 6 }}>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>Changes to the position list of this configuration (the current version keeps its positions as history):</div>
-                <DiffRow kind="unchanged" label="Unchanged" codes={preview.diff.unchanged} color="#374151" />
-                <DiffRow kind="added" label="Added" codes={preview.diff.added} color="#166534" />
-                <DiffRow kind="removed" label="Removed" codes={preview.diff.removed} color="#b45309" />
+                <div style={{ fontSize: 12, color: '#6b7280' }}>{t('tire.help.changesPositionListConfigurationCurrentVersion')}:</div>
+                <DiffRow kind="unchanged" label={t('tire.fields.unchanged')} codes={preview.diff.unchanged} color="#374151" />
+                <DiffRow kind="added" label={t('tire.fields.added')} codes={preview.diff.added} color="#166534" />
+                <DiffRow kind="removed" label={t('tire.fields.removed')} codes={preview.diff.removed} color="#b45309" />
               </div>
             )}
 
             {preview.changed && preview.mapped_vehicle_count > 0 && (
               <p data-save-mapped-impact style={{ fontSize: 12, color: '#92400e', margin: '0 0 12px' }}>
-                {preview.mapped_vehicle_count} mapped vehicle(s) stay on their current version until updated in Vehicle Mapping.
+                {t('tire.help.mappedVehicleCountMappedVehicleS', { count: preview.mapped_vehicle_count })}
               </p>
             )}
             {!preview.changed && (
               <p data-save-unchanged style={{ fontSize: 13, color: '#166534' }}>
-                No changes — this is already the current version.
+                {t('tire.empty.noChangesAlreadyCurrentVersion')}
               </p>
             )}
             {preview.duplicate && (
               <div data-save-duplicate role="alert" style={{ fontSize: 13, color: '#b91c1c', marginBottom: 12 }}>
-                Configuration {preview.duplicate.config_code} already exists for this vehicle type. <Link to={`/app/wheel-configurations/${preview.duplicate.id}/edit`}>Edit that configuration</Link> instead.
+                {t('tire.help.configurationConfigCodeAlreadyExistsVehicle', { config_code: preview.duplicate.config_code })} <Link to={`/app/wheel-configurations/${preview.duplicate.id}/edit`}>{t('tire.actions.editThatConfiguration')}</Link> {t('tire.help.instead')}
               </div>
             )}
           </>
@@ -152,11 +153,11 @@ export function SaveConfigurationDialog({
 
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button className="btn-secondary" onClick={onClose}>
-            {preview && !preview.changed ? 'Close' : 'Cancel'}
+            {preview && !preview.changed ? t('common.actions.close') : t('common.actions.cancel')}
           </button>
           {(!preview || preview.changed) && (
             <button className="btn-primary" onClick={save} disabled={!canSave}>
-              {saving ? 'Saving…' : 'Confirm Save'}
+              {saving ? t('common.actions.saving') : t('tire.actions.confirmSave')}
             </button>
           )}
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../../../api/client';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useAuth } from '../../../auth/AuthContext';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 interface Recommendation {
   id: string;
@@ -80,7 +81,7 @@ export function RecommendationsPage() {
                 <td style={{ padding: 8 }}>{r.recommendation_type}</td>
                 <td style={{ padding: 8 }}>{r.priority}</td>
                 <td style={{ padding: 8 }}>{r.description}</td>
-                <td style={{ padding: 8 }}>{r.status}</td>
+                <td style={{ padding: 8 }}>{statusLabel(r.status)}</td>
                 <td style={{ padding: 8, display: 'flex', gap: 4 }}>
                   {r.status === 'NEW' && hasPermission('intelligence.recommendation.review') && (
                     <button disabled={busyId === r.id} onClick={() => act(r.id, 'review')}>Review</button>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../../api/client';
 import { ErrorState, LoadingState } from '../../components/States';
 import { formatMoney } from '../../utils/money';
+import { t } from '../../i18n/i18n';
 
 interface DashboardData {
   branches_total: number;
@@ -52,15 +53,15 @@ export function TenantDashboardPage() {
   if (!data) return <LoadingState />;
 
   const stats = [
-    { label: 'Branches', value: data.branches_total },
-    { label: 'Workshops', value: data.workshops_total },
-    { label: 'Warehouses', value: data.warehouses_total },
-    { label: 'Active Users', value: data.users_total },
+    { label: t('dashboard.sections.branches'), value: data.branches_total },
+    { label: t('dashboard.sections.workshops'), value: data.workshops_total },
+    { label: t('dashboard.sections.warehouses'), value: data.warehouses_total },
+    { label: t('dashboard.sections.activeUsers'), value: data.users_total },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Dashboard</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 20 }}>{t('dashboard.titles.dashboard')}</h1>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
         {stats.map((s) => (
           <div key={s.label} className="card">
@@ -72,13 +73,13 @@ export function TenantDashboardPage() {
 
       {data.active_modules.includes('VEHICLE') && (
         <>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Fleet</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.fleet')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              { label: 'Total Vehicles', value: data.vehicles_total },
-              { label: 'Active', value: data.vehicles_active },
-              { label: 'In Maintenance', value: data.vehicles_in_maintenance },
-              { label: 'Breakdown', value: data.vehicles_breakdown },
+              { label: t('dashboard.fields.totalVehicles'), value: data.vehicles_total },
+              { label: t('common.fields.active'), value: data.vehicles_active },
+              { label: t('dashboard.fields.inMaintenance'), value: data.vehicles_in_maintenance },
+              { label: t('dashboard.fields.breakdown'), value: data.vehicles_breakdown },
             ].map((s) => (
               <div key={s.label} className="card">
                 <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
@@ -91,14 +92,14 @@ export function TenantDashboardPage() {
 
       {data.active_modules.includes('MAINTENANCE') && (
         <>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Maintenance</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.maintenance')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              { label: 'Upcoming', value: data.maintenance_upcoming },
-              { label: 'Due Soon', value: data.maintenance_due_soon },
-              { label: 'Due', value: data.maintenance_due },
-              { label: 'Overdue', value: data.maintenance_overdue },
-              { label: 'Open Requests', value: data.maintenance_requests_open },
+              { label: t('dashboard.fields.upcoming'), value: data.maintenance_upcoming },
+              { label: t('dashboard.fields.dueSoon'), value: data.maintenance_due_soon },
+              { label: t('dashboard.fields.due'), value: data.maintenance_due },
+              { label: t('dashboard.fields.overdue'), value: data.maintenance_overdue },
+              { label: t('dashboard.fields.openRequests'), value: data.maintenance_requests_open },
             ].map((s) => (
               <div key={s.label} className="card">
                 <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
@@ -111,11 +112,11 @@ export function TenantDashboardPage() {
 
       {data.active_modules.includes('WORK_ORDER') && (
         <>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Work Orders</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.workOrders')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              { label: 'Active', value: data.work_orders_active },
-              { label: 'Pending QC', value: data.work_orders_pending_qc },
+              { label: t('common.fields.active'), value: data.work_orders_active },
+              { label: t('dashboard.fields.pendingQc'), value: data.work_orders_pending_qc },
             ].map((s) => (
               <div key={s.label} className="card">
                 <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
@@ -128,11 +129,11 @@ export function TenantDashboardPage() {
 
       {data.active_modules.includes('WORKSHOP') && (
         <>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Workshop Operations</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.workshopOperations')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              { label: 'Workspaces Available', value: data.workspaces_available },
-              { label: 'Workspaces Occupied', value: data.workspaces_occupied },
+              { label: t('dashboard.fields.workspacesAvailable'), value: data.workspaces_available },
+              { label: t('dashboard.fields.workspacesOccupied'), value: data.workspaces_occupied },
             ].map((s) => (
               <div key={s.label} className="card">
                 <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
@@ -145,15 +146,15 @@ export function TenantDashboardPage() {
 
       {data.active_modules.includes('INVENTORY') && (
         <>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Supply Chain — Inventory</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.supplyChainInventory')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              { label: 'Total Inventory Value', value: formatMoney(data.inventory_total_value) },
-              { label: 'Reserved Stock', value: data.inventory_reserved_stock },
-              { label: 'Low Stock', value: data.inventory_low_stock },
-              { label: 'Out of Stock', value: data.inventory_out_of_stock },
-              { label: 'Open Transfers', value: data.transfers_open },
-              { label: 'In-Transit Transfers', value: data.transfers_in_transit },
+              { label: t('dashboard.fields.totalInventoryValue'), value: formatMoney(data.inventory_total_value) },
+              { label: t('dashboard.fields.reservedStock'), value: data.inventory_reserved_stock },
+              { label: t('dashboard.fields.lowStock'), value: data.inventory_low_stock },
+              { label: t('dashboard.fields.outOfStock'), value: data.inventory_out_of_stock },
+              { label: t('dashboard.fields.openTransfers'), value: data.transfers_open },
+              { label: t('dashboard.fields.inTransitTransfers'), value: data.transfers_in_transit },
             ].map((s) => (
               <div key={s.label} className="card">
                 <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
@@ -166,12 +167,12 @@ export function TenantDashboardPage() {
 
       {data.active_modules.includes('PROCUREMENT') && (
         <>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Supply Chain — Procurement</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.supplyChainProcurement')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              { label: 'Open Purchase Requests', value: data.purchase_requests_open },
-              { label: 'Open Purchase Orders', value: data.purchase_orders_open },
-              { label: 'Pending Goods Receipt', value: data.goods_receipts_pending },
+              { label: t('dashboard.fields.openPurchaseRequests'), value: data.purchase_requests_open },
+              { label: t('dashboard.fields.openPurchaseOrders'), value: data.purchase_orders_open },
+              { label: t('dashboard.fields.pendingGoodsReceipt'), value: data.goods_receipts_pending },
             ].map((s) => (
               <div key={s.label} className="card">
                 <div style={{ fontSize: 13, color: '#6b7280' }}>{s.label}</div>
@@ -184,12 +185,12 @@ export function TenantDashboardPage() {
 
       {(data.active_modules.includes('TIRE') || data.active_modules.includes('COMPONENT')) && (
         <>
-          <h2 style={{ fontSize: 16, marginBottom: 12 }}>Asset Lifecycle</h2>
+          <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.assetLifecycle')}</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
             {[
-              data.active_modules.includes('TIRE') && { label: 'Tires In Use', value: data.tires_in_use },
-              data.active_modules.includes('TIRE') && { label: 'Tires Due Replacement', value: data.tires_due_replacement },
-              data.active_modules.includes('COMPONENT') && { label: 'Component Assets Installed', value: data.component_assets_installed },
+              data.active_modules.includes('TIRE') && { label: t('dashboard.fields.tiresInUse'), value: data.tires_in_use },
+              data.active_modules.includes('TIRE') && { label: t('dashboard.fields.tiresDueReplacement'), value: data.tires_due_replacement },
+              data.active_modules.includes('COMPONENT') && { label: t('dashboard.fields.componentAssetsInstalled'), value: data.component_assets_installed },
               // Warranty is ORPHANED in the active UI: its claim count is no longer shown (the API still returns it).
             ]
               .filter((s): s is { label: string; value: number | undefined } => Boolean(s))
@@ -203,14 +204,14 @@ export function TenantDashboardPage() {
         </>
       )}
 
-      <h2 style={{ fontSize: 16, marginBottom: 12 }}>Active Modules</h2>
+      <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.activeModules')}</h2>
       <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {data.active_modules.map((m) => (
           <span key={m} style={{ background: '#eff6ff', color: '#1d4ed8', padding: '4px 10px', borderRadius: 6, fontSize: 12 }}>
             {m}
           </span>
         ))}
-        {data.active_modules.length === 0 && <span style={{ color: '#9ca3af' }}>No modules entitled.</span>}
+        {data.active_modules.length === 0 && <span style={{ color: '#9ca3af' }}>{t('dashboard.empty.noModulesEntitled')}</span>}
       </div>
     </div>
   );

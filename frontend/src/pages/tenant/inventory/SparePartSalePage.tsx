@@ -12,6 +12,7 @@ import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
 import { ScrappedTireSaleForm } from './ScrappedTireSaleForm';
+import { t } from '../../../i18n/i18n';
 
 const inputStyle: React.CSSProperties = { padding: '6px 8px', fontSize: 12, border: '1px solid #d1d5db', borderRadius: 4 };
 const STATUS_FILTERS = ['', 'DRAFT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED', 'CANCELLED'];
@@ -52,9 +53,9 @@ export function SparePartSalePage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Sell Sparepart</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('inventory.titles.sellSparepart')}</h1>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0, marginBottom: 16 }}>
-        Only quantity finalized as SELL_ELIGIBLE by Used Sparepart Processing can be sold. Every sale is approved by someone other than the maker before it counts as final.
+        {t('inventory.help.onlyQuantityFinalizedSellEligibleUsed')}
       </p>
 
       {canCreate && tireIds.length > 0 && (
@@ -76,11 +77,11 @@ export function SparePartSalePage() {
         />
       )}
 
-      <h3 style={{ fontSize: 15, marginTop: 24 }}>Sales</h3>
+      <h3 style={{ fontSize: 15, marginTop: 24 }}>{t('inventory.sections.sales')}</h3>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUS_FILTERS.map((s) => (
           <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }} className={statusFilter === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 11 }}>
-            {s || 'All'}
+            {s || t('common.actions.all')}
           </button>
         ))}
       </div>
@@ -88,17 +89,17 @@ export function SparePartSalePage() {
       {error && <ErrorState message={error} />}
       {listError && <ErrorState message={listError} />}
       {!listError && loading && <LoadingState />}
-      {!listError && !loading && sales.length === 0 && <EmptyState label="No sales found." />}
+      {!listError && !loading && sales.length === 0 && <EmptyState label={t('inventory.empty.noSalesFound')} />}
       {!listError && !loading && sales.map((sale) => (
         <div key={sale.id} className="card" style={{ marginBottom: 10, fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
             <span>
-              {sale.source_type === 'SCRAPPED_TIRE' && <strong data-sale-serial>Tire {sale.tire_serial_number} · </strong>}
-              {sale.source_type === 'COMPONENT_ASSET' && <strong data-sale-asset>Asset {sale.asset_number} · </strong>}
-              {sale.product?.name ?? sale.product_id} — qty {formatQty(sale.quantity)} × {formatMoney(sale.unit_price)} = {formatMoney(sale.total_amount)} ({sale.sale_type})
+              {sale.source_type === 'SCRAPPED_TIRE' && <strong data-sale-serial>{t('masterData.itemType.tire')} {sale.tire_serial_number} · </strong>}
+              {sale.source_type === 'COMPONENT_ASSET' && <strong data-sale-asset>{t('inventory.help.assetNumber', { asset: sale.asset_number })} · </strong>}
+              {t('inventory.help.valueQtyQuantityUnitPriceTotal', { value: sale.product?.name ?? sale.product_id, quantity: formatQty(sale.quantity), unit_price: formatMoney(sale.unit_price), total_amount: formatMoney(sale.total_amount), sale_type: sale.sale_type })}
               <br />
               <span style={{ color: '#6b7280', fontSize: 12 }}>
-                Buyer: {sale.buyer_type === 'PARTNER' ? sale.partner?.name : sale.buyer_name}
+                {t('tenantComponents.fields.buyer')}: {sale.buyer_type === 'PARTNER' ? sale.partner?.name : sale.buyer_name}
               </span>
             </span>
             <StatusBadge status={sale.status} />
@@ -108,7 +109,7 @@ export function SparePartSalePage() {
               setBusyId(sale.id);
               submit(() => apiClient.post(`/app/sparepart-sales/${sale.id}/submit`)).finally(() => setBusyId(null));
             }}>
-              Submit for Approval
+              {t('workflow.actionVerb.pendingApproval')}
             </button>
           )}
           {sale.status === 'PENDING_APPROVAL' && (
@@ -118,21 +119,21 @@ export function SparePartSalePage() {
                   setBusyId(sale.id);
                   submit(() => apiClient.post(`/app/sparepart-sales/${sale.id}/decide`, { decision: 'APPROVE' })).finally(() => setBusyId(null));
                 }}>
-                  Approve
+                  {t('common.actions.approve')}
                 </button>
                 <button className="btn-secondary" disabled={busyId === sale.id} onClick={() => {
                   setBusyId(sale.id);
                   submit(() => apiClient.post(`/app/sparepart-sales/${sale.id}/decide`, { decision: 'REJECT' })).finally(() => setBusyId(null));
                 }}>
-                  Reject
+                  {t('common.actions.reject')}
                 </button>
               </div>
             ) : (
-              <span style={{ fontSize: 11, color: '#6b7280' }}>Awaiting an approver (the maker cannot approve their own sale).</span>
+              <span style={{ fontSize: 11, color: '#6b7280' }}>{t('inventory.help.awaitingApproverMakerCannotApproveTheir')}</span>
             )
           )}
           {sale.status === 'REJECTED' && sale.rejection_reason && (
-            <span style={{ fontSize: 12, color: '#b91c1c' }}>Rejected: {sale.rejection_reason}</span>
+            <span style={{ fontSize: 12, color: '#b91c1c' }}>{t('inventory.fields.rejectedRejectionReason', { rejection_reason: sale.rejection_reason })}</span>
           )}
         </div>
       ))}
@@ -175,27 +176,27 @@ function NewSaleForm({
 
   return (
     <div className="card" style={{ marginBottom: 10 }}>
-      <h3 style={{ marginTop: 0, fontSize: 14 }}>New Sale</h3>
-      {eligibleReturns.length === 0 && <EmptyState label="No SELL_ELIGIBLE quantity available. Process a used return first." />}
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>{t('inventory.sections.newSale')}</h3>
+      {eligibleReturns.length === 0 && <EmptyState label={t('inventory.empty.noSellEligibleQuantityAvailableProcess')} />}
       {eligibleReturns.length > 0 && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <select value={returnId} onChange={(e) => setReturnId(e.target.value)} style={{ ...inputStyle, width: 240 }}>
-            <option value="">Select eligible item…</option>
+            <option value="">{t('inventory.fields.selectEligibleItem')}</option>
             {eligibleReturns.map((r) => (
               <option key={r.id} value={r.id}>
-                {r.product?.name ?? r.product_id} (remaining {formatQty(r.remaining_eligible_quantity)})
+                {t('inventory.help.productRemaining', { product: r.product?.name ?? r.product_id, remaining: formatQty(r.remaining_eligible_quantity) })}
               </option>
             ))}
           </select>
-          <NumericInput step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 80 }} max={selected?.remaining_eligible_quantity} />
+          <NumericInput step="0.01" placeholder={t('inventory.placeholders.qty')} value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 80 }} max={selected?.remaining_eligible_quantity} />
           <select value={saleType} onChange={(e) => setSaleType(e.target.value as 'OPERATIONAL_REUSE' | 'SCRAP_MATERIAL')} style={{ ...inputStyle, width: 160 }}>
-            <option value="OPERATIONAL_REUSE" disabled={selected?.condition === 'USED_FAULTY'}>Operational Reuse</option>
-            <option value="SCRAP_MATERIAL">Scrap Material</option>
+            <option value="OPERATIONAL_REUSE" disabled={selected?.condition === 'USED_FAULTY'}>{t('tenantComponents.fields.operationalReuse')}</option>
+            <option value="SCRAP_MATERIAL">{t('tenantComponents.fields.scrapMaterial')}</option>
           </select>
-          <input placeholder="Buyer name" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} style={{ ...inputStyle, width: 160 }} />
-          <NumericInput step="0.01" placeholder="Unit price" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <input placeholder={t('inventory.fields.buyerName')} value={buyerName} onChange={(e) => setBuyerName(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+          <NumericInput step="0.01" placeholder={t('inventory.placeholders.unitPrice')} value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <button className="btn-primary" disabled={submitting || !returnId || !quantity || !buyerName || !unitPrice} onClick={submit}>
-            Create Sale (Draft)
+            {t('inventory.actions.createSaleDraft')}
           </button>
         </div>
       )}

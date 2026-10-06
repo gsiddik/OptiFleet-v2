@@ -11,6 +11,7 @@ import { VehicleBrandModelSelect } from './VehicleBrandModelSelect';
 import { ProductDetailsSection } from './ProductDetailsSection';
 import type { ProductItem, VehicleCategory } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
+import { t } from '../../../i18n/i18n';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -142,7 +143,7 @@ export function ProductDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/products" label="← Back to Product" />
+      <BackButton fallbackTo="/app/products" label={t('inventory.actions.backToProduct')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {product.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({product.code})</span>
@@ -154,31 +155,31 @@ export function ProductDetailPage() {
       <ProductDetailsSection product={product} onChanged={load} />
       {product.product_type === 'TIRE' && hasPermission('tire.view') && (
         <p style={{ fontSize: 13, margin: '-6px 0 16px' }} data-tire-detail-link>
-          Physical tires of this product (New Stock, Installed, Used) and Register Tire are on its <Link to={`/app/tires/products/${product.id}`}>Tire Detail</Link>.
+          {t('inventory.help.physicalTiresProductNewStockInstalled')} <Link to={`/app/tires/products/${product.id}`}>{t('inventory.actions.tireDetail')}</Link>.
         </p>
       )}
 
       {product.product_type === 'CONSUMABLE' && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Safety Data Sheet</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inventory.sections.safetyDataSheet')}</h3>
           {product.consumable_spec?.sds_file_path ? (
             <p style={{ fontSize: 13 }}>
-              <strong>File:</strong> {product.consumable_spec.sds_original_filename ?? 'Uploaded document'}
+              <strong>{t('inventory.fields.file')}:</strong> {product.consumable_spec.sds_original_filename ?? t('inventory.fields.uploadedDocument')}
               &nbsp;
               <button className="btn-link" disabled={sdsBusy} onClick={downloadSds}>
-                Download
+                {t('common.actions.download')}
               </button>
               {hasPermission('product.delete') && !product.is_system && (
                 <>
                   &nbsp;
                   <button className="btn-link" style={{ color: '#b91c1c' }} disabled={sdsBusy} onClick={removeSds}>
-                    Remove
+                    {t('common.actions.remove')}
                   </button>
                 </>
               )}
             </p>
           ) : (
-            <p style={{ fontSize: 13, color: '#6b7280' }}>No Safety Data Sheet uploaded.</p>
+            <p style={{ fontSize: 13, color: '#6b7280' }}>{t('inventory.empty.noSafetyDataSheetUploaded')}</p>
           )}
           {hasPermission('product.update') && !product.is_system && (
             <div style={{ marginTop: 8 }}>
@@ -189,15 +190,15 @@ export function ProductDetailPage() {
                 disabled={sdsBusy}
                 onChange={(e) => e.target.files?.[0] && uploadSds(e.target.files[0])}
               />
-              <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>JPG, PNG, WEBP, or PDF — max 10MB. Uploading replaces the current file.</p>
+              <p style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>{t('inventory.help.jpgPngWebpPdfMax10mb')}</p>
             </div>
           )}
         </div>
       )}
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Compatibility</h3>
-        {(product.compatibilities ?? []).length === 0 && <EmptyState label="No compatibility rules — treated as universally compatible." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inventory.sections.vehicleCompatibility')}</h3>
+        {(product.compatibilities ?? []).length === 0 && <EmptyState label={t('inventory.empty.noCompatibilityRulesTreatedUniversallyCompatible')} />}
         {(product.compatibilities ?? []).map((c) => (
           <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             {editingRule?.id === c.id ? (
@@ -206,22 +207,22 @@ export function ProductDetailPage() {
                   brandId={editingRule.brandId}
                   modelId={editingRule.modelId}
                   onChange={(brandId, modelId) => setEditingRule({ ...editingRule, brandId, modelId })}
-                  anyLabel="Any"
+                  anyLabel={t('inventory.filters.any')}
                   current={{ brandName: editingRule.brandName, modelName: editingRule.modelName }}
                   width={150}
                 />
                 <button className="btn-secondary" disabled={busy} onClick={saveRule}>
-                  Save
+                  {t('common.actions.save')}
                 </button>
                 <button className="btn-link" disabled={busy} onClick={() => setEditingRule(null)}>
-                  Cancel
+                  {t('common.actions.cancel')}
                 </button>
               </span>
             ) : (
               <span>
-                {c.component_group ? componentGroupLabel(c.component_group) : 'Any component'} — {c.vehicle_category?.name ?? 'Any category'}
+                {c.component_group ? componentGroupLabel(c.component_group) : t('inventory.fields.anyComponent')} — {c.vehicle_category?.name ?? t('inventory.fields.anyCategory')}
                 {c.vehicle_brand && ` — ${c.brand_master?.name ?? c.vehicle_brand}`} {c.vehicle_model && ` ${c.model_master?.name ?? c.vehicle_model}`}
-                {c.vehicle_brand && !c.vehicle_brand_id && <span style={{ color: '#9ca3af', fontSize: 11 }}> (legacy text — not linked to the Vehicle Brand master)</span>}
+                {c.vehicle_brand && !c.vehicle_brand_id && <span style={{ color: '#9ca3af', fontSize: 11 }}> {t('inventory.help.legacyTextNotLinkedVehicleBrand')}</span>}
               </span>
             )}
             {hasPermission('product.update') && !product.is_system && editingRule?.id !== c.id && (
@@ -239,10 +240,10 @@ export function ProductDetailPage() {
                     })
                   }
                 >
-                  Edit
+                  {t('common.actions.edit')}
                 </button>
                 <button className="btn-link" disabled={busy} onClick={() => removeCompatibility(c.id)}>
-                  Remove
+                  {t('common.actions.remove')}
                 </button>
               </span>
             )}
@@ -250,9 +251,9 @@ export function ProductDetailPage() {
         ))}
         {hasPermission('product.update') && !product.is_system && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Vehicle Category">
+            <FormField label={t('inspection.fields.vehicleCategory')}>
               <select value={vehicleCategoryId} onChange={(e) => setVehicleCategoryId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-                <option value="">Any</option>
+                <option value="">{t('inventory.filters.any')}</option>
                 {categories.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
@@ -260,7 +261,7 @@ export function ProductDetailPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Brand / Model">
+            <FormField label={t('inventory.fields.brandModel')}>
               <span style={{ display: 'flex', gap: 6 }}>
                 <VehicleBrandModelSelect
                   brandId={vehicleBrandId}
@@ -269,13 +270,13 @@ export function ProductDetailPage() {
                     setVehicleBrandId(brandId);
                     setVehicleModelId(modelId);
                   }}
-                  anyLabel="Any"
+                  anyLabel={t('inventory.filters.any')}
                   width={150}
                 />
               </span>
             </FormField>
             <button className="btn-secondary" disabled={busy} onClick={addCompatibility} style={{ marginBottom: 14 }}>
-              Add Rule
+              {t('inventory.actions.addRule')}
             </button>
           </div>
         )}

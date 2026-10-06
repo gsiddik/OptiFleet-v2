@@ -1,4 +1,5 @@
 import type { NumberingPayload, NumberingSegment } from "../../../../types";
+import { t } from '../../../../i18n/i18n';
 
 /**
  * Document Numbering Format Builder ↔ the numbering engine's payload. The stored format keeps
@@ -91,16 +92,16 @@ export function validateBuilder(
 ): string[] {
   const errors: string[] = [];
   const tokens = usedTokens(segments);
-  if (segments.length === 0) errors.push("Format is required.");
+  if (segments.length === 0) errors.push(t('configuration.validation.formatIsRequired'));
   if (!tokens.has("SEQ") && !tokens.has("SEQ:N"))
-    errors.push("Add a running number (SEQ or SEQ:N) to the Format.");
+    errors.push(t('configuration.validation.addRunningNumberSeqSeqN'));
   if (segments.some((s) => s.type === "literal" && /[{}]/.test(s.value)))
-    errors.push("Custom text cannot contain { or }.");
+    errors.push(t('configuration.validation.customTextNoBraces'));
   if (tokens.has("SEQ:N")) {
     const n = Number(digits);
     if (!/^\d+$/.test(digits) || n < 1 || n > maxDigits)
       errors.push(
-        `Sequential Digit must be a whole number from 1 to ${maxDigits}.`,
+        t('configuration.validation.sequentialDigitMustWholeNumber1', { maxDigits: maxDigits }),
       );
   }
   return errors;

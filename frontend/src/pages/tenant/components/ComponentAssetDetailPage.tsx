@@ -10,7 +10,10 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import { NumericInput } from '../../../components/NumericInput';
 import type { ComponentAssetItem, PartnerItem, VehicleItem, Warehouse } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
-import { formatDateTime } from '../../../utils/date';
+import { formatDateTime, formatTimestampDate } from '../../../utils/date';
+import { statusLabel } from '../../../i18n/statusRegistry';
+import { message } from '../../../i18n/messages';
+import { t } from '../../../i18n/i18n';
 
 /** Statuses a Sell Sparepart sale may be raised for (backend ComponentAsset::SELLABLE). */
 const SELLABLE = ['SCRAPPED', 'REMOVED'];
@@ -110,7 +113,7 @@ export function ComponentAssetDetailPage() {
   const warehouseSelect = (value: string, onChange: (v: string) => void, label: string) => (
     <FormField label={label}>
       <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-        <option value="">Select…</option>
+        <option value="">{t('common.fields.select')}</option>
         {warehouses.map((w) => (
           <option key={w.id} value={w.id}>
             {w.name}
@@ -122,21 +125,21 @@ export function ComponentAssetDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/component-assets" label="← Back to Component Assets" />
+      <BackButton fallbackTo="/app/component-assets" label={t('tenantComponents.actions.backToComponentAssets')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, margin: 0, fontFamily: 'monospace' }}>{asset.asset_number ?? asset.serial_number ?? 'Component Asset'}</h1>
+        <h1 style={{ fontSize: 22, margin: 0, fontFamily: 'monospace' }}>{asset.asset_number ?? asset.serial_number ?? t('tenantComponents.titles.componentAsset')}</h1>
         <StatusBadge status={asset.current_status} />
       </div>
       {error && <ErrorState message={error} />}
 
       <div className="card" style={{ marginBottom: 16 }} data-asset-identity-card>
         <dl style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '6px 16px', fontSize: 13, margin: 0 }}>
-          <Fact label="Asset#" value={asset.asset_number} />
-          <Fact label="Serial Number" value={asset.serial_number} />
-          <Fact label="Product" value={asset.product?.name} />
-          <Fact label="Component Group" value={groups} />
+          <Fact label={t('tenantComponents.fields.assetNumber')} value={asset.asset_number} />
+          <Fact label={t('common.fields.serialNumber')} value={asset.serial_number} />
+          <Fact label={t('common.fields.product')} value={asset.product?.name} />
+          <Fact label={t('common.fields.componentGroup')} value={groups} />
           <Fact
-            label="Location / Vehicle"
+            label={t('tenantComponents.fields.locationVehicle')}
             value={
               asset.location ? (
                 asset.location.type === 'VEHICLE' ? (
@@ -148,11 +151,11 @@ export function ComponentAssetDetailPage() {
             }
           />
           <Fact
-            label="Source"
+            label={t('common.fields.source')}
             value={
               asset.source ? (
                 <>
-                  Goods Receipt {asset.source.gr_number}
+                  {t('breadcrumb.goodsReceipts')} {asset.source.gr_number}
                   {asset.source.purchase_order_id && (
                     <>
                       {' '}
@@ -163,18 +166,18 @@ export function ComponentAssetDetailPage() {
               ) : null
             }
           />
-          {asset.purchase_return && <Fact label="Returned to Vendor" value={`Return Order ${asset.purchase_return.return_number} (${asset.purchase_return.status.replace(/_/g, ' ')})`} />}
-          {asset.sale && <Fact label="Sale" value={`${asset.sale.status} · ${asset.sale.buyer_name ?? 'Partner'} · ${formatDateTime(asset.sale.decided_at)}`} />}
+          {asset.purchase_return && <Fact label={t('tenantComponents.fields.returnedToVendor')} value={t('tenantComponents.fields.returnOrderReturnNumberValue', { return_number: asset.purchase_return.return_number, value: statusLabel(asset.purchase_return.status) })} />}
+          {asset.sale && <Fact label={t('common.fields.sale')} value={message('tenantComponents.fields.saleSummary', { status: statusLabel(asset.sale.status), buyerName: asset.sale.buyer_name ?? message('common.fields.partner'), decidedAt: formatDateTime(asset.sale.decided_at) })} />}
         </dl>
       </div>
 
       {['IN_STOCK', 'REMOVED', 'RECONDITIONED'].includes(asset.current_status) && canInstall && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Install</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tenantComponents.actions.install')}</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Vehicle" required>
+            <FormField label={t('common.fields.vehicle')} required>
               <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-                <option value="">Select…</option>
+                <option value="">{t('common.fields.select')}</option>
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.registration_number}
@@ -182,11 +185,11 @@ export function ComponentAssetDetailPage() {
                 ))}
               </select>
             </FormField>
-            <FormField label="Position / Location">
+            <FormField label={t('tenantComponents.fields.positionLocation')}>
               <input value={positionLocation} onChange={(e) => setPositionLocation(e.target.value)} style={{ ...inputStyle, width: 200 }} />
             </FormField>
             <button className="btn-primary" disabled={busy || !vehicleId} onClick={install} style={{ marginBottom: 14 }}>
-              Install
+              {t('tenantComponents.actions.install')}
             </button>
           </div>
         </div>
@@ -194,12 +197,12 @@ export function ComponentAssetDetailPage() {
 
       {['INSTALLED', 'ACTIVE', 'FAILED'].includes(asset.current_status) && canRemove && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Remove / Replace</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tenantComponents.sections.removeReplace')}</h3>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <FormField label="Removal Reason" required>
+            <FormField label={t('tenantComponents.fields.removalReason')} required>
               <input value={removalReason} onChange={(e) => setRemovalReason(e.target.value)} style={{ ...inputStyle, width: 220 }} />
             </FormField>
-            <FormField label="Disposition" required>
+            <FormField label={t('tenantComponents.fields.disposition')} required>
               <select value={disposition} onChange={(e) => setDisposition(e.target.value)} style={{ ...inputStyle, width: 130 }}>
                 {['REUSE', 'REPAIR', 'SCRAP'].map((d) => (
                   <option key={d} value={d}>
@@ -208,9 +211,9 @@ export function ComponentAssetDetailPage() {
                 ))}
               </select>
             </FormField>
-            {warehouseSelect(removalWarehouseId, setRemovalWarehouseId, 'Store in Warehouse')}
+            {warehouseSelect(removalWarehouseId, setRemovalWarehouseId, t('tenantComponents.fields.storeInWarehouse'))}
             <button className="btn-secondary" disabled={busy || !removalReason} onClick={remove} style={{ marginBottom: 14 }}>
-              Remove From Vehicle
+              {t('tenantComponents.actions.removeFromVehicle')}
             </button>
           </div>
         </div>
@@ -218,19 +221,19 @@ export function ComponentAssetDetailPage() {
 
       {asset.current_status === 'UNDER_REPAIR' && canManage && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Repair</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tenantComponents.sections.repair')}</h3>
           {!openRepair ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <FormField label="Description" required>
+              <FormField label={t('common.fields.description')} required>
                 <input value={repairDescription} onChange={(e) => setRepairDescription(e.target.value)} style={{ ...inputStyle, width: 260 }} />
               </FormField>
               <button className="btn-secondary" disabled={busy || !repairDescription} onClick={startRepair} style={{ marginBottom: 14 }}>
-                Start Repair
+                {t('tenantComponents.actions.startRepair')}
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-              <FormField label="Outcome" required>
+              <FormField label={t('tenantComponents.fields.outcome')} required>
                 <select value={repairOutcome} onChange={(e) => setRepairOutcome(e.target.value)} style={{ ...inputStyle, width: 200 }}>
                   {['RECONDITIONED', 'SCRAPPED', 'RETURNED_TO_SERVICE'].map((o) => (
                     <option key={o} value={o}>
@@ -239,9 +242,9 @@ export function ComponentAssetDetailPage() {
                   ))}
                 </select>
               </FormField>
-              {repairOutcome !== 'SCRAPPED' && !asset.current_warehouse_id && warehouseSelect(repairWarehouseId, setRepairWarehouseId, 'Back in Warehouse')}
+              {repairOutcome !== 'SCRAPPED' && !asset.current_warehouse_id && warehouseSelect(repairWarehouseId, setRepairWarehouseId, t('tenantComponents.fields.backInWarehouse'))}
               <button className="btn-primary" disabled={busy} onClick={() => completeRepair(openRepair.id)} style={{ marginBottom: 14 }}>
-                Complete Repair
+                {t('tenantComponents.actions.completeRepair')}
               </button>
             </div>
           )}
@@ -251,32 +254,32 @@ export function ComponentAssetDetailPage() {
       {SELLABLE.includes(asset.current_status) && hasPermission('sparepart_sale.create') && <SellAssetCard asset={asset} onSold={load} />}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Installation History</h3>
-        {(asset.installations ?? []).length === 0 && <EmptyState label="No installations yet." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tenantComponents.sections.installationHistory')}</h3>
+        {(asset.installations ?? []).length === 0 && <EmptyState label={t('tenantComponents.empty.noInstallationsYet')} />}
         {(asset.installations ?? []).map((i) => (
           <div key={i.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {i.vehicle?.registration_number ?? i.vehicle_id} — {i.position_location ?? '—'} — installed {new Date(i.installed_at).toLocaleDateString()}
-            {i.removed_at && ` — removed ${new Date(i.removed_at).toLocaleDateString()}`}
+            {t('tenantComponents.help.installationLine', { vehicle: i.vehicle?.registration_number ?? i.vehicle_id, position: i.position_location ?? '—', date: formatTimestampDate(i.installed_at) })}
+            {i.removed_at && ` — removed ${formatTimestampDate(i.removed_at)}`}
           </div>
         ))}
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Removal / Repair History</h3>
-        {(asset.removals ?? []).length === 0 && <EmptyState label="No removals yet." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tenantComponents.sections.removalRepairHistory')}</h3>
+        {(asset.removals ?? []).length === 0 && <EmptyState label={t('tenantComponents.empty.noRemovalsYet')} />}
         {(asset.removals ?? []).map((r) => (
           <div key={r.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {new Date(r.removed_at).toLocaleDateString()} — {r.removal_reason} — {r.disposition}
+            {formatTimestampDate(r.removed_at)} — {r.removal_reason} — {r.disposition}
           </div>
         ))}
       </div>
 
       <div className="card" style={{ marginTop: 16 }} data-status-history>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Status History</h3>
-        {(asset.status_history ?? []).length === 0 && <EmptyState label="No status changes recorded." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tenantComponents.sections.statusHistory')}</h3>
+        {(asset.status_history ?? []).length === 0 && <EmptyState label={t('tenantComponents.empty.noStatusChangesRecorded')} />}
         {(asset.status_history ?? []).map((h, i) => (
           <div key={i} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            {formatDateTime(h.at)} — {h.action === 'created' ? 'Registered' : `${(h.from ?? '—').replace(/_/g, ' ')} → ${(h.to ?? '—').replace(/_/g, ' ')}`}
+            {formatDateTime(h.at)} — {h.action === 'created' ? t('tenantComponents.fields.registered') : `${h.from ? statusLabel(h.from) : '—'} → ${h.to ? statusLabel(h.to) : '—'}`}
           </div>
         ))}
       </div>
@@ -336,29 +339,29 @@ function SellAssetCard({ asset, onSold }: { asset: ComponentAssetItem; onSold: (
 
   return (
     <div className="card" style={{ marginBottom: 16 }} data-sell-asset>
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Sell</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tenantComponents.sections.sell')}</h3>
       {created ? (
         <p style={{ fontSize: 13, margin: 0 }}>
-          Draft sale created. Submit it for approval in <Link to="/app/sparepart-sales">Inventory → Sell Sparepart</Link>; approval marks this asset SOLD.
+          {t('tenantComponents.help.draftSaleCreatedSubmitApproval')} <Link to="/app/sparepart-sales">{t('tenantComponents.actions.inventorySellSparepart')}</Link>{t('tenantComponents.help.approvalMarksAssetSold')}
         </p>
       ) : (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <FormField label="Sale Type" required>
-            <select aria-label="Sale Type" value={saleType} disabled={scrapped} onChange={(e) => setSaleType(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-              <option value="OPERATIONAL_REUSE">Operational Reuse</option>
-              <option value="SCRAP_MATERIAL">Scrap Material</option>
+          <FormField label={t('tenantComponents.fields.saleType')} required>
+            <select aria-label={t('tenantComponents.fields.saleType')} value={saleType} disabled={scrapped} onChange={(e) => setSaleType(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+              <option value="OPERATIONAL_REUSE">{t('tenantComponents.fields.operationalReuse')}</option>
+              <option value="SCRAP_MATERIAL">{t('tenantComponents.fields.scrapMaterial')}</option>
             </select>
           </FormField>
-          <FormField label="Buyer" required>
-            <select aria-label="Buyer Type" value={buyerType} onChange={(e) => setBuyerType(e.target.value)} style={{ ...inputStyle, width: 140 }}>
-              <option value="EXTERNAL">External</option>
-              <option value="PARTNER">Partner</option>
+          <FormField label={t('tenantComponents.fields.buyer')} required>
+            <select aria-label={t('tenantComponents.fields.buyerType')} value={buyerType} onChange={(e) => setBuyerType(e.target.value)} style={{ ...inputStyle, width: 140 }}>
+              <option value="EXTERNAL">{t('tenantComponents.fields.external')}</option>
+              <option value="PARTNER">{t('common.fields.partner')}</option>
             </select>
           </FormField>
           {buyerType === 'PARTNER' ? (
-            <FormField label="Partner" required>
-              <select aria-label="Partner" value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-                <option value="">Select…</option>
+            <FormField label={t('common.fields.partner')} required>
+              <select aria-label={t('common.fields.partner')} value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+                <option value="">{t('common.fields.select')}</option>
                 {partners.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -367,15 +370,15 @@ function SellAssetCard({ asset, onSold }: { asset: ComponentAssetItem; onSold: (
               </select>
             </FormField>
           ) : (
-            <FormField label="Buyer Name" required>
-              <input aria-label="Buyer Name" value={buyerName} onChange={(e) => setBuyerName(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+            <FormField label={t('tenantComponents.fields.buyerName')} required>
+              <input aria-label={t('tenantComponents.fields.buyerName')} value={buyerName} onChange={(e) => setBuyerName(e.target.value)} style={{ ...inputStyle, width: 200 }} />
             </FormField>
           )}
-          <FormField label="Unit Price" required>
-            <NumericInput aria-label="Unit Price" value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...inputStyle, width: 150 }} />
+          <FormField label={t('common.fields.unitPrice')} required>
+            <NumericInput aria-label={t('common.fields.unitPrice')} value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={{ ...inputStyle, width: 150 }} />
           </FormField>
           <button className="btn-primary" disabled={busy || !unitPrice || (buyerType === 'PARTNER' ? !partnerId : !buyerName.trim())} onClick={sell} style={{ marginBottom: 14 }}>
-            {busy ? 'Saving…' : 'Create Sale'}
+            {busy ? t('common.actions.saving') : t('tenantComponents.actions.createSale')}
           </button>
         </div>
       )}

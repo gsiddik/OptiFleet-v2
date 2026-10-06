@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { Branch } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 export function BranchesPage() {
   const { hasPermission } = useAuth();
@@ -33,10 +34,10 @@ export function BranchesPage() {
   }
 
   const columns: Column<Branch>[] = [
-    { key: 'code', header: 'Code', render: (b) => b.code },
-    { key: 'name', header: 'Name', render: (b) => b.name },
-    { key: 'city', header: 'City', render: (b) => b.city ?? '—' },
-    { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
+    { key: 'code', header: t('common.fields.code'), render: (b) => b.code },
+    { key: 'name', header: t('common.fields.name'), render: (b) => b.name },
+    { key: 'city', header: t('common.fields.city'), render: (b) => b.city ?? '—' },
+    { key: 'status', header: t('common.fields.status'), render: (b) => <StatusBadge status={b.status} /> },
     {
       key: 'actions',
       header: '',
@@ -44,12 +45,12 @@ export function BranchesPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {hasPermission('branch.update') && (
             <button className="btn-link" onClick={() => setEditing(b)}>
-              Edit
+              {t('common.actions.edit')}
             </button>
           )}
           {(hasPermission('branch.activate') || hasPermission('branch.deactivate')) && (
             <button className="btn-link" onClick={() => toggleStatus(b)}>
-              {b.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+              {b.status === 'ACTIVE' ? t('common.actions.deactivate') : t('common.actions.activate')}
             </button>
           )}
         </div>
@@ -59,7 +60,7 @@ export function BranchesPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Branches</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('organization.titles.branches')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -69,23 +70,23 @@ export function BranchesPage() {
         actions={
           hasPermission('branch.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Branch
+              {t('organization.actions.newBranch')}
             </button>
           ) : null
         }
       >
         <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ ...inputStyle, width: 150 }}>
-          <option value="">All statuses</option>
-          <option value="DRAFT">Draft</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-          <option value="CLOSED">Closed</option>
+          <option value="">{t('common.filters.allStatuses')}</option>
+          <option value="DRAFT">{t('common.fields.draft')}</option>
+          <option value="ACTIVE">{t('common.fields.active')}</option>
+          <option value="INACTIVE">{t('common.fields.inactive')}</option>
+          <option value="CLOSED">{t('organization.fields.closed')}</option>
         </select>
       </Toolbar>
 
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No branches found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('organization.empty.noBranchesFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -157,28 +158,28 @@ function BranchFormModal({
   }
 
   return (
-    <Modal open={open} title={branch ? 'Edit Branch' : 'New Branch'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required={!branch}>
+    <Modal open={open} title={branch ? t('organization.modals.editBranch') : t('organization.modals.newBranch')} onClose={onClose}>
+      <FormField label={t('common.fields.code')} errors={errors.code} required={!branch}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!branch} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required={!branch}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required={!branch}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="City" errors={errors.city}>
+      <FormField label={t('common.fields.city')} errors={errors.city}>
         <input value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Province" errors={errors.province}>
+      <FormField label={t('common.fields.province')} errors={errors.province}>
         <input value={province} onChange={(e) => setProvince(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Address" errors={errors.address}>
+      <FormField label={t('common.fields.address')} errors={errors.address}>
         <input value={address} onChange={(e) => setAddress(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>

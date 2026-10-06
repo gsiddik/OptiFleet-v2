@@ -5,6 +5,7 @@ import { ErrorState, LoadingState } from "../../../components/States";
 import { StatusBadge } from "../../../components/StatusBadge";
 import type { PartnerItem } from "../../../types";
 import type { ScrappedTireRow } from "../tires/scrap/ScrappedTiresPanel";
+import { t as tt } from '../../../i18n/i18n';
 
 const inputStyle: React.CSSProperties = {
   padding: "6px 8px",
@@ -83,10 +84,9 @@ export function ScrappedTireSaleForm({
 
   return (
     <div className="card" style={{ marginBottom: 10 }} data-scrapped-tire-sale>
-      <h3 style={{ marginTop: 0, fontSize: 14 }}>Sell scrapped tires</h3>
+      <h3 style={{ marginTop: 0, fontSize: 14 }}>{tt('inventory.sections.sellScrappedTires')}</h3>
       <p style={{ fontSize: 12, color: "#6b7280", marginTop: 0 }}>
-        One Draft sale (Scrap Material, quantity 1) is created per tire; each
-        keeps its serial number. Submit each sale for approval afterwards.
+        {tt('inventory.help.oneDraftSaleScrapMaterialQuantity')}
       </p>
       {error && <ErrorState message={error} />}
       {!tires && !error && <LoadingState />}
@@ -94,8 +94,7 @@ export function ScrappedTireSaleForm({
         <>
           {missing > 0 && (
             <p role="alert" style={{ fontSize: 12, color: "#b91c1c" }}>
-              {missing} selected tire(s) are no longer scrapped or are outside
-              your data scope and were left out.
+              {tt('inventory.help.missingSelectedTireSNoLonger', { count: missing })}
             </p>
           )}
           <div style={{ overflowX: "auto", marginBottom: 10 }}>
@@ -108,10 +107,10 @@ export function ScrappedTireSaleForm({
             >
               <thead>
                 <tr style={{ background: "#f9fafb", textAlign: "left" }}>
-                  <th style={cell}>Serial Number</th>
-                  <th style={cell}>Product</th>
-                  <th style={cell}>Status</th>
-                  <th style={cell}>Sale</th>
+                  <th style={cell}>{tt('common.fields.serialNumber')}</th>
+                  <th style={cell}>{tt('common.fields.product')}</th>
+                  <th style={cell}>{tt('common.fields.status')}</th>
+                  <th style={cell}>{tt('common.fields.sale')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -125,8 +124,7 @@ export function ScrappedTireSaleForm({
                     <td style={cell}>
                       {t.sale_status ? (
                         <>
-                          <StatusBadge status={t.sale_status} /> (already in a
-                          sale)
+                          <StatusBadge status={t.sale_status} /> {tt('inventory.help.alreadyInASale')}
                         </>
                       ) : (
                         "—"
@@ -146,24 +144,24 @@ export function ScrappedTireSaleForm({
             }}
           >
             <select
-              aria-label="Buyer type"
+              aria-label={tt('inventory.fields.buyerType')}
               value={buyerType}
               onChange={(e) =>
                 setBuyerType(e.target.value as "EXTERNAL" | "PARTNER")
               }
               style={{ ...inputStyle, width: 120 }}
             >
-              <option value="EXTERNAL">External</option>
-              <option value="PARTNER">Partner</option>
+              <option value="EXTERNAL">{tt('tenantComponents.fields.external')}</option>
+              <option value="PARTNER">{tt('common.fields.partner')}</option>
             </select>
             {buyerType === "PARTNER" ? (
               <select
-                aria-label="Partner"
+                aria-label={tt('common.fields.partner')}
                 value={partnerId}
                 onChange={(e) => setPartnerId(e.target.value)}
                 style={{ ...inputStyle, width: 200 }}
               >
-                <option value="">Select partner…</option>
+                <option value="">{tt('inventory.fields.selectPartner')}</option>
                 {partners.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -172,25 +170,25 @@ export function ScrappedTireSaleForm({
               </select>
             ) : (
               <input
-                aria-label="Buyer name"
-                placeholder="Buyer name"
+                aria-label={tt('inventory.fields.buyerName')}
+                placeholder={tt('inventory.fields.buyerName')}
                 value={buyerName}
                 onChange={(e) => setBuyerName(e.target.value)}
                 style={{ ...inputStyle, width: 180 }}
               />
             )}
             <NumericInput
-              aria-label="Unit price per tire"
+              aria-label={tt('inventory.fields.unitPricePerTire')}
               step="0.01"
               min="0"
-              placeholder="Unit price per tire"
+              placeholder={tt('inventory.fields.unitPricePerTire')}
               value={unitPrice}
               onChange={(e) => setUnitPrice(e.target.value)}
               style={{ ...inputStyle, width: 140 }}
             />
             <input
-              aria-label="Notes"
-              placeholder="Notes (optional)"
+              aria-label={tt('common.fields.notes')}
+              placeholder={tt('inventory.placeholders.notesOptional')}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               style={{ ...inputStyle, width: 200 }}
@@ -202,10 +200,10 @@ export function ScrappedTireSaleForm({
               }
               onClick={submit}
             >
-              Create {sellable.length} Sale(s) (Draft)
+              {tt('inventory.actions.createSellableCountSaleSDraft', { count: sellable.length })}
             </button>
             <button className="btn-secondary" onClick={onCancel}>
-              Cancel
+              {tt('common.actions.cancel')}
             </button>
           </div>
         </>

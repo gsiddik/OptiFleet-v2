@@ -275,4 +275,16 @@ class TireImportTest extends TestCase
         $this->import($headers, $ownProduct, [['serial_number' => 'X1']])->assertStatus(422)->assertJsonValidationErrors('product');
         $this->assertSame(0, Tire::query()->count());
     }
+
+    public function test_indonesian_headers_and_sheet_name_are_read_by_stable_column_id(): void
+    {
+        [, $product, $headers] = $this->scenario();
+
+        // i18n: columns are identified by position + id, so a file with Indonesian headers (and sheet
+        // name) is read like the English template — old English files keep working unchanged.
+        $response = $this->preview($headers, $product, $this->upload([['Nomor Seri', 'Kode Tanggal Produksi', 'Tanggal Pembelian'], ['ID-1', '2322', '2026-07-01']], 'Isi Di Sini'))->assertOk();
+        $this->assertSame('ID-1', $response->json('data.rows.0.serial_number'));
+        $this->preview($headers, $product, $this->upload([['serial number ', 'MANUFACTURE DATE CODE', 'Tanggal Pembelian'], ['ID-2', '', '']]))->assertOk();
+        $this->preview($headers, $product, $this->upload([self::HEADERS, ['EN-1', '', '']]))->assertOk();
+    }
 }

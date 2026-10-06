@@ -15,6 +15,7 @@ import { ImportTiresModal } from './ImportTiresModal';
 import { formatHours } from './operations/tireOperationFormat';
 import { RegisterTireModal } from './RegisterTireModal';
 import type { ProductItem, TireInventoryCategory, TireInventoryRow, TireInventorySummary } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 type TireProductDetail = ProductItem & { inventory: TireInventorySummary; deleted_at?: string | null };
 
@@ -54,7 +55,7 @@ export function TireProductDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/tires" label="← Back to Tires" />
+      <BackButton fallbackTo="/app/tires" label={t('tire.actions.backToTires')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {product.brand ? `${product.brand} — ` : ''}
@@ -62,23 +63,23 @@ export function TireProductDetailPage() {
         </h1>
         <StatusBadge status={product.deleted_at ? 'DELETED' : product.status} />
       </div>
-      {product.deleted_at && <p style={{ fontSize: 13, color: '#92400e' }}>This product was deleted. Its tires and their history stay available here.</p>}
+      {product.deleted_at && <p style={{ fontSize: 13, color: '#92400e' }}>{t('tire.help.productDeletedTiresTheirHistoryStay')}</p>}
 
       <ProductDetailsSection product={product} onChanged={load} />
 
-      <h2 style={{ fontSize: 17, margin: '20px 0 10px' }}>Inventory</h2>
+      <h2 style={{ fontSize: 17, margin: '20px 0 10px' }}>{t('tire.sections.inventory')}</h2>
       <div className="tire-inventory-top" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: 16, marginBottom: 16 }}>
         <InventoryCard
-          title="New Stock"
+          title={t('tire.sections.newStock')}
           count={product.inventory.new_qty}
           action={
             canRegister ? (
               <span style={{ display: 'flex', gap: 6 }}>
                 <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setImporting(true)} data-import-open>
-                  Import
+                  {t('tire.actions.import')}
                 </button>
                 <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setRegistering(true)}>
-                  Register Tire
+                  {t('tire.actions.registerTire')}
                 </button>
               </span>
             ) : null
@@ -90,32 +91,32 @@ export function TireProductDetailPage() {
             reloadKey={reloadKey}
             columns={[
               // New stock has no operation history yet: the serial is plain text (Installed / Used link to the tire).
-              { header: 'Serial', cell: (r) => <span style={{ fontFamily: 'monospace' }}>{r.serial_number}</span> },
-              { header: 'Manufacture Date Code', cell: (r) => r.manufacture_date_code ?? '—' },
-              { header: 'Purchase Date', cell: (r) => (r.purchase_date ? formatDate(r.purchase_date) : '—') },
-              { header: 'Status', cell: (r) => <StatusBadge status={r.current_status} /> },
+              { header: t('tire.fields.serial'), cell: (r) => <span style={{ fontFamily: 'monospace' }}>{r.serial_number}</span> },
+              { header: t('tire.fields.manufactureDateCode'), cell: (r) => r.manufacture_date_code ?? '—' },
+              { header: t('tire.fields.purchaseDate'), cell: (r) => (r.purchase_date ? formatDate(r.purchase_date) : '—') },
+              { header: t('common.fields.status'), cell: (r) => <StatusBadge status={r.current_status} /> },
             ]}
           />
         </InventoryCard>
-        <InventoryCard title="Installed" count={product.inventory.installed_qty}>
+        <InventoryCard title={t('tire.sections.installed')} count={product.inventory.installed_qty}>
           <ScrollingInventory
             productId={productId}
             category="INSTALLED"
             reloadKey={reloadKey}
             columns={[
-              { header: 'Serial', cell: (r) => <SerialLink row={r} /> },
-              { header: 'Registration', cell: (r) => (r.vehicle_id ? <Link to={`/app/vehicles/${r.vehicle_id}`}>{r.registration_number ?? '—'}</Link> : '—') },
-              { header: 'Current KM', cell: (r) => <Num value={r.current_odometer} /> },
+              { header: t('tire.fields.serial'), cell: (r) => <SerialLink row={r} /> },
+              { header: t('tire.fields.registration'), cell: (r) => (r.vehicle_id ? <Link to={`/app/vehicles/${r.vehicle_id}`}>{r.registration_number ?? '—'}</Link> : '—') },
+              { header: t('tire.fields.currentKm'), cell: (r) => <Num value={r.current_odometer} /> },
             ]}
           />
         </InventoryCard>
       </div>
       <InventoryCard
-        title="Used Stocks"
+        title={t('tire.sections.usedStocks')}
         count={product.inventory.used_qty}
         action={
-          <span data-reusable-count style={{ fontSize: 12, color: '#166534' }} title="Only REUSE tires are available for installation; REMOVED, HOLD, REPAIR and RETREAD are not.">
-            {product.inventory.reusable_qty} reusable (REUSE)
+          <span data-reusable-count style={{ fontSize: 12, color: '#166534' }} title={t('tire.tooltips.onlyReuseTiresAvailableInstallationRemoved')}>
+            {t('tire.fields.reusableQtyReusableReuse', { reusable_qty: product.inventory.reusable_qty })}
           </span>
         }
       >
@@ -123,11 +124,11 @@ export function TireProductDetailPage() {
           productId={productId}
           reloadKey={reloadKey}
           columns={[
-            { header: 'Serial', cell: (r) => <SerialLink row={r} /> },
-            { header: 'Status', cell: (r) => <StatusBadge status={r.current_status} /> },
-            { header: 'Usage KM', cell: (r) => <Num value={r.usage_km} /> },
-            { header: 'Usage Time / Hours Meter', cell: (r) => formatHours(r.usage_hours) },
-            { header: 'Current Tread Depth', cell: (r) => (r.current_tread_depth_mm != null ? `${r.current_tread_depth_mm} mm` : '—') },
+            { header: t('tire.fields.serial'), cell: (r) => <SerialLink row={r} /> },
+            { header: t('common.fields.status'), cell: (r) => <StatusBadge status={r.current_status} /> },
+            { header: t('tire.fields.usageKm'), cell: (r) => <Num value={r.usage_km} /> },
+            { header: t('tire.fields.usageTimeHoursMeter'), cell: (r) => formatHours(r.usage_hours) },
+            { header: t('tire.fields.currentTreadDepth'), cell: (r) => (r.current_tread_depth_mm != null ? t('tire.help.dPullMmMm', { d_pull_mm: r.current_tread_depth_mm }) : '—') },
           ]}
         />
       </InventoryCard>
@@ -204,7 +205,7 @@ function ScrollingInventory({ productId, category, reloadKey, columns }: { produ
 
   return (
     <div>
-      <ScrollTable dataAttr={category} columns={columns} rows={rows ?? []} rowKey={(r) => r.serial_number} maxRows={VISIBLE_ROWS} onReachEnd={loadMore} emptyLabel={rows === null ? 'Loading…' : 'No tires.'} />
+      <ScrollTable dataAttr={category} columns={columns} rows={rows ?? []} rowKey={(r) => r.serial_number} maxRows={VISIBLE_ROWS} onReachEnd={loadMore} emptyLabel={rows === null ? t('tire.empty.loading') : t('tire.empty.noTires')} />
       <InventoryFooter shown={rows?.length ?? 0} meta={meta} loading={loadingMore} error={error} onMore={hasMore ? loadMore : undefined} />
     </div>
   );
@@ -217,7 +218,7 @@ function PagedInventory({ productId, reloadKey, columns }: { productId: string; 
 
   return (
     <div data-inventory-paged="USED">
-      <ScrollTable dataAttr="USED" columns={columns} rows={data} rowKey={(r) => r.serial_number} maxRows={PAGE_SIZE} emptyLabel={loading ? 'Loading…' : 'No tires.'} />
+      <ScrollTable dataAttr="USED" columns={columns} rows={data} rowKey={(r) => r.serial_number} maxRows={PAGE_SIZE} emptyLabel={loading ? t('tire.empty.loading') : t('tire.empty.noTires')} />
       {error && <ErrorState message={error} />}
       {meta && meta.last_page > 1 && <Pagination meta={meta} onPageChange={setPage} />}
     </div>
@@ -227,11 +228,11 @@ function PagedInventory({ productId, reloadKey, columns }: { productId: string; 
 function InventoryFooter({ shown, meta, loading, error, onMore }: { shown: number; meta: PaginationMeta | null; loading: boolean; error: string | null; onMore?: () => void }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12, color: '#6b7280', marginTop: 6, minHeight: 24 }}>
-      <span>{meta ? `Showing ${shown} of ${meta.total}` : ''}</span>
+      <span>{meta ? t('tire.help.showingShownOfTotal', { shown: shown, total: meta.total }) : ''}</span>
       {error && <span style={{ color: '#b91c1c' }}>{error}</span>}
       {onMore && (
         <button className="btn-link" disabled={loading} onClick={onMore}>
-          {loading ? 'Loading…' : 'Load more'}
+          {loading ? t('tire.empty.loading') : t('tire.actions.loadMore')}
         </button>
       )}
     </div>

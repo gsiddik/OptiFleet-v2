@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -7,28 +7,40 @@ import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
+import { useTabParam } from '../../../hooks/useTabParam';
+import type { TabDef } from '../../../utils/tabs';
 import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { VEHICLE_TYPES, resolveVehicleType, vehicleTypeOption } from '../tires/wheel-configuration/vehicleTypes';
 import { VehicleWheelsConfigurationTab } from '../tires/wheel-configuration/VehicleWheelsConfigurationTab';
-import { formatDate } from '../../../utils/date';
+import { formatDate, formatDateTime } from '../../../utils/date';
 import { DetailsWithImage, ImageContainer } from '../../../components/ImageContainer';
+import { formatNumber } from '../../../utils/number';
+import { labelText, t as tt, translatedRecord, withLabels } from '../../../i18n/i18n';
 
-const TABS = ['Overview', 'Assignment', 'Transfer', 'Documents', 'Wheels Configuration', 'History'] as const;
-type Tab = (typeof TABS)[number];
+type Tab = 'overview' | 'assignment' | 'transfer' | 'documents' | 'wheels' | 'history';
+// Stable ids drive state, ?tab= and permission gating; labels are display only.
+// `wheels` keeps the existing ?tab=wheels deep links; legacy label links still resolve.
+const TABS: readonly TabDef<Tab>[] = withLabels([
+  { id: 'overview', label: 'Overview', labelKey: 'vehicle.fields.overview' },
+  { id: 'assignment', label: 'Assignment', labelKey: 'vehicle.sections.assignment' },
+  { id: 'transfer', label: 'Transfer', labelKey: 'vehicle.sections.transfer' },
+  { id: 'documents', label: 'Documents', labelKey: 'vehicle.sections.documents' },
+  { id: 'wheels', label: 'Wheels Configuration', labelKey: 'vehicle.fields.wheelsConfiguration' },
+  { id: 'history', label: 'History', labelKey: 'vehicle.sections.history' },
+]);
 /** Tabs that need more than vehicle.view. */
-const TAB_PERMISSION: Partial<Record<Tab, string>> = { 'Wheels Configuration': 'tire.view' };
+const TAB_PERMISSION: Partial<Record<Tab, string>> = { wheels: 'tire.view' };
 
 export function VehicleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [vehicle, setVehicle] = useState<VehicleItem | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // ?tab=wheels opens a tab directly (e.g. "complete the tire data" links from Tire Operations).
-  const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(() => (searchParams.get('tab') === 'wheels' ? 'Wheels Configuration' : 'Overview'));
+  // ?tab=<id> opens a tab directly (e.g. ?tab=wheels from the Tire Operations "complete the tire data" links).
+  const [tab, setTab] = useTabParam(TABS, 'overview');
 
   function load() {
     apiClient
@@ -44,9 +56,13 @@ export function VehicleDetailPage() {
   if (error && !vehicle) return <ErrorState message={error} />;
   if (!vehicle) return <LoadingState />;
 
+  // A deep-linked tab the user may not see (e.g. ?tab=wheels without tire.view) falls back to Overview.
+  const permittedTab = (t: Tab) => !TAB_PERMISSION[t] || hasPermission(TAB_PERMISSION[t]);
+  const activeTab: Tab = permittedTab(tab) ? tab : 'overview';
+
   return (
     <div>
-      <BackButton fallbackTo="/app/vehicles" label="← Back to List" />
+      <BackButton fallbackTo="/app/vehicles" label={tt('vehicle.actions.backToList')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {vehicle.registration_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({vehicle.brand} {vehicle.model})</span>
@@ -60,7 +76,7 @@ export function VehicleDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: '1px solid #e5e7eb', overflowX: 'auto' }}>
-        {TABS.filter((t) => !TAB_PERMISSION[t] || hasPermission(TAB_PERMISSION[t])).map((t) => (
+        {TABS.filter(({ id: t }) => permittedTab(t)).map(({ id: t, ...tabDef }) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -68,26 +84,26 @@ export function VehicleDetailPage() {
               padding: '8px 16px',
               border: 'none',
               background: 'none',
-              borderBottom: tab === t ? '2px solid #1d4ed8' : '2px solid transparent',
-              color: tab === t ? '#1d4ed8' : '#6b7280',
-              fontWeight: tab === t ? 600 : 400,
+              borderBottom: activeTab === t ? '2px solid #1d4ed8' : '2px solid transparent',
+              color: activeTab === t ? '#1d4ed8' : '#6b7280',
+              fontWeight: activeTab === t ? 600 : 400,
               cursor: 'pointer',
               fontSize: 14,
               whiteSpace: 'nowrap',
               flexShrink: 0,
             }}
           >
-            {t}
+            {labelText(tabDef)}
           </button>
         ))}
       </div>
 
-      {tab === 'Overview' && <OverviewTab vehicle={vehicle} onChanged={load} />}
-      {tab === 'Assignment' && <AssignmentTab vehicle={vehicle} onChanged={load} />}
-      {tab === 'Transfer' && <TransferTab vehicle={vehicle} onChanged={load} />}
-      {tab === 'Documents' && <DocumentsTab vehicle={vehicle} />}
-      {tab === 'Wheels Configuration' && <VehicleWheelsConfigurationTab vehicleId={vehicle.id} />}
-      {tab === 'History' && <HistoryTab vehicleId={vehicle.id} />}
+      {activeTab === 'overview' && <OverviewTab vehicle={vehicle} onChanged={load} />}
+      {activeTab === 'assignment' && <AssignmentTab vehicle={vehicle} onChanged={load} />}
+      {activeTab === 'transfer' && <TransferTab vehicle={vehicle} onChanged={load} />}
+      {activeTab === 'documents' && <DocumentsTab vehicle={vehicle} />}
+      {activeTab === 'wheels' && <VehicleWheelsConfigurationTab vehicleId={vehicle.id} />}
+      {activeTab === 'history' && <HistoryTab vehicleId={vehicle.id} />}
     </div>
   );
 }
@@ -124,7 +140,7 @@ function VehiclePhoto({ vehicle, onUploaded }: { vehicle: VehicleItem; onUploade
 
   async function handleFile(file: File) {
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setError('Only JPG, JPEG, or PNG images are accepted.');
+      setError(tt('vehicle.errors.onlyJpgJpegPngImagesAccepted'));
       return;
     }
     setUploading(true);
@@ -145,8 +161,8 @@ function VehiclePhoto({ vehicle, onUploaded }: { vehicle: VehicleItem; onUploade
     <div>
       <ImageContainer
         src={previewUrl}
-        alt={`${vehicle.registration_number} photo`}
-        placeholder={canEdit ? 'Click to upload photo (JPG/PNG)' : 'No photo'}
+        alt={tt('vehicle.tooltips.registrationNumberPhoto', { registration_number: vehicle.registration_number })}
+        placeholder={canEdit ? tt('vehicle.placeholders.clickUploadPhotoJpgPng') : tt('vehicle.placeholders.noPhoto')}
         onActivate={canEdit ? () => inputRef.current?.click() : undefined}
       >
         {uploading && (
@@ -162,7 +178,7 @@ function VehiclePhoto({ vehicle, onUploaded }: { vehicle: VehicleItem; onUploade
               color: '#374151',
             }}
           >
-            Uploading…
+            {tt('common.actions.uploading')}
           </div>
         )}
       </ImageContainer>
@@ -188,29 +204,29 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
   const { hasPermission } = useAuth();
   const [editing, setEditing] = useState(false);
   const rows: [string, string][] = [
-    ['Branch', vehicle.branch?.name ?? '—'],
-    ['Default Workshop', vehicle.default_workshop?.name ?? '—'],
-    ['Category', vehicle.vehicle_category?.name ?? '—'],
-    ['Vehicle Type', vehicleTypeOption(resolveVehicleType(vehicle.vehicle_type) ?? '')?.label ?? vehicle.vehicle_type ?? '—'],
+    [tt('common.fields.branch'), vehicle.branch?.name ?? '—'],
+    [tt('vehicle.fields.defaultWorkshop'), vehicle.default_workshop?.name ?? '—'],
+    [tt('common.fields.category'), vehicle.vehicle_category?.name ?? '—'],
+    [tt('tire.fields.vehicleType'), vehicleTypeOption(resolveVehicleType(vehicle.vehicle_type) ?? '')?.label ?? vehicle.vehicle_type ?? '—'],
     ['VIN', vehicle.vin ?? '—'],
-    ['Chassis Number', vehicle.chassis_number ?? '—'],
-    ['Engine Number', vehicle.engine_number ?? '—'],
-    ['Year', vehicle.year ? String(vehicle.year) : '—'],
-    ['Fuel Type', vehicle.fuel_type ?? '—'],
-    ['Transmission', vehicle.transmission_type ?? '—'],
-    ['Current Odometer', Number(vehicle.current_odometer).toLocaleString()],
-    ['Engine Hour', vehicle.engine_hour ?? '—'],
-    ['Operational Status', vehicle.operational_status],
-    ['Color', vehicle.color ?? '—'],
-    ['Doors', vehicle.doors != null ? String(vehicle.doors) : '—'],
-    ['Seats', vehicle.seats != null ? String(vehicle.seats) : '—'],
-    ['Dimensions (L×W×H mm)', vehicle.length_mm ? `${vehicle.length_mm} × ${vehicle.width_mm ?? '—'} × ${vehicle.height_mm ?? '—'}` : '—'],
-    ['Fuel Tank Capacity (L)', vehicle.fuel_tank_capacity_liters ?? '—'],
-    ['Engine Capacity (cc)', vehicle.engine_capacity_cc ?? '—'],
-    ['Suspension', vehicle.suspension_type ?? '—'],
-    ['Axles', vehicle.axle_count != null ? String(vehicle.axle_count) : '—'],
-    ['Empty / Load Weight (kg)', vehicle.empty_weight_kg ? `${vehicle.empty_weight_kg} / ${vehicle.load_weight_kg ?? '—'}` : '—'],
-    ['Wheels (incl. spare)', vehicle.wheel_count != null ? String(vehicle.wheel_count) : '—'],
+    [tt('vehicle.fields.chassisNumber'), vehicle.chassis_number ?? '—'],
+    [tt('vehicle.fields.engineNumber'), vehicle.engine_number ?? '—'],
+    [tt('vehicle.fields.year'), vehicle.year ? String(vehicle.year) : '—'],
+    [tt('vehicle.fields.fuelType'), vehicle.fuel_type ?? '—'],
+    [tt('vehicle.fields.transmission'), vehicle.transmission_type ?? '—'],
+    [tt('vehicle.fields.currentOdometer'), formatNumber(vehicle.current_odometer)],
+    [tt('maintenance.fields.engineHour'), vehicle.engine_hour ?? '—'],
+    [tt('vehicle.fields.operationalStatus'), vehicle.operational_status],
+    [tt('vehicle.fields.color'), vehicle.color ?? '—'],
+    [tt('vehicle.fields.doors'), vehicle.doors != null ? String(vehicle.doors) : '—'],
+    [tt('vehicle.fields.seats'), vehicle.seats != null ? String(vehicle.seats) : '—'],
+    [tt('inventory.fields.dimensionsLWHMm'), vehicle.length_mm ? `${vehicle.length_mm} × ${vehicle.width_mm ?? '—'} × ${vehicle.height_mm ?? '—'}` : '—'],
+    [tt('vehicle.help.fuelTankCapacityL'), vehicle.fuel_tank_capacity_liters ?? '—'],
+    [tt('vehicle.fields.engineCapacityCc'), vehicle.engine_capacity_cc ?? '—'],
+    [tt('vehicle.fields.suspension'), vehicle.suspension_type ?? '—'],
+    [tt('tire.fields.axles'), vehicle.axle_count != null ? String(vehicle.axle_count) : '—'],
+    [tt('vehicle.help.emptyLoadWeightKg'), vehicle.empty_weight_kg ? `${vehicle.empty_weight_kg} / ${vehicle.load_weight_kg ?? '—'}` : '—'],
+    [tt('vehicle.fields.wheelsInclSpare'), vehicle.wheel_count != null ? String(vehicle.wheel_count) : '—'],
   ];
 
   return (
@@ -218,7 +234,7 @@ function OverviewTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
       {hasPermission('vehicle.update') && (
         <div style={{ textAlign: 'right', marginBottom: 12 }}>
           <button className="btn-secondary" onClick={() => setEditing(true)}>
-            Edit Specifications
+            {tt('vehicle.actions.editSpecifications')}
           </button>
         </div>
       )}
@@ -305,11 +321,11 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
   }
 
   return (
-    <Modal open title="Edit Vehicle Specifications" onClose={onClose} width={640}>
+    <Modal open title={tt('vehicle.modals.editVehicleSpecifications')} onClose={onClose} width={640}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Category" errors={errors.vehicle_category_id} required>
+        <FormField label={tt('common.fields.category')} errors={errors.vehicle_category_id} required>
           <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
-            <option value="">Select…</option>
+            <option value="">{tt('common.fields.select')}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -317,75 +333,75 @@ function EditVehicleModal({ vehicle, onClose, onSaved }: { vehicle: VehicleItem;
             ))}
           </select>
         </FormField>
-        <FormField label="Vehicle Type" errors={errors.vehicle_type}>
-          <select aria-label="Vehicle Type" value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle}>
-            <option value="">Select…</option>
+        <FormField label={tt('tire.fields.vehicleType')} errors={errors.vehicle_type}>
+          <select aria-label={tt('tire.fields.vehicleType')} value={vehicleType} onChange={(e) => setVehicleType(e.target.value)} style={inputStyle}>
+            <option value="">{tt('common.fields.select')}</option>
             {VEHICLE_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
-                {t.label}
+                {labelText(t)}
               </option>
             ))}
-            {legacyVehicleType && <option value={legacyVehicleType}>{legacyVehicleType} (legacy)</option>}
+            {legacyVehicleType && <option value={legacyVehicleType}>{tt('vehicle.fields.valueLegacy', { value: legacyVehicleType })}</option>}
           </select>
         </FormField>
-        <FormField label="Year" errors={errors.year}>
+        <FormField label={tt('vehicle.fields.year')} errors={errors.year}>
           <NumericInput value={year} onChange={(e) => setYear(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Fuel Type" errors={errors.fuel_type}>
+        <FormField label={tt('vehicle.fields.fuelType')} errors={errors.fuel_type}>
           <input value={fuelType} onChange={(e) => setFuelType(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Transmission" errors={errors.transmission_type}>
+        <FormField label={tt('vehicle.fields.transmission')} errors={errors.transmission_type}>
           <input value={transmissionType} onChange={(e) => setTransmissionType(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Engine Hour" errors={errors.engine_hour}>
+        <FormField label={tt('maintenance.fields.engineHour')} errors={errors.engine_hour}>
           <NumericInput step="0.01" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Color" errors={errors.color}>
+        <FormField label={tt('vehicle.fields.color')} errors={errors.color}>
           <input value={color} onChange={(e) => setColor(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Doors" errors={errors.doors}>
+        <FormField label={tt('vehicle.fields.doors')} errors={errors.doors}>
           <NumericInput value={doors} onChange={(e) => setDoors(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Seats" errors={errors.seats}>
+        <FormField label={tt('vehicle.fields.seats')} errors={errors.seats}>
           <NumericInput value={seats} onChange={(e) => setSeats(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Length (mm)" errors={errors.length_mm}>
+        <FormField label={tt('inventory.fields.lengthMm')} errors={errors.length_mm}>
           <NumericInput value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Width (mm)" errors={errors.width_mm}>
+        <FormField label={tt('inventory.fields.widthMm')} errors={errors.width_mm}>
           <NumericInput value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Height (mm)" errors={errors.height_mm}>
+        <FormField label={tt('inventory.fields.heightMm')} errors={errors.height_mm}>
           <NumericInput value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Fuel Tank (L)" errors={errors.fuel_tank_capacity_liters}>
+        <FormField label={tt('vehicle.fields.fuelTankL')} errors={errors.fuel_tank_capacity_liters}>
           <NumericInput value={fuelTank} onChange={(e) => setFuelTank(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Engine Capacity (cc)" errors={errors.engine_capacity_cc}>
+        <FormField label={tt('vehicle.fields.engineCapacityCc')} errors={errors.engine_capacity_cc}>
           <NumericInput value={engineCapacity} onChange={(e) => setEngineCapacity(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Suspension" errors={errors.suspension_type}>
+        <FormField label={tt('vehicle.fields.suspension')} errors={errors.suspension_type}>
           <input value={suspensionType} onChange={(e) => setSuspensionType(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Axles" errors={errors.axle_count}>
+        <FormField label={tt('tire.fields.axles')} errors={errors.axle_count}>
           <NumericInput value={axleCount} onChange={(e) => setAxleCount(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Wheels (incl. spare)" errors={errors.wheel_count}>
+        <FormField label={tt('vehicle.fields.wheelsInclSpare')} errors={errors.wheel_count}>
           <NumericInput value={wheelCount} onChange={(e) => setWheelCount(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Empty Weight (kg)" errors={errors.empty_weight_kg}>
+        <FormField label={tt('vehicle.fields.emptyWeightKg')} errors={errors.empty_weight_kg}>
           <NumericInput value={emptyWeight} onChange={(e) => setEmptyWeight(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Load Weight (kg)" errors={errors.load_weight_kg}>
+        <FormField label={tt('vehicle.fields.loadWeightKg')} errors={errors.load_weight_kg}>
           <NumericInput value={loadWeight} onChange={(e) => setLoadWeight(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !categoryId} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
     </Modal>
@@ -411,11 +427,11 @@ function StatusChanger({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged
   return (
     <>
       <button className="btn-secondary" onClick={() => setOpen(true)}>
-        Change Status
+        {tt('vehicle.actions.changeStatus')}
       </button>
       {open && (
-        <Modal open title="Change Vehicle Status" onClose={() => setOpen(false)}>
-          <FormField label="Status">
+        <Modal open title={tt('vehicle.modals.changeVehicleStatus')} onClose={() => setOpen(false)}>
+          <FormField label={tt('common.fields.status')}>
             <select value={status} onChange={(e) => setStatus(e.target.value as VehicleItem['status'])} style={inputStyle}>
               {['ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'].map((s) => (
                 <option key={s} value={s}>
@@ -426,10 +442,10 @@ function StatusChanger({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged
           </FormField>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
             <button className="btn-secondary" onClick={() => setOpen(false)}>
-              Cancel
+              {tt('common.actions.cancel')}
             </button>
             <button className="btn-primary" disabled={submitting} onClick={submit}>
-              Save
+              {tt('common.actions.save')}
             </button>
           </div>
         </Modal>
@@ -452,20 +468,20 @@ function AssignmentTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 15 }}>Assignment History</h3>
+        <h3 style={{ margin: 0, fontSize: 15 }}>{tt('vehicle.sections.assignmentHistory')}</h3>
         {hasPermission('vehicle.assign') && (
           <button className="btn-secondary" onClick={() => setShowAssign(true)}>
-            Reassign
+            {tt('vehicle.actions.reassign')}
           </button>
         )}
       </div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-            <th style={{ padding: '6px 8px' }}>From</th>
-            <th style={{ padding: '6px 8px' }}>To</th>
-            <th style={{ padding: '6px 8px' }}>Effective From</th>
-            <th style={{ padding: '6px 8px' }}>Effective Until</th>
+            <th style={{ padding: '6px 8px' }}>{tt('common.fields.from')}</th>
+            <th style={{ padding: '6px 8px' }}>{tt('common.fields.to')}</th>
+            <th style={{ padding: '6px 8px' }}>{tt('platform.pricing.fields.effectiveFrom')}</th>
+            <th style={{ padding: '6px 8px' }}>{tt('vehicle.fields.effectiveUntil')}</th>
           </tr>
         </thead>
         <tbody>
@@ -479,7 +495,7 @@ function AssignmentTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged
           ))}
         </tbody>
       </table>
-      {history.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No assignment history yet.</p>}
+      {history.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{tt('vehicle.empty.noAssignmentHistoryYet')}</p>}
 
       {showAssign && (
         <AssignModal
@@ -520,11 +536,11 @@ function AssignModal({ vehicle, onClose, onAssigned }: { vehicle: VehicleItem; o
   }
 
   return (
-    <Modal open title="Reassign Vehicle" onClose={onClose}>
+    <Modal open title={tt('vehicle.modals.reassignVehicle')} onClose={onClose}>
       {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-      <FormField label="New Branch">
+      <FormField label={tt('vehicle.fields.newBranch')}>
         <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -534,33 +550,33 @@ function AssignModal({ vehicle, onClose, onAssigned }: { vehicle: VehicleItem; o
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !branchId} onClick={submit}>
-          Assign
+          {tt('common.actions.assign')}
         </button>
       </div>
     </Modal>
   );
 }
 
-const TRANSFER_ACTIONS: Record<string, { label: string; action: string }[]> = {
-  DRAFT: [{ label: 'Submit', action: 'submit' }, { label: 'Cancel', action: 'cancel' }],
-  REQUESTED: [{ label: 'Approve', action: 'approve' }, { label: 'Reject', action: 'reject' }, { label: 'Cancel', action: 'cancel' }],
-  APPROVED: [{ label: 'Dispatch', action: 'dispatch' }, { label: 'Cancel', action: 'cancel' }],
-  IN_TRANSIT: [{ label: 'Receive', action: 'receive' }],
-  RECEIVED: [{ label: 'Complete', action: 'complete' }],
+const TRANSFER_ACTIONS: Record<string, { label: string; labelKey?: string; action: string }[]> = {
+  DRAFT: [{ label: 'Submit', labelKey: 'common.actions.submit', action: 'submit' }, { label: 'Cancel', labelKey: 'common.actions.cancelRecord', action: 'cancel' }],
+  REQUESTED: [{ label: 'Approve', labelKey: 'common.actions.approve', action: 'approve' }, { label: 'Reject', labelKey: 'common.actions.reject', action: 'reject' }, { label: 'Cancel', labelKey: 'common.actions.cancelRecord', action: 'cancel' }],
+  APPROVED: [{ label: 'Dispatch', labelKey: 'vehicle.actions.dispatch', action: 'dispatch' }, { label: 'Cancel', labelKey: 'common.actions.cancelRecord', action: 'cancel' }],
+  IN_TRANSIT: [{ label: 'Receive', labelKey: 'tire.actions.receive', action: 'receive' }],
+  RECEIVED: [{ label: 'Complete', labelKey: 'common.actions.complete', action: 'complete' }],
 };
 
 /** The module action that moves a vehicle transfer into each status (the workflow decides when it is offered). */
-const TRANSFER_ACTIONS_BY_TARGET: Record<string, { label: string; action: string; permission: string }> = {
-  REQUESTED: { label: 'Submit', action: 'submit', permission: 'vehicle.transfer' },
-  APPROVED: { label: 'Approve', action: 'approve', permission: 'vehicle.transfer' },
-  REJECTED: { label: 'Reject', action: 'reject', permission: 'vehicle.transfer' },
-  CANCELLED: { label: 'Cancel', action: 'cancel', permission: 'vehicle.transfer' },
-  IN_TRANSIT: { label: 'Dispatch', action: 'dispatch', permission: 'vehicle.transfer' },
-  RECEIVED: { label: 'Receive', action: 'receive', permission: 'vehicle.transfer' },
-  COMPLETED: { label: 'Complete', action: 'complete', permission: 'vehicle.transfer' },
+const TRANSFER_ACTIONS_BY_TARGET: Record<string, { label: string; labelKey?: string; action: string; permission: string }> = {
+  REQUESTED: { label: 'Submit', labelKey: 'common.actions.submit', action: 'submit', permission: 'vehicle.transfer' },
+  APPROVED: { label: 'Approve', labelKey: 'common.actions.approve', action: 'approve', permission: 'vehicle.transfer' },
+  REJECTED: { label: 'Reject', labelKey: 'common.actions.reject', action: 'reject', permission: 'vehicle.transfer' },
+  CANCELLED: { label: 'Cancel', labelKey: 'common.actions.cancelRecord', action: 'cancel', permission: 'vehicle.transfer' },
+  IN_TRANSIT: { label: 'Dispatch', labelKey: 'vehicle.actions.dispatch', action: 'dispatch', permission: 'vehicle.transfer' },
+  RECEIVED: { label: 'Receive', labelKey: 'tire.actions.receive', action: 'receive', permission: 'vehicle.transfer' },
+  COMPLETED: { label: 'Complete', labelKey: 'common.actions.complete', action: 'complete', permission: 'vehicle.transfer' },
 };
 
 function TransferActions({ transfer, onAct }: { transfer: VehicleTransferItem; onAct: (action: string) => void }) {
@@ -570,7 +586,7 @@ function TransferActions({ transfer, onAct }: { transfer: VehicleTransferItem; o
     <>
       {workflowButtons(available, TRANSFER_ACTIONS_BY_TARGET, fallback).map((a) => (
         <button key={a.action} className="btn-link" onClick={() => onAct(a.action)}>
-          {a.label}
+          {labelText(a)}
         </button>
       ))}
     </>
@@ -605,10 +621,10 @@ function TransferTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-        <h3 style={{ margin: 0, fontSize: 15 }}>Transfers</h3>
+        <h3 style={{ margin: 0, fontSize: 15 }}>{tt('vehicle.sections.transfers')}</h3>
         {hasPermission('vehicle.transfer') && !hasOpenTransfer && (
           <button className="btn-secondary" onClick={() => setShowCreate(true)}>
-            + New Transfer
+            {tt('inventory.actions.newTransfer')}
           </button>
         )}
       </div>
@@ -628,7 +644,7 @@ function TransferTab({ vehicle, onChanged }: { vehicle: VehicleItem; onChanged: 
           )}
         </div>
       ))}
-      {transfers.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No transfers yet.</p>}
+      {transfers.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{tt('vehicle.empty.noTransfersYet')}</p>}
 
       {showCreate && (
         <CreateTransferModal
@@ -669,11 +685,11 @@ function CreateTransferModal({ vehicle, onClose, onCreated }: { vehicle: Vehicle
   }
 
   return (
-    <Modal open title="New Vehicle Transfer" onClose={onClose}>
+    <Modal open title={tt('vehicle.modals.newVehicleTransfer')} onClose={onClose}>
       {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-      <FormField label="To Branch">
+      <FormField label={tt('vehicle.fields.toBranch')}>
         <select value={toBranchId} onChange={(e) => setToBranchId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -681,22 +697,23 @@ function CreateTransferModal({ vehicle, onClose, onCreated }: { vehicle: Vehicle
           ))}
         </select>
       </FormField>
-      <FormField label="Reason">
+      <FormField label={tt('common.fields.reason')}>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !toBranchId} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>
   );
 }
 
-const DOCUMENT_TYPE_LABEL: Record<string, string> = {
+/** Vehicle document type code → English label; shown through vehicle.documentType.<camelCase> (documentTypeLabel). */
+const DOCUMENT_TYPE_LABEL: Record<string, string> = translatedRecord({
   REGISTRATION: 'Registration',
   INSPECTION_CERTIFICATE: 'Inspection Certificate',
   INSURANCE: 'Insurance',
@@ -704,7 +721,11 @@ const DOCUMENT_TYPE_LABEL: Record<string, string> = {
   VEHICLE_TAX: 'Vehicle Tax',
   WARRANTY: 'Warranty',
   OTHER: 'Other',
-};
+}, { REGISTRATION: 'tire.fields.registration', INSPECTION_CERTIFICATE: 'vehicle.documentType.inspectionCertificate', INSURANCE: 'vehicle.documentType.insurance', PERMIT: 'vehicle.documentType.permit', VEHICLE_TAX: 'vehicle.documentType.vehicleTax', WARRANTY: 'vehicle.documentType.warranty', OTHER: 'tire.fields.other' });
+
+function documentTypeLabel(code: string): string {
+  return DOCUMENT_TYPE_LABEL[code] ?? code;
+}
 
 function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
   const { hasPermission } = useAuth();
@@ -775,7 +796,7 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
   }
 
   async function remove(docId: string) {
-    if (!window.confirm('Delete this document? This cannot be undone.')) return;
+    if (!window.confirm(tt('vehicle.confirm.deleteDocumentCannotUndone'))) return;
     setError(null);
     try {
       await apiClient.delete(`/app/vehicles/${vehicle.id}/documents/${docId}`);
@@ -787,44 +808,44 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Documents</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('vehicle.sections.documents')}</h3>
       {error && <ErrorState message={error} />}
       {documents.map((d) => (
         <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <span>
-            {DOCUMENT_TYPE_LABEL[d.document_type] ?? d.document_type} — {d.original_filename} <span style={{ color: '#9ca3af' }}>({(d.size / 1024).toFixed(0)} KB)</span>
+            {documentTypeLabel(d.document_type)} — {d.original_filename} <span style={{ color: '#9ca3af' }}>({(d.size / 1024).toFixed(0)} KB)</span>
             {(d.expiry_date || d.extension_deadline) && (
               <span style={{ display: 'block', color: '#6b7280', fontSize: 12 }}>
-                {d.expiry_date && <>Expiry: {formatDate(d.expiry_date)}</>}
+                {d.expiry_date && <>{tt('vehicle.fields.expiryExpiryDate', { expiry_date: formatDate(d.expiry_date) })}</>}
                 {d.expiry_date && d.extension_deadline && ' · '}
-                {d.extension_deadline && <>Extension deadline: {formatDate(d.extension_deadline)}</>}
+                {d.extension_deadline && <>{tt('vehicle.fields.extensionDeadlineExtensionDeadline', { extension_deadline: formatDate(d.extension_deadline) })}</>}
               </span>
             )}
           </span>
           <span style={{ display: 'flex', gap: 12 }}>
             <button className="btn-link" onClick={() => preview(d.id)}>
-              Preview
+              {tt('configuration.actions.preview')}
             </button>
             <button className="btn-link" onClick={() => download(d.id, d.original_filename)}>
-              Download
+              {tt('common.actions.download')}
             </button>
             {hasPermission('vehicle.update') && (
               <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => remove(d.id)}>
-                Delete
+                {tt('common.actions.delete')}
               </button>
             )}
           </span>
         </div>
       ))}
-      {documents.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No documents uploaded.</p>}
+      {documents.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{tt('vehicle.empty.noDocumentsUploaded')}</p>}
 
       {hasPermission('vehicle.update') && (
         <div data-document-upload style={{ marginTop: 16, display: 'grid', gap: 10 }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            <select aria-label="Document Type" value={docType} onChange={(e) => setDocType(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-              {Object.entries(DOCUMENT_TYPE_LABEL).map(([value, label]) => (
+            <select aria-label={tt('configuration.fields.documentType')} value={docType} onChange={(e) => setDocType(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+              {Object.keys(DOCUMENT_TYPE_LABEL).map((value) => (
                 <option key={value} value={value}>
-                  {label}
+                  {documentTypeLabel(value)}
                 </option>
               ))}
             </select>
@@ -832,31 +853,31 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', fontSize: 13 }}>
             <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input type="checkbox" checked={hasExpiry} onChange={(e) => setHasExpiry(e.target.checked)} />
-              Have an Expiry Date?
+              {tt('vehicle.fields.haveAnExpiryDate')}
             </label>
             {hasExpiry && (
               <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                Expiry Date <span style={{ color: '#b91c1c' }}>*</span>
-                <input aria-label="Expiry Date" type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} style={{ ...inputStyle, width: 170 }} />
+                {tt('vehicle.fields.expiryDate')} <span style={{ color: '#b91c1c' }}>*</span>
+                <input aria-label={tt('vehicle.fields.expiryDate')} type="date" value={expiryDate} onChange={(e) => setExpiryDate(e.target.value)} style={{ ...inputStyle, width: 170 }} />
               </label>
             )}
           </div>
           <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap', fontSize: 13 }}>
             <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
               <input type="checkbox" checked={needsExtension} onChange={(e) => setNeedsExtension(e.target.checked)} />
-              Need to be extended?
+              {tt('vehicle.fields.needToBeExtended')}
             </label>
             {needsExtension && (
               <label style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                Extension Deadline <span style={{ color: '#b91c1c' }}>*</span>
-                <input aria-label="Extension Deadline" type="date" value={extensionDeadline} onChange={(e) => setExtensionDeadline(e.target.value)} style={{ ...inputStyle, width: 170 }} />
+                {tt('vehicle.fields.extensionDeadline')} <span style={{ color: '#b91c1c' }}>*</span>
+                <input aria-label={tt('vehicle.fields.extensionDeadline')} type="date" value={extensionDeadline} onChange={(e) => setExtensionDeadline(e.target.value)} style={{ ...inputStyle, width: 170 }} />
               </label>
             )}
           </div>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
             <input
               key={fileKey}
-              aria-label="Document file"
+              aria-label={tt('vehicle.fields.documentFile')}
               type="file"
               accept=".jpg,.jpeg,.png,.webp,.pdf"
               disabled={uploading || missingDate}
@@ -865,7 +886,7 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
                 if (f) upload(f);
               }}
             />
-            {missingDate && <span style={{ fontSize: 12, color: '#b45309' }}>Fill in the date for every checked box before choosing the file.</span>}
+            {missingDate && <span style={{ fontSize: 12, color: '#b45309' }}>{tt('vehicle.help.fillDateEveryCheckedBoxBefore')}</span>}
           </div>
         </div>
       )}
@@ -882,15 +903,15 @@ function HistoryTab({ vehicleId }: { vehicleId: string }) {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Maintenance History</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('vehicle.sections.maintenanceHistory')}</h3>
       {events.map((e) => (
         <div key={`${e.type}-${e.id}`} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-          <span style={{ color: '#9ca3af', minWidth: 140 }}>{e.at ? new Date(e.at).toLocaleString() : '—'}</span>
+          <span style={{ color: '#9ca3af', minWidth: 140 }}>{e.at ? formatDateTime(e.at) : '—'}</span>
           <span style={{ background: '#eff6ff', color: '#1d4ed8', padding: '2px 8px', borderRadius: 6, fontSize: 11, height: 'fit-content' }}>{e.type}</span>
           <span>{e.summary}</span>
         </div>
       ))}
-      {events.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>No history yet.</p>}
+      {events.length === 0 && <p style={{ color: '#9ca3af', fontSize: 13 }}>{tt('inspection.empty.noHistoryYet')}</p>}
     </div>
   );
 }

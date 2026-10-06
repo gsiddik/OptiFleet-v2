@@ -23,6 +23,7 @@ class EscalationProcessor
         private readonly ConditionEvaluator $conditions,
         private readonly RecipientResolver $recipients,
         private readonly ResourceStatusLookup $statusLookup,
+        private readonly RecipientLocaleResolver $locales,
     ) {}
 
     public function run(): int
@@ -84,6 +85,7 @@ class EscalationProcessor
                 'recipient_email' => $target['email'] ?? null,
                 'channel' => $log->channel,
                 'template_configuration_version_id' => $log->template_configuration_version_id,
+                'locale' => $this->locales->resolve($target, $log->tenant_id), // the escalation target's language
                 'status' => NotificationDeliveryLog::STATUS_QUEUED,
                 'queued_at' => now(),
             ]);

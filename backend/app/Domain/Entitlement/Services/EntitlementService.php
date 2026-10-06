@@ -5,6 +5,7 @@ namespace App\Domain\Entitlement\Services;
 use App\Domain\Entitlement\Models\TenantModuleEntitlement;
 use App\Domain\ProductCatalog\Models\Module;
 use App\Domain\ProductCatalog\Services\ModuleDependencyService;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
@@ -54,7 +55,7 @@ class EntitlementService
 
         if ($missing->isNotEmpty()) {
             throw new EntitlementException(
-                'Cannot enable module '.$module->code.': missing required module(s): '.$missing->implode(', ')
+                Messages::text('errors.entitlement.cannotEnableModuleWithList', ['moduleCode' => $module->code, 'modules' => $missing->implode(', ')])
             );
         }
 
@@ -80,7 +81,7 @@ class EntitlementService
 
         if ($blocking->isNotEmpty()) {
             throw new EntitlementException(
-                'Cannot disable module '.$module->code.': still required by active module(s): '.$blocking->implode(', ')
+                Messages::text('errors.entitlement.cannotDisableModuleWithList', ['moduleCode' => $module->code, 'modules' => $blocking->implode(', ')])
             );
         }
 

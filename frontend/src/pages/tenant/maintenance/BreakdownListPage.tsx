@@ -10,6 +10,9 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { BreakdownItem } from '../../../types';
+import { statusLabel } from '../../../i18n/statusRegistry';
+import { formatDateTime } from '../../../utils/date';
+import { t } from '../../../i18n/i18n';
 
 const STATUSES = ['', 'REPORTED', 'VERIFIED', 'ASSESSED', 'REPAIR_REQUIRED', 'WORK_ORDER_CREATED', 'RESOLVED'];
 
@@ -21,20 +24,20 @@ export function BreakdownListPage() {
   const { data, loading, error } = useApiList<BreakdownItem>('/app/breakdowns', { status: status || undefined }, reloadKey);
 
   const columns: Column<BreakdownItem>[] = [
-    { key: 'vehicle', header: 'Vehicle', render: (b) => <Link to={`/app/breakdowns/${b.id}`}>{b.vehicle?.registration_number ?? b.vehicle_id}</Link> },
-    { key: 'severity', header: 'Severity', render: (b) => <StatusBadge status={b.severity} /> },
-    { key: 'reported_at', header: 'Reported At', render: (b) => new Date(b.reported_at).toLocaleString() },
-    { key: 'location', header: 'Location', render: (b) => b.location ?? '—' },
-    { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
+    { key: 'vehicle', header: t('common.fields.vehicle'), render: (b) => <Link to={`/app/breakdowns/${b.id}`}>{b.vehicle?.registration_number ?? b.vehicle_id}</Link> },
+    { key: 'severity', header: t('maintenance.fields.severity'), render: (b) => <StatusBadge status={b.severity} /> },
+    { key: 'reported_at', header: t('maintenance.fields.reportedAt'), render: (b) => formatDateTime(b.reported_at) },
+    { key: 'location', header: t('maintenance.fields.location'), render: (b) => b.location ?? '—' },
+    { key: 'status', header: t('common.fields.status'), render: (b) => <StatusBadge status={b.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Breakdowns</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('maintenance.titles.breakdowns')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s || 'All'}
+            {s ? statusLabel(s) : t('common.actions.all')}
           </button>
         ))}
       </div>
@@ -42,14 +45,14 @@ export function BreakdownListPage() {
         actions={
           hasPermission('breakdown.report') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + Report Breakdown
+              {t('maintenance.actions.reportBreakdown')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No breakdowns found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('maintenance.empty.noBreakdownsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <ReportBreakdownModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -89,10 +92,10 @@ function ReportBreakdownModal({ open, onClose, onCreated }: { open: boolean; onC
   }
 
   return (
-    <Modal open={open} title="Report Breakdown" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id} required>
+    <Modal open={open} title={t('maintenance.modals.reportBreakdown')} onClose={onClose}>
+      <FormField label={t('common.fields.vehicle')} errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{t('common.fields.select')}</option>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number}
@@ -100,7 +103,7 @@ function ReportBreakdownModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Severity" errors={errors.severity} required>
+      <FormField label={t('maintenance.fields.severity')} errors={errors.severity} required>
         <select value={severity} onChange={(e) => setSeverity(e.target.value)} style={inputStyle}>
           {['MINOR', 'MAJOR', 'IMMOBILIZED'].map((s) => (
             <option key={s} value={s}>
@@ -109,18 +112,18 @@ function ReportBreakdownModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Location (optional)" errors={errors.location}>
+      <FormField label={t('maintenance.fields.locationOptional')} errors={errors.location}>
         <input value={location} onChange={(e) => setLocation(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Description" errors={errors.description} required>
+      <FormField label={t('common.fields.description')} errors={errors.description} required>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !vehicleId || !description} onClick={submit}>
-          Report
+          {t('maintenance.actions.report')}
         </button>
       </div>
     </Modal>

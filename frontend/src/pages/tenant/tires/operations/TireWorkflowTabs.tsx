@@ -12,10 +12,14 @@ import { formatDateTime } from '../../../../utils/date';
 import type { TireActivityItem, TireActivityType, TireItem } from '../../../../types';
 import { TireHistoryModal } from './TireHistoryModal';
 import { formatHours, formatKm } from './tireOperationFormat';
+import { statusLabel } from '../../../../i18n/statusRegistry';
+import { labelText, t as tt, translatedRecord } from '../../../../i18n/i18n';
 
 export interface WorkflowTab {
   key: string;
   label: string;
+  /** Translation key of the tab label. */
+  labelKey?: string;
   /** Any one of these shows the tab; the backend still authorises every action. */
   permissions: string[];
   /** Tires this step applies to (current_status values), e.g. IN_STOCK + RESERVED for Installation. */
@@ -72,11 +76,11 @@ export function TireWorkflowTabs({ title, intro, tabs }: { title: string; intro:
               cursor: 'pointer',
             }}
           >
-            {t.label}
+            {labelText(t)}
           </button>
         ))}
       </div>
-      {active ? <WorkflowTabPanel key={active.key} tab={active} /> : <EmptyState label="You have no tire workflow permissions." />}
+      {active ? <WorkflowTabPanel key={active.key} tab={active} /> : <EmptyState label={tt('tire.empty.youNoTireWorkflowPermissions')} />}
     </div>
   );
 }
@@ -90,7 +94,7 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
   const columns: Column<TireItem>[] = [
     {
       key: 'serial',
-      header: 'Serial',
+      header: tt('tire.fields.serial'),
       render: (t) =>
         tab.serialOpensHistory ? (
           <button type="button" className="btn-link" data-history-open={t.serial_number} onClick={() => setHistoryOf(t)} style={{ fontFamily: 'monospace' }}>
@@ -100,13 +104,13 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
           <Link to={`/app/tires/${t.id}`}>{t.serial_number}</Link>
         ),
     },
-    { key: 'product', header: 'Product', render: (t) => t.product?.name ?? '—' },
-    { key: 'vehicle', header: 'Vehicle', render: (t) => t.current_vehicle?.registration_number ?? '—' },
-    { key: 'position', header: 'Position', render: (t) => t.current_position ?? '—' },
-    { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.current_status} /> },
+    { key: 'product', header: tt('common.fields.product'), render: (t) => t.product?.name ?? '—' },
+    { key: 'vehicle', header: tt('common.fields.vehicle'), render: (t) => t.current_vehicle?.registration_number ?? '—' },
+    { key: 'position', header: tt('inventory.placeholders.position'), render: (t) => t.current_position ?? '—' },
+    { key: 'status', header: tt('common.fields.status'), render: (t) => <StatusBadge status={t.current_status} /> },
     {
       key: 'action',
-      header: 'Action',
+      header: tt('common.fields.action'),
       render: (t) => <Link to={tab.actionHref ? tab.actionHref(t) : `/app/tires/${t.id}#${typeof tab.anchor === 'function' ? tab.anchor(t) : tab.anchor}`}>{tab.actionLabel}</Link>,
     },
   ];
@@ -127,7 +131,7 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
         />
         {error && <ErrorState message={error} />}
         {!error && loading && <LoadingState />}
-        {!error && !loading && data.length === 0 && <EmptyState label="No tires." />}
+        {!error && !loading && data.length === 0 && <EmptyState label={tt('tire.empty.noTires')} />}
         {!error && !loading && data.length > 0 && (
           <div style={{ overflowX: 'auto' }}>
             <Table columns={columns} rows={data} />
@@ -147,7 +151,7 @@ function WorkflowTabPanel({ tab }: { tab: WorkflowTab }) {
   );
 }
 
-const ACTIVITY_LABELS: Record<TireActivityType, string> = {
+const ACTIVITY_LABELS: Record<TireActivityType, string> = translatedRecord({
   INSTALLATION: 'Installation',
   ROTATION: 'Rotation',
   INSPECTION: 'Inspection',
@@ -155,20 +159,20 @@ const ACTIVITY_LABELS: Record<TireActivityType, string> = {
   RETREAD: 'Retread',
   REPAIR: 'Repair',
   SCRAP: 'Scrapped',
-};
+}, { INSTALLATION: 'tire.activity.installation', ROTATION: 'tire.activity.rotation', INSPECTION: 'breadcrumb.inspection', REMOVAL: 'tire.activity.removal', RETREAD: 'tire.status.retread', REPAIR: 'inventory.fields.repair', SCRAP: 'tire.status.scrap' });
 
 /** Retread / repair cycle states (the cycle model's own steps). */
-const CYCLE_STAGE_LABELS: Record<string, string> = {
+const CYCLE_STAGE_LABELS: Record<string, string> = translatedRecord({
   SENT: 'Sent to vendor',
   RECEIVED: 'Received',
   FINAL_INSPECTED: 'Re-inspection',
   APPROVED: 'Completed',
   REJECTED: 'Rejected',
-};
+}, { SENT: 'tire.cycleStage.sent', RECEIVED: 'tire.status.received', FINAL_INSPECTED: 'tire.cycleStage.finalInspected', APPROVED: 'tire.status.approved', REJECTED: 'tire.status.rejected' });
 
 function cycleEvent(e: TireActivityItem): string {
   const stage = e.stage ? (CYCLE_STAGE_LABELS[e.stage] ?? e.stage) : null;
-  const result = e.stage === 'APPROVED' && e.status && e.status !== e.stage ? ` → ${e.status}` : '';
+  const result = e.stage === 'APPROVED' && e.status && e.status !== e.stage ? ` → ${statusLabel(e.status)}` : '';
   return [ACTIVITY_LABELS[e.type], stage].filter(Boolean).join(' · ') + result;
 }
 
@@ -187,30 +191,30 @@ export function TireActivityTable({ types, search, perPage = 20, completedCycles
   // Used Tire Management → Retread: the vehicle / position the tire was last on before the cycle and
   // the tire's own usage up to then (backend values; "—" when unknown).
   const cycleColumns: Column<TireActivityItem>[] = [
-    { key: 'when', header: 'When', render: (e) => formatDateTime(e.occurred_at) },
-    { key: 'event', header: 'Event', render: (e) => cycleEvent(e) },
-    { key: 'serial', header: 'Serial', render: (e) => <Link to={`/app/tires/${e.tire_id}`}>{e.serial_number}</Link> },
-    { key: 'product', header: 'Product', render: (e) => (e.product_name ? <Link to={`/app/tires/products/${e.product_id}`}>{e.product_name}</Link> : '—') },
-    { key: 'vehicle', header: 'Vehicle', render: vehicleCell },
-    { key: 'position', header: 'Position', render: (e) => <PositionLabel code={e.position} /> },
-    { key: 'usage_km', header: 'Usage KM', render: (e) => formatKm(e.usage_km) },
-    { key: 'usage_hours', header: 'Usage Hours', render: (e) => formatHours(e.usage_hours) },
+    { key: 'when', header: tt('common.fields.when'), render: (e) => formatDateTime(e.occurred_at) },
+    { key: 'event', header: tt('common.fields.event'), render: (e) => cycleEvent(e) },
+    { key: 'serial', header: tt('tire.fields.serial'), render: (e) => <Link to={`/app/tires/${e.tire_id}`}>{e.serial_number}</Link> },
+    { key: 'product', header: tt('common.fields.product'), render: (e) => (e.product_name ? <Link to={`/app/tires/products/${e.product_id}`}>{e.product_name}</Link> : '—') },
+    { key: 'vehicle', header: tt('common.fields.vehicle'), render: vehicleCell },
+    { key: 'position', header: tt('inventory.placeholders.position'), render: (e) => <PositionLabel code={e.position} /> },
+    { key: 'usage_km', header: tt('tire.fields.usageKm'), render: (e) => formatKm(e.usage_km) },
+    { key: 'usage_hours', header: tt('tire.fields.usageHours'), render: (e) => formatHours(e.usage_hours) },
   ];
 
   const columns: Column<TireActivityItem>[] = completedCycles ? cycleColumns : [
-    { key: 'when', header: 'When', render: (e) => formatDateTime(e.occurred_at) },
-    { key: 'event', header: 'Event', render: (e) => ACTIVITY_LABELS[e.type] },
-    { key: 'serial', header: 'Serial', render: (e) => <Link to={`/app/tires/${e.tire_id}`}>{e.serial_number}</Link> },
-    { key: 'product', header: 'Product', render: (e) => (e.product_name ? <Link to={`/app/tires/products/${e.product_id}`}>{e.product_name}</Link> : '—') },
-    { key: 'vehicle', header: 'Vehicle', render: vehicleCell },
-    { key: 'position', header: 'Position', render: (e) => e.position ?? '—' },
+    { key: 'when', header: tt('common.fields.when'), render: (e) => formatDateTime(e.occurred_at) },
+    { key: 'event', header: tt('common.fields.event'), render: (e) => ACTIVITY_LABELS[e.type] },
+    { key: 'serial', header: tt('tire.fields.serial'), render: (e) => <Link to={`/app/tires/${e.tire_id}`}>{e.serial_number}</Link> },
+    { key: 'product', header: tt('common.fields.product'), render: (e) => (e.product_name ? <Link to={`/app/tires/products/${e.product_id}`}>{e.product_name}</Link> : '—') },
+    { key: 'vehicle', header: tt('common.fields.vehicle'), render: vehicleCell },
+    { key: 'position', header: tt('inventory.placeholders.position'), render: (e) => e.position ?? '—' },
     { key: 'odometer', header: 'KM', render: (e) => e.odometer ?? '—' },
-    { key: 'status', header: 'Result', render: (e) => [e.status, e.detail].filter(Boolean).join(' · ') || '—' },
+    { key: 'status', header: tt('tire.fields.result'), render: (e) => [e.status, e.detail].filter(Boolean).join(' · ') || '—' },
   ];
 
   if (error) return <ErrorState message={error} />;
   if (loading && rows.length === 0) return <LoadingState />;
-  if (rows.length === 0) return <EmptyState label="No activity yet." />;
+  if (rows.length === 0) return <EmptyState label={tt('tire.empty.noActivityYet')} />;
   return (
     <div data-tire-activity>
       <div style={{ overflowX: 'auto' }}>

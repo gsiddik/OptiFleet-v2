@@ -34,6 +34,7 @@ import type {
   WarehouseZoneItem,
 } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { t as tt } from '../../../i18n/i18n';
 
 const SPEC_RELATION_KEY: Record<string, keyof ProductItem> = {
   SPARE_PART: 'sparepart_spec',
@@ -287,19 +288,19 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
   const canSubmit = name && (subcategoryId || categoryId) && uomId && binId && !submitting;
 
   return (
-    <Modal open title={`Edit ${product.name}`} onClose={onClose} width={680}>
-      <FormField label="Code">
+    <Modal open title={tt('inventory.modals.editName', { name: product.name })} onClose={onClose} width={680}>
+      <FormField label={tt('common.fields.code')}>
         <input value={product.code} disabled style={{ ...inputStyle, color: '#888' }} />
       </FormField>
-      <FormField label="Item Type">
+      <FormField label={tt('common.fields.itemType')}>
         <input value={itemType} disabled style={{ ...inputStyle, color: '#888' }} />
       </FormField>
-      <FormField label="Item Name" errors={errors.name} required>
+      <FormField label={tt('inventory.fields.itemName')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Category" errors={errors.product_category_id} required>
+      <FormField label={tt('common.fields.category')} errors={errors.product_category_id} required>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -308,9 +309,9 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         </select>
       </FormField>
       {subcategories.length > 0 && (
-        <FormField label="Subcategory" errors={errors.product_category_id}>
+        <FormField label={tt('inventory.fields.subcategory')} errors={errors.product_category_id}>
           <select value={subcategoryId} onChange={(e) => setSubcategoryId(e.target.value)} style={inputStyle}>
-            <option value="">None</option>
+            <option value="">{tt('common.fields.none')}</option>
             {subcategories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -327,12 +328,12 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         current={{ group: product.component_group, category: product.component_category, subcategory: product.component_subcategory }}
         requireCategory={CATEGORY_REQUIRED_ITEM_TYPES.includes(itemType) && !!product.component_category_id}
       />
-      <FormField label="Description" errors={errors.description}>
+      <FormField label={tt('common.fields.description')} errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
-      <FormField label="Base UOM" errors={errors.uom_id} required>
+      <FormField label={tt('inventory.fields.baseUom')} errors={errors.uom_id} required>
         <select value={uomId} onChange={(e) => setUomId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {uoms.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name}
@@ -341,10 +342,10 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         </select>
       </FormField>
 
-      <FormField label="Default Storage Location" errors={errors.default_storage_bin_id} required>
+      <FormField label={tt('inventory.fields.defaultStorageLocation')} errors={errors.default_storage_bin_id} required>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
           <select value={warehouseId} onChange={(e) => { setWarehouseId(e.target.value); setZoneId(''); setRackId(''); setBinId(''); }} style={inputStyle}>
-            <option value="">Warehouse…</option>
+            <option value="">{tt('inventory.fields.warehouse')}</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -352,7 +353,7 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
             ))}
           </select>
           <select value={zoneId} onChange={(e) => { setZoneId(e.target.value); setRackId(''); setBinId(''); }} style={inputStyle} disabled={!warehouseId}>
-            <option value="">Zone…</option>
+            <option value="">{tt('inventory.fields.zone')}</option>
             {zones.map((z) => (
               <option key={z.id} value={z.id}>
                 {z.name}
@@ -360,7 +361,7 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
             ))}
           </select>
           <select value={rackId} onChange={(e) => { setRackId(e.target.value); setBinId(''); }} style={inputStyle} disabled={!zoneId}>
-            <option value="">Rack…</option>
+            <option value="">{tt('inventory.fields.rack')}</option>
             {racks.map((r) => (
               <option key={r.id} value={r.id}>
                 {r.name}
@@ -368,7 +369,7 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
             ))}
           </select>
           <select value={binId} onChange={(e) => setBinId(e.target.value)} style={inputStyle} disabled={!rackId}>
-            <option value="">Bin…</option>
+            <option value="">{tt('inventory.fields.bin')}</option>
             {bins.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -378,34 +379,34 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         </div>
       </FormField>
 
-      <FormField label="Active">
+      <FormField label={tt('common.fields.active')}>
         <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> Active
+          <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} /> {tt('common.fields.active')}
         </label>
       </FormField>
 
       <details style={{ marginBottom: 14 }}>
-        <summary style={{ cursor: 'pointer', fontSize: 13, color: '#6b7280', marginBottom: 8 }}>Physical Attributes (optional)</summary>
+        <summary style={{ cursor: 'pointer', fontSize: 13, color: '#6b7280', marginBottom: 8 }}>{tt('inventory.sections.physicalAttributesOptional')}</summary>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 8 }}>
-          <FormField label="Manufacturer" errors={errors.manufacturer}>
+          <FormField label={tt('inventory.fields.manufacturer')} errors={errors.manufacturer}>
             <input value={manufacturer} onChange={(e) => setManufacturer(e.target.value)} style={inputStyle} />
           </FormField>
-          <FormField label="Material" errors={errors.material}>
+          <FormField label={tt('inventory.fields.material')} errors={errors.material}>
             <input value={material} onChange={(e) => setMaterial(e.target.value)} style={inputStyle} />
           </FormField>
-          <FormField label="Production Year" errors={errors.production_year}>
+          <FormField label={tt('inventory.fields.productionYear')} errors={errors.production_year}>
             <NumericInput value={productionYear} onChange={(e) => setProductionYear(e.target.value)} style={inputStyle} />
           </FormField>
-          <FormField label="Weight (kg)" errors={errors.weight_kg}>
+          <FormField label={tt('inventory.fields.weightKg')} errors={errors.weight_kg}>
             <NumericInput step="0.001" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} style={inputStyle} />
           </FormField>
-          <FormField label="Length (mm)" errors={errors.length_mm}>
+          <FormField label={tt('inventory.fields.lengthMm')} errors={errors.length_mm}>
             <NumericInput value={lengthMm} onChange={(e) => setLengthMm(e.target.value)} style={inputStyle} />
           </FormField>
-          <FormField label="Width (mm)" errors={errors.width_mm}>
+          <FormField label={tt('inventory.fields.widthMm')} errors={errors.width_mm}>
             <NumericInput value={widthMm} onChange={(e) => setWidthMm(e.target.value)} style={inputStyle} />
           </FormField>
-          <FormField label="Height (mm)" errors={errors.height_mm}>
+          <FormField label={tt('inventory.fields.heightMm')} errors={errors.height_mm}>
             <NumericInput value={heightMm} onChange={(e) => setHeightMm(e.target.value)} style={inputStyle} />
           </FormField>
         </div>
@@ -416,15 +417,15 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
           existing Product ID, so it belongs outside this Create/Edit form). */}
 
       {itemType !== 'OTHER' && (
-        <FormField label="Brand / Manufacturer" errors={errors.brand} required={brandRequired(itemType)}>
+        <FormField label={tt('inventory.fields.brandManufacturer')} errors={errors.brand} required={brandRequired(itemType)}>
           <input value={brand} onChange={(e) => setBrand(e.target.value)} style={inputStyle} />
         </FormField>
       )}
 
       {needsField('track_serial_number', itemType) && (
-        <FormField label="Serialized" errors={errors.track_serial_number} required>
+        <FormField label={tt('inventory.fields.serialized')} errors={errors.track_serial_number} required>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input type="checkbox" checked={trackSerialNumber} onChange={(e) => setTrackSerialNumber(e.target.checked)} /> Each unit requires serial tracking
+            <input type="checkbox" checked={trackSerialNumber} onChange={(e) => setTrackSerialNumber(e.target.checked)} /> {tt('inventory.fields.eachUnitRequiresSerialTracking')}
           </label>
         </FormField>
       )}
@@ -433,7 +434,7 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
         <>
           <hr style={{ margin: '18px 0', border: 0, borderTop: '1px solid #e5e7eb' }} />
           <p style={{ fontSize: 12, color: '#9ca3af', marginTop: -8, marginBottom: 12 }}>
-            Vehicle Compatibility is managed separately below on the Product page and is not affected by this form.
+            {tt('inventory.help.vehicleCompatibilityManagedSeparatelyBelowProduct')}
           </p>
         </>
       )}
@@ -492,10 +493,10 @@ export function EditProductModal({ product, onClose, onSaved }: { product: Produ
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={!canSubmit} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
     </Modal>

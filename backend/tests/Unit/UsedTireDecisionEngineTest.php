@@ -216,4 +216,27 @@ class UsedTireDecisionEngineTest extends TestCase
         $damaged = $this->decide($this->goodAnswers(['bulge_separation' => 'PRESENT']), $this->uniform('13.4'), [], null, [], '16');
         $this->assertSame(['SCRAP', '80.00'], [$damaged['recommendation'], $damaged['remaining_tread_percent']]);
     }
+
+    public function test_every_reason_and_follow_up_has_a_machine_readable_code_that_renders_to_the_text(): void
+    {
+        $render = fn (array $codes) => array_map(\App\Domain\Shared\Support\Messages::render(...), $codes);
+        $answers = $this->goodAnswers(['leak_foreign_object' => 'YES', 'repair_eligibility' => 'YES', 'wear_pattern' => 'CENTER']);
+        $cases = [
+            $this->decide($answers, $this->measurements('7.0'), [$this->puncture(['diameter_mm' => '12'])]),          // nested damage label + field
+            $this->decide($this->goodAnswers(['bead_condition' => 'TORN', 'identity_status' => null]), $this->measurements('9.0')),
+            $this->decide($this->goodAnswers(), []),                                                                  // missing tread points (list)
+            $this->decide($this->goodAnswers(), $this->measurements('9.0')),                                           // REUSE
+        ];
+        foreach ($cases as $r) {
+            $this->assertSame($r['reasons'], $render($r['reason_codes']));
+            $this->assertSame($r['open_items'], $render($r['open_item_codes']));
+            $this->assertSame($r['follow_ups'], $render($r['follow_up_codes']));
+            foreach ($r['reason_codes'] as $code) {
+                $this->assertArrayHasKey($code['code'], \App\Domain\Shared\Support\Messages::EN);
+            }
+        }
+        $label = $cases[0]['reason_codes'][0]['params']['label'];
+        $this->assertSame(['tire.reasons.damageLabel', 'tire.damageTypes.puncture'], [$label['code'], $label['params']['type']['code']]);
+        $this->assertSame(['Center wear: check tire pressure (over-inflation).'], $cases[0]['follow_ups']);
+    }
 }

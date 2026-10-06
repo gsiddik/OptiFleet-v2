@@ -1,0 +1,9 @@
+{
+  "labels": {
+    "amendmentNumberAmendmentNumberProratedAdjustment": "Amendment #{{amendment_number}} prorated adjustment through {{toDateString}}"
+  },
+  "notes": {
+    "amendmentRejected": "Rejected: {{note}}",
+    "contractTerminated": "Terminated: {{reason}}"
+  }
+}

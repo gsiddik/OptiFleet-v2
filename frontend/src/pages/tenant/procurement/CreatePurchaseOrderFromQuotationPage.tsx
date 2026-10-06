@@ -7,6 +7,8 @@ import { ErrorState, LoadingState } from '../../../components/States';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
 import type { VendorQuotationItem, Warehouse } from '../../../types';
+import { statusLabel } from '../../../i18n/statusRegistry';
+import { t } from '../../../i18n/i18n';
 
 function today(): string {
   const d = new Date();
@@ -72,16 +74,16 @@ export function CreatePurchaseOrderFromQuotationPage() {
   if (!quotation.can_create_purchase_order) {
     return (
       <div style={{ maxWidth: 820 }}>
-        <BackButton fallbackTo="/app/quotations" label="← Back to Quotation" />
-        <h1 style={{ fontSize: 22, marginBottom: 16 }}>Create Purchase Order</h1>
+        <BackButton fallbackTo="/app/quotations" label={t('procurement.actions.backToQuotation')} />
+        <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('procurement.actions.createPurchaseOrder')}</h1>
         <div className="card" style={{ fontSize: 13 }}>
           {quotation.purchase_order ? (
             <>
-              A Purchase Order has already been created from this quotation:{' '}
+              {t('procurement.help.purchaseOrderAlreadyBeenCreatedQuotation')}:{' '}
               <Link to={`/app/purchase-orders/${quotation.purchase_order.id}`}>{quotation.purchase_order.po_number}</Link>.
             </>
           ) : (
-            <>This quotation is {quotation.status} — only the selected quotation of an RFQ can be converted to a Purchase Order.</>
+            <>{t('procurement.help.quotationNotConvertible', { status: statusLabel(quotation.status) })}</>
           )}
         </div>
       </div>
@@ -93,28 +95,28 @@ export function CreatePurchaseOrderFromQuotationPage() {
 
   return (
     <div style={{ maxWidth: 820 }}>
-      <BackButton fallbackTo="/app/quotations" label="← Back to Quotation" />
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Create Purchase Order</h1>
+      <BackButton fallbackTo="/app/quotations" label={t('procurement.actions.backToQuotation')} />
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('procurement.actions.createPurchaseOrder')}</h1>
       {error && <ErrorState message={error} />}
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13, marginTop: 0 }}>
-          Vendor: <strong>{quotation.partner?.name}</strong>
+          {t('common.fields.vendor')}: <strong>{quotation.partner?.name}</strong>
           {quotation.rfq?.rfq_number && (
             <>
-              {' '}· RFQ <strong>{quotation.rfq.rfq_number}</strong>
+              {' '}{t('procurement.fields.rfq')} <strong>{quotation.rfq.rfq_number}</strong>
             </>
           )}
-          {' '}· Lead time: <strong>{leadDays !== null ? `${leadDays} day(s) after PO` : 'not provided'}</strong>
+          {' '}{t('procurement.fields.leadTime')}: <strong>{leadDays !== null ? t('procurement.help.leadDaysDaySAfterPo', { count: leadDays }) : t('procurement.fields.notProvided')}</strong>
         </p>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 520 }}>
             <thead>
               <tr style={{ textAlign: 'left', background: '#f9fafb' }}>
-                <th style={{ padding: 6 }}>Product</th>
-                <th style={{ padding: 6, textAlign: 'right' }}>Quantity</th>
-                <th style={{ padding: 6, textAlign: 'right' }}>Unit Price (vendor)</th>
-                <th style={{ padding: 6, textAlign: 'right' }}>Line Total</th>
+                <th style={{ padding: 6 }}>{t('common.fields.product')}</th>
+                <th style={{ padding: 6, textAlign: 'right' }}>{t('common.fields.quantity')}</th>
+                <th style={{ padding: 6, textAlign: 'right' }}>{t('procurement.fields.unitPriceVendor')}</th>
+                <th style={{ padding: 6, textAlign: 'right' }}>{t('procurement.fields.lineTotal')}</th>
               </tr>
             </thead>
             <tbody>
@@ -130,7 +132,7 @@ export function CreatePurchaseOrderFromQuotationPage() {
             <tfoot>
               <tr style={{ borderTop: '2px solid #e5e7eb', fontWeight: 600 }}>
                 <td style={{ padding: 6 }} colSpan={3}>
-                  Total
+                  {t('procurement.help.total')}
                 </td>
                 <td style={{ padding: 6, textAlign: 'right' }}>{formatMoney(quotation.total)}</td>
               </tr>
@@ -140,9 +142,9 @@ export function CreatePurchaseOrderFromQuotationPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, maxWidth: 560 }}>
-        <FormField label="Delivery Warehouse" errors={errors.delivery_warehouse_id} required>
-          <select aria-label="Delivery warehouse" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
-            <option value="">Select…</option>
+        <FormField label={t('procurement.fields.deliveryWarehouse')} errors={errors.delivery_warehouse_id} required>
+          <select aria-label={t('procurement.fields.deliveryWarehouse2')} value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
+            <option value="">{t('common.fields.select')}</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -150,16 +152,16 @@ export function CreatePurchaseOrderFromQuotationPage() {
             ))}
           </select>
         </FormField>
-        <FormField label="Order Date" errors={errors.order_date} required>
-          <input type="date" aria-label="Order date" value={orderDate} onChange={(e) => setOrderDate(e.target.value)} style={inputStyle} />
+        <FormField label={t('procurement.fields.orderDate')} errors={errors.order_date} required>
+          <input type="date" aria-label={t('procurement.fields.orderDate2')} value={orderDate} onChange={(e) => setOrderDate(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <p style={{ fontSize: 13, color: '#374151' }}>
-        Expected Receipt Date: <strong>{validDate && leadDays !== null ? addDays(orderDate, leadDays) : '—'}</strong>
-        <span style={{ color: '#6b7280' }}> (Order Date + vendor lead time; calculated by the system)</span>
+        {t('procurement.fields.expectedReceiptDate')}: <strong>{validDate && leadDays !== null ? addDays(orderDate, leadDays) : '—'}</strong>
+        <span style={{ color: '#6b7280' }}> {t('procurement.help.orderDateVendorLeadTimeCalculated')}</span>
       </p>
       <button className="btn-primary" disabled={submitting || !warehouseId || !validDate} onClick={submit}>
-        {submitting ? 'Creating…' : 'Create Purchase Order'}
+        {submitting ? t('common.actions.creating') : t('procurement.actions.createPurchaseOrder')}
       </button>
     </div>
   );

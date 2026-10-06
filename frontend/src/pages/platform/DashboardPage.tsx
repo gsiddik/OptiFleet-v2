@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../../api/client';
 import { ErrorState, LoadingState } from '../../components/States';
+import { formatDateTime } from '../../utils/date';
+import { t } from '../../i18n/i18n';
 
 interface DashboardData {
   tenants_total: number;
@@ -33,26 +35,26 @@ export function PlatformDashboardPage() {
   if (!data) return <LoadingState />;
 
   const stats = [
-    { label: 'Total Tenants', value: data.tenants_total },
-    { label: 'Active Tenants', value: data.tenants_active },
-    { label: 'Platform Users', value: data.platform_users_total },
-    { label: 'Tenant Users', value: data.tenant_users_total },
-    { label: 'Modules', value: data.modules_total },
+    { label: t('platform.dashboard.sections.totalTenants'), value: data.tenants_total },
+    { label: t('platform.dashboard.sections.activeTenants'), value: data.tenants_active },
+    { label: t('platform.dashboard.sections.platformUsers'), value: data.platform_users_total },
+    { label: t('platform.dashboard.sections.tenantUsers'), value: data.tenant_users_total },
+    { label: t('platform.dashboard.sections.modules'), value: data.modules_total },
   ];
 
   const commercialStats = [
-    { label: 'Pending Subscriptions', value: data.subscriptions_pending },
-    { label: 'Active Subscriptions', value: data.subscriptions_active },
-    { label: 'Suspended Subscriptions', value: data.subscriptions_suspended, alert: data.subscriptions_suspended > 0 },
-    { label: 'Contracts Expiring', value: data.contracts_expiring, alert: data.contracts_expiring > 0 },
-    { label: 'Invoices Outstanding', value: data.invoices_outstanding },
-    { label: 'Invoices Overdue', value: data.invoices_overdue, alert: data.invoices_overdue > 0 },
-    { label: 'Payments Pending Verification', value: data.payments_pending_verification, alert: data.payments_pending_verification > 0 },
+    { label: t('platform.dashboard.sections.pendingSubscriptions'), value: data.subscriptions_pending },
+    { label: t('platform.dashboard.sections.activeSubscriptions'), value: data.subscriptions_active },
+    { label: t('platform.dashboard.sections.suspendedSubscriptions'), value: data.subscriptions_suspended, alert: data.subscriptions_suspended > 0 },
+    { label: t('platform.dashboard.sections.contractsExpiring'), value: data.contracts_expiring, alert: data.contracts_expiring > 0 },
+    { label: t('platform.dashboard.sections.invoicesOutstanding'), value: data.invoices_outstanding },
+    { label: t('platform.dashboard.sections.invoicesOverdue'), value: data.invoices_overdue, alert: data.invoices_overdue > 0 },
+    { label: t('platform.dashboard.sections.paymentsPendingVerification'), value: data.payments_pending_verification, alert: data.payments_pending_verification > 0 },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Platform Dashboard</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 20 }}>{t('platform.dashboard.titles.platformDashboard')}</h1>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
         {stats.map((s) => (
           <div key={s.label} className="card">
@@ -62,7 +64,7 @@ export function PlatformDashboardPage() {
         ))}
       </div>
 
-      <h2 style={{ fontSize: 16, marginBottom: 12 }}>Commercial Overview</h2>
+      <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('platform.dashboard.sections.commercialOverview')}</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 28 }}>
         {commercialStats.map((s) => (
           <div key={s.label} className="card">
@@ -72,12 +74,12 @@ export function PlatformDashboardPage() {
         ))}
       </div>
 
-      <h2 style={{ fontSize: 16, marginBottom: 12 }}>Recent Activity</h2>
+      <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('platform.dashboard.sections.recentActivity')}</h2>
       <div className="card">
-        {data.recent_audit_logs.length === 0 && <div style={{ color: '#9ca3af' }}>No recent activity.</div>}
+        {data.recent_audit_logs.length === 0 && <div style={{ color: '#9ca3af' }}>{t('platform.dashboard.empty.noRecentActivity')}</div>}
         {data.recent_audit_logs.map((log) => (
           <div key={log.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
-            <strong>{log.resource_type}</strong> {log.action} — {new Date(log.created_at).toLocaleString()}
+            <strong>{log.resource_type}</strong> {log.action} — {formatDateTime(log.created_at)}
           </div>
         ))}
       </div>

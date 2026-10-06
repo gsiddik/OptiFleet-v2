@@ -1,0 +1,8 @@
+{
+  "system": {
+    "platformSuperadmin": {
+      "description": "Akses platform penuh.",
+      "name": "Superadmin Platform"
+    }
+  }
+}

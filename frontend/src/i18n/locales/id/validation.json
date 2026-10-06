@@ -1,0 +1,331 @@
+{
+  "accessControl": {
+    "cannotRemoveManagePermission": "Anda tidak dapat menghapus \"{{permission}}\" dari peran yang merupakan satu-satunya sumber izin tersebut — Anda akan kehilangan akses ke manajemen peran.",
+    "invalidPermissions": "{{count}} izin yang dipilih tidak ada atau bukan milik cakupan {{scope}}.",
+    "platformSuperadminRoleAlwaysHoldsEvery": "Peran superadmin platform selalu memiliki semua izin platform dan tidak dapat diubah."
+  },
+  "after": "Kolom :attribute harus berupa tanggal setelah :date.",
+  "after_or_equal": "Kolom :attribute harus berupa tanggal yang sama dengan atau setelah :date.",
+  "array": "Kolom :attribute harus berupa daftar.",
+  "auth": {
+    "accountBeenDeactivated": "Akun ini telah dinonaktifkan.",
+    "noActiveTenantMembershipFoundAccount": "Tidak ditemukan keanggotaan penyewa aktif untuk akun ini.",
+    "providedCredentialsIncorrect": "Kredensial yang diberikan salah.",
+    "youDoNotActiveMembershipTenant": "Anda tidak memiliki keanggotaan aktif untuk penyewa ini."
+  },
+  "between": {
+    "numeric": "Kolom :attribute harus antara :min dan :max."
+  },
+  "boolean": "Kolom :attribute harus bernilai benar atau salah.",
+  "componentAsset": {
+    "chooseWarehouseRepairedComponentStored": "Pilih gudang tempat komponen yang diperbaiki disimpan.",
+    "componentMustRemovedRepairDispositionBefore": "Komponen harus dilepas dengan disposisi perbaikan sebelum memulai perbaikan."
+  },
+  "configuration": {
+    "chooseDocumentTypeSupportsDocumentNumbering": "Pilih jenis dokumen yang mendukung penomoran dokumen.",
+    "chooseDocumentTypeSupportsDocumentTemplates": "Pilih jenis dokumen yang mendukung templat dokumen.",
+    "chooseNotificationEventCompanyConfigure": "Pilih event notifikasi yang dapat dikonfigurasi oleh perusahaan Anda.",
+    "sequencePaddingMustIntegerBetween1": "sequence_padding harus bilangan bulat antara 1 dan 12.",
+    "sequenceStartMustPositiveInteger": "sequence_start harus bilangan bulat positif."
+  },
+  "contract": {
+    "unitPriceMustNotNegative": "Harga satuan tidak boleh negatif."
+  },
+  "current_password": "Kata sandi salah.",
+  "date": "Kolom :attribute harus berupa tanggal yang valid.",
+  "decimal": "Kolom :attribute harus memiliki :decimal angka desimal.",
+  "email": "Kolom :attribute harus berupa alamat email yang valid.",
+  "exists": ":attribute yang dipilih tidak valid.",
+  "file": "Kolom :attribute harus berupa file.",
+  "goodsReceipt": {
+    "amountMustNumberUp2Decimals": "Nilai harus berupa angka dengan maksimal 2 desimal.",
+    "invoiceDocumentMustPdfFile": "Dokumen faktur harus berupa file PDF.",
+    "termsPaymentMustWholeNumberWorking": "Termin pembayaran harus berupa jumlah hari kerja yang bulat."
+  },
+  "gt": {
+    "numeric": "Kolom :attribute harus lebih dari :value."
+  },
+  "in": ":attribute yang dipilih tidak valid.",
+  "integer": "Kolom :attribute harus berupa bilangan bulat.",
+  "inventory": {
+    "adjustmentDirectionMustPlusMinus": "Arah penyesuaian harus PLUS atau MINUS.",
+    "adjustmentQuantityMustPositive": "Jumlah penyesuaian harus positif.",
+    "consumptionQuantityMustPositive": "Jumlah pemakaian harus positif.",
+    "issueQuantityMustPositive": "Jumlah pengeluaran harus positif.",
+    "receiptQuantityMustPositive": "Jumlah penerimaan harus positif.",
+    "releaseQuantityMustPositive": "Jumlah pelepasan harus positif.",
+    "reservationQuantityMustPositive": "Jumlah reservasi harus positif.",
+    "scrapQuantityMustPositive": "Jumlah scrap harus positif."
+  },
+  "invoice": {
+    "adjustmentAmountMustGreaterThanZero": "Nilai penyesuaian harus lebih dari nol."
+  },
+  "maintenance": {
+    "assessmentGroupsDuplicated": "Setiap grup inspeksi hanya boleh muncul satu kali. Duplikat: {{groups}}",
+    "assessmentGroupsMissing": "Ke-14 grup inspeksi wajib diisi. Belum diisi: {{groups}}"
+  },
+  "maintenancePackage": {
+    "leastOneItemMustSelectedBefore": "Minimal satu item harus dipilih sebelum diaktifkan."
+  },
+  "maintenancePolicy": {
+    "workshopWorkingDaysMustSetCompany": "Hari Kerja Bengkel harus diatur di Profil Perusahaan sebelum membuat jadwal periodik."
+  },
+  "masterData": {
+    "abbreviationAbbreviationAlreadyUsedAnotherComponent": "Singkatan \"{{abbreviation}}\" sudah digunakan oleh Grup Komponen lain (termasuk grup yang terhapus) dan tidak dapat digunakan ulang.",
+    "abbreviationCannotChangedBecauseComponentGroup": "Singkatan tidak dapat diubah karena Grup Komponen ini sudah digunakan oleh Produk (dan untuk membuat SKU Produk).",
+    "anotherActiveComponentGroupAlreadyUses": "Grup Komponen aktif lain sudah menggunakan kode \"{{code}}\".",
+    "categoryAlreadyUsedProductsCannotMoved": "Kategori ini sudah digunakan oleh Produk dan tidak dapat dipindahkan ke Grup Komponen lain. Klasifikasikan ulang Produk tersebut secara eksplisit.",
+    "codeCodeAlreadyUsedUnderParent": "Kode \"{{code}}\" sudah digunakan di bawah induk ini (termasuk data yang terhapus).",
+    "componentGroupStillActiveSubGroups": "Grup Komponen ini masih memiliki sub-grup aktif. Hapus atau pindahkan terlebih dahulu.",
+    "itemTypesStranded": "Produk yang ada dengan Jenis Item {{itemTypes}} menggunakan Subkategori ini; tetap izinkan Jenis Item tersebut atau klasifikasikan ulang Produk tersebut terlebih dahulu.",
+    "selectedCategoryNotAvailableInactiveDeleted": "Kategori yang dipilih tidak tersedia (nonaktif, terhapus, Grup Komponennya sudah dihentikan, atau tidak terlihat).",
+    "selectedComponentGroupNotAvailableInactive": "Grup Komponen yang dipilih tidak tersedia (nonaktif, terhapus, atau tidak terlihat).",
+    "selectedVehicleBrandNotAvailable": "Merek Kendaraan yang dipilih tidak tersedia.",
+    "selectedVehicleModelDoesNotBelong": "Model Kendaraan yang dipilih bukan bagian dari Merek Kendaraan yang dipilih.",
+    "selectedVehicleModelNotAvailable": "Model Kendaraan yang dipilih tidak tersedia.",
+    "subcategoryAlreadyUsedProductsCannotMoved": "Subkategori ini sudah digunakan oleh Produk dan tidak dapat dipindahkan ke Kategori lain. Klasifikasikan ulang Produk tersebut secara eksplisit.",
+    "valueAlreadyExistsUnderParent": "\"{{value}}\" sudah ada di bawah induk ini."
+  },
+  "max": {
+    "array": "Kolom :attribute tidak boleh memiliki lebih dari :max item.",
+    "file": "Kolom :attribute tidak boleh lebih dari :max kilobyte.",
+    "numeric": "Kolom :attribute tidak boleh lebih dari :max.",
+    "string": "Kolom :attribute tidak boleh lebih dari :max karakter."
+  },
+  "mimes": "Kolom :attribute harus berupa file dengan jenis: :values.",
+  "min": {
+    "array": "Kolom :attribute minimal memiliki :min item.",
+    "numeric": "Kolom :attribute minimal :min.",
+    "string": "Kolom :attribute minimal :min karakter."
+  },
+  "not_in": ":attribute yang dipilih tidak valid.",
+  "notification": {
+    "chooseKindEachWhat": "Pilih {{kind}} untuk setiap {{what}}.",
+    "chooseLeastOneChannelAppEmail": "Pilih minimal satu kanal: Dalam Aplikasi atau Email.",
+    "conditionsMustMatchedAllAny": "Kondisi harus dicocokkan dengan Semua (AND) atau Salah Satu (OR).",
+    "notificationTemplateMustDeclareLeastOne": "Templat notifikasi harus memiliki minimal satu kanal."
+  },
+  "numeric": "Kolom :attribute harus berupa angka.",
+  "partRequest": {
+    "selectWarehouseTenant": "Pilih gudang milik penyewa ini."
+  },
+  "present": "Kolom :attribute harus ada.",
+  "procurement": {
+    "eachQuotationLineMustDistinctItem": "Setiap baris penawaran harus merupakan item berbeda dari RFQ ini.",
+    "eachReturnedLineMustItemPurchase": "Setiap baris yang diretur harus merupakan item dari Purchase Order ini.",
+    "enterQuantityReturnedVendorLeastOne": "Masukkan jumlah yang diretur ke vendor untuk minimal satu item.",
+    "enterReceivedQuantityGreaterThanZero": "Masukkan jumlah diterima lebih dari nol.",
+    "invalidDecisionDecisionMustApprovedRejected": "Keputusan '{{decision}}' tidak valid — harus APPROVED atau REJECTED.",
+    "invoiceNumberRequired": "Nomor faktur wajib diisi.",
+    "onlyActiveSupplierSparePartSupplier": "Hanya Pemasok, Pemasok Suku Cadang, atau Pemasok Ban yang aktif yang dapat diundang.",
+    "onlyVendorInvitedRfqSubmitQuotation": "Hanya vendor yang diundang ke RFQ ini yang dapat mengirim penawaran.",
+    "orderDateRequiredYyyyMmDd": "Tanggal Pesanan wajib diisi (YYYY-MM-DD).",
+    "partnerAlreadySubmittedQuotationRfq": "{{partner}} sudah mengirim penawaran untuk RFQ ini.",
+    "productListedMoreThanOnce": "\"{{product}}\" tercantum lebih dari satu kali.",
+    "qtyReturnedVendorMustGreaterThan": "Qty Diretur ke Vendor harus lebih dari nol.",
+    "quantityMustGreaterThanZero": "Jumlah harus lebih dari nol.",
+    "quotationDocumentMayNotLargerThan": "Dokumen penawaran tidak boleh lebih dari 10 MB.",
+    "quotationDocumentMustPdfMicrosoftWord": "Dokumen penawaran harus berupa file PDF atau Microsoft Word (DOC/DOCX).",
+    "returnOptionMustRefundRequestRedelivery": "Opsi Retur harus Permintaan Refund atau Permintaan Pengiriman Ulang.",
+    "selectActiveProductTenant": "Pilih produk aktif milik penyewa ini."
+  },
+  "productMaster": {
+    "calibrationIntervalRequiredWhenCalibrationRequired": "Interval Kalibrasi wajib diisi jika Kalibrasi diwajibkan.",
+    "certificationTypeRequiredWhenCertificationRequired": "Jenis Sertifikasi wajib diisi jika Sertifikasi diwajibkan.",
+    "conversionBaseUomRequiredWhenPurchase": "Konversi ke UOM Dasar wajib diisi jika UOM Pembelian berbeda dari UOM Dasar.",
+    "dualLoadIndexRequiredTruckBus": "Indeks Beban Ganda wajib diisi untuk ban Truk & Bus.",
+    "fileExceeds10mbMaximumSize": "File melebihi ukuran maksimum 10MB.",
+    "fileExceeds5mbMaximumSize": "File melebihi ukuran maksimum 5MB.",
+    "intervalRequiredWhenFlagRequired": "Interval wajib diisi jika {{flag}} diwajibkan.",
+    "maintenanceIntervalRequiredWhenMaintenanceRequired": "Interval Pemeliharaan wajib diisi jika Pemeliharaan diwajibkan.",
+    "plyRatingRequiredTruckBusTires": "Peringkat Lapisan wajib diisi untuk ban Truk & Bus.",
+    "productCountedWholeUnitsQuantityMust": "\"{{product}}\" dihitung dalam satuan utuh — jumlah harus bilangan bulat.",
+    "safetyDataSheetUploadOnlyApplies": "Unggahan Lembar Data Keselamatan hanya berlaku untuk produk Bahan Habis Pakai.",
+    "selectedCategoryDoesNotApplyItem": "Kategori yang dipilih tidak berlaku untuk Jenis Item ini.",
+    "selectedComponentGroupNoAbbreviationYet": "Grup Komponen yang dipilih belum memiliki singkatan; atur singkatan 3 hurufnya sebelum membuat Produk (bagian dari SKU).",
+    "selectedStarRatingDoesNotBelong": "Peringkat Bintang yang dipilih bukan bagian dari TRA Code yang dipilih.",
+    "shelfLifeRequiredWhenExpiryTracking": "Masa Simpan wajib diisi jika Pelacakan Kedaluwarsa diaktifkan.",
+    "starRatingRequiredOnceTraCode": "Peringkat Bintang wajib diisi setelah TRA Code dipilih.",
+    "storageRequirementRequiredWhenConsumableMarked": "Persyaratan Penyimpanan wajib diisi jika bahan habis pakai ditandai Berbahaya.",
+    "tenantContextMustSetTenantProduct": "Konteks penyewa harus diatur ke penyewa tempat Produk dibuat.",
+    "unsupportedFileExtensionOnlyJpgJpeg": "Ekstensi file tidak didukung. Hanya .jpg, .jpeg, atau .png yang diterima.",
+    "unsupportedFileTypeOnlyJpegPng": "Jenis file tidak didukung. Hanya gambar JPEG, PNG, WEBP, atau PDF yang diterima.",
+    "unsupportedFileTypeOnlyJpgPng": "Jenis file tidak didukung. Hanya gambar JPG atau PNG yang diterima."
+  },
+  "regex": "Format kolom :attribute tidak valid.",
+  "required": "Kolom :attribute wajib diisi.",
+  "required_if": "Kolom :attribute wajib diisi jika :other bernilai :value.",
+  "required_with": "Kolom :attribute wajib diisi jika :values diisi.",
+  "required_without": "Kolom :attribute wajib diisi jika :values tidak diisi.",
+  "shared": {
+    "fileTooLarge": "{{label}} tidak boleh lebih besar dari {{maxMb}} MB.",
+    "labelCouldNotUploadedPleaseTry": "{{label}} tidak dapat diunggah. Silakan coba lagi.",
+    "labelMust": "{{label}} harus berupa",
+    "labelMustNotLargerThan": "{{label}} tidak boleh lebih besar dari"
+  },
+  "size": {
+    "array": "Kolom :attribute harus berisi :size item.",
+    "numeric": "Kolom :attribute harus :size.",
+    "string": "Kolom :attribute harus :size karakter."
+  },
+  "string": "Kolom :attribute harus berupa teks.",
+  "tire": {
+    "andTruckConfigurationType": "dan jenis konfigurasi truk",
+    "approvalDispositionMustReturnServiceScrap": "Disposisi persetujuan harus RETURN_TO_SERVICE, SCRAP, atau QUARANTINE.",
+    "assignWheelsConfigurationVehicleBeforeRegistering": "Tetapkan konfigurasi roda untuk kendaraan ini sebelum mendaftarkan ban.",
+    "bothTiresMustCurrentlyInstalledSwap": "Kedua ban harus sedang terpasang untuk ditukar posisinya.",
+    "bothTiresMustInstalledSameVehicle": "Kedua ban harus terpasang pada kendaraan yang sama untuk ditukar posisinya.",
+    "chooseSerialNumberReplacingTireCode": "Pilih nomor seri yang menggantikan ban di {{code}}.",
+    "chooseWarehouseReuseTireReturned": "Pilih gudang tujuan pengembalian ban REUSE.",
+    "codeNotPositionVehicleSWheels": "{{code}} bukan posisi pada Konfigurasi Roda kendaraan ini ({{config_code}}).",
+    "configCodeClientCodeDoesNot": "Config Code '{{clientCode}}' tidak sesuai dengan konfigurasi; server menghasilkan '{{config_code}}'.",
+    "dispositionMustOneReuseRetreadRepair": "Disposisi harus salah satu dari: REUSE, RETREAD, REPAIR, SCRAP.",
+    "estimatedPriceMustGreaterThanZero": "Estimasi Harga harus lebih dari nol dengan maksimal 2 desimal.",
+    "estimatedPriceMustNumber": "Estimasi Harga harus berupa angka.",
+    "finalInspectionResultMustSafeUnsafe": "Hasil inspeksi akhir harus SAFE atau UNSAFE.",
+    "importHeaderMismatch": "Baris header pada \"{{sheet}}\" harus persis: {{headers}}.",
+    "importMaxRows": "Paling banyak {{maxRows}} baris ban yang dapat diimpor per file.",
+    "importNoRows": "Sheet \"{{sheet}}\" tidak memiliki baris ban. Isi satu ban per baris di bawah header.",
+    "importSerialRepeated": "Nomor seri ini berulang di dalam file (baris {{row}}).",
+    "importSheetMissing": "Workbook tidak memiliki sheet bernama \"{{sheet}}\". Unduh templat dan isi sheet tersebut.",
+    "installationDateTimeCannotFuture": "Tanggal dan waktu pemasangan tidak boleh di masa depan.",
+    "installedAtSourceMustKnownEstimated": "installedAtSource harus KNOWN, ESTIMATED, atau UNKNOWN.",
+    "kmTireOperationsCannotLowerThan": "KM saat Operasi Ban tidak boleh lebih rendah dari KM terakhir yang tercatat untuk ban yang dipilih ({{floor}}).",
+    "leastOneFrontAxleRequired": "Minimal satu poros depan wajib ada.",
+    "leastOneRearAxleRequired": "Minimal satu poros belakang wajib ada.",
+    "pairBSelectedTwice": "Pasangan {{a}} ↔ {{b}} dipilih dua kali.",
+    "positionCannotRotatedItself": "Posisi {{a}} tidak dapat dirotasi dengan dirinya sendiri.",
+    "positionCodeAlreadyAnotherRotationPair": "Posisi {{code}} sudah ada dalam pasangan rotasi lain.",
+    "positionCodeAlreadyOpenTireOperation": "Posisi {{code}} sudah ada dalam Operasi Ban yang terbuka ({{operation_type}}, Work Order {{wo_number}}).",
+    "positionCodeNoTireDataYet": "Posisi {{code}} belum memiliki data ban. Lengkapi di Detail Kendaraan → Konfigurasi Roda terlebih dahulu.",
+    "positionCodeNotPositionVehicleS": "{{position_code}} bukan posisi pada konfigurasi roda kendaraan ini.",
+    "positionCodeSelectedTwice": "Posisi {{code}} dipilih dua kali.",
+    "positionPositionCodeAlreadyTireSerial": "Posisi {{position_code}} sudah terpasang ban {{serial_number}}.",
+    "replacementCodeMustNewStockReuse": "Pengganti untuk {{code}} harus berupa Stok Baru atau ban REUSE. Ban yang dilepas harus lulus inspeksi di Manajemen Ban Bekas terlebih dahulu.",
+    "replacementCodeMustSameTireProduct": "Pengganti untuk {{code}} harus berupa Produk Ban yang sama dengan ban yang terpasang.",
+    "reuseSerialSerialNumberNoWarehouse": "Seri REUSE {{serial_number}} tidak ada di gudang mana pun: seri ini dikeluarkan melalui Permintaan Suku Cadang dari jumlah ban bekas di gudangnya.",
+    "sameSerialNumberCannotReplaceTwo": "Nomor seri yang sama tidak dapat menggantikan dua posisi.",
+    "selectLeastOneTirePosition": "Pilih minimal satu posisi ban.",
+    "selectProductWhoseItemTypeTire": "Pilih produk dengan Jenis Item Ban.",
+    "sellTypeMustSellOperationalReuse": "sellType harus SELL_FOR_OPERATIONAL_REUSE, SELL_AS_RETREADABLE_CASING, atau SELL_AS_SCRAP_OR_RECYCLABLE_MATERIAL.",
+    "serialNumberCaseWhitespaceInsensitiveAlready": "Nomor seri ini (tanpa membedakan huruf besar/kecil dan spasi) sudah terdaftar untuk penyewa ini.",
+    "serialNumberSerialNumberAlreadyRegistered": "Nomor seri {{serial_number}} sudah terdaftar untuk produk ban lain.",
+    "serialSerialNumberAlreadyChosenAnother": "Seri {{serial_number}} sudah dipilih di Operasi Ban lain yang masih terbuka.",
+    "tireMustRepairStatusRemovedRepair": "Ban harus berstatus REPAIR (dilepas dengan disposisi perbaikan) sebelum dikirim untuk diperbaiki.",
+    "tireMustRetreadStatusRemovedRetread": "Ban harus berstatus RETREAD (dilepas dengan disposisi vulkanisir) sebelum dikirim untuk divulkanisir.",
+    "tireOperationsDateTimeCannotEarlier": "Tanggal dan waktu Operasi Ban tidak boleh lebih awal dari pemasangan atau Operasi Ban terakhir pada ban yang dipilih ({{local}}).",
+    "tireOperationsDateTimeCannotFuture": "Tanggal dan waktu Operasi Ban tidak boleh di masa depan.",
+    "tireSerialNumberAlreadyInstalledRegistration": "Ban {{serial_number}} sudah terpasang pada {{registration_number}} di {{current_position}}.",
+    "tireSerialNumberCurrentStatusCannot": "Ban {{serial_number}} berstatus {{current_status}} dan tidak dapat didaftarkan pada kendaraan.",
+    "tireSerialNumberWarehouseStockInstall": "Ban {{serial_number}} ada di stok gudang; pasang melalui alur pengeluaran gudang.",
+    "tiresOnlyRegisteredProductWhoseItem": "Ban hanya dapat didaftarkan untuk produk dengan Jenis Item Ban.",
+    "uploadAtMostPhotos": "Unggah paling banyak {{max}} foto.",
+    "uploadPhotoRange": "Unggah 1 sampai {{max}} foto.",
+    "vehicleAppearOnlyOnceAmongAdded": "Kendaraan hanya boleh muncul satu kali di antara kendaraan yang ditambahkan, dihapus, dan diperbarui.",
+    "vehicleDoesNotWheelsConfigurationPlease": "Kendaraan ini belum memiliki Konfigurasi Roda. Silakan petakan Konfigurasi Roda terlebih dahulu.",
+    "vehicleNoDefaultWorkshopChooseWorkshop": "Kendaraan ini tidak memiliki bengkel default: pilih bengkel yang mengerjakan Work Order.",
+    "vehiclesNotFound": "Beberapa kendaraan tidak ditemukan: {{vehicles}}.",
+    "vehicleTireOperationCannotChanged": "Kendaraan pada Operasi Ban tidak dapat diubah.",
+    "vehicleTypeTruckConfigurationTypeSaved": "Jenis Kendaraan dan Jenis Konfigurasi Truk pada konfigurasi yang tersimpan tidak dapat diubah. Buat konfigurasi baru.",
+    "wheelConfigurationAlreadyExistsEditConfiguration": "Konfigurasi roda ini sudah ada. Ubah konfigurasi tersebut.",
+    "wheelConfigurationConfigCodeAlreadyExists": "Konfigurasi roda {{config_code}} sudah ada untuk jenis kendaraan ini",
+    "wheelConfigurationExistsForTruckType": "Konfigurasi roda {{configCode}} sudah ada untuk jenis kendaraan dan jenis konfigurasi truk ini. Ubah konfigurasi tersebut."
+  },
+  "tireCycle": {
+    "uploadLeastOnePhoto": "Unggah minimal satu foto."
+  },
+  "tireOperation": {
+    "enterKmTireOperationsPhysicalOdometer": "Masukkan KM saat Operasi Ban (pembacaan odometer fisik).",
+    "enterNumberKilometres0MoreUp": "Masukkan jumlah kilometer (0 atau lebih, maksimal 2 desimal), misalnya 12500.75.",
+    "enterTreadDepthMm0More": "Masukkan kedalaman tapak ban dalam mm (0 atau lebih, maksimal 2 desimal), misalnya 8.5.",
+    "selectAVehicle": "Pilih kendaraan.",
+    "use24HourFormatHhMm": "Gunakan format 24 jam HH:mm, misalnya 07:30 atau 14:05."
+  },
+  "tireProduct": {
+    "productDeletedTiresNoLongerAdded": "Produk ini telah dihapus; ban tidak dapat ditambahkan lagi ke produk ini.",
+    "productNoTireSpecificationYetComplete": "Produk ini belum memiliki spesifikasi ban — lengkapi melalui Ubah Produk terlebih dahulu."
+  },
+  "tireRuleProfile": {
+    "activeProfileAlreadyExistsCategoryTire": "Profil aktif sudah ada untuk kategori, produk ban, dan aplikasi ini.",
+    "dPullMustGreaterThanEqual": "D_pull harus lebih besar dari atau sama dengan D_service."
+  },
+  "tireUsedInspection": {
+    "eachZoneGroovePointMeasuredOnce": "Setiap titik zona / alur hanya dapat diukur satu kali.",
+    "warehouseOutsideDataScope": "Gudang ini berada di luar lingkup data Anda."
+  },
+  "unique": ":attribute sudah digunakan.",
+  "usedPartDisposition": {
+    "evidencePhotoMayNotLargerThan": "Ukuran foto bukti tidak boleh lebih dari 3 MB.",
+    "onlyJpgPngImagesAccepted": "Hanya gambar JPG atau PNG yang diterima."
+  },
+  "uuid": "Kolom :attribute harus berupa UUID yang valid.",
+  "validatesComponentClassification": {
+    "codeMustUpperSnakeCaseLetters": "Kode harus UPPER_SNAKE_CASE (huruf, angka, dan garis bawah tunggal), mis. DISC_BRAKE."
+  },
+  "validatesComponentGroupAbbreviation": {
+    "abbreviationMustContainLettersZOnly": "Singkatan hanya boleh berisi huruf A-Z (mis. ENG, BRK, HYD).",
+    "abbreviationMustExactly3Letters": "Singkatan harus tepat 3 huruf."
+  },
+  "vehicle": {
+    "selectVehicleBrand": "Pilih Merek Kendaraan.",
+    "selectVehicleModel": "Pilih Model Kendaraan."
+  },
+  "vehicleBrand": {
+    "selectOnlyActiveVehicleCategories": "Pilih hanya Kategori Kendaraan yang aktif."
+  },
+  "vehicleDocument": {
+    "expiryDateRequiredWhenExpiryDate": "Tanggal Kedaluwarsa wajib diisi jika \"Memiliki Tanggal Kedaluwarsa?\" dicentang.",
+    "extensionDeadlineRequiredWhenNeedExtended": "Batas Waktu Perpanjangan wajib diisi jika \"Perlu diperpanjang?\" dicentang."
+  },
+  "vehicleWheelConfiguration": {
+    "enterLastKnownInstallationKmEstimate": "Masukkan KM pemasangan terakhir yang diketahui (perkiraan tidak masalah)."
+  },
+  "vendorInvoiceReference": {
+    "paymentProofMustJpgJpegPng": "Bukti pembayaran harus berupa file JPG, JPEG, PNG, atau PDF."
+  },
+  "workflow": {
+    "codeNotStatusDocument": "'{{code}}' bukan status yang dapat dimiliki dokumen ini.",
+    "displayNameNotWorkflowDocumentAlready": "{{display_name}} tidak ada di alur kerja ini: dokumen yang sudah berada di status tersebut tidak dapat dilanjutkan.",
+    "earlierApprovalStepsMustDecidedFirst": "Tahap persetujuan sebelumnya harus diputuskan terlebih dahulu.",
+    "everyStatusMustUniqueNonEmpty": "Setiap status harus memiliki kode yang unik dan tidak kosong.",
+    "noActionOptiFleetMovesDocument": "Tidak ada aksi di OptiFleet yang memindahkan dokumen ini ke {{to}}; transisi ini tidak akan pernah berjalan.",
+    "statusCodeNotConnectedAnyOther": "Status '{{code}}' tidak terhubung ke status lain.",
+    "statusCodeUnreachableNoPathStart": "Status '{{code}}' tidak dapat dicapai — tidak ada jalur dari status awal yang menuju ke sana.",
+    "statusCodeUnreachableNoTransitionLeads": "Status '{{code}}' tidak dapat dicapai — tidak ada transisi yang menuju ke sana.",
+    "thereAlreadyTransition": "Sudah ada transisi dari {{from}} ke {{to}}.",
+    "transitionCannotStartEndSameStatus": "Transisi tidak boleh dimulai dan berakhir pada status yang sama ({{from}}).",
+    "transitionMissingRequiredFieldField": "Transisi tidak memiliki kolom wajib '{{field}}'.",
+    "transitionReferencesUnknownActionCode": "Transisi merujuk aksi yang tidak dikenal '{{code}}'.",
+    "transitionReferencesUnknownPermissionRequiredPermission": "Transisi merujuk izin yang tidak dikenal '{{required_permission}}'.",
+    "transitionReferencesUnknownStatus": "Transisi merujuk from_status yang tidak dikenal '{{from}}'.",
+    "transitionReferencesUnknownStatus2": "Transisi merujuk to_status yang tidak dikenal '{{to}}'.",
+    "twoTransitionsUseSameActionAction": "Dua transisi dari {{from}} menggunakan aksi yang sama '{{action}}'.",
+    "workflowMustDeclareLeastOneStatus": "Alur kerja harus memiliki minimal satu status.",
+    "workflowNoStartStatus": "Alur kerja tidak memiliki status awal."
+  },
+  "workOrder": {
+    "acceptedQuantityMustPositiveCannotExceed": "Jumlah yang diterima harus positif dan tidak boleh melebihi jumlah yang semula diretur.",
+    "actualConditionMustNewGoodNew": "Kondisi aktual harus Baru Baik atau Baru Rusak.",
+    "approvedQuantityLineDescriptionMustBetween": "Jumlah yang disetujui untuk baris \"{{description}}\" harus antara 0 dan jumlah yang diminta.",
+    "dispositionMustWarrantyClaimRepairScrap": "Disposisi harus Klaim Garansi, Perbaikan, atau Scrap.",
+    "eachPartRequestLineMustQuantity": "Setiap baris permintaan suku cadang harus memiliki jumlah lebih dari nol.",
+    "inspectionConditionMustUsedGoodUsed": "Kondisi inspeksi harus USED_GOOD atau USED_FAULTY.",
+    "invalidDecisionDecisionMustApproveReject": "Keputusan '{{decision}}' tidak valid — harus APPROVE atau REJECT.",
+    "invoiceTotalAmountMustGreaterThan": "total_amount faktur harus lebih dari nol.",
+    "leastOneLineMustApprovedQuantity": "Minimal satu baris harus disetujui dengan jumlah lebih dari nol — jika tidak, gunakan reject().",
+    "partRequestMustIncludeLeastOne": "Permintaan suku cadang harus memuat minimal satu baris item.",
+    "quantityMustBePositive": "Jumlah harus positif.",
+    "removedQuantityMustPositive": "Jumlah yang dilepas harus positif.",
+    "returnQuantityMustPositive": "Jumlah retur harus positif.",
+    "saleQuantityMustPositive": "Jumlah penjualan harus positif.",
+    "selectedWorkshopMustActiveExternalWorkshop": "Bengkel yang dipilih harus mitra Bengkel Eksternal yang aktif.",
+    "selectLeastOneComponentAssetSell": "Pilih minimal satu aset komponen untuk dijual.",
+    "selectLeastOneScrappedTireSell": "Pilih minimal satu ban scrap untuk dijual.",
+    "unitPriceMustNumber": "Harga satuan harus berupa angka.",
+    "vendorInvoiceAmountMustGreaterThan": "Nilai faktur vendor harus lebih dari nol."
+  },
+  "workshop": {
+    "chooseDifferentWorkspaceWorkOrderAlready": "Pilih workspace lain — Work Order sudah ditugaskan ke workspace ini.",
+    "reservationStartMustBeforeEnd": "Waktu mulai reservasi harus sebelum waktu berakhirnya."
+  }
+}

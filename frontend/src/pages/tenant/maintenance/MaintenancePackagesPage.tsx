@@ -14,6 +14,7 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { ComponentGroup, MaintenancePackageItemType, VehicleItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
 import { NumericInput } from '../../../components/NumericInput';
+import { labelText, t as tt } from '../../../i18n/i18n';
 
 const ALL_MAINTENANCE_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECTION', 'CAMPAIGN', 'PERIODIC'];
 // Section 10: the new-package workflow only offers these two — legacy types
@@ -21,10 +22,10 @@ const ALL_MAINTENANCE_TYPES = ['PREVENTIVE', 'CORRECTIVE', 'BREAKDOWN', 'INSPECT
 const CREATABLE_MAINTENANCE_TYPES = ['PREVENTIVE', 'PERIODIC'];
 const TRIGGER_TYPES = ['ODOMETER', 'ENGINE_HOUR', 'CALENDAR_DAY', 'MONTH', 'COMBINATION', 'CONDITION_BASED'];
 const PERIOD_BY_OPTIONS = [
-  { value: 'CALENDAR_DAY', label: 'Days' },
-  { value: 'MONTH', label: 'Month' },
+  { value: 'CALENDAR_DAY', label: 'Days', labelKey: 'maintenance.fields.days' },
+  { value: 'MONTH', label: 'Month', labelKey: 'maintenance.fields.month' },
   { value: 'ODOMETER', label: 'KM' },
-  { value: 'ENGINE_HOUR', label: 'Engine Hour' },
+  { value: 'ENGINE_HOUR', label: 'Engine Hour', labelKey: 'maintenance.fields.engineHour' },
 ];
 const THRESHOLD_FIELD_BY_PERIOD: Record<string, 'threshold_days' | 'threshold_month' | 'threshold_km' | 'threshold_engine_hour'> = {
   CALENDAR_DAY: 'threshold_days',
@@ -47,27 +48,27 @@ export function MaintenancePackagesPage() {
   );
 
   const columns: Column<MaintenancePackageItemType>[] = [
-    { key: 'code', header: 'Code', render: (p) => <Link to={`/app/maintenance-policies/${p.id}`}>{p.code}</Link> },
-    { key: 'name', header: 'Name', render: (p) => p.name },
-    { key: 'type', header: 'Type', render: (p) => p.maintenance_type },
-    { key: 'intervals', header: 'Intervals', render: (p) => (p.intervals ?? []).length },
-    { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
+    { key: 'code', header: tt('common.fields.code'), render: (p) => <Link to={`/app/maintenance-policies/${p.id}`}>{p.code}</Link> },
+    { key: 'name', header: tt('common.fields.name'), render: (p) => p.name },
+    { key: 'type', header: tt('common.fields.type'), render: (p) => p.maintenance_type },
+    { key: 'intervals', header: tt('maintenance.fields.intervals'), render: (p) => (p.intervals ?? []).length },
+    { key: 'status', header: tt('common.fields.status'), render: (p) => <StatusBadge status={p.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Maintenance Packages</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('maintenance.titles.maintenancePackages')}</h1>
       <Toolbar
         actions={
           hasPermission('maintenance_policy.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Package
+              {tt('maintenance.actions.newPackage')}
             </button>
           ) : null
         }
       >
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} style={{ ...inputStyle, maxWidth: 180 }}>
-          <option value="">All types</option>
+          <option value="">{tt('common.filters.allTypes')}</option>
           {ALL_MAINTENANCE_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -75,15 +76,15 @@ export function MaintenancePackagesPage() {
           ))}
         </select>
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...inputStyle, maxWidth: 140 }}>
-          <option value="">All statuses</option>
-          <option value="DRAFT">Draft</option>
-          <option value="ACTIVE">Active</option>
-          <option value="ARCHIVED">Archived</option>
+          <option value="">{tt('common.filters.allStatuses')}</option>
+          <option value="DRAFT">{tt('common.fields.draft')}</option>
+          <option value="ACTIVE">{tt('common.fields.active')}</option>
+          <option value="ARCHIVED">{tt('configuration.fields.archived')}</option>
         </select>
       </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No maintenance packages defined yet." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('maintenance.empty.noMaintenancePackagesDefinedYet')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreatePackageModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -151,14 +152,14 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
   }
 
   return (
-    <Modal open={open} title="New Maintenance Package" onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required>
+    <Modal open={open} title={tt('maintenance.modals.newMaintenancePackage')} onClose={onClose}>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Maintenance Type" errors={errors.maintenance_type} required>
+      <FormField label={tt('maintenance.fields.maintenanceType')} errors={errors.maintenance_type} required>
         <select value={maintenanceType} onChange={(e) => setMaintenanceType(e.target.value)} style={inputStyle}>
           {CREATABLE_MAINTENANCE_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -167,31 +168,31 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
           ))}
         </select>
       </FormField>
-      <FormField label="Maintenance Period By" errors={errors.period_by} required>
+      <FormField label={tt('maintenance.fields.maintenancePeriodBy')} errors={errors.period_by} required>
         <select value={periodBy} onChange={(e) => setPeriodBy(e.target.value)} style={inputStyle}>
           {periodByOptions.map((o) => (
             <option key={o.value} value={o.value}>
-              {o.label}
+              {labelText(o)}
             </option>
           ))}
         </select>
       </FormField>
       {maintenanceType === 'PERIODIC' ? (
-        <FormField label="Schedule Period" errors={errors.schedule_period} required>
+        <FormField label={tt('maintenance.fields.schedulePeriod')} errors={errors.schedule_period} required>
           <NumericInput min={1} value={schedulePeriod} onChange={(e) => setSchedulePeriod(e.target.value)} style={inputStyle} />
           <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>
-            Gap between the schedule start and the next schedule, in {PERIOD_BY_OPTIONS.find((o) => o.value === periodBy)?.label.toLowerCase()}.
+            {tt('maintenance.help.gapBetweenScheduleStartNextSchedule')} {PERIOD_BY_OPTIONS.find((o) => o.value === periodBy)?.label.toLowerCase()}.
           </div>
         </FormField>
       ) : (
         <>
-          <FormField label={`Primary Threshold (${PERIOD_BY_OPTIONS.find((o) => o.value === periodBy)?.label})`} errors={errors[primaryField]} required>
+          <FormField label={tt('maintenance.fields.primaryThresholdLabel', { label: PERIOD_BY_OPTIONS.find((o) => o.value === periodBy)?.label })} errors={errors[primaryField]} required>
             <NumericInput min={1} value={primaryThreshold} onChange={(e) => setPrimaryThreshold(e.target.value)} style={inputStyle} />
           </FormField>
           <div style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#374151' }}>Equivalent Threshold (optional)</div>
+            <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6, color: '#374151' }}>{tt('maintenance.fields.equivalentThresholdOptional')}</div>
             <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 8 }}>
-              Leave 0 or blank to skip — an empty/0 threshold is never used to trigger a schedule.
+              {tt('maintenance.help.leave0BlankSkipEmpty0')}
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
               {equivalentFields.map((field) => (
@@ -208,18 +209,18 @@ function CreatePackageModal({ open, onClose, onCreated }: { open: boolean; onClo
           </div>
         </>
       )}
-      <FormField label="Standard Labor Hours" errors={errors.standard_labor_hours}>
+      <FormField label={tt('maintenance.fields.standardLaborHours')} errors={errors.standard_labor_hours}>
         <NumericInput step="0.1" value={standardLaborHours} onChange={(e) => setStandardLaborHours(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label={tt('common.fields.description')} errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !code || !name} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>
@@ -279,7 +280,7 @@ export function MaintenancePackageDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/maintenance-policies" label="← Back to Maintenance Packages" />
+      <BackButton fallbackTo="/app/maintenance-policies" label={tt('maintenance.actions.backToMaintenancePackages')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {pkg.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({pkg.code})</span>
@@ -292,17 +293,17 @@ export function MaintenancePackageDetailPage() {
               disabled={busy || (isNewWorkflowType && draftSelectedGroupIds.length === 0)}
               onClick={() => activate(isNewWorkflowType ? draftSelectedGroupIds : undefined)}
             >
-              Activate
+              {tt('common.actions.activate')}
             </button>
           )}
           {canManage && pkg.status === 'ARCHIVED' && (
             <button className="btn-primary" disabled={busy} onClick={() => activate()}>
-              Activate
+              {tt('common.actions.activate')}
             </button>
           )}
           {canManage && pkg.status === 'ACTIVE' && (
             <button className="btn-primary" onClick={() => setShowAssign(true)}>
-              Assign to Vehicle
+              {tt('maintenance.actions.assignToVehicle')}
             </button>
           )}
         </div>
@@ -311,27 +312,26 @@ export function MaintenancePackageDetailPage() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13 }}>
-          <strong>Type:</strong> {pkg.maintenance_type} &nbsp;
-          <strong>Standard Labor Hours:</strong> {pkg.standard_labor_hours ?? '—'}
+          <strong>{tt('common.fields.type')}:</strong> {pkg.maintenance_type} &nbsp;
+          <strong>{tt('maintenance.fields.standardLaborHours')}:</strong> {pkg.standard_labor_hours ?? '—'}
         </p>
         {isNewWorkflowType && (
           <p style={{ fontSize: 13 }}>
-            <strong>Period By:</strong> {PERIOD_BY_OPTIONS.find((o) => o.value === pkg.period_by)?.label ?? '—'} &nbsp;
+            <strong>{tt('maintenance.fields.periodBy')}:</strong> {PERIOD_BY_OPTIONS.find((o) => o.value === pkg.period_by)?.label ?? '—'} &nbsp;
             {pkg.maintenance_type === 'PERIODIC' ? (
               <>
-                <strong>Schedule Period:</strong> {pkg.schedule_period ?? '—'}
+                <strong>{tt('maintenance.fields.schedulePeriod')}:</strong> {pkg.schedule_period ?? '—'}
               </>
             ) : (
               <>
-                <strong>Thresholds:</strong> Days {pkg.threshold_days ?? '—'} · Month {pkg.threshold_month ?? '—'} · KM {pkg.threshold_km ?? '—'} · Engine
-                Hour {pkg.threshold_engine_hour ?? '—'}
+                <strong>{tt('maintenance.fields.thresholds')}:</strong> {tt('maintenance.fields.days')} {pkg.threshold_days ?? '—'} {tt('maintenance.fields.month2')} {pkg.threshold_month ?? '—'} {tt('maintenance.fields.km2')} {pkg.threshold_km ?? '—'} {tt('maintenance.fields.engineHour2')} {pkg.threshold_engine_hour ?? '—'}
               </>
             )}
           </p>
         )}
         {pkg.description && (
           <p style={{ fontSize: 13 }}>
-            <strong>Description:</strong> {pkg.description}
+            <strong>{tt('common.fields.description')}:</strong> {pkg.description}
           </p>
         )}
       </div>
@@ -349,39 +349,39 @@ export function MaintenancePackageDetailPage() {
         <>
           <div className="card" style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
+              <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('common.sections.items')}</h3>
               {canManage && (
                 <button className="btn-secondary" onClick={() => setShowAddItem(true)}>
-                  + Add Item
+                  {tt('platform.contracts.actions.addItem')}
                 </button>
               )}
             </div>
-            {(pkg.items ?? []).length === 0 && <EmptyState label="No items defined." />}
+            {(pkg.items ?? []).length === 0 && <EmptyState label={tt('maintenance.empty.noItemsDefined')} />}
             {(pkg.items ?? []).map((it) => (
               <div key={it.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
                 {it.service_item}
                 {it.component_group_id && <span style={{ color: '#6b7280' }}> — {it.component_group ? componentGroupLabel(it.component_group) : (groups.find((g) => g.id === it.component_group_id)?.name ?? it.component_group_id)}</span>}
                 {it.standard_labor_hours && <span style={{ color: '#6b7280' }}> · {it.standard_labor_hours}h</span>}
-                {it.recommended_part_reference && <span style={{ color: '#6b7280' }}> · part ref {it.recommended_part_reference}</span>}
+                {it.recommended_part_reference && <span style={{ color: '#6b7280' }}> {tt('maintenance.help.partRefRecommendedPartReference', { recommended_part_reference: it.recommended_part_reference })}</span>}
               </div>
             ))}
           </div>
 
           <div className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ marginTop: 0, fontSize: 15 }}>Intervals</h3>
+              <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('maintenance.fields.intervals')}</h3>
               {canManage && (
                 <button className="btn-secondary" onClick={() => setShowAddInterval(true)}>
-                  + Add Interval
+                  {tt('maintenance.actions.addInterval')}
                 </button>
               )}
             </div>
-            {(pkg.intervals ?? []).length === 0 && <EmptyState label="No intervals defined." />}
+            {(pkg.intervals ?? []).length === 0 && <EmptyState label={tt('maintenance.empty.noIntervalsDefined')} />}
             {(pkg.intervals ?? []).map((iv) => (
               <div key={iv.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
                 {iv.trigger_type}
                 {iv.odometer_km && ` · every ${iv.odometer_km} km`}
-                {iv.engine_hours && ` · every ${iv.engine_hours} engine hrs`}
+                {iv.engine_hours && tt('maintenance.help.everyEngineHoursEngineHrs', { engine_hours: iv.engine_hours })}
                 {iv.calendar_days && ` · every ${iv.calendar_days} days`}
                 {iv.months && ` · every ${iv.months} months`}
               </div>
@@ -456,25 +456,25 @@ function PackageItemsCheckboxCard({
   return (
     <div className="card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('common.sections.items')}</h3>
         {canManage && pkg.status === 'ACTIVE' && !editing && (
           <button className="btn-secondary" onClick={startEdit}>
-            Edit Items
+            {tt('maintenance.actions.editItems')}
           </button>
         )}
         {canManage && pkg.status === 'ACTIVE' && editing && (
           <div style={{ display: 'flex', gap: 8 }}>
             <button className="btn-secondary" disabled={saving} onClick={cancelEdit}>
-              Cancel
+              {tt('common.actions.cancel')}
             </button>
             <button className="btn-primary" disabled={saving || editedIds.length === 0} onClick={saveEdit}>
-              {saving ? 'Saving…' : 'Update Items'}
+              {saving ? tt('common.actions.saving') : tt('maintenance.actions.updateItems')}
             </button>
           </div>
         )}
       </div>
       {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 10 }}>{error}</div>}
-      {groups.length === 0 && <EmptyState label="No component groups available." />}
+      {groups.length === 0 && <EmptyState label={tt('maintenance.empty.noComponentGroupsAvailable')} />}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
         {groups.map((g) => {
           const checked = pkg.status === 'DRAFT' ? draftSelectedGroupIds.includes(g.id) : editing ? editedIds.includes(g.id) : activeSelectedIds.includes(g.id);
@@ -497,7 +497,7 @@ function PackageItemsCheckboxCard({
         })}
       </div>
       {pkg.status === 'DRAFT' && draftSelectedGroupIds.length === 0 && (
-        <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 8 }}>At least one item must be checked before activating.</p>
+        <p style={{ fontSize: 12, color: '#b91c1c', marginTop: 8 }}>{tt('maintenance.help.leastOneItemMustCheckedBefore')}</p>
       )}
     </div>
   );
@@ -541,13 +541,13 @@ function AddItemModal({
   }
 
   return (
-    <Modal open title="Add Package Item" onClose={onClose}>
-      <FormField label="Service Item" errors={errors.service_item} required>
-        <input value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} placeholder="e.g. Oil filter replacement" style={inputStyle} />
+    <Modal open title={tt('maintenance.modals.addPackageItem')} onClose={onClose}>
+      <FormField label={tt('maintenance.fields.serviceItem')} errors={errors.service_item} required>
+        <input value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} placeholder={tt('maintenance.placeholders.eGOilFilterReplacement')} style={inputStyle} />
       </FormField>
-      <FormField label="Component Group (optional)" errors={errors.component_group_id}>
+      <FormField label={tt('maintenance.fields.componentGroupOptional')} errors={errors.component_group_id}>
         <select value={componentGroupId} onChange={(e) => setComponentGroupId(e.target.value)} style={inputStyle}>
-          <option value="">None</option>
+          <option value="">{tt('common.fields.none')}</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
               {componentGroupLabel(g)}
@@ -555,18 +555,18 @@ function AddItemModal({
           ))}
         </select>
       </FormField>
-      <FormField label="Recommended Part Reference" errors={errors.recommended_part_reference}>
+      <FormField label={tt('maintenance.fields.recommendedPartReference')} errors={errors.recommended_part_reference}>
         <input value={recommendedPartReference} onChange={(e) => setRecommendedPartReference(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Standard Labor Hours" errors={errors.standard_labor_hours}>
+      <FormField label={tt('maintenance.fields.standardLaborHours')} errors={errors.standard_labor_hours}>
         <NumericInput step="0.1" value={standardLaborHours} onChange={(e) => setStandardLaborHours(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !serviceItem} onClick={submit}>
-          Save
+          {tt('common.actions.save')}
         </button>
       </div>
     </Modal>
@@ -607,8 +607,8 @@ function AddIntervalModal({ packageId, onClose, onSaved }: { packageId: string; 
   }
 
   return (
-    <Modal open title="Add Interval" onClose={onClose}>
-      <FormField label="Trigger Type" errors={errors.trigger_type} required>
+    <Modal open title={tt('maintenance.modals.addInterval')} onClose={onClose}>
+      <FormField label={tt('maintenance.fields.triggerType')} errors={errors.trigger_type} required>
         <select value={triggerType} onChange={(e) => setTriggerType(e.target.value)} style={inputStyle}>
           {TRIGGER_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -618,31 +618,31 @@ function AddIntervalModal({ packageId, onClose, onSaved }: { packageId: string; 
         </select>
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Odometer (km)" errors={errors.odometer_km}>
+        <FormField label={tt('maintenance.fields.odometerKm')} errors={errors.odometer_km}>
           <NumericInput value={odometerKm} onChange={(e) => setOdometerKm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Engine Hours" errors={errors.engine_hours}>
+        <FormField label={tt('maintenance.fields.engineHours')} errors={errors.engine_hours}>
           <NumericInput value={engineHours} onChange={(e) => setEngineHours(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Calendar Days" errors={errors.calendar_days}>
+        <FormField label={tt('maintenance.fields.calendarDays')} errors={errors.calendar_days}>
           <NumericInput value={calendarDays} onChange={(e) => setCalendarDays(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Months" errors={errors.months}>
+        <FormField label={tt('maintenance.fields.months')} errors={errors.months}>
           <NumericInput value={months} onChange={(e) => setMonths(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Tolerance (km)" errors={errors.tolerance_km}>
+        <FormField label={tt('maintenance.fields.toleranceKm')} errors={errors.tolerance_km}>
           <NumericInput value={toleranceKm} onChange={(e) => setToleranceKm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Tolerance (days)" errors={errors.tolerance_days}>
+        <FormField label={tt('maintenance.fields.toleranceDays')} errors={errors.tolerance_days}>
           <NumericInput value={toleranceDays} onChange={(e) => setToleranceDays(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          Save
+          {tt('common.actions.save')}
         </button>
       </div>
     </Modal>
@@ -679,10 +679,10 @@ function AssignVehicleModal({
   }
 
   return (
-    <Modal open title="Assign Package to Vehicle" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id} required>
+    <Modal open title={tt('maintenance.modals.assignPackageToVehicle')} onClose={onClose}>
+      <FormField label={tt('common.fields.vehicle')} errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number}
@@ -691,14 +691,14 @@ function AssignVehicleModal({
         </select>
       </FormField>
       <p style={{ fontSize: 12, color: '#6b7280' }}>
-        Assigning generates a maintenance schedule for this vehicle immediately, based on the package&apos;s intervals.
+        {tt('maintenance.help.assigningGeneratesMaintenanceScheduleVehicleImmediately')}
       </p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !vehicleId} onClick={submit}>
-          Assign
+          {tt('common.actions.assign')}
         </button>
       </div>
     </Modal>

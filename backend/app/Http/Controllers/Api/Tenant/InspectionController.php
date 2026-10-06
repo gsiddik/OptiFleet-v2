@@ -9,6 +9,7 @@ use App\Domain\Inspection\Models\Inspection;
 use App\Domain\Inspection\Models\InspectionTemplate;
 use App\Domain\Inspection\Services\InspectionService;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreInspectionRequest;
@@ -148,7 +149,7 @@ class InspectionController extends Controller
             'source_type' => 'INSPECTION',
             'source_inspection_id' => $inspection->id,
             'priority' => in_array($topFinding?->severity, ['CRITICAL', 'HIGH'], true) ? 'URGENT' : 'MEDIUM',
-            'complaint' => $request->input('complaint', $topFinding?->description ?? 'Issues found during inspection '.$inspection->id),
+            'complaint' => $request->input('complaint', $topFinding?->description ?? Messages::text('inspection.defaults.issuesFound', ['inspectionId' => $inspection->id])),
             'status' => 'SUBMITTED',
         ], $this->context->user()->id);
 

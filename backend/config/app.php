@@ -88,6 +88,12 @@ return [
 
     'fallback_locale' => env('APP_FALLBACK_LOCALE', 'en'),
 
+    /*
+    | Request locale resolution (i18n): user preferred locale, then tenant default, then Accept-Language,
+    | then English (App\Http\Middleware\ResolveRequestLocale). Set to false to keep every response English.
+    */
+    'runtime_locale_resolution' => (bool) env('APP_RUNTIME_LOCALE_RESOLUTION', true),
+
     'faker_locale' => env('APP_FAKER_LOCALE', 'en_US'),
 
     /*

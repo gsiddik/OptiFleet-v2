@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleBrandItem } from '../../../types';
+import { t as tt } from '../../../i18n/i18n';
 
 export function VehicleBrandsPage() {
   const { hasPermission } = useAuth();
@@ -42,29 +43,29 @@ export function VehicleBrandsPage() {
   }
 
   const columns: Column<VehicleBrandItem>[] = [
-    { key: 'code', header: 'Code', render: (b) => b.code },
-    { key: 'name', header: 'Name', render: (b) => b.name },
-    { key: 'vehicle_categories', header: 'Brand Of', render: (b) => (b.vehicle_categories ?? []).map((c) => c.name).join(', ') || '—' },
-    { key: 'is_system', header: 'Source', render: (b) => (b.is_system ? 'System' : 'Tenant') },
-    { key: 'status', header: 'Status', render: (b) => <StatusBadge status={b.status} /> },
+    { key: 'code', header: tt('common.fields.code'), render: (b) => b.code },
+    { key: 'name', header: tt('common.fields.name'), render: (b) => b.name },
+    { key: 'vehicle_categories', header: tt('masterData.fields.brandOf'), render: (b) => (b.vehicle_categories ?? []).map((c) => c.name).join(', ') || '—' },
+    { key: 'is_system', header: tt('common.fields.source'), render: (b) => (b.is_system ? tt('common.fields.system') : tt('common.fields.tenant')) },
+    { key: 'status', header: tt('common.fields.status'), render: (b) => <StatusBadge status={b.status} /> },
     {
       key: 'actions',
       header: '',
       render: (b) => (
         <div style={{ display: 'flex', gap: 8 }}>
           <Link className="btn-link" to={`/app/master-data/vehicle-models?vehicle_brand_id=${b.id}`}>
-            Models
+            {tt('masterData.actions.models')}
           </Link>
           {!b.is_system && (
             <>
               {hasPermission('vehicle_brand.update') && (
                 <button className="btn-link" onClick={() => setEditing(b)}>
-                  Edit
+                  {tt('common.actions.edit')}
                 </button>
               )}
               {hasPermission('vehicle_brand.update') && (
                 <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(b)}>
-                  Delete
+                  {tt('common.actions.delete')}
                 </button>
               )}
             </>
@@ -76,7 +77,7 @@ export function VehicleBrandsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vehicle Brands</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('masterData.titles.vehicleBrands')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -86,14 +87,14 @@ export function VehicleBrandsPage() {
         actions={
           hasPermission('vehicle_brand.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Brand
+              {tt('masterData.actions.newBrand')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No vehicle brands found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('masterData.empty.noVehicleBrandsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -125,9 +126,9 @@ export function VehicleBrandsPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Delete Vehicle Brand"
-        message={deleteError ?? `Delete "${deleting?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={tt('masterData.confirm.deleteVehicleBrand')}
+        message={deleteError ?? tt('platform.masterdata.confirm.deleteNameCannotUndone', { name: deleting?.name })}
+        confirmLabel={tt('common.actions.delete')}
         onCancel={() => {
           setDeleting(null);
           setDeleteError(null);
@@ -206,7 +207,7 @@ function BrandFormModal({
   function handleFileChange(file: File | undefined) {
     if (!file) return;
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setErrors({ logo: ['Only JPG or PNG images are accepted.'] });
+      setErrors({ logo: [tt('masterData.help.onlyJpgPngImagesAccepted')] });
       return;
     }
     setErrors({});
@@ -246,18 +247,18 @@ function BrandFormModal({
   }
 
   return (
-    <Modal open={open} title={brand ? 'Edit Vehicle Brand' : 'New Vehicle Brand'} onClose={close}>
-      <FormField label="Code" errors={errors.code} required={!brand}>
+    <Modal open={open} title={brand ? tt('masterData.modals.editVehicleBrand') : tt('masterData.modals.newVehicleBrand')} onClose={close}>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required={!brand}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!brand} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required={!brand}>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required={!brand}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Brand Of" errors={errors.vehicle_category_ids}>
+      <FormField label={tt('masterData.fields.brandOf')} errors={errors.vehicle_category_ids}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 220, overflowY: 'auto' }}>
-          {categoryOptions === null && <span style={{ fontSize: 12, color: '#9ca3af' }}>Loading vehicle categories…</span>}
+          {categoryOptions === null && <span style={{ fontSize: 12, color: '#9ca3af' }}>{tt('masterData.help.loadingVehicleCategories')}</span>}
           {categoryOptions !== null && shownCategories.length === 0 && (
-            <span style={{ fontSize: 12, color: '#9ca3af' }}>No active Vehicle Categories — add them under Master Data → Vehicle Categories.</span>
+            <span style={{ fontSize: 12, color: '#9ca3af' }}>{tt('masterData.empty.noActiveVehicleCategoriesAddThem')}</span>
           )}
           {shownCategories.map((c) => (
             <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
@@ -266,16 +267,16 @@ function BrandFormModal({
           ))}
         </div>
       </FormField>
-      <FormField label="Logo (JPG or PNG)" errors={errors.logo ?? errors.file}>
+      <FormField label={tt('account.fields.logoJpgOrPng')} errors={errors.logo ?? errors.file}>
         <input type="file" accept="image/jpeg,image/png" onChange={(e) => handleFileChange(e.target.files?.[0])} style={inputStyle} />
       </FormField>
       {logoPreview && <img src={logoPreview} alt={name} style={{ maxWidth: 100, marginBottom: 12, borderRadius: 4 }} />}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={close}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
     </Modal>

@@ -5,6 +5,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import type { ContractItem } from '../../../types';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { t } from '../../../i18n/i18n';
 
 export function AccountContractPage() {
   const [contracts, setContracts] = useState<ContractItem[] | null>(null);
@@ -22,8 +23,8 @@ export function AccountContractPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Contracts</h1>
-      {contracts.length === 0 && <div className="card" style={{ color: '#9ca3af' }}>No contracts found.</div>}
+      <h1 style={{ fontSize: 22, marginBottom: 20 }}>{t('nav.items.contracts')}</h1>
+      {contracts.length === 0 && <div className="card" style={{ color: '#9ca3af' }}>{t('platform.contracts.empty.noContractsFound')}</div>}
       {contracts.map((c) => (
         <div key={c.id} className="card" style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -31,20 +32,20 @@ export function AccountContractPage() {
             <StatusBadge status={c.status} />
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, fontSize: 13, color: '#374151' }}>
-            <div>Start: {c.start_date}</div>
-            <div>End: {c.end_date}</div>
-            <div>Billing Cycle: {c.billing_cycle}</div>
+            <div>{t('account.fields.startStartDate', { start_date: c.start_date })}</div>
+            <div>{t('account.fields.endEndDate', { end_date: c.end_date })}</div>
+            <div>{t('account.fields.billingCycleBillingCycle', { billing_cycle: c.billing_cycle })}</div>
             <div>
-              Total: {c.currency} {formatMoney(c.total)}
+              {t('common.fields.total')}: {c.currency} {formatMoney(c.total)}
             </div>
           </div>
           {c.items && c.items.length > 0 && (
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginTop: 12 }}>
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-                  <th style={{ padding: '6px 8px' }}>Item</th>
-                  <th style={{ padding: '6px 8px' }}>Qty</th>
-                  <th style={{ padding: '6px 8px' }}>Amount</th>
+                  <th style={{ padding: '6px 8px' }}>{t('account.fields.item')}</th>
+                  <th style={{ padding: '6px 8px' }}>{t('common.fields.qty')}</th>
+                  <th style={{ padding: '6px 8px' }}>{t('common.fields.amount')}</th>
                 </tr>
               </thead>
               <tbody>

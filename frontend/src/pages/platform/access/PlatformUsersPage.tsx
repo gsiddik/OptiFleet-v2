@@ -9,6 +9,7 @@ import { Pagination } from '../../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
+import { t } from '../../../i18n/i18n';
 
 interface PlatformUserRow {
   id: string;
@@ -31,16 +32,16 @@ export function PlatformUsersPage() {
   }
 
   const columns: Column<PlatformUserRow>[] = [
-    { key: 'name', header: 'Name', render: (r) => r.name },
-    { key: 'email', header: 'Email', render: (r) => r.email },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'name', header: t('common.fields.name'), render: (r) => r.name },
+    { key: 'email', header: t('common.fields.email'), render: (r) => r.email },
+    { key: 'status', header: t('common.fields.status'), render: (r) => <StatusBadge status={r.status} /> },
     {
       key: 'actions',
       header: '',
       render: (r) =>
         hasPermission('user.update') ? (
           <button className="btn-link" onClick={() => toggleStatus(r)}>
-            {r.status === 'active' ? 'Deactivate' : 'Activate'}
+            {r.status === 'active' ? t('common.actions.deactivate') : t('common.actions.activate')}
           </button>
         ) : null,
     },
@@ -48,7 +49,7 @@ export function PlatformUsersPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Platform Users</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('platform.access.titles.platformUsers')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -58,14 +59,14 @@ export function PlatformUsersPage() {
         actions={
           hasPermission('user.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New User
+              {t('platform.access.actions.newUser')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No platform users found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('platform.access.empty.noPlatformUsersFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -104,22 +105,22 @@ function CreateUserModal({ open, onClose, onCreated }: { open: boolean; onClose:
   }
 
   return (
-    <Modal open={open} title="New Platform User" onClose={onClose}>
-      <FormField label="Name" errors={errors.name} required>
+    <Modal open={open} title={t('platform.access.modals.newPlatformUser')} onClose={onClose}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Email" errors={errors.email} required>
+      <FormField label={t('common.fields.email')} errors={errors.email} required>
         <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Password" errors={errors.password} required>
+      <FormField label={t('common.fields.password')} errors={errors.password} required>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Creating…' : 'Create User'}
+          {submitting ? t('common.actions.creating') : t('platform.access.actions.createUser')}
         </button>
       </div>
     </Modal>

@@ -1,0 +1,47 @@
+{
+  "empty": {
+    "noModulesEntitled": "No modules entitled."
+  },
+  "fields": {
+    "breakdown": "Breakdown",
+    "componentAssetsInstalled": "Component Assets Installed",
+    "due": "Due",
+    "dueSoon": "Due Soon",
+    "inMaintenance": "In Maintenance",
+    "inTransitTransfers": "In-Transit Transfers",
+    "lowStock": "Low Stock",
+    "openPurchaseOrders": "Open Purchase Orders",
+    "openPurchaseRequests": "Open Purchase Requests",
+    "openRequests": "Open Requests",
+    "openTransfers": "Open Transfers",
+    "outOfStock": "Out of Stock",
+    "overdue": "Overdue",
+    "pendingGoodsReceipt": "Pending Goods Receipt",
+    "pendingQc": "Pending QC",
+    "reservedStock": "Reserved Stock",
+    "tiresDueReplacement": "Tires Due Replacement",
+    "tiresInUse": "Tires In Use",
+    "totalInventoryValue": "Total Inventory Value",
+    "totalVehicles": "Total Vehicles",
+    "upcoming": "Upcoming",
+    "workspacesAvailable": "Workspaces Available",
+    "workspacesOccupied": "Workspaces Occupied"
+  },
+  "sections": {
+    "activeModules": "Active Modules",
+    "activeUsers": "Active Users",
+    "assetLifecycle": "Asset Lifecycle",
+    "branches": "Branches",
+    "fleet": "Fleet",
+    "maintenance": "Maintenance",
+    "supplyChainInventory": "Supply Chain — Inventory",
+    "supplyChainProcurement": "Supply Chain — Procurement",
+    "warehouses": "Warehouses",
+    "workOrders": "Work Orders",
+    "workshopOperations": "Workshop Operations",
+    "workshops": "Workshops"
+  },
+  "titles": {
+    "dashboard": "Dashboard"
+  }
+}

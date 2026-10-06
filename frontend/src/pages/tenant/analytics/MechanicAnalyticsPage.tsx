@@ -1,22 +1,23 @@
 import { AnalyticsDomainPage } from './AnalyticsDomainPage';
+import { t } from '../../../i18n/i18n';
 
 export function MechanicAnalyticsPage() {
   return (
     <AnalyticsDomainPage
       config={{
-        title: 'Mechanic Analytics',
-        description: 'Assigned/completed jobs, labor time, and utilization against a configured standard shift.',
+        title: t('analytics.sections.mechanicAnalytics'),
+        description: t('analytics.help.assignedCompletedJobsLaborTimeUtilization'),
         endpoint: '/app/analytics/mechanics',
         exportSlug: 'mechanics',
         permission: 'analytics.mechanic.view',
         dimensionField: 'mechanic_id',
-        dimensionLabel: 'Mechanic',
+        dimensionLabel: t('analytics.fields.mechanic'),
         highlightFields: [
-          { key: 'utilization.percentage', label: 'Utilization %' },
-          { key: 'assigned_jobs', label: 'Assigned' },
-          { key: 'completed_jobs', label: 'Completed' },
-          { key: 'workload', label: 'Open Workload' },
-          { key: 'avg_job_duration_minutes', label: 'Avg Duration (min)' },
+          { key: 'utilization.percentage', label: t('analytics.fields.utilizationPercent') },
+          { key: 'assigned_jobs', label: t('analytics.fields.assigned') },
+          { key: 'completed_jobs', label: t('analytics.fields.completed') },
+          { key: 'workload', label: t('analytics.fields.openWorkload') },
+          { key: 'avg_job_duration_minutes', label: t('analytics.fields.avgDurationMin') },
         ],
       }}
     />

@@ -1,4 +1,5 @@
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { t } from '../../../../i18n/i18n';
 
 export interface WorkflowNodeData extends Record<string, unknown> {
   label: string;
@@ -38,8 +39,8 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
           ? "#2563eb"
           : "#cbd5e1";
   const description = [
-    data.isStart ? "start status" : null,
-    data.isEnd ? "end status" : null,
+    data.isStart ? t('configuration.fields.startStatus2') : null,
+    data.isEnd ? t('configuration.fields.endStatus') : null,
     ...data.errors,
     ...data.warnings,
   ]
@@ -47,7 +48,7 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
     .join(". ");
   return (
     <div
-      aria-label={`Status ${data.label}${description ? ` — ${description}` : ""}`}
+      aria-label={t('configuration.tooltips.statusLabelValue', { label: data.label, value: description ? ` — ${description}` : "" })}
       title={[...data.errors, ...data.warnings].join("\n") || undefined}
       data-status-node={data.code}
       data-node-problem={problem ?? undefined}
@@ -70,12 +71,12 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
       >
         {data.isStart && (
           <span style={badge("#dcfce7", "#166534")} data-start-marker>
-            Start
+            {t('common.fields.start')}
           </span>
         )}
         {data.isEnd && (
           <span style={badge("#f1f5f9", "#475569")} data-end-marker>
-            End
+            {t('common.fields.end')}
           </span>
         )}
         {problem && (
@@ -86,7 +87,7 @@ export function WorkflowNode({ data, selected }: NodeProps<WorkflowFlowNode>) {
                 : badge("#fef3c7", "#92400e")
             }
           >
-            {problem === "error" ? "Error" : "Warning"}
+            {problem === "error" ? t('configuration.fields.error') : t('configuration.warnings.warning')}
           </span>
         )}
       </div>

@@ -21,7 +21,7 @@ class NotificationDeliveryLog extends Model
 
     protected $fillable = [
         'tenant_id', 'notification_rule_id', 'event_code', 'resource_type', 'resource_id',
-        'recipient_user_id', 'recipient_email', 'channel', 'template_configuration_version_id',
+        'recipient_user_id', 'recipient_email', 'channel', 'template_configuration_version_id', 'locale',
         'status', 'failure_reason', 'queued_at', 'sent_at', 'delivered_at', 'failed_at', 'escalated_at',
     ];
 

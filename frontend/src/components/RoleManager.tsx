@@ -5,6 +5,7 @@ import { FormField, inputStyle } from './FormField';
 import { Modal } from './Modal';
 import type { PermissionItem, RoleItem } from '../types';
 import { useAuth } from '../auth/AuthContext';
+import { t } from '../i18n/i18n';
 
 type FeatureGroup = { feature: string; label: string; permissions: PermissionItem[] };
 type ModuleGroup = { module: string; label: string; features: FeatureGroup[] };
@@ -13,7 +14,7 @@ type ModuleGroup = { module: string; label: string; features: FeatureGroup[] };
 function buildTree(permissions: PermissionItem[]): ModuleGroup[] {
   const modules = new Map<string, ModuleGroup>();
   for (const p of permissions) {
-    const moduleKey = p.module_name ?? p.module ?? 'General';
+    const moduleKey = p.module_name ?? p.module ?? t('common.fields.general');
     const featureKey = p.feature ?? p.group;
     let mod = modules.get(moduleKey);
     if (!mod) {
@@ -74,28 +75,28 @@ export function RoleManager({ rolesEndpoint, permissionsEndpoint }: { rolesEndpo
       {hasPermission('role.create') && (
         <div style={{ marginBottom: 12, textAlign: 'right' }}>
           <button className="btn-primary" onClick={() => setShowCreate(true)}>
-            + New Role
+            {t('common.actions.newRole')}
           </button>
         </div>
       )}
 
-      {roles.length === 0 && <EmptyState label="No roles defined yet." />}
+      {roles.length === 0 && <EmptyState label={t('common.empty.noRolesDefinedYet')} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 14 }}>
         {roles.map((role) => (
           <div key={role.id} className="card">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
               <strong>{role.name}</strong>
-              {role.is_system && <span style={{ fontSize: 11, color: '#9ca3af' }}>SYSTEM</span>}
+              {role.is_system && <span style={{ fontSize: 11, color: '#9ca3af' }}>{t('common.fields.system2')}</span>}
             </div>
             {role.description && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{role.description}</div>}
-            <div style={{ fontSize: 12, color: '#6b7280', margin: '6px 0 10px' }}>{role.permissions.length} permissions</div>
+            <div style={{ fontSize: 12, color: '#6b7280', margin: '6px 0 10px' }}>{t('common.fields.permissionCount', { count: role.permissions.length })}</div>
             {canEdit && role.editable !== false && (
               <button className="btn-link" onClick={() => setEditingRole(role)}>
-                Edit role &amp; permissions
+                {t('common.actions.editRoleAndPermissions')}
               </button>
             )}
-            {role.editable === false && <div style={{ fontSize: 11, color: '#9ca3af' }}>Holds every permission; not editable.</div>}
+            {role.editable === false && <div style={{ fontSize: 11, color: '#9ca3af' }}>{t('common.help.holdsEveryPermissionNotEditable')}</div>}
           </div>
         ))}
       </div>
@@ -225,33 +226,33 @@ function RoleFormModal({
   );
 
   return (
-    <Modal open title={role ? `Edit Role — ${role.name}` : 'New Role'} onClose={onClose} width={760}>
+    <Modal open title={role ? t('common.modals.editRoleName', { name: role.name }) : t('common.modals.newRole')} onClose={onClose} width={760}>
       {formError && <ErrorState message={formError} />}
-      <FormField label="Name" errors={errors.name} required={!role}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required={!role}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} disabled={!!role && (role.is_system || !canEditDetails)} />
       </FormField>
-      {role?.is_system && <div style={{ fontSize: 12, color: '#6b7280', marginTop: -10, marginBottom: 12 }}>System role: its name is fixed; description and permissions can be changed.</div>}
-      <FormField label="Description" errors={errors.description}>
+      {role?.is_system && <div style={{ fontSize: 12, color: '#6b7280', marginTop: -10, marginBottom: 12 }}>{t('common.help.systemRoleNameFixedDescriptionPermissions')}</div>}
+      <FormField label={t('common.fields.description')} errors={errors.description}>
         <input value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={inputStyle} disabled={!!role && !canEditDetails} />
       </FormField>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
         <label style={{ fontSize: 13, fontWeight: 600 }}>
-          Permissions <span style={{ fontWeight: 400, color: '#6b7280' }}>({selected.size} of {permissions.length} selected)</span>
+          {t('common.fields.permissions')} <span style={{ fontWeight: 400, color: '#6b7280' }}>{t('common.fields.selectedCountOfPermissionsCountSelected', { selectedCount: selected.size, permissionsCount: permissions.length })}</span>
         </label>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input placeholder="Filter permissions…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+          <input placeholder={t('common.search.filterPermissions')} value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, width: 200 }} />
           <button type="button" className="btn-link" disabled={!canEditPermissions} onClick={() => setMany(visibleIds, true)}>
-            Select all{needle ? ' shown' : ''}
+            {needle ? t('common.actions.selectAllShown') : t('common.actions.selectAll')}
           </button>
           <button type="button" className="btn-link" disabled={!canEditPermissions} onClick={() => setMany(visibleIds, false)}>
-            Clear{needle ? ' shown' : ' all'}
+            {needle ? t('common.actions.clearShown') : t('common.actions.clearAll')}
           </button>
         </div>
       </div>
       {errors.permission_ids && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 6 }}>{errors.permission_ids[0]}</div>}
       <div style={{ maxHeight: '50vh', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6 }}>
-        {visibleTree.length === 0 && <div style={{ padding: 12, fontSize: 13, color: '#6b7280' }}>No permission matches the filter.</div>}
+        {visibleTree.length === 0 && <div style={{ padding: 12, fontSize: 13, color: '#6b7280' }}>{t('common.empty.noPermissionMatchesFilter')}</div>}
         {visibleTree.map((m) => {
           const moduleIds = m.features.flatMap((f) => idsOf(f.permissions));
           const isCollapsed = collapsed.has(m.module) && !needle;
@@ -293,10 +294,10 @@ function RoleFormModal({
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose} disabled={submitting}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || (!role && !name)} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>

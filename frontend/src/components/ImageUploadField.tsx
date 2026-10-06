@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { extractApiError } from '../api/client';
+import { t } from '../i18n/i18n';
 
 export interface UploadedImage {
   id: string;
@@ -49,18 +50,18 @@ export function ImageUploadField({
     try {
       for (const file of Array.from(files)) {
         if (!['image/jpeg', 'image/png'].includes(file.type) || !/\.(jpe?g|png)$/i.test(file.name)) {
-          setError('Only JPG or PNG images are accepted.');
+          setError(t('common.errors.onlyJpgPngImagesAccepted'));
           continue;
         }
         if (maxSizeBytes && file.size > maxSizeBytes) {
-          setError(`"${file.name}" exceeds the ${Math.round(maxSizeBytes / 1024 / 1024)} MB maximum size.`);
+          setError(t('common.errors.nameExceedsValueMbMaximumSize', { name: file.name, value: Math.round(maxSizeBytes / 1024 / 1024) }));
           continue;
         }
         await onUpload(file);
       }
     } catch (err) {
       const apiError = extractApiError(err);
-      setError(apiError.errors ? (Object.values(apiError.errors).flat()[0] ?? apiError.message) : apiError.message || 'Upload failed. Please try again.');
+      setError(apiError.errors ? (Object.values(apiError.errors).flat()[0] ?? apiError.message) : apiError.message || t('common.errors.uploadFailedPleaseTryAgain'));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = '';
@@ -74,7 +75,7 @@ export function ImageUploadField({
     try {
       await onRemove(id);
     } catch {
-      setError('Could not remove this image.');
+      setError(t('common.errors.couldNotRemoveImage'));
     } finally {
       setRemovingId(null);
     }
@@ -94,10 +95,10 @@ export function ImageUploadField({
             marginBottom: 8,
           }}
         >
-          <div style={{ marginBottom: 8 }}>No image selected</div>
+          <div style={{ marginBottom: 8 }}>{t('common.empty.noImageSelected')}</div>
           {!disabled && (
             <button type="button" className="btn-secondary" disabled={uploading} onClick={() => inputRef.current?.click()}>
-              {uploading ? 'Uploading…' : uploadLabel}
+              {uploading ? t('common.actions.uploading') : uploadLabel}
             </button>
           )}
           <div style={{ marginTop: 6, fontSize: 11 }}>{label}</div>
@@ -110,13 +111,13 @@ export function ImageUploadField({
             <div key={img.id} style={{ position: 'relative' }}>
               <img
                 src={img.previewUrl}
-                alt={img.name ?? 'Evidence'}
+                alt={img.name ?? t('common.tooltips.evidence')}
                 style={{ width: 90, height: 90, objectFit: 'cover', borderRadius: 6, border: '1px solid #e5e7eb', display: 'block' }}
               />
               {onRemove && !disabled && (
                 <button
                   type="button"
-                  aria-label={`Remove ${img.name ?? 'image'}`}
+                  aria-label={t('common.actions.removeValue', { value: img.name ?? 'image' })}
                   disabled={removingId === img.id}
                   onClick={() => handleRemove(img.id)}
                   style={{
@@ -148,7 +149,7 @@ export function ImageUploadField({
               onClick={() => inputRef.current?.click()}
               style={{ width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12 }}
             >
-              {uploading ? '…' : '+ Add'}
+              {uploading ? '…' : t('common.actions.add')}
             </button>
           )}
         </div>

@@ -8,6 +8,7 @@ import {
   TemplateEditor,
   type TemplateEditorTarget,
 } from "./templates/TemplateEditor";
+import { t as tt } from '../../../i18n/i18n';
 
 /**
  * Configuration → Document Template: per printed document type, the System Default and your
@@ -57,12 +58,9 @@ export function DocumentTemplateConfigPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Document Templates</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{tt('configuration.titles.documentTemplates')}</h1>
       <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
-        Design how each printed document looks. Write and format text like in a
-        word processor and add information such as the vehicle registration or
-        the list of jobs from the cards; the preview shows the result with
-        sample data. Documents already printed keep their layout.
+        {tt('configuration.help.designHowEachPrintedDocumentLooks')}
       </p>
       {error && <ErrorState message={error} />}
       <DocumentConfigList
@@ -71,10 +69,10 @@ export function DocumentTemplateConfigPage() {
         publishPermission="document_template.publish"
         documentTypes={types}
         reloadKey={reloadKey}
-        newLabel="New Document Type Configuration"
+        newLabel={tt('configuration.actions.newDocumentTypeConfiguration')}
         describe={(payload) => (
           <span style={{ color: "#6b7280" }}>
-            {payload.editor ? "Designed in the visual editor" : "Template"}
+            {payload.editor ? tt('configuration.help.designedVisualEditor') : tt('configuration.fields.template')}
           </span>
         )}
         onEdit={setEditing}
@@ -94,12 +92,12 @@ export function DocumentTemplateConfigPage() {
       {preview && (
         <Modal
           open
-          title={`Preview — ${label(preview.code)}`}
+          title={tt('configuration.modals.previewValue', { value: label(preview.code) })}
           onClose={() => setPreview(null)}
           width={860}
         >
           <iframe
-            title="Template preview"
+            title={tt('configuration.tooltips.templatePreview')}
             sandbox=""
             srcDoc={preview.html}
             style={{

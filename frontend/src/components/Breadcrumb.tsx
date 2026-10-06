@@ -1,6 +1,8 @@
 import { Link, useLocation } from 'react-router-dom';
-import { humanizeSegment, isDynamicSegment, SEGMENT_LABELS } from '../navigation/breadcrumbLabels';
+import { isDynamicSegment, SEGMENT_LABELS, segmentLabel } from '../navigation/breadcrumbLabels';
 import { useBreadcrumbLabels } from '../navigation/BreadcrumbLabelContext';
+import { t } from '../i18n/i18n';
+import { appLocale } from '../i18n/locale';
 
 interface Crumb {
   key: string;
@@ -24,7 +26,7 @@ export function Breadcrumb() {
   if (segments.length === 0) return null;
 
   const portalRoot = segments[0]; // 'platform' | 'app'
-  const rootLabel = SEGMENT_LABELS[portalRoot] ?? humanizeSegment(portalRoot);
+  const rootLabel = segmentLabel(portalRoot);
   const dashboardHref = `/${portalRoot}/dashboard`;
 
   // If we're exactly on the dashboard, only show the root crumb (current page).
@@ -33,6 +35,7 @@ export function Breadcrumb() {
   const crumbs: Crumb[] = [{ key: 'root', label: rootLabel, href: onDashboard ? null : dashboardHref }];
 
   let cumulativePath = `/${portalRoot}`;
+  let previousSegment = portalRoot;
   let previousLabel = rootLabel;
 
   const trailSegments = onDashboard ? [] : segments.slice(1);
@@ -43,17 +46,18 @@ export function Breadcrumb() {
 
     let label: string;
     if (isDynamicSegment(segment)) {
-      label = dynamicLabels[segment] ?? `${singularize(previousLabel)} Detail`;
+      label = dynamicLabels[segment] ?? t('common.fields.valueDetail', { value: recordNoun(previousSegment, previousLabel) });
     } else {
-      label = SEGMENT_LABELS[segment] ?? humanizeSegment(segment);
+      label = segmentLabel(segment);
     }
 
     crumbs.push({ key: `${cumulativePath}:${idx}`, label, href: isLast ? null : cumulativePath });
+    previousSegment = segment;
     previousLabel = label;
   });
 
   return (
-    <nav className="breadcrumb" aria-label="Breadcrumb">
+    <nav className="breadcrumb" aria-label={t('common.tooltips.breadcrumb')}>
       {crumbs.map((crumb, idx) => (
         <span key={crumb.key} style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           {idx > 0 && (
@@ -74,6 +78,15 @@ export function Breadcrumb() {
       ))}
     </nav>
   );
+}
+
+/**
+ * The record noun for "<noun> Detail": English singularizes the parent list label ("Vehicles" →
+ * "Vehicle"); Indonesian nouns are not inflected for number, so the list label is used as is.
+ */
+function recordNoun(parentSegment: string, parentLabel: string): string {
+  const english = isDynamicSegment(parentSegment) ? parentLabel : (SEGMENT_LABELS[parentSegment] ?? parentLabel);
+  return appLocale() === 'en' ? singularize(english) : parentLabel;
 }
 
 function singularize(label: string): string {

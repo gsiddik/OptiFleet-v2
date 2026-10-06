@@ -106,6 +106,9 @@ class MaintenanceHistoryScopeTest extends TestCase
             $vehicle = $this->makeVehicle($tenant, $branch, $category, ['registration_number' => "B X{$i} MHS"]);
             Breakdown::query()->create(['tenant_id' => $tenant->id, 'branch_id' => $branch->id, 'vehicle_id' => $vehicle->id, 'reported_at' => now(), 'location' => 'Depot', 'severity' => 'MAJOR', 'description' => 'x', 'status' => 'REPORTED']);
         }
+        // Frozen clock: Sanctum touches the token's last_used_at only when the second has changed, which would
+        // add one UPDATE to whichever request crosses a second boundary.
+        $this->freezeTime();
         $this->getJson('/api/v1/app/maintenance-history?per_page=1', $admin)->assertOk(); // warm the auth / permission caches
         DB::enableQueryLog();
         $this->getJson('/api/v1/app/maintenance-history?per_page=50', $admin)->assertOk();

@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 export interface PaginationMeta {
   current_page: number;
   last_page: number;
@@ -15,17 +16,17 @@ export function Pagination({ meta, onPageChange }: { meta: PaginationMeta; onPag
         disabled={meta.current_page <= 1}
         onClick={() => onPageChange(meta.current_page - 1)}
       >
-        Previous
+        {t('common.actions.previous')}
       </button>
       <span>
-        Page {meta.current_page} of {meta.last_page} ({meta.total} total)
+        {t('common.help.pageCurrentPageLastPageTotal', { current_page: meta.current_page, last_page: meta.last_page, total: meta.total })}
       </span>
       <button
         className="btn-secondary"
         disabled={meta.current_page >= meta.last_page}
         onClick={() => onPageChange(meta.current_page + 1)}
       >
-        Next
+        {t('common.actions.next')}
       </button>
     </div>
   );

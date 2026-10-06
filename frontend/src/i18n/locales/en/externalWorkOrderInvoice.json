@@ -1,0 +1,92 @@
+{
+  "actions": {
+    "acknowledge": "Acknowledge",
+    "confirmCancel": "Confirm Cancel",
+    "confirmComplete": "Confirm Complete",
+    "confirmDeliver": "Confirm Deliver",
+    "confirmSettlement": "Confirm Settlement",
+    "deliver": "Deliver",
+    "generate": "Generate",
+    "generateWorkAuthorization": "Generate Work Authorization",
+    "openCompletedWorkOrder": "Open Completed Work Order",
+    "openPaymentProof": "Open Payment Proof",
+    "openVendorInvoice": "Open Vendor Invoice",
+    "settlement": "Settlement",
+    "viewAcknowledgement": "View Acknowledgement",
+    "viewBill": "View Bill",
+    "viewHistory": "View History",
+    "viewSettlement": "View Settlement",
+    "viewWorkAuthorization": "View Work Authorization"
+  },
+  "empty": {
+    "noExternalWorkOrderInvoicesFound": "No External Work Order Invoices found.",
+    "noHistoryRecordedYet": "No history recorded yet."
+  },
+  "fields": {
+    "completedWorkOrderJpgPngPdf": "Completed Work Order (JPG, PNG, or PDF)",
+    "invoiceAmount": "Invoice Amount",
+    "invoiceAmountVendorInvoiceAmount": "Invoice Amount: {{vendor_invoice_amount}}",
+    "invoiceDateVendorInvoiceDate": "Invoice Date: {{vendor_invoice_date}}",
+    "paidAmount": "Paid Amount",
+    "paidAmountPaidAmount": "Paid Amount: {{paid_amount}}",
+    "paymentDatePaymentDate": "Payment Date: {{payment_date}}",
+    "paymentProofJpgPngPdf": "Payment Proof (JPG, PNG, or PDF)",
+    "paymentTerm": "Payment Term",
+    "selectWorkshop": "Select workshop…",
+    "vendorInvoiceJpgPngPdf": "Vendor Invoice (JPG, PNG, or PDF)",
+    "woNumber": "WO Number",
+    "workAuthorization": "Work Authorization"
+  },
+  "help": {
+    "confirmExternalWorkshopFinishedMaintenanceWork": "Confirm that the External Workshop has finished the maintenance work.",
+    "confirmWorkOrderWorkAuthorizationLetter": "Confirm that the Work Order and Work Authorization Letter have been printed and handed over to the External Workshop.",
+    "paidAmountMustExactlyMatchVendor": "Paid amount must exactly match the vendor invoice amount ({{vendor_invoice_amount}}) — partial settlement is not supported.",
+    "selectExternalWorkshopPerformMaintenance": "Select the External Workshop that will perform this maintenance.",
+    "uploadSignedWorkAuthorizationLetterReceived": "Upload the signed Work Authorization Letter received back from the workshop.",
+    "workOrdersBeingCarriedOutExternal": "Work Orders being carried out by an External Workshop."
+  },
+  "labels": {
+    "workOrderExternalInvoice": "WorkOrderExternalInvoice"
+  },
+  "modals": {
+    "acknowledgeWorkAuthorization": "Acknowledge Work Authorization",
+    "bill": "Bill",
+    "cancelExternalWorkOrder": "Cancel External Work Order",
+    "complete": "Complete",
+    "deliver": "Deliver",
+    "generateWorkAuthorization": "Generate Work Authorization",
+    "history": "History",
+    "settlement": "Settlement",
+    "settlementDetails": "Settlement Details"
+  },
+  "placeholders": {
+    "eGNet30": "e.g. NET 30",
+    "reasonRequired": "Reason (required)"
+  },
+  "sections": {
+    "acknowledgedWorkAuthorization": "Acknowledged Work Authorization",
+    "completedWorkOrder": "Completed Work Order",
+    "paymentProof": "Payment Proof",
+    "vendorInvoice": "Vendor Invoice",
+    "workAuthorizationLetter": "Work Authorization Letter"
+  },
+  "status": {
+    "billed": "Billed",
+    "cancelled": "Cancelled",
+    "delivered": "Delivered",
+    "inProgress": "In Progress",
+    "newExternalWo": "New External WO",
+    "paid": "Paid"
+  },
+  "titles": {
+    "externalWorkOrderInvoices": "External Work Order Invoices"
+  },
+  "wal": {
+    "acknowledged": "Acknowledged",
+    "generated": "Generated",
+    "notGenerated": "Not Generated"
+  },
+  "warnings": {
+    "cancelsExternalWorkOrderExternalWorkshop": "This cancels the External Work Order and its External Workshop Invoice. It cannot be undone."
+  }
+}

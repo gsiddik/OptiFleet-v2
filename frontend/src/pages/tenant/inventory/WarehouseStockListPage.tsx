@@ -15,18 +15,20 @@ import type { WarehouseStockItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { statusLabel } from '../../../i18n/statusRegistry';
+import { labelText, t, translated, withLabels } from '../../../i18n/i18n';
 
 const REORDER_STATUSES = ['', 'HEALTHY', 'LOW_STOCK', 'REORDER_REQUIRED', 'OUT_OF_STOCK'];
 
 /** Tabs follow the canonical Item Type (classified server-side via `item_group`). */
-const ITEM_GROUPS = [
-  { value: 'PARTS_SUPPLIES', label: 'Parts & Supplies', hint: 'Spare Parts, Consumables, Rims, Tires' },
-  { value: 'TOOLS_EQUIPMENT', label: 'Tools & Equipment', hint: 'Tools, Equipment' },
+const ITEM_GROUPS = withLabels([
+  { value: 'PARTS_SUPPLIES', label: 'Parts & Supplies', labelKey: 'inventory.fields.partsAndSupplies', hint: 'Spare Parts, Consumables, Rims, Tires', hintKey: 'inventory.help.sparePartsConsumablesRimsTires' },
+  { value: 'TOOLS_EQUIPMENT', label: 'Tools & Equipment', labelKey: 'inventory.fields.toolsAndEquipment', hint: 'Tools, Equipment', hintKey: 'inventory.help.toolsEquipment' },
   // Used parts from Used Sparepart Processing — kept apart so used and new stock never mix.
-  { value: 'USED_SPAREPARTS', label: 'Used Spareparts', hint: 'Reusable, Quarantine and Repair-pending used parts' },
+  { value: 'USED_SPAREPARTS', label: 'Used Spareparts', labelKey: 'inventory.fields.usedSpareparts', hint: 'Reusable, Quarantine and Repair-pending used parts', hintKey: 'inventory.help.reusableQuarantineRepairPendingUsedParts' },
   // REUSE tires: a separate used tire quantity, issued through Part Requests (Used lines).
-  { value: 'USED_TIRES', label: 'Used Tires', hint: 'REUSE tires per warehouse, issued through Part Requests' },
-] as const;
+  { value: 'USED_TIRES', label: 'Used Tires', labelKey: 'inventory.fields.usedTires', hint: 'REUSE tires per warehouse, issued through Part Requests', hintKey: 'inventory.help.reuseTiresPerWarehouseIssuedThrough' },
+] as const);
 
 export function WarehouseStockListPage() {
   const { hasPermission } = useAuth();
@@ -45,32 +47,32 @@ export function WarehouseStockListPage() {
   );
 
   const columns: Column<WarehouseStockItem>[] = [
-    { key: 'product', header: 'Product', render: (s) => s.product?.name ?? s.product_id },
-    { key: 'warehouse', header: 'Warehouse', render: (s) => s.warehouse?.name ?? s.warehouse_id },
-    { key: 'on_hand', header: 'On Hand', render: (s) => formatQty(s.quantity_on_hand) },
-    { key: 'reserved', header: 'Reserved', render: (s) => formatQty(s.quantity_reserved) },
-    { key: 'available', header: 'Available', render: (s) => formatQty(s.quantity_available) },
-    { key: 'avg_cost', header: 'Avg Cost', render: (s) => formatMoney(s.average_unit_cost) },
-    { key: 'min', header: 'Min', render: (s) => formatQty(s.minimum_stock) },
-    { key: 'reorder', header: 'Reorder Pt.', render: (s) => formatQty(s.reorder_point) },
-    { key: 'max', header: 'Max', render: (s) => formatQty(s.maximum_stock) },
-    { key: 'status', header: 'Status', render: (s) => <StatusBadge status={s.reorder_status} /> },
+    { key: 'product', header: t('common.fields.product'), render: (s) => s.product?.name ?? s.product_id },
+    { key: 'warehouse', header: t('common.fields.warehouse'), render: (s) => s.warehouse?.name ?? s.warehouse_id },
+    { key: 'on_hand', header: t('analytics.fields.onHand'), render: (s) => formatQty(s.quantity_on_hand) },
+    { key: 'reserved', header: t('inventory.fields.reserved'), render: (s) => formatQty(s.quantity_reserved) },
+    { key: 'available', header: t('inventory.fields.available'), render: (s) => formatQty(s.quantity_available) },
+    { key: 'avg_cost', header: t('inventory.fields.avgCost'), render: (s) => formatMoney(s.average_unit_cost) },
+    { key: 'min', header: t('inventory.fields.min'), render: (s) => formatQty(s.minimum_stock) },
+    { key: 'reorder', header: t('inventory.fields.reorderPt'), render: (s) => formatQty(s.reorder_point) },
+    { key: 'max', header: t('inventory.fields.max'), render: (s) => formatQty(s.maximum_stock) },
+    { key: 'status', header: t('common.fields.status'), render: (s) => <StatusBadge status={s.reorder_status} /> },
     {
       key: 'actions', header: '', render: (s) => (
         <>
           {hasPermission('inventory.adjust') && (
             <button className="btn-link" onClick={() => setThresholdsTarget(s)}>
-              Thresholds
+              {t('inventory.actions.thresholds')}
             </button>
           )}
           {hasPermission('inventory.adjust') && (
             <button className="btn-link" style={{ marginLeft: 8 }} onClick={() => setAdjustTarget(s)}>
-              Adjust
+              {t('inventory.actions.adjust')}
             </button>
           )}
           {hasPermission('inventory.scrap') && (
             <button className="btn-link" style={{ marginLeft: 8, color: '#b91c1c' }} onClick={() => setScrapTarget(s)}>
-              Scrap
+              {t('inventory.actions.scrap')}
             </button>
           )}
         </>
@@ -80,14 +82,14 @@ export function WarehouseStockListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Warehouse Stock</h1>
-      <div role="tablist" aria-label="Item group" style={{ display: 'flex', gap: 0, marginBottom: 14, borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('inventory.titles.warehouseStock')}</h1>
+      <div role="tablist" aria-label={t('inventory.tooltips.itemGroup')} style={{ display: 'flex', gap: 0, marginBottom: 14, borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
         {ITEM_GROUPS.map((g) => (
           <button
             key={g.value}
             role="tab"
             aria-selected={itemGroup === g.value}
-            title={g.hint}
+            title={translated(g.hintKey, g.hint)}
             onClick={() => {
               setItemGroup(g.value);
               setPage(1);
@@ -103,7 +105,7 @@ export function WarehouseStockListPage() {
               cursor: 'pointer',
             }}
           >
-            {g.label}
+            {labelText(g)}
           </button>
         ))}
       </div>
@@ -124,7 +126,7 @@ export function WarehouseStockListPage() {
                 className={reorderStatus === s ? 'btn-primary' : 'btn-secondary'}
                 style={{ padding: '4px 10px', fontSize: 12 }}
               >
-                {s || 'All'}
+                {s ? statusLabel(s) : t('common.actions.all')}
               </button>
             ))}
           </div>
@@ -137,7 +139,7 @@ export function WarehouseStockListPage() {
           />
           {error && <ErrorState message={error} />}
           {!error && loading && <LoadingState />}
-          {!error && !loading && data.length === 0 && <EmptyState label="No stock records found." />}
+          {!error && !loading && data.length === 0 && <EmptyState label={t('inventory.empty.noStockRecordsFound')} />}
           {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
           {meta && <Pagination meta={meta} onPageChange={setPage} />}
         </>
@@ -193,25 +195,25 @@ function ThresholdsModal({ target, onClose, onSaved }: { target: WarehouseStockI
   }
 
   return (
-    <Modal open={!!target} title={`Stock Thresholds — ${target?.product?.name ?? ''}`} onClose={onClose}>
+    <Modal open={!!target} title={t('inventory.modals.stockThresholdsValue', { value: target?.product?.name ?? '' })} onClose={onClose}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
-        Applies only to this Warehouse ({target?.warehouse?.name ?? ''}). Leave a field blank for no threshold.
+        {t('inventory.help.appliesOnlyWarehouse')}{target?.warehouse?.name ?? ''}{t('inventory.help.leaveFieldBlankNoThreshold')}
       </p>
-      <FormField label="Minimum Stock" errors={errors.minimum_stock}>
+      <FormField label={t('inventory.fields.minimumStock')} errors={errors.minimum_stock}>
         <NumericInput step="0.0001" min="0" value={minimumStock} onChange={(e) => setMinimumStock(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reorder Point" errors={errors.reorder_point}>
+      <FormField label={t('inventory.fields.reorderPoint')} errors={errors.reorder_point}>
         <NumericInput step="0.0001" min="0" value={reorderPoint} onChange={(e) => setReorderPoint(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Maximum Stock" errors={errors.maximum_stock}>
+      <FormField label={t('inventory.fields.maximumStock')} errors={errors.maximum_stock}>
         <NumericInput step="0.0001" min="0" value={maximumStock} onChange={(e) => setMaximumStock(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          Save Thresholds
+          {t('inventory.actions.saveThresholds')}
         </button>
       </div>
     </Modal>
@@ -246,25 +248,25 @@ function AdjustModal({ target, onClose, onAdjusted }: { target: WarehouseStockIt
   }
 
   return (
-    <Modal open={!!target} title={`Adjust Stock — ${target?.product?.name ?? ''}`} onClose={onClose}>
-      <FormField label="Direction" errors={errors.direction} required>
+    <Modal open={!!target} title={t('inventory.modals.adjustStockValue', { value: target?.product?.name ?? '' })} onClose={onClose}>
+      <FormField label={t('inventory.fields.direction')} errors={errors.direction} required>
         <select value={direction} onChange={(e) => setDirection(e.target.value as 'PLUS' | 'MINUS')} style={inputStyle}>
-          <option value="PLUS">Increase (+)</option>
-          <option value="MINUS">Decrease (-)</option>
+          <option value="PLUS">{t('inventory.fields.increase')}</option>
+          <option value="MINUS">{t('inventory.fields.decrease')}</option>
         </select>
       </FormField>
-      <FormField label="Quantity" errors={errors.quantity} required>
+      <FormField label={t('common.fields.quantity')} errors={errors.quantity} required>
         <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reason (required, audited)" errors={errors.reason} required>
+      <FormField label={t('inventory.fields.reasonRequiredAudited')} errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !quantity || !reason} onClick={submit}>
-          Submit Adjustment
+          {t('inventory.actions.submitAdjustment')}
         </button>
       </div>
     </Modal>
@@ -299,22 +301,22 @@ function ScrapModal({ target, onClose, onScrapped }: { target: WarehouseStockIte
   }
 
   return (
-    <Modal open={!!target} title={`Scrap Stock — ${target?.product?.name ?? ''}`} onClose={onClose}>
+    <Modal open={!!target} title={t('inventory.modals.scrapStockValue', { value: target?.product?.name ?? '' })} onClose={onClose}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
-        Permanently removes available on-hand stock (max {formatQty(target?.quantity_available ?? 0)}). This cannot be undone.
+        {t('inventory.warnings.permanentlyRemovesAvailableHandStockMax', { value: formatQty(target?.quantity_available ?? 0) })}
       </p>
-      <FormField label="Quantity" errors={errors.quantity} required>
+      <FormField label={t('common.fields.quantity')} errors={errors.quantity} required>
         <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reason (required, audited)" errors={errors.reason} required>
+      <FormField label={t('inventory.fields.reasonRequiredAudited')} errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !quantity || !reason} onClick={submit}>
-          Confirm Scrap
+          {t('inventory.actions.confirmScrap')}
         </button>
       </div>
     </Modal>

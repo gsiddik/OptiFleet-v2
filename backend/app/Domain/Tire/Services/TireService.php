@@ -3,6 +3,7 @@
 namespace App\Domain\Tire\Services;
 
 use App\Domain\Partner\Models\Partner;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireCyclePhoto;
 use App\Domain\Tire\Models\TireInspection;
@@ -106,7 +107,7 @@ class TireService
                     'tire_id' => $tire->id,
                     'tread_depth_mm' => $baselineTreadDepthMm,
                     'condition' => $baselineCondition,
-                    'recommendation' => $installedAtSource === 'KNOWN' ? null : 'Baseline reading captured at onboarding; installation date is '.$installedAtSource.'.',
+                    'recommendation' => $installedAtSource === 'KNOWN' ? null : Messages::text('tire.reasons.baselineOnboarding', ['source' => $installedAtSource]),
                     'inspected_by' => $userId,
                     'inspected_at' => $installedAt,
                 ]);

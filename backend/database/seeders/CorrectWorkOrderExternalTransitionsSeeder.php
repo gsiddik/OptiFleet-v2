@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Domain\Workflow\Services\WorkflowDefinitionService;
+use App\Domain\Workflow\Support\WorkflowActionVerbs;
 use Illuminate\Database\Seeder;
 
 /**
@@ -42,7 +43,7 @@ class CorrectWorkOrderExternalTransitionsSeeder extends Seeder
 
         $newTransitions = $transitions->reject($oldExternalRelated)
             ->concat([
-                ['from_status' => 'DRAFT', 'to_status' => 'EXTERNAL', 'action_code' => 'external', 'action_label' => 'External'],
+                ['from_status' => 'DRAFT', 'to_status' => 'EXTERNAL', 'action_code' => 'external', 'action_label' => WorkflowActionVerbs::label('EXTERNAL')],
                 ['from_status' => 'EXTERNAL', 'to_status' => 'DRAFT', 'action_code' => 'revise', 'action_label' => 'Revise'],
                 ['from_status' => 'EXTERNAL', 'to_status' => 'CANCELLED', 'action_code' => 'cancel', 'action_label' => 'Cancel'],
             ])->values()->all();

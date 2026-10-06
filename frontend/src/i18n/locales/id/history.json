@@ -1,0 +1,41 @@
+{
+  "empty": {
+    "noMaintenanceHistoryAccessScope": "Tidak ada riwayat pemeliharaan dalam cakupan akses Anda."
+  },
+  "fields": {
+    "details": "Detail",
+    "eventType": "Jenis event",
+    "fromDate": "Dari tanggal",
+    "searchRegistration": "Cari nomor registrasi",
+    "toDate": "Sampai tanggal"
+  },
+  "filters": {
+    "allBranches": "Semua cabang",
+    "allEventTypes": "Semua jenis event"
+  },
+  "help": {
+    "maintenanceEventsEveryVehicleAccessScope": "Kejadian pemeliharaan untuk setiap kendaraan dalam cakupan akses Anda, terbaru lebih dulu. Gunakan Kendaraan → Riwayat untuk linimasa satu kendaraan."
+  },
+  "labels": {
+    "breakdownDetailStatus": "Kerusakan ({{detail}}) — {{status}}",
+    "castBreakdownsSeverityVarchar": "CAST(breakdowns.severity AS varchar)",
+    "castBreakdownsStatusVarchar": "CAST(breakdowns.status AS varchar)",
+    "castMaintenanceRequestsRequestNumberVarchar": "CAST(maintenance_requests.request_number AS varchar)",
+    "castMaintenanceRequestsStatusVarchar": "CAST(maintenance_requests.status AS varchar)",
+    "castNullAsType": "CAST(NULL AS {{type}})",
+    "castQcInspectionsStatusVarchar": "CAST(qc_inspections.status AS varchar)",
+    "castWorkOrdersMaintenanceTypeVarchar": "CAST(work_orders.maintenance_type AS varchar)",
+    "castWorkOrdersStatusVarchar": "CAST(work_orders.status AS varchar)",
+    "castWorkOrdersWoNumberVarchar": "CAST(work_orders.wo_number AS varchar)",
+    "qcInspectionStatus": "Inspeksi QC — {{status}}",
+    "requestRefStatus": "Permintaan {{ref}} — {{status}}",
+    "vehicleReleased": "Kendaraan dilepas",
+    "workOrderRefDetailStatus": "Work Order {{ref}} ({{detail}}) — {{status}}"
+  },
+  "search": {
+    "searchRegistration": "Cari nomor registrasi…"
+  },
+  "titles": {
+    "maintenanceHistory": "Riwayat Pemeliharaan"
+  }
+}

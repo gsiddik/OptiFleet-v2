@@ -1,3 +1,6 @@
+import { message } from '../../../../i18n/messages';
+import { t } from '../../../../i18n/i18n';
+
 /**
  * Wheel configuration calculations — pure functions with no UI dependency, so the same rules can
  * be re-implemented server-side when the configuration is persisted.
@@ -32,10 +35,10 @@ export type Range = { min: number; max: number };
 /** Parses a mandatory whole-number text field; returns the number or an error message. */
 export function parseCount(raw: string, range: Range): { value: number | null; error: string | null } {
   const text = raw.trim();
-  if (text === '') return { value: null, error: 'Required.' };
-  if (!/^\d+$/.test(text)) return { value: null, error: 'Enter a whole number.' };
+  if (text === '') return { value: null, error: t('tire.errors.required') };
+  if (!/^\d+$/.test(text)) return { value: null, error: t('tire.validation.enterAWholeNumber') };
   const value = Number(text);
-  if (value < range.min || value > range.max) return { value: null, error: `Enter a whole number from ${range.min} to ${range.max}.` };
+  if (value < range.min || value > range.max) return { value: null, error: t('tire.validation.enterWholeNumberMinMax', { min: range.min, max: range.max }) };
   return { value, error: null };
 }
 
@@ -67,8 +70,8 @@ export function configCode(groups: AxleGroups, prefix = ''): string | null {
  */
 export function saveErrors(groups: AxleGroups): string[] {
   const errors: string[] = [];
-  if (groups.front.length < 1) errors.push('At least one front axle is required to save.');
-  if (groups.rear.length < 1) errors.push('At least one rear axle is required to save.');
+  if (groups.front.length < 1) errors.push(t('tire.validation.leastOneFrontAxleRequiredSave'));
+  if (groups.rear.length < 1) errors.push(t('tire.validation.leastOneRearAxleRequiredSave'));
   return errors;
 }
 
@@ -114,5 +117,10 @@ export function spareCodes(spareTires: number): string[] {
 
 /** Plain-language description of a position, e.g. "Front axle 1 · Left · wheel 1 (closest to body)". */
 export function describePosition(p: { group: AxleGroupKey; axle: number; side: Side; index: number }): string {
-  return `${p.group === 'F' ? 'Front' : 'Rear'} axle ${p.axle} · ${p.side === 'L' ? 'Left' : 'Right'} · wheel ${p.index}${p.index === 1 ? ' (closest to body)' : ''}`;
+  return message(p.index === 1 ? 'tire.wheelConfiguration.positionDescriptionClosestToBody' : 'tire.wheelConfiguration.positionDescription', {
+    axleGroup: message(p.group === 'F' ? 'common.fields.front' : 'common.fields.rear'),
+    axle: p.axle,
+    side: message(p.side === 'L' ? 'common.fields.left' : 'common.fields.right'),
+    index: p.index,
+  });
 }

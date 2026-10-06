@@ -2,6 +2,8 @@
 
 namespace App\Domain\Workflow\Services;
 
+use App\Domain\Workflow\Support\WorkflowLabels;
+
 /**
  * Section 27: the publish-time gate for a workflow definition payload —
  * {statuses: [...], transitions: [...], layout?: ...}. WorkflowGraphAnalyzer checks the graph
@@ -26,5 +28,6 @@ class WorkflowDefinitionValidator
         if ($result['errors'] !== []) {
             throw new WorkflowValidationException($result['errors'][0]['message']);
         }
+        WorkflowLabels::validateLocales($payload);
     }
 }

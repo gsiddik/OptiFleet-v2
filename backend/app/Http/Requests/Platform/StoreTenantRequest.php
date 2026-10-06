@@ -24,6 +24,7 @@ class StoreTenantRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'in:DRAFT,ACTIVE,INACTIVE,SUSPENDED'],
+            'default_locale' => ['nullable', 'in:en,id'],
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tire\Inspection;
 
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\TireUsedInspection;
 
 /**
@@ -46,6 +47,6 @@ class UsedTireUsageRestrictions
             return null;
         }
 
-        return "Serial {$serialNumber} is restricted to position(s) ".implode(', ', $allowed)." by its used tire inspection, but is planned for {$position}. Installation is allowed — check the restriction before fitting.";
+        return Messages::text('tire.reasons.positionRestrictionWarning', ['serialNumber' => $serialNumber, 'positions' => implode(', ', $allowed), 'position' => $position]);
     }
 }

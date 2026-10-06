@@ -3,6 +3,7 @@ import { apiClient, extractApiError } from '../../../../api/client';
 import { ErrorState, LoadingState } from '../../../../components/States';
 import type { ModuleCatalogItem, TenantModuleEntitlement } from '../../../../types';
 import { useAuth } from '../../../../auth/AuthContext';
+import { t } from '../../../../i18n/i18n';
 
 export function TenantEntitlementsTab({ tenantId }: { tenantId: string }) {
   const { hasPermission } = useAuth();
@@ -45,9 +46,9 @@ export function TenantEntitlementsTab({ tenantId }: { tenantId: string }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-            <th style={{ padding: '8px 4px' }}>Module</th>
-            <th style={{ padding: '8px 4px' }}>Category</th>
-            <th style={{ padding: '8px 4px' }}>Status</th>
+            <th style={{ padding: '8px 4px' }}>{t('platform.tenants.fields.module')}</th>
+            <th style={{ padding: '8px 4px' }}>{t('common.fields.category')}</th>
+            <th style={{ padding: '8px 4px' }}>{t('common.fields.status')}</th>
             <th style={{ padding: '8px 4px' }} />
           </tr>
         </thead>
@@ -61,7 +62,7 @@ export function TenantEntitlementsTab({ tenantId }: { tenantId: string }) {
                   {m.name} <span style={{ color: '#9ca3af' }}>({m.code})</span>
                 </td>
                 <td style={{ padding: '8px 4px' }}>{m.category}</td>
-                <td style={{ padding: '8px 4px' }}>{isActive ? '✅ Active' : '⬜ Not entitled'}</td>
+                <td style={{ padding: '8px 4px' }}>{isActive ? t('platform.tenants.help.active') : t('platform.tenants.help.notEntitled')}</td>
                 <td style={{ padding: '8px 4px', textAlign: 'right' }}>
                   {hasPermission('entitlement.manage') && (
                     <button
@@ -69,7 +70,7 @@ export function TenantEntitlementsTab({ tenantId }: { tenantId: string }) {
                       disabled={busyModuleId === m.id}
                       onClick={() => toggle(m, !isActive)}
                     >
-                      {isActive ? 'Revoke' : 'Grant'}
+                      {isActive ? t('platform.tenants.actions.revoke') : t('platform.tenants.actions.grant')}
                     </button>
                   )}
                 </td>

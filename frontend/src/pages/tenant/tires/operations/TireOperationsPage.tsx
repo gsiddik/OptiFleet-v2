@@ -1,40 +1,41 @@
 import { TireWorkflowTabs, type WorkflowTab } from './TireWorkflowTabs';
+import { t, withLabels } from '../../../../i18n/i18n';
 
-const TABS: WorkflowTab[] = [
+const TABS: WorkflowTab[] = withLabels([
   {
     key: 'installation',
-    label: 'Installation',
+    label: 'Installation', labelKey: 'tire.sections.installation',
     permissions: ['tire.install'],
     statuses: ['IN_STOCK', 'RESERVED'],
-    candidatesTitle: 'Tires available to install',
-    actionLabel: 'Install',
+    get candidatesTitle() { return t('tire.sections.tiresAvailableToInstall'); },
+    get actionLabel() { return t('tire.fields.install'); },
     anchor: 'install',
     activityTypes: ['INSTALLATION'],
-    activityTitle: 'Recent installations',
+    get activityTitle() { return t('tire.sections.recentInstallations'); },
   },
   {
     key: 'rotation',
-    label: 'Rotation',
+    label: 'Rotation', labelKey: 'tire.sections.rotation',
     permissions: ['tire.rotate'],
     statuses: ['INSTALLED', 'IN_USE'],
-    candidatesTitle: 'Installed tires',
-    actionLabel: 'Rotate',
+    get candidatesTitle() { return t('tire.sections.installedTires'); },
+    get actionLabel() { return t('tire.fields.rotate'); },
     anchor: 'in-service',
     activityTypes: ['ROTATION'],
-    activityTitle: 'Recent rotations',
+    get activityTitle() { return t('tire.sections.recentRotations'); },
   },
   {
     key: 'inspection',
-    label: 'Inspection',
+    label: 'Inspection', labelKey: 'breadcrumb.inspection',
     permissions: ['tire.inspect'],
     statuses: ['INSTALLED', 'IN_USE'],
-    candidatesTitle: 'Installed tires',
-    actionLabel: 'Inspect',
+    get candidatesTitle() { return t('tire.sections.installedTires'); },
+    get actionLabel() { return t('tire.fields.inspect'); },
     anchor: 'in-service',
     activityTypes: ['INSPECTION'],
-    activityTitle: 'Recent inspections',
+    get activityTitle() { return t('tire.sections.recentInspections'); },
   },
-];
+]);
 
 /**
  * @deprecated Replaced by TireOperationsLandingPage (Recent Tire Operations + Add New Tire Operations).
@@ -42,5 +43,5 @@ const TABS: WorkflowTab[] = [
  * Tire Operations: Installation, Rotation and Inspection in one place (replaces three menu aliases).
  */
 export function TireOperationsPage() {
-  return <TireWorkflowTabs title="Tire Operations" intro="Install, rotate and inspect tires. Each action opens the tire, where the step is recorded." tabs={TABS} />;
+  return <TireWorkflowTabs title={t('tire.sections.tireOperations')} intro="Install, rotate and inspect tires. Each action opens the tire, where the step is recorded." tabs={TABS} />;
 }

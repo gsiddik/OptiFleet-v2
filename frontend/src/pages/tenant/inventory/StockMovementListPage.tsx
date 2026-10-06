@@ -9,6 +9,8 @@ import { useApiList } from '../../../hooks/useApiList';
 import type { StockMovementItem, ProductItem, Warehouse } from '../../../types';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { formatDateTime } from '../../../utils/date';
+import { t as tt } from '../../../i18n/i18n';
 
 const MOVEMENT_TYPES = [
   '', 'OPENING', 'RECEIPT', 'RESERVATION', 'RELEASE_RESERVATION', 'ISSUE', 'RETURN',
@@ -63,27 +65,27 @@ export function StockMovementListPage() {
   const rows = isDrilldown ? [...withBalance].reverse() : withBalance;
 
   const columns: Column<StockMovementItem & { __balance: number }>[] = [
-    { key: 'occurred_at', header: 'Date', render: (m) => new Date(m.occurred_at).toLocaleString() },
-    { key: 'warehouse', header: 'Warehouse', render: (m) => m.warehouse?.name ?? m.warehouse_id },
-    { key: 'product', header: 'Product', render: (m) => m.product?.name ?? m.product_id },
-    { key: 'type', header: 'Type', render: (m) => <StatusBadge status={m.movement_type} /> },
-    { key: 'quantity', header: 'Quantity', render: (m) => (BALANCE_WEIGHT[m.movement_type] === -1 ? '-' : BALANCE_WEIGHT[m.movement_type] === 1 ? '+' : '') + formatQty(m.quantity) },
-    ...(isDrilldown ? [{ key: 'balance', header: 'Running Balance', render: (m: StockMovementItem & { __balance: number }) => m.__balance.toFixed(4) } as Column<StockMovementItem & { __balance: number }>] : []),
-    { key: 'unit_cost', header: 'Unit Cost', render: (m) => formatMoney(m.unit_cost) },
-    { key: 'reason', header: 'Reason', render: (m) => m.reason ?? '—' },
+    { key: 'occurred_at', header: tt('common.fields.date'), render: (m) => formatDateTime(m.occurred_at) },
+    { key: 'warehouse', header: tt('common.fields.warehouse'), render: (m) => m.warehouse?.name ?? m.warehouse_id },
+    { key: 'product', header: tt('common.fields.product'), render: (m) => m.product?.name ?? m.product_id },
+    { key: 'type', header: tt('common.fields.type'), render: (m) => <StatusBadge status={m.movement_type} /> },
+    { key: 'quantity', header: tt('common.fields.quantity'), render: (m) => (BALANCE_WEIGHT[m.movement_type] === -1 ? '-' : BALANCE_WEIGHT[m.movement_type] === 1 ? '+' : '') + formatQty(m.quantity) },
+    ...(isDrilldown ? [{ key: 'balance', header: tt('inventory.fields.runningBalance'), render: (m: StockMovementItem & { __balance: number }) => m.__balance.toFixed(4) } as Column<StockMovementItem & { __balance: number }>] : []),
+    { key: 'unit_cost', header: tt('inventory.fields.unitCost'), render: (m) => formatMoney(m.unit_cost) },
+    { key: 'reason', header: tt('common.fields.reason'), render: (m) => m.reason ?? '—' },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{isDrilldown ? 'Inventory Card' : 'Stock Movement Ledger'}</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{isDrilldown ? tt('inventory.titles.inventoryCard') : tt('inventory.titles.stockMovementLedger')}</h1>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0, marginBottom: 16 }}>
         {isDrilldown
-          ? 'Per-item/per-warehouse movement history with a running on-hand balance. Note: this drilldown is only exact when a page is not split across a pagination boundary.'
-          : 'Filter by product or warehouse below for a per-item Inventory Card with a running balance.'}
+          ? tt('inventory.help.perItemPerWarehouseMovementHistory')
+          : tt('inventory.help.filterProductWarehouseBelowPerItem')}
       </p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
         <select value={productId} onChange={(e) => { setProductId(e.target.value); setPage(1); }} style={{ padding: '6px 8px', fontSize: 12, minWidth: 200 }}>
-          <option value="">All products</option>
+          <option value="">{tt('inventory.filters.allProducts')}</option>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -91,7 +93,7 @@ export function StockMovementListPage() {
           ))}
         </select>
         <select value={warehouseId} onChange={(e) => { setWarehouseId(e.target.value); setPage(1); }} style={{ padding: '6px 8px', fontSize: 12, minWidth: 200 }}>
-          <option value="">All warehouses</option>
+          <option value="">{tt('inventory.filters.allWarehouses')}</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -100,21 +102,21 @@ export function StockMovementListPage() {
         </select>
         {isDrilldown && (
           <button className="btn-secondary" onClick={() => { setProductId(''); setWarehouseId(''); setPage(1); }} style={{ fontSize: 12 }}>
-            Clear drilldown
+            {tt('inventory.actions.clearDrilldown')}
           </button>
         )}
       </div>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {MOVEMENT_TYPES.map((t) => (
           <button key={t} onClick={() => { setMovementType(t); setPage(1); }} className={movementType === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 11 }}>
-            {t || 'All'}
+            {t || tt('common.actions.all')}
           </button>
         ))}
       </div>
       <Toolbar />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No movements found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('inventory.empty.noMovementsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={rows} />

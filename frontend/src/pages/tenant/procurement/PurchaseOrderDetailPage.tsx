@@ -17,15 +17,17 @@ import { RecordVendorInvoiceModal, type ReceiptLine } from './RecordVendorInvoic
 import { ReturnToVendorModal } from './ReturnToVendorModal';
 import { ReturnHistory } from './ReturnHistory';
 import { DocumentViewer } from '../../../components/DocumentViewer';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
+import { labelText, t } from '../../../i18n/i18n';
 
-const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
-  DRAFT: [{ action: 'submit', label: 'Submit', permission: 'purchase_order.create', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'purchase_order.create' }],
+const LIFECYCLE: Record<string, { action: string; label: string; labelKey?: string; permission: string; primary?: boolean }[]> = {
+  DRAFT: [{ action: 'submit', label: 'Submit', labelKey: 'common.actions.submit', permission: 'purchase_order.create', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'purchase_order.create' }],
   SUBMITTED: [
-    { action: 'approve', label: 'Approve', permission: 'purchase_order.approve', primary: true },
-    { action: 'reject', label: 'Reject', permission: 'purchase_order.approve' },
+    { action: 'approve', label: 'Approve', labelKey: 'common.actions.approve', permission: 'purchase_order.approve', primary: true },
+    { action: 'reject', label: 'Reject', labelKey: 'common.actions.reject', permission: 'purchase_order.approve' },
   ],
-  APPROVED: [{ action: 'issue', label: 'Issue', permission: 'purchase_order.issue', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'purchase_order.create' }],
-  RECEIVED: [{ action: 'close', label: 'Close', permission: 'purchase_order.approve', primary: true }],
+  APPROVED: [{ action: 'issue', label: 'Issue', labelKey: 'procurement.actions.issue', permission: 'purchase_order.issue', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'purchase_order.create' }],
+  RECEIVED: [{ action: 'close', label: 'Close', labelKey: 'common.fields.close', permission: 'purchase_order.approve', primary: true }],
 };
 
 /** The status each lifecycle action moves the order into (the workflow decides when it is offered). */
@@ -112,9 +114,9 @@ export function PurchaseOrderDetailPage() {
     setNotice(null);
     try {
       await apiClient.post(`/app/purchase-returns/${returnId}/${action}`);
-      if (action === 'reject') setNotice('Refund rejected by the vendor: the vendor will redeliver the returned goods. Use "Receive Redelivery" once they arrive.');
-      if (action === 'accept') setNotice('Refund accepted by the vendor — the refunded amount is recorded in the Return History.');
-      if (action === 'receive-redelivery') setNotice('Redelivery received — post the Goods Receipt for the redelivered goods.');
+      if (action === 'reject') setNotice(t('procurement.messages.refundRejectedVendorVendorRedeliverReturned'));
+      if (action === 'accept') setNotice(t('procurement.messages.refundAcceptedVendorRefundedAmountRecorded'));
+      if (action === 'receive-redelivery') setNotice(t('procurement.messages.redeliveryReceivedPostGoodsReceiptRedelivered'));
       load();
     } catch (err) {
       setError(extractApiError(err).message);
@@ -131,7 +133,7 @@ export function PurchaseOrderDetailPage() {
       .filter((item) => accepted[item.id] && Number(accepted[item.id]) > 0)
       .map((item) => ({ purchase_order_item_id: item.id, quantity_accepted: accepted[item.id] }));
     if (lines.length === 0) {
-      setError('Enter the quantity received for at least one item.');
+      setError(t('procurement.errors.enterQuantityReceivedLeastOneItem'));
       return;
     }
     setReceiptLines(lines);
@@ -160,28 +162,29 @@ export function PurchaseOrderDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/purchase-orders" label="← Back to Purchase Order" />
+      <BackButton fallbackTo="/app/purchase-orders" label={t('procurement.actions.backToPurchaseOrder')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{po.po_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <StatusBadge status={po.status} />
+          <StatusBadge status={po.status} domain="document" />
           {hasPermission('purchase_order.view') && (
             <button className="btn-secondary" disabled={printing} onClick={printPurchaseOrder}>
-              {printing ? 'Loading…' : 'Print'}
+              {printing ? t('common.actions.loading') : t('common.actions.print')}
             </button>
           )}
+          {hasPermission('purchase_order.view') && <DocumentVersionsButton printPath={`/app/purchase-orders/${po.id}/print`} />}
           {summary?.can_return && hasPermission('purchase_return.create') && (
             <button className="btn-secondary" disabled={busy} onClick={() => setReturning(true)}>
-              Return to Vendor
+              {t('procurement.actions.returnToVendor')}
             </button>
           )}
           {openReturn?.status === 'REFUND_REQUESTED' && hasPermission('purchase_return.decide') && (
             <>
               <button className="btn-primary" disabled={busy} onClick={() => returnAction(openReturn.id, 'accept')}>
-                Accepted by Vendor
+                {t('procurement.actions.acceptedByVendor')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={() => returnAction(openReturn.id, 'reject')}>
-                Rejected by Vendor
+                {t('procurement.actions.rejectedByVendor')}
               </button>
             </>
           )}
@@ -189,20 +192,21 @@ export function PurchaseOrderDetailPage() {
             <button
               className="btn-primary"
               disabled={busy || openReturn.status === 'REDELIVERY_REQUESTED'}
-              title={openReturn.status === 'REDELIVERY_REQUESTED' ? 'Print the Return Order first' : undefined}
+              title={openReturn.status === 'REDELIVERY_REQUESTED' ? t('procurement.tooltips.printReturnOrderFirst') : undefined}
               onClick={() => returnAction(openReturn.id, 'receive-redelivery')}
             >
-              Receive Redelivery
+              {t('procurement.actions.receiveRedelivery')}
             </button>
           )}
           {openReturn && (
             <button className="btn-secondary" disabled={busy} onClick={() => setPreview(openReturn)}>
-              Print Return Order
+              {t('procurement.actions.printReturnOrder')}
             </button>
           )}
+          {openReturn && <DocumentVersionsButton printPath={`/app/purchase-returns/${openReturn.id}/print`} disabled={busy} />}
           {actions.map((a) => (
             <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy} onClick={() => act(a.action)}>
-              {a.label}
+              {labelText(a)}
             </button>
           ))}
         </div>
@@ -216,28 +220,28 @@ export function PurchaseOrderDetailPage() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13 }}>
-          <strong>Vendor:</strong> {po.partner?.name ?? po.partner_id} &nbsp; <strong>Delivery:</strong>{' '}
+          <strong>{t('common.fields.vendor')}:</strong> {po.partner?.name ?? po.partner_id} &nbsp; <strong>{t('procurement.fields.delivery')}:</strong>{' '}
           {po.delivery_warehouse?.name ?? po.delivery_warehouse_id}
         </p>
         <p style={{ fontSize: 13 }}>
-          <strong>Order Date:</strong> {po.order_date ? po.order_date.slice(0, 10) : '—'} &nbsp; <strong>Expected Receipt Date:</strong>{' '}
+          <strong>{t('procurement.fields.orderDate')}:</strong> {po.order_date ? po.order_date.slice(0, 10) : '—'} &nbsp; <strong>{t('procurement.fields.expectedReceiptDate')}:</strong>{' '}
           {po.expected_delivery_date ? po.expected_delivery_date.slice(0, 10) : '—'}
         </p>
         <p style={{ fontSize: 13 }}>
-          <strong>Subtotal:</strong> {formatMoney(po.subtotal)} &nbsp; <strong>Tax:</strong> {formatMoney(po.tax_total)} &nbsp; <strong>Freight:</strong> {formatMoney(po.freight_cost)} &nbsp;
-          <strong>Total:</strong> {formatMoney(po.total)}
+          <strong>{t('procurement.fields.subtotal')}:</strong> {formatMoney(po.subtotal)} &nbsp; <strong>{t('common.fields.tax')}:</strong> {formatMoney(po.tax_total)} &nbsp; <strong>{t('procurement.fields.freight')}:</strong> {formatMoney(po.freight_cost)} &nbsp;
+          <strong>{t('common.fields.total')}:</strong> {formatMoney(po.total)}
         </p>
       </div>
 
       {po.status === 'PENDING_APPROVAL' && po.workflow_approval_request && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Tiered Approval</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('procurement.sections.tieredApproval')}</h3>
           {(po.workflow_approval_request.steps ?? [])
             .sort((a, b) => a.step_number - b.step_number)
             .map((step) => (
               <div key={step.id} style={{ padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
                 <span>
-                  Step {step.step_number} — {step.approver_identifier}
+                  {t('procurement.help.approvalStep', { step: step.step_number, approver: step.approver_identifier })}
                   {step.note && <span style={{ color: '#6b7280' }}> ({step.note})</span>}
                 </span>
                 <StatusBadge status={step.status} />
@@ -246,10 +250,10 @@ export function PurchaseOrderDetailPage() {
           {hasPermission('purchase_order.approve') && (
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <button className="btn-primary" disabled={busy} onClick={() => decideApproval('APPROVED')}>
-                Approve Step
+                {t('procurement.actions.approveStep')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={() => decideApproval('REJECTED')}>
-                Reject
+                {t('common.actions.reject')}
               </button>
             </div>
           )}
@@ -257,7 +261,7 @@ export function PurchaseOrderDetailPage() {
       )}
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.items')}</h3>
         {(po.items ?? []).map((item) => {
           const remaining = remainingOf(item);
           const q = summary?.items[item.id];
@@ -265,22 +269,22 @@ export function PurchaseOrderDetailPage() {
           return (
             <div key={item.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6' }} data-po-line={item.product?.name ?? item.id}>
               <div style={{ fontSize: 13, marginBottom: 6 }}>
-                {item.product?.name ?? item.product_id} — ordered {formatQty(q?.ordered_quantity ?? item.quantity_ordered)} @ {formatMoney(item.unit_price)} — received {formatQty(q?.gross_received_quantity ?? item.quantity_received)}
-                {Number(q?.returned_quantity ?? 0) > 0 && <> — returned {formatQty(q?.returned_quantity ?? 0)}</>}
-                {Number(q?.reopened_for_redelivery_quantity ?? 0) > 0 && <> (re-opened for redelivery {formatQty(q?.reopened_for_redelivery_quantity ?? 0)})</>}
-                {Number(q?.refund_requested_quantity ?? 0) > 0 && <> — refund requested {formatQty(q?.refund_requested_quantity ?? 0)}</>}
-                {Number(q?.accepted_refund_quantity ?? 0) > 0 && <> — refunded {formatQty(q?.accepted_refund_quantity ?? 0)}</>}
-                {' '}— <strong data-remaining={formatQty(remaining)}>remaining {formatQty(remaining)}</strong>
+                {t('procurement.help.orderedReceivedLine', { product: item.product?.name ?? item.product_id, ordered: formatQty(q?.ordered_quantity ?? item.quantity_ordered), price: formatMoney(item.unit_price), received: formatQty(q?.gross_received_quantity ?? item.quantity_received) })}
+                {Number(q?.returned_quantity ?? 0) > 0 && <> {t('procurement.fields.returnedValue', { value: formatQty(q?.returned_quantity ?? 0) })}</>}
+                {Number(q?.reopened_for_redelivery_quantity ?? 0) > 0 && <> {t('procurement.help.reOpenedRedeliveryValue', { value: formatQty(q?.reopened_for_redelivery_quantity ?? 0) })}</>}
+                {Number(q?.refund_requested_quantity ?? 0) > 0 && <> {t('procurement.help.refundRequestedValue', { value: formatQty(q?.refund_requested_quantity ?? 0) })}</>}
+                {Number(q?.accepted_refund_quantity ?? 0) > 0 && <> {t('procurement.fields.refundedValue', { value: formatQty(q?.accepted_refund_quantity ?? 0) })}</>}
+                {' '}— <strong data-remaining={formatQty(remaining)}>{t('procurement.fields.remainingRemaining', { remaining: formatQty(remaining) })}</strong>
               </div>
               {canReceive && remaining > 0 && (
                 <>
-                  <NumericInput step="0.0001" min="0" max={String(remaining)} placeholder="Accept quantity" value={accepted[item.id] ?? ''} disabled={receiptBlocked} aria-label={`Accept quantity ${item.product?.name ?? item.id}`}
+                  <NumericInput step="0.0001" min="0" max={String(remaining)} placeholder={t('procurement.placeholders.acceptQuantity')} value={accepted[item.id] ?? ''} disabled={receiptBlocked} aria-label={t('procurement.fields.acceptQuantityValue', { value: item.product?.name ?? item.id })}
                     onChange={(e) => setAccepted((a) => ({ ...a, [item.id]: e.target.value }))}
                     style={{ ...inputStyle, width: 140, ...(over ? { borderColor: '#b91c1c' } : {}) }}
                   />
                   {over && (
                     <span role="alert" style={{ fontSize: 12, color: '#b91c1c', marginLeft: 8 }}>
-                      Max {formatQty(remaining)} (Remaining Receivable Qty)
+                      {t('procurement.help.maxRemainingRemainingReceivableQty', { remaining: formatQty(remaining) })}
                     </span>
                   )}
                 </>
@@ -291,11 +295,11 @@ export function PurchaseOrderDetailPage() {
         {canReceive && (
           <>
             <button className="btn-primary" disabled={busy || receiptBlocked || anyOver} onClick={startReceipt} style={{ marginTop: 12 }}>
-              Post Goods Receipt
+              {t('procurement.actions.postGoodsReceipt')}
             </button>
             {receiptBlocked && (
               <p style={{ fontSize: 12, color: '#b45309', margin: '6px 0 0' }}>
-                Waiting for the vendor's redelivery of Return Order {openReturn?.return_number} — use "Receive Redelivery" when it arrives.
+                {t('procurement.help.waitingForRedelivery', { number: openReturn?.return_number })}
               </p>
             )}
           </>
@@ -321,7 +325,7 @@ export function PurchaseOrderDetailPage() {
       {preview && (
         <DocumentViewer
           path={`/app/purchase-returns/${preview.id}/print`}
-          title={`Return Order ${preview.return_number}`}
+          title={t('procurement.sections.returnOrderReturnNumber', { return_number: preview.return_number })}
           fileName={`${preview.return_number.replace(/\//g, '-')}.pdf`}
           mimeType="application/pdf"
           onClose={() => {

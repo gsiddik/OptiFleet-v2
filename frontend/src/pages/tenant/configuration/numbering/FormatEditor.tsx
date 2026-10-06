@@ -1,6 +1,7 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import type { NumberingSegment } from "../../../../types";
 import { mergeLiterals } from "./numberingFormat";
+import { t } from '../../../../i18n/i18n';
 
 export interface FormatEditorHandle {
   /** Inserts a token chip at the last caret position (or at the end). */
@@ -129,7 +130,7 @@ export const FormatEditor = forwardRef<
     <div
       ref={root}
       role="textbox"
-      aria-label="Format"
+      aria-label={t('configuration.tooltips.format')}
       aria-invalid={invalid || undefined}
       contentEditable
       suppressContentEditableWarning

@@ -11,6 +11,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { UomItem } from '../../../types';
+import { t as tt } from '../../../i18n/i18n';
 
 const MEASURE_TYPES = ['LENGTH', 'PACKAGING', 'CAPACITY', 'WEIGHT', 'PRESSURE'];
 
@@ -39,12 +40,12 @@ export function UomsPage() {
   }
 
   const columns: Column<UomItem>[] = [
-    { key: 'code', header: 'Code', render: (u) => u.code },
-    { key: 'name', header: 'Name', render: (u) => u.name },
-    { key: 'measure_type', header: 'Type of Measure', render: (u) => u.measure_type ?? '—' },
-    { key: 'description', header: 'Description', render: (u) => u.description ?? '—' },
-    { key: 'is_system', header: 'Source', render: (u) => (u.is_system ? 'System' : 'Tenant') },
-    { key: 'status', header: 'Status', render: (u) => <StatusBadge status={u.status} /> },
+    { key: 'code', header: tt('common.fields.code'), render: (u) => u.code },
+    { key: 'name', header: tt('common.fields.name'), render: (u) => u.name },
+    { key: 'measure_type', header: tt('masterData.fields.typeOfMeasure'), render: (u) => u.measure_type ?? '—' },
+    { key: 'description', header: tt('common.fields.description'), render: (u) => u.description ?? '—' },
+    { key: 'is_system', header: tt('common.fields.source'), render: (u) => (u.is_system ? tt('common.fields.system') : tt('common.fields.tenant')) },
+    { key: 'status', header: tt('common.fields.status'), render: (u) => <StatusBadge status={u.status} /> },
     {
       key: 'actions',
       header: '',
@@ -53,12 +54,12 @@ export function UomsPage() {
           <div style={{ display: 'flex', gap: 8 }}>
             {hasPermission('product.update') && (
               <button className="btn-link" onClick={() => setEditing(u)}>
-                Edit
+                {tt('common.actions.edit')}
               </button>
             )}
             {hasPermission('product.delete') && (
               <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(u)}>
-                Delete
+                {tt('common.actions.delete')}
               </button>
             )}
           </div>
@@ -68,7 +69,7 @@ export function UomsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Units of Measure</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('masterData.titles.unitsOfMeasure')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -78,14 +79,14 @@ export function UomsPage() {
         actions={
           hasPermission('product.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Unit
+              {tt('masterData.actions.newUnit')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No units of measure found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('masterData.empty.noUnitsMeasureFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -117,9 +118,9 @@ export function UomsPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Delete Unit of Measure"
-        message={deleteError ?? `Delete "${deleting?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={tt('masterData.confirm.deleteUnitOfMeasure')}
+        message={deleteError ?? tt('platform.masterdata.confirm.deleteNameCannotUndone', { name: deleting?.name })}
+        confirmLabel={tt('common.actions.delete')}
         onCancel={() => {
           setDeleting(null);
           setDeleteError(null);
@@ -157,16 +158,16 @@ function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: Uo
   }
 
   return (
-    <Modal open={open} title={uom ? 'Edit Unit of Measure' : 'New Unit of Measure'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required={!uom}>
+    <Modal open={open} title={uom ? tt('masterData.modals.editUnitOfMeasure') : tt('masterData.modals.newUnitOfMeasure')} onClose={onClose}>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required={!uom}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!uom} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required={!uom}>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required={!uom}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Type of Measure" errors={errors.measure_type}>
+      <FormField label={tt('masterData.fields.typeOfMeasure')} errors={errors.measure_type}>
         <select value={measureType ?? ''} onChange={(e) => setMeasureType(e.target.value)} style={inputStyle}>
-          <option value="">— None —</option>
+          <option value="">{tt('masterData.fields.none')}</option>
           {MEASURE_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -174,15 +175,15 @@ function UomFormModal({ open, uom, onClose, onSaved }: { open: boolean; uom?: Uo
           ))}
         </select>
       </FormField>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label={tt('common.fields.description')} errors={errors.description}>
         <input value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
     </Modal>

@@ -8,6 +8,10 @@ import { useApiList } from '../../../../hooks/useApiList';
 import { useAuth } from '../../../../auth/AuthContext';
 import type { ContractItem } from '../../../../types';
 import { ContractForm } from '../../contracts/ContractForm';
+import { formatMoney } from '../../../../utils/money';
+import { t } from '../../../../i18n/i18n';
+import { billingCycleLabel } from '../../contracts/ContractForm';
+import { formatDate } from '../../../../utils/date';
 
 /**
  * Section 6.1: contracts belonging only to the tenant currently open in
@@ -30,18 +34,18 @@ export function TenantContractTab({ tenantId, tenantName, tenantCode }: { tenant
   );
 
   const columns: Column<ContractItem>[] = [
-    { key: 'contract_number', header: 'Contract #', render: (c) => c.contract_number },
-    { key: 'billing_cycle', header: 'Cycle', render: (c) => c.billing_cycle },
-    { key: 'total', header: 'Total', render: (c) => `${c.currency} ${Number(c.total).toLocaleString()}` },
-    { key: 'start_date', header: 'Start', render: (c) => c.start_date },
-    { key: 'end_date', header: 'End', render: (c) => c.end_date },
-    { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.status} /> },
+    { key: 'contract_number', header: t('common.fields.contractNumber'), render: (c) => c.contract_number },
+    { key: 'billing_cycle', header: t('common.fields.cycle'), render: (c) => billingCycleLabel(c.billing_cycle) },
+    { key: 'total', header: t('common.fields.total'), render: (c) => `${c.currency} ${formatMoney(c.total)}` },
+    { key: 'start_date', header: t('common.fields.start'), render: (c) => formatDate(c.start_date) },
+    { key: 'end_date', header: t('common.fields.end'), render: (c) => formatDate(c.end_date) },
+    { key: 'status', header: t('common.fields.status'), render: (c) => <StatusBadge status={c.status} /> },
     {
       key: 'actions',
       header: '',
       render: (c) => (
         <button className="btn-link" onClick={() => navigate(`/platform/contracts/${c.id}?fromTenant=${tenantId}`)}>
-          View
+          {t('common.actions.view')}
         </button>
       ),
     },
@@ -52,14 +56,14 @@ export function TenantContractTab({ tenantId, tenantName, tenantCode }: { tenant
       {hasPermission('contract.create') && (
         <div style={{ marginBottom: 12, textAlign: 'right' }}>
           <button className="btn-primary" onClick={() => setShowCreate(true)}>
-            + Add New Contract
+            {t('platform.tenants.actions.addNewContract')}
           </button>
         </div>
       )}
 
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No contracts for this tenant yet." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('platform.tenants.empty.noContractsTenantYet')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />

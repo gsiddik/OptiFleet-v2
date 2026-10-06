@@ -6,6 +6,7 @@ use App\Domain\Inventory\Services\InventoryException;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequestItem;
@@ -274,7 +275,9 @@ class WorkOrderPartRequestService
                 $target === 'ISSUED' && $locked->status === 'REQUESTED' => 'This part request must be approved before it can be issued.',
                 $target === 'ISSUED' && $locked->status === 'ISSUED' => 'This part request has already been issued.',
                 $target === 'ISSUED' => "A {$locked->status} part request cannot be issued.",
-                default => 'Only a requested part request can be '.strtolower($target === 'CANCELLED' ? 'cancelled' : $target).'.',
+                $target === 'APPROVED' => Messages::text('errors.workOrder.partRequestOnlyRequestedApprove'),
+                $target === 'REJECTED' => Messages::text('errors.workOrder.partRequestOnlyRequestedReject'),
+                default => Messages::text('errors.workOrder.partRequestOnlyRequestedCancel'),
             };
             throw new WorkOrderException($message);
         }

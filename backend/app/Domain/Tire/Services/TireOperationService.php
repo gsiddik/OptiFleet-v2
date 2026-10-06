@@ -3,6 +3,7 @@
 namespace App\Domain\Tire\Services;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Shared\Exceptions\CodedValidationException;
 use App\Domain\Tire\Inspection\UsedTireUsageRestrictions;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInstallation;
@@ -451,13 +452,13 @@ class TireOperationService
         $busy = $this->openOperationPositions($vehicle->id, $existing?->id);
         foreach (array_keys($selected) as $code) {
             if (! in_array($code, $valid, true)) {
-                throw ValidationException::withMessages(['items' => "{$code} is not a position of this vehicle's Wheels Configuration ({$mapping->version->config_code})."]);
+                throw CodedValidationException::forField('items', 'validation.tire.codeNotPositionVehicleSWheels', ['code' => $code, 'config_code' => $mapping->version->config_code]);
             }
             if (! $installations->has($code)) {
-                throw ValidationException::withMessages(['items' => "Position {$code} has no tire data yet. Complete it in Vehicle Details → Wheels Configuration first."]);
+                throw CodedValidationException::forField('items', 'validation.tire.positionCodeNoTireDataYet', ['code' => $code]);
             }
             if (isset($busy[$code])) {
-                throw ValidationException::withMessages(['items' => "Position {$code} is already in an open Tire Operation ({$busy[$code]['operation_type']}, Work Order {$busy[$code]['wo_number']})."]);
+                throw CodedValidationException::forField('items', 'validation.tire.positionCodeAlreadyOpenTireOperation', ['code' => $code, 'operation_type' => $busy[$code]['operation_type'], 'wo_number' => $busy[$code]['wo_number']]);
             }
         }
 

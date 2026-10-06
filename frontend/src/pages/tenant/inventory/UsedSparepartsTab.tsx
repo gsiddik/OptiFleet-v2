@@ -8,6 +8,7 @@ import { Table, type Column } from '../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import { formatQty } from '../../../utils/quantity';
+import { labelText, t as tt, withLabels } from '../../../i18n/i18n';
 
 interface UsedSparepartRow {
   id: string;
@@ -24,17 +25,17 @@ interface UsedSparepartRow {
   vehicle: { id: string; registration_number: string } | null;
 }
 
-const CATEGORIES = [
-  { value: '', label: 'All' },
-  { value: 'REUSABLE', label: 'Reusable' },
-  { value: 'QUARANTINE', label: 'Quarantine' },
-  { value: 'REPAIR_PENDING', label: 'Repair pending' },
-];
+const CATEGORIES = withLabels([
+  { value: '', label: 'All', labelKey: 'common.actions.all' },
+  { value: 'REUSABLE', label: 'Reusable', labelKey: 'inventory.fields.reusable' },
+  { value: 'QUARANTINE', label: 'Quarantine', labelKey: 'inventory.fields.quarantine' },
+  { value: 'REPAIR_PENDING', label: 'Repair pending', labelKey: 'inventory.fields.repairPending' },
+]);
 
-const AVAILABILITY: Record<UsedSparepartRow['category'], { label: string; color: string; note: string }> = {
-  REUSABLE: { label: 'Reusable', color: '#047857', note: 'Returned to stock — counted in the product On Hand' },
-  QUARANTINE: { label: 'Quarantine', color: '#b91c1c', note: 'Physically held — not available' },
-  REPAIR_PENDING: { label: 'Repair pending', color: '#b45309', note: 'Under repair — not available' },
+const AVAILABILITY: Record<UsedSparepartRow['category'], { label: string; labelKey?: string; color: string; note: string; noteKey: string }> = {
+  REUSABLE: { label: 'Reusable', labelKey: 'inventory.fields.reusable', color: '#047857', note: 'Returned to stock — counted in the product On Hand', noteKey: 'inventory.help.returnedStockCountedProductHand' },
+  QUARANTINE: { label: 'Quarantine', labelKey: 'inventory.fields.quarantine', color: '#b91c1c', note: 'Physically held — not available', noteKey: 'inventory.help.physicallyHeldNotAvailable' },
+  REPAIR_PENDING: { label: 'Repair pending', labelKey: 'inventory.fields.repairPending', color: '#b45309', note: 'Under repair — not available', noteKey: 'inventory.help.underRepairNotAvailable' },
 };
 
 /**
@@ -67,26 +68,26 @@ export function UsedSparepartsTab() {
   const summary = (meta as (PaginationMeta & { summary?: { reusable_qty: number; quarantine_qty: number; repair_pending_qty: number } }) | null)?.summary;
 
   const columns: Column<UsedSparepartRow>[] = [
-    { key: 'product', header: 'Product', render: (r) => r.product?.name ?? '—' },
-    { key: 'sku', header: 'Part Code / SKU', render: (r) => r.product?.sku ?? '—' },
-    { key: 'quantity', header: 'Quantity', render: (r) => formatQty(r.quantity) },
-    { key: 'condition', header: 'Condition', render: (r) => (r.condition === 'USED_FAULTY' ? 'Used — Faulty' : 'Used — Good') },
-    { key: 'disposition', header: 'Disposition', render: (r) => (r.repaired ? `REPAIR → ${r.disposition}` : r.disposition) },
+    { key: 'product', header: tt('common.fields.product'), render: (r) => r.product?.name ?? '—' },
+    { key: 'sku', header: tt('inventory.fields.partCodeSku'), render: (r) => r.product?.sku ?? '—' },
+    { key: 'quantity', header: tt('common.fields.quantity'), render: (r) => formatQty(r.quantity) },
+    { key: 'condition', header: tt('common.fields.condition'), render: (r) => (r.condition === 'USED_FAULTY' ? tt('inventory.fields.usedFaulty') : tt('inventory.fields.usedGood')) },
+    { key: 'disposition', header: tt('tenantComponents.fields.disposition'), render: (r) => (r.repaired ? `REPAIR → ${r.disposition}` : r.disposition) },
     {
       key: 'availability',
-      header: 'Availability',
+      header: tt('inventory.fields.availability'),
       render: (r) => (
-        <span title={AVAILABILITY[r.category].note} style={{ color: AVAILABILITY[r.category].color, fontWeight: 600 }}>
+        <span title={tt(AVAILABILITY[r.category].noteKey)} style={{ color: AVAILABILITY[r.category].color, fontWeight: 600 }}>
           {AVAILABILITY[r.category].label}
-          <div style={{ fontSize: 11, fontWeight: 400, color: '#6b7280' }}>{AVAILABILITY[r.category].note}</div>
+          <div style={{ fontSize: 11, fontWeight: 400, color: '#6b7280' }}>{tt(AVAILABILITY[r.category].noteKey)}</div>
         </span>
       ),
     },
-    { key: 'status', header: 'Processing Status', render: (r) => <StatusBadge status={r.disposition_status} /> },
-    { key: 'warehouse', header: 'Warehouse', render: (r) => r.warehouse?.name ?? '—' },
-    { key: 'bin', header: 'Bin', render: (r) => r.storage_bin?.code ?? '—' },
-    { key: 'wo', header: 'Origin Work Order', render: (r) => (r.work_order ? <Link to={`/app/work-orders/${r.work_order.id}`}>{r.work_order.wo_number}</Link> : '—') },
-    { key: 'vehicle', header: 'Origin Vehicle', render: (r) => r.vehicle?.registration_number ?? '—' },
+    { key: 'status', header: tt('inventory.fields.processingStatus'), render: (r) => <StatusBadge status={r.disposition_status} /> },
+    { key: 'warehouse', header: tt('common.fields.warehouse'), render: (r) => r.warehouse?.name ?? '—' },
+    { key: 'bin', header: tt('inventory.fields.bin2'), render: (r) => r.storage_bin?.code ?? '—' },
+    { key: 'wo', header: tt('inventory.fields.originWorkOrder'), render: (r) => (r.work_order ? <Link to={`/app/work-orders/${r.work_order.id}`}>{r.work_order.wo_number}</Link> : '—') },
+    { key: 'vehicle', header: tt('inventory.fields.originVehicle'), render: (r) => r.vehicle?.registration_number ?? '—' },
   ];
 
   const tile = (label: string, value: number | undefined, color: string) => (
@@ -99,9 +100,9 @@ export function UsedSparepartsTab() {
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-        {tile('Reusable Qty', summary?.reusable_qty, '#047857')}
-        {tile('Quarantine Qty (unavailable)', summary?.quarantine_qty, '#b91c1c')}
-        {tile('Repair pending Qty (unavailable)', summary?.repair_pending_qty, '#b45309')}
+        {tile(tt('inventory.fields.reusableQty'), summary?.reusable_qty, '#047857')}
+        {tile(tt('inventory.fields.quarantineQtyUnavailable'), summary?.quarantine_qty, '#b91c1c')}
+        {tile(tt('inventory.fields.repairPendingQtyUnavailable'), summary?.repair_pending_qty, '#b45309')}
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12, alignItems: 'center' }}>
         {CATEGORIES.map((c) => (
@@ -114,11 +115,11 @@ export function UsedSparepartsTab() {
             className={category === c.value ? 'btn-primary' : 'btn-secondary'}
             style={{ padding: '4px 10px', fontSize: 12 }}
           >
-            {c.label}
+            {labelText(c)}
           </button>
         ))}
         <select
-          aria-label="Used spareparts warehouse"
+          aria-label={tt('inventory.fields.usedSparepartsWarehouse')}
           value={warehouseId}
           onChange={(e) => {
             setWarehouseId(e.target.value);
@@ -126,7 +127,7 @@ export function UsedSparepartsTab() {
           }}
           style={{ ...inputStyle, width: 200 }}
         >
-          <option value="">All warehouses</option>
+          <option value="">{tt('inventory.filters.allWarehouses')}</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -134,8 +135,8 @@ export function UsedSparepartsTab() {
           ))}
         </select>
         <input
-          aria-label="Search used spareparts"
-          placeholder="Search product, WO or vehicle…"
+          aria-label={tt('inventory.fields.searchUsedSpareparts')}
+          placeholder={tt('inventory.search.searchProductWoVehicle')}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -146,7 +147,7 @@ export function UsedSparepartsTab() {
       </div>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No used spareparts in Reuse, Quarantine or Repair." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('inventory.empty.noUsedSparepartsReuseQuarantineRepair')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
     </div>

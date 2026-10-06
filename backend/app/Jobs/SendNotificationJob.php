@@ -6,6 +6,8 @@ use App\Domain\Configuration\Models\ConfigurationVersion;
 use App\Domain\Notification\Models\NotificationDeliveryLog;
 use App\Domain\Notification\Models\NotificationInAppMessage;
 use App\Domain\Notification\Services\NotificationTemplateService;
+use App\Domain\Notification\Services\RecipientLocaleResolver;
+use App\Domain\Shared\Support\Messages;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -29,7 +31,7 @@ class SendNotificationJob implements ShouldQueue
 
     public function __construct(private readonly string $deliveryLogId, private readonly array $context) {}
 
-    public function handle(NotificationTemplateService $templates): void
+    public function handle(NotificationTemplateService $templates, RecipientLocaleResolver $locales): void
     {
         $log = NotificationDeliveryLog::query()->withoutGlobalScopes()->find($this->deliveryLogId);
         if (! $log || $log->status !== NotificationDeliveryLog::STATUS_QUEUED) {
@@ -45,11 +47,13 @@ class SendNotificationJob implements ShouldQueue
                 throw new \RuntimeException('No published notification template found for this event.');
             }
 
-            $rendered = $templates->render($templateVersion, $log->channel, $this->context);
+            // Rows queued before the locale was recorded resolve the recipient's language now.
+            $locale = $log->locale ?? $locales->resolve(array_filter(['user_id' => $log->recipient_user_id, 'email' => $log->recipient_email]), $log->tenant_id);
+            $rendered = $templates->render($templateVersion, $log->channel, $this->context, $locale);
 
             match ($log->channel) {
                 'IN_APP' => $this->deliverInApp($log, $rendered),
-                'EMAIL' => $this->deliverEmail($log, $rendered),
+                'EMAIL' => $this->deliverEmail($log, $rendered, $locale),
                 default => throw new \RuntimeException("Unsupported delivery channel '{$log->channel}'."),
             };
 
@@ -74,15 +78,16 @@ class SendNotificationJob implements ShouldQueue
         ]);
     }
 
-    private function deliverEmail(NotificationDeliveryLog $log, array $rendered): void
+    private function deliverEmail(NotificationDeliveryLog $log, array $rendered, string $locale): void
     {
         $email = $log->recipient_email ?? User::query()->find($log->recipient_user_id)?->email;
         if (! $email) {
             throw new \RuntimeException('No email address could be resolved for this recipient.');
         }
 
-        Mail::raw($rendered['body'], function ($message) use ($email, $rendered) {
-            $message->to($email)->subject($rendered['subject'] ?? 'Notification');
+        $subject = $rendered['subject'] ?? Messages::text('app.labels.notification', [], $locale);
+        Mail::raw($rendered['body'], function ($message) use ($email, $subject) {
+            $message->to($email)->subject($subject);
         });
     }
 }

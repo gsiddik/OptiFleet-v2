@@ -1,0 +1,42 @@
+{
+  "actions": {
+    "done": "Selesai",
+    "manageAccess": "Kelola Akses"
+  },
+  "empty": {
+    "noRolesAssigned": "Belum ada peran yang ditetapkan",
+    "noScopeAssignedNoAccess": "Tidak ada cakupan yang ditetapkan (tanpa akses).",
+    "noUsersFound": "Tidak ada pengguna."
+  },
+  "errors": {
+    "userCreatedButLinkingWorkerFailed": "Pengguna berhasil dibuat, tetapi penautan pekerja gagal: {{message}}"
+  },
+  "fields": {
+    "assignRoleOptional": "Tetapkan Peran (opsional)",
+    "branch": "CABANG",
+    "donTAssign": "Jangan tugaskan",
+    "donTLink": "Jangan tautkan",
+    "linkToWorkerOptional": "Tautkan ke Pekerja (opsional)",
+    "own": "SENDIRI",
+    "selectResource": "Pilih resource…",
+    "selectRoleToAssign": "Pilih peran yang akan ditetapkan…",
+    "tenant": "PENYEWA",
+    "warehouse": "GUDANG",
+    "workshop": "BENGKEL"
+  },
+  "help": {
+    "userCreatedButAssigningRoleFailed": "Pengguna berhasil dibuat, tetapi penetapan peran gagal: {{message}}"
+  },
+  "modals": {
+    "addUser": "Tambah Pengguna",
+    "manageAccessName": "Kelola Akses — {{name}}"
+  },
+  "sections": {
+    "dataScope": "Lingkup Data",
+    "roles": "Peran"
+  },
+  "titles": {
+    "rolesAndPermissions": "Peran & Izin",
+    "users": "Pengguna"
+  }
+}

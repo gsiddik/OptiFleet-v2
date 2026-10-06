@@ -1,4 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
+import { appLocale } from '../i18n/locale';
+import { t } from '../i18n/i18n';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1';
 
@@ -14,6 +16,8 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // API language contract: the active UI locale. Messages are localized; codes never are.
+  config.headers['Accept-Language'] = appLocale();
   const tenantId = localStorage.getItem('optifleet_active_tenant');
   if (tenantId) {
     config.headers['X-Tenant-ID'] = tenantId;
@@ -24,6 +28,11 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 export interface ApiErrorShape {
   message: string;
   errors?: Record<string, string[]>;
+  /**
+   * Machine-readable error per field for coded validation errors ({code, params}; code = EN-ID dataset
+   * key). Branch on this, never on the English message text.
+   */
+  codes?: Record<string, { code: string; params: Record<string, unknown> }>;
 }
 
 export function extractApiError(error: unknown): ApiErrorShape {
@@ -31,7 +40,7 @@ export function extractApiError(error: unknown): ApiErrorShape {
   if (axiosError.response?.data) {
     return axiosError.response.data;
   }
-  return { message: axiosError.message ?? 'Unexpected error occurred' };
+  return { message: axiosError.message ?? t('common.errors.unexpectedErrorOccurred') };
 }
 
 apiClient.interceptors.response.use(

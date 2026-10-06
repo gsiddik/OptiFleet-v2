@@ -4,6 +4,8 @@ import { PositionLabel } from '../../../../components/tires/PositionLabel';
 import { formatDate } from '../../../../utils/date';
 import type { TireCard } from './tireOperationTypes';
 import { REPLACEMENT_COLOR, ROTATION_RETURN_COLOR, formatHours, formatKm } from './tireOperationFormat';
+import { t } from '../../../../i18n/i18n';
+import { Trans } from 'react-i18next';
 
 /**
  * Rounded card with the facts of the tire on one position (Installed Tire / To be Rotated /
@@ -31,21 +33,21 @@ export function TireOperationCard({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
         <h4 style={{ margin: 0, fontSize: 13, color: accent, textTransform: 'uppercase', letterSpacing: 0.4 }}>{title}</h4>
         {onRemove && (
-          <button type="button" className="btn-link" onClick={onRemove} style={{ fontSize: 12 }} aria-label={`Remove ${code}`}>
-            Remove
+          <button type="button" className="btn-link" onClick={onRemove} style={{ fontSize: 12 }} aria-label={t('tire.actions.removeCode', { code: code })}>
+            {t('common.actions.remove')}
           </button>
         )}
       </div>
       {tire ? (
         <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(130px, max-content) 1fr', gap: '4px 12px', fontSize: 13, margin: 0 }}>
-          <Fact label="Tire Position" value={<PositionLabel code={code} variant="stacked" />} />
-          <Fact label="Current Serial Number" value={<span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tire.serial_number}</span>} />
-          <Fact label="Last Tire Operations Date" value={tire.last_operation_date ? formatDate(tire.last_operation_date) : '—'} />
-          <Fact label="Last Tire Operations Time" value={tire.last_operation_time ?? '—'} />
-          <Fact label="Last KM at Tire Operations" value={formatKm(tire.last_operation_odometer)} />
-          <Fact label="Usage KM" value={formatKm(tire.usage_km)} />
-          <Fact label="Usage Time / Hours Meter" value={formatHours(tire.usage_hours)} />
-          <Fact label="Last Tread Depth" value={tire.last_tread_depth_mm != null ? `${tire.last_tread_depth_mm} mm` : '—'} />
+          <Fact label={t('tire.fields.tirePosition')} value={<PositionLabel code={code} variant="stacked" />} />
+          <Fact label={t('tire.fields.currentSerialNumber')} value={<span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{tire.serial_number}</span>} />
+          <Fact label={t('tire.fields.lastTireOperationsDate')} value={tire.last_operation_date ? formatDate(tire.last_operation_date) : '—'} />
+          <Fact label={t('tire.fields.lastTireOperationsTime')} value={tire.last_operation_time ?? '—'} />
+          <Fact label={t('tire.fields.lastKmTireOperations')} value={formatKm(tire.last_operation_odometer)} />
+          <Fact label={t('tire.fields.usageKm')} value={formatKm(tire.usage_km)} />
+          <Fact label={t('tire.fields.usageTimeHoursMeter')} value={formatHours(tire.usage_hours)} />
+          <Fact label={t('tire.fields.lastTreadDepth')} value={tire.last_tread_depth_mm != null ? t('tire.help.dPullMmMm', { d_pull_mm: tire.last_tread_depth_mm }) : '—'} />
         </dl>
       ) : (
         <MissingTireNotice code={code} vehicleId={vehicleId} />
@@ -59,8 +61,11 @@ export function TireOperationCard({
 export function MissingTireNotice({ code, vehicleId }: { code: string; vehicleId?: string }) {
   return (
     <div role="alert" data-missing-tire={code} style={{ fontSize: 13, color: '#991b1b', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 10px' }}>
-      <PositionLabel code={code} /> has no tire data yet. Complete it in{' '}
-      {vehicleId ? <Link to={`/app/vehicles/${vehicleId}?tab=wheels`}>Vehicle Details → Wheels Configuration</Link> : 'Vehicle Details → Wheels Configuration'} before continuing.
+      <Trans
+        i18nKey="tire.help.missingTireDataNotice"
+        values={{ position: code }}
+        components={{ position: <PositionLabel code={code} />, linkTo: vehicleId ? <Link to={`/app/vehicles/${vehicleId}?tab=wheels`} /> : <span /> }}
+      />
     </div>
   );
 }

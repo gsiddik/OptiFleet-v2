@@ -11,6 +11,7 @@ import { StatusBadge } from "../../../../components/StatusBadge";
 import { Toolbar } from "../../../../components/Toolbar";
 import { useApiList } from "../../../../hooks/useApiList";
 import { formatDate } from "../../../../utils/date";
+import { t as tt } from '../../../../i18n/i18n';
 
 export interface ScrappedTireRow {
   id: string;
@@ -85,7 +86,7 @@ export function ScrappedTiresPanel() {
         }}
       >
         <h3 style={{ margin: 0, fontSize: 15 }}>
-          Recently Scrapped{" "}
+          {tt('tire.sections.recentlyScrapped')}{" "}
           {meta && (
             <span style={{ color: "#6b7280", fontWeight: 400 }}>
               ({meta.total})
@@ -99,7 +100,7 @@ export function ScrappedTiresPanel() {
             disabled={selected.size === 0}
             onClick={() => sell([...selected])}
           >
-            Sell{selected.size > 0 ? ` (${selected.size})` : ""}
+            {tt('tire.actions.sell')}{selected.size > 0 ? ` (${selected.size})` : ""}
           </button>
         )}
       </div>
@@ -113,7 +114,7 @@ export function ScrappedTiresPanel() {
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && (
-        <EmptyState label="No scrapped tires." />
+        <EmptyState label={tt('tire.empty.noScrappedTires')} />
       )}
       {!error && !loading && data.length > 0 && (
         <div
@@ -132,19 +133,19 @@ export function ScrappedTiresPanel() {
                   <th style={cell}>
                     <input
                       type="checkbox"
-                      aria-label="Select all scrapped tires on this page"
+                      aria-label={tt('tire.fields.selectAllScrappedTiresPage')}
                       checked={allSelected}
                       disabled={sellable.length === 0}
                       onChange={toggleAll}
                     />
                   </th>
                 )}
-                <th style={cell}>Serial Number</th>
-                <th style={cell}>Product</th>
-                <th style={cell}>Status</th>
-                <th style={cell}>Scrapped</th>
-                <th style={cell}>Sale</th>
-                {canSell && <th style={cell}>Action</th>}
+                <th style={cell}>{tt('common.fields.serialNumber')}</th>
+                <th style={cell}>{tt('common.fields.product')}</th>
+                <th style={cell}>{tt('common.fields.status')}</th>
+                <th style={cell}>{tt('analytics.fields.scrapped')}</th>
+                <th style={cell}>{tt('common.fields.sale')}</th>
+                {canSell && <th style={cell}>{tt('common.fields.action')}</th>}
               </tr>
             </thead>
             <tbody>
@@ -154,7 +155,7 @@ export function ScrappedTiresPanel() {
                     <td style={cell}>
                       <input
                         type="checkbox"
-                        aria-label={`Select ${t.serial_number}`}
+                        aria-label={tt('tire.fields.selectSerialNumber2', { serial_number: t.serial_number })}
                         checked={selected.has(t.id)}
                         disabled={Boolean(t.sale_id)}
                         onChange={() => toggle(t.id)}
@@ -186,7 +187,7 @@ export function ScrappedTiresPanel() {
                         disabled={Boolean(t.sale_id)}
                         onClick={() => sell([t.id])}
                       >
-                        Sell
+                        {tt('tire.actions.sell')}
                       </button>
                     </td>
                   )}

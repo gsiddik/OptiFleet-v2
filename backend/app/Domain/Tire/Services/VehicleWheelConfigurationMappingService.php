@@ -3,6 +3,7 @@
 namespace App\Domain\Tire\Services;
 
 use App\Domain\AccessControl\Services\DataScopeService;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationMaster;
 use App\Domain\Tire\Models\WheelConfigurationVersion;
@@ -132,7 +133,7 @@ class VehicleWheelConfigurationMappingService
                 ->whereIn('id', $all)->orderBy('id')->lockForUpdate()->get()->keyBy('id');
             $missing = array_values(array_diff($all, $vehicles->keys()->all()));
             if ($missing !== []) {
-                throw ValidationException::withMessages(['vehicles' => 'Some vehicles were not found: '.implode(', ', $missing).'.']);
+                throw ValidationException::withMessages(['vehicles' => Messages::text('validation.tire.vehiclesNotFound', ['vehicles' => implode(', ', $missing)])]);
             }
             foreach ($vehicles as $vehicle) {
                 if (! $this->scope->canAccessBranch($user, $lockedMaster->tenant_id, $vehicle->branch_id)) {
@@ -207,7 +208,9 @@ class VehicleWheelConfigurationMappingService
         }
         $type = VehicleTypeClassifier::resolve($vehicle->vehicle_type);
         if ($type !== $master->vehicle_type) {
-            return 'vehicle type '.($vehicle->vehicle_type ?? '(not set)').' does not match the configuration vehicle type.';
+            return $vehicle->vehicle_type === null
+                ? Messages::text('tire.wheelConfiguration.vehicleTypeNotSetMismatch')
+                : Messages::text('tire.wheelConfiguration.vehicleTypeMismatch', ['vehicleType' => $vehicle->vehicle_type]);
         }
         if ((int) $vehicle->axle_count !== $version->total_axles || $vehicle->axle_count === null) {
             return "total axles ({$this->num($vehicle->axle_count)}) do not match the configuration ({$version->total_axles}).";

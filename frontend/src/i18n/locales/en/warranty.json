@@ -1,0 +1,46 @@
+{
+  "actions": {
+    "backToClaims": "← Back to Claims",
+    "backToWarranty": "← Back to Warranty",
+    "checkEligibility": "Check Eligibility",
+    "newClaim": "+ New Claim",
+    "newWarranty": "+ New Warranty",
+    "resolveViaRepair": "Resolve via Repair",
+    "resolveViaReplacement": "Resolve via Replacement",
+    "settle": "Settle"
+  },
+  "empty": {
+    "noWarrantiesFound": "No warranties found.",
+    "noWarrantyClaimsFound": "No warranty claims found."
+  },
+  "fields": {
+    "claimNumber": "Claim #",
+    "coverage": "Coverage",
+    "coverageBasis": "Coverage Basis",
+    "currentOdometerOptional": "Current Odometer (optional)",
+    "duration": "Duration",
+    "durationKm": "Duration (km)",
+    "durationMonths": "Duration (months)",
+    "engineHrs": "engine hrs",
+    "failureDate": "Failure Date",
+    "km": "km /",
+    "months": "months /",
+    "resolveViaRepair": "Resolve via Repair",
+    "resolveViaReplacement": "Resolve via Replacement",
+    "settle": "Settle",
+    "starts": "Starts",
+    "startsAt": "Starts At"
+  },
+  "modals": {
+    "newWarranty": "New Warranty",
+    "newWarrantyClaim": "New Warranty Claim"
+  },
+  "sections": {
+    "eligibilityCheck": "Eligibility Check"
+  },
+  "titles": {
+    "coverageBasisWarranty": "{{coverage_basis}} Warranty",
+    "warranties": "Warranties",
+    "warrantyClaims": "Warranty Claims"
+  }
+}

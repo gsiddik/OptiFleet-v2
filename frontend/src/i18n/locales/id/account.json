@@ -1,0 +1,58 @@
+{
+  "actions": {
+    "submitPayment": "+ Kirim Pembayaran",
+    "submitPayment2": "Kirim Pembayaran"
+  },
+  "empty": {
+    "noActiveSubscriptionFoundOrganization": "Tidak ada langganan aktif untuk organisasi ini."
+  },
+  "fields": {
+    "bankName": "Nama Bank",
+    "billingCycleBillingCycle": "Siklus Penagihan: {{billing_cycle}}",
+    "current": "Saat Ini",
+    "defaultLanguage": "Bahasa Default",
+    "endEndDate": "Berakhir: {{end_date}}",
+    "fax": "Faks",
+    "invoice": "Faktur",
+    "invoiceNumberCurrencyOutstandingAmountOutstanding": "{{invoice_number}} — {{currency}} {{outstanding_amount}} belum lunas",
+    "item": "Item",
+    "limit": "Batas",
+    "logoJpgOrPng": "Logo (JPG atau PNG)",
+    "n5DaysMondayFriday": "5 hari (Senin–Jumat)",
+    "n6DaysMondaySaturday": "6 hari (Senin–Sabtu)",
+    "n7DaysMondaySunday": "7 hari (Senin–Minggu)",
+    "paymentMethod": "Metode Pembayaran",
+    "phone": "Telepon",
+    "proofPaymentOptionalJpgPngWebp": "Bukti Pembayaran (opsional, JPG/PNG/WEBP/PDF, maks 5MB)",
+    "selectAnOutstandingInvoice": "Pilih faktur yang belum lunas…",
+    "startStartDate": "Mulai: {{start_date}}",
+    "taxId": "NPWP",
+    "totalCurrencyTotal": "Total: {{currency}} {{total}}",
+    "website": "Situs Web",
+    "workshopWorkingDays": "Hari Kerja Bengkel"
+  },
+  "help": {
+    "accountOutstandingBalancePleaseSettleBefore": "Akun Anda memiliki tagihan yang belum dibayar. Silakan lunasi sebelum",
+    "drivesWorkingDayCalculationsPlanningSchedule": "Menjadi dasar perhitungan hari kerja untuk Perencanaan & Jadwal. Wajib dilengkapi sebelum jadwal pemeliharaan periodik dapat dibuat.",
+    "pleaseSubmitNewPaymentInvoicePayments": "Silakan kirim pembayaran baru untuk faktur ini dari daftar Pembayaran.",
+    "saved": "Tersimpan.",
+    "subscriptionSuspendedOperationalFeaturesRestrictedUntil": "Langganan Anda ditangguhkan. Fitur operasional dibatasi sampai pembayaran yang tertunggak diverifikasi. Silakan kirim atau periksa status pembayaran Anda di Pembayaran.",
+    "theGracePeriodEnds": "masa tenggang berakhir",
+    "thisPaymentWasRejected": "Pembayaran ini ditolak",
+    "toAvoidSuspension": "untuk menghindari penangguhan.",
+    "unlimited": "Tidak terbatas",
+    "uploading": "Mengunggah…",
+    "usedSidebarBrowserTabIconTenant": "Digunakan di sidebar dan ikon tab browser untuk penyewa ini."
+  },
+  "modals": {
+    "submitPayment": "Kirim Pembayaran"
+  },
+  "sections": {
+    "nextBillingDate": "Tanggal Penagihan Berikutnya",
+    "usageAndLimits": "Pemakaian & Batas"
+  },
+  "titles": {
+    "companyProfile": "Profil Perusahaan",
+    "subscription": "Langganan"
+  }
+}

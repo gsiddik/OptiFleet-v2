@@ -6,6 +6,8 @@ import { EmptyState, ErrorState, LoadingState } from './States';
 import { useApiList } from '../hooks/useApiList';
 import { inputStyle } from './FormField';
 import type { AuditLogEntry } from '../types';
+import { formatDateTime } from '../utils/date';
+import { t } from '../i18n/i18n';
 
 export function AuditLogTable({ endpoint, showTenantColumn = false }: { endpoint: string; showTenantColumn?: boolean }) {
   const [resourceType, setResourceType] = useState('');
@@ -14,17 +16,17 @@ export function AuditLogTable({ endpoint, showTenantColumn = false }: { endpoint
   const { data, meta, loading, error } = useApiList<AuditLogEntry>(endpoint, { resource_type: resourceType, action, page });
 
   const columns: Column<AuditLogEntry>[] = [
-    { key: 'created_at', header: 'When', render: (l) => new Date(l.created_at).toLocaleString() },
-    { key: 'actor_name', header: 'Actor', render: (l) => l.actor_name ?? 'System' },
-    ...(showTenantColumn ? [{ key: 'tenant_id', header: 'Tenant', render: (l: AuditLogEntry) => l.tenant_id ?? '—' } as Column<AuditLogEntry>] : []),
-    { key: 'resource_type', header: 'Resource', render: (l) => l.resource_type },
-    { key: 'action', header: 'Action', render: (l) => l.action },
+    { key: 'created_at', header: t('common.fields.when'), render: (l) => formatDateTime(l.created_at) },
+    { key: 'actor_name', header: t('common.fields.actor'), render: (l) => l.actor_name ?? t('common.fields.system') },
+    ...(showTenantColumn ? [{ key: 'tenant_id', header: t('common.fields.tenant'), render: (l: AuditLogEntry) => l.tenant_id ?? '—' } as Column<AuditLogEntry>] : []),
+    { key: 'resource_type', header: t('common.fields.resource'), render: (l) => l.resource_type },
+    { key: 'action', header: t('common.fields.action'), render: (l) => l.action },
     {
       key: 'changes',
-      header: 'Changes',
+      header: t('common.fields.changes'),
       render: (l) => (
         <details>
-          <summary style={{ cursor: 'pointer', fontSize: 12, color: '#1d4ed8' }}>view</summary>
+          <summary style={{ cursor: 'pointer', fontSize: 12, color: '#1d4ed8' }}>{t('common.sections.view')}</summary>
           <pre style={{ fontSize: 11, maxWidth: 320, whiteSpace: 'pre-wrap' }}>
             {JSON.stringify({ old: l.old_values, new: l.new_values }, null, 2)}
           </pre>
@@ -37,7 +39,7 @@ export function AuditLogTable({ endpoint, showTenantColumn = false }: { endpoint
     <div>
       <Toolbar>
         <input
-          placeholder="Resource type (e.g. Branch)"
+          placeholder={t('common.placeholders.resourceTypeEGBranch')}
           value={resourceType}
           onChange={(e) => {
             setResourceType(e.target.value);
@@ -46,7 +48,7 @@ export function AuditLogTable({ endpoint, showTenantColumn = false }: { endpoint
           style={{ ...inputStyle, width: 180 }}
         />
         <input
-          placeholder="Action (e.g. created)"
+          placeholder={t('common.placeholders.actionEGCreated')}
           value={action}
           onChange={(e) => {
             setAction(e.target.value);
@@ -57,7 +59,7 @@ export function AuditLogTable({ endpoint, showTenantColumn = false }: { endpoint
       </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No audit records found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('common.empty.noAuditRecordsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />

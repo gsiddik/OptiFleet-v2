@@ -11,6 +11,7 @@ import {
 } from "../../../components/States";
 import { useApiList } from "../../../hooks/useApiList";
 import { formatQty } from "../../../utils/quantity";
+import { t as tt } from '../../../i18n/i18n';
 
 interface UsedTireStockRow {
   id: string;
@@ -57,7 +58,7 @@ export function UsedTiresTab() {
   const columns: Column<UsedTireStockRow>[] = [
     {
       key: "product",
-      header: "Tire Product",
+      header: tt('inventory.fields.tireProduct'),
       render: (r) =>
         r.product ? (
           <Link to={`/app/tires/products/${r.product.id}`}>
@@ -70,12 +71,12 @@ export function UsedTiresTab() {
     { key: "sku", header: "SKU", render: (r) => r.product?.sku ?? "—" },
     {
       key: "warehouse",
-      header: "Warehouse",
+      header: tt('common.fields.warehouse'),
       render: (r) => r.warehouse?.name ?? "—",
     },
     {
       key: "qty",
-      header: "Used Qty (REUSE)",
+      header: tt('inventory.fields.usedQtyReuse'),
       render: (r) => (
         <span data-used-tire-qty={r.quantity_on_hand}>
           {formatQty(r.quantity_on_hand)}
@@ -84,7 +85,7 @@ export function UsedTiresTab() {
     },
     {
       key: "serials",
-      header: "Serial Numbers",
+      header: tt('inventory.fields.serialNumbers'),
       render: (r) =>
         r.serials.length === 0
           ? "—"
@@ -100,14 +101,13 @@ export function UsedTiresTab() {
   return (
     <div>
       <p style={{ fontSize: 13, color: "#6b7280", marginTop: 0 }}>
-        Used tires inspected as REUSE. Kept apart from new stock and issued
-        through Part Requests (Used lines).
+        {tt('inventory.help.usedTiresInspectedReuseKeptApart')}
       </p>
       <div
         style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}
       >
         <select
-          aria-label="Used tires warehouse"
+          aria-label={tt('inventory.fields.usedTiresWarehouse')}
           value={warehouseId}
           onChange={(e) => {
             setWarehouseId(e.target.value);
@@ -115,7 +115,7 @@ export function UsedTiresTab() {
           }}
           style={{ ...inputStyle, width: 200 }}
         >
-          <option value="">All warehouses</option>
+          <option value="">{tt('inventory.filters.allWarehouses')}</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -123,8 +123,8 @@ export function UsedTiresTab() {
           ))}
         </select>
         <input
-          aria-label="Search used tires"
-          placeholder="Search tire product…"
+          aria-label={tt('inventory.fields.searchUsedTires')}
+          placeholder={tt('inventory.search.searchTireProduct')}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -136,7 +136,7 @@ export function UsedTiresTab() {
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && (
-        <EmptyState label="No used tires in stock." />
+        <EmptyState label={tt('inventory.empty.noUsedTiresStock')} />
       )}
       {!error && !loading && data.length > 0 && (
         <Table columns={columns} rows={data} />

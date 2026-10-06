@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Platform;
 
+use App\Domain\DocumentGeneration\Support\DocumentLocale;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -24,6 +25,8 @@ class UpdateTenantRequest extends FormRequest
             'phone' => ['nullable', 'string', 'max:50'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
+            // i18n: the tenant's default language; null = none (users then fall back to their browser / English).
+            'default_locale' => ['sometimes', 'nullable', Rule::in(DocumentLocale::SUPPORTED)],
         ];
     }
 }

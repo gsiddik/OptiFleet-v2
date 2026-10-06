@@ -6,6 +6,7 @@ use App\Domain\AccessControl\Models\Permission;
 use App\Domain\AccessControl\Models\Role;
 use App\Domain\AccessControl\Models\RoleAssignment;
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Shared\Support\Messages;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -52,7 +53,7 @@ class RolePermissionService
         $invalid = array_values(array_diff($permissionIds, $valid->keys()->all()));
         if ($invalid !== []) {
             throw ValidationException::withMessages([
-                'permission_ids' => count($invalid).' selected permission(s) do not exist or do not belong to the '.$role->scope.' scope.',
+                'permission_ids' => Messages::text('validation.accessControl.invalidPermissions', ['count' => count($invalid), 'scope' => $role->scope]),
             ]);
         }
 
@@ -63,7 +64,7 @@ class RolePermissionService
 
             if ($actor !== null && ! in_array(self::MANAGE_PERMISSION, $after, true) && $this->wouldLockOut($actor, $role, $actorTenantId)) {
                 throw ValidationException::withMessages([
-                    'permission_ids' => 'You cannot remove "'.self::MANAGE_PERMISSION.'" from a role that is your only source of it — you would lose access to role management.',
+                    'permission_ids' => Messages::text('validation.accessControl.cannotRemoveManagePermission', ['permission' => self::MANAGE_PERMISSION]),
                 ]);
             }
 

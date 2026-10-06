@@ -3,6 +3,8 @@ import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
 import type { SubscriptionItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
+import { formatDate } from '../../../utils/date';
 
 interface UsageLimit {
   resource_type: string;
@@ -35,11 +37,11 @@ export function AccountSubscriptionPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 20 }}>Subscription</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 20 }}>{t('account.titles.subscription')}</h1>
 
       {!subscription && (
         <div className="card" style={{ color: '#9ca3af' }}>
-          No active subscription found for this organization.
+          {t('account.empty.noActiveSubscriptionFoundOrganization')}
         </div>
       )}
 
@@ -47,47 +49,46 @@ export function AccountSubscriptionPage() {
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
             <div className="card">
-              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>Status</div>
+              <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>{t('common.fields.status')}</div>
               <StatusBadge status={subscription.status} />
             </div>
-            <SummaryCard label="Start Date" value={subscription.start_date} />
-            <SummaryCard label="End Date" value={subscription.end_date} />
-            <SummaryCard label="Next Billing Date" value={subscription.next_billing_date} />
+            <SummaryCard label={t('platform.contracts.fields.startDate')} value={formatDate(subscription.start_date)} />
+            <SummaryCard label={t('platform.contracts.fields.endDate')} value={formatDate(subscription.end_date)} />
+            <SummaryCard label={t('account.sections.nextBillingDate')} value={formatDate(subscription.next_billing_date)} />
           </div>
 
           {subscription.status === 'SUSPENDED' && (
             <div style={{ background: '#fef2f2', color: '#b91c1c', padding: 14, borderRadius: 8, marginBottom: 20, fontSize: 14 }}>
-              Your subscription is suspended. Operational features are restricted until an outstanding payment is verified. Please submit
-              or check your payment status under Payments.
+              {t('account.help.subscriptionSuspendedOperationalFeaturesRestrictedUntil')}
             </div>
           )}
           {['GRACE_PERIOD', 'PAST_DUE'].includes(subscription.status) && (
             <div style={{ background: '#fffbeb', color: '#a16207', padding: 14, borderRadius: 8, marginBottom: 20, fontSize: 14 }}>
-              Your account has an outstanding balance. Please settle it before {subscription.grace_period_end ?? 'the grace period ends'}{' '}
-              to avoid suspension.
+              {t('account.help.accountOutstandingBalancePleaseSettleBefore')} {subscription.grace_period_end ?? t('account.help.theGracePeriodEnds')}{' '}
+              {t('account.help.toAvoidSuspension')}
             </div>
           )}
         </>
       )}
 
-      <h2 style={{ fontSize: 16, marginBottom: 12 }}>Active Modules</h2>
+      <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('dashboard.sections.activeModules')}</h2>
       <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 24 }}>
         {activeModules.map((m) => (
           <span key={m} style={{ background: '#eff6ff', color: '#1d4ed8', padding: '4px 10px', borderRadius: 6, fontSize: 12 }}>
             {m}
           </span>
         ))}
-        {activeModules.length === 0 && <span style={{ color: '#9ca3af' }}>No modules entitled.</span>}
+        {activeModules.length === 0 && <span style={{ color: '#9ca3af' }}>{t('dashboard.empty.noModulesEntitled')}</span>}
       </div>
 
-      <h2 style={{ fontSize: 16, marginBottom: 12 }}>Usage &amp; Limits</h2>
+      <h2 style={{ fontSize: 16, marginBottom: 12 }}>{t('account.sections.usageAndLimits')}</h2>
       <div className="card">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: '6px 8px' }}>Resource</th>
-              <th style={{ padding: '6px 8px' }}>Current</th>
-              <th style={{ padding: '6px 8px' }}>Limit</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.resource')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('account.fields.current')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('account.fields.limit')}</th>
             </tr>
           </thead>
           <tbody>
@@ -95,7 +96,7 @@ export function AccountSubscriptionPage() {
               <tr key={u.resource_type} style={{ borderBottom: '1px solid #f3f4f6' }}>
                 <td style={{ padding: '6px 8px', textTransform: 'capitalize' }}>{u.resource_type}</td>
                 <td style={{ padding: '6px 8px' }}>{u.current_count}</td>
-                <td style={{ padding: '6px 8px' }}>{u.max_count ?? 'Unlimited'}</td>
+                <td style={{ padding: '6px 8px' }}>{u.max_count ?? t('account.help.unlimited')}</td>
               </tr>
             ))}
           </tbody>

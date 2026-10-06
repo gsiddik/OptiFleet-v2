@@ -1,0 +1,14 @@
+{
+  "labels": {
+    "accessManagement": "Manajemen Akses",
+    "accountAndSubscription": "Akun & Langganan",
+    "analytics": "Analitik",
+    "commercial": "Komersial",
+    "configuration": "Konfigurasi",
+    "maintenanceIntelligence": "Kecerdasan Pemeliharaan",
+    "masterData": "Data Master",
+    "permissionsUserIdTenant": "permissions:user:{{id}}:tenant",
+    "serviceInvoice": "Faktur Layanan",
+    "viewExternalWorkshopInvoiceReference": "Lihat Referensi Faktur Bengkel Eksternal"
+  }
+}

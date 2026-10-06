@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
 import { StatusBadge } from '../../../components/StatusBadge';
@@ -11,24 +11,29 @@ import { TenantEntitlementsTab } from './tabs/TenantEntitlementsTab';
 import { TenantCapacityTab } from './tabs/TenantCapacityTab';
 import { TenantContractTab } from './tabs/TenantContractTab';
 import { useAuth } from '../../../auth/AuthContext';
+import { useTabParam } from '../../../hooks/useTabParam';
+import type { TabDef } from '../../../utils/tabs';
+import { formatDateTime } from '../../../utils/date';
+import { labelText, t as tt } from '../../../i18n/i18n';
 
-const TABS = ['Overview', 'Users', 'Module Entitlements', 'Capacity Limits', 'Contract'] as const;
+type TenantTab = 'overview' | 'users' | 'module-entitlements' | 'capacity-limits' | 'contract';
+// Stable ids drive state and ?tab=; labels are display only. Legacy ?tab=Contract links still resolve.
+const TABS: readonly TabDef<TenantTab>[] = [
+  { id: 'overview', label: 'Overview', labelKey: 'common.sections.overview' },
+  { id: 'users', label: 'Users', labelKey: 'platform.tenants.sections.users' },
+  { id: 'module-entitlements', label: 'Module Entitlements', labelKey: 'platform.tenants.sections.moduleEntitlements' },
+  { id: 'capacity-limits', label: 'Capacity Limits', labelKey: 'platform.tenants.sections.capacityLimits' },
+  { id: 'contract', label: 'Contract', labelKey: 'platform.tenants.sections.contract' },
+];
 
 export function TenantDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { hasPermission } = useAuth();
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [searchParams, setSearchParams] = useSearchParams();
-  const initialTab = (searchParams.get('tab') as (typeof TABS)[number] | null) ?? 'Overview';
-  const [tab, setTab] = useState<(typeof TABS)[number]>(TABS.includes(initialTab) ? initialTab : 'Overview');
+  const [tab, selectTab] = useTabParam(TABS, 'overview');
 
   useBreadcrumbLabel(tenant?.id, tenant ? `${tenant.name} (${tenant.code})` : undefined);
-
-  function selectTab(t: (typeof TABS)[number]) {
-    setTab(t);
-    setSearchParams(t === 'Overview' ? {} : { tab: t }, { replace: true });
-  }
 
   function load() {
     apiClient
@@ -38,6 +43,16 @@ export function TenantDetailPage() {
   }
 
   useEffect(load, [id]);
+
+  async function changeDefaultLocale(value: string) {
+    if (!tenant) return;
+    try {
+      await apiClient.put(`/platform/tenants/${id}`, { default_locale: value || null });
+      load();
+    } catch (err) {
+      setError(extractApiError(err).message);
+    }
+  }
 
   async function toggleStatus() {
     if (!tenant) return;
@@ -52,7 +67,7 @@ export function TenantDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/platform/tenants" label="← Back to Tenant Management" />
+      <BackButton fallbackTo="/platform/tenants" label={tt('platform.tenants.actions.backToTenantManagement')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {tenant.name} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({tenant.code})</span>
@@ -61,14 +76,14 @@ export function TenantDetailPage() {
           <StatusBadge status={tenant.status} />
           {(hasPermission('tenant.activate') || hasPermission('tenant.deactivate')) && (
             <button className="btn-secondary" onClick={toggleStatus}>
-              {tenant.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+              {tenant.status === 'ACTIVE' ? tt('common.actions.deactivate') : tt('common.actions.activate')}
             </button>
           )}
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
-        {TABS.map((t) => (
+        {TABS.map(({ id: t, ...tabDef }) => (
           <button
             key={t}
             onClick={() => selectTab(t)}
@@ -83,28 +98,41 @@ export function TenantDetailPage() {
               fontWeight: tab === t ? 600 : 400,
             }}
           >
-            {t}
+            {labelText(tabDef)}
           </button>
         ))}
       </div>
 
-      {tab === 'Overview' && (
+      {tab === 'overview' && (
         <div className="card">
           <p>
-            <strong>Legal Name:</strong> {tenant.legal_name ?? '—'}
+            <strong>{tt('platform.tenants.fields.legalName')}:</strong> {tenant.legal_name ?? '—'}
           </p>
           <p>
-            <strong>Industry:</strong> {tenant.industry ?? '—'}
+            <strong>{tt('platform.tenants.fields.industry')}:</strong> {tenant.industry ?? '—'}
           </p>
           <p>
-            <strong>Created:</strong> {new Date(tenant.created_at).toLocaleString()}
+            <strong>{tt('platform.tenants.fields.created')}:</strong> {formatDateTime(tenant.created_at)}
           </p>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <strong>{tt('platform.tenants.fields.defaultLanguage')}:</strong>
+            <select
+              value={tenant.default_locale ?? ''}
+              disabled={!hasPermission('tenant.update')}
+              onChange={(e) => changeDefaultLocale(e.target.value)}
+              data-tenant-default-locale
+            >
+              <option value="">—</option>
+              <option value="en">{tt('common.language.en')}</option>
+              <option value="id">{tt('common.language.id')}</option>
+            </select>
+          </label>
         </div>
       )}
-      {tab === 'Users' && <TenantUsersTab tenantId={tenant.id} />}
-      {tab === 'Module Entitlements' && <TenantEntitlementsTab tenantId={tenant.id} />}
-      {tab === 'Capacity Limits' && <TenantCapacityTab tenantId={tenant.id} />}
-      {tab === 'Contract' && <TenantContractTab tenantId={tenant.id} tenantName={tenant.name} tenantCode={tenant.code} />}
+      {tab === 'users' && <TenantUsersTab tenantId={tenant.id} />}
+      {tab === 'module-entitlements' && <TenantEntitlementsTab tenantId={tenant.id} />}
+      {tab === 'capacity-limits' && <TenantCapacityTab tenantId={tenant.id} />}
+      {tab === 'contract' && <TenantContractTab tenantId={tenant.id} tenantName={tenant.name} tenantCode={tenant.code} />}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { WorkflowIssue } from "../../../../types";
+import { t } from '../../../../i18n/i18n';
 
 /** Validation results; each problem selects the status or transition it concerns. */
 export function WorkflowValidationPanel({
@@ -32,7 +33,7 @@ export function WorkflowValidationPanel({
             marginRight: 6,
           }}
         >
-          {kind === "error" ? "Error" : "Warning"}
+          {kind === "error" ? t('configuration.fields.error') : t('configuration.warnings.warning')}
         </span>
         {issue.message}{" "}
         {target && (
@@ -52,7 +53,7 @@ export function WorkflowValidationPanel({
               fontSize: 12,
             }}
           >
-            Show
+            {t('configuration.actions.show')}
           </button>
         )}
       </li>
@@ -68,7 +69,7 @@ export function WorkflowValidationPanel({
     >
       {total === 0 ? (
         <span style={{ color: "#15803d", fontWeight: 600 }} data-validation-ok>
-          The workflow is valid.
+          {t('configuration.help.theWorkflowIsValid')}
         </span>
       ) : (
         <ul style={{ margin: 0, paddingLeft: 16 }}>

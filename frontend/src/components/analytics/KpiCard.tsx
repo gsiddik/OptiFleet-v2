@@ -1,4 +1,5 @@
 import { formatMoney } from '../../utils/money';
+import { formatNumber } from '../../utils/number';
 
 export interface KpiResult {
   code: string;
@@ -17,7 +18,7 @@ function formatValue(kpi: KpiResult): string {
   const rounded = Math.round(kpi.value * 100) / 100;
   if (kpi.unit === 'percentage') return `${rounded}%`;
   if (kpi.unit === 'currency') return formatMoney(kpi.value);
-  return rounded.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return formatNumber(rounded);
 }
 
 // Section 45/55: the card always shows the underlying numerator/denominator,
@@ -29,7 +30,7 @@ export function KpiCard({ kpi }: { kpi: KpiResult }) {
       <div style={{ fontSize: 26, fontWeight: 700, color: '#111827' }}>{formatValue(kpi)}</div>
       {kpi.numerator !== null && kpi.denominator !== null && (
         <div style={{ fontSize: 11, color: '#9ca3af', marginTop: 4 }}>
-          {kpi.numerator.toLocaleString()} / {kpi.denominator.toLocaleString()}
+          {formatNumber(kpi.numerator)} / {formatNumber(kpi.denominator)}
         </div>
       )}
     </div>

@@ -6,6 +6,8 @@ import { NumericInput } from "../../../components/NumericInput";
 import type { PurchaseOrderItem, PurchaseReturnOption } from "../../../types";
 import { RETURN_OPTION_LABEL } from "./purchaseReturnLabels";
 import { formatQty } from "../../../utils/quantity";
+import { message } from "../../../i18n/messages";
+import { t } from '../../../i18n/i18n';
 
 const readonly = { ...inputStyle, background: "#f3f4f6" };
 
@@ -61,17 +63,17 @@ export function ReturnToVendorModal({
           ? { component_asset_ids: selectedAssets[item.id] ?? [] }
           : {}),
       }));
-    if (!option) return setError("Choose the Return Option.");
+    if (!option) return setError(t('procurement.validation.chooseTheReturnOption'));
     if (items.length === 0)
       return setError(
-        "Enter the Qty Returned to Vendor for at least one item.",
+        t('procurement.validation.enterQtyReturnedVendorLeastOne'),
       );
     const over = lines.find(
       (item) => Number(quantities[item.id] || 0) > returnable(item.id),
     );
     if (over)
       return setError(
-        `${over.product?.name ?? "Item"}: at most ${formatQty(returnable(over.id))} can be returned.`,
+        message("procurement.validation.returnQtyExceeded", { productName: over.product?.name ?? message("account.fields.item"), returnable: formatQty(returnable(over.id)) }),
       );
     setSaving(true);
     try {
@@ -89,7 +91,7 @@ export function ReturnToVendorModal({
   }
 
   return (
-    <Modal open title="Return PO" onClose={onClose} width={640}>
+    <Modal open title={t('procurement.modals.returnPo')} onClose={onClose} width={640}>
       <div data-return-po style={{ display: "grid", gap: 12 }}>
         <div
           style={{
@@ -98,26 +100,26 @@ export function ReturnToVendorModal({
             gap: 12,
           }}
         >
-          <FormField label="Vendor Name">
+          <FormField label={t('notifications.vendorName')}>
             <input
-              aria-label="Vendor Name"
+              aria-label={t('notifications.vendorName')}
               value={po.partner?.name ?? "—"}
               readOnly
               style={readonly}
             />
           </FormField>
-          <FormField label="Vendor PIC Phone Number">
+          <FormField label={t('procurement.fields.vendorPicPhoneNumber')}>
             <input
-              aria-label="Vendor PIC Phone Number"
+              aria-label={t('procurement.fields.vendorPicPhoneNumber')}
               value={po.partner?.contact_phone ?? "—"}
               readOnly
               style={readonly}
             />
           </FormField>
         </div>
-        <FormField label="Vendor Address">
+        <FormField label={t('procurement.fields.vendorAddress')}>
           <textarea
-            aria-label="Vendor Address"
+            aria-label={t('procurement.fields.vendorAddress')}
             value={po.partner?.address ?? "—"}
             readOnly
             rows={2}
@@ -131,24 +133,24 @@ export function ReturnToVendorModal({
             gap: 12,
           }}
         >
-          <FormField label="PO Number">
+          <FormField label={t('procurement.fields.poNumber2')}>
             <input
-              aria-label="PO Number"
+              aria-label={t('procurement.fields.poNumber2')}
               value={po.po_number}
               readOnly
               style={readonly}
             />
           </FormField>
-          <FormField label="Return Option" required>
+          <FormField label={t('procurement.fields.returnOption')} required>
             <select
-              aria-label="Return Option"
+              aria-label={t('procurement.fields.returnOption')}
               value={option}
               onChange={(e) =>
                 setOption(e.target.value as PurchaseReturnOption | "")
               }
               style={inputStyle}
             >
-              <option value="">Select…</option>
+              <option value="">{t('common.fields.select')}</option>
               <option value="REFUND">{RETURN_OPTION_LABEL.REFUND}</option>
               <option value="REDELIVERY">
                 {RETURN_OPTION_LABEL.REDELIVERY}
@@ -158,7 +160,7 @@ export function ReturnToVendorModal({
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-            Qty Returned to Vendor
+            {t('procurement.help.qtyReturnedToVendor')}
           </div>
           {lines.map((item) => (
             <div
@@ -178,12 +180,11 @@ export function ReturnToVendorModal({
                 {item.product?.name ?? item.product_id}
                 <span style={{ color: "#6b7280" }}>
                   {" "}
-                  — received {formatQty(item.quantity_received)}, returnable{" "}
-                  {formatQty(returnable(item.id))}
+                  {t('procurement.help.receivedReturnable', { received: formatQty(item.quantity_received), returnable: formatQty(returnable(item.id)) })}
                 </span>
               </span>
               <NumericInput
-                aria-label={`Qty Returned ${item.product?.name ?? item.id}`}
+                aria-label={t('procurement.fields.qtyReturnedValue', { value: item.product?.name ?? item.id })}
                 readOnly={assetsOf(item.id).length > 0}
                 step="0.0001"
                 min="0"
@@ -207,7 +208,7 @@ export function ReturnToVendorModal({
                   }}
                 >
                   <legend style={{ fontSize: 12, color: "#374151" }}>
-                    Select the Asset# returned (quantity = number selected)
+                    {t('procurement.sections.selectAssetNumberReturnedQuantityNumber')}
                   </legend>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
                     {assetsOf(item.id).map((a) => (
@@ -243,9 +244,9 @@ export function ReturnToVendorModal({
             </div>
           ))}
         </div>
-        <FormField label="Notes">
+        <FormField label={t('common.fields.notes')}>
           <textarea
-            aria-label="Return notes"
+            aria-label={t('procurement.fields.returnNotes')}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
@@ -259,10 +260,10 @@ export function ReturnToVendorModal({
         )}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button className="btn-secondary" onClick={onClose} disabled={saving}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={save} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? t('common.actions.saving') : t('common.actions.save')}
           </button>
         </div>
       </div>

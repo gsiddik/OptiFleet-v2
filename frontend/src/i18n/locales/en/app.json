@@ -1,0 +1,22 @@
+{
+  "labels": {
+    "averageUsageCountKmDay": "average usage: {{count}} km/day",
+    "contentDisposition": "Content-Disposition",
+    "countBreakdownSLast30Days": "{{count}} breakdown(s) in the last 30 days",
+    "countBreakdownSLast90Days": "{{count}} breakdown(s) in the last 90 days",
+    "countComponentReplacementSLast90": "{{count}} component replacement(s) in the last 90 days",
+    "countCriticalInspectionFindingSLast": "{{count}} critical inspection finding(s) in the last 90 days",
+    "countDaySDowntimeLast90": "{{count}} day(s) of downtime in the last 90 days",
+    "countMinuteSDowntimeLast90": "{{count}} minute(s) of downtime in the last 90 days",
+    "countOverdueMaintenanceItemS": "{{count}} overdue maintenance item(s)",
+    "countRepeatRepairSSameComponent": "{{count}} repeat repair(s) on the same component group in the last 90 days",
+    "countTireReplacementSLast90": "{{count}} tire replacement(s) in the last 90 days",
+    "countWarrantyClaimSLast90": "{{count}} warranty claim(s) in the last 90 days",
+    "displayAnInspiringQuote": "Display an inspiring quote",
+    "example": "Example",
+    "laravel": "Laravel",
+    "laravelLog": "Laravel Log",
+    "notification": "Notification",
+    "vehicleAgeCountDayS": "vehicle age: {{count}} day(s)"
+  }
+}

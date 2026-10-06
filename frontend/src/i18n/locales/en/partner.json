@@ -1,0 +1,69 @@
+{
+  "actions": {
+    "backToVendor": "← Back to Vendor",
+    "newVendor": "+ New Vendor"
+  },
+  "empty": {
+    "noSuppliersFound": "No suppliers found.",
+    "noVendorsFound": "No vendors found."
+  },
+  "fields": {
+    "accountHolder": "Account Holder",
+    "accountNumber": "Account Number",
+    "contact": "Contact",
+    "contactEmail": "Contact Email",
+    "contactName": "Contact Name",
+    "contactPhone": "Contact Phone",
+    "paymentTerms": "Payment Terms",
+    "performanceFrom": "Performance from",
+    "performanceTo": "Performance to",
+    "provinceCity": "Province/City",
+    "vendorType": "Vendor type"
+  },
+  "filters": {
+    "allSuppliers": "All Suppliers"
+  },
+  "help": {
+    "rejectedExternalWorkshopWorkflowNoRejection": "Rejected: the External Workshop workflow has no rejection step — a declined Work Authorization is cancelled and counted as Cancelled."
+  },
+  "labels": {
+    "externalServicesRequestedPeriod": "External services requested in the period",
+    "purchaseOrdersOrderedPeriod": "Purchase Orders ordered in the period"
+  },
+  "modals": {
+    "newVendor": "New Vendor"
+  },
+  "sections": {
+    "acknowledged": "Acknowledged",
+    "acknowledgementRate": "Acknowledgement Rate",
+    "avgAcknowledgementTime": "Avg. Acknowledgement Time",
+    "avgCompletionTime": "Avg. Completion Time",
+    "avgLeadTime": "Avg. Lead Time",
+    "cancellationRate": "Cancellation Rate",
+    "cancelled": "Cancelled",
+    "completed": "Completed",
+    "completionRate": "Completion Rate",
+    "deliveries": "Deliveries",
+    "estimatedCost": "Estimated Cost",
+    "invoiceAmount": "Invoice Amount",
+    "lateDeliveries": "Late Deliveries",
+    "onTimeDeliveries": "On-Time Deliveries",
+    "onTimeRate": "On-Time Rate",
+    "outstandingAmount": "Outstanding Amount",
+    "paidAmount": "Paid Amount",
+    "performance": "Performance",
+    "posCancelled": "POs Cancelled",
+    "posFullyReceived": "POs Fully Received",
+    "posIssued": "POs Issued",
+    "poValue": "PO Value",
+    "qtyAccepted": "Qty Accepted",
+    "qtyDamaged": "Qty Damaged",
+    "qtyRejected": "Qty Rejected",
+    "rejectionRate": "Rejection Rate",
+    "servicesRequested": "Services Requested",
+    "workOrdersAssigned": "Work Orders Assigned"
+  },
+  "titles": {
+    "vendorsPartners": "Vendors / Partners"
+  }
+}

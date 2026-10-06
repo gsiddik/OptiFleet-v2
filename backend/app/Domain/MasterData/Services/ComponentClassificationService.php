@@ -7,6 +7,7 @@ use App\Domain\MasterData\Models\ComponentCategory;
 use App\Domain\MasterData\Models\ComponentGroup;
 use App\Domain\MasterData\Models\ComponentSubcategory;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -149,7 +150,7 @@ class ComponentClassificationService
                 ->pluck('product_type')
                 ->all();
             if ($stranded !== []) {
-                throw ValidationException::withMessages(['item_types' => 'Existing Products of Item Type '.implode(', ', $stranded).' use this Subcategory; keep that Item Type allowed or reclassify those Products first.']);
+                throw ValidationException::withMessages(['item_types' => Messages::text('validation.masterData.itemTypesStranded', ['itemTypes' => implode(', ', $stranded)])]);
             }
         }
 

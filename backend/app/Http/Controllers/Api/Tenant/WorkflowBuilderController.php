@@ -17,6 +17,7 @@ use App\Domain\Workflow\Models\WorkflowLayout;
 use App\Domain\Workflow\Services\WorkflowCatalog;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\Workflow\Services\WorkflowGraphAnalyzer;
+use App\Domain\Workflow\Support\WorkflowLabels;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
@@ -132,7 +133,7 @@ class WorkflowBuilderController extends Controller
             'workflow_configuration_version_id' => $version?->id,
             'transitions' => array_map(fn (array $t) => [
                 'action_code' => $t['action_code'],
-                'action_label' => $t['action_label'] ?? $t['action_code'],
+                'action_label' => WorkflowLabels::actionLabel($version->payload ?? [], $t, app()->getLocale()),
                 'to_status' => $t['to_status'],
                 'requires_approval' => ! empty($t['approval_rule']),
             ], $transitions),

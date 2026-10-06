@@ -13,6 +13,9 @@ import { ContractForm } from './ContractForm';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { t } from '../../../i18n/i18n';
+import { billingCycleLabel } from './ContractForm';
+import { formatDate } from '../../../utils/date';
 
 const PRODUCT_TYPES = ['BUNDLE', 'MODULE', 'ADD_ON', 'CAPACITY', 'SETUP_FEE', 'OTHER'];
 const FREQUENCIES = ['MONTHLY', 'QUARTERLY', 'SEMIANNUAL', 'ANNUAL', 'CUSTOM'];
@@ -32,8 +35,8 @@ export function ContractDetailPage() {
   // Reached from a Tenant Detail page's Contract tab -> Back must return
   // there (to the Contract tab specifically), not to Contract Management.
   const fromTenantId = searchParams.get('fromTenant');
-  const backFallback = fromTenantId ? `/platform/tenants/${fromTenantId}?tab=Contract` : '/platform/contracts';
-  const backLabel = fromTenantId ? '← Back to Tenant Contracts' : '← Back to Contract Management';
+  const backFallback = fromTenantId ? `/platform/tenants/${fromTenantId}?tab=contract` : '/platform/contracts';
+  const backLabel = fromTenantId ? t('platform.contracts.help.backToTenantContracts') : t('platform.contracts.help.backToContractManagement');
 
   function load() {
     apiClient
@@ -80,37 +83,37 @@ export function ContractDetailPage() {
           <StatusBadge status={contract.status} />
           {canEdit && (
             <button className="btn-secondary" disabled={busy} onClick={() => setShowEdit(true)}>
-              Edit Draft
+              {t('platform.contracts.actions.editDraft')}
             </button>
           )}
           {canSubmit && (
             <button className="btn-primary" disabled={busy} onClick={() => action('/submit')}>
-              Submit for Approval
+              {t('platform.contracts.actions.submitForApproval')}
             </button>
           )}
           {canApprove && (
             <>
               <button className="btn-primary" disabled={busy} onClick={() => setNoteModal('approve')}>
-                Approve
+                {t('common.actions.approve')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={() => setNoteModal('reject')}>
-                Reject
+                {t('common.actions.reject')}
               </button>
             </>
           )}
           {canAmend && (
             <button className="btn-secondary" disabled={busy} onClick={() => setShowAmendModal(true)}>
-              Create Amendment
+              {t('platform.contracts.actions.createAmendment')}
             </button>
           )}
           {canRenew && (
             <button className="btn-secondary" disabled={busy} onClick={() => setShowRenewModal(true)}>
-              Renew
+              {t('platform.contracts.actions.renew')}
             </button>
           )}
           {canTerminate && (
             <button className="btn-secondary" style={{ color: '#b91c1c' }} disabled={busy} onClick={() => setNoteModal('terminate')}>
-              Terminate
+              {t('platform.contracts.actions.terminate')}
             </button>
           )}
         </div>
@@ -119,24 +122,24 @@ export function ContractDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
-        <SummaryCard label="Start Date" value={contract.start_date} />
-        <SummaryCard label="End Date" value={contract.end_date} />
-        <SummaryCard label="Billing Cycle" value={contract.billing_cycle} />
-        <SummaryCard label="Total" value={`${contract.currency} ${Number(contract.total).toLocaleString()}`} />
+        <SummaryCard label={t('platform.contracts.sections.startDate')} value={formatDate(contract.start_date)} />
+        <SummaryCard label={t('platform.contracts.sections.endDate')} value={formatDate(contract.end_date)} />
+        <SummaryCard label={t('platform.contracts.fields.billingCycle')} value={billingCycleLabel(contract.billing_cycle)} />
+        <SummaryCard label={t('common.sections.total')} value={`${contract.currency} ${formatMoney(contract.total)}`} />
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Line Items</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.lineItems')}</h3>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-              <th style={{ padding: '6px 8px' }}>Type</th>
-              <th style={{ padding: '6px 8px' }}>Description</th>
-              <th style={{ padding: '6px 8px' }}>Qty</th>
-              <th style={{ padding: '6px 8px' }}>Unit Price</th>
-              <th style={{ padding: '6px 8px' }}>Discount</th>
-              <th style={{ padding: '6px 8px' }}>Tax</th>
-              <th style={{ padding: '6px 8px' }}>Amount</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.type')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.description')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.qty')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.unitPrice')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.discount')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.tax')}</th>
+              <th style={{ padding: '6px 8px' }}>{t('common.fields.amount')}</th>
             </tr>
           </thead>
           <tbody>
@@ -147,35 +150,35 @@ export function ContractDetailPage() {
                 </td>
                 <td style={{ padding: '6px 8px' }}>{it.description}</td>
                 <td style={{ padding: '6px 8px' }}>{formatQty(it.quantity)}</td>
-                <td style={{ padding: '6px 8px' }}>{Number(it.unit_price).toLocaleString()}</td>
-                <td style={{ padding: '6px 8px' }}>{Number(it.discount).toLocaleString()}</td>
-                <td style={{ padding: '6px 8px' }}>{Number(it.tax).toLocaleString()}</td>
-                <td style={{ padding: '6px 8px', fontWeight: 600 }}>{Number(it.final_amount).toLocaleString()}</td>
+                <td style={{ padding: '6px 8px' }}>{formatMoney(it.unit_price)}</td>
+                <td style={{ padding: '6px 8px' }}>{formatMoney(it.discount)}</td>
+                <td style={{ padding: '6px 8px' }}>{formatMoney(it.tax)}</td>
+                <td style={{ padding: '6px 8px', fontWeight: 600 }}>{formatMoney(it.final_amount)}</td>
               </tr>
             ))}
           </tbody>
         </table>
         <div style={{ textAlign: 'right', marginTop: 10, fontSize: 13, color: '#374151' }}>
-          Subtotal: {Number(contract.subtotal).toLocaleString()} &nbsp; Discount: {Number(contract.discount).toLocaleString()} &nbsp; Tax:{' '}
-          {Number(contract.tax).toLocaleString()} &nbsp;{' '}
-          <strong>Total: {contract.currency} {Number(contract.total).toLocaleString()}</strong>
+          {t('documents.platformInvoice.subtotal')}: {formatMoney(contract.subtotal)} {t('common.fields.discount')}: {formatMoney(contract.discount)} {t('common.fields.tax')}:{' '}
+          {formatMoney(contract.tax)} &nbsp;{' '}
+          <strong>{t('common.sections.total')}: {contract.currency} {formatMoney(contract.total)}</strong>
         </div>
       </div>
 
       {contract.subscription && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Subscription</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('platform.contracts.sections.subscription')}</h3>
           <div style={{ display: 'flex', gap: 24, fontSize: 13, alignItems: 'center', flexWrap: 'wrap' }}>
             <StatusBadge status={contract.subscription.status} />
-            <span>Next billing: {contract.subscription.next_billing_date}</span>
-            <span>Grace period end: {contract.subscription.grace_period_end ?? '—'}</span>
+            <span>{t('platform.contracts.fields.nextBillingNextBillingDate', { next_billing_date: contract.subscription.next_billing_date })}</span>
+            <span>{t('platform.contracts.fields.gracePeriodEnd')}: {contract.subscription.grace_period_end ?? '—'}</span>
           </div>
         </div>
       )}
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Amendments</h3>
-        {(contract.amendments ?? []).length === 0 && <p style={{ fontSize: 13, color: '#9ca3af' }}>No amendments.</p>}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('platform.contracts.sections.amendments')}</h3>
+        {(contract.amendments ?? []).length === 0 && <p style={{ fontSize: 13, color: '#9ca3af' }}>{t('platform.contracts.empty.noAmendments')}</p>}
         {(contract.amendments ?? []).map((a) => (
           <AmendmentCard key={a.id} contractId={contract.id} amendment={a} onChanged={load} />
         ))}
@@ -183,7 +186,7 @@ export function ContractDetailPage() {
 
       {noteModal && (
         <NoteModal
-          title={noteModal === 'approve' ? 'Approve Contract' : noteModal === 'reject' ? 'Reject Contract' : 'Terminate Contract'}
+          title={noteModal === 'approve' ? t('platform.contracts.modals.approveContract') : noteModal === 'reject' ? t('platform.contracts.modals.rejectContract') : t('platform.contracts.modals.terminateContract')}
           onClose={() => setNoteModal(null)}
           onSubmit={(note) => {
             const path = noteModal === 'approve' ? '/approve' : noteModal === 'reject' ? '/reject' : '/terminate';
@@ -232,15 +235,15 @@ function NoteModal({ title, onClose, onSubmit }: { title: string; onClose: () =>
   const [note, setNote] = useState('');
   return (
     <Modal open title={title} onClose={onClose}>
-      <FormField label="Note (optional)">
+      <FormField label={t('platform.contracts.fields.noteOptional')}>
         <textarea value={note} onChange={(e) => setNote(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" onClick={() => onSubmit(note)}>
-          Confirm
+          {t('platform.contracts.actions.confirm')}
         </button>
       </div>
     </Modal>
@@ -267,19 +270,19 @@ function CreateAmendmentModal({ contractId, onClose, onCreated }: { contractId: 
   }
 
   return (
-    <Modal open title="New Amendment" onClose={onClose}>
-      <FormField label="Reason" errors={errors.reason} required>
+    <Modal open title={t('platform.contracts.modals.newAmendment')} onClose={onClose}>
+      <FormField label={t('common.fields.reason')} errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
-      <FormField label="Effective Date" errors={errors.effective_date} required>
+      <FormField label={t('platform.contracts.fields.effectiveDate')} errors={errors.effective_date} required>
         <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Creating…' : 'Create Draft Amendment'}
+          {submitting ? t('common.actions.creating') : t('platform.contracts.actions.createDraftAmendment')}
         </button>
       </div>
     </Modal>
@@ -332,11 +335,11 @@ function AmendmentCard({
   return (
     <div style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-        <strong style={{ fontSize: 13 }}>Amendment #{amendment.amendment_number}</strong>
+        <strong style={{ fontSize: 13 }}>{t('platform.contracts.fields.amendmentNumberAmendmentNumber', { amendment_number: amendment.amendment_number })}</strong>
         <StatusBadge status={amendment.status} />
       </div>
       <div style={{ fontSize: 13, color: '#374151', marginBottom: 6 }}>{amendment.reason}</div>
-      <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>Effective: {amendment.effective_date}</div>
+      <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>{t('platform.contracts.fields.effectiveEffectiveDate', { effective_date: amendment.effective_date })}</div>
       {error && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 6 }}>{error}</div>}
       {(amendment.items ?? []).length > 0 && (
         <table style={{ width: '100%', fontSize: 12, marginBottom: 8, borderCollapse: 'collapse' }}>
@@ -354,21 +357,21 @@ function AmendmentCard({
       <div style={{ display: 'flex', gap: 8 }}>
         {canEdit && (
           <button className="btn-secondary" disabled={busy} onClick={() => setShowAddItem(true)}>
-            + Add Item
+            {t('platform.contracts.actions.addItem')}
           </button>
         )}
         {canEdit && (
           <button className="btn-primary" disabled={busy} onClick={submitForApproval}>
-            Submit for Approval
+            {t('platform.contracts.actions.submitForApproval')}
           </button>
         )}
         {canApprove && (
           <>
             <button className="btn-primary" disabled={busy} onClick={() => decide('approve')}>
-              Approve
+              {t('common.actions.approve')}
             </button>
             <button className="btn-secondary" disabled={busy} onClick={() => decide('reject')}>
-              Reject
+              {t('common.actions.reject')}
             </button>
           </>
         )}
@@ -429,8 +432,8 @@ function AddAmendmentItemModal({
   }
 
   return (
-    <Modal open title="Add Amendment Item" onClose={onClose}>
-      <FormField label="Product Type" errors={errors.product_type} required>
+    <Modal open title={t('platform.contracts.modals.addAmendmentItem')} onClose={onClose}>
+      <FormField label={t('platform.contracts.fields.productType')} errors={errors.product_type} required>
         <select value={productType} onChange={(e) => setProductType(e.target.value)} style={inputStyle}>
           {PRODUCT_TYPES.map((p) => (
             <option key={p} value={p}>
@@ -439,13 +442,13 @@ function AddAmendmentItemModal({
           ))}
         </select>
       </FormField>
-      <FormField label="Product Reference (code)" errors={errors.product_reference}>
+      <FormField label={t('platform.contracts.fields.productReferenceCode')} errors={errors.product_reference}>
         <input value={productReference} onChange={(e) => setProductReference(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Description" errors={errors.description} required>
+      <FormField label={t('common.fields.description')} errors={errors.description} required>
         <input value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Billing Frequency" errors={errors.billing_frequency} required>
+      <FormField label={t('platform.contracts.fields.billingFrequency')} errors={errors.billing_frequency} required>
         <select value={billingFrequency} onChange={(e) => setBillingFrequency(e.target.value)} style={inputStyle}>
           {FREQUENCIES.map((f) => (
             <option key={f} value={f}>
@@ -455,19 +458,19 @@ function AddAmendmentItemModal({
         </select>
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Quantity" errors={errors.quantity} required>
+        <FormField label={t('common.fields.quantity')} errors={errors.quantity} required>
           <NumericInput value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Unit Price" errors={errors.unit_price} required>
+        <FormField label={t('common.fields.unitPrice')} errors={errors.unit_price} required>
           <NumericInput value={unitPrice} onChange={(e) => setUnitPrice(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Adding…' : 'Add Item'}
+          {submitting ? t('common.actions.adding') : t('platform.contracts.actions.addItem2')}
         </button>
       </div>
     </Modal>
@@ -510,16 +513,15 @@ function RenewModal({ contract, onClose, onCreated }: { contract: ContractItem; 
   }
 
   return (
-    <Modal open title={`Renew ${contract.contract_number}`} onClose={onClose} width={600}>
+    <Modal open title={t('platform.contracts.modals.renewContractNumber', { contract_number: contract.contract_number })} onClose={onClose} width={600}>
       <p style={{ fontSize: 13, color: '#6b7280' }}>
-        Creates a new draft contract carrying over the current line items. Adjust the end date and items as needed, then submit the new
-        contract for approval separately.
+        {t('platform.contracts.help.createsNewDraftContractCarryingOver')}
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="New End Date" errors={errors.end_date} required>
+        <FormField label={t('platform.contracts.fields.newEndDate')} errors={errors.end_date} required>
           <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Billing Cycle" errors={errors.billing_cycle} required>
+        <FormField label={t('platform.contracts.fields.billingCycle')} errors={errors.billing_cycle} required>
           <select value={billingCycle} onChange={(e) => setBillingCycle(e.target.value)} style={inputStyle}>
             {FREQUENCIES.map((f) => (
               <option key={f} value={f}>
@@ -529,7 +531,7 @@ function RenewModal({ contract, onClose, onCreated }: { contract: ContractItem; 
           </select>
         </FormField>
       </div>
-      <h4 style={{ fontSize: 14, marginBottom: 8 }}>Items carried over from current contract</h4>
+      <h4 style={{ fontSize: 14, marginBottom: 8 }}>{t('platform.contracts.sections.itemsCarriedOverCurrentContract')}</h4>
       {items.map((it, idx) => (
         <div key={idx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr auto', gap: 8, alignItems: 'center', marginBottom: 6 }}>
           <span style={{ fontSize: 13 }}>{it.description}</span>
@@ -544,17 +546,17 @@ function RenewModal({ contract, onClose, onCreated }: { contract: ContractItem; 
             style={inputStyle}
           />
           <button className="btn-secondary" onClick={() => setItems((prev) => prev.filter((_, i) => i !== idx))}>
-            Remove
+            {t('common.actions.remove')}
           </button>
         </div>
       ))}
       {errors.items && <div style={{ color: '#b91c1c', fontSize: 12, marginBottom: 8 }}>{errors.items.join(', ')}</div>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !endDate} onClick={submit}>
-          {submitting ? 'Creating…' : 'Create Renewal Draft'}
+          {submitting ? t('common.actions.creating') : t('platform.contracts.actions.createRenewalDraft')}
         </button>
       </div>
     </Modal>

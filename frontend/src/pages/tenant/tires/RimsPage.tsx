@@ -12,6 +12,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { RimItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { t } from '../../../i18n/i18n';
 
 /** Final reconciliation — G-09: Rim observed as a real, working VMS master-data screen. */
 export function RimsPage() {
@@ -39,12 +40,12 @@ export function RimsPage() {
   }
 
   const columns: Column<RimItem>[] = [
-    { key: 'code', header: 'Code', render: (r) => r.code },
-    { key: 'brand', header: 'Brand', render: (r) => r.brand },
-    { key: 'material', header: 'Material', render: (r) => r.material ?? '—' },
-    { key: 'size', header: 'Width x Diameter', render: (r) => `${r.width_inch ?? '—'}" x ${r.diameter_inch ?? '—'}"` },
-    { key: 'bolt', header: 'Bolt Pattern', render: (r) => (r.bolt_holes ? `${r.bolt_holes}x${r.pcd_mm ?? '—'}mm` : '—') },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.status} /> },
+    { key: 'code', header: t('common.fields.code'), render: (r) => r.code },
+    { key: 'brand', header: t('common.fields.brand'), render: (r) => r.brand },
+    { key: 'material', header: t('inventory.fields.material'), render: (r) => r.material ?? '—' },
+    { key: 'size', header: t('tire.fields.widthXDiameter'), render: (r) => `${r.width_inch ?? '—'}" x ${r.diameter_inch ?? '—'}"` },
+    { key: 'bolt', header: t('tire.fields.boltPattern'), render: (r) => (r.bolt_holes ? t('tire.fields.boltHolesXValueMm', { bolt_holes: r.bolt_holes, value: r.pcd_mm ?? '—' }) : '—') },
+    { key: 'status', header: t('common.fields.status'), render: (r) => <StatusBadge status={r.status} /> },
     {
       key: 'actions',
       header: '',
@@ -52,12 +53,12 @@ export function RimsPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {hasPermission('rim.manage') && (
             <button className="btn-link" onClick={() => setEditing(r)}>
-              Edit
+              {t('common.actions.edit')}
             </button>
           )}
           {hasPermission('rim.manage') && (
             <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(r)}>
-              Delete
+              {t('common.actions.delete')}
             </button>
           )}
         </div>
@@ -67,7 +68,7 @@ export function RimsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Rim</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('tire.titles.rim')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -77,14 +78,14 @@ export function RimsPage() {
         actions={
           hasPermission('rim.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Rim
+              {t('tire.actions.newRim')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No rims found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('tire.empty.noRimsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -116,9 +117,9 @@ export function RimsPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Delete Rim"
-        message={deleteError ?? `Delete "${deleting?.brand} ${deleting?.code}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('tire.confirm.deleteRim')}
+        message={deleteError ?? t('tire.confirm.deleteBrandCodeCannotUndone', { brand: deleting?.brand, code: deleting?.code })}
+        confirmLabel={t('common.actions.delete')}
         onCancel={() => {
           setDeleting(null);
           setDeleteError(null);
@@ -175,48 +176,48 @@ function RimFormModal({ open, rim, onClose, onSaved }: { open: boolean; rim?: Ri
   }
 
   return (
-    <Modal open={open} title={rim ? 'Edit Rim' : 'New Rim'} onClose={onClose} width={520}>
+    <Modal open={open} title={rim ? t('tire.modals.editRim') : t('tire.modals.newRim')} onClose={onClose} width={520}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Code" errors={errors.code} required={!rim}>
+        <FormField label={t('common.fields.code')} errors={errors.code} required={!rim}>
           <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!rim} />
         </FormField>
-        <FormField label="Brand" errors={errors.brand} required={!rim}>
+        <FormField label={t('common.fields.brand')} errors={errors.brand} required={!rim}>
           <input value={brand} onChange={(e) => setBrand(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Material" errors={errors.material}>
+        <FormField label={t('inventory.fields.material')} errors={errors.material}>
           <input value={material ?? ''} onChange={(e) => setMaterial(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Width (in)" errors={errors.width_inch}>
+        <FormField label={t('tire.fields.widthIn')} errors={errors.width_inch}>
           <NumericInput step="0.1" value={widthInch ?? ''} onChange={(e) => setWidthInch(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Diameter (in)" errors={errors.diameter_inch}>
+        <FormField label={t('tire.fields.diameterIn')} errors={errors.diameter_inch}>
           <NumericInput step="0.1" value={diameterInch ?? ''} onChange={(e) => setDiameterInch(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Disc Thickness (mm)" errors={errors.disc_thickness_mm}>
+        <FormField label={t('tire.fields.discThicknessMm')} errors={errors.disc_thickness_mm}>
           <NumericInput step="0.1" value={discThicknessMm ?? ''} onChange={(e) => setDiscThicknessMm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Offset (mm)" errors={errors.offset_mm}>
+        <FormField label={t('inventory.fields.offsetMm')} errors={errors.offset_mm}>
           <NumericInput step="0.1" value={offsetMm ?? ''} onChange={(e) => setOffsetMm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Bolt Holes" errors={errors.bolt_holes}>
+        <FormField label={t('inventory.fields.boltHoles')} errors={errors.bolt_holes}>
           <NumericInput step="1" value={boltHoles} onChange={(e) => setBoltHoles(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Bolt Diameter (mm)" errors={errors.bolt_diameter_mm}>
+        <FormField label={t('tire.fields.boltDiameterMm')} errors={errors.bolt_diameter_mm}>
           <NumericInput step="0.1" value={boltDiameterMm ?? ''} onChange={(e) => setBoltDiameterMm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="PCD (mm)" errors={errors.pcd_mm}>
+        <FormField label={t('inventory.fields.pcdMm')} errors={errors.pcd_mm}>
           <NumericInput step="0.1" value={pcdMm ?? ''} onChange={(e) => setPcdMm(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Hub Hole Diameter (mm)" errors={errors.hub_hole_diameter_mm}>
+        <FormField label={t('tire.fields.hubHoleDiameterMm')} errors={errors.hub_hole_diameter_mm}>
           <NumericInput step="0.1" value={hubHoleDiameterMm ?? ''} onChange={(e) => setHubHoleDiameterMm(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !brand || (!rim && !code)} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>

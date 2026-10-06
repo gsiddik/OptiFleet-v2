@@ -10,6 +10,7 @@ import { LIMITS, configCode, parseCount, saveErrors, totalAxles, totalWheels, ty
 import { WheelConfigurationPreview } from './WheelConfigurationPreview';
 import { SaveConfigurationDialog } from './SaveConfigurationDialog';
 import type { ConfigurationMaster, ConfigurationVersion, SaveRequest } from './masterTypes';
+import { t as tt } from '../../../../i18n/i18n';
 
 /** Route entry for /new and /:id/edit — keyed so switching between them starts a fresh form. */
 export function AddWheelConfigurationPage() {
@@ -64,13 +65,13 @@ function WheelConfigurationFormPage({ masterId }: { masterId: string | null }) {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/wheel-configurations" label="← Back to Wheel Configuration" />
-      <h1 style={{ fontSize: 22, margin: '0 0 14px' }}>{editing ? 'Edit Wheels Configuration' : 'Add New Wheels Configuration'}</h1>
+      <BackButton fallbackTo="/app/wheel-configurations" label={tt('tire.actions.backToWheelConfiguration')} />
+      <h1 style={{ fontSize: 22, margin: '0 0 14px' }}>{editing ? tt('tire.titles.editWheelsConfiguration') : tt('tire.titles.addNewWheelsConfiguration')}</h1>
 
       <div className="card" style={{ marginBottom: 16, maxWidth: 420 }}>
-        <FormField label="Vehicle Type" required>
+        <FormField label={tt('tire.fields.vehicleType')} required>
           <select
-            aria-label="Vehicle Type"
+            aria-label={tt('tire.fields.vehicleType')}
             value={vehicleType}
             disabled={editing}
             onChange={(e) => {
@@ -79,7 +80,7 @@ function WheelConfigurationFormPage({ masterId }: { masterId: string | null }) {
             }}
             style={inputStyle}
           >
-            <option value="">Select vehicle type…</option>
+            <option value="">{tt('tire.fields.selectVehicleType')}</option>
             {VEHICLE_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
                 {t.label}
@@ -88,9 +89,9 @@ function WheelConfigurationFormPage({ masterId }: { masterId: string | null }) {
           </select>
         </FormField>
         {needsTruckType && (
-          <FormField label="Truck Configuration Type" required>
-            <select aria-label="Truck Configuration Type" value={truckType} disabled={editing} onChange={(e) => setTruckType(e.target.value)} style={inputStyle}>
-              <option value="">Select truck configuration type…</option>
+          <FormField label={tt('tire.fields.truckConfigurationType')} required>
+            <select aria-label={tt('tire.fields.truckConfigurationType')} value={truckType} disabled={editing} onChange={(e) => setTruckType(e.target.value)} style={inputStyle}>
+              <option value="">{tt('tire.fields.selectTruckConfigurationType')}</option>
               {TRUCK_CONFIGURATION_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
                   {t.label}
@@ -101,18 +102,18 @@ function WheelConfigurationFormPage({ masterId }: { masterId: string | null }) {
         )}
         {editing && current && (
           <p data-editing-version style={{ fontSize: 12, color: '#6b7280', margin: 0 }}>
-            Editing version {current.version_number} ({current.config_code}). Saving a change creates version {current.version_number + 1}. Vehicle Type and Truck Configuration Type identify this configuration and cannot be changed — create a new configuration for another type.
+            {tt('tire.help.editingVersionVersionNumberConfigCode', { version_number: current.version_number, config_code: current.config_code, value: current.version_number + 1 })}
           </p>
         )}
         {editing && (master?.mapped_vehicle_count ?? 0) > 0 && (
           <p data-mapped-impact style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 8px', margin: '8px 0 0' }}>
-            {master?.mapped_vehicle_count} vehicle(s) are mapped to this configuration. They keep their current version; move them to the new version from Vehicle Mapping when ready.
+            {tt('tire.help.mappedVehicleCountVehicleSMapped', { count: master?.mapped_vehicle_count ?? 0 })}
           </p>
         )}
       </div>
 
-      {!option && <p style={{ fontSize: 13, color: '#6b7280' }}>Select a vehicle type to configure its axles and wheels.</p>}
-      {option && !ready && <p style={{ fontSize: 13, color: '#6b7280' }}>Select the truck configuration type to configure its axles and wheels.</p>}
+      {!option && <p style={{ fontSize: 13, color: '#6b7280' }}>{tt('tire.help.selectVehicleTypeConfigureAxlesWheels')}</p>}
+      {option && !ready && <p style={{ fontSize: 13, color: '#6b7280' }}>{tt('tire.help.selectTruckConfigurationTypeConfigureAxles')}</p>}
       {/* Every vehicle type uses the same form and rules; only the preview body and the Config Code
           prefix (Truck · Trailer "+", Truck · Semi Trailer "-") differ. Keyed so a type change
           starts a fresh form. */}
@@ -187,10 +188,10 @@ function AxleConfigurationForm({
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: 16, alignItems: 'start' }}>
       <div>
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Configuration</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('tire.sections.configuration')}</h3>
           <AxleGroupFields
-            title="Front"
-            countLabel="Number of Front Axles"
+            title={tt('tire.sections.front')}
+            countLabel={tt('tire.fields.numberOfFrontAxles')}
             countRaw={frontAxles}
             onCount={setFrontAxles}
             countErrors={errorOf('frontAxles', front, frontAxles)}
@@ -201,8 +202,8 @@ function AxleConfigurationForm({
             onRowBlur={(i) => touch(`front-${i}`)}
           />
           <AxleGroupFields
-            title="Rear"
-            countLabel="Number of Rear Axles"
+            title={tt('tire.sections.rear')}
+            countLabel={tt('tire.fields.numberOfRearAxles')}
             countRaw={rearAxles}
             onCount={setRearAxles}
             countErrors={errorOf('rearAxles', rear, rearAxles)}
@@ -217,26 +218,26 @@ function AxleConfigurationForm({
               {e}
             </div>
           ))}
-          <FormField label="Spare Tires" required errors={errorOf('spare', spare, spareTires)}>
-            <IntegerField label="Spare Tires" value={spareTires} onChange={setSpareTires} onBlur={() => touch('spare')} range={LIMITS.spareTires} />
+          <FormField label={tt('tire.fields.spareTires')} required errors={errorOf('spare', spare, spareTires)}>
+            <IntegerField label={tt('tire.fields.spareTires')} value={spareTires} onChange={setSpareTires} onBlur={() => touch('spare')} range={LIMITS.spareTires} />
           </FormField>
         </div>
 
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Summary</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('tire.sections.summary')}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 10 }}>
-            <SummaryField label="Total Axles" value={countsValid ? String(totalAxles(front.value as number, rear.value as number)) : ''} />
-            <SummaryField label="Total Wheels" value={groups && spare.value !== null ? String(totalWheels(groups, spare.value)) : ''} />
-            <SummaryField label="Config Code" value={code ?? ''} />
+            <SummaryField label={tt('tire.fields.totalAxles')} value={countsValid ? String(totalAxles(front.value as number, rear.value as number)) : ''} />
+            <SummaryField label={tt('tire.fields.totalWheels')} value={groups && spare.value !== null ? String(totalWheels(groups, spare.value)) : ''} />
+            <SummaryField label={tt('tire.fields.configCode')} value={code ?? ''} />
           </div>
           <p style={{ fontSize: 12, color: saveReady ? '#166534' : '#6b7280', marginBottom: 0 }}>
             {saveReady
-              ? 'Valid configuration.'
-              : 'The Config Code appears when every field is valid and there is at least one front and one rear axle.'}
+              ? tt('tire.help.validConfiguration')
+              : tt('tire.help.configCodeAppearsWhenEveryField')}
           </p>
           <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10, marginTop: 14 }}>
             <button className="btn-primary" disabled={!saveReady} onClick={openSave}>
-              Save Configuration
+              {tt('tire.actions.saveConfiguration')}
             </button>
           </div>
           {saveRequest && (
@@ -254,7 +255,7 @@ function AxleConfigurationForm({
       </div>
 
       <div className="card" style={{ position: 'sticky', top: 12 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Preview</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('tire.sections.vehiclePreview')}</h3>
         <WheelConfigurationPreview
           bodyStyle={bodyStyle}
           input={{
@@ -264,7 +265,7 @@ function AxleConfigurationForm({
           }}
         />
         <p style={{ fontSize: 11, color: '#6b7280', marginBottom: 0 }}>
-          Position code = axle number in its group + F/R (front/rear) + L/R (side) + wheel number counted from the body outwards, e.g. 1FL1, 2RR2. Tap a tire to see its code. Dashed axle = wheels per side not entered yet.
+          {tt('tire.empty.positionCodeAxleNumberGroupF')}
         </p>
       </div>
     </div>
@@ -294,8 +295,8 @@ function AxleGroupFields(props: {
       </FormField>
       {props.rows.map((raw, i) => (
         <div key={i} style={{ paddingLeft: 14, borderLeft: '2px solid #e5e7eb' }}>
-          <FormField label={`${props.title} Axle ${i + 1} — Wheels / Side`} required errors={props.rowErrors[i]}>
-            <IntegerField label={`${props.title} Axle ${i + 1} wheels per side`} value={raw} onChange={(v) => props.onRow(i, v)} onBlur={() => props.onRowBlur(i)} range={LIMITS.wheelsPerSide} />
+          <FormField label={tt('tire.fields.titleAxleValueWheelsSide', { title: props.title, value: i + 1 })} required errors={props.rowErrors[i]}>
+            <IntegerField label={tt('tire.fields.titleAxleValueWheelsPerSide', { title: props.title, value: i + 1 })} value={raw} onChange={(v) => props.onRow(i, v)} onBlur={() => props.onRowBlur(i)} range={LIMITS.wheelsPerSide} />
           </FormField>
         </div>
       ))}

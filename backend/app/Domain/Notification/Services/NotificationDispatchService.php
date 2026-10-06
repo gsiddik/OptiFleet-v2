@@ -15,7 +15,7 @@ use Throwable;
  * the event, evaluates each rule's condition_set (Section 31, reusing the
  * same ConditionEvaluator as Batch D's workflow conditions), resolves
  * recipients, and writes one QUEUED DeliveryLog row per (recipient,
- * channel) — the actual send happens later in SendNotificationJob, after
+ * channel), in that recipient's language — the actual send happens later in SendNotificationJob, after
  * the caller's transaction commits. dispatchEvent() itself never throws:
  * any failure here is caught and logged, so a broken or misconfigured
  * notification rule can never roll back the business transaction that
@@ -27,6 +27,7 @@ class NotificationDispatchService
         private readonly ConditionEvaluator $conditions,
         private readonly RecipientResolver $recipients,
         private readonly NotificationTemplateService $templates,
+        private readonly RecipientLocaleResolver $locales,
     ) {}
 
     public function dispatchEvent(string $eventCode, string $tenantId, array $context, ?string $resourceType = null, ?string $resourceId = null): void
@@ -60,6 +61,7 @@ class NotificationDispatchService
             $targets = $this->recipients->resolve($rule->recipient_rules, $tenantId, $context);
 
             foreach ($targets as $target) {
+                $locale = $this->locales->resolve($target, $tenantId);
                 foreach ($rule->channels as $channel) {
                     $log = NotificationDeliveryLog::query()->create([
                         'tenant_id' => $tenantId,
@@ -71,6 +73,7 @@ class NotificationDispatchService
                         'recipient_email' => $target['email'] ?? null,
                         'channel' => $channel,
                         'template_configuration_version_id' => $templateVersion?->id,
+                        'locale' => $locale,
                         'status' => NotificationDeliveryLog::STATUS_QUEUED,
                         'queued_at' => now(),
                     ]);

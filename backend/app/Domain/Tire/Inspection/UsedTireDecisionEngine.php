@@ -2,6 +2,8 @@
 
 namespace App\Domain\Tire\Inspection;
 
+use App\Domain\Shared\Support\Messages;
+
 /**
  * Pass/fail decision for a used tire inspection — no weighted scoring. Every threshold comes from
  * the tire's rule profile (category + optional model + application); nothing is hardcoded here, and
@@ -31,6 +33,16 @@ namespace App\Domain\Tire\Inspection;
  */
 final class UsedTireDecisionEngine
 {
+    /** Bead / inner liner condition codes → message keys for their display text (no reformatting of the code). */
+    private const CONDITION_LABEL_KEYS = [
+        'TORN' => 'tire.conditions.torn',
+        'DEFORMED' => 'tire.conditions.deformed',
+        'BEAD_WIRE_DAMAGED' => 'tire.conditions.beadWireDamaged',
+        'CRACKED_DELAMINATED' => 'tire.conditions.crackedDelaminated',
+        'WRINKLED_HEAT_DAMAGE' => 'tire.conditions.wrinkledHeatDamage',
+        'CORD_EXPOSED' => 'tire.conditions.cordExposed',
+    ];
+
     public const REUSE = 'REUSE';
 
     public const REPAIR = 'REPAIR';
@@ -43,16 +55,33 @@ final class UsedTireDecisionEngine
 
     public const MIN_MEASUREMENT_ZONES = 3;
 
-    /** Wear patterns that make the tread unsuitable to keep regardless of depth. */
-    private const UNSUITABLE_WEAR = ['CUPPING_SCALLOPING' => 'cupping / scalloping', 'FLAT_SPOT' => 'flat spot'];
+    /** Wear patterns that make the tread unsuitable to keep regardless of depth (→ label message key). */
+    private const UNSUITABLE_WEAR = ['CUPPING_SCALLOPING' => 'tire.wearPatterns.cuppingScalloping', 'FLAT_SPOT' => 'tire.wearPatterns.flatSpot'];
 
-    /** Uneven wear → vehicle-side follow-up (the tire repair does not fix the root cause). */
+    /** Uneven wear → vehicle-side follow-up message key (the tire repair does not fix the root cause). */
     private const WEAR_FOLLOW_UPS = [
-        'ONE_SIDED' => 'One-sided wear: check wheel alignment (camber / toe).',
-        'CENTER' => 'Center wear: check tire pressure (over-inflation).',
-        'BOTH_SIDES' => 'Both-sides wear: check tire pressure (under-inflation) and load.',
-        'CUPPING_SCALLOPING' => 'Cupping / scalloping: check suspension (shock absorbers) and wheel balance.',
-        'FLAT_SPOT' => 'Flat spot: check brakes / wheel lock-up and suspension.',
+        'ONE_SIDED' => 'tire.reasons.oneSidedWearCheckWheelAlignment',
+        'CENTER' => 'tire.reasons.centerWearCheckTirePressureOver',
+        'BOTH_SIDES' => 'tire.reasons.bothSidesWearCheckTirePressure',
+        'CUPPING_SCALLOPING' => 'tire.reasons.cuppingScallopingCheckSuspensionShockAbsorbers',
+        'FLAT_SPOT' => 'tire.reasons.flatSpotCheckBrakesWheelLock',
+    ];
+
+    /** Damage type / location / measured field codes → label message keys. */
+    private const DAMAGE_TYPE_KEYS = [
+        'PUNCTURE' => 'tire.damageTypes.puncture', 'CUT' => 'tire.damageTypes.cut', 'CRACK' => 'tire.damageTypes.crack',
+        'ABRASION' => 'tire.damageTypes.abrasion', 'SEPARATION' => 'tire.damageTypes.separation',
+        'PREVIOUS_REPAIR_DAMAGE' => 'tire.damageTypes.previousRepairDamage', 'OTHER' => 'tire.damageTypes.other',
+    ];
+
+    private const DAMAGE_LOCATION_KEYS = [
+        'TREAD' => 'tire.damageLocations.tread', 'SHOULDER' => 'tire.damageLocations.shoulder', 'SIDEWALL' => 'tire.damageLocations.sidewall',
+        'BEAD' => 'tire.damageLocations.bead', 'INNER_LINER' => 'tire.damageLocations.innerLiner',
+    ];
+
+    private const DAMAGE_FIELD_KEYS = [
+        'diameter_mm' => 'tire.damageFields.diameter', 'length_mm' => 'tire.damageFields.length',
+        'width_mm' => 'tire.damageFields.width', 'depth_mm' => 'tire.damageFields.depth',
     ];
 
     private const NOT_KNOWN = ['NOT_INSPECTED', 'UNKNOWN', 'NOT_TESTED', 'CANNOT_CONFIRM', 'SUSPECTED', 'QUESTIONABLE', 'NOT_YET', 'PARTIALLY_UNKNOWN', 'CANNOT_VERIFY'];
@@ -74,67 +103,67 @@ final class UsedTireDecisionEngine
 
         // ---- profile / category -------------------------------------------------------------
         if ($facts['category'] === null) {
-            $hold[] = 'Tire category is unknown — set the Vehicle Group of the tire product.';
+            $hold[] = Messages::make('tire.reasons.tireCategoryUnknownSetVehicleGroup');
         }
         if ($profile === null) {
-            $hold[] = 'No active inspection rule profile for this tire category — thresholds (D_service, D_pull, ages, repair limits) are required.';
+            $hold[] = Messages::make('tire.reasons.noActiveInspectionRuleProfileTire');
         }
 
         // ---- Q1 / Q2 / unknown answers --------------------------------------------------------
         $questions = [
-            'identity_status' => 'Tire identity / category / manufacture date not fully verified',
-            'internal_inspected' => 'Interior not inspected after removal from the rim',
-            'wear_pattern' => 'Wear pattern not inspected',
-            'bulge_separation' => 'Bulge / deformation / separation suspected or not inspected',
-            'cord_exposure' => 'Cord / wire exposure suspected or not inspected',
-            'sidewall_condition' => 'Sidewall not inspected',
-            'bead_condition' => 'Bead not inspected',
-            'inner_liner_condition' => 'Inner liner not inspected',
-            'run_flat_overheat' => 'Run-flat / low-pressure / overheat history unknown',
-            'leak_foreign_object' => 'Leak / foreign object not tested',
-            'previous_repair' => 'Previous repair questionable or not inspected',
-            'age_chemical' => 'Age / chemical damage suspected or not inspected',
-            'casing_compliance' => 'Age / retread / casing compliance cannot yet be confirmed',
+            'identity_status' => 'tire.reasons.tireIdentityCategoryManufactureDateNot',
+            'internal_inspected' => 'tire.reasons.interiorNotInspectedAfterRemovalRim',
+            'wear_pattern' => 'tire.reasons.wearPatternNotInspected',
+            'bulge_separation' => 'tire.reasons.bulgeDeformationSeparationSuspectedNotInspected',
+            'cord_exposure' => 'tire.reasons.cordWireExposureSuspectedNotInspected',
+            'sidewall_condition' => 'tire.reasons.sidewallNotInspected',
+            'bead_condition' => 'tire.reasons.beadNotInspected',
+            'inner_liner_condition' => 'tire.reasons.innerLinerNotInspected',
+            'run_flat_overheat' => 'tire.reasons.runFlatLowPressureOverheatHistory',
+            'leak_foreign_object' => 'tire.reasons.leakForeignObjectNotTested',
+            'previous_repair' => 'tire.reasons.previousRepairQuestionableNotInspected',
+            'age_chemical' => 'tire.reasons.ageChemicalDamageSuspectedNotInspected',
+            'casing_compliance' => 'tire.reasons.ageRetreadCasingComplianceCannotYet',
         ];
-        foreach ($questions as $key => $label) {
+        foreach ($questions as $key => $labelKey) {
             $value = $a($key);
             if ($value === null || in_array($value, self::NOT_KNOWN, true)) {
-                $hold[] = $value === null ? "{$label} (not answered)." : "{$label}.";
+                $hold[] = Messages::make($value === null ? 'tire.reasons.labelNotAnswered' : 'tire.reasons.openItem', ['label' => Messages::make($labelKey)]);
             }
         }
 
         // ---- confirmed rejections (X) ---------------------------------------------------------
         if ($a('bulge_separation') === 'PRESENT') {
-            $scrap[] = 'Confirmed bulge / deformation / separation.';
+            $scrap[] = Messages::make('tire.reasons.confirmedBulgeDeformationSeparation');
         }
         if ($a('cord_exposure') === 'PRESENT') {
-            $scrap[] = 'Cord / wire exposed.';
+            $scrap[] = Messages::make('tire.reasons.cordWireExposed');
         }
         if ($a('sidewall_condition') === 'DEEP_CUT_CRACK') {
-            $scrap[] = 'Deep sidewall cut / crack.';
+            $scrap[] = Messages::make('tire.reasons.deepSidewallCutCrack');
         }
         if (in_array($a('bead_condition'), ['TORN', 'DEFORMED', 'BEAD_WIRE_DAMAGED'], true)) {
-            $scrap[] = 'Bead damage: '.strtolower(str_replace('_', ' ', $a('bead_condition'))).'.';
+            $scrap[] = Messages::make('tire.reasons.beadDamageDetail', ['condition' => Messages::make(self::CONDITION_LABEL_KEYS[$a('bead_condition')])]);
         }
         if (in_array($a('inner_liner_condition'), ['CRACKED_DELAMINATED', 'WRINKLED_HEAT_DAMAGE', 'CORD_EXPOSED'], true)) {
-            $scrap[] = 'Inner liner / casing failure: '.strtolower(str_replace('_', ' ', $a('inner_liner_condition'))).'.';
+            $scrap[] = Messages::make('tire.reasons.innerLinerFailure', ['condition' => Messages::make(self::CONDITION_LABEL_KEYS[$a('inner_liner_condition')])]);
         }
         if ($a('run_flat_overheat') === 'PHYSICAL_SIGN') {
-            $scrap[] = 'Physical sign of run-flat / low-pressure / overheat damage.';
+            $scrap[] = Messages::make('tire.reasons.physicalSignRunFlatLowPressure');
         }
         if ($a('previous_repair') === 'DOES_NOT_MEET') {
-            $scrap[] = 'Previous repair does not meet the standard.';
+            $scrap[] = Messages::make('tire.reasons.previousRepairDoesNotMeetStandard');
         }
         if ($a('age_chemical') === 'DEGRADED') {
-            $scrap[] = 'Permanent chemical / age degradation (hardened, brittle, softened or swollen).';
+            $scrap[] = Messages::make('tire.reasons.permanentChemicalAgeDegradationHardenedBrittle');
         }
 
         // ---- age --------------------------------------------------------------------------------
         $age = $facts['age_months'];
         if ($age === null) {
-            $hold[] = 'Tire age unknown — the manufacture date code cannot be read.';
+            $hold[] = Messages::make('tire.reasons.tireAgeUnknownManufactureDateCode');
         } elseif ($profile !== null && $age > (int) $profile['a_max_months']) {
-            $scrap[] = "Tire age {$age} months exceeds the maximum service age A_max ({$profile['a_max_months']} months).";
+            $scrap[] = Messages::make('tire.reasons.tireAgeAgeMonthsExceedsMaximum', ['age' => $age, 'a_max_months' => $profile['a_max_months']]);
         }
 
         // ---- tread ------------------------------------------------------------------------------
@@ -146,23 +175,23 @@ final class UsedTireDecisionEngine
             $dService = $this->hundredths((string) $profile['d_service_mm']);
             $tread = $dMin <= $dPull;
             if ($dMin < $dService) {
-                $treadReasons[] = 'D_min '.$this->mm($dMin).' is below the minimum service depth D_service '.$this->mm($dService).'.';
+                $treadReasons[] = Messages::make('tire.reasons.belowDService', ['dMin' => $this->mm($dMin), 'dService' => $this->mm($dService)]);
             } elseif ($tread) {
-                $treadReasons[] = 'D_min '.$this->mm($dMin).' is at or below the planned removal depth D_pull '.$this->mm($dPull).'.';
+                $treadReasons[] = Messages::make('tire.reasons.atOrBelowDPull', ['dMin' => $this->mm($dMin), 'dPull' => $this->mm($dPull)]);
             }
         }
         if (isset(self::UNSUITABLE_WEAR[$a('wear_pattern')])) {
             $tread = true;
-            $treadReasons[] = 'Tread not suitable to retain: '.self::UNSUITABLE_WEAR[$a('wear_pattern')].'.';
+            $treadReasons[] = Messages::make('tire.reasons.treadNotSuitable', ['wearPattern' => Messages::make(self::UNSUITABLE_WEAR[$a('wear_pattern')])]);
         }
         if (isset(self::WEAR_FOLLOW_UPS[$a('wear_pattern')])) {
-            $followUps[] = self::WEAR_FOLLOW_UPS[$a('wear_pattern')];
+            $followUps[] = Messages::make(self::WEAR_FOLLOW_UPS[$a('wear_pattern')]);
         }
 
         // ---- damages / repair ---------------------------------------------------------------------
         $needsDamageRows = $a('leak_foreign_object') === 'YES' || $a('inner_liner_condition') === 'LOCAL_DAMAGE';
         if ($needsDamageRows && $damages === []) {
-            $hold[] = 'A leak / local inner liner damage was reported — record the damage details.';
+            $hold[] = Messages::make('tire.reasons.leakLocalInnerLinerDamageReported');
         }
         $repairNeeded = $damages !== [];
         $eligible = null;
@@ -170,16 +199,16 @@ final class UsedTireDecisionEngine
             $eligibility = $a('repair_eligibility');
             $specialist = $a('specialist_result');
             if ($eligibility === null) {
-                $hold[] = 'Repair eligibility of the damages has not been answered.';
+                $hold[] = Messages::make('tire.reasons.repairEligibilityDamagesNotBeenAnswered');
             } elseif ($eligibility === 'NO') {
-                $scrap[] = 'Damage is not repairable within the limits for this tire category / model.';
+                $scrap[] = Messages::make('tire.reasons.damageNotRepairableWithinLimitsTire');
             } elseif ($eligibility === 'SPECIALIST_REQUIRED') {
                 if ($specialist === 'ACCEPTED') {
                     $eligible = true;
                 } elseif ($specialist === 'REJECTED') {
-                    $scrap[] = 'The specialist rejected the repair.';
+                    $scrap[] = Messages::make('tire.reasons.specialistRejectedRepair');
                 } else {
-                    $hold[] = 'Specialist decision required — no final specialist result yet.';
+                    $hold[] = Messages::make('tire.reasons.specialistDecisionRequiredNoFinalSpecialist');
                 }
             } else {
                 $eligible = true;
@@ -194,20 +223,20 @@ final class UsedTireDecisionEngine
             $casing = true;
             if ($a('casing_compliance') === 'DOES_NOT_MEET') {
                 $casing = false;
-                $casingReasons[] = 'Casing does not meet the age / retread requirement.';
+                $casingReasons[] = Messages::make('tire.reasons.casingDoesNotMeetAgeRetread');
             }
             if ($age !== null && $age > (int) $profile['a_retread_max_months']) {
                 $casing = false;
-                $casingReasons[] = "Casing age {$age} months exceeds A_retread_max ({$profile['a_retread_max_months']} months).";
+                $casingReasons[] = Messages::make('tire.reasons.casingAgeAgeMonthsExceedsRetread', ['age' => $age, 'a_retread_max_months' => $profile['a_retread_max_months']]);
             }
             if ($facts['retread_count'] >= (int) $profile['n_retread_max']) {
                 $casing = false;
-                $casingReasons[] = "Retread count {$facts['retread_count']} has reached N_retread_max ({$profile['n_retread_max']}).";
+                $casingReasons[] = Messages::make('tire.reasons.retreadCountRetreadCountReachedN', ['retread_count' => $facts['retread_count'], 'n_retread_max' => $profile['n_retread_max']]);
             }
         }
         $specialistFinal = $a('specialist_result') === 'ACCEPTED';
         if ($tread === true && $a('specialist_result') === 'REJECTED') {
-            $scrap[] = 'The retreader / specialist rejected the casing.';
+            $scrap[] = Messages::make('tire.reasons.retreaderSpecialistRejectedCasing');
         }
 
         // ---- decision ---------------------------------------------------------------------------------
@@ -227,28 +256,36 @@ final class UsedTireDecisionEngine
             } elseif ($specialistFinal) {
                 $recommendation = self::RETREAD;
                 $additionalWork = $repairNeeded ? 'CASING_REPAIR' : null;
-                $reasons = array_merge($treadReasons, ['Casing accepted for retread by the retreader / specialist.'], $repairNeeded ? ['Casing damage within the repair limits: repair it before retreading.'] : []);
+                $reasons = array_merge($treadReasons, [Messages::make('tire.reasons.casingAcceptedRetreadRetreaderSpecialist')], $repairNeeded ? [Messages::make('tire.reasons.casingDamageWithinRepairLimitsRepair')] : []);
             } else {
                 $recommendation = self::HOLD;
                 $detail = 'RETREAD_CANDIDATE';
-                $reasons = array_merge($treadReasons, ['Retread candidate: the casing is awaiting the final retreader inspection.']);
+                $reasons = array_merge($treadReasons, [Messages::make('tire.reasons.retreadCandidateCasingAwaitingFinalRetreader')]);
             }
         } elseif ($repairNeeded) {
             [$recommendation, $reasons] = $repairAllowed
-                ? [self::REPAIR, [count($damages).' repairable damage(s) within the repair limits; tread still usable.']]
+                ? [self::REPAIR, [Messages::make('tire.reasons.repairableDamages', ['count' => count($damages)])]]
                 : [self::SCRAP, $repairFails];
         } else {
             $recommendation = self::REUSE;
-            $reasons = ['Inspection complete: tread usable, no damage requiring repair, no rejection condition.'];
+            $reasons = [Messages::make('tire.reasons.inspectionCompleteTreadUsableNoDamage')];
         }
+
+        $reasons = $this->uniqueMessages($reasons);
+        $openItems = $this->uniqueMessages($hold);
 
         return [
             'recommendation' => $recommendation,
             'recommendation_detail' => $detail,
             'additional_work' => $additionalWork,
-            'reasons' => array_values(array_unique($reasons)),
-            'open_items' => array_values(array_unique($hold)),
-            'follow_ups' => $followUps,
+            // Display text (unchanged English) and the machine-readable form ({code, params}, code = EN-ID
+            // dataset key) of the same reasons — logic never depends on the text.
+            'reasons' => array_map(Messages::render(...), $reasons),
+            'reason_codes' => $reasons,
+            'open_items' => array_map(Messages::render(...), $openItems),
+            'open_item_codes' => $openItems,
+            'follow_ups' => array_map(Messages::render(...), $followUps),
+            'follow_up_codes' => $followUps,
             'variables' => [
                 'C' => $complete, 'X' => $scrap !== [], 'R' => $repairNeeded, 'P' => $repairAllowed,
                 'T' => $tread, 'K' => $casing, 'F' => $specialistFinal,
@@ -295,12 +332,12 @@ final class UsedTireDecisionEngine
         for ($zone = 1; $zone <= self::MIN_MEASUREMENT_ZONES; $zone++) {
             foreach (['INNER_MAIN', 'OUTER_MAIN'] as $groove) {
                 if (! isset($points["{$zone}|{$groove}"])) {
-                    $missing[] = "zone {$zone} ".strtolower(str_replace('_', ' ', $groove));
+                    $missing[] = Messages::make('tire.reasons.treadPoint', ['zone' => $zone, 'groove' => Messages::make($groove === 'INNER_MAIN' ? 'tire.grooves.innerMain' : 'tire.grooves.outerMain')]);
                 }
             }
         }
         if ($missing !== []) {
-            $hold[] = 'Tread depth: at least 6 points are required (3 zones × inner / outer main groove); missing '.implode(', ', $missing).'.';
+            $hold[] = Messages::make('tire.reasons.treadPointsMissing', ['points' => $missing]);
         }
 
         return $points === [] || $missing !== [] ? null : min($points);
@@ -312,16 +349,20 @@ final class UsedTireDecisionEngine
         $limits = $profile['repair_limits'] ?? null;
         foreach (array_values($damages) as $i => $d) {
             $n = $i + 1;
-            $label = "Damage {$n} (".strtolower(str_replace('_', ' ', (string) ($d['damage_type'] ?? '?'))).' on '.strtolower(str_replace('_', ' ', (string) ($d['location'] ?? '?'))).')';
+            $label = Messages::make('tire.reasons.damageLabel', [
+                'n' => $n,
+                'type' => $this->codeLabel(self::DAMAGE_TYPE_KEYS, $d['damage_type'] ?? null),
+                'location' => $this->codeLabel(self::DAMAGE_LOCATION_KEYS, $d['location'] ?? null),
+            ]);
             $type = $d['damage_type'] ?? null;
             if ($type === 'SEPARATION') {
-                $scrap[] = "{$label}: separation.";
+                $scrap[] = Messages::make('tire.reasons.labelSeparation', ['label' => $label]);
             }
             if (($d['reaches_reinforcement'] ?? null) === 'UNKNOWN') {
-                $hold[] = "{$label}: unknown whether it reaches the reinforcing structure.";
+                $hold[] = Messages::make('tire.reasons.labelUnknownWhetherReachesReinforcingStructure', ['label' => $label]);
             }
             if (($d['overlaps_previous_repair'] ?? null) === 'UNKNOWN') {
-                $hold[] = "{$label}: unknown whether it overlaps a previous repair.";
+                $hold[] = Messages::make('tire.reasons.labelUnknownWhetherOverlapsPreviousRepair', ['label' => $label]);
             }
             $required = match ($type) {
                 'PUNCTURE' => ['diameter_mm'],
@@ -330,20 +371,20 @@ final class UsedTireDecisionEngine
             };
             foreach ($required as $field) {
                 if (($d[$field] ?? null) === null || $d[$field] === '') {
-                    $hold[] = "{$label}: ".str_replace('_mm', '', $field).' is required.';
+                    $hold[] = Messages::make('tire.reasons.limitFieldRequired', ['label' => $label, 'field' => Messages::make(self::DAMAGE_FIELD_KEYS[$field])]);
                 }
             }
             if ($limits === null) {
                 continue;
             }
             if (! in_array($d['location'] ?? null, $limits['allowed_locations'] ?? [], true)) {
-                $fails[] = "{$label}: repairs are not permitted in this location.";
+                $fails[] = Messages::make('tire.reasons.labelRepairsNotPermittedLocation', ['label' => $label]);
             }
             if (($d['reaches_reinforcement'] ?? null) === 'YES' && empty($limits['allow_reinforcement_damage'])) {
-                $fails[] = "{$label}: reaches the reinforcing structure, which the repair limits do not permit.";
+                $fails[] = Messages::make('tire.reasons.labelReachesReinforcingStructureWhichRepair', ['label' => $label]);
             }
             if (($d['overlaps_previous_repair'] ?? null) === 'YES' && empty($limits['allow_overlap_previous_repair'])) {
-                $fails[] = "{$label}: overlaps a previous repair, which the repair limits do not permit.";
+                $fails[] = Messages::make('tire.reasons.labelOverlapsPreviousRepairWhichRepair', ['label' => $label]);
             }
             $sizeLimits = match ($type) {
                 'PUNCTURE' => ['diameter_mm' => 'max_puncture_diameter_mm'],
@@ -353,9 +394,9 @@ final class UsedTireDecisionEngine
             foreach ($sizeLimits as $field => $limitKey) {
                 $limit = $limits[$limitKey] ?? null;
                 if ($limit === null || $limit === '') {
-                    $hold[] = "{$label}: the repair limit {$limitKey} is not configured in the rule profile.";
+                    $hold[] = Messages::make('tire.reasons.labelRepairLimitLimitKeyNot', ['label' => $label, 'limitKey' => $limitKey]);
                 } elseif (($d[$field] ?? null) !== null && $d[$field] !== '' && $this->hundredths((string) $d[$field]) > $this->hundredths((string) $limit)) {
-                    $fails[] = "{$label}: ".str_replace('_mm', '', $field).' '.$d[$field]." mm exceeds the limit of {$limit} mm.";
+                    $fails[] = Messages::make('tire.reasons.damageSizeExceedsLimit', ['label' => $label, 'field' => Messages::make(self::DAMAGE_FIELD_KEYS[$field]), 'value' => $d[$field], 'limit' => $limit]);
                 }
             }
         }
@@ -364,10 +405,44 @@ final class UsedTireDecisionEngine
         }
         $max = $limits['max_repairs'] ?? null;
         if ($max === null || $max === '') {
-            $hold[] = 'The repair limit max_repairs is not configured in the rule profile.';
+            $hold[] = Messages::make('tire.reasons.repairLimitMaxRepairsNotConfigured');
         } elseif (count($damages) > (int) $max) {
-            $fails[] = count($damages)." damages exceed the maximum of {$max} repairs.";
+            $fails[] = Messages::make('tire.reasons.damageCountExceedsMax', ['count' => count($damages), 'max' => $max]);
         }
+    }
+
+    /**
+     * Distinct messages in their original order (two reasons that render the same text are one reason).
+     *
+     * @param  list<array{code: string, params: array}>  $messages
+     * @return list<array{code: string, params: array}>
+     */
+    private function uniqueMessages(array $messages): array
+    {
+        $seen = [];
+        $unique = [];
+        foreach ($messages as $message) {
+            $text = Messages::render($message);
+            if (! isset($seen[$text])) {
+                $seen[$text] = true;
+                $unique[] = $message;
+            }
+        }
+
+        return $unique;
+    }
+
+    /**
+     * Label message for a known code; an unexpected value keeps its previous rendering (lower-cased, "?"
+     * when missing) so historical / foreign input still reads the same.
+     */
+    private function codeLabel(array $keys, ?string $code): array|string
+    {
+        if ($code !== null && isset($keys[$code])) {
+            return Messages::make($keys[$code]);
+        }
+
+        return strtolower(str_replace('_', ' ', $code ?? '?'));
     }
 
     /** "7.5" → 750 (hundredths of a mm — exact, no floats). */

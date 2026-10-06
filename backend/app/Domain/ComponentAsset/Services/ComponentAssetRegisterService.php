@@ -12,6 +12,7 @@ use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\Procurement\Models\PurchaseReturn;
 use App\Domain\Procurement\Services\ProcurementException;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Services\TireInventoryService;
 use App\Models\User;
 use Illuminate\Database\Query\Builder;
@@ -240,7 +241,7 @@ class ComponentAssetRegisterService
         }
         $assetIds = array_values(array_unique($assetIds));
         if (abs(count($assetIds) - $quantity) > 0.0001) {
-            throw new ProcurementException('Select exactly '.rtrim(rtrim(number_format($quantity, 4, '.', ''), '0'), '.').' Asset# being returned for this item (selected '.count($assetIds).').');
+            throw new ProcurementException(Messages::text('errors.componentAsset.selectExactAssets', ['quantity' => rtrim(rtrim(number_format($quantity, 4, '.', ''), '0'), '.'), 'selectedCount' => count($assetIds)]));
         }
         $assets = $this->lineAssets($item->id)->whereIn('id', $assetIds)->lockForUpdate()->get();
         if ($assets->count() !== count($assetIds)) {

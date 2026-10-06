@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { t } from '../i18n/i18n';
 
 /**
  * OptiFleet wordmark (512x188 source, transparent PNG). object-fit: contain
@@ -13,7 +14,7 @@ export function Logo({ height = 36, style, src = '/logo-optifleet.png' }: { heig
   return (
     <img
       src={src}
-      alt="OptiFleet"
+      alt={t('common.tooltips.optiFleet')}
       style={{
         height,
         width: 'auto',

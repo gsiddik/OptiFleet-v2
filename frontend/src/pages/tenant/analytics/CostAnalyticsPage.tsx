@@ -1,23 +1,24 @@
 import { AnalyticsDomainPage } from './AnalyticsDomainPage';
+import { t } from '../../../i18n/i18n';
 
 export function CostAnalyticsPage() {
   return (
     <AnalyticsDomainPage
       config={{
-        title: 'Maintenance Cost Analytics',
-        description: 'Parts/tire/component cost from recorded cost snapshots, and cost per vehicle/km/operating hour.',
+        title: t('analytics.sections.maintenanceCostAnalytics'),
+        description: t('analytics.help.partsTireComponentCostRecordedCost'),
         endpoint: '/app/analytics/cost',
         exportSlug: 'cost',
         permission: 'analytics.cost.view',
         dimensionField: 'branch_id',
-        dimensionLabel: 'Branch',
+        dimensionLabel: t('common.fields.branch'),
         highlightFields: [
-          { key: 'total_maintenance_cost', label: 'Total Cost' },
-          { key: 'parts_cost', label: 'Parts Cost' },
-          { key: 'tire_cost', label: 'Tire Cost' },
-          { key: 'component_replacement_cost', label: 'Component Cost' },
-          { key: 'cost_per_vehicle', label: 'Cost / Vehicle' },
-          { key: 'cost_per_km', label: 'Cost / Km' },
+          { key: 'total_maintenance_cost', label: t('analytics.fields.totalCost') },
+          { key: 'parts_cost', label: t('analytics.fields.partsCost') },
+          { key: 'tire_cost', label: t('analytics.fields.tireCost') },
+          { key: 'component_replacement_cost', label: t('analytics.fields.componentCost') },
+          { key: 'cost_per_vehicle', label: t('analytics.fields.costVehicle') },
+          { key: 'cost_per_km', label: t('analytics.fields.costKm') },
         ],
       }}
     />

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Logo } from '../components/Logo';
 import { NavIcon } from '../components/NavIcon';
-import { searchNav, type NavGroup, type NavItem } from './tenantNav';
+import { navLabel, searchNav, type NavGroup, type NavItem } from './tenantNav';
+import { t } from '../i18n/i18n';
 
 const EXPANDED_KEY = 'optifleet_nav_expanded';
 
@@ -110,7 +111,7 @@ export function TenantSidebar({
   return (
     <aside
       className={`tenant-sidebar${mobileOpen ? ' open' : ''}${minimized ? ' minimized' : ''}`}
-      aria-label="Main menu"
+      aria-label={t('common.tooltips.mainMenu')}
       onClick={(e) => {
         if ((e.target as HTMLElement).closest('a')) onNavigate();
       }}
@@ -120,7 +121,7 @@ export function TenantSidebar({
             width; minimized shows the square mark. Never stretched, never cropped. */}
         <div className="tenant-sidebar-logo">
           {minimized ? (
-            <img src={logoSrc ?? '/apple-touch-icon.png'} alt="OptiFleet" style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
+            <img src={logoSrc ?? '/apple-touch-icon.png'} alt={t('common.tooltips.optiFleet')} style={{ width: 36, height: 36, objectFit: 'contain', display: 'block' }} />
           ) : logoSrc ? (
             <Logo src={logoSrc} height={64} style={{ width: '100%', height: 64 }} />
           ) : (
@@ -128,7 +129,7 @@ export function TenantSidebar({
             // x 30–465, y 27–176). The frame matches the artwork's aspect ratio and only that
             // transparent margin falls outside it, so the wordmark fills the card.
             <div style={{ position: 'relative', width: '100%', aspectRatio: '436 / 150', overflow: 'hidden' }}>
-              <img src="/logo-optifleet.png" alt="OptiFleet" style={{ position: 'absolute', width: '117.43%', left: '-6.88%', top: '-18%', height: 'auto', display: 'block' }} />
+              <img src="/logo-optifleet.png" alt={t('common.tooltips.optiFleet')} style={{ position: 'absolute', width: '117.43%', left: '-6.88%', top: '-18%', height: 'auto', display: 'block' }} />
             </div>
           )}
         </div>
@@ -138,8 +139,8 @@ export function TenantSidebar({
         <button
           type="button"
           className="tenant-sidebar-iconbtn"
-          aria-label="Search menu"
-          title="Search menu"
+          aria-label={t('common.actions.searchMenu')}
+          title={t('common.actions.searchMenu')}
           onClick={() => {
             focusSearchAfterExpand.current = true;
             onToggleMinimized();
@@ -155,8 +156,8 @@ export function TenantSidebar({
           <input
             ref={searchRef}
             type="search"
-            aria-label="Search menu"
-            placeholder="Search menu…"
+            aria-label={t('common.actions.searchMenu')}
+            placeholder={t('common.search.searchMenu')}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
@@ -167,7 +168,7 @@ export function TenantSidebar({
       )}
 
       <nav className="tenant-sidebar-nav">
-        {!minimized && searching && visible.length === 0 && <div style={{ padding: '10px 20px', fontSize: 13, color: '#9ca3af' }}>No menu matches “{query.trim()}”.</div>}
+        {!minimized && searching && visible.length === 0 && <div style={{ padding: '10px 20px', fontSize: 13, color: '#9ca3af' }}>{t('common.empty.noMenuMatchesTrim', { trim: query.trim() })}</div>}
 
         {(minimized ? groups : visible).map((group, index) => {
           const key = group.label ?? group.items[0].label;
@@ -181,15 +182,15 @@ export function TenantSidebar({
                 key={`root:${item.label}`}
                 className={minimized ? 'tenant-sidebar-iconlink' : undefined}
                 to={item.to}
-                title={minimized ? item.label : undefined}
-                aria-label={minimized ? item.label : undefined}
+                title={minimized ? navLabel(item) : undefined}
+                aria-label={minimized ? navLabel(item) : undefined}
                 style={({ isActive: active }) => ({
                   ...(minimized ? { background: active ? '#1d4ed8' : 'transparent', color: active ? '#fff' : '#cbd5e1' } : linkStyle(active, 14)),
                   marginTop: index > 0 ? 16 : undefined,
                 })}
               >
                 <NavIcon name={group.icon} />
-                {!minimized && <span>{item.label}</span>}
+                {!minimized && <span>{navLabel(item)}</span>}
               </NavLink>
             ));
           }
@@ -200,10 +201,10 @@ export function TenantSidebar({
                 key={key}
                 type="button"
                 className="tenant-sidebar-iconbtn"
-                aria-label={group.label}
+                aria-label={navLabel(group)}
                 aria-haspopup="menu"
                 aria-expanded={flyout?.label === key}
-                title={group.label}
+                title={navLabel(group)}
                 onMouseEnter={(e) => openFlyout(key, e.currentTarget)}
                 onMouseLeave={scheduleClose}
                 onFocus={(e) => openFlyout(key, e.currentTarget)}
@@ -229,7 +230,7 @@ export function TenantSidebar({
                 style={{ color: groupActive ? '#fff' : '#cbd5e1' }}
               >
                 <NavIcon name={group.icon} />
-                <span style={{ flex: 1, textAlign: 'left' }}>{group.label}</span>
+                <span style={{ flex: 1, textAlign: 'left' }}>{navLabel(group)}</span>
                 <span style={{ color: '#6b7280' }}>
                   <NavIcon name={open ? 'chevronDown' : 'chevronRight'} size={16} />
                 </span>
@@ -238,7 +239,7 @@ export function TenantSidebar({
                 <div id={listId}>
                   {group.items.map((item) => (
                     <NavLink key={`${key}:${item.label}`} to={item.to} style={({ isActive: active }) => linkStyle(active, 42)}>
-                      {item.label}
+                      {navLabel(item)}
                     </NavLink>
                   ))}
                 </div>
@@ -252,17 +253,17 @@ export function TenantSidebar({
         type="button"
         className="tenant-sidebar-collapse"
         onClick={onToggleMinimized}
-        aria-label={minimized ? 'Expand sidebar' : 'Minimize sidebar'}
-        title={minimized ? 'Expand sidebar' : 'Minimize sidebar'}
+        aria-label={minimized ? t('common.actions.expandSidebar') : t('common.actions.minimizeSidebar')}
+        title={minimized ? t('common.actions.expandSidebar') : t('common.actions.minimizeSidebar')}
       >
         <NavIcon name={minimized ? 'expand' : 'collapse'} />
-        {!minimized && <span>Minimize</span>}
+        {!minimized && <span>{t('common.actions.minimize')}</span>}
       </button>
 
       {flyoutGroup && flyout && (
         <div
           role="menu"
-          aria-label={flyoutGroup.label ?? undefined}
+          aria-label={flyoutGroup.label ? navLabel(flyoutGroup) : undefined}
           className="tenant-sidebar-flyout"
           style={{ top: Math.min(flyout.top, window.innerHeight - 48 - flyoutGroup.items.length * 34) }}
           onMouseEnter={() => closeTimer.current && clearTimeout(closeTimer.current)}
@@ -272,10 +273,10 @@ export function TenantSidebar({
             if ((e.target as HTMLElement).closest('a')) setFlyout(null);
           }}
         >
-          <div style={{ padding: '6px 14px 6px', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#9ca3af' }}>{flyoutGroup.label}</div>
+          <div style={{ padding: '6px 14px 6px', fontSize: 11, textTransform: 'uppercase', letterSpacing: 1, color: '#9ca3af' }}>{flyoutGroup.label && navLabel(flyoutGroup)}</div>
           {flyoutGroup.items.map((item) => (
             <NavLink key={item.label} role="menuitem" to={item.to} style={({ isActive: active }) => linkStyle(active, 14)}>
-              {item.label}
+              {navLabel(item)}
             </NavLink>
           ))}
         </div>

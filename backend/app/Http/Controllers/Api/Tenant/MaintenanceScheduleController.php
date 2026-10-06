@@ -9,6 +9,7 @@ use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\MaintenancePolicy\Models\MaintenancePackage;
 use App\Domain\MaintenancePolicy\Models\MaintenanceSchedule;
 use App\Domain\MaintenancePolicy\Services\MaintenanceScheduleService;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
@@ -125,7 +126,7 @@ class MaintenanceScheduleController extends Controller
             'source_type' => 'SCHEDULE',
             'source_schedule_id' => $maintenanceSchedule->id,
             'priority' => $maintenanceSchedule->status === 'OVERDUE' ? 'URGENT' : 'MEDIUM',
-            'complaint' => $request->input('complaint', 'Scheduled maintenance due: '.($package?->name ?? $maintenanceSchedule->source_policy)),
+            'complaint' => $request->input('complaint', Messages::text('maintenance.defaults.scheduledMaintenanceDue', ['packageName' => $package?->name ?? $maintenanceSchedule->source_policy])),
             'status' => 'SUBMITTED',
         ], $this->context->user()->id);
 

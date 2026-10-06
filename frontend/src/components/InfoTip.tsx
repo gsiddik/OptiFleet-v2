@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import { t } from '../i18n/i18n';
 
 /**
  * A small "i" button that explains a field. The text shows on hover and on keyboard focus (and
@@ -26,7 +27,7 @@ export function InfoTip({
     >
       <button
         type="button"
-        aria-label={`About ${label}`}
+        aria-label={t('common.actions.aboutLabel', { label: label })}
         aria-describedby={open ? id : undefined}
         aria-expanded={open}
         data-info-tip={label}

@@ -183,7 +183,7 @@ class NotificationEngineTest extends TestCase
             'queued_at' => now(),
         ]);
 
-        (new SendNotificationJob($log->id, []))->handle(app(\App\Domain\Notification\Services\NotificationTemplateService::class));
+        (new SendNotificationJob($log->id, []))->handle(app(\App\Domain\Notification\Services\NotificationTemplateService::class), app(\App\Domain\Notification\Services\RecipientLocaleResolver::class));
 
         $log->refresh();
         $this->assertSame('FAILED', $log->status);

@@ -1,0 +1,68 @@
+{
+  "actions": {
+    "confirmPayment": "Konfirmasi Pembayaran",
+    "invoiceAttachment": "Lampiran Faktur",
+    "openWorkOrder": "Buka Work Order",
+    "paymentEvidence": "Bukti Pembayaran",
+    "requestCancellation": "Ajukan Pembatalan",
+    "requestCorrection": "Ajukan Koreksi",
+    "returnedMemoAttachment": "Lampiran Memo yang Dikembalikan",
+    "saveNote": "Simpan Catatan",
+    "submitCancellationRequest": "Ajukan Permintaan Pembatalan",
+    "submitCorrectionRequest": "Ajukan Permintaan Koreksi",
+    "uploadPaymentEvidence": "Unggah Bukti Pembayaran"
+  },
+  "empty": {
+    "noPaymentRecordedYet": "Belum ada pembayaran yang dicatat."
+  },
+  "fields": {
+    "bankTransactionReferenceOptional": "Referensi Bank / Transaksi (opsional)",
+    "correctedInvoiceDate": "Tanggal Faktur yang Dikoreksi",
+    "correctedTotalAmount": "Total Nominal yang Dikoreksi",
+    "expected": "Diharapkan",
+    "invoiced": "Sudah Diinvoice",
+    "maintenanceMemo": "Memo Pemeliharaan",
+    "missingSourceRecords": "Data sumber tidak ada",
+    "notesNotes": "Catatan: {{notes}}",
+    "paid": "Lunas",
+    "paidAmountPaymentDate": "{{paid_amount}} pada {{payment_date}}",
+    "partnerReference": "Referensi Mitra",
+    "paymentEvidenceUrlRequired": "URL Bukti Pembayaran (wajib)",
+    "paymentMethodOptional": "Metode Pembayaran (opsional)",
+    "pendingCancellation": "Menunggu Pembatalan",
+    "pendingCorrection": "Menunggu Koreksi",
+    "reference": "Referensi",
+    "requestedValuesValue": "Nilai yang diminta: {{value}}",
+    "serviceProvider": "Penyedia Jasa",
+    "totalAmountTotalAmount": "Total Nominal: {{total_amount}}",
+    "unmatchedLineItems": "Baris item yang tidak cocok",
+    "variance": "Selisih",
+    "workOrderEstimate": "Estimasi Work Order"
+  },
+  "help": {
+    "amountOnDate": "{{amount}} pada {{date}}",
+    "payableAmountPayableAmountPartialPayment": "Jumlah yang harus dibayar: {{payableAmount}}. Pembayaran sebagian tidak didukung — jumlah yang dibayar harus sama persis.",
+    "recordedExternallyIssuedDocumentOptiFleet": "Dicatat dari dokumen yang diterbitkan pihak eksternal — OptiFleet tidak menerbitkan faktur ini.",
+    "requiresApprovalDifferentUserOriginalValues": "Memerlukan persetujuan dari pengguna lain. Nilai asli tetap disimpan.",
+    "requiresApprovalDifferentUserPreservesPayment": "Memerlukan persetujuan dari pengguna lain. Riwayat pembayaran tetap disimpan jika ada."
+  },
+  "modals": {
+    "requestInvoiceCancellation": "Ajukan Pembatalan Faktur",
+    "requestInvoiceCorrection": "Ajukan Koreksi Faktur",
+    "uploadPaymentEvidence": "Unggah Bukti Pembayaran"
+  },
+  "placeholders": {
+    "eGBankTransfer": "mis. Transfer Bank",
+    "reconciliationNoteExceptionReasonOptional": "Catatan rekonsiliasi / alasan pengecualian (opsional)"
+  },
+  "sections": {
+    "cancellationHistory": "Riwayat Pembatalan",
+    "correctionCancellation": "Koreksi / Pembatalan",
+    "correctionHistory": "Riwayat Koreksi",
+    "payment": "Pembayaran",
+    "reconciliation": "Rekonsiliasi"
+  },
+  "titles": {
+    "serviceInvoiceExternalInvoiceNumber": "Faktur Layanan — {{external_invoice_number}}"
+  }
+}

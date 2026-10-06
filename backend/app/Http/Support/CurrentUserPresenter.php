@@ -4,6 +4,7 @@ namespace App\Http\Support;
 
 use App\Domain\AccessControl\Models\RoleAssignment;
 use App\Domain\AccessControl\Services\PermissionService;
+use App\Domain\Identity\Models\Tenant;
 use App\Models\User;
 use App\Support\TenantContext;
 
@@ -24,6 +25,9 @@ class CurrentUserPresenter
             'name' => $user->name,
             'email' => $user->email,
             'scope' => $isPlatform ? 'platform' : 'tenant',
+            // i18n: the UI resolves its language as preferred_locale → tenant_default_locale → browser → en.
+            'preferred_locale' => $user->preferred_locale,
+            'tenant_default_locale' => $tenantId ? Tenant::query()->whereKey($tenantId)->value('default_locale') : null,
             'permissions' => $this->permissions->permissionsFor($user, $tenantId)->values(),
             'memberships' => $isPlatform ? [] : $this->memberships($user),
         ];

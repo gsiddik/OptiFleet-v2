@@ -7,6 +7,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Services\TireOperationExecutionService;
 use App\Domain\Tire\Services\UsedTireStockService;
 use App\Domain\WorkOrder\Models\WorkOrder;
@@ -117,7 +118,7 @@ class WorkOrderPartService
             }
             QuantityPolicy::assertValidForProductId($locked->product_id, $quantity);
             if ($quantity > $locked->returnableQuantity()) {
-                throw new WorkOrderException('Cannot return more than the returnable quantity ('.$locked->returnableQuantity().'): consumed quantity is never returnable.');
+                throw new WorkOrderException(Messages::text('errors.workOrder.returnExceedsReturnable', ['returnable' => $locked->returnableQuantity()]));
             }
 
             $workOrder = WorkOrder::query()->findOrFail($locked->work_order_id);

@@ -1,20 +1,21 @@
 import { AnalyticsDomainPage } from './AnalyticsDomainPage';
+import { t } from '../../../i18n/i18n';
 
 export function DowntimeAnalyticsPage() {
   return (
     <AnalyticsDomainPage
       config={{
-        title: 'MTTR / MTBF (per Vehicle)',
-        description: 'Mean Time To Repair and Mean Time Between Failures, by vehicle.',
+        title: t('analytics.sections.mttrMtbfPerVehicle'),
+        description: t('analytics.help.meanTimeRepairMeanTimeBetween'),
         endpoint: '/app/analytics/downtime',
         exportSlug: 'downtime',
         permission: 'analytics.breakdown.view',
         dimensionField: 'vehicle_id',
-        dimensionLabel: 'Vehicle',
+        dimensionLabel: t('common.fields.vehicle'),
         highlightFields: [
-          { key: 'mttr_minutes', label: 'MTTR (min)' },
-          { key: 'mtbf_hours', label: 'MTBF (hrs)' },
-          { key: 'avg_total_downtime_minutes', label: 'Avg Downtime (min)' },
+          { key: 'mttr_minutes', label: t('analytics.fields.mttrMin') },
+          { key: 'mtbf_hours', label: t('analytics.fields.mtbfHrs') },
+          { key: 'avg_total_downtime_minutes', label: t('analytics.fields.avgDowntimeMin') },
         ],
       }}
     />

@@ -1,5 +1,6 @@
 import { cloneElement, isValidElement, type CSSProperties, type ReactNode } from 'react';
 import { InfoTip } from './InfoTip';
+import { t } from '../i18n/i18n';
 
 function labelElement(label: string, required: boolean | undefined, marginBottom: number) {
   return (
@@ -10,7 +11,7 @@ function labelElement(label: string, required: boolean | undefined, marginBottom
           <span aria-hidden="true" style={{ color: '#dc2626', marginLeft: 3 }}>
             *
           </span>
-          <span className="sr-only"> (required)</span>
+          <span className="sr-only"> {t('common.fields.required')}</span>
         </>
       )}
     </label>

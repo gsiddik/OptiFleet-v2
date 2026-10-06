@@ -4,6 +4,7 @@ namespace App\Domain\ProductCatalog\Services;
 
 use App\Domain\ProductCatalog\Models\Module;
 use App\Domain\ProductCatalog\Models\ModuleDependency;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Support\Collection;
 
 class ModuleDependencyService
@@ -138,7 +139,7 @@ class ModuleDependencyService
         if ($cyclePath !== null) {
             $codes = Module::query()->whereIn('id', $cyclePath)->pluck('code', 'id');
             $labels = array_map(fn ($id) => $codes[$id] ?? $id, $cyclePath);
-            throw new ModuleDependencyException('Circular module dependency detected: '.implode(' -> ', $labels));
+            throw new ModuleDependencyException(Messages::text('errors.productCatalog.circularDependency', ['path' => implode(' -> ', $labels)]));
         }
     }
 

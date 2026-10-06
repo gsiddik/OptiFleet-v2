@@ -5,6 +5,7 @@ import { openProtectedFile } from "../../../../utils/protectedFile";
 import { formatDate } from "../../../../utils/date";
 import { formatMoney } from "../../../../utils/money";
 import type { TireCycle } from "./retreadTypes";
+import { t } from '../../../../i18n/i18n';
 
 /**
  * Retread History of a tire (retread and repair cycles — repair is a kind of retread): vendor,
@@ -25,7 +26,7 @@ export function RetreadHistory({ tireId }: { tireId: string }) {
 
   return (
     <section className="card" data-retread-history style={{ marginBottom: 16 }}>
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Retread History</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tire.sections.retreadHistory')}</h3>
       <div style={{ overflowX: "auto" }}>
         <table
           style={{
@@ -40,15 +41,15 @@ export function RetreadHistory({ tireId }: { tireId: string }) {
               style={{ textAlign: "left", borderBottom: "1px solid #e5e7eb" }}
             >
               {[
-                "Cycle",
-                "Vendor",
-                "Estimated Price",
-                "Open Cycle Date",
-                "Receive Date",
-                "Inspection Result",
-                "Final Status",
-                "Photos",
-                "Notes",
+                t('common.fields.cycle'),
+                t('common.fields.vendor'),
+                t('tire.fields.estimatedPrice'),
+                t('tire.fields.openCycleDate'),
+                t('tire.fields.receiveDate'),
+                t('inventory.fields.inspectionResult2'),
+                t('tire.fields.finalStatus'),
+                t('tire.fields.photos'),
+                t('common.fields.notes'),
               ].map((h) => (
                 <th key={h} style={{ padding: 6 }}>
                   {h}
@@ -67,7 +68,7 @@ export function RetreadHistory({ tireId }: { tireId: string }) {
                 }}
               >
                 <td style={{ padding: 6 }}>
-                  {c.kind === "REPAIR" ? "Repair" : "Retread"} #{c.cycle_number}
+                  {c.kind === "REPAIR" ? t('inventory.fields.repair') : t('tire.filters.retread')} #{c.cycle_number}
                   <div style={{ fontSize: 11, color: "#6b7280" }}>
                     {c.state.replace("_", " ")}
                   </div>
@@ -102,8 +103,7 @@ export function RetreadHistory({ tireId }: { tireId: string }) {
                               )
                             }
                           >
-                            Photo {i + 1}
-                          </button>
+                            {t('tire.actions.photoValue', { value: i + 1 })}</button>
                         </div>
                       ))}
                 </td>

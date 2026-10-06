@@ -8,6 +8,7 @@ use App\Domain\Procurement\Models\VendorInvoicePayment;
 use App\Domain\Procurement\Models\VendorInvoiceReference;
 use App\Domain\Procurement\Support\VendorInvoiceStatus;
 use App\Domain\Shared\Services\PrivateDocumentStorage;
+use App\Domain\Shared\Support\Messages;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
@@ -37,7 +38,7 @@ class VendorInvoicePaymentService
             throw new ProcurementException('The payment date cannot be in the future.');
         }
         if (Money::compare($amount, (string) $invoice->amount) !== 0) {
-            throw new ProcurementException('The payment amount must equal the invoice amount ('.Money::of((string) $invoice->amount)->toScale(2).'); partial payments are not supported.');
+            throw new ProcurementException(Messages::text('errors.procurement.paymentMustEqualInvoice', ['amount' => Money::of((string) $invoice->amount)->toScale(2)]));
         }
 
         $upload = ['file' => $proof, 'directory' => "vendor-invoice-payments/{$invoice->tenant_id}", 'mimes' => self::PROOF_MIMES, 'max_bytes' => self::PROOF_MAX_BYTES, 'label' => 'payment proof'];

@@ -7,6 +7,7 @@ import {
   WorkflowBuilder,
   type WorkflowBuilderTarget,
 } from "./workflow/WorkflowBuilder";
+import { t as tt } from '../../../i18n/i18n';
 
 /**
  * Configuration → Workflow: per document type, the System Default workflow and your Custom
@@ -48,12 +49,9 @@ export function WorkflowConfigPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Workflow</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{tt('configuration.titles.workflow')}</h1>
       <p style={{ color: "#6b7280", fontSize: 13, marginBottom: 16 }}>
-        Design how each document moves between its statuses. Open a workflow to
-        see it as cards and arrows; New Draft lets you add, remove or redirect
-        transitions. A published workflow applies to documents created after
-        publishing — documents already in progress keep their workflow.
+        {tt('configuration.help.designHowEachDocumentMovesBetween')}
       </p>
       <DocumentConfigList
         type="WORKFLOW"
@@ -61,13 +59,12 @@ export function WorkflowConfigPage() {
         publishPermission="workflow.publish"
         documentTypes={types}
         reloadKey={reloadKey}
-        newLabel="New Workflow"
+        newLabel={tt('configuration.actions.newWorkflow')}
         describe={(payload) => {
           const p = payload as unknown as WorkflowPayload;
           return (
             <span style={{ color: "#6b7280" }}>
-              {p.statuses?.length ?? 0} statuses · {p.transitions?.length ?? 0}{" "}
-              transitions
+              {tt('configuration.help.statusesTransitionsCount', { statuses: p.statuses?.length ?? 0, transitions: p.transitions?.length ?? 0 })}
             </span>
           );
         }}

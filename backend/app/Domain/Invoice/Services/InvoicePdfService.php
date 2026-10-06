@@ -14,11 +14,12 @@ use Dompdf\Options;
  */
 class InvoicePdfService
 {
-    public function render(Invoice $invoice): string
+    /** @param string $locale document language (labels, status, dates, amounts); invoice data is printed as stored */
+    public function render(Invoice $invoice, string $locale = 'en'): string
     {
         $invoice->loadMissing(['items', 'tenant', 'contract']);
 
-        $html = view('invoices.pdf', ['invoice' => $invoice])->render();
+        $html = view('invoices.pdf', ['invoice' => $invoice, 'locale' => $locale])->render();
 
         $options = new Options;
         $options->set('isRemoteEnabled', false);

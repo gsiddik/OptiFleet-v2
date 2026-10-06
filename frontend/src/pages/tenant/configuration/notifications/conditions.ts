@@ -3,6 +3,7 @@ import type {
   NotificationConditionSet,
   NotificationMetadata,
 } from "../../../../types";
+import { t } from '../../../../i18n/i18n';
 
 export const isGroup = (
   rule: NotificationCondition | NotificationConditionSet,
@@ -16,7 +17,7 @@ export function describeConditions(
 ): string {
   if (!set || !set.rules?.length) return "";
   const join =
-    (set.operator ?? "AND").toUpperCase() === "OR" ? " or " : " and ";
+    (set.operator ?? "AND").toUpperCase() === "OR" ? ` ${t("common.fields.conditionOr")} ` : ` ${t("common.fields.conditionAnd")} `;
   return set.rules
     .map((rule) => {
       if (isGroup(rule))

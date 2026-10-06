@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import { RequirePermission, RequirePlatform, RequireTenant } from './components/RouteGuards';
@@ -157,6 +158,8 @@ function RootRedirect() {
 }
 
 export default function App() {
+  // Subscribes the whole tree to language changes: switching the locale re-renders every page.
+  useTranslation();
   return (
     <BrowserRouter>
       <AuthProvider>

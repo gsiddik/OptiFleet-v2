@@ -8,6 +8,7 @@ import { StatusBadge } from '../../../components/StatusBadge';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WarrantyItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { t } from '../../../i18n/i18n';
 
 export function WarrantyDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -55,14 +56,14 @@ export function WarrantyDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/warranties" label="← Back to Warranty" />
+      <BackButton fallbackTo="/app/warranties" label={t('warranty.actions.backToWarranty')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, margin: 0 }}>{warranty.coverage_basis} Warranty</h1>
+        <h1 style={{ fontSize: 22, margin: 0 }}>{warranty.coverage_basis} {t('breadcrumb.warranty')}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <StatusBadge status={warranty.status} />
           {warranty.status === 'ACTIVE' && hasPermission('warranty.manage') && (
             <button className="btn-secondary" disabled={busy} onClick={voidWarranty}>
-              Void
+              {t('platform.invoices.actions.void')}
             </button>
           )}
         </div>
@@ -71,27 +72,27 @@ export function WarrantyDetailPage() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13 }}>
-          <strong>Product:</strong> {warranty.product?.name ?? '—'} &nbsp; <strong>Vendor:</strong> {warranty.partner?.name ?? '—'}
+          <strong>{t('common.fields.product')}:</strong> {warranty.product?.name ?? '—'} &nbsp; <strong>{t('common.fields.vendor')}:</strong> {warranty.partner?.name ?? '—'}
         </p>
         <p style={{ fontSize: 13 }}>
-          <strong>Starts:</strong> {warranty.starts_at} &nbsp; <strong>Duration:</strong> {warranty.duration_months ?? '—'} months /{' '}
-          {warranty.duration_km ?? '—'} km / {warranty.duration_engine_hours ?? '—'} engine hrs
+          <strong>{t('warranty.fields.starts')}:</strong> {warranty.starts_at} &nbsp; <strong>{t('warranty.fields.duration')}:</strong> {warranty.duration_months ?? '—'} {t('warranty.fields.months')}{' '}
+          {warranty.duration_km ?? '—'} {t('warranty.fields.km')} {warranty.duration_engine_hours ?? '—'} {t('warranty.fields.engineHrs')}
         </p>
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Eligibility Check</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('warranty.sections.eligibilityCheck')}</h3>
         <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
-          <FormField label="Current Odometer (optional)">
+          <FormField label={t('warranty.fields.currentOdometerOptional')}>
             <NumericInput value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={{ ...inputStyle, width: 160 }} />
           </FormField>
           <button className="btn-secondary" disabled={busy} onClick={checkEligibility} style={{ marginBottom: 14 }}>
-            Check Eligibility
+            {t('warranty.actions.checkEligibility')}
           </button>
         </div>
         {eligibility && (
           <p style={{ fontSize: 14 }}>
-            Result: <StatusBadge status={eligibility} />
+            {t('documents.inspectionReport.result')}: <StatusBadge status={eligibility} />
           </p>
         )}
       </div>

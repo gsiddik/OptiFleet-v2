@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\Api\Tenant;
 
 use App\Domain\AccessControl\Services\DataScopeService;
-use App\Domain\Configuration\Services\DocumentPdfService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
-use App\Domain\Configuration\Services\DocumentTemplateRenderService;
+use App\Domain\DocumentGeneration\Support\DocumentSource;
 use App\Domain\Procurement\Models\PurchaseOrder;
 use App\Domain\Procurement\Models\PurchaseReturn;
 use App\Domain\Procurement\Services\PurchaseReturnService;
+use App\Http\Controllers\Concerns\PrintsDocuments;
 use App\Http\Controllers\Controller;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
@@ -16,6 +16,8 @@ use Illuminate\Http\Request;
 /** Purchase Order Return to Vendor (Return Orders): create, vendor decision, redelivery, print. */
 class PurchaseReturnController extends Controller
 {
+    use PrintsDocuments;
+
     public function __construct(
         private readonly PurchaseReturnService $returns,
         private readonly DataScopeService $scope,
@@ -63,18 +65,36 @@ class PurchaseReturnController extends Controller
      * Print Return Order: the tenant's published Return Order template as a PDF. Generating it
      * records that the Return Order was printed (a redelivery request becomes ready to receive).
      */
-    public function print(PurchaseReturn $purchaseReturn, DocumentTemplateRenderService $templates, DocumentPdfService $pdf)
+    public function print(Request $request, PurchaseReturn $purchaseReturn)
     {
         $this->authorizeReturn($purchaseReturn);
-        $context = DocumentTemplateContextBuilder::forPurchaseReturn($purchaseReturn);
-        $rendered = $templates->render('purchase_return', $context, $purchaseReturn->tenant_id, null, null, $purchaseReturn->warehouse_id);
-        $body = $pdf->fromHtml($rendered['html']);
+        $response = $this->printDocument($request, $this->purchaseReturnDocument($purchaseReturn));
         $this->returns->markPrinted($purchaseReturn, $this->context->user()->id);
 
-        return response($body, 200, [
-            'Content-Type' => 'application/pdf',
-            'Content-Disposition' => 'inline; filename="'.str_replace('/', '-', $purchaseReturn->return_number).'.pdf"',
-        ]);
+        return $response;
+    }
+
+    public function printGenerations(PurchaseReturn $purchaseReturn)
+    {
+        $this->authorizeReturn($purchaseReturn);
+
+        return $this->documentGenerations($this->purchaseReturnDocument($purchaseReturn));
+    }
+
+    public function generatePrint(Request $request, PurchaseReturn $purchaseReturn)
+    {
+        $this->authorizeReturn($purchaseReturn);
+
+        return $this->generateDocument($request, $this->purchaseReturnDocument($purchaseReturn));
+    }
+
+    private function purchaseReturnDocument(PurchaseReturn $purchaseReturn): DocumentSource
+    {
+        return new DocumentSource(
+            'purchase_return', 'purchase_return', $purchaseReturn->id, $purchaseReturn->tenant_id, str_replace('/', '-', $purchaseReturn->return_number).'.pdf',
+            fn (string $locale) => DocumentTemplateContextBuilder::forPurchaseReturn($purchaseReturn, $locale),
+            warehouseId: $purchaseReturn->warehouse_id,
+        );
     }
 
     private function authorizeOrder(PurchaseOrder $po): void

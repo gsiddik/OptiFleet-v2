@@ -4,6 +4,7 @@ import { ErrorState, LoadingState } from '../../../../components/States';
 import { inputStyle } from '../../../../components/FormField';
 import { useAuth } from '../../../../auth/AuthContext';
 import { NumericInput } from '../../../../components/NumericInput';
+import { t } from '../../../../i18n/i18n';
 
 interface CapacityRow {
   resource_type: string;
@@ -57,9 +58,9 @@ export function TenantCapacityTab({ tenantId }: { tenantId: string }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
         <thead>
           <tr style={{ textAlign: 'left', borderBottom: '1px solid #e5e7eb' }}>
-            <th style={{ padding: '8px 4px' }}>Resource</th>
-            <th style={{ padding: '8px 4px' }}>Current Usage</th>
-            <th style={{ padding: '8px 4px' }}>Max Limit</th>
+            <th style={{ padding: '8px 4px' }}>{t('common.fields.resource')}</th>
+            <th style={{ padding: '8px 4px' }}>{t('platform.tenants.fields.currentUsage')}</th>
+            <th style={{ padding: '8px 4px' }}>{t('platform.tenants.fields.maxLimit')}</th>
             <th style={{ padding: '8px 4px' }} />
           </tr>
         </thead>
@@ -75,13 +76,13 @@ export function TenantCapacityTab({ tenantId }: { tenantId: string }) {
                   onChange={(e) => setDrafts({ ...drafts, [r.resource_type]: e.target.value })}
                   style={{ ...inputStyle, width: 100 }}
                   disabled={!hasPermission('entitlement.manage')}
-                  placeholder="unlimited"
+                  placeholder={t('platform.tenants.placeholders.unlimited')}
                 />
               </td>
               <td style={{ padding: '8px 4px' }}>
                 {hasPermission('entitlement.manage') && (
                   <button className="btn-secondary" disabled={savingType === r.resource_type} onClick={() => save(r.resource_type)}>
-                    Save
+                    {t('common.actions.save')}
                   </button>
                 )}
               </td>

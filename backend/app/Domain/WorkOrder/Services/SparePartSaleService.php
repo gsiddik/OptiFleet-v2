@@ -6,6 +6,7 @@ use App\Domain\ComponentAsset\Models\ComponentAsset;
 use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Workflow\Models\WorkflowApprovalRequest;
@@ -47,10 +48,10 @@ class SparePartSaleService
         $unitPrice = (float) $data['unit_price'];
 
         if (! in_array($saleType, SparePartSale::SALE_TYPES, true)) {
-            throw new WorkOrderException('Sale type must be one of: '.implode(', ', SparePartSale::SALE_TYPES).'.');
+            throw new WorkOrderException(Messages::text('errors.workOrder.saleTypeMustBeOneOf', ['values' => implode(', ', SparePartSale::SALE_TYPES)]));
         }
         if (! in_array($buyerType, SparePartSale::BUYER_TYPES, true)) {
-            throw new WorkOrderException('Buyer type must be one of: '.implode(', ', SparePartSale::BUYER_TYPES).'.');
+            throw new WorkOrderException(Messages::text('errors.workOrder.buyerTypeMustBeOneOf', ['values' => implode(', ', SparePartSale::BUYER_TYPES)]));
         }
         if ($buyerType === 'PARTNER' && empty($data['partner_id'])) {
             throw new WorkOrderException('A PARTNER sale requires partner_id.');
@@ -120,7 +121,7 @@ class SparePartSaleService
         }
         $buyerType = $data['buyer_type'] ?? null;
         if (! in_array($buyerType, SparePartSale::BUYER_TYPES, true)) {
-            throw new WorkOrderException('Buyer type must be one of: '.implode(', ', SparePartSale::BUYER_TYPES).'.');
+            throw new WorkOrderException(Messages::text('errors.workOrder.buyerTypeMustBeOneOf', ['values' => implode(', ', SparePartSale::BUYER_TYPES)]));
         }
         if ($buyerType === 'PARTNER' && empty($data['partner_id'])) {
             throw new WorkOrderException('A PARTNER sale requires partner_id.');
@@ -183,11 +184,11 @@ class SparePartSaleService
         }
         $saleType = $data['sale_type'] ?? null;
         if (! in_array($saleType, SparePartSale::SALE_TYPES, true)) {
-            throw new WorkOrderException('Sale type must be one of: '.implode(', ', SparePartSale::SALE_TYPES).'.');
+            throw new WorkOrderException(Messages::text('errors.workOrder.saleTypeMustBeOneOf', ['values' => implode(', ', SparePartSale::SALE_TYPES)]));
         }
         $buyerType = $data['buyer_type'] ?? null;
         if (! in_array($buyerType, SparePartSale::BUYER_TYPES, true)) {
-            throw new WorkOrderException('Buyer type must be one of: '.implode(', ', SparePartSale::BUYER_TYPES).'.');
+            throw new WorkOrderException(Messages::text('errors.workOrder.buyerTypeMustBeOneOf', ['values' => implode(', ', SparePartSale::BUYER_TYPES)]));
         }
         if ($buyerType === 'PARTNER' && empty($data['partner_id'])) {
             throw new WorkOrderException('A PARTNER sale requires partner_id.');

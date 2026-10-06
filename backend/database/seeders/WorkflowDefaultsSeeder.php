@@ -2,7 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Shared\Support\Messages;
+use App\Domain\Shared\Support\StatusLabels;
 use App\Domain\Workflow\Services\WorkflowDefinitionService;
+use App\Domain\Workflow\Support\WorkflowActionVerbs;
 use Illuminate\Database\Seeder;
 
 /**
@@ -22,6 +25,20 @@ use Illuminate\Database\Seeder;
  */
 class WorkflowDefaultsSeeder extends Seeder
 {
+    /** Resource display names for the seeded workflow set names (never derived from the code). */
+    private const RESOURCE_LABELS = [
+        'maintenance_request' => 'Maintenance Request',
+        'work_order' => 'Work Order',
+        'vehicle_transfer' => 'Vehicle Transfer',
+        'breakdown' => 'Breakdown',
+        'stock_transfer' => 'Stock Transfer',
+        'purchase_request' => 'Purchase Request',
+        'purchase_order' => 'Purchase Order',
+        'warranty_claim' => 'Warranty Claim',
+        'used_part_disposition' => 'Used Part Disposition',
+        'sparepart_sale' => 'Sparepart Sale',
+    ];
+
     public function run(): void
     {
         $service = app(WorkflowDefinitionService::class);
@@ -33,21 +50,26 @@ class WorkflowDefaultsSeeder extends Seeder
 
     private function seedPlatformDefault(WorkflowDefinitionService $service, string $resourceType, array $payload): void
     {
-        $set = $service->findOrCreateSet(null, $resourceType, 'TENANT', null, ucwords(str_replace('_', ' ', $resourceType)).' Workflow', true);
+        $set = $service->findOrCreateSet(null, $resourceType, 'TENANT', null, Messages::text('workflow.defaults.setName', ['resourceType' => self::RESOURCE_LABELS[$resourceType]]), true);
         if ($set->publishedVersion()) {
             return;
         }
         $service->publish($service->createDraft($set, $payload, null, 'Initial platform default (migrated from hardcoded transitions)'), null);
     }
 
+    /** Display name from the status label registry (i18n structural preparation); the code is canonical. */
     private function status(string $code, bool $start = false): array
     {
-        return ['code' => $code, 'display_name' => ucwords(strtolower(str_replace('_', ' ', $code))), 'is_start' => $start];
+        return ['code' => $code, 'display_name' => StatusLabels::label($code), 'is_start' => $start];
     }
 
+    /**
+     * The action label is the owner-approved verb for the target status ("Approve" → APPROVED), not
+     * the status name. The action code and statuses are unchanged.
+     */
     private function transition(string $from, string $to): array
     {
-        return ['from_status' => $from, 'to_status' => $to, 'action_code' => strtolower($to), 'action_label' => ucwords(strtolower(str_replace('_', ' ', $to)))];
+        return ['from_status' => $from, 'to_status' => $to, 'action_code' => strtolower($to), 'action_label' => WorkflowActionVerbs::label($to) ?? StatusLabels::label($to)];
     }
 
     private function definitions(): array

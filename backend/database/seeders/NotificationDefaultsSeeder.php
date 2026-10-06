@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domain\Configuration\Services\ConfigurationService;
 use App\Domain\Notification\Models\NotificationRule;
 use App\Domain\Notification\Services\NotificationTemplateValidator;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Database\Seeder;
 
 /**
@@ -55,7 +56,7 @@ class NotificationDefaultsSeeder extends Seeder
         ];
 
         foreach ($templates as $eventCode => $channels) {
-            $set = $service->findOrCreateSet(null, 'NOTIFICATION', $eventCode, 'TENANT', null, ucwords(str_replace(['_', '.'], ' ', $eventCode)).' Notification', true);
+            $set = $service->findOrCreateSet(null, 'NOTIFICATION', $eventCode, 'TENANT', null, Messages::text('notifications.defaults.setName', ['eventName' => ucwords(str_replace(['_', '.'], ' ', $eventCode))]), true);
             if ($set->publishedVersion()) {
                 continue;
             }

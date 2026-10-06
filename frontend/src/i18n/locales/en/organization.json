@@ -1,0 +1,55 @@
+{
+  "actions": {
+    "newBranch": "+ New Branch",
+    "newWarehouse": "+ New Warehouse",
+    "newWorkshop": "+ New Workshop",
+    "rename": "Rename",
+    "storageLayout": "Storage Layout"
+  },
+  "confirm": {
+    "deleteCode": "Delete {{code}}?"
+  },
+  "empty": {
+    "noBranchesFound": "No branches found.",
+    "noneYet": "None yet.",
+    "noWarehousesFound": "No warehouses found.",
+    "noWorkshopsFound": "No workshops found.",
+    "selectARack": "Select a Rack",
+    "selectAZone": "Select a Zone"
+  },
+  "fields": {
+    "closed": "Closed",
+    "internal": "Internal",
+    "mobile": "Mobile",
+    "renameCode": "Rename {{code}}",
+    "satellite": "Satellite",
+    "serviceBays": "Service Bays",
+    "titleCode": "{{title}} code",
+    "titleName": "{{title}} name"
+  },
+  "help": {
+    "productsStoredBinWarehouseZoneRack": "Products are stored in a Bin (Warehouse → Zone → Rack → Bin). Select a Zone to see its Racks, and a Rack to see its Bins."
+  },
+  "modals": {
+    "editBranch": "Edit Branch",
+    "editWarehouse": "Edit Warehouse",
+    "editWorkshop": "Edit Workshop",
+    "newBranch": "New Branch",
+    "newWarehouse": "New Warehouse",
+    "newWorkshop": "New Workshop",
+    "storageLayoutName": "Storage Layout — {{name}}"
+  },
+  "placeholders": {
+    "code": "Code"
+  },
+  "sections": {
+    "bins": "Bins",
+    "racks": "Racks",
+    "zones": "Zones"
+  },
+  "titles": {
+    "branches": "Branches",
+    "warehouses": "Warehouses",
+    "workshops": "Workshops"
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { LanguageSelector } from '../components/LanguageSelector';
 import { Outlet } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
@@ -6,6 +7,7 @@ import { Breadcrumb } from '../components/Breadcrumb';
 import { NavDropdown } from '../components/NavDropdown';
 import { NAV_GROUPS, navItemAllowed } from './tenantNav';
 import { TenantSidebar } from './TenantSidebar';
+import { t } from '../i18n/i18n';
 
 const MINIMIZED_KEY = 'optifleet_sidebar_minimized';
 
@@ -34,22 +36,22 @@ function useIsMobile(): boolean {
 // dropdowns (see the header below) instead of sidebar entries — same
 // routes, same permissions, just relocated.
 const ACCOUNT_NAV = [
-  { to: '/app/account/company', label: 'Company Profile', permission: 'company.view' },
-  { to: '/app/account/subscription', label: 'Subscription', permission: 'account.subscription.view' },
-  { to: '/app/account/contract', label: 'Contract', permission: 'account.contract.view' },
-  { to: '/app/account/invoices', label: 'Invoices', permission: 'account.invoice.view' },
-  { to: '/app/account/payments', label: 'Payments', permission: 'account.payment.view' },
+  { to: '/app/account/company', labelKey: 'account.titles.companyProfile', permission: 'company.view' },
+  { to: '/app/account/subscription', labelKey: 'account.titles.subscription', permission: 'account.subscription.view' },
+  { to: '/app/account/contract', labelKey: 'breadcrumb.contract', permission: 'account.contract.view' },
+  { to: '/app/account/invoices', labelKey: 'nav.items.invoices', permission: 'account.invoice.view' },
+  { to: '/app/account/payments', labelKey: 'nav.items.payments', permission: 'account.payment.view' },
 ];
 
 const ORGANIZATION_NAV = [
-  { to: '/app/organization/branches', label: 'Branches', permission: 'branch.view' },
-  { to: '/app/organization/workshops', label: 'Workshops', permission: 'workshop.view' },
-  { to: '/app/organization/warehouses', label: 'Warehouses', permission: 'warehouse.view' },
+  { to: '/app/organization/branches', labelKey: 'organization.titles.branches', permission: 'branch.view' },
+  { to: '/app/organization/workshops', labelKey: 'organization.titles.workshops', permission: 'workshop.view' },
+  { to: '/app/organization/warehouses', labelKey: 'organization.titles.warehouses', permission: 'warehouse.view' },
 ];
 
 const ACCESS_NAV = [
-  { to: '/app/access/users', label: 'Users', permission: 'user.view' },
-  { to: '/app/access/roles', label: 'Roles', permission: 'role.view' },
+  { to: '/app/access/users', labelKey: 'access.titles.users', permission: 'user.view' },
+  { to: '/app/access/roles', labelKey: 'access.sections.roles', permission: 'role.view' },
 ];
 
 export function TenantLayout() {
@@ -146,11 +148,11 @@ export function TenantLayout() {
           <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', rowGap: 6, columnGap: 4, minWidth: 0 }}>
             <button
               className="tenant-mobile-toggle btn-secondary"
-              aria-label="Toggle menu"
+              aria-label={t('common.actions.toggleMenu')}
               onClick={() => setSidebarOpen((v) => !v)}
               style={{ marginRight: 8 }}
             >
-              ☰ Menu
+              {t('common.actions.menu')}
             </button>
             {/* Section 5.1: tenant name moved from the right side of the navbar to here, on the left. */}
             <span
@@ -170,9 +172,9 @@ export function TenantLayout() {
             >
               {currentMembership?.tenant_name}
             </span>
-            <NavDropdown label="Account" items={ACCOUNT_NAV.filter((item) => hasPermission(item.permission))} />
-            <NavDropdown label="Organization" items={ORGANIZATION_NAV.filter((item) => hasPermission(item.permission))} />
-            <NavDropdown label="Access" items={ACCESS_NAV.filter((item) => hasPermission(item.permission))} />
+            <NavDropdown label={t('nav.groups.account')} items={ACCOUNT_NAV.filter((item) => hasPermission(item.permission)).map((item) => ({ to: item.to, label: t(item.labelKey) }))} />
+            <NavDropdown label={t('nav.groups.organization')} items={ORGANIZATION_NAV.filter((item) => hasPermission(item.permission)).map((item) => ({ to: item.to, label: t(item.labelKey) }))} />
+            <NavDropdown label={t('nav.groups.access')} items={ACCESS_NAV.filter((item) => hasPermission(item.permission)).map((item) => ({ to: item.to, label: t(item.labelKey) }))} />
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
             {user && user.memberships.length > 1 && (
@@ -188,21 +190,21 @@ export function TenantLayout() {
                 ))}
               </select>
             )}
+            <LanguageSelector compact />
             <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
             <button className="btn-secondary" onClick={() => logout()}>
-              Logout
+              {t('common.actions.logout')}
             </button>
           </div>
         </header>
         {subscriptionStatus === 'SUSPENDED' && (
           <div style={{ background: '#b91c1c', color: '#fff', padding: '10px 24px', fontSize: 13, textAlign: 'center' }}>
-            Your subscription is suspended due to an outstanding payment. Operational features are restricted — visit Account →
-            Payments to resolve it.
+            {t('common.help.subscriptionSuspendedDueOutstandingPaymentOperational')}
           </div>
         )}
         {['GRACE_PERIOD', 'PAST_DUE'].includes(subscriptionStatus ?? '') && (
           <div style={{ background: '#fffbeb', color: '#a16207', padding: '10px 24px', fontSize: 13, textAlign: 'center', borderBottom: '1px solid #fde68a' }}>
-            Your account has an outstanding balance. Please settle it soon to avoid suspension — see Account → Payments.
+            {t('common.help.accountOutstandingBalancePleaseSettleSoon')}
           </div>
         )}
         <main className="tenant-main" style={{ flex: 1, padding: 24, minWidth: 0 }}>

@@ -28,27 +28,41 @@ import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney, sumMoney } from '../../../utils/money';
 import { formatDate, formatDateTime } from '../../../utils/date';
 import { DocumentViewer } from '../../../components/DocumentViewer';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
+import { useTabParam } from '../../../hooks/useTabParam';
+import type { TabDef } from '../../../utils/tabs';
 import { SearchableSelect, type SearchableOption } from '../../../components/SearchableSelect';
 import { WorkOrderTireOperationTab } from '../tires/operations/WorkOrderTireOperationTab';
 import type { TireOperationDetail } from '../tires/operations/tireOperationTypes';
 import { lineName } from '../../../utils/stockCondition';
 import { ScheduleWorkspaceModal } from './workspace/ScheduleWorkspaceModal';
 import { WorkOrderWorkspaceTab } from './workspace/WorkOrderWorkspaceTab';
-import { SCHEDULABLE_WORK_ORDER_STATUSES, START_BLOCKED_REASON, canStart } from './workspace/workspaceAssignment';
+import { SCHEDULABLE_WORK_ORDER_STATUSES, startBlockedReason, canStart } from './workspace/workspaceAssignment';
+import { labelText, t as tt, translatedRecord, withLabels } from '../../../i18n/i18n';
 
-const INTERNAL_TABS = [
-  'Overview', 'Complaint', 'Diagnosis', 'Jobs', 'Mechanic',
-  'Planned Parts', 'Issuance & Return', 'Workspace', 'QC', 'Road Test', 'External Services', 'Documents', 'History', 'Audit',
-] as const;
+// Stable tab ids drive state, ?tab= deep links and visibility rules; labels are display only.
+type Tab =
+  | 'overview' | 'complaint' | 'diagnosis' | 'jobs' | 'mechanic' | 'planned-parts' | 'issuance-return' | 'workspace'
+  | 'qc' | 'road-test' | 'external-services' | 'documents' | 'history' | 'audit' | 'findings' | 'tire-operations';
+const TAB_LABELS: Record<Tab, string> = translatedRecord({
+  overview: 'Overview', complaint: 'Complaint', diagnosis: 'Diagnosis', jobs: 'Jobs', mechanic: 'Mechanic',
+  'planned-parts': 'Planned Parts', 'issuance-return': 'Issuance & Return', workspace: 'Workspace', qc: 'QC',
+  'road-test': 'Road Test', 'external-services': 'External Services', documents: 'Documents', history: 'History',
+  audit: 'Audit', findings: 'Findings', 'tire-operations': 'Tire Operations',
+}, { overview: 'common.sections.overview', complaint: 'workOrder.sections.complaint', diagnosis: 'workOrder.sections.diagnosis', jobs: 'workOrder.sections.jobs', mechanic: 'workOrder.sections.mechanic', 'planned-parts': 'workOrder.sections.plannedParts', 'issuance-return': 'workOrder.sections.issuanceAndReturn', workspace: 'workOrder.sections.workspace', 'road-test': 'workOrder.sections.roadTest', 'external-services': 'workOrder.sections.externalServices', documents: 'vehicle.sections.documents', history: 'externalWorkOrderInvoice.modals.history', audit: 'workOrder.sections.audit', findings: 'workOrder.sections.findings', 'tire-operations': 'breadcrumb.tireOperations' });
+const ALL_TABS: readonly TabDef<Tab>[] = (Object.keys(TAB_LABELS) as Tab[]).map((id) => ({ id, label: TAB_LABELS[id] }));
+const INTERNAL_TABS: readonly Tab[] = [
+  'overview', 'complaint', 'diagnosis', 'jobs', 'mechanic',
+  'planned-parts', 'issuance-return', 'workspace', 'qc', 'road-test', 'external-services', 'documents', 'history', 'audit',
+];
 // Consolidated External Workshop business rules: an External-mode Work Order uses only Findings
 // as its scope — every internal-workshop tab (Diagnosis, Jobs, Mechanic, Planned Parts, Issuance
 // & Return, Workspace, QC, Road Test) is hidden, not just its actions. "External Services"
 // (towing / 3rd-party memos) is hidden too, in every status: the External Workshop's own
 // documents (acknowledged WAL, invoice, payment proof) are under Documents instead. The
 // decision is by execution mode, never by status; internal Work Orders keep the tab.
-const EXTERNAL_MODE_TABS = ['Overview', 'Findings', 'Documents', 'History', 'Audit'] as const;
-type Tab = (typeof INTERNAL_TABS)[number] | 'Findings' | 'Tire Operations';
+const EXTERNAL_MODE_TABS: readonly Tab[] = ['overview', 'findings', 'documents', 'history', 'audit'];
 
 /**
  * ORPHANED tabs: hidden from the active Work Order UI (owner decision). Their components, APIs,
@@ -56,10 +70,10 @@ type Tab = (typeof INTERNAL_TABS)[number] | 'Findings' | 'Tire Operations';
  * third-party memos) and Documents (read-only viewer; External Workshop documents stay in the
  * External Work Order Invoices flow).
  */
-const ORPHANED_TABS: readonly Tab[] = ['External Services', 'Documents'];
+const ORPHANED_TABS: readonly Tab[] = ['external-services', 'documents'];
 
 /** QC and Road Test belong to the QC step: shown only while the Work Order is pending QC (the API enforces the same). */
-const QC_STEP_TABS: readonly Tab[] = ['QC', 'Road Test'];
+const QC_STEP_TABS: readonly Tab[] = ['qc', 'road-test'];
 
 // Mirrors backend WorkOrderExecutionService — Findings/Diagnosis/Corrective Actions are
 // Draft-only (Add + Delete/Remove hidden afterward); Jobs/Mechanic/Planned Parts stay
@@ -75,37 +89,37 @@ const REQUEST_PARTS_VISIBLE_STATUSES = ['IN_PROGRESS', 'ON_HOLD', 'WAITING_PART'
 // narrower EXECUTABLE_STATUSES used by WorkOrderPartService.
 const PART_ACTION_STATUSES = ['ASSIGNED', 'SCHEDULED', 'IN_PROGRESS', 'ON_HOLD', 'WAITING_PART', 'REWORK'];
 
-const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
-  DRAFT: [{ action: 'submit', label: 'Submit', permission: 'work_order.submit', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
+const LIFECYCLE: Record<string, { action: string; label: string; labelKey?: string; permission: string; primary?: boolean }[]> = {
+  DRAFT: [{ action: 'submit', label: 'Submit', labelKey: 'common.actions.submit', permission: 'work_order.submit', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' }],
   SUBMITTED: [
-    { action: 'approve', label: 'Approve', permission: 'work_order.approve', primary: true },
-    { action: 'reject', label: 'Reject', permission: 'work_order.reject' },
-    { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
+    { action: 'approve', label: 'Approve', labelKey: 'common.actions.approve', permission: 'work_order.approve', primary: true },
+    { action: 'reject', label: 'Reject', labelKey: 'common.actions.reject', permission: 'work_order.reject' },
+    { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' },
   ],
-  APPROVED: [{ action: 'assign', label: 'Assign', permission: 'work_order.assign', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
+  APPROVED: [{ action: 'assign', label: 'Assign', labelKey: 'workOrder.fields.assign', permission: 'work_order.assign', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' }],
   // Moves the Work Order to SCHEDULED; where / when comes from its approved Workspace Assignment (Schedule Workspace).
-  ASSIGNED: [{ action: 'schedule', label: 'Mark as Scheduled', permission: 'work_order.schedule', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
+  ASSIGNED: [{ action: 'schedule', label: 'Mark as Scheduled', labelKey: 'workOrder.fields.markAsScheduled', permission: 'work_order.schedule', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' }],
   SCHEDULED: [
-    { action: 'start', label: 'Start', permission: 'work_order.start', primary: true },
-    { action: 'external', label: 'Send External', permission: 'work_order.pause' },
-    { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
+    { action: 'start', label: 'Start', labelKey: 'common.fields.start', permission: 'work_order.start', primary: true },
+    { action: 'external', label: 'Send External', labelKey: 'workOrder.fields.sendExternal', permission: 'work_order.pause' },
+    { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' },
   ],
   IN_PROGRESS: [
-    { action: 'hold', label: 'Hold', permission: 'work_order.pause' },
-    { action: 'wait-for-part', label: 'Wait for Part', permission: 'work_order.pause' },
-    { action: 'external', label: 'Send External', permission: 'work_order.pause' },
-    { action: 'submit-to-qc', label: 'Submit to QC', permission: 'work_order.complete', primary: true },
-    { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' },
+    { action: 'hold', label: 'Hold', labelKey: 'workOrder.fields.hold', permission: 'work_order.pause' },
+    { action: 'wait-for-part', label: 'Wait for Part', labelKey: 'workOrder.fields.waitForPart', permission: 'work_order.pause' },
+    { action: 'external', label: 'Send External', labelKey: 'workOrder.fields.sendExternal', permission: 'work_order.pause' },
+    { action: 'submit-to-qc', label: 'Submit to QC', labelKey: 'workOrder.fields.submitToQc', permission: 'work_order.complete', primary: true },
+    { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' },
   ],
-  ON_HOLD: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
-  WAITING_PART: [{ action: 'resume', label: 'Resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'work_order.cancel' }],
+  ON_HOLD: [{ action: 'resume', label: 'Resume', labelKey: 'workOrder.actions.resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' }],
+  WAITING_PART: [{ action: 'resume', label: 'Resume', labelKey: 'workOrder.actions.resume', permission: 'work_order.pause', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'work_order.cancel' }],
   // EXTERNAL has no entry here: its header actions (Print/Revise/Cancel) are rendered by the
   // isExternalMode branch below, which forces `actions` to [] — see "Perbaikan Tenant Portal -
   // Work Order Status External dan Workshop Invoice" Section 3.
-  REWORK: [{ action: 'resume', label: 'Resume to In Progress', permission: 'work_order.pause', primary: true }],
+  REWORK: [{ action: 'resume', label: 'Resume to In Progress', labelKey: 'workOrder.fields.resumeToInProgress', permission: 'work_order.pause', primary: true }],
   /** G-03: previously nothing in the UI could ever invoke this transition — a WO reaching QC_PENDING had no path to COMPLETED at all. */
-  QC_PENDING: [{ action: 'complete', label: 'Complete', permission: 'work_order.complete', primary: true }],
-  COMPLETED: [{ action: 'close', label: 'Close', permission: 'work_order.close', primary: true }],
+  QC_PENDING: [{ action: 'complete', label: 'Complete', labelKey: 'common.actions.complete', permission: 'work_order.complete', primary: true }],
+  COMPLETED: [{ action: 'close', label: 'Close', labelKey: 'common.actions.close', permission: 'work_order.close', primary: true }],
 };
 
 /** The status each lifecycle action moves the work order into (the workflow decides when it is offered). */
@@ -122,7 +136,7 @@ export function WorkOrderDetailPage() {
   const available = useWorkflowTransitions('work_order', id, wo?.status);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>('Overview');
+  const [tab, setTab] = useTabParam(ALL_TABS, 'overview');
   const [showSchedule, setShowSchedule] = useState(false);
   const [showComplete, setShowComplete] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -224,7 +238,7 @@ export function WorkOrderDetailPage() {
 
   async function cancelExternal() {
     if (!cancelReason.trim()) {
-      setError('A cancellation reason is required.');
+      setError(tt('workOrder.validation.cancellationReasonRequired'));
       return;
     }
     setBusy(true);
@@ -247,22 +261,22 @@ export function WorkOrderDetailPage() {
   const isExternalMode = wo.execution_mode === 'EXTERNAL';
   const baseTabs: readonly Tab[] = (isExternalMode ? EXTERNAL_MODE_TABS : INTERNAL_TABS).filter(
     (t) =>
-      (t !== 'Issuance & Return' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status)) &&
+      (t !== 'issuance-return' || REQUEST_PARTS_VISIBLE_STATUSES.includes(wo.status)) &&
       !ORPHANED_TABS.includes(t) &&
       (!QC_STEP_TABS.includes(t) || wo.status === 'QC_PENDING'),
   );
   // Tire Operations sits between Planned Parts and Issuance & Return.
-  const tireOperationsAt = baseTabs.indexOf('Planned Parts') + 1 || baseTabs.length;
-  const visibleTabs: readonly Tab[] = tireOperation ? [...baseTabs.slice(0, tireOperationsAt), 'Tire Operations', ...baseTabs.slice(tireOperationsAt)] : baseTabs;
+  const tireOperationsAt = baseTabs.indexOf('planned-parts') + 1 || baseTabs.length;
+  const visibleTabs: readonly Tab[] = tireOperation ? [...baseTabs.slice(0, tireOperationsAt), 'tire-operations', ...baseTabs.slice(tireOperationsAt)] : baseTabs;
   // A tab that is not offered (orphaned, or QC / Road Test outside QC_PENDING) never renders.
-  const activeTab: Tab = visibleTabs.includes(tab) ? tab : 'Overview';
+  const activeTab: Tab = visibleTabs.includes(tab) ? tab : 'overview';
   const actions = isExternalMode
     ? []
     : (LIFECYCLE[wo.status] ?? []).filter((a) => hasPermission(a.permission)).filter(allowedByWorkflow(available, ACTION_TARGET));
 
   return (
     <div>
-      <BackButton fallbackTo="/app/work-orders" label="← Back to Work Order" />
+      <BackButton fallbackTo="/app/work-orders" label={tt('workOrder.actions.backToWorkOrder')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 8, flexWrap: 'wrap' }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>
           {wo.wo_number} <span style={{ color: '#9ca3af', fontWeight: 400 }}>({wo.vehicle?.registration_number})</span>
@@ -271,47 +285,48 @@ export function WorkOrderDetailPage() {
           <StatusBadge status={wo.status} />
           {isExternalMode && (
             <span style={{ fontSize: 12, color: '#6b7280' }}>
-              External · Rev {wo.external_finalized_revision || '—'}
+              {tt('workOrder.fields.externalRev')} {wo.external_finalized_revision || '—'}
             </span>
           )}
           {hasPermission('work_order.view') && (
             <button className="btn-secondary" disabled={printing} onClick={printWorkOrder}>
-              {printing ? 'Loading…' : 'Print'}
+              {printing ? tt('common.actions.loading') : tt('common.actions.print')}
             </button>
           )}
+          {hasPermission('work_order.view') && <DocumentVersionsButton printPath={`/app/work-orders/${wo.id}/print`} />}
           {!isExternalMode && wo.status === 'DRAFT' && hasPermission('work_order.prepare_external') && (
             <button className="btn-secondary" disabled={busy} onClick={markExternalWorkshop}>
-              Select External Workshop
+              {tt('workOrder.actions.selectExternalWorkshop')}
             </button>
           )}
           {isExternalMode && wo.status === 'DRAFT' && hasPermission('work_order.finalize_external') && (
             <button
               className="btn-primary"
               disabled={busy || (wo.findings?.length ?? 0) < 1}
-              title={(wo.findings?.length ?? 0) < 1 ? 'At least one Finding is required before finalizing.' : undefined}
+              title={(wo.findings?.length ?? 0) < 1 ? tt('workOrder.tooltips.leastOneFindingRequiredBeforeFinalizing') : undefined}
               onClick={finalizeExternal}
             >
-              External Workshop
+              {tt('workOrder.actions.externalWorkshop')}
             </button>
           )}
           {isExternalMode && wo.status === 'DRAFT' && hasPermission('work_order.cancel') && (
             <button className="btn-secondary" disabled={busy} onClick={() => act('cancel')}>
-              Cancel
+              {tt('common.actions.cancelRecord')}
             </button>
           )}
           {isExternalMode && wo.status === 'EXTERNAL' && hasPermission('work_order.revise_external') && (
             <button className="btn-secondary" disabled={busy} onClick={() => setShowReviseConfirm(true)}>
-              Revise
+              {tt('workOrder.actions.revise')}
             </button>
           )}
           {isExternalMode && wo.status === 'EXTERNAL' && hasPermission('work_order.cancel_external') && (
             <button className="btn-secondary" disabled={busy} onClick={() => setShowCancelExternal(true)}>
-              Cancel
+              {tt('common.actions.cancel')}
             </button>
           )}
           {!isExternalMode && SCHEDULABLE_WORK_ORDER_STATUSES.includes(wo.status) && hasPermission('workspace.reserve') && (
             <button className="btn-secondary" disabled={busy} onClick={() => setShowSchedule(true)}>
-              Schedule Workspace
+              {tt('workOrder.actions.scheduleWorkspace')}
             </button>
           )}
           {!isExternalMode &&
@@ -319,8 +334,8 @@ export function WorkOrderDetailPage() {
               // SCHEDULED → IN_PROGRESS needs an approved workspace and work date (the backend enforces it too).
               const blocked = a.action === 'start' && wo.status === 'SCHEDULED' && !canStart(wo);
               return (
-                <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy || blocked} title={blocked ? START_BLOCKED_REASON : undefined} onClick={() => act(a.action)}>
-                  {a.label}
+                <button key={a.action} className={a.primary ? 'btn-primary' : 'btn-secondary'} disabled={busy || blocked} title={blocked ? startBlockedReason() : undefined} onClick={() => act(a.action)}>
+                  {labelText(a)}
                 </button>
               );
             })}
@@ -329,51 +344,50 @@ export function WorkOrderDetailPage() {
 
       {!isExternalMode && wo.status === 'SCHEDULED' && !canStart(wo) && (
         <p role="note" data-start-blocked style={{ fontSize: 13, color: '#b45309', marginTop: -8, marginBottom: 16 }}>
-          {START_BLOCKED_REASON}
+          {startBlockedReason()}
         </p>
       )}
 
       {isExternalMode && wo.status === 'DRAFT' && (wo.findings?.length ?? 0) < 1 && (
         <p style={{ fontSize: 13, color: '#b45309', marginTop: -8, marginBottom: 16 }}>
-          Add at least one Finding on the Findings tab before this Work Order can be finalized as External.
+          {tt('workOrder.help.addLeastOneFindingFindingsTab')}
         </p>
       )}
 
       {wo.status === 'CANCELLED' && wo.cancellation_reason && (
         <p style={{ fontSize: 13, color: '#6b7280', marginTop: -8, marginBottom: 16 }}>
-          <strong>Cancellation reason:</strong> {wo.cancellation_reason}
+          <strong>{tt('common.fields.cancellationReason')}:</strong> {wo.cancellation_reason}
         </p>
       )}
 
-      <Modal open={showReviseConfirm} title="Revise External Work Order" onClose={() => setShowReviseConfirm(false)}>
+      <Modal open={showReviseConfirm} title={tt('workOrder.modals.reviseExternalWorkOrder')} onClose={() => setShowReviseConfirm(false)}>
         <p style={{ fontSize: 13 }}>
-          This returns the Work Order to Draft so its Findings can be edited. The current finalized revision
-          (Rev {wo.external_finalized_revision}) is preserved in history. Continue?
+          {tt('workOrder.help.returnsWorkOrderDraftSoFindings', { external_finalized_revision: wo.external_finalized_revision })}
         </p>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setShowReviseConfirm(false)} disabled={busy}>
-            Cancel
+            {tt('common.actions.cancel')}
           </button>
           <button className="btn-primary" onClick={reviseExternal} disabled={busy}>
-            Revise
+            {tt('workOrder.actions.revise')}
           </button>
         </div>
       </Modal>
 
-      <Modal open={showCancelExternal} title="Cancel External Work Order" onClose={() => setShowCancelExternal(false)}>
-        <p style={{ fontSize: 13 }}>This cannot be undone. A cancellation reason is required.</p>
+      <Modal open={showCancelExternal} title={tt('externalWorkOrderInvoice.modals.cancelExternalWorkOrder')} onClose={() => setShowCancelExternal(false)}>
+        <p style={{ fontSize: 13 }}>{tt('workOrder.warnings.cannotUndoneCancellationReasonRequired')}</p>
         <textarea
           value={cancelReason}
           onChange={(e) => setCancelReason(e.target.value)}
-          placeholder="Cancellation reason (required)"
+          placeholder={tt('workOrder.placeholders.cancellationReasonRequired')}
           style={{ width: '100%', minHeight: 70, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}
         />
         <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
           <button className="btn-secondary" onClick={() => setShowCancelExternal(false)} disabled={busy}>
-            Back
+            {tt('common.actions.back')}
           </button>
           <button className="btn-primary" onClick={cancelExternal} disabled={busy}>
-            Confirm Cancel
+            {tt('externalWorkOrderInvoice.actions.confirmCancel')}
           </button>
         </div>
       </Modal>
@@ -396,27 +410,27 @@ export function WorkOrderDetailPage() {
               fontSize: 13,
             }}
           >
-            {t}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
 
-      {activeTab === 'Overview' && <OverviewTab wo={wo} onChanged={load} />}
-      {activeTab === 'Tire Operations' && tireOperation && <WorkOrderTireOperationTab operation={tireOperation} />}
-      {activeTab === 'Complaint' && <ComplaintTab wo={wo} onChanged={load} />}
-      {activeTab === 'Diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
-      {activeTab === 'Jobs' && <JobsTab wo={wo} onChanged={load} />}
-      {activeTab === 'Mechanic' && <MechanicTab wo={wo} onChanged={load} />}
-      {activeTab === 'Planned Parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
-      {activeTab === 'Issuance & Return' && <IssuanceReturnTab wo={wo} onChanged={load} />}
-      {activeTab === 'Workspace' && <WorkOrderWorkspaceTab wo={wo} onChanged={load} />}
-      {activeTab === 'QC' && <QcTab wo={wo} onChanged={load} />}
-      {activeTab === 'Road Test' && <RoadTestTab wo={wo} onChanged={load} />}
-      {activeTab === 'Findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
-      {activeTab === 'External Services' && <ExternalServicesTab wo={wo} onChanged={load} />}
-      {activeTab === 'Documents' && <DocumentsTab workOrderId={wo.id} />}
-      {activeTab === 'History' && <HistoryTab vehicleId={wo.vehicle_id} />}
-      {activeTab === 'Audit' && <AuditTab workOrderId={wo.id} />}
+      {activeTab === 'overview' && <OverviewTab wo={wo} onChanged={load} />}
+      {activeTab === 'tire-operations' && tireOperation && <WorkOrderTireOperationTab operation={tireOperation} />}
+      {activeTab === 'complaint' && <ComplaintTab wo={wo} onChanged={load} />}
+      {activeTab === 'diagnosis' && <DiagnosisTab wo={wo} onChanged={load} />}
+      {activeTab === 'jobs' && <JobsTab wo={wo} onChanged={load} />}
+      {activeTab === 'mechanic' && <MechanicTab wo={wo} onChanged={load} />}
+      {activeTab === 'planned-parts' && <PlannedPartsEstimatesTab wo={wo} onChanged={load} />}
+      {activeTab === 'issuance-return' && <IssuanceReturnTab wo={wo} onChanged={load} />}
+      {activeTab === 'workspace' && <WorkOrderWorkspaceTab wo={wo} onChanged={load} />}
+      {activeTab === 'qc' && <QcTab wo={wo} onChanged={load} />}
+      {activeTab === 'road-test' && <RoadTestTab wo={wo} onChanged={load} />}
+      {activeTab === 'findings' && <ExternalFindingsTab wo={wo} onChanged={load} />}
+      {activeTab === 'external-services' && <ExternalServicesTab wo={wo} onChanged={load} />}
+      {activeTab === 'documents' && <DocumentsTab workOrderId={wo.id} />}
+      {activeTab === 'history' && <HistoryTab vehicleId={wo.vehicle_id} />}
+      {activeTab === 'audit' && <AuditTab workOrderId={wo.id} />}
 
       <ScheduleWorkspaceModal open={showSchedule} wo={wo} onClose={() => setShowSchedule(false)} onDone={load} />
       <CompleteModal open={showComplete} wo={wo} onClose={() => setShowComplete(false)} onCompleted={load} />
@@ -447,17 +461,17 @@ function CompleteModal({ open, wo, onClose, onCompleted }: { open: boolean; wo: 
   }
 
   return (
-    <Modal open={open} title="Complete Work Order" onClose={onClose}>
+    <Modal open={open} title={tt('workOrder.modals.completeWorkOrder')} onClose={onClose}>
       {error && <ErrorState message={error} />}
-      <FormField label="Result Summary (optional)">
+      <FormField label={tt('workOrder.fields.resultSummaryOptional')}>
         <textarea value={resultSummary} onChange={(e) => setResultSummary(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          Complete
+          {tt('common.actions.complete')}
         </button>
       </div>
     </Modal>
@@ -495,23 +509,23 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     laborCost !== null || partsCost !== null ? sumMoney(laborCost, partsCost) : null;
 
   const rows: [string, string][] = [
-    ['Vehicle', wo.vehicle?.registration_number ?? wo.vehicle_id],
-    ['Branch', wo.branch?.name ?? '—'],
-    ['Workshop', wo.workshop?.name ?? '—'],
-    ['Maintenance Type', wo.maintenance_type],
-    ['Priority', wo.priority],
-    ['Current Odometer', wo.current_odometer ?? '—'],
-    ['Est. Number of Mechanic', wo.estimated_number_of_mechanics != null ? String(wo.estimated_number_of_mechanics) : '—'],
-    ['Est. Total Hours', wo.estimated_total_hours ?? '—'],
-    ['Estimated Labor Cost', formatMoney(laborCost)],
-    ['Estimated Parts Cost', formatMoney(partsCost)],
-    ['Estimated Total Cost', formatMoney(totalCost)],
-    ['Target Start', wo.target_start_at ? new Date(wo.target_start_at).toLocaleString() : '—'],
-    ['Target Completion', wo.target_completion_at ? new Date(wo.target_completion_at).toLocaleString() : '—'],
-    ['Started At', wo.started_at ? new Date(wo.started_at).toLocaleString() : '—'],
-    ['Completed At', wo.completed_at ? new Date(wo.completed_at).toLocaleString() : '—'],
-    ['Closed At', wo.closed_at ? new Date(wo.closed_at).toLocaleString() : '—'],
-    ['Result Summary', wo.result_summary ?? '—'],
+    [tt('common.fields.vehicle'), wo.vehicle?.registration_number ?? wo.vehicle_id],
+    [tt('common.fields.branch'), wo.branch?.name ?? '—'],
+    [tt('common.fields.workshop'), wo.workshop?.name ?? '—'],
+    [tt('maintenance.fields.maintenanceType'), wo.maintenance_type],
+    [tt('common.fields.priority'), wo.priority],
+    [tt('vehicle.fields.currentOdometer'), wo.current_odometer ?? '—'],
+    [tt('workOrder.help.estNumberOfMechanic'), wo.estimated_number_of_mechanics != null ? String(wo.estimated_number_of_mechanics) : '—'],
+    [tt('workOrder.fields.estTotalHours'), wo.estimated_total_hours ?? '—'],
+    [tt('workOrder.fields.estimatedLaborCost'), formatMoney(laborCost)],
+    [tt('workOrder.fields.estimatedPartsCost'), formatMoney(partsCost)],
+    [tt('workOrder.fields.estimatedTotalCost'), formatMoney(totalCost)],
+    [tt('workOrder.fields.targetStart'), wo.target_start_at ? formatDateTime(wo.target_start_at) : '—'],
+    [tt('workOrder.fields.targetCompletion'), wo.target_completion_at ? formatDateTime(wo.target_completion_at) : '—'],
+    [tt('workOrder.fields.startedAt'), wo.started_at ? formatDateTime(wo.started_at) : '—'],
+    [tt('workOrder.fields.completedAt'), wo.completed_at ? formatDateTime(wo.completed_at) : '—'],
+    [tt('workOrder.fields.closedAt'), wo.closed_at ? formatDateTime(wo.closed_at) : '—'],
+    [tt('workOrder.fields.resultSummary'), wo.result_summary ?? '—'],
   ];
 
   return (
@@ -520,7 +534,7 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
         {canEdit && (
           <div style={{ textAlign: 'right', marginBottom: 8 }}>
             <button className="btn-secondary" onClick={() => setEditing(true)}>
-              Edit Details
+              {tt('workOrder.actions.editDetails')}
             </button>
           </div>
         )}
@@ -539,7 +553,7 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
           Complaint yang seharusnya hanya muncul jika Work Order dibuat oleh user"). */}
       {!wo.maintenance_request_id && (
         <div className="card" style={{ marginTop: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Complaint</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.complaint')}</h3>
           <p style={{ fontSize: 13 }}>{wo.complaint || '—'}</p>
         </div>
       )}
@@ -584,9 +598,9 @@ function EditWorkOrderModal({ wo, onClose, onSaved }: { wo: WorkOrderItem; onClo
   }
 
   return (
-    <Modal open title={`Edit ${wo.wo_number}`} onClose={onClose}>
+    <Modal open title={tt('workOrder.modals.editWoNumber', { wo_number: wo.wo_number })} onClose={onClose}>
       {error && <ErrorState message={error} />}
-      <FormField label="Priority" required>
+      <FormField label={tt('common.fields.priority')} required>
         <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>
           {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
             <option key={p} value={p}>
@@ -596,16 +610,16 @@ function EditWorkOrderModal({ wo, onClose, onSaved }: { wo: WorkOrderItem; onClo
         </select>
       </FormField>
       {!wo.maintenance_request_id && (
-        <FormField label="Complaint">
+        <FormField label={tt('workOrder.sections.complaint')}>
           <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 80 }} />
         </FormField>
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <button className="btn-secondary" onClick={onClose} disabled={busy}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" onClick={save} disabled={busy}>
-          {busy ? 'Saving…' : 'Save'}
+          {busy ? tt('common.actions.saving') : tt('common.actions.save')}
         </button>
       </div>
     </Modal>
@@ -656,8 +670,8 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
   return (
     <div>
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Findings</h3>
-        {(wo.findings ?? []).length === 0 && <EmptyState label="No findings recorded." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.findings')}</h3>
+        {(wo.findings ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noFindingsRecorded')} />}
         {(wo.findings ?? []).map((f) => (
           <div key={f.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', display: 'flex', gap: 10, alignItems: 'center', fontSize: 13 }}>
             <StatusBadge status={f.severity} />
@@ -665,12 +679,12 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
             <span style={{ flex: 1 }}>{f.description}</span>
             {f.status === 'OPEN' && hasPermission('diagnosis.manage') && (
               <button className="btn-secondary" disabled={busy} onClick={() => resolveFinding(f.id)}>
-                Resolve
+                {tt('workOrder.actions.resolve')}
               </button>
             )}
             {editable && (
               <button className="btn-secondary" disabled={busy} onClick={() => deleteFinding(f.id)}>
-                Delete
+                {tt('common.actions.delete')}
               </button>
             )}
           </div>
@@ -684,9 +698,9 @@ function ComplaintTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
                 </option>
               ))}
             </select>
-            <input placeholder="Finding description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
+            <input placeholder={tt('workOrder.search.findingDescription')} value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
             <button className="btn-secondary" disabled={busy || !description} onClick={addFinding}>
-              Add Finding
+              {tt('workOrder.actions.addFinding')}
             </button>
           </div>
         )}
@@ -766,9 +780,9 @@ function ExternalFindingsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Findings (External Scope of Work)</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.findingsExternalScopeWork')}</h3>
       {error && <ErrorState message={error} />}
-      {(wo.findings ?? []).length === 0 && <EmptyState label="No findings recorded." />}
+      {(wo.findings ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noFindingsRecorded')} />}
       {(wo.findings ?? []).map((f) => (
         <div key={f.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           {editingId === f.id ? (
@@ -782,10 +796,10 @@ function ExternalFindingsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
               </select>
               <input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} style={inputStyle} />
               <button className="btn-primary" disabled={busy} onClick={() => saveEdit(f.id)}>
-                Save
+                {tt('common.actions.save')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={() => setEditingId(null)}>
-                Cancel
+                {tt('common.actions.cancel')}
               </button>
             </div>
           ) : (
@@ -795,10 +809,10 @@ function ExternalFindingsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
               {editable && (
                 <>
                   <button className="btn-secondary" disabled={busy} onClick={() => startEdit(f)}>
-                    Edit
+                    {tt('common.actions.edit')}
                   </button>
                   <button className="btn-secondary" disabled={busy} onClick={() => deleteFinding(f.id)}>
-                    Delete
+                    {tt('common.actions.delete')}
                   </button>
                 </>
               )}
@@ -815,13 +829,13 @@ function ExternalFindingsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
               </option>
             ))}
           </select>
-          <input placeholder="Finding description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
+          <input placeholder={tt('workOrder.search.findingDescription')} value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !description} onClick={addFinding}>
-            Add Finding
+            {tt('workOrder.actions.addFinding')}
           </button>
         </div>
       ) : (
-        wo.status !== 'DRAFT' && <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 12 }}>Findings are read-only once finalized.</p>
+        wo.status !== 'DRAFT' && <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 12 }}>{tt('workOrder.help.findingsReadOnlyOnceFinalized')}</p>
       )}
     </div>
   );
@@ -884,19 +898,19 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
   return (
     <div>
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Diagnoses</h3>
-        {(wo.diagnoses ?? []).length === 0 && <EmptyState label="No diagnoses recorded." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.diagnoses')}</h3>
+        {(wo.diagnoses ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noDiagnosesRecorded')} />}
         {(wo.diagnoses ?? []).map((d) => (
           <div key={d.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div>
-                <strong>Root Cause:</strong> {d.root_cause}
+                <strong>{tt('workOrder.fields.rootCause')}:</strong> {d.root_cause}
               </div>
               {d.notes && <div style={{ color: '#6b7280' }}>{d.notes}</div>}
             </div>
             {canManage && (
               <button className="btn-secondary" disabled={busy} onClick={() => deleteDiagnosis(d.id)}>
-                Delete
+                {tt('common.actions.delete')}
               </button>
             )}
           </div>
@@ -905,33 +919,33 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
           <div style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
               <select value={findingId} onChange={(e) => setFindingId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-                <option value="">Link to finding (optional)</option>
+                <option value="">{tt('workOrder.fields.linkToFindingOptional')}</option>
                 {(wo.findings ?? []).map((f) => (
                   <option key={f.id} value={f.id}>
                     {f.description.slice(0, 40)}
                   </option>
                 ))}
               </select>
-              <input placeholder="Root cause" value={rootCause} onChange={(e) => setRootCause(e.target.value)} style={inputStyle} />
+              <input placeholder={tt('workOrder.placeholders.rootCause')} value={rootCause} onChange={(e) => setRootCause(e.target.value)} style={inputStyle} />
             </div>
-            <textarea placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, minHeight: 50, marginBottom: 8 }} />
+            <textarea placeholder={tt('workOrder.fields.notesOptional')} value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, minHeight: 50, marginBottom: 8 }} />
             <button className="btn-secondary" disabled={busy || !rootCause} onClick={addDiagnosis}>
-              Add Diagnosis
+              {tt('workOrder.actions.addDiagnosis')}
             </button>
           </div>
         )}
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Corrective Actions</h3>
-        {(wo.corrective_actions ?? []).length === 0 && <EmptyState label="No corrective actions recorded." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.correctiveActions')}</h3>
+        {(wo.corrective_actions ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noCorrectiveActionsRecorded')} />}
         {(wo.corrective_actions ?? []).map((c) => (
           <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10, alignItems: 'center' }}>
             <StatusBadge status={c.status} />
             <span style={{ flex: 1 }}>{c.action_description}</span>
             {canManage && (
               <button className="btn-secondary" disabled={busy} onClick={() => deleteCorrectiveAction(c.id)}>
-                Delete
+                {tt('common.actions.delete')}
               </button>
             )}
           </div>
@@ -939,16 +953,16 @@ function DiagnosisTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => v
         {canManage && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
             <select value={diagnosisId} onChange={(e) => setDiagnosisId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-              <option value="">Link to diagnosis (optional)</option>
+              <option value="">{tt('workOrder.fields.linkToDiagnosisOptional')}</option>
               {(wo.diagnoses ?? []).map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.root_cause.slice(0, 40)}
                 </option>
               ))}
             </select>
-            <input placeholder="Action description" value={actionDescription} onChange={(e) => setActionDescription(e.target.value)} style={inputStyle} />
+            <input placeholder={tt('workOrder.placeholders.actionDescription')} value={actionDescription} onChange={(e) => setActionDescription(e.target.value)} style={inputStyle} />
             <button className="btn-secondary" disabled={busy || !actionDescription} onClick={addCorrectiveAction}>
-              Add Action
+              {tt('workOrder.actions.addAction')}
             </button>
           </div>
         )}
@@ -995,19 +1009,19 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Maintenance Jobs</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.maintenanceJobs')}</h3>
       <div style={{ fontSize: 13, color: '#374151', marginBottom: 8 }}>
-        Est. Total Hours: <strong>{wo.estimated_total_hours ?? '—'}</strong>
+        {tt('workOrder.fields.estTotalHours')}: <strong>{wo.estimated_total_hours ?? '—'}</strong>
       </div>
-      {(wo.jobs ?? []).length === 0 && <EmptyState label="No jobs added." />}
+      {(wo.jobs ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noJobsAdded')} />}
       {(wo.jobs ?? []).map((j) => (
         <div key={j.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <strong>{j.service_item ?? 'Job'}</strong> — {j.description}
+              <strong>{j.service_item ?? tt('workOrder.fields.job')}</strong> — {j.description}
               <div style={{ color: '#6b7280' }}>
-                Est. {j.estimated_hours ?? '—'}h / Actual {j.actual_hours ?? '—'}h
-                {j.estimated_labor_cost_computed && ` · Est. Labor Cost: ${formatMoney(j.estimated_labor_cost_computed)}`}
+                {tt('workOrder.help.est')} {j.estimated_hours ?? '—'}{tt('workOrder.fields.hActual')} {j.actual_hours ?? '—'}h
+                {j.estimated_labor_cost_computed && tt('workOrder.help.estLaborCostEstimatedLaborCost', { estimated_labor_cost_computed: formatMoney(j.estimated_labor_cost_computed) })}
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1022,7 +1036,7 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
                   style={{ ...inputStyle, width: 140 }}
                   disabled={busy}
                 >
-                  <option value="">Change status…</option>
+                  <option value="">{tt('workOrder.fields.changeStatus')}</option>
                   {['ASSIGNED', 'IN_PROGRESS', 'ON_HOLD', 'COMPLETED', 'CANCELLED'].map((s) => (
                     <option key={s} value={s}>
                       {s}
@@ -1036,11 +1050,11 @@ function JobsTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }
       ))}
       {canAdd && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-          <input placeholder="Service item" value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} style={{ ...inputStyle, width: 160 }} />
-          <input placeholder="Job description" value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
-          <NumericInput placeholder="Est. hours" value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <input placeholder={tt('workOrder.placeholders.serviceItem')} value={serviceItem} onChange={(e) => setServiceItem(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+          <input placeholder={tt('workOrder.placeholders.jobDescription')} value={description} onChange={(e) => setDescription(e.target.value)} style={inputStyle} />
+          <NumericInput placeholder={tt('workOrder.placeholders.estHours')} value={estimatedHours} onChange={(e) => setEstimatedHours(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <button className="btn-secondary" disabled={busy || !description} onClick={addJob}>
-            Add Job
+            {tt('workOrder.actions.addJob')}
           </button>
         </div>
       )}
@@ -1122,17 +1136,17 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     <div>
       {error && <ErrorState message={error} />}
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Mechanic Assignments</h3>
-        {(wo.mechanic_assignments ?? []).length === 0 && <EmptyState label="No mechanics assigned." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.mechanicAssignments')}</h3>
+        {(wo.mechanic_assignments ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noMechanicsAssigned')} />}
         {(wo.mechanic_assignments ?? []).map((a) => (
           <div key={a.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between' }}>
             <span>
               {a.worker?.name ?? a.worker_id} — {a.role} {a.maintenance_job_id ? '(job-specific)' : '(WO-wide)'}
-              {a.hourly_rate_snapshot && ` · Rate at assignment: ${a.hourly_rate_snapshot}/hr`}
+              {a.hourly_rate_snapshot && tt('workOrder.help.rateAssignmentHourlyRateSnapshotHr', { hourly_rate_snapshot: a.hourly_rate_snapshot })}
             </span>
             {canAssign && !a.unassigned_at && (
               <button className="btn-secondary" disabled={busy} onClick={() => unassign(a.id)}>
-                Unassign
+                {tt('workOrder.actions.unassign')}
               </button>
             )}
           </div>
@@ -1140,7 +1154,7 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
         {canAdd && (
           <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
             <select value={workerId} onChange={(e) => setWorkerId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-              <option value="">Select worker…</option>
+              <option value="">{tt('workOrder.fields.selectWorker')}</option>
               {workers.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name} ({w.worker_type})
@@ -1148,11 +1162,11 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
               ))}
             </select>
             <select value={role} onChange={(e) => setRole(e.target.value)} style={{ ...inputStyle, width: 120 }}>
-              <option value="PRIMARY">PRIMARY</option>
-              <option value="ASSISTANT">ASSISTANT</option>
+              <option value="PRIMARY">{tt('workOrder.fields.primary')}</option>
+              <option value="ASSISTANT">{tt('workOrder.fields.assistant')}</option>
             </select>
             <select value={jobId} onChange={(e) => setJobId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-              <option value="">WO-wide (no job)</option>
+              <option value="">{tt('workOrder.fields.woWideNoJob')}</option>
               {(wo.jobs ?? []).map((j) => (
                 <option key={j.id} value={j.id}>
                   {j.service_item ?? j.description.slice(0, 30)}
@@ -1160,7 +1174,7 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
               ))}
             </select>
             <button className="btn-secondary" disabled={busy || !workerId} onClick={assign}>
-              Assign
+              {tt('workOrder.fields.assign')}
             </button>
           </div>
         )}
@@ -1168,18 +1182,18 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
             many are currently assigned; Estimated Labor Cost = Est. Total Hours (Jobs tab) x
             the sum of every assigned mechanic's hourly rate — never manually editable. */}
         <div style={{ display: 'flex', gap: 24, marginTop: 16, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
-          <FormField label="Number of Mechanics">
+          <FormField label={tt('workOrder.fields.numberOfMechanics')}>
             <input value={wo.estimated_number_of_mechanics ?? 0} readOnly style={{ ...inputStyle, width: 100, background: '#f9fafb' }} />
           </FormField>
-          <FormField label="Estimated Labor Cost">
+          <FormField label={tt('workOrder.fields.estimatedLaborCost')}>
             <input value={wo.estimated_labor_cost_computed ?? '—'} readOnly style={{ ...inputStyle, width: 160, background: '#f9fafb' }} />
           </FormField>
         </div>
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Labor Timer</h3>
-        {(wo.jobs ?? []).length === 0 && <EmptyState label="No jobs to time." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.laborTimer')}</h3>
+        {(wo.jobs ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noJobsToTime')} />}
         {(wo.jobs ?? []).map((j) => {
           const activeLog = (j.labor_logs ?? []).find((l) => l.status !== 'FINISHED') ?? (runningLog[j.id] ? { id: runningLog[j.id], status: 'RUNNING' } : null);
           return (
@@ -1197,7 +1211,7 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
                       style={{ ...inputStyle, width: 160 }}
                       disabled={busy}
                     >
-                      <option value="">Start labor for…</option>
+                      <option value="">{tt('workOrder.fields.startLaborFor')}</option>
                       {workers.map((w) => (
                         <option key={w.id} value={w.id}>
                           {w.name}
@@ -1208,20 +1222,20 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
                   {activeLog && activeLog.status === 'RUNNING' && (
                     <>
                       <button className="btn-secondary" disabled={busy} onClick={() => laborAction(j.id, activeLog.id, 'pause')}>
-                        Pause
+                        {tt('workOrder.actions.pause')}
                       </button>
                       <button className="btn-secondary" disabled={busy} onClick={() => laborAction(j.id, activeLog.id, 'finish')}>
-                        Finish
+                        {tt('workOrder.actions.finish')}
                       </button>
                     </>
                   )}
                   {activeLog && activeLog.status === 'PAUSED' && (
                     <>
                       <button className="btn-secondary" disabled={busy} onClick={() => laborAction(j.id, activeLog.id, 'resume')}>
-                        Resume
+                        {tt('workOrder.actions.resume')}
                       </button>
                       <button className="btn-secondary" disabled={busy} onClick={() => laborAction(j.id, activeLog.id, 'finish')}>
-                        Finish
+                        {tt('workOrder.actions.finish')}
                       </button>
                     </>
                   )}
@@ -1237,10 +1251,10 @@ function MechanicTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
 
 // Issuance & Return only returns a new part that was NOT used; a component taken off the
 // vehicle is recorded under Removed Components (Used Sparepart Processing) instead.
-const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY'; label: string }[] = [
-  { value: 'UNUSED_NEW', label: 'New Good' },
-  { value: 'UNUSED_FAULTY', label: 'New Faulty' },
-];
+const RETURN_CONDITIONS: { value: 'UNUSED_NEW' | 'UNUSED_FAULTY'; label: string; labelKey?: string }[] = withLabels([
+  { value: 'UNUSED_NEW', label: 'New Good', labelKey: 'inventory.condition.unusedNew' },
+  { value: 'UNUSED_FAULTY', label: 'New Faulty', labelKey: 'inventory.condition.unusedFaulty' },
+]);
 
 
 const PLANNED_PART_PRODUCT_TYPES = ['SPARE_PART', 'TIRE', 'CONSUMABLE'];
@@ -1300,17 +1314,17 @@ function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChan
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Planned Parts</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.plannedParts')}</h3>
       {error && <ErrorState message={error} />}
-      {(wo.planned_part_estimates ?? []).length === 0 && <EmptyState label="No parts planned." />}
+      {(wo.planned_part_estimates ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noPartsPlanned')} />}
       {(wo.planned_part_estimates ?? []).map((e) => (
         <div key={e.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>
-            {e.product?.name ?? e.product_id} — qty {formatQty(e.quantity)} {e.notes && <span style={{ color: '#6b7280' }}>({e.notes})</span>}
+            {tt('common.help.productQuantity', { product: e.product?.name ?? e.product_id, quantity: formatQty(e.quantity) })} {e.notes && <span style={{ color: '#6b7280' }}>({e.notes})</span>}
           </span>
           {canManage && (
             <button className="btn-secondary" disabled={busy} onClick={() => deleteEstimate(e.id)}>
-              Delete
+              {tt('common.actions.delete')}
             </button>
           )}
         </div>
@@ -1318,22 +1332,22 @@ function PlannedPartsEstimatesTab({ wo, onChanged }: { wo: WorkOrderItem; onChan
       {canManage && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
           <select value={productId} onChange={(e) => setProductId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-            <option value="">Product…</option>
+            <option value="">{tt('workOrder.fields.product')}</option>
             {products.map((prod) => (
               <option key={prod.id} value={prod.id}>
                 {prod.name}
               </option>
             ))}
           </select>
-          <NumericInput step="0.01" placeholder="Qty" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
-          <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+          <NumericInput step="0.01" placeholder={tt('common.fields.qty')} value={quantity} onChange={(e) => setQuantity(e.target.value)} style={{ ...inputStyle, width: 90 }} />
+          <input placeholder={tt('workOrder.fields.notesOptional')} value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !productId || !quantity} onClick={addEstimate}>
-            Add
+            {tt('common.actions.add2')}
           </button>
         </div>
       )}
       {/* SYSTEM_DERIVED — Σ(Qty x Product price), never manually editable. */}
-      <FormField label="Estimated Parts Cost">
+      <FormField label={tt('workOrder.fields.estimatedPartsCost')}>
         <input value={wo.estimated_parts_cost_computed ?? '—'} readOnly style={{ ...inputStyle, width: 160, background: '#f9fafb' }} />
       </FormField>
     </div>
@@ -1414,7 +1428,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
       setSelectedProduct(null);
       setQuantity('1');
       setNotes('');
-      setNotice('Part Request created (REQUESTED). It is approved and issued from Part Requests.');
+      setNotice(tt('workOrder.messages.partRequestCreatedRequestedApprovedIssued'));
       setRequestsKey((k) => k + 1);
     } catch (err) {
       const e = extractApiError(err);
@@ -1500,19 +1514,19 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Issuance &amp; Return</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.issuanceAndReturn')}</h3>
       {error && <ErrorState message={error} />}
       {notice && <div style={{ color: '#047857', fontSize: 13, marginBottom: 8 }}>{notice}</div>}
 
       {canReserve && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'flex-end', background: '#f9fafb', padding: 10, borderRadius: 6 }}>
-          <FormField label="Product" required>
+          <FormField label={tt('common.fields.product')} required>
             <SearchableSelect
-              ariaLabel="Product"
+              ariaLabel={tt('common.fields.product')}
               value={productId}
               selectedLabel={selectedProduct ? `${selectedProduct.name}${selectedProduct.sku ? ` — ${selectedProduct.sku}` : ''}` : null}
-              placeholder="Select product…"
-              searchPlaceholder="Search product…"
+              placeholder={tt('workOrder.placeholders.selectProduct')}
+              searchPlaceholder={tt('workOrder.search.searchProduct')}
               loadOptions={loadProductOptions}
               onChange={(id) => {
                 setProductId(id);
@@ -1521,20 +1535,20 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
               width={300}
             />
           </FormField>
-          <FormField label="Qty" required>
+          <FormField label={tt('common.fields.qty')} required>
             <NumericInput
-              aria-label="Quantity"
+              aria-label={tt('common.fields.quantity')}
               integer={!selectedProduct?.uom?.allows_fractional_quantity}
               value={quantity}
               onChange={(e) => setQuantity(e.target.value)}
               style={{ ...inputStyle, width: 90 }}
             />
           </FormField>
-          <FormField label="Notes">
-            <input placeholder="Optional" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+          <FormField label={tt('common.fields.notes')}>
+            <input placeholder={tt('workOrder.placeholders.optional')} value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
           </FormField>
           <button className="btn-primary" disabled={busy || !productId || !(Number(quantity) > 0)} onClick={reservePart} style={{ marginBottom: 14 }}>
-            Reserve
+            {tt('workOrder.actions.reserve')}
           </button>
         </div>
       )}
@@ -1542,60 +1556,60 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
       {canViewRequests && partRequests.length > 0 && (
         <div style={{ marginBottom: 14 }}>
           <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>
-            Part Requests <Link to={`/app/part-requests?work_order_id=${wo.id}`} style={{ fontWeight: 400, fontSize: 12 }}>open in Part Requests →</Link>
+            {tt('workOrder.fields.partRequests')} <Link to={`/app/part-requests?work_order_id=${wo.id}`} style={{ fontWeight: 400, fontSize: 12 }}>{tt('workOrder.actions.openInPartRequests')}</Link>
           </div>
           {partRequests.map((r) => (
             <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13, padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
               <span>
                 {(r.items ?? []).map((i) => `${lineName(i.product?.name ?? i.description, i.stock_condition)} × ${formatQty(i.quantity_approved ?? i.quantity_requested)}`).join(', ')}
-                {r.requested_at && <span style={{ color: '#9ca3af', fontSize: 12 }}> · {new Date(r.requested_at).toLocaleString()}</span>}
+                {r.requested_at && <span style={{ color: '#9ca3af', fontSize: 12 }}> · {formatDateTime(r.requested_at)}</span>}
               </span>
-              <StatusBadge status={r.status} />
+              <StatusBadge status={r.status} domain="stock" />
             </div>
           ))}
         </div>
       )}
 
-      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Issued parts</div>
-      {(wo.planned_parts ?? []).length === 0 && <EmptyState label="No parts issued to this Work Order yet." />}
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{tt('workOrder.fields.issuedParts')}</div>
+      {(wo.planned_parts ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noPartsIssuedWorkOrderYet')} />}
       {(wo.planned_parts ?? []).map((p) => (
         <div key={p.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <StatusBadge status={p.status} />
+              <StatusBadge status={p.status} domain="stock" />
               <strong>{lineName(p.product?.name ?? p.description, p.stock_condition)}</strong>
-              <span>— approved {formatQty(p.planned_quantity)}</span>
+              <span>{tt('workOrder.fields.approvedPlannedQuantity', { planned_quantity: formatQty(p.planned_quantity) })}</span>
               {p.notes && <span style={{ color: '#6b7280' }}>({p.notes})</span>}
             </span>
           </div>
           {p.product_id && (
             <>
               <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-                issued {formatQty(p.issued_quantity)} · used {formatQty(p.consumed_quantity)} · returned {formatQty(p.returned_quantity)}
-                {Number(p.reserved_quantity) > 0 && ` · reserved ${formatQty(p.reserved_quantity)}`}
+                {tt('workOrder.help.partQuantities', { issued: formatQty(p.issued_quantity), used: formatQty(p.consumed_quantity), returned: formatQty(p.returned_quantity) })}
+                {Number(p.reserved_quantity) > 0 && ` ${tt('workOrder.help.partReserved', { reserved: formatQty(p.reserved_quantity) })}`}
                 {p.average_unit_cost && (
                   <>
-                    {' · '}Unit Cost <strong>{formatMoney(p.average_unit_cost)}</strong>
-                    {' · '}Total Cost <strong title="Consumed quantity × Unit Cost — returned quantity is not charged">{formatMoney(p.consumed_total_cost)}</strong>
+                    {' · '}{tt('inventory.fields.unitCost')} <strong>{formatMoney(p.average_unit_cost)}</strong>
+                    {' · '}{tt('analytics.fields.totalCost')} <strong title={tt('workOrder.tooltips.consumedQuantityUnitCostReturnedQuantity')}>{formatMoney(p.consumed_total_cost)}</strong>
                   </>
                 )}
               </div>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {canConsume && outstandingIssued(p) > 0 && (
                   <button className="btn-secondary" disabled={busy} onClick={() => startConsume(p)}>
-                    Consume
+                    {tt('workOrder.actions.consume')}
                   </button>
                 )}
                 {canReturn && returnableQuantity(p) > 0 && returningPartId !== p.id && (
                   <button className="btn-secondary" disabled={busy} onClick={() => startReturn(p.id)}>
-                    Return
+                    {tt('workOrder.actions.return')}
                   </button>
                 )}
                 {/* Business rule: Consumed material can never be returned here (backend enforces it too);
                     components physically removed from the unit are returned via Removed Components. */}
                 {canReturn && p.status === 'CONSUMED' && (
-                  <button className="btn-secondary" disabled title="Consumed items cannot be returned. Use Removed Components for components removed from the unit.">
-                    Return
+                  <button className="btn-secondary" disabled title={tt('workOrder.tooltips.consumedItemsCannotReturnedUseRemoved')}>
+                    {tt('workOrder.actions.return')}
                   </button>
                 )}
               </div>
@@ -1603,12 +1617,12 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                 <div style={{ marginTop: 8, background: '#f9fafb', padding: 10, borderRadius: 6 }}>
                   {/* SYSTEM_INFORMATION — the ceiling the user is returning against, never re-entered. */}
                   <div style={{ fontSize: 11, color: '#6b7280', marginBottom: 8 }}>
-                    Available to return: <strong>{formatQty(returnableQuantity(p))}</strong> (Issued {formatQty(p.issued_quantity)} − Used {formatQty(p.consumed_quantity)} − Returned {formatQty(p.returned_quantity)})
+                    {tt('workOrder.fields.availableToReturn')}: <strong>{formatQty(returnableQuantity(p))}</strong> {tt('workOrder.help.returnableFormula', { issued: formatQty(p.issued_quantity), used: formatQty(p.consumed_quantity), returned: formatQty(p.returned_quantity) })}
                   </div>
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
                     <NumericInput
                       integer={!p.product?.uom?.allows_fractional_quantity}
-                      placeholder="Qty"
+                      placeholder={tt('common.fields.qty')}
                       value={returnQty}
                       onChange={(e) => setReturnQty(e.target.value)}
                       style={{ ...inputStyle, width: 90 }}
@@ -1620,12 +1634,12 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                     >
                       {RETURN_CONDITIONS.map((c) => (
                         <option key={c.value} value={c.value}>
-                          {c.label}
+                          {labelText(c)}
                         </option>
                       ))}
                     </select>
                     <input
-                      placeholder="Reason (optional)"
+                      placeholder={tt('common.placeholders.reasonOptional')}
                       value={returnReason}
                       onChange={(e) => setReturnReason(e.target.value)}
                       style={{ ...inputStyle, width: 180 }}
@@ -1640,13 +1654,13 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <button className="btn-secondary" disabled={busy || !returnQty} onClick={() => submitReturn(p.id)}>
-                      Confirm return
+                      {tt('workOrder.actions.confirmReturn')}
                     </button>
                     <button className="btn-secondary" disabled={busy} onClick={() => setReturningPartId(null)}>
-                      Cancel
+                      {tt('common.actions.cancel')}
                     </button>
                     <span style={{ fontSize: 11, color: '#6b7280' }}>
-                      Creates a numbered Return; the warehouse inspects it in Inventory → Return before anything goes back to stock.
+                      {tt('workOrder.help.createsNumberedReturnWarehouseInspectsInventory')}
                     </span>
                   </div>
                 </div>
@@ -1655,7 +1669,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
           )}
         </div>
       ))}
-      <Modal open={!!consumingPart} title="Consumed Parts" onClose={() => setConsumingPart(null)}>
+      <Modal open={!!consumingPart} title={tt('workOrder.modals.consumedParts')} onClose={() => setConsumingPart(null)}>
         {consumingPart && (
           <>
             {/* SYSTEM_INFORMATION */}
@@ -1663,7 +1677,7 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
               <div>
                 <strong>{lineName(consumingPart.product?.name ?? consumingPart.description, consumingPart.stock_condition)}</strong>
               </div>
-              <div style={{ color: '#6b7280' }}>Issued Qty: {formatQty(consumingPart.issued_quantity)}</div>
+              <div style={{ color: '#6b7280' }}>{tt('workOrder.fields.issuedQtyIssuedQuantity', { issued_quantity: formatQty(consumingPart.issued_quantity) })}</div>
             </div>
             <FormField label="">
               <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1675,10 +1689,10 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
                     if (e.target.checked) setInstalledQty(String(outstandingIssued(consumingPart)));
                   }}
                 />
-                Install All
+                {tt('workOrder.fields.installAll')}
               </label>
             </FormField>
-            <FormField label="Installed Qty" required>
+            <FormField label={tt('workOrder.fields.installedQty')} required>
               <NumericInput
                 integer={!consumingPart.product?.uom?.allows_fractional_quantity}
                 value={installedQty}
@@ -1689,10 +1703,10 @@ function IssuanceReturnTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: ()
             </FormField>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
               <button className="btn-secondary" onClick={() => setConsumingPart(null)}>
-                Cancel
+                {tt('common.actions.cancel')}
               </button>
               <button className="btn-primary" disabled={!installedQty} onClick={confirmConsume}>
-                Consume
+                {tt('workOrder.actions.consume')}
               </button>
             </div>
           </>
@@ -1849,19 +1863,18 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
 
   return (
     <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Removed Components</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.removedComponents')}</h3>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: -8 }}>
-        Old/used components taken off the vehicle when a replacement part is installed — separate from the Unused Return above,
-        and never a reversal of the new part's consumption. Each recorded removal is processed in Inventory → Used Sparepart Processing.
+        {tt('workOrder.help.oldUsedComponentsTakenOffVehicle')}
       </p>
       {error && <ErrorState message={error} />}
-      {(wo.removed_components ?? []).length === 0 && <EmptyState label="No components removed." />}
+      {(wo.removed_components ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noComponentsRemoved')} />}
       {(wo.removed_components ?? []).map((rc) => (
         <div key={rc.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
             <span>
-              {rc.product?.name ?? rc.product_id} — qty {formatQty(rc.quantity)} — {rc.condition}
-              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> (replaced by the consumed new part)</span>}
+              {tt('workOrder.help.productQuantityCondition', { product: rc.product?.name ?? rc.product_id, quantity: formatQty(rc.quantity), condition: rc.condition })}
+              {rc.replaced_by_planned_part_id && <span style={{ color: '#6b7280' }}> {tt('workOrder.help.replacedConsumedNewPart')}</span>}
             </span>
             <StatusBadge status={rc.status} />
           </div>
@@ -1876,12 +1889,12 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
               {canReturn && returningId !== rc.id && (
                 <button className="btn-secondary" disabled={busy} onClick={() => setReturningId(rc.id)}>
-                  Return to Warehouse
+                  {tt('workOrder.actions.returnToWarehouse')}
                 </button>
               )}
               {canManage && (
                 <button className="btn-secondary" disabled={busy} onClick={() => deleteRemoval(rc.id)}>
-                  Delete
+                  {tt('common.actions.delete')}
                 </button>
               )}
             </div>
@@ -1889,19 +1902,19 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
           {returningId === rc.id && (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center', background: '#f9fafb', padding: 8, borderRadius: 6 }}>
               <select value={returnWarehouseId} onChange={(e) => setReturnWarehouseId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-                <option value="">Warehouse…</option>
+                <option value="">{tt('inventory.fields.warehouse')}</option>
                 {warehouses.map((w) => (
                   <option key={w.id} value={w.id}>
                     {w.name}
                   </option>
                 ))}
               </select>
-              <input placeholder="Reason (optional)" value={returnReason} onChange={(e) => setReturnReason(e.target.value)} style={{ ...inputStyle, width: 180 }} />
+              <input placeholder={tt('common.placeholders.reasonOptional')} value={returnReason} onChange={(e) => setReturnReason(e.target.value)} style={{ ...inputStyle, width: 180 }} />
               <button className="btn-secondary" disabled={busy || !returnWarehouseId} onClick={() => submitReturn(rc.id)}>
-                Confirm Return
+                {tt('workOrder.actions.confirmReturn2')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={() => setReturningId(null)}>
-                Cancel
+                {tt('common.actions.cancel')}
               </button>
             </div>
           )}
@@ -1910,7 +1923,7 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
       {canManage && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
           <select
-            aria-label="Old/removed product"
+            aria-label={tt('workOrder.fields.oldRemovedProduct')}
             value={productId}
             onChange={(e) => {
               setProductId(e.target.value);
@@ -1918,15 +1931,15 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
             }}
             style={{ ...inputStyle, width: 220 }}
           >
-            <option value="">{removable.length === 0 ? 'No consumed parts yet' : 'Old/removed product…'}</option>
+            <option value="">{removable.length === 0 ? tt('workOrder.fields.noConsumedPartsYet') : tt('workOrder.fields.oldRemovedProduct2')}</option>
             {removable.map((r) => (
               <option key={r.productId} value={r.productId} disabled={r.remaining <= 0}>
-                {r.name} (consumed {formatQty(r.consumed)}, removable {formatQty(r.remaining)})
+                {tt('workOrder.help.removableOption', { name: r.name, consumed: formatQty(r.consumed), removable: formatQty(r.remaining) })}
               </option>
             ))}
           </select>
           <select value={jobId} onChange={(e) => setJobId(e.target.value)} style={{ ...inputStyle, width: 160 }}>
-            <option value="">Job (optional)</option>
+            <option value="">{tt('workOrder.fields.jobOptional')}</option>
             {(wo.jobs ?? []).map((j) => (
               <option key={j.id} value={j.id}>
                 {j.service_item ?? j.description.slice(0, 30)}
@@ -1934,20 +1947,20 @@ function RemovedComponentsSection({ wo, onChanged }: { wo: WorkOrderItem; onChan
             ))}
           </select>
           <NumericInput
-            aria-label="Removed quantity"
+            aria-label={tt('workOrder.fields.removedQuantity')}
             integer={!selectedRemovable?.allowsFraction}
-            placeholder="Qty"
+            placeholder={tt('common.fields.qty')}
             value={removeQty}
             onChange={(e) => setRemoveQty(e.target.value)}
             style={{ ...inputStyle, width: 90 }}
           />
           <select value={condition} onChange={(e) => setCondition(e.target.value as 'GOOD' | 'FAULTY')} style={{ ...inputStyle, width: 110 }}>
-            <option value="GOOD">Good</option>
-            <option value="FAULTY">Faulty</option>
+            <option value="GOOD">{tt('inventory.fields.good')}</option>
+            <option value="FAULTY">{tt('inventory.fields.faulty')}</option>
           </select>
-          <input placeholder="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+          <input placeholder={tt('workOrder.fields.notesOptional')} value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
           <button className="btn-secondary" disabled={busy || !productId || !(Number(removeQty) > 0) || Number(removeQty) > (selectedRemovable?.remaining ?? 0)} onClick={submitRemoval}>
-            Record Removal
+            {tt('workOrder.actions.recordRemoval')}
           </button>
         </div>
       )}
@@ -2050,14 +2063,14 @@ function QcTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) 
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Quality Control</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.qualityControl')}</h3>
       {error && <ErrorState message={error} />}
       {wo.status === 'QC_PENDING' && !latest && hasPermission('qc.perform') && (
         <button className="btn-primary" disabled={busy} onClick={start}>
-          Start QC Inspection
+          {tt('workOrder.actions.startQcInspection')}
         </button>
       )}
-      {inspections.length === 0 && !(wo.status === 'QC_PENDING') && <EmptyState label="No QC inspection yet." />}
+      {inspections.length === 0 && !(wo.status === 'QC_PENDING') && <EmptyState label={tt('workOrder.empty.noQcInspectionYet')} />}
       {inspections.map((i) => (
         <div key={i.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 6 }}>
@@ -2067,11 +2080,11 @@ function QcTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) 
           {(i.findings ?? []).map((f) => (
             <div key={f.id} style={{ paddingLeft: 8, color: '#6b7280', display: 'flex', gap: 8, alignItems: 'center' }}>
               <span>
-                [{f.severity}] {f.description} {f.resolved ? '(Resolved)' : '(Open)'}
+                [{f.severity}] {f.description} {f.resolved ? tt('workOrder.fields.resolved') : tt('workOrder.fields.open')}
               </span>
               {!f.resolved && hasPermission('qc.perform') && (
                 <button className="btn-secondary" disabled={busy} onClick={() => resolveFinding(i.id, f.id)}>
-                  Resolve
+                  {tt('workOrder.actions.resolve')}
                 </button>
               )}
             </div>
@@ -2085,25 +2098,25 @@ function QcTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => void }) 
                   </option>
                 ))}
               </select>
-              <input placeholder="Finding" value={findingDesc} onChange={(e) => setFindingDesc(e.target.value)} style={{ ...inputStyle, width: 220 }} />
+              <input placeholder={tt('workOrder.search.finding')} value={findingDesc} onChange={(e) => setFindingDesc(e.target.value)} style={{ ...inputStyle, width: 220 }} />
               <button className="btn-secondary" disabled={busy || !findingDesc} onClick={() => addFinding(i.id)}>
-                Add Finding
+                {tt('workOrder.actions.addFinding')}
               </button>
             </div>
           )}
           {i.status === 'QC_STARTED' && hasPermission('qc.approve') && (
             <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
               <button className="btn-primary" disabled={busy} onClick={() => pass(i.id)}>
-                Pass
+                {tt('workOrder.actions.pass')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={() => fail(i.id)}>
-                Fail (Rework)
+                {tt('workOrder.actions.failRework')}
               </button>
             </div>
           )}
           {i.status === 'PASS' && hasPermission('qc.approve') && (
             <button className="btn-primary" disabled={busy} onClick={() => complete(i.id)} style={{ marginTop: 8 }}>
-              Complete QC
+              {tt('workOrder.actions.completeQc')}
             </button>
           )}
         </div>
@@ -2153,8 +2166,8 @@ function RoadTestTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
     <div>
       {error && <ErrorState message={error} />}
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Road Test</h3>
-        {roadTests.length === 0 && <EmptyState label="No road test recorded." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.roadTest')}</h3>
+        {roadTests.length === 0 && <EmptyState label={tt('workOrder.empty.noRoadTestRecorded')} />}
         {roadTests.map((r) => (
           <div key={r.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10 }}>
             <StatusBadge status={r.result} />
@@ -2170,27 +2183,27 @@ function RoadTestTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
                 </option>
               ))}
             </select>
-            <input placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
+            <input placeholder={tt('common.fields.notes')} value={notes} onChange={(e) => setNotes(e.target.value)} style={inputStyle} />
             <button className="btn-secondary" disabled={busy} onClick={record}>
-              Record Road Test
+              {tt('workOrder.actions.recordRoadTest')}
             </button>
           </div>
         )}
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Release</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.vehicleRelease')}</h3>
         {release ? (
-          <p style={{ fontSize: 13 }}>Released at {new Date(release.released_at).toLocaleString()}.</p>
+          <p style={{ fontSize: 13 }}>{tt('workOrder.help.releasedAtToLocaleString', { toLocaleString: formatDateTime(release.released_at) })}</p>
         ) : wo.status === 'COMPLETED' && hasPermission('vehicle_release.perform') ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <NumericInput placeholder="Release odometer (optional)" value={releaseOdometer} onChange={(e) => setReleaseOdometer(e.target.value)} style={{ ...inputStyle, width: 180 }} />
+            <NumericInput placeholder={tt('workOrder.placeholders.releaseOdometerOptional')} value={releaseOdometer} onChange={(e) => setReleaseOdometer(e.target.value)} style={{ ...inputStyle, width: 180 }} />
             <button className="btn-primary" disabled={busy} onClick={releaseVehicle}>
-              Release Vehicle
+              {tt('workOrder.actions.releaseVehicle')}
             </button>
           </div>
         ) : (
-          <EmptyState label="Vehicle can be released once the Work Order is COMPLETED." />
+          <EmptyState label={tt('workOrder.empty.vehicleReleasedOnceWorkOrderCompleted')} />
         )}
       </div>
     </div>
@@ -2284,9 +2297,9 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>External Services</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.externalServices')}</h3>
       {error && <ErrorState message={error} />}
-      {(wo.external_services ?? []).length === 0 && <EmptyState label="No external service has been requested for this Work Order." />}
+      {(wo.external_services ?? []).length === 0 && <EmptyState label={tt('workOrder.empty.noExternalServiceBeenRequestedWork')} />}
       {(wo.external_services ?? []).map((s) => (
         <div key={s.id} style={{ padding: '10px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 4 }}>
@@ -2296,14 +2309,14 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
           </div>
           <div style={{ color: '#374151' }}>{s.description}</div>
           <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>
-            {s.reference_number && <>Ref: {s.reference_number} &nbsp;</>}
-            {s.cost && <>Cost: {formatMoney(s.cost)} &nbsp;</>}
-            {s.priority && <>Priority: {s.priority}</>}
+            {s.reference_number && <>{tt('workOrder.fields.refReferenceNumber', { reference_number: s.reference_number })}</>}
+            {s.cost && <>{tt('workOrder.fields.costCost', { cost: formatMoney(s.cost) })}</>}
+            {s.priority && <>{tt('workOrder.fields.priorityPriority', { priority: s.priority })}</>}
           </div>
-          {s.condition_notes && <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>Condition: {s.condition_notes}</div>}
+          {s.condition_notes && <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>{tt('workOrder.fields.conditionConditionNotes', { condition_notes: s.condition_notes })}</div>}
           {s.photo_evidence && (
             <div style={{ fontSize: 12, marginTop: 2 }}>
-              Evidence:{' '}
+              {tt('common.tooltips.evidence')}:{' '}
               <a href={s.photo_evidence} target="_blank" rel="noreferrer">
                 {s.photo_evidence}
               </a>
@@ -2312,27 +2325,28 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
           <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
             {s.status === 'REQUESTED' && hasPermission('work_order_external_service.complete') && (
               <button className="btn-primary" disabled={busy} onClick={() => complete(s.id)}>
-                Complete
+                {tt('common.actions.complete')}
               </button>
             )}
             {s.status === 'REQUESTED' && hasPermission('work_order_external_service.cancel') && (
               <button className="btn-secondary" disabled={busy} onClick={() => cancel(s.id)}>
-                Cancel
+                {tt('common.actions.cancelRecord')}
               </button>
             )}
             {hasPermission('work_order.view') && (
               <button className="btn-secondary" disabled={busy} onClick={() => printMemo(s.id)}>
-                Print Memo
+                {tt('workOrder.actions.printMemo')}
               </button>
             )}
+            {hasPermission('work_order.view') && <DocumentVersionsButton printPath={`/app/work-orders/${wo.id}/external-services/${s.id}/print`} disabled={busy} />}
             {s.status === 'COMPLETED' && hasPermission('workshop_invoice.record') && (
               <button className="btn-primary" disabled={busy} onClick={() => setRecordingInvoiceFor(s.id)}>
-                Record Service Invoice
+                {tt('workOrder.actions.recordServiceInvoice')}
               </button>
             )}
             {(s.status === 'BILLED' || s.status === 'PAID') && s.workshop_invoice_id && hasPermission('workshop_invoice.view') && (
               <Link className="btn-secondary" to={`/app/workshop-invoices/${s.workshop_invoice_id}`}>
-                View Service Invoice
+                {tt('workOrder.actions.viewServiceInvoice')}
               </Link>
             )}
           </div>
@@ -2352,9 +2366,9 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
       )}
       {hasPermission('work_order_external_service.create') && (
         <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <FormField label="Partner" required>
+          <FormField label={tt('common.fields.partner')} required>
             <select value={partnerId} onChange={(e) => setPartnerId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-              <option value="">Select partner</option>
+              <option value="">{tt('workOrder.fields.selectPartner')}</option>
               {partners.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} ({p.partner_type})
@@ -2362,10 +2376,10 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
               ))}
             </select>
           </FormField>
-          <FormField label="Description" required>
+          <FormField label={tt('common.fields.description')} required>
             <input value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, width: 220 }} />
           </FormField>
-          <FormField label="Priority (optional)">
+          <FormField label={tt('workOrder.fields.priorityOptional')}>
             <select value={priority} onChange={(e) => setPriority(e.target.value)} style={{ ...inputStyle, width: 120 }}>
               <option value="">—</option>
               {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
@@ -2375,20 +2389,20 @@ function ExternalServicesTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: 
               ))}
             </select>
           </FormField>
-          <FormField label="Condition (optional)">
+          <FormField label={tt('workOrder.fields.conditionOptional')}>
             <input value={conditionNotes} onChange={(e) => setConditionNotes(e.target.value)} style={{ ...inputStyle, width: 160 }} />
           </FormField>
-          <FormField label="Evidence / photo URL (optional)">
+          <FormField label={tt('workOrder.fields.evidencePhotoUrlOptional')}>
             <input value={photoEvidence} onChange={(e) => setPhotoEvidence(e.target.value)} style={{ ...inputStyle, width: 180 }} />
           </FormField>
-          <FormField label="Reference # (optional)">
+          <FormField label={tt('workOrder.fields.referenceNumberOptional')}>
             <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} style={{ ...inputStyle, width: 120 }} />
           </FormField>
-          <FormField label="Cost (optional)">
+          <FormField label={tt('workOrder.fields.costOptional')}>
             <NumericInput min="0" step="0.01" value={cost} onChange={(e) => setCost(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           </FormField>
           <button className="btn-secondary" disabled={busy || !partnerId || !description} onClick={request}>
-            Request
+            {tt('workOrder.actions.request')}
           </button>
         </div>
       )}
@@ -2408,11 +2422,11 @@ interface WorkOrderDocument {
   path: string;
 }
 
-const DOCUMENT_ACTION: Record<WorkOrderDocument['type'], string> = {
+const DOCUMENT_ACTION: Record<WorkOrderDocument['type'], string> = translatedRecord({
   WORK_AUTHORIZATION_LETTER: 'View WAL',
   EXTERNAL_WORKSHOP_INVOICE: 'View Invoice',
   PAYMENT_PROOF: 'View Payment Proof',
-};
+}, { WORK_AUTHORIZATION_LETTER: 'workOrder.actions.viewWal', EXTERNAL_WORKSHOP_INVOICE: 'procurement.actions.viewInvoice', PAYMENT_PROOF: 'workOrder.actions.viewPaymentProof' });
 
 /**
  * Work Order documents. External Workshop Work Orders list the acknowledged Work Authorization
@@ -2441,17 +2455,17 @@ function DocumentsTab({ workOrderId }: { workOrderId: string }) {
   if (!docs) return <LoadingState />;
 
   const dateLabel = (d: WorkOrderDocument) =>
-    d.date_kind === 'UPLOADED_AT' ? `Uploaded: ${formatDateTime(d.date)}` : d.date_kind === 'INVOICE_DATE' ? `Invoice Date: ${formatDate(d.date)}` : `Payment Date: ${formatDate(d.date)}`;
+    d.date_kind === 'UPLOADED_AT' ? tt('workOrder.fields.uploadedDate', { date: formatDateTime(d.date) }) : d.date_kind === 'INVOICE_DATE' ? tt('workOrder.fields.invoiceDateDate', { date: formatDate(d.date) }) : tt('workOrder.fields.paymentDateDate', { date: formatDate(d.date) });
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Documents</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('vehicle.sections.documents')}</h3>
       {docs.length === 0 && (
         <EmptyState
           label={
             mode === 'EXTERNAL'
-              ? 'No External Workshop documents yet — the acknowledged Work Authorization Letter, the workshop invoice and the payment proof appear here as the work progresses.'
-              : "Work Order-level documents are not tracked for internal Work Orders — see the vehicle's Documents tab for vehicle-level records."
+              ? tt('workOrder.empty.noExternalWorkshopDocumentsYetAcknowledged')
+              : tt('workOrder.empty.workOrderLevelDocumentsNotTracked')
           }
         />
       )}
@@ -2465,7 +2479,7 @@ function DocumentsTab({ workOrderId }: { workOrderId: string }) {
             <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4, color: '#374151', flexWrap: 'wrap' }}>
               {d.type === 'WORK_AUTHORIZATION_LETTER' && <StatusBadge status="ACKNOWLEDGED" />}
               <span>{dateLabel(d)}</span>
-              {d.amount != null && <span>Amount: {formatMoney(d.amount)}</span>}
+              {d.amount != null && <span>{tt('workOrder.fields.amountAmount', { amount: formatMoney(d.amount) })}</span>}
               {d.file && <span style={{ color: '#6b7280' }}>{d.file.name}</span>}
             </div>
           </div>
@@ -2496,12 +2510,12 @@ function HistoryTab({ vehicleId }: { vehicleId: string }) {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle History (this Work Order's vehicle)</h3>
-      {events.length === 0 && <EmptyState label="No history events." />}
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.vehicleHistoryWorkOrderSVehicle')}</h3>
+      {events.length === 0 && <EmptyState label={tt('workOrder.empty.noHistoryEvents')} />}
       {events.map((e) => (
         <div key={`${e.type}-${e.id}`} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13, display: 'flex', gap: 10 }}>
           <StatusBadge status={e.type} />
-          <span style={{ color: '#9ca3af' }}>{new Date(e.at).toLocaleString()}</span>
+          <span style={{ color: '#9ca3af' }}>{formatDateTime(e.at)}</span>
           <span>{e.summary}</span>
         </div>
       ))}
@@ -2564,54 +2578,54 @@ function RecordWorkshopInvoiceModal({
   }
 
   return (
-    <Modal open title="Record Service Invoice" onClose={onClose} width={560}>
+    <Modal open title={tt('workOrder.actions.recordServiceInvoice')} onClose={onClose} width={560}>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>
-        This records an invoice the service provider already issued externally — OptiFleet does not issue this invoice.
+        {tt('workOrder.help.recordsInvoiceServiceProviderAlreadyIssued')}
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="External Invoice Number" errors={errors.external_invoice_number} required>
+        <FormField label={tt('workOrder.fields.externalInvoiceNumber')} errors={errors.external_invoice_number} required>
           <input value={externalInvoiceNumber} onChange={(e) => setExternalInvoiceNumber(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Partner Reference (optional)" errors={errors.partner_reference}>
+        <FormField label={tt('workOrder.fields.partnerReferenceOptional')} errors={errors.partner_reference}>
           <input value={partnerReference} onChange={(e) => setPartnerReference(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Invoice Date" errors={errors.invoice_date} required>
+        <FormField label={tt('common.fields.invoiceDate')} errors={errors.invoice_date} required>
           <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Due Date (optional)" errors={errors.due_date}>
+        <FormField label={tt('workOrder.fields.dueDateOptional')} errors={errors.due_date}>
           <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Currency" errors={errors.currency}>
+        <FormField label={tt('workOrder.fields.currency')} errors={errors.currency}>
           <input value={currency} onChange={(e) => setCurrency(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Total Amount" errors={errors.total_amount} required>
+        <FormField label={tt('workOrder.fields.totalAmount')} errors={errors.total_amount} required>
           <NumericInput step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Subtotal (optional)" errors={errors.subtotal}>
+        <FormField label={tt('workOrder.fields.subtotalOptional')} errors={errors.subtotal}>
           <NumericInput step="0.01" value={subtotal} onChange={(e) => setSubtotal(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Tax (optional)" errors={errors.tax_total}>
+        <FormField label={tt('workOrder.fields.taxOptional')} errors={errors.tax_total}>
           <NumericInput step="0.01" value={taxTotal} onChange={(e) => setTaxTotal(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Discount (optional)" errors={errors.discount_total}>
+        <FormField label={tt('workOrder.fields.discountOptional')} errors={errors.discount_total}>
           <NumericInput step="0.01" value={discountTotal} onChange={(e) => setDiscountTotal(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
-      <FormField label="Returned Maintenance Memo attachment URL (optional)" errors={errors.returned_memo_attachment_url}>
+      <FormField label={tt('workOrder.fields.returnedMaintenanceMemoAttachmentUrlOptional')} errors={errors.returned_memo_attachment_url}>
         <input value={returnedMemoAttachmentUrl} onChange={(e) => setReturnedMemoAttachmentUrl(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Invoice attachment URL (optional)" errors={errors.invoice_attachment_url}>
+      <FormField label={tt('workOrder.fields.invoiceAttachmentUrlOptional')} errors={errors.invoice_attachment_url}>
         <input value={invoiceAttachmentUrl} onChange={(e) => setInvoiceAttachmentUrl(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Notes (optional)" errors={errors.notes}>
+      <FormField label={tt('workOrder.fields.notesOptional')} errors={errors.notes}>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !externalInvoiceNumber || !invoiceDate || !totalAmount} onClick={submit}>
-          {submitting ? 'Recording…' : 'Record Service Invoice'}
+          {submitting ? tt('workOrder.actions.recording') : tt('workOrder.actions.recordServiceInvoice')}
         </button>
       </div>
     </Modal>
@@ -2624,7 +2638,7 @@ function AuditTab({ workOrderId }: { workOrderId: string }) {
 
   useEffect(() => {
     apiClient
-      .get('/app/audit-logs', { params: { resource_type: 'WorkOrder', resource_id: workOrderId, per_page: 50 } })
+      .get('/app/audit-logs', { params: { resource_type: tt('workOrder.fields.workOrder'), resource_id: workOrderId, per_page: 50 } })
       .then((res) => setLogs(res.data.data))
       .catch((err) => setError(extractApiError(err).message));
   }, [workOrderId]);
@@ -2633,12 +2647,12 @@ function AuditTab({ workOrderId }: { workOrderId: string }) {
 
   return (
     <div className="card">
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Audit Trail</h3>
-      {logs.length === 0 && <EmptyState label="No audit entries for this Work Order." />}
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{tt('workOrder.sections.auditTrail')}</h3>
+      {logs.length === 0 && <EmptyState label={tt('workOrder.empty.noAuditEntriesWorkOrder')} />}
       {logs.map((l) => (
         <div key={l.id} style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
           <div>
-            <strong>{l.action}</strong> by {l.actor_name ?? 'system'} — {new Date(l.created_at).toLocaleString()}
+            <strong>{l.action}</strong> {tt('workOrder.fields.by')} {l.actor_name ?? 'system'} — {formatDateTime(l.created_at)}
           </div>
         </div>
       ))}

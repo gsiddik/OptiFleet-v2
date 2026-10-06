@@ -4,6 +4,7 @@ namespace App\Domain\Configuration\Services;
 
 use App\Domain\Configuration\Models\ConfigurationSet;
 use App\Domain\Configuration\Models\ConfigurationVersion;
+use App\Domain\DocumentGeneration\Support\DocumentLocale;
 
 /**
  * Section 10: thin wrapper around the generic ConfigurationService for
@@ -37,6 +38,13 @@ class DocumentTemplateService
     {
         return $this->configuration->publish($version, $userId, function (array $payload) use ($documentType) {
             $this->validator->validate($documentType, $payload['html'] ?? '');
+            // Optional per-locale bodies (PRINT_LOCALE_SNAPSHOT) get the same variable whitelist.
+            foreach ($payload['locales'] ?? [] as $locale => $body) {
+                if (! DocumentLocale::isSupported((string) $locale)) {
+                    throw new TemplateValidationException("Unsupported template locale {$locale}.");
+                }
+                $this->validator->validate($documentType, (string) ($body['html'] ?? ''));
+            }
         });
     }
 

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { LoadingState } from './States';
+import { t } from '../i18n/i18n';
 
 export function RequirePlatform({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
@@ -26,7 +27,7 @@ export function RequirePermission({ permission, children }: { permission: string
   if (!allowed) {
     return (
       <div style={{ padding: 32, color: '#b91c1c' }}>
-        You do not have permission ({Array.isArray(permission) ? permission.join(' / ') : permission}) to view this page.
+        {t('analytics.help.youDoNotPermissionPermissionView', { permission: Array.isArray(permission) ? permission.join(' / ') : permission })}
       </div>
     );
   }

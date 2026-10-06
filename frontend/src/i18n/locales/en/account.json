@@ -1,0 +1,58 @@
+{
+  "actions": {
+    "submitPayment": "+ Submit Payment",
+    "submitPayment2": "Submit Payment"
+  },
+  "empty": {
+    "noActiveSubscriptionFoundOrganization": "No active subscription found for this organization."
+  },
+  "fields": {
+    "bankName": "Bank Name",
+    "billingCycleBillingCycle": "Billing Cycle: {{billing_cycle}}",
+    "current": "Current",
+    "defaultLanguage": "Default Language",
+    "endEndDate": "End: {{end_date}}",
+    "fax": "Fax",
+    "invoice": "Invoice",
+    "invoiceNumberCurrencyOutstandingAmountOutstanding": "{{invoice_number}} — {{currency}} {{outstanding_amount}} outstanding",
+    "item": "Item",
+    "limit": "Limit",
+    "logoJpgOrPng": "Logo (JPG or PNG)",
+    "n5DaysMondayFriday": "5 days (Monday–Friday)",
+    "n6DaysMondaySaturday": "6 days (Monday–Saturday)",
+    "n7DaysMondaySunday": "7 days (Monday–Sunday)",
+    "paymentMethod": "Payment Method",
+    "phone": "Phone",
+    "proofPaymentOptionalJpgPngWebp": "Proof of Payment (optional, JPG/PNG/WEBP/PDF, max 5MB)",
+    "selectAnOutstandingInvoice": "Select an outstanding invoice…",
+    "startStartDate": "Start: {{start_date}}",
+    "taxId": "Tax ID",
+    "totalCurrencyTotal": "Total: {{currency}} {{total}}",
+    "website": "Website",
+    "workshopWorkingDays": "Workshop Working Days"
+  },
+  "help": {
+    "accountOutstandingBalancePleaseSettleBefore": "Your account has an outstanding balance. Please settle it before",
+    "drivesWorkingDayCalculationsPlanningSchedule": "Drives working-day calculations for Planning & Schedule. Must be completed before a periodic maintenance schedule can be created.",
+    "pleaseSubmitNewPaymentInvoicePayments": "Please submit a new payment for this invoice from the Payments list.",
+    "saved": "Saved.",
+    "subscriptionSuspendedOperationalFeaturesRestrictedUntil": "Your subscription is suspended. Operational features are restricted until an outstanding payment is verified. Please submit or check your payment status under Payments.",
+    "theGracePeriodEnds": "the grace period ends",
+    "thisPaymentWasRejected": "This payment was rejected",
+    "toAvoidSuspension": "to avoid suspension.",
+    "unlimited": "Unlimited",
+    "uploading": "Uploading…",
+    "usedSidebarBrowserTabIconTenant": "Used in the sidebar and browser tab icon for this tenant."
+  },
+  "modals": {
+    "submitPayment": "Submit Payment"
+  },
+  "sections": {
+    "nextBillingDate": "Next Billing Date",
+    "usageAndLimits": "Usage & Limits"
+  },
+  "titles": {
+    "companyProfile": "Company Profile",
+    "subscription": "Subscription"
+  }
+}

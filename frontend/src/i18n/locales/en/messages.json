@@ -1,0 +1,88 @@
+{
+  "auth": {
+    "loggedOut": "Logged out."
+  },
+  "componentAsset": {
+    "componentAssetsGeneratedGoodsReceiptOne": "Component Assets are generated from Goods Receipt (one per unit received of a serial-tracked product); manual creation is no longer available."
+  },
+  "componentCategory": {
+    "categoryDeletedNoLongerAvailableNew": "Category deleted. It is no longer available for new Products; existing records keep their reference."
+  },
+  "componentGroup": {
+    "componentGroupDeletedExistingProductsHistorical": "Component group deleted. Existing Products and historical records keep their reference."
+  },
+  "componentSubcategory": {
+    "subcategoryDeletedNoLongerAvailableNew": "Subcategory deleted. It is no longer available for new Products; existing records keep their reference."
+  },
+  "dataScope": {
+    "dataScopeRemoved": "Data scope removed."
+  },
+  "etlAdmin": {
+    "analyticsEtlDispatched": "Analytics ETL dispatched.",
+    "backfillDispatched": "Backfill dispatched.",
+    "retryDispatched": "Retry dispatched."
+  },
+  "inspection": {
+    "onlyFailedWarningInspectionRaiseMaintenance": "Only a failed or warning inspection can raise a maintenance request."
+  },
+  "inspectionTemplate": {
+    "itemRemoved": "Item removed."
+  },
+  "invoice": {
+    "voidedByPlatform": "Voided by platform"
+  },
+  "maintenancePackage": {
+    "periodicPackageOnlyScheduledCalendarDay": "A periodic package can only be scheduled by calendar day or month."
+  },
+  "masterData": {
+    "selectedCategoryComponentGroupInactiveDeleted": "The selected Category (or its Component Group) is inactive or deleted.",
+    "selectedSubcategoryCategoryComponentGroupInactive": "The selected Subcategory (or its Category / Component Group) is inactive or deleted."
+  },
+  "moduleDependency": {
+    "dependencyRemoved": "Dependency removed."
+  },
+  "partner": {
+    "workOrdersAssignedWorkAuthorizationLetter": "Work Orders assigned (Work Authorization Letter issued) in the period"
+  },
+  "product": {
+    "compatibilityRuleRemoved": "Compatibility rule removed.",
+    "productImageRemoved": "Product image removed.",
+    "safetyDataSheetRemoved": "Safety Data Sheet removed."
+  },
+  "tenantCustomPricing": {
+    "customPricingDeactivated": "Custom pricing deactivated."
+  },
+  "tenantUser": {
+    "roleRevoked": "Role revoked."
+  },
+  "tire": {
+    "tireOperationCancelled": "Tire Operation cancelled",
+    "workOrderClosedWithoutWork": "Work Order closed without work"
+  },
+  "tireProduct": {
+    "onlyExcelFilesXlsxImported": "Only Excel files (.xlsx) can be imported."
+  },
+  "usedPartDisposition": {
+    "evidencePhotoRemoved": "Evidence photo removed.",
+    "onlyJpgPngImagesAccepted": "Only JPG or PNG images are accepted."
+  },
+  "vehicleCategory": {
+    "vehicleCategoryDeactivated": "Vehicle category deactivated."
+  },
+  "vehicleDocument": {
+    "documentRemoved": "Document removed."
+  },
+  "workOrder": {
+    "resolvedAutomaticallyExternalWorkshopWorkConfirmed": "Resolved automatically: External Workshop work confirmed complete and settled (WAL {{wal_number}}).",
+    "returnedPartReturnNumberAcceptedAfter": "Returned part {{return_number}} accepted after inspection",
+    "usedSparepartApprovedReuseAfterInspection": "Used sparepart approved for reuse after inspection"
+  },
+  "workOrderExecution": {
+    "correctiveActionDeleted": "Corrective action deleted.",
+    "diagnosisDeleted": "Diagnosis deleted.",
+    "evidenceRemoved": "Evidence removed.",
+    "findingDeleted": "Finding deleted.",
+    "plannedPartEstimateRemoved": "Planned part estimate removed.",
+    "removedComponentRecordDeleted": "Removed-component record deleted."
+  }
+}

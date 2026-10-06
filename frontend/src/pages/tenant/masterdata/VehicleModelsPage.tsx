@@ -12,6 +12,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleBrandItem, VehicleModelItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 export function VehicleModelsPage() {
   const { hasPermission } = useAuth();
@@ -48,11 +49,11 @@ export function VehicleModelsPage() {
   }
 
   const columns: Column<VehicleModelItem>[] = [
-    { key: 'code', header: 'Code', render: (m) => m.code },
-    { key: 'name', header: 'Name', render: (m) => m.name },
-    { key: 'brand', header: 'Brand', render: (m) => m.brand?.name ?? '—' },
-    { key: 'is_system', header: 'Source', render: (m) => (m.is_system ? 'System' : 'Tenant') },
-    { key: 'status', header: 'Status', render: (m) => <StatusBadge status={m.status} /> },
+    { key: 'code', header: t('common.fields.code'), render: (m) => m.code },
+    { key: 'name', header: t('common.fields.name'), render: (m) => m.name },
+    { key: 'brand', header: t('common.fields.brand'), render: (m) => m.brand?.name ?? '—' },
+    { key: 'is_system', header: t('common.fields.source'), render: (m) => (m.is_system ? t('common.fields.system') : t('common.fields.tenant')) },
+    { key: 'status', header: t('common.fields.status'), render: (m) => <StatusBadge status={m.status} /> },
     {
       key: 'actions',
       header: '',
@@ -61,12 +62,12 @@ export function VehicleModelsPage() {
           <div style={{ display: 'flex', gap: 8 }}>
             {hasPermission('vehicle_brand.update') && (
               <button className="btn-link" onClick={() => setEditing(m)}>
-                Edit
+                {t('common.actions.edit')}
               </button>
             )}
             {hasPermission('vehicle_brand.update') && (
               <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(m)}>
-                Delete
+                {t('common.actions.delete')}
               </button>
             )}
           </div>
@@ -76,12 +77,12 @@ export function VehicleModelsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vehicle Models</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('masterData.titles.vehicleModels')}</h1>
       <Toolbar
         actions={
           hasPermission('vehicle_brand.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Model
+              {t('masterData.actions.newModel')}
             </button>
           ) : null
         }
@@ -94,7 +95,7 @@ export function VehicleModelsPage() {
           }}
           style={{ ...inputStyle, width: 200 }}
         >
-          <option value="">All brands</option>
+          <option value="">{t('masterData.filters.allBrands')}</option>
           {brands.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -104,7 +105,7 @@ export function VehicleModelsPage() {
       </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No vehicle models found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('masterData.empty.noVehicleModelsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -128,9 +129,9 @@ export function VehicleModelsPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Delete Vehicle Model"
-        message={deleteError ?? `Delete "${deleting?.name}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        title={t('masterData.confirm.deleteVehicleModel')}
+        message={deleteError ?? t('platform.masterdata.confirm.deleteNameCannotUndone', { name: deleting?.name })}
+        confirmLabel={t('common.actions.delete')}
         onCancel={() => {
           setDeleting(null);
           setDeleteError(null);
@@ -181,11 +182,11 @@ function ModelFormModal({
   }
 
   return (
-    <Modal open={open} title={model ? 'Edit Vehicle Model' : 'New Vehicle Model'} onClose={onClose}>
+    <Modal open={open} title={model ? t('masterData.modals.editVehicleModel') : t('masterData.modals.newVehicleModel')} onClose={onClose}>
       {!model && (
-        <FormField label="Brand" errors={errors.vehicle_brand_id} required>
+        <FormField label={t('common.fields.brand')} errors={errors.vehicle_brand_id} required>
           <select value={vehicleBrandId} onChange={(e) => setVehicleBrandId(e.target.value)} style={inputStyle}>
-            <option value="">Select…</option>
+            <option value="">{t('common.fields.select')}</option>
             {brands.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -194,18 +195,18 @@ function ModelFormModal({
           </select>
         </FormField>
       )}
-      <FormField label="Code" errors={errors.code} required={!model}>
+      <FormField label={t('common.fields.code')} errors={errors.code} required={!model}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!model} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required={!model}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required={!model}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || (!model && !vehicleBrandId)} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>

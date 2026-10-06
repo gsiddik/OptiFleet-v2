@@ -1,0 +1,108 @@
+{
+  "actions": {
+    "backToList": "← Kembali ke Daftar",
+    "changeStatus": "Ubah Status",
+    "createVehicle": "Buat Kendaraan",
+    "dispatch": "Kirim",
+    "editSpecifications": "Ubah Spesifikasi",
+    "newVehicle": "+ Kendaraan Baru",
+    "reassign": "Tugaskan Ulang"
+  },
+  "confirm": {
+    "deleteDocumentCannotUndone": "Hapus dokumen ini? Tindakan ini tidak dapat dibatalkan."
+  },
+  "documentType": {
+    "inspectionCertificate": "Sertifikat Uji Kelayakan",
+    "insurance": "Asuransi",
+    "permit": "Izin Operasional",
+    "vehicleTax": "Pajak Kendaraan",
+    "warranty": "Garansi"
+  },
+  "empty": {
+    "noAssignmentHistoryYet": "Belum ada riwayat penugasan.",
+    "noDocumentsUploaded": "Belum ada dokumen yang diunggah.",
+    "noHistoryEventsVehicle": "Tidak ada riwayat untuk kendaraan ini.",
+    "noTransfersYet": "Belum ada transfer.",
+    "noVehiclesFound": "Tidak ada kendaraan.",
+    "noVehicleTransfersFound": "Tidak ada transfer kendaraan."
+  },
+  "errors": {
+    "onlyJpgJpegPngImagesAccepted": "Hanya gambar JPG, JPEG, atau PNG yang diterima."
+  },
+  "fields": {
+    "chassisNumber": "Nomor Rangka",
+    "color": "Warna",
+    "currentOdometer": "Odometer Saat Ini",
+    "defaultWorkshop": "Bengkel Default",
+    "documentFile": "File dokumen",
+    "doors": "Pintu",
+    "effectiveUntil": "Berlaku Sampai",
+    "emptyWeightKg": "Berat Kosong (kg)",
+    "engineCapacityCc": "Kapasitas Mesin (cc)",
+    "engineNumber": "Nomor Mesin",
+    "expiryDate": "Tanggal Kedaluwarsa",
+    "expiryExpiryDate": "Kedaluwarsa: {{expiry_date}}",
+    "extensionDeadline": "Batas Waktu Perpanjangan",
+    "extensionDeadlineExtensionDeadline": "Batas waktu perpanjangan: {{extension_deadline}}",
+    "fromBranch": "Dari Cabang",
+    "fuelTankL": "Tangki Bahan Bakar (L)",
+    "fuelType": "Jenis Bahan Bakar",
+    "haveAnExpiryDate": "Memiliki Tanggal Kedaluwarsa?",
+    "legacyVehicleTypeLegacy": "{{legacyVehicleType}} (lama)",
+    "loadWeightKg": "Berat Muatan (kg)",
+    "needToBeExtended": "Perlu diperpanjang?",
+    "newBranch": "Cabang Baru",
+    "operational": "Operasional",
+    "operationalStatus": "Status Operasional",
+    "overview": "Ringkasan",
+    "purchaseMonth": "Bulan Pembelian",
+    "purchaseYear": "Tahun Pembelian",
+    "seats": "Kursi",
+    "suspension": "Suspensi",
+    "toBranch": "Ke Cabang",
+    "transmission": "Transmisi",
+    "valueLegacy": "{{value}} (lama)",
+    "vinOptional": "VIN (opsional)",
+    "wheelsConfiguration": "Konfigurasi Roda",
+    "wheelsInclSpare": "Roda (termasuk cadangan)",
+    "year": "Tahun"
+  },
+  "help": {
+    "emptyLoadWeightKg": "Berat Kosong / Muatan (kg)",
+    "fillDateEveryCheckedBoxBefore": "Isi tanggal untuk setiap kotak yang dicentang sebelum memilih file.",
+    "fleetWideViewVehicleTransfersOpen": "Tampilan seluruh armada untuk transfer kendaraan. Buka kendaraan untuk membuat atau memproses Transfer-nya.",
+    "fuelTankCapacityL": "Kapasitas Tangki Bahan Bakar (L)"
+  },
+  "modals": {
+    "changeVehicleStatus": "Ubah Status Kendaraan",
+    "editVehicleSpecifications": "Ubah Spesifikasi Kendaraan",
+    "newVehicle": "Kendaraan Baru",
+    "newVehicleTransfer": "Transfer Kendaraan Baru",
+    "reassignVehicle": "Tugaskan Ulang Kendaraan"
+  },
+  "notes": {
+    "vehicleTransfer": "Transfer kendaraan {{transferId}}"
+  },
+  "placeholders": {
+    "clickUploadPhotoJpgPng": "Klik untuk mengunggah foto (JPG/PNG)",
+    "noPhoto": "Tidak ada foto"
+  },
+  "sections": {
+    "assignment": "Penugasan",
+    "assignmentHistory": "Riwayat Penugasan",
+    "documents": "Dokumen",
+    "history": "Riwayat",
+    "maintenanceHistory": "Riwayat Pemeliharaan",
+    "transfer": "Transfer",
+    "transfers": "Transfer",
+    "wheelsConfiguration": "Konfigurasi Roda"
+  },
+  "titles": {
+    "vehicleHistory": "Riwayat Kendaraan",
+    "vehicles": "Kendaraan",
+    "vehicleTransfers": "Transfer Kendaraan"
+  },
+  "tooltips": {
+    "registrationNumberPhoto": "Foto {{registration_number}}"
+  }
+}

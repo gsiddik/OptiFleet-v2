@@ -7,13 +7,19 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:unit": "node --experimental-strip-types --import ./tests/unit/register.mjs --test 'tests/unit/**/*.test.ts'",
+    "i18n:generate": "node scripts/i18n/generate.mjs",
+    "i18n:check": "node scripts/i18n/generate.mjs --check",
+    "i18n:audit": "node scripts/i18n/strings.mjs audit src"
   },
   "dependencies": {
     "@xyflow/react": "^12.12.0",
     "axios": "^1.20.0",
+    "i18next": "^26.4.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
+    "react-i18next": "^17.0.15",
     "react-router-dom": "^7.18.3"
   },
   "devDependencies": {

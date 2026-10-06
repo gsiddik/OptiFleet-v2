@@ -6,6 +6,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Workflow\Models\WorkflowApprovalRequest;
 use App\Domain\Workflow\Services\WorkflowApprovalService;
 use App\Domain\Workflow\Services\WorkflowEngine;
@@ -69,7 +70,7 @@ class UsedPartDispositionService
     public function proposeDisposition(WorkOrderPartReturn $return, string $disposition, ?string $reason, string $userId): WorkOrderPartReturn
     {
         if (! in_array($disposition, WorkOrderPartReturn::DISPOSITIONS, true)) {
-            throw new WorkOrderException('Disposition must be one of: '.implode(', ', WorkOrderPartReturn::DISPOSITIONS).'.');
+            throw new WorkOrderException(Messages::text('errors.workOrder.dispositionMustBeOneOf', ['values' => implode(', ', WorkOrderPartReturn::DISPOSITIONS)]));
         }
 
         return DB::transaction(function () use ($return, $disposition, $reason, $userId) {

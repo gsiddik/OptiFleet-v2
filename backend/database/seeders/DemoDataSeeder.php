@@ -37,10 +37,7 @@ class DemoDataSeeder extends Seeder
 {
     public function run(): void
     {
-        $superAdminRole = Role::query()->updateOrCreate(
-            ['tenant_id' => null, 'name' => 'Platform Superadmin', 'scope' => 'platform'],
-            ['is_system' => true, 'description' => 'Full platform access.']
-        );
+        $superAdminRole = Role::ensurePlatformSuperadmin();
         $superAdminRole->permissions()->sync(Permission::query()->where('scope', 'platform')->pluck('id'));
 
         $superAdmin = User::query()->updateOrCreate(

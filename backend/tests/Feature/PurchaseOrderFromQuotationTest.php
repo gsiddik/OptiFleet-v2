@@ -62,8 +62,11 @@ class PurchaseOrderFromQuotationTest extends TestCase
         $this->assertSame('2026-10-01', $po->order_date->toDateString());
         $this->assertSame('2026-10-08', $po->expected_delivery_date->toDateString());
 
+        // Printed dates follow the document locale (i18n D3); the stored dates above stay ISO.
         $context = DocumentTemplateContextBuilder::forPurchaseOrder($po);
-        $this->assertSame(['2026-10-01', '2026-10-08'], [$context['purchase_order']['order_date'], $context['purchase_order']['expected_delivery_date']]);
+        $this->assertSame(['October 1, 2026', 'October 8, 2026'], [$context['purchase_order']['order_date'], $context['purchase_order']['expected_delivery_date']]);
+        $context = DocumentTemplateContextBuilder::forPurchaseOrder($po, 'id');
+        $this->assertSame(['1 Oktober 2026', '8 Oktober 2026'], [$context['purchase_order']['order_date'], $context['purchase_order']['expected_delivery_date']]);
         $this->app['auth']->forgetGuards();
         $this->get("/api/v1/app/purchase-orders/{$po->id}/print", $headers)->assertOk()->assertHeader('Content-Type', 'application/pdf');
     }

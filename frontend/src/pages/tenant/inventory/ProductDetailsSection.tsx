@@ -7,6 +7,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import { EditProductModal } from './EditProductModal';
 import type { ProductItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
+import { t } from '../../../i18n/i18n';
 
 /**
  * The "Details" card of a Product — shared by Product Detail and Tire Detail so both show the same
@@ -70,38 +71,38 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
     return run(() => apiClient.post(`/app/products/${product.id}/image`, form, { headers: { 'Content-Type': 'multipart/form-data' } }));
   }
 
-  const deleted = (row: { deleted_at?: string | null } | null | undefined) => (row?.deleted_at ? ' (deleted)' : '');
+  const deleted = (row: { deleted_at?: string | null } | null | undefined) => (row?.deleted_at ? ` ${t('common.fields.deletedMarker')}` : '');
 
   const line = { fontSize: 13, margin: '0 0 10px' };
   const details = (
     <>
       <p style={line}>
-        <strong>SKU:</strong> {product.sku} &nbsp; <strong>Type:</strong> {product.product_type} &nbsp; <strong>Category:</strong> {product.category?.name ?? '—'} &nbsp;{' '}
-        <strong>UOM:</strong> {product.uom?.name ?? '—'}
+        <strong>{t('inventory.fields.sku')}:</strong> {product.sku} &nbsp; <strong>{t('common.fields.type')}:</strong> {product.product_type} &nbsp; <strong>{t('common.fields.category')}:</strong> {product.category?.name ?? '—'} &nbsp;{' '}
+        <strong>{t('inventory.fields.uom2')}:</strong> {product.uom?.name ?? '—'}
         {(product.component_groups ?? []).length > 0 && (
           <>
             {' '}
-            &nbsp; <strong>Component Groups:</strong> {(product.component_groups ?? []).map((g) => componentGroupLabel(g) + deleted(g)).join(', ')}
+            &nbsp; <strong>{t('inventory.fields.componentGroups')}:</strong> {(product.component_groups ?? []).map((g) => componentGroupLabel(g) + deleted(g)).join(', ')}
           </>
         )}
       </p>
       <p style={line}>
-        <strong>Component Group:</strong> {product.component_group ? componentGroupLabel(product.component_group) + deleted(product.component_group) : '—'}
-        &nbsp; <strong>Category:</strong> {product.component_category ? product.component_category.name + deleted(product.component_category) : '—'}
-        &nbsp; <strong>Subcategory:</strong> {product.component_subcategory ? product.component_subcategory.name + deleted(product.component_subcategory) : '—'}
+        <strong>{t('common.fields.componentGroup')}:</strong> {product.component_group ? componentGroupLabel(product.component_group) + deleted(product.component_group) : '—'}
+        &nbsp; <strong>{t('common.fields.category')}:</strong> {product.component_category ? product.component_category.name + deleted(product.component_category) : '—'}
+        &nbsp; <strong>{t('inventory.fields.subcategory')}:</strong> {product.component_subcategory ? product.component_subcategory.name + deleted(product.component_subcategory) : '—'}
       </p>
       {product.brand && (
         <p style={line}>
-          <strong>Brand:</strong> {product.brand} &nbsp; <strong>Manufacturer Part #:</strong> {product.manufacturer_part_number ?? '—'}
+          <strong>{t('common.fields.brand')}:</strong> {product.brand} &nbsp; <strong>{t('inventory.fields.manufacturerPartNumber')}:</strong> {product.manufacturer_part_number ?? '—'}
         </p>
       )}
       <p style={line}>
-        <strong>Manufacturer:</strong> {product.manufacturer ?? '—'} &nbsp; <strong>Material:</strong> {product.material ?? '—'} &nbsp;
-        <strong>Production Year:</strong> {product.production_year ?? '—'}
+        <strong>{t('inventory.fields.manufacturer')}:</strong> {product.manufacturer ?? '—'} &nbsp; <strong>{t('inventory.fields.material')}:</strong> {product.material ?? '—'} &nbsp;
+        <strong>{t('inventory.fields.productionYear')}:</strong> {product.production_year ?? '—'}
       </p>
       <p style={line}>
-        <strong>Dimensions (L×W×H mm):</strong> {product.length_mm ? `${product.length_mm} × ${product.width_mm ?? '—'} × ${product.height_mm ?? '—'}` : '—'} &nbsp;
-        <strong>Weight (kg):</strong> {product.weight_kg ?? '—'}
+        <strong>{t('inventory.fields.dimensionsLWHMm')}:</strong> {product.length_mm ? `${product.length_mm} × ${product.width_mm ?? '—'} × ${product.height_mm ?? '—'}` : '—'} &nbsp;
+        <strong>{t('inventory.fields.weightKg')}:</strong> {product.weight_kg ?? '—'}
       </p>
       {product.product_type === 'TIRE' && product.tire_spec && <TireSpecification spec={product.tire_spec} />}
     </>
@@ -109,29 +110,29 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
   const removable = Boolean(imagePreviewUrl) && !product.is_system && hasPermission('product.delete');
   const image = (
     <div data-product-image>
-      <ImageContainer src={imagePreviewUrl} alt={product.name} placeholder={canUpdate ? 'No image — use Upload Image (JPG or PNG)' : 'No image'} />
+      <ImageContainer src={imagePreviewUrl} alt={product.name} placeholder={canUpdate ? t('inventory.placeholders.noImageUseUploadImageJpg') : t('common.placeholders.noImage')} />
       {canUpdate && (
         <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
           <button type="button" className="btn-secondary" disabled={busy} onClick={() => fileRef.current?.click()}>
-            {imagePreviewUrl ? 'Replace Image' : 'Upload Image'}
+            {imagePreviewUrl ? t('inventory.actions.replaceImage') : t('common.actions.uploadImage')}
           </button>
           {removable && (
             <button type="button" className="btn-link" style={{ color: '#b91c1c' }} disabled={busy} onClick={() => run(() => apiClient.delete(`/app/products/${product.id}/image`))}>
-              Remove Image
+              {t('inventory.actions.removeImage')}
             </button>
           )}
           <input
             ref={fileRef}
             type="file"
             accept=".jpg,.jpeg,.png,image/jpeg,image/png"
-            aria-label="Product image file"
+            aria-label={t('inventory.fields.productImageFile')}
             style={{ display: 'none' }}
             onChange={(e) => {
               const f = e.target.files?.[0];
               e.target.value = '';
               if (!f) return;
               if (!['image/jpeg', 'image/png'].includes(f.type)) {
-                setError('Only JPG or PNG images are accepted.');
+                setError(t('common.errors.onlyJpgPngImagesAccepted'));
                 return;
               }
               uploadImage(f);
@@ -145,10 +146,10 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
   return (
     <div className="card" style={{ marginBottom: 16 }} data-product-details>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <h3 style={{ margin: 0, fontSize: 15 }}>Details</h3>
+        <h3 style={{ margin: 0, fontSize: 15 }}>{t('common.sections.details')}</h3>
         {canUpdate && (
           <button className="btn-secondary" onClick={() => setEditing(true)}>
-            Edit Product
+            {t('inventory.actions.editProduct')}
           </button>
         )}
       </div>
@@ -158,10 +159,10 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
         </div>
       )}
       <DetailsWithImage details={details} image={image} />
-      {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>Platform system record — read-only.</p>}
+      {product.is_system && <p style={{ fontSize: 12, color: '#9ca3af' }}>{t('inventory.help.platformSystemRecordReadOnly')}</p>}
       {product.product_type === 'TIRE' && (
         <div style={{ marginTop: 10 }}>
-          <FormField label="Reference Tread Depth (mm) — required before this Tire product's tires can be scored">
+          <FormField label={t('inventory.fields.referenceTreadDepthMmRequiredBefore')}>
             <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
               <NumericInput
                 step="0.01"
@@ -173,7 +174,7 @@ export function ProductDetailsSection({ product, onChanged }: { product: Product
               />
               {canUpdate && (
                 <button className="btn-secondary" disabled={busy} onClick={() => run(() => apiClient.put(`/app/products/${product.id}`, { reference_tread_depth_mm: referenceTreadDepthMm || null }))}>
-                  Save
+                  {t('common.actions.save')}
                 </button>
               )}
             </div>
@@ -202,14 +203,14 @@ function TireSpecification({ spec }: { spec: NonNullable<ProductItem['tire_spec'
   );
   return (
     <p style={{ fontSize: 13, display: 'flex', flexWrap: 'wrap', gap: '4px 14px' }} data-tire-spec>
-      {item('Tire Size', spec.tire_size_computed)}
-      {item('Rim Diameter', spec.rim_diameter_inch != null ? `${spec.rim_diameter_inch}"` : null)}
-      {item('Pattern', spec.pattern_name)}
-      {item('Vehicle Group', spec.vehicle_group === 'TRUCK_BUS' ? 'Truck & Bus' : spec.vehicle_group === 'OTR' ? 'OTR / Heavy Equipment' : 'Car')}
-      {item('Construction', spec.construction_type)}
-      {item('Tire Type', spec.tire_type)}
-      {item('Max Load (single)', spec.single_max_load_kg_computed != null ? `${spec.single_max_load_kg_computed} kg` : null)}
-      {item('Max Speed', spec.max_speed_kmh_computed != null ? `${spec.max_speed_kmh_computed} km/h` : null)}
+      {item(t('inventory.fields.tireSize'), spec.tire_size_computed)}
+      {item(t('inventory.fields.rimDiameter'), spec.rim_diameter_inch != null ? `${spec.rim_diameter_inch}"` : null)}
+      {item(t('inventory.fields.pattern'), spec.pattern_name)}
+      {item(t('inventory.fields.vehicleGroup'), spec.vehicle_group === 'TRUCK_BUS' ? t('inventory.fields.truckAndBus') : spec.vehicle_group === 'OTR' ? t('inventory.fields.otrHeavyEquipment') : t('inventory.fields.car'))}
+      {item(t('inventory.fields.construction'), spec.construction_type)}
+      {item(t('inventory.fields.tireType'), spec.tire_type)}
+      {item(t('inventory.fields.maxLoadSingle'), spec.single_max_load_kg_computed != null ? t('inventory.fields.dualMaxLoadKg', { dualMaxLoad: spec.single_max_load_kg_computed }) : null)}
+      {item(t('inventory.fields.maxSpeed'), spec.max_speed_kmh_computed != null ? t('inventory.fields.maxSpeedKmH', { maxSpeed: spec.max_speed_kmh_computed }) : null)}
     </p>
   );
 }

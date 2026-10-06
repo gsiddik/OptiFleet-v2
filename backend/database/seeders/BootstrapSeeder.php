@@ -20,12 +20,14 @@ class BootstrapSeeder extends Seeder
             PlatformSuperadminRoleSeeder::class,
             ConfigurationDefaultsSeeder::class,
             AddExternalWorkOrderPrintSectionSeeder::class,
+            AddLocalizedDocumentTemplatesSeeder::class,
             WorkflowDefaultsSeeder::class,
             RetireMaintenanceRequestNeedInformationSeeder::class,
             AddWorkOrderExternalStatusSeeder::class,
             CorrectWorkOrderExternalTransitionsSeeder::class,
             AddWorkOrderExternalClosedTransitionSeeder::class,
             NotificationDefaultsSeeder::class,
+            AddLocalizedNotificationTemplatesSeeder::class,
 
             // --- Reference / master data (Vehicle Category, Component Group, Product Category, UOM, Tire/Tool/Equipment reference, Storage Requirement) ---
             MasterDataSeeder::class,

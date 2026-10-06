@@ -2,6 +2,7 @@
 
 namespace App\Domain\Shared\Services;
 
+use App\Domain\Shared\Support\Messages;
 use Closure;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -69,7 +70,7 @@ class PrivateDocumentStorage
             throw ValidationException::withMessages([$field => ["The {$label} must be a ".$this->describe($mimes).' file.']]);
         }
         if ($file->getSize() > $maxBytes) {
-            throw ValidationException::withMessages([$field => ["The {$label} must not be larger than ".round($maxBytes / 1024 / 1024).' MB.']]);
+            throw ValidationException::withMessages([$field => [Messages::text('validation.shared.fileTooLarge', ['label' => $label, 'maxMb' => round($maxBytes / 1024 / 1024)])]]);
         }
     }
 

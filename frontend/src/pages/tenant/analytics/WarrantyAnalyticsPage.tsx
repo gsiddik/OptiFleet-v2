@@ -1,21 +1,22 @@
 import { AnalyticsDomainPage } from './AnalyticsDomainPage';
+import { t } from '../../../i18n/i18n';
 
 export function WarrantyAnalyticsPage() {
   return (
     <AnalyticsDomainPage
       config={{
-        title: 'Warranty Analytics',
-        description: 'Claims submitted/approved/rejected/settled, claim value, and warranty utilization.',
+        title: t('analytics.sections.warrantyAnalytics'),
+        description: t('analytics.help.claimsSubmittedApprovedRejectedSettledClaim'),
         endpoint: '/app/analytics/warranty',
         exportSlug: 'warranty',
         permission: 'analytics.warranty.view',
         dimensionField: 'branch_id',
-        dimensionLabel: 'Branch',
+        dimensionLabel: t('common.fields.branch'),
         highlightFields: [
-          { key: 'claims_submitted', label: 'Submitted' },
-          { key: 'settled', label: 'Settled' },
-          { key: 'claim_value', label: 'Claim Value' },
-          { key: 'warranty_utilization_percentage', label: 'Utilization %' },
+          { key: 'claims_submitted', label: t('analytics.fields.submitted') },
+          { key: 'settled', label: t('analytics.fields.settled') },
+          { key: 'claim_value', label: t('analytics.fields.claimValue') },
+          { key: 'warranty_utilization_percentage', label: t('analytics.fields.utilizationPercent') },
         ],
       }}
     />

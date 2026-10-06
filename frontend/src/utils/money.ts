@@ -1,9 +1,11 @@
+import { appLocale, type AppLocale } from '../i18n/locale';
+
 /**
  * Money presentation standard: always exactly two decimals with thousands separators,
  * rounded half-up (the backend's Money rounding policy). Works on the decimal string the API
  * returns — no floating-point arithmetic — so "100.005" becomes "100.01", not "100.00".
  */
-export function formatMoney(value: string | number | null | undefined, currency?: string | null): string {
+export function formatMoney(value: string | number | null | undefined, currency?: string | null, locale: AppLocale = appLocale()): string {
   if (value === null || value === undefined || value === '') return '—';
   const raw = String(value).trim();
   const match = /^(-?)(\d*)(?:\.(\d*))?$/.exec(typeof value === 'number' ? value.toFixed(10) : raw);
@@ -28,9 +30,11 @@ export function formatMoney(value: string | number | null | undefined, currency?
     digits = (i < 0 ? '1' : '') + chars.join('');
   }
   const intPart = digits.slice(0, -2).replace(/^0+(?=\d)/, '') || '0';
-  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-  const isZero = /^[0,]*$/.test(grouped) && /^0*$/.test(digits.slice(-2));
-  const amount = `${sign && !isZero ? '-' : ''}${grouped}.${digits.slice(-2)}`;
+  // D3: separators follow the locale (en 1,234.50 · id 1.234,50), as DisplayFormat::money on the backend.
+  const [thousands, decimal] = locale === 'id' ? ['.', ','] : [',', '.'];
+  const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousands);
+  const isZero = /^0*$/.test(intPart) && /^0*$/.test(digits.slice(-2));
+  const amount = `${sign && !isZero ? '-' : ''}${grouped}${decimal}${digits.slice(-2)}`;
   return currency ? `${currency} ${amount}` : amount;
 }
 

@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Tenant;
 
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequestInspectionGroup;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -33,10 +34,10 @@ class SaveMaintenanceRequestAssessmentRequest extends FormRequest
             $duplicates = array_diff_assoc($codes, array_unique($codes));
 
             if ($missing !== []) {
-                $validator->errors()->add('groups', 'All 14 inspection groups are required. Missing: '.implode(', ', $missing));
+                $validator->errors()->add('groups', Messages::text('validation.maintenance.assessmentGroupsMissing', ['groups' => implode(', ', $missing)]));
             }
             if ($duplicates !== []) {
-                $validator->errors()->add('groups', 'Each inspection group may only appear once. Duplicated: '.implode(', ', array_unique($duplicates)));
+                $validator->errors()->add('groups', Messages::text('validation.maintenance.assessmentGroupsDuplicated', ['groups' => implode(', ', array_unique($duplicates))]));
             }
         });
     }

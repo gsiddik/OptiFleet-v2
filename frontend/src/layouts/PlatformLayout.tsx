@@ -1,26 +1,28 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { LanguageSelector } from '../components/LanguageSelector';
 import { useAuth } from '../auth/AuthContext';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { Logo } from '../components/Logo';
+import { t } from '../i18n/i18n';
 
 const NAV = [
-  { to: '/platform/dashboard', label: 'Dashboard', permission: null },
-  { to: '/platform/tenants', label: 'Tenant Management', permission: 'tenant.view' },
-  { to: '/platform/modules', label: 'Module Catalog', permission: 'module.view' },
-  { to: '/platform/product-categories', label: 'Product Categories', permission: 'product_category.view' },
-  { to: '/platform/component-groups', label: 'Component Groups', permission: 'component_group.view' },
-  { to: '/platform/component-categories', label: 'Component Categories', permission: 'component_category.view' },
-  { to: '/platform/component-subcategories', label: 'Component Subcategories', permission: 'component_subcategory.view' },
-  { to: '/platform/bundles', label: 'Bundles', permission: 'bundle.view' },
-  { to: '/platform/pricing', label: 'Pricing', permission: 'pricing.view' },
-  { to: '/platform/contracts', label: 'Contracts', permission: 'contract.view' },
-  { to: '/platform/subscriptions', label: 'Subscriptions', permission: 'subscription.view' },
-  { to: '/platform/billings', label: 'Billing', permission: 'billing.view' },
-  { to: '/platform/invoices', label: 'Invoices', permission: 'invoice.view' },
-  { to: '/platform/payments', label: 'Payments', permission: 'payment.view' },
-  { to: '/platform/access/users', label: 'Platform Users', permission: 'user.view' },
-  { to: '/platform/access/roles', label: 'Platform Roles', permission: 'role.view' },
-  { to: '/platform/audit-logs', label: 'Audit Log', permission: 'audit.view' },
+  { to: '/platform/dashboard', labelKey: 'nav.items.dashboard', permission: null },
+  { to: '/platform/tenants', labelKey: 'nav.items.tenantManagement', permission: 'tenant.view' },
+  { to: '/platform/modules', labelKey: 'nav.items.moduleCatalog', permission: 'module.view' },
+  { to: '/platform/product-categories', labelKey: 'nav.items.productCategories', permission: 'product_category.view' },
+  { to: '/platform/component-groups', labelKey: 'nav.items.componentGroups', permission: 'component_group.view' },
+  { to: '/platform/component-categories', labelKey: 'nav.items.componentCategories', permission: 'component_category.view' },
+  { to: '/platform/component-subcategories', labelKey: 'nav.items.componentSubcategories', permission: 'component_subcategory.view' },
+  { to: '/platform/bundles', labelKey: 'nav.items.bundles', permission: 'bundle.view' },
+  { to: '/platform/pricing', labelKey: 'nav.items.pricing', permission: 'pricing.view' },
+  { to: '/platform/contracts', labelKey: 'nav.items.contracts', permission: 'contract.view' },
+  { to: '/platform/subscriptions', labelKey: 'nav.items.subscriptions', permission: 'subscription.view' },
+  { to: '/platform/billings', labelKey: 'nav.items.billing', permission: 'billing.view' },
+  { to: '/platform/invoices', labelKey: 'nav.items.invoices', permission: 'invoice.view' },
+  { to: '/platform/payments', labelKey: 'nav.items.payments', permission: 'payment.view' },
+  { to: '/platform/access/users', labelKey: 'nav.items.platformUsers', permission: 'user.view' },
+  { to: '/platform/access/roles', labelKey: 'nav.items.platformRoles', permission: 'role.view' },
+  { to: '/platform/audit-logs', labelKey: 'nav.items.auditLog', permission: 'audit.view' },
 ];
 
 export function PlatformLayout() {
@@ -38,7 +40,7 @@ export function PlatformLayout() {
           </div>
         </div>
         <div style={{ padding: '0 20px 16px', fontSize: 11, textTransform: 'uppercase', color: '#9ca3af', letterSpacing: 1 }}>
-          Platform Portal
+          {t('common.fields.platformPortal')}
         </div>
         <nav>
           {NAV.filter((item) => !item.permission || hasPermission(item.permission)).map((item) => (
@@ -54,7 +56,7 @@ export function PlatformLayout() {
                 fontSize: 14,
               })}
             >
-              {item.label}
+              {t(item.labelKey)}
             </NavLink>
           ))}
         </nav>
@@ -71,9 +73,10 @@ export function PlatformLayout() {
             borderBottom: '1px solid #e5e7eb',
           }}
         >
+          <LanguageSelector compact />
           <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
           <button className="btn-secondary" onClick={() => logout()}>
-            Logout
+            {t('common.actions.logout')}
           </button>
         </header>
         <main style={{ flex: 1, padding: 24 }}>

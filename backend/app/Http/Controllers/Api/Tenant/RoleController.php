@@ -83,6 +83,8 @@ class RoleController extends Controller
     {
         return [
             'id' => $role->id,
+            // Canonical identifier of a system-defined role (never shown, never translated); null for tenant roles.
+            'code' => $role->code,
             'name' => $role->name,
             'scope' => $role->scope,
             'is_system' => $role->is_system,

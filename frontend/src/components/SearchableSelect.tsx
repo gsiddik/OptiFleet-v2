@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { inputStyle } from './FormField';
+import { t } from '../i18n/i18n';
 
 export interface SearchableOption {
   value: string;
@@ -126,7 +127,7 @@ export function SearchableSelect({
           <div style={{ padding: 6, borderBottom: '1px solid #e5e7eb' }}>
             <input
               ref={searchRef}
-              aria-label={`${ariaLabel} search`}
+              aria-label={t('common.fields.ariaLabelSearch', { ariaLabel: ariaLabel })}
               placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -135,8 +136,8 @@ export function SearchableSelect({
             />
           </div>
           <ul id={listId} role="listbox" aria-label={ariaLabel} style={{ listStyle: 'none', margin: 0, padding: 4, maxHeight: 260, overflowY: 'auto' }}>
-            {loading && <li style={{ padding: '6px 8px', fontSize: 13, color: '#6b7280' }}>Loading…</li>}
-            {!loading && options.length === 0 && <li style={{ padding: '6px 8px', fontSize: 13, color: '#6b7280' }}>No matches</li>}
+            {loading && <li style={{ padding: '6px 8px', fontSize: 13, color: '#6b7280' }}>{t('common.actions.loading')}</li>}
+            {!loading && options.length === 0 && <li style={{ padding: '6px 8px', fontSize: 13, color: '#6b7280' }}>{t('common.empty.noMatches')}</li>}
             {!loading &&
               options.map((option, i) => (
                 <li

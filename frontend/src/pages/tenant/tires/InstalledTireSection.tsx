@@ -5,6 +5,8 @@ import type { TireInstalledSummary } from '../../../types';
 import { formatHours, formatKm } from './operations/tireOperationFormat';
 import { WheelConfigurationPreview } from './wheel-configuration/WheelConfigurationPreview';
 import { bodyStyleFor, type VehicleType } from './wheel-configuration/vehicleTypes';
+import { t } from '../../../i18n/i18n';
+import { Trans } from 'react-i18next';
 
 const HIGHLIGHT = '#a8321f';
 
@@ -20,33 +22,33 @@ export function InstalledTireSection({ installed }: { installed: TireInstalledSu
   return (
     <div className="split-layout" data-installed-tire style={{ marginBottom: 16 }}>
       <section className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Installed Tire</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tire.sections.installedTire')}</h3>
         <dl style={{ display: 'grid', gridTemplateColumns: 'minmax(150px, max-content) 1fr', gap: '10px 14px', fontSize: 14, margin: 0 }}>
-          <Fact label="Vehicle">
+          <Fact label={t('common.fields.vehicle')}>
             <Link to={`/app/vehicles/${installed.vehicle.id}?tab=wheels`}>{installed.vehicle.registration_number ?? '—'}</Link>
           </Fact>
-          <Fact label="Position">
+          <Fact label={t('tire.fields.position')}>
             <div data-position-code={installed.position_code}>
               <div style={{ fontWeight: 700, fontSize: 18 }}>{installed.position_code}</div>
               <div style={{ color: '#6b7280', fontSize: 13 }}>{describePositionCode(installed.position_code)}</div>
             </div>
           </Fact>
-          <Fact label="Usage KM">
+          <Fact label={t('tire.fields.usageKm')}>
             <span data-usage-km>{formatKm(installed.usage_km)}</span>
           </Fact>
-          <Fact label="Usage Time / Hours Meter">
+          <Fact label={t('tire.fields.usageTimeHoursMeter')}>
             <span data-usage-hours>{formatHours(installed.usage_hours)}</span>
           </Fact>
-          <Fact label="Current Tread Depth">
+          <Fact label={t('tire.fields.currentTreadDepth')}>
             <div data-tread>
               <span style={{ fontVariantNumeric: 'tabular-nums', color: below ? '#b91c1c' : undefined, fontWeight: below ? 700 : undefined }}>
-                {installed.current_tread_depth_mm != null ? `${installed.current_tread_depth_mm} mm` : '—'}
+                {installed.current_tread_depth_mm != null ? t('tire.help.dPullMmMm', { d_pull_mm: installed.current_tread_depth_mm }) : '—'}
               </span>
-              <span style={{ color: '#6b7280' }}> / {installed.reference_tread_depth_mm != null ? `${installed.reference_tread_depth_mm} mm` : '—'}</span>
-              <div style={{ color: '#6b7280', fontSize: 12 }}>Current / Reference</div>
+              <span style={{ color: '#6b7280' }}> / {installed.reference_tread_depth_mm != null ? t('tire.help.dPullMmMm', { d_pull_mm: installed.reference_tread_depth_mm }) : '—'}</span>
+              <div style={{ color: '#6b7280', fontSize: 12 }}>{t('tire.fields.currentReference')}</div>
               {below && (
                 <div role="alert" data-tread-warning style={{ color: '#b91c1c', fontSize: 13, marginTop: 4 }}>
-                  (The Tread Depth is below standard, <strong>NEED TO CHECK</strong>)
+                  {t('tire.help.treadDepthBelowStandard')} <strong>{t('tire.fields.needToCheck')}</strong>)
                 </div>
               )}
             </div>
@@ -54,7 +56,7 @@ export function InstalledTireSection({ installed }: { installed: TireInstalledSu
         </dl>
       </section>
       <section className="card" data-installed-preview>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Vehicle Preview</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('tire.sections.vehiclePreview')}</h3>
         {configuration ? (
           <>
             <WheelConfigurationPreview
@@ -64,11 +66,11 @@ export function InstalledTireSection({ installed }: { installed: TireInstalledSu
               positionColors={{ [installed.position_code]: HIGHLIGHT }}
             />
             <p style={{ fontSize: 12, color: '#6b7280', marginBottom: 0 }}>
-              Wheels Configuration {configuration.config_code} (v{configuration.version_number}) — this tire is on <strong style={{ color: HIGHLIGHT }}>{installed.position_code}</strong>.
+              <Trans i18nKey="tire.help.installedOnPosition" values={{ config_code: configuration.config_code, version_number: configuration.version_number, position: installed.position_code }} components={{ strong: <strong style={{ color: HIGHLIGHT }} /> }} />
             </p>
           </>
         ) : (
-          <p style={{ fontSize: 13, color: '#6b7280' }}>This vehicle has no Wheels Configuration mapped.</p>
+          <p style={{ fontSize: 13, color: '#6b7280' }}>{t('tire.help.vehicleNoWheelsConfigurationMapped')}</p>
         )}
       </section>
     </div>

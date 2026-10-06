@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { extractApiError } from '../api/client';
 import { Modal } from './Modal';
 import { fetchProtectedFile } from '../utils/protectedFile';
+import { t } from '../i18n/i18n';
 
 /**
  * Opens a protected document in a modal according to its ACTUAL type — the Content-Type the
@@ -43,23 +44,23 @@ export function DocumentViewer({ path, title, fileName, mimeType, onClose }: { p
         {file && <span> · {file.type}</span>}
       </div>
       {error && <div style={{ color: '#b91c1c', fontSize: 13 }}>{error}</div>}
-      {!error && !file && <div style={{ fontSize: 13 }}>Loading…</div>}
+      {!error && !file && <div style={{ fontSize: 13 }}>{t('common.help.loading')}</div>}
       {file && isImage && <img src={file.url} alt={name} style={{ display: 'block', maxWidth: '100%', maxHeight: '70vh', margin: '0 auto', border: '1px solid #e5e7eb' }} />}
       {file && isPdf && <iframe title={name} src={file.url} style={{ width: '100%', height: '70vh', border: '1px solid #e5e7eb' }} />}
-      {file && !isImage && !isPdf && <div style={{ fontSize: 13 }}>This file type cannot be previewed in the browser — download it to open it.</div>}
+      {file && !isImage && !isPdf && <div style={{ fontSize: 13 }}>{t('common.help.fileTypeCannotPreviewedBrowserDownload')}</div>}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
         {file && isPdf && (
           <a className="btn-secondary" href={file.url} target="_blank" rel="noreferrer">
-            Open in new tab
+            {t('common.actions.openInNewTab')}
           </a>
         )}
         {file && (
           <a className="btn-secondary" href={file.url} download={name}>
-            Download
+            {t('common.actions.download')}
           </a>
         )}
         <button className="btn-primary" onClick={onClose}>
-          Close
+          {t('common.actions.close')}
         </button>
       </div>
     </Modal>

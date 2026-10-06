@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiClient, extractApiError } from '../../../api/client';
 import { BackButton } from '../../../components/BackButton';
+import { DocumentVersionsButton } from '../../../components/DocumentVersions';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { ErrorState, LoadingState } from '../../../components/States';
@@ -11,6 +12,8 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { WorkshopInvoiceItem, WorkshopInvoiceReconciliation } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney, toMoneyInput } from '../../../utils/money';
+import { t } from '../../../i18n/i18n';
+import { formatDate } from '../../../utils/date';
 
 /**
  * R1: full detail view for one recorded Workshop Invoice — reconciliation,
@@ -102,69 +105,70 @@ export function WorkshopInvoiceDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo={`/app/work-orders/${invoice.work_order_id}`} label="← Back to Work Order" />
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Service Invoice — {invoice.external_invoice_number}</h1>
+      <BackButton fallbackTo={`/app/work-orders/${invoice.work_order_id}`} label={t('workOrder.actions.backToWorkOrder')} />
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('workshopInvoice.titles.serviceInvoiceExternalInvoiceNumber', { external_invoice_number: invoice.external_invoice_number })}</h1>
       <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 0 }}>
-        Recorded from an externally-issued document — OptiFleet did not issue this invoice.
+        {t('workshopInvoice.help.recordedExternallyIssuedDocumentOptiFleet')}
       </p>
 
       <div className="card" style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', gap: 16, alignItems: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
           <StatusBadge status={invoice.status} />
-          <span style={{ fontSize: 12, color: '#6b7280' }}>Maintenance Memo: <StatusBadge status={invoice.memo?.status ?? '—'} /></span>
+          <span style={{ fontSize: 12, color: '#6b7280' }}>{t('workshopInvoice.fields.maintenanceMemo')}: <StatusBadge status={invoice.memo?.status ?? '—'} /></span>
           <button className="btn-secondary" disabled={printing} onClick={printInvoice}>
-            {printing ? 'Loading…' : 'Print'}
+            {printing ? t('common.actions.loading') : t('common.actions.print')}
           </button>
+          <DocumentVersionsButton printPath={`/app/workshop-invoices/${invoice.id}/print`} />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13 }}>
-          <div><strong>Service Provider:</strong> {invoice.partner?.name ?? invoice.partner_id}</div>
-          <div><strong>Work Order:</strong> <Link to={`/app/work-orders/${invoice.work_order_id}`}>{invoice.work_order?.wo_number ?? 'Open Work Order'}</Link></div>
-          <div><strong>Partner Reference:</strong> {invoice.partner_reference ?? '—'}</div>
-          <div><strong>Invoice Date:</strong> {invoice.invoice_date}</div>
-          <div><strong>Due Date:</strong> {invoice.due_date ?? '—'}</div>
-          <div><strong>Currency:</strong> {invoice.currency}</div>
-          <div><strong>Subtotal:</strong> {formatMoney(invoice.subtotal)}</div>
-          <div><strong>Tax:</strong> {formatMoney(invoice.tax_total)}</div>
-          <div><strong>Discount:</strong> {formatMoney(invoice.discount_total)}</div>
-          <div style={{ gridColumn: '1 / -1', fontSize: 15 }}><strong>Total Amount: {formatMoney(invoice.total_amount, invoice.currency)}</strong></div>
+          <div><strong>{t('workshopInvoice.fields.serviceProvider')}:</strong> {invoice.partner?.name ?? invoice.partner_id}</div>
+          <div><strong>{t('common.fields.workOrder')}:</strong> <Link to={`/app/work-orders/${invoice.work_order_id}`}>{invoice.work_order?.wo_number ?? t('workshopInvoice.actions.openWorkOrder')}</Link></div>
+          <div><strong>{t('workshopInvoice.fields.partnerReference')}:</strong> {invoice.partner_reference ?? '—'}</div>
+          <div><strong>{t('common.fields.invoiceDate')}:</strong> {invoice.invoice_date}</div>
+          <div><strong>{t('common.fields.dueDate')}:</strong> {invoice.due_date ?? '—'}</div>
+          <div><strong>{t('workOrder.fields.currency')}:</strong> {invoice.currency}</div>
+          <div><strong>{t('documents.platformInvoice.subtotal')}:</strong> {formatMoney(invoice.subtotal)}</div>
+          <div><strong>{t('common.fields.tax')}:</strong> {formatMoney(invoice.tax_total)}</div>
+          <div><strong>{t('common.fields.discount')}:</strong> {formatMoney(invoice.discount_total)}</div>
+          <div style={{ gridColumn: '1 / -1', fontSize: 15 }}><strong>{t('workshopInvoice.fields.totalAmountTotalAmount', { total_amount: formatMoney(invoice.total_amount, invoice.currency) })}</strong></div>
         </div>
-        {invoice.notes && <p style={{ fontSize: 13, marginTop: 10 }}><strong>Notes:</strong> {invoice.notes}</p>}
+        {invoice.notes && <p style={{ fontSize: 13, marginTop: 10 }}><strong>{t('common.fields.notes')}:</strong> {invoice.notes}</p>}
         <div style={{ display: 'flex', gap: 16, marginTop: 10, fontSize: 12 }}>
           {invoice.returned_memo_attachment_url && (
-            <a href={invoice.returned_memo_attachment_url} target="_blank" rel="noreferrer">Returned Memo Attachment</a>
+            <a href={invoice.returned_memo_attachment_url} target="_blank" rel="noreferrer">{t('workshopInvoice.actions.returnedMemoAttachment')}</a>
           )}
           {invoice.invoice_attachment_url && (
-            <a href={invoice.invoice_attachment_url} target="_blank" rel="noreferrer">Invoice Attachment</a>
+            <a href={invoice.invoice_attachment_url} target="_blank" rel="noreferrer">{t('workshopInvoice.actions.invoiceAttachment')}</a>
           )}
         </div>
       </div>
 
       {reconciliation && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Reconciliation</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('workshopInvoice.sections.reconciliation')}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, fontSize: 13, marginBottom: 10 }}>
-            <div><strong>Expected:</strong> {formatMoney(reconciliation.expected_amount)}</div>
-            <div><strong>Invoiced:</strong> {formatMoney(reconciliation.invoiced_amount)}</div>
-            <div><strong>Variance:</strong> {formatMoney(reconciliation.variance_amount)} {reconciliation.variance_percent ? `(${reconciliation.variance_percent}%)` : ''}</div>
-            <div><strong>Work Order Estimate:</strong> {formatMoney(reconciliation.work_order_estimated_total_cost)}</div>
+            <div><strong>{t('workshopInvoice.fields.expected')}:</strong> {formatMoney(reconciliation.expected_amount)}</div>
+            <div><strong>{t('workshopInvoice.fields.invoiced')}:</strong> {formatMoney(reconciliation.invoiced_amount)}</div>
+            <div><strong>{t('workshopInvoice.fields.variance')}:</strong> {formatMoney(reconciliation.variance_amount)} {reconciliation.variance_percent ? `(${reconciliation.variance_percent}%)` : ''}</div>
+            <div><strong>{t('workshopInvoice.fields.workOrderEstimate')}:</strong> {formatMoney(reconciliation.work_order_estimated_total_cost)}</div>
             <div><StatusBadge status={reconciliation.reconciliation_status} /></div>
           </div>
           {reconciliation.missing_source_records.length > 0 && (
-            <p style={{ fontSize: 12, color: '#b45309' }}>Missing source records: {reconciliation.missing_source_records.join(', ')}</p>
+            <p style={{ fontSize: 12, color: '#b45309' }}>{t('workshopInvoice.fields.missingSourceRecords')}: {reconciliation.missing_source_records.join(', ')}</p>
           )}
           {reconciliation.unmatched_line_items.length > 0 && (
-            <p style={{ fontSize: 12, color: '#b45309' }}>Unmatched line items: {reconciliation.unmatched_line_items.join(', ')}</p>
+            <p style={{ fontSize: 12, color: '#b45309' }}>{t('workshopInvoice.fields.unmatchedLineItems')}: {reconciliation.unmatched_line_items.join(', ')}</p>
           )}
           {hasPermission('workshop_invoice.view_settlement_history') && (
             <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
               <input
-                placeholder="Reconciliation note / exception reason (optional)"
+                placeholder={t('workshopInvoice.placeholders.reconciliationNoteExceptionReasonOptional')}
                 value={reconciliationNote}
                 onChange={(e) => setReconciliationNote(e.target.value)}
                 style={{ ...inputStyle, flex: 1 }}
               />
               <button className="btn-secondary" disabled={savingNote} onClick={saveReconciliationNote}>
-                Save Note
+                {t('workshopInvoice.actions.saveNote')}
               </button>
             </div>
           )}
@@ -172,68 +176,68 @@ export function WorkshopInvoiceDetailPage() {
       )}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Payment</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('workshopInvoice.sections.payment')}</h3>
         {invoice.payment ? (
           <div style={{ fontSize: 13 }}>
-            <div><strong>Paid:</strong> {formatMoney(invoice.payment.paid_amount)} on {invoice.payment.payment_date}</div>
-            <div><strong>Method:</strong> {invoice.payment.payment_method ?? '—'} | <strong>Reference:</strong> {invoice.payment.reference_number ?? '—'}</div>
+            <div><strong>{t('workshopInvoice.fields.paid')}:</strong> {t('workshopInvoice.help.amountOnDate', { amount: formatMoney(invoice.payment.paid_amount), date: formatDate(invoice.payment.payment_date) })}</div>
+            <div><strong>{t('common.fields.method')}:</strong> {invoice.payment.payment_method ?? '—'} | <strong>{t('workshopInvoice.fields.reference')}:</strong> {invoice.payment.reference_number ?? '—'}</div>
             <div>
-              <a href={invoice.payment.evidence_url} target="_blank" rel="noreferrer">Payment Evidence</a>
+              <a href={invoice.payment.evidence_url} target="_blank" rel="noreferrer">{t('workshopInvoice.actions.paymentEvidence')}</a>
             </div>
-            {invoice.payment.notes && <div>Notes: {invoice.payment.notes}</div>}
+            {invoice.payment.notes && <div>{t('workshopInvoice.fields.notesNotes', { notes: invoice.payment.notes })}</div>}
           </div>
         ) : (
-          <p style={{ fontSize: 13, color: '#6b7280' }}>No payment recorded yet.</p>
+          <p style={{ fontSize: 13, color: '#6b7280' }}>{t('workshopInvoice.empty.noPaymentRecordedYet')}</p>
         )}
         {canPay && hasPermission('workshop_invoice.upload_payment') && (
           <button className="btn-primary" style={{ marginTop: 8 }} onClick={() => setShowPayment(true)}>
-            Upload Payment Evidence
+            {t('workshopInvoice.actions.uploadPaymentEvidence')}
           </button>
         )}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Correction / Cancellation</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('workshopInvoice.sections.correctionCancellation')}</h3>
         {invoice.status === 'RECORDED' && (
           <div style={{ display: 'flex', gap: 8 }}>
             {hasPermission('workshop_invoice.request_correction') && (
               <button className="btn-secondary" onClick={() => setShowCorrection(true)}>
-                Request Correction
+                {t('workshopInvoice.actions.requestCorrection')}
               </button>
             )}
             {hasPermission('workshop_invoice.request_cancellation') && (
               <button className="btn-secondary" style={{ color: '#b91c1c' }} onClick={() => setShowCancellation(true)}>
-                Request Cancellation
+                {t('workshopInvoice.actions.requestCancellation')}
               </button>
             )}
           </div>
         )}
         {pendingCorrection && (
           <div style={{ marginTop: 12, padding: 10, background: '#fffbeb', borderRadius: 6, fontSize: 13 }}>
-            <div><strong>Pending Correction</strong> — {pendingCorrection.reason}</div>
-            <div style={{ fontSize: 12, color: '#6b7280' }}>Requested values: {JSON.stringify(pendingCorrection.requested_values)}</div>
+            <div><strong>{t('workshopInvoice.fields.pendingCorrection')}</strong> — {pendingCorrection.reason}</div>
+            <div style={{ fontSize: 12, color: '#6b7280' }}>{t('workshopInvoice.fields.requestedValuesValue', { value: JSON.stringify(pendingCorrection.requested_values) })}</div>
             {hasPermission('workshop_invoice.verify_correction') && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button className="btn-primary" onClick={() => decideCorrection(pendingCorrection.id, 'APPROVE')}>Approve</button>
-                <button className="btn-secondary" onClick={() => decideCorrection(pendingCorrection.id, 'REJECT')}>Reject</button>
+                <button className="btn-primary" onClick={() => decideCorrection(pendingCorrection.id, 'APPROVE')}>{t('common.actions.approve')}</button>
+                <button className="btn-secondary" onClick={() => decideCorrection(pendingCorrection.id, 'REJECT')}>{t('common.actions.reject')}</button>
               </div>
             )}
           </div>
         )}
         {pendingCancellation && (
           <div style={{ marginTop: 12, padding: 10, background: '#fef2f2', borderRadius: 6, fontSize: 13 }}>
-            <div><strong>Pending Cancellation</strong> — {pendingCancellation.reason}</div>
+            <div><strong>{t('workshopInvoice.fields.pendingCancellation')}</strong> — {pendingCancellation.reason}</div>
             {hasPermission('workshop_invoice.verify_cancellation') && (
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button className="btn-primary" onClick={() => decideCancellation(pendingCancellation.id, 'APPROVE')}>Approve</button>
-                <button className="btn-secondary" onClick={() => decideCancellation(pendingCancellation.id, 'REJECT')}>Reject</button>
+                <button className="btn-primary" onClick={() => decideCancellation(pendingCancellation.id, 'APPROVE')}>{t('common.actions.approve')}</button>
+                <button className="btn-secondary" onClick={() => decideCancellation(pendingCancellation.id, 'REJECT')}>{t('common.actions.reject')}</button>
               </div>
             )}
           </div>
         )}
         {(invoice.corrections?.length ?? 0) > 0 && (
           <div style={{ marginTop: 12 }}>
-            <h4 style={{ fontSize: 13 }}>Correction History</h4>
+            <h4 style={{ fontSize: 13 }}>{t('workshopInvoice.sections.correctionHistory')}</h4>
             {invoice.corrections!.map((c) => (
               <div key={c.id} style={{ fontSize: 12, color: '#6b7280', padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <StatusBadge status={c.status} /> {c.reason} {c.decision_note && `— ${c.decision_note}`}
@@ -243,7 +247,7 @@ export function WorkshopInvoiceDetailPage() {
         )}
         {(invoice.cancellations?.length ?? 0) > 0 && (
           <div style={{ marginTop: 12 }}>
-            <h4 style={{ fontSize: 13 }}>Cancellation History</h4>
+            <h4 style={{ fontSize: 13 }}>{t('workshopInvoice.sections.cancellationHistory')}</h4>
             {invoice.cancellations!.map((c) => (
               <div key={c.id} style={{ fontSize: 12, color: '#6b7280', padding: '4px 0', borderBottom: '1px solid #f3f4f6' }}>
                 <StatusBadge status={c.status} /> {c.reason} {c.decision_note && `— ${c.decision_note}`}
@@ -293,30 +297,30 @@ function PaymentModal({ invoiceId, payableAmount, onClose, onSaved }: { invoiceI
   }
 
   return (
-    <Modal open title="Upload Payment Evidence" onClose={onClose}>
-      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Payable amount: {formatMoney(payableAmount)}. Partial payment is not supported — the paid amount must match exactly.</p>
-      <FormField label="Payment Date" errors={errors.payment_date} required>
+    <Modal open title={t('workshopInvoice.actions.uploadPaymentEvidence')} onClose={onClose}>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>{t('workshopInvoice.help.payableAmountPayableAmountPartialPayment', { payableAmount: formatMoney(payableAmount) })}</p>
+      <FormField label={t('common.fields.paymentDate')} errors={errors.payment_date} required>
         <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Paid Amount" errors={errors.paid_amount} required>
+      <FormField label={t('externalWorkOrderInvoice.fields.paidAmount')} errors={errors.paid_amount} required>
         <NumericInput step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Payment Method (optional)" errors={errors.payment_method}>
-        <input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder="e.g. Bank Transfer" style={inputStyle} />
+      <FormField label={t('workshopInvoice.fields.paymentMethodOptional')} errors={errors.payment_method}>
+        <input value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} placeholder={t('workshopInvoice.placeholders.eGBankTransfer')} style={inputStyle} />
       </FormField>
-      <FormField label="Bank / Transaction Reference (optional)" errors={errors.reference_number}>
+      <FormField label={t('workshopInvoice.fields.bankTransactionReferenceOptional')} errors={errors.reference_number}>
         <input value={referenceNumber} onChange={(e) => setReferenceNumber(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Payment Evidence URL (required)" errors={errors.evidence_url} required>
+      <FormField label={t('workshopInvoice.fields.paymentEvidenceUrlRequired')} errors={errors.evidence_url} required>
         <input value={evidenceUrl} onChange={(e) => setEvidenceUrl(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Notes (optional)" errors={errors.notes}>
+      <FormField label={t('inventory.placeholders.notesOptional')} errors={errors.notes}>
         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn-secondary" onClick={onClose}>{t('common.actions.cancel')}</button>
         <button className="btn-primary" disabled={submitting || !paymentDate || !paidAmount || !evidenceUrl} onClick={submit}>
-          {submitting ? 'Saving…' : 'Confirm Payment'}
+          {submitting ? t('common.actions.saving') : t('workshopInvoice.actions.confirmPayment')}
         </button>
       </div>
     </Modal>
@@ -347,21 +351,21 @@ function CorrectionModal({ invoice, onClose, onSaved }: { invoice: WorkshopInvoi
   }
 
   return (
-    <Modal open title="Request Invoice Correction" onClose={onClose}>
-      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Requires approval from a different user. The original values are preserved.</p>
-      <FormField label="Corrected Total Amount">
+    <Modal open title={t('workshopInvoice.modals.requestInvoiceCorrection')} onClose={onClose}>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>{t('workshopInvoice.help.requiresApprovalDifferentUserOriginalValues')}</p>
+      <FormField label={t('workshopInvoice.fields.correctedTotalAmount')}>
         <NumericInput step="0.01" value={totalAmount} onChange={(e) => setTotalAmount(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Corrected Invoice Date">
+      <FormField label={t('workshopInvoice.fields.correctedInvoiceDate')}>
         <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Reason" errors={errors.reason} required>
+      <FormField label={t('common.fields.reason')} errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn-secondary" onClick={onClose}>{t('common.actions.cancel')}</button>
         <button className="btn-primary" disabled={submitting || !reason} onClick={submit}>
-          {submitting ? 'Submitting…' : 'Submit Correction Request'}
+          {submitting ? t('common.actions.submitting') : t('workshopInvoice.actions.submitCorrectionRequest')}
         </button>
       </div>
     </Modal>
@@ -387,15 +391,15 @@ function CancellationModal({ invoiceId, onClose, onSaved }: { invoiceId: string;
   }
 
   return (
-    <Modal open title="Request Invoice Cancellation" onClose={onClose}>
-      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>Requires approval from a different user. Preserves payment history if any exists.</p>
-      <FormField label="Reason" errors={errors.reason} required>
+    <Modal open title={t('workshopInvoice.modals.requestInvoiceCancellation')} onClose={onClose}>
+      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0 }}>{t('workshopInvoice.help.requiresApprovalDifferentUserPreservesPayment')}</p>
+      <FormField label={t('common.fields.reason')} errors={errors.reason} required>
         <textarea value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
-        <button className="btn-secondary" onClick={onClose}>Cancel</button>
+        <button className="btn-secondary" onClick={onClose}>{t('common.actions.cancel')}</button>
         <button className="btn-primary" style={{ background: '#b91c1c' }} disabled={submitting || !reason} onClick={submit}>
-          {submitting ? 'Submitting…' : 'Submit Cancellation Request'}
+          {submitting ? t('common.actions.submitting') : t('workshopInvoice.actions.submitCancellationRequest')}
         </button>
       </div>
     </Modal>

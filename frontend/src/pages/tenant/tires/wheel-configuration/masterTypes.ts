@@ -1,3 +1,4 @@
+import { t } from '../../../../i18n/i18n';
 /** API shapes of the Wheel Configuration master/template endpoints (/app/wheel-configuration-masters). */
 
 export interface PositionDiff {
@@ -66,7 +67,7 @@ export interface SaveRequest {
 export function groupPositions(positions: { position_code: string; group: string; axle_in_group: number | null }[]): { label: string; codes: string[] }[] {
   const rows = new Map<string, string[]>();
   for (const p of positions) {
-    const key = p.group === 'SPARE' ? 'Spare' : `${p.group === 'FRONT' ? 'F' : 'R'}${p.axle_in_group}`;
+    const key = p.group === 'SPARE' ? t('tire.help.spare') : `${p.group === 'FRONT' ? 'F' : 'R'}${p.axle_in_group}`;
     rows.set(key, [...(rows.get(key) ?? []), p.position_code]);
   }
   return [...rows.entries()].map(([label, codes]) => ({ label, codes }));

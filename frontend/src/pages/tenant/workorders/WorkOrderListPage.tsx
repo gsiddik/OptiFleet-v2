@@ -11,6 +11,8 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { WorkOrderItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
+import { statusLabel } from '../../../i18n/statusRegistry';
+import { t as tt } from '../../../i18n/i18n';
 
 const STATUSES = [
   '', 'DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS',
@@ -26,21 +28,21 @@ export function WorkOrderListPage() {
   const { data, loading, error } = useApiList<WorkOrderItem>('/app/work-orders', { status: status || undefined }, reloadKey);
 
   const columns: Column<WorkOrderItem>[] = [
-    { key: 'wo_number', header: 'WO Number', render: (w) => <Link to={`/app/work-orders/${w.id}`}>{w.wo_number}</Link> },
-    { key: 'vehicle', header: 'Vehicle', render: (w) => w.vehicle?.registration_number ?? w.vehicle_id },
-    { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
-    { key: 'type', header: 'Type', render: (w) => w.maintenance_type },
-    { key: 'priority', header: 'Priority', render: (w) => w.priority },
-    { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
+    { key: 'wo_number', header: tt('externalWorkOrderInvoice.fields.woNumber'), render: (w) => <Link to={`/app/work-orders/${w.id}`}>{w.wo_number}</Link> },
+    { key: 'vehicle', header: tt('common.fields.vehicle'), render: (w) => w.vehicle?.registration_number ?? w.vehicle_id },
+    { key: 'workshop', header: tt('common.fields.workshop'), render: (w) => w.workshop?.name ?? '—' },
+    { key: 'type', header: tt('common.fields.type'), render: (w) => w.maintenance_type },
+    { key: 'priority', header: tt('common.fields.priority'), render: (w) => w.priority },
+    { key: 'status', header: tt('common.fields.status'), render: (w) => <StatusBadge status={w.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Work Orders</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('workOrder.titles.workOrders')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {s || 'All'}
+            {s ? statusLabel(s) : tt('common.actions.all')}
           </button>
         ))}
       </div>
@@ -48,14 +50,14 @@ export function WorkOrderListPage() {
         actions={
           hasPermission('work_order.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Work Order
+              {tt('workOrder.actions.newWorkOrder')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No work orders found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('workOrder.empty.noWorkOrdersFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateWorkOrderModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -106,10 +108,10 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
   }
 
   return (
-    <Modal open={open} title="New Work Order" onClose={onClose}>
-      <FormField label="Vehicle" errors={errors.vehicle_id} required>
+    <Modal open={open} title={tt('workOrder.modals.newWorkOrder')} onClose={onClose}>
+      <FormField label={tt('common.fields.vehicle')} errors={errors.vehicle_id} required>
         <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {vehicles.map((v) => (
             <option key={v.id} value={v.id}>
               {v.registration_number}
@@ -117,7 +119,7 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Maintenance Type" errors={errors.maintenance_type} required>
+      <FormField label={tt('maintenance.fields.maintenanceType')} errors={errors.maintenance_type} required>
         <select value={maintenanceType} onChange={(e) => setMaintenanceType(e.target.value)} style={inputStyle}>
           {['CORRECTIVE', 'BREAKDOWN'].map((t) => (
             <option key={t} value={t}>
@@ -126,7 +128,7 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Priority" errors={errors.priority}>
+      <FormField label={tt('common.fields.priority')} errors={errors.priority}>
         <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>
           {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
             <option key={p} value={p}>
@@ -135,25 +137,25 @@ function CreateWorkOrderModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Complaint (optional)" errors={errors.complaint}>
+      <FormField label={tt('workOrder.fields.complaintOptional')} errors={errors.complaint}>
         <textarea value={complaint} onChange={(e) => setComplaint(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Current KM" required errors={errors.current_odometer}>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Last Odometer: {selectedVehicle?.current_odometer ?? '—'}</div>
+        <FormField label={tt('tire.fields.currentKm')} required errors={errors.current_odometer}>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{tt('workOrder.fields.lastOdometer')}: {selectedVehicle?.current_odometer ?? '—'}</div>
           <NumericInput min="0" value={currentOdometer} onChange={(e) => setCurrentOdometer(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Current HM (optional)" errors={errors.engine_hour}>
-          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>Last HM: {selectedVehicle?.engine_hour ?? '—'}</div>
+        <FormField label={tt('workOrder.fields.currentHmOptional')} errors={errors.engine_hour}>
+          <div style={{ fontSize: 11, color: '#9ca3af', marginBottom: 2 }}>{tt('workOrder.fields.lastHm')}: {selectedVehicle?.engine_hour ?? '—'}</div>
           <NumericInput min="0" value={engineHour} onChange={(e) => setEngineHour(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !vehicleId || !currentOdometer} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>

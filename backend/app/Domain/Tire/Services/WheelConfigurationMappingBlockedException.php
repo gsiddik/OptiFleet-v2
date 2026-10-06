@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tire\Services;
 
+use App\Domain\Shared\Support\Messages;
 use RuntimeException;
 
 /**
@@ -13,9 +14,12 @@ class WheelConfigurationMappingBlockedException extends RuntimeException
     /** @param  list<array<string, string>>  $blockers */
     public function __construct(public readonly array $blockers)
     {
-        $lines = array_map(fn (array $b) => "{$b['vehicle_registration_number']} {$b['position_code']} — Tire {$b['tire_serial_number']}", $blockers);
+        $lines = array_map(fn (array $b) => Messages::text('tire.labels.vehicleRegistrationNumberPositionCodeTire', [
+            'vehicle_registration_number' => $b['vehicle_registration_number'],
+            'position_code' => $b['position_code'],
+            'tire_serial_number' => $b['tire_serial_number'],
+        ]), $blockers);
 
-        parent::__construct('Vehicle cannot be remapped because active tires are installed on positions removed by the target configuration: '
-            .implode('; ', $lines).'. Remove or transfer these tires first.');
+        parent::__construct(Messages::text('errors.tire.remapBlocked', ['positions' => implode('; ', $lines)]));
     }
 }

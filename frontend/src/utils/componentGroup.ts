@@ -1,3 +1,4 @@
+import { t } from '../i18n/i18n';
 /**
  * Picker/label format for Component Groups: "{ABBR} — {Name}" so users see the
  * 3-letter abbreviation used as a Product SKU element. Legacy groups without
@@ -14,7 +15,7 @@ export function normalizeAbbreviationInput(value: string): string {
 }
 
 export function abbreviationError(value: string): string | null {
-  if (value.length === 0) return 'Abbreviation is required.';
-  if (!/^[A-Z]{3}$/.test(value)) return 'Must be exactly 3 letters (A-Z).';
+  if (value.length === 0) return t('common.validation.abbreviationIsRequired');
+  if (!/^[A-Z]{3}$/.test(value)) return t('common.validation.mustExactly3LettersZ');
   return null;
 }

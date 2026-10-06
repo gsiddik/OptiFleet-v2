@@ -1,0 +1,88 @@
+{
+  "auth": {
+    "loggedOut": "Berhasil keluar."
+  },
+  "componentAsset": {
+    "componentAssetsGeneratedGoodsReceiptOne": "Aset Komponen dibuat dari Goods Receipt (satu per unit yang diterima dari produk dengan pelacakan nomor seri); pembuatan manual tidak lagi tersedia."
+  },
+  "componentCategory": {
+    "categoryDeletedNoLongerAvailableNew": "Kategori dihapus. Kategori tidak lagi tersedia untuk Produk baru; data yang ada tetap mempertahankan referensinya."
+  },
+  "componentGroup": {
+    "componentGroupDeletedExistingProductsHistorical": "Grup komponen dihapus. Produk yang ada dan data historis tetap mempertahankan referensinya."
+  },
+  "componentSubcategory": {
+    "subcategoryDeletedNoLongerAvailableNew": "Subkategori dihapus. Subkategori tidak lagi tersedia untuk Produk baru; data yang ada tetap mempertahankan referensinya."
+  },
+  "dataScope": {
+    "dataScopeRemoved": "Lingkup data dihapus."
+  },
+  "etlAdmin": {
+    "analyticsEtlDispatched": "ETL analitik dijalankan.",
+    "backfillDispatched": "Backfill dijalankan.",
+    "retryDispatched": "Percobaan ulang dijalankan."
+  },
+  "inspection": {
+    "onlyFailedWarningInspectionRaiseMaintenance": "Hanya inspeksi dengan hasil gagal atau peringatan yang dapat membuat permintaan pemeliharaan."
+  },
+  "inspectionTemplate": {
+    "itemRemoved": "Item dihapus."
+  },
+  "invoice": {
+    "voidedByPlatform": "Dibatalkan (void) oleh platform"
+  },
+  "maintenancePackage": {
+    "periodicPackageOnlyScheduledCalendarDay": "Paket periodik hanya dapat dijadwalkan berdasarkan hari kalender atau bulan."
+  },
+  "masterData": {
+    "selectedCategoryComponentGroupInactiveDeleted": "Kategori yang dipilih (atau Grup Komponennya) nonaktif atau sudah dihapus.",
+    "selectedSubcategoryCategoryComponentGroupInactive": "Subkategori yang dipilih (atau Kategori / Grup Komponennya) nonaktif atau sudah dihapus."
+  },
+  "moduleDependency": {
+    "dependencyRemoved": "Dependensi dihapus."
+  },
+  "partner": {
+    "workOrdersAssignedWorkAuthorizationLetter": "Work Order yang ditugaskan (Work Authorization Letter diterbitkan) dalam periode"
+  },
+  "product": {
+    "compatibilityRuleRemoved": "Aturan kompatibilitas dihapus.",
+    "productImageRemoved": "Gambar produk dihapus.",
+    "safetyDataSheetRemoved": "Lembar Data Keselamatan (SDS) dihapus."
+  },
+  "tenantCustomPricing": {
+    "customPricingDeactivated": "Harga kustom dinonaktifkan."
+  },
+  "tenantUser": {
+    "roleRevoked": "Peran dicabut."
+  },
+  "tire": {
+    "tireOperationCancelled": "Operasi Ban dibatalkan",
+    "workOrderClosedWithoutWork": "Work Order ditutup tanpa pekerjaan"
+  },
+  "tireProduct": {
+    "onlyExcelFilesXlsxImported": "Hanya file Excel (.xlsx) yang dapat diimpor."
+  },
+  "usedPartDisposition": {
+    "evidencePhotoRemoved": "Foto bukti dihapus.",
+    "onlyJpgPngImagesAccepted": "Hanya gambar JPG atau PNG yang diterima."
+  },
+  "vehicleCategory": {
+    "vehicleCategoryDeactivated": "Kategori kendaraan dinonaktifkan."
+  },
+  "vehicleDocument": {
+    "documentRemoved": "Dokumen dihapus."
+  },
+  "workOrder": {
+    "resolvedAutomaticallyExternalWorkshopWorkConfirmed": "Diselesaikan otomatis: pekerjaan Bengkel Eksternal dikonfirmasi selesai dan dilunasi (WAL {{wal_number}}).",
+    "returnedPartReturnNumberAcceptedAfter": "Suku cadang retur {{return_number}} diterima setelah inspeksi",
+    "usedSparepartApprovedReuseAfterInspection": "Suku cadang bekas disetujui untuk digunakan ulang setelah inspeksi"
+  },
+  "workOrderExecution": {
+    "correctiveActionDeleted": "Tindakan korektif dihapus.",
+    "diagnosisDeleted": "Diagnosis dihapus.",
+    "evidenceRemoved": "Bukti dihapus.",
+    "findingDeleted": "Temuan dihapus.",
+    "plannedPartEstimateRemoved": "Estimasi suku cadang terencana dihapus.",
+    "removedComponentRecordDeleted": "Catatan komponen terlepas dihapus."
+  }
+}

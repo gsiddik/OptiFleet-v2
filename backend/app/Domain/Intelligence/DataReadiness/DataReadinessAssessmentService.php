@@ -3,6 +3,7 @@
 namespace App\Domain\Intelligence\DataReadiness;
 
 use App\Domain\Intelligence\Labels\LabelBuilderRegistry;
+use App\Domain\Shared\Support\Messages;
 
 /**
  * Phase 7 Section 7: computed before any training attempt. Never trains
@@ -53,11 +54,11 @@ class DataReadinessAssessmentService
             }
             if ($majorityClassRatio > $cfg['max_majority_class_ratio']) {
                 $status = DataReadinessResult::LIMITED;
-                $reasons[] = 'class imbalance too severe: majority class ratio '.round($majorityClassRatio, 3);
+                $reasons[] = Messages::text('intelligence.reasons.classImbalance', ['ratio' => round($majorityClassRatio, 3)]);
             }
             if ($missingness > $cfg['max_missingness_ratio']) {
                 $status = DataReadinessResult::LIMITED;
-                $reasons[] = 'feature missingness too high: '.round($missingness, 3);
+                $reasons[] = Messages::text('intelligence.reasons.featureMissingness', ['ratio' => round($missingness, 3)]);
             }
         }
 

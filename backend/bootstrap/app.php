@@ -4,6 +4,7 @@ use App\Http\Middleware\CheckModuleEntitlement;
 use App\Http\Middleware\CheckPermission;
 use App\Http\Middleware\EnsurePlatformScope;
 use App\Http\Middleware\EnsureTenantScope;
+use App\Http\Middleware\ResolveRequestLocale;
 use App\Http\Middleware\RestrictSuspendedTenant;
 use App\Http\Middleware\TenantContextMiddleware;
 use Illuminate\Foundation\Application;
@@ -27,6 +28,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => CheckPermission::class,
             'module' => CheckModuleEntitlement::class,
             'subscription.access' => RestrictSuspendedTenant::class,
+            'request.locale' => ResolveRequestLocale::class,
         ]);
 
         // TenantContextMiddleware must run before route-model-binding
@@ -47,6 +49,7 @@ return Application::configure(basePath: dirname(__DIR__))
             \Illuminate\Routing\Middleware\ThrottleRequestsWithRedis::class,
             \Illuminate\Contracts\Session\Middleware\AuthenticatesSessions::class,
             TenantContextMiddleware::class,
+            ResolveRequestLocale::class,
             EnsurePlatformScope::class,
             EnsureTenantScope::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
@@ -69,6 +72,8 @@ return Application::configure(basePath: dirname(__DIR__))
             return response()->json([
                 'message' => $e->getMessage(),
                 'errors' => $e->errors(),
+                // Machine-readable error codes (i18n): additive, only for coded validation errors.
+                ...($e instanceof \App\Domain\Shared\Exceptions\CodedValidationException ? ['codes' => $e->codes()] : []),
             ], 422);
         });
 

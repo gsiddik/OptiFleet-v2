@@ -1,0 +1,648 @@
+{
+  "analytics": {
+    "noAnalyticsDatasetExtractorRegisteredKey": "No analytics dataset extractor registered for key [{{key}}].",
+    "unknownKpiCodeCode": "Unknown KPI code [{{code}}]."
+  },
+  "analyticsDomain": {
+    "dimensionValueOutsideAssignedDataScope": "This dimension value is outside your assigned data scope."
+  },
+  "app": {
+    "appDeliveryRequiresRecipientUser": "IN_APP delivery requires a recipient user.",
+    "noEmailAddressCouldResolvedRecipient": "No email address could be resolved for this recipient.",
+    "noPublishedNotificationTemplateFoundEvent": "No published notification template found for this event.",
+    "unsupportedDeliveryChannelChannel": "Unsupported delivery channel '{{channel}}'."
+  },
+  "billing": {
+    "customBillingCycleRequiresExplicitPeriod": "CUSTOM billing cycle requires an explicit period end."
+  },
+  "breakdown": {
+    "breakdownOutsideAssignedDataScope": "This breakdown is outside your assigned data scope.",
+    "cannotTransitionBreakdownStatus": "Cannot transition breakdown from {{status}} to {{to}}.",
+    "onlyBreakdownAssessedRepairRequiredConverted": "Only a breakdown assessed as repair-required can be converted to a maintenance request."
+  },
+  "common": {
+    "andCountMoreErrors": "(and {{count}} more errors)",
+    "branchOutsideAssignedDataScope": "This branch is outside your assigned data scope.",
+    "fileExceeds5mbMaximumSize": "File exceeds the 5MB maximum size.",
+    "missingRequiredPermissionPermission": "Missing required permission: {{permission}}",
+    "systemMasterDataCannotDeletedTenant": "System master data cannot be deleted by a tenant.",
+    "systemMasterDataCannotModifiedTenant": "System master data cannot be modified by a tenant.",
+    "unsupportedFileExtensionOnlyJpgJpeg": "Unsupported file extension. Only .jpg, .jpeg, or .png are accepted.",
+    "unsupportedFileTypeOnlyJpgPng": "Unsupported file type. Only JPG or PNG images are accepted.",
+    "vehicleOutsideAssignedDataScope": "This vehicle is outside your assigned data scope.",
+    "warehouseOutsideAssignedDataScope": "This warehouse is outside your assigned data scope.",
+    "workOrderOutsideAssignedDataScope": "This Work Order is outside your assigned data scope.",
+    "workshopOutsideAssignedDataScope": "This workshop is outside your assigned data scope."
+  },
+  "componentAsset": {
+    "assetAssetNumberCurrentStatusNot": "Asset {{asset_number}} is {{current_status}} and not in stock at the delivery warehouse; it cannot be returned.",
+    "componentAssetAlreadyActivelyInstalledVehicle": "This component asset is already actively installed on a vehicle.",
+    "componentAssetAlreadyInstalledVehicle": "This component asset is already installed on a vehicle.",
+    "componentAssetNotCurrentlyInstalledVehicle": "This component asset is not currently installed on a vehicle.",
+    "componentAssetOpenSaleSellSparepart": "This component asset is in an open sale (Sell Sparepart) and cannot be installed.",
+    "componentAssetOutsideAssignedDataScope": "This component asset is outside your assigned data scope.",
+    "componentCurrentStatusCannotRemovedVehicle": "Component is {{current_status}} and cannot be removed from a vehicle.",
+    "currentStatusComponentAssetCannotInstalled": "A {{current_status}} component asset cannot be installed.",
+    "itemNoComponentAssetsSelect": "This item has no Component Assets to select.",
+    "noActiveInstallationFoundComponentAsset": "No active installation found for this component asset.",
+    "productTrackedSerialNumberReceiveWhole": "{{product}} is tracked by serial number: receive it in whole units.",
+    "selectedAssetNumberNotReceivedPurchase": "A selected Asset# was not received on this Purchase Order item.",
+    "selectExactAssets": "Select exactly {{quantity}} Asset# being returned for this item (selected {{selectedCount}}).",
+    "unknownWarehouse": "Unknown warehouse.",
+    "warehouseOutsideDataScope": "This warehouse is outside your data scope."
+  },
+  "componentGroup": {
+    "systemMasterDataCannotRestoredTenant": "System master data cannot be restored by a tenant."
+  },
+  "configuration": {
+    "configurationTypeRetiredNoLongerChanged": "This configuration type is retired and can no longer be changed.",
+    "configurationTypeTypeCodeAlreadyExists": "A configuration of type {{type}}/{{code}} already exists for this scope.",
+    "documentContainsInvalidWhatReference": "The document contains an invalid {{what}} reference.",
+    "documentContainsUnsupportedElement": "The document contains an unsupported element.",
+    "documentNestedTooDeeply": "The document is nested too deeply.",
+    "formatContainsIncompleteMalformedToken": "The format contains an incomplete or malformed token.",
+    "initialTextInvalid": "{{field}} must be text of at most 30 characters without braces.",
+    "invalidConfigurationType": "Invalid configuration type.",
+    "invalidResetRuleResetRule": "Invalid reset_rule: {{resetRule}}.",
+    "mismatchedClosingTagToken": "Mismatched closing tag {{/{{token}}}}.",
+    "noPublishedDocumentTemplateFoundType": "No published document template found for type {{documentType}}.",
+    "noPublishedNumberingConfigurationFoundDocument": "No published numbering configuration found for document type {{documentType}}.",
+    "noPublishedWorkflowFoundResourceType": "No published workflow found for this resource type.",
+    "numberingFormatIsRequired": "Numbering format is required.",
+    "numberingFormatMustIncludeSeqSeq": "Numbering format must include a {{SEQ}} or {SEQ:N} sequence token.",
+    "onlyDraftVersionEdited": "Only a DRAFT version can be edited.",
+    "onlyDraftVersionPublished": "Only a DRAFT version can be published.",
+    "onlyPublishedVersionArchived": "Only a PUBLISHED version can be archived.",
+    "previewNotSupportedConfigurationType": "Preview is not supported for this configuration type.",
+    "sequenceDigitRange": "Sequential Digit must be a whole number between 1 and {{max}}.",
+    "systemDefaultAlready": "This is the system default already.",
+    "systemDefaultAlreadyUse": "The system default is already in use.",
+    "thereNoSystemDefaultDocumentType": "There is no system default for this document type to return to.",
+    "tokenTokenDoesNotTakeNumber": "Token {{{token}}} does not take a number.",
+    "unclosedSectionNumberClosingSection": "Unclosed section {{#{{closingSection}}}}.",
+    "unexpectedClosingSectionTag": "Unexpected closing section tag.",
+    "unknownMetadataType": "Unknown metadata type.",
+    "unknownNotificationEvent": "Unknown notification event.",
+    "unknownNumberingTokenToken": "Unknown numbering token: {{{token}}}.",
+    "unknownTemplateDocumentTypeDocumentType": "Unknown template document type '{{documentType}}'."
+  },
+  "contract": {
+    "amendmentNoLongerDraftStatus": "This amendment is no longer in DRAFT status.",
+    "bundleProductReferenceNotAvailableNew": "Bundle '{{product_reference}}' is not available for new contracts.",
+    "bundleProductReferenceNotBeenPublished": "Bundle '{{product_reference}}' has not been published yet.",
+    "cannotRemoveModuleModuleCodeStill": "Cannot remove module {{moduleCode}}: still required by active module(s) on this contract",
+    "cannotSubmitAmendmentNoChanges": "Cannot submit an amendment with no changes.",
+    "cannotSubmitContractNoItems": "Cannot submit a contract with no items.",
+    "onlyActiveContractAmended": "Only an active contract can be amended.",
+    "onlyActiveContractTerminated": "Only an active contract can be terminated.",
+    "onlyActiveExpiringExpiredContractRenewed": "Only an active, expiring, or expired contract can be renewed.",
+    "onlyAmendmentPendingApprovalApproved": "Only an amendment pending approval can be approved.",
+    "onlyAmendmentPendingApprovalRejected": "Only an amendment pending approval can be rejected.",
+    "onlyContractPendingApprovalApproved": "Only a contract pending approval can be approved.",
+    "onlyContractPendingApprovalRejected": "Only a contract pending approval can be rejected.",
+    "onlyDraftContractEdited": "Only a DRAFT contract can be edited.",
+    "onlyDraftContractItemsAdded": "Only a DRAFT contract can have items added.",
+    "onlyDraftContractSubmittedApproval": "Only a DRAFT contract can be submitted for approval.",
+    "productReferencePricingCodeRequiredProduct": "A product reference (pricing code) is required for {{productType}} line items.",
+    "unitPriceRequiredProductTypeLine": "Unit price is required for {{productType}} line items.",
+    "unitPriceUnitPriceProductType": "Unit price ({{unitPrice}}) for {{productType}} '{{product_reference}}' cannot be lower than the active price ({{activePrice}}).",
+    "unsupportedProductTypeProductType": "Unsupported product type: {{productType}}."
+  },
+  "entitlement": {
+    "cannotDisableModuleWithList": "Cannot disable module {{moduleCode}}: still required by active module(s): {{modules}}",
+    "cannotEnableModuleWithList": "Cannot enable module {{moduleCode}}: missing required module(s): {{modules}}",
+    "capacityLimitReachedResourceTypeMaximum": "Capacity limit reached for {{resourceType}}: maximum of {{limit}} allowed."
+  },
+  "exportAnalytics": {
+    "unknownAnalyticsDomain": "Unknown analytics domain."
+  },
+  "externalWorkOrderInvoice": {
+    "externalWorkOrderInvoiceOutsideAssigned": "This External Work Order Invoice is outside your assigned data scope.",
+    "noWorkAuthorizationLetterBeenGenerated": "No Work Authorization Letter has been generated yet."
+  },
+  "http": {
+    "forbidden": "Forbidden.",
+    "moduleNotEntitledModuleCode": "Module not entitled: {{moduleCode}}",
+    "platformAccessRequired": "Platform access required.",
+    "resourceNotFound": "Resource not found.",
+    "subscriptionSuspendedDueOutstandingBalancePlease": "Your subscription is suspended due to an outstanding balance. Please settle your invoice to restore access.",
+    "tenantAccessRequired": "Tenant access required.",
+    "tenantContextRequired": "Tenant context required.",
+    "tenantIsNotActive": "Tenant is not active.",
+    "tenantMembershipNotActive": "Tenant membership is not active.",
+    "tokenNoValidScope": "Token has no valid scope.",
+    "unauthenticated": "Unauthenticated.",
+    "userAccountInactive": "This user account is inactive."
+  },
+  "inspection": {
+    "inspectionAlreadyBeenReviewed": "This inspection has already been reviewed.",
+    "inspectionOutsideAssignedDataScope": "This inspection is outside your assigned data scope.",
+    "onlyCreatedAssignedInspectionStarted": "Only a created or assigned inspection can be started.",
+    "onlyCreatedInspectionAssigned": "Only a created inspection can be assigned.",
+    "onlyStartedInspectionSubmitted": "Only a started inspection can be submitted.",
+    "onlySubmittedInspectionReviewed": "Only a submitted inspection can be reviewed."
+  },
+  "inspectionTemplate": {
+    "systemRequiredItemCannotRemoved": "This is a system-required item and cannot be removed."
+  },
+  "intelligence": {
+    "cannotTransitionRecommendationStatus": "Cannot transition recommendation from {{status}} to {{to}}.",
+    "modelDoesNotMeetAcceptanceCriteria": "Model does not meet acceptance criteria: {{metricName}}={{actual}} is below required minimum {{minimum}}.",
+    "noDeterministicRiskScorerRegisteredTarget": "No deterministic risk scorer registered for target [{{target}}].",
+    "noLabelBuilderRegisteredTargetTarget": "No label builder registered for target [{{target}}].",
+    "onlyAcceptedRecommendationConvertedMaintenanceRequest": "Only an ACCEPTED recommendation can be converted to a Maintenance Request.",
+    "onlyEvaluatedModelActivatedCurrentStatus": "Only an EVALUATED model can be activated (current status: {{status}}).",
+    "onlyVehicleEntityRecommendationsConvertedMaintenance": "Only vehicle-entity recommendations can be converted to a Maintenance Request.",
+    "unknownModelTargetTarget": "Unknown model target [{{target}}]."
+  },
+  "inventory": {
+    "cannotAdjustBelowZeroHandStock": "Cannot adjust below zero on-hand stock.",
+    "cannotScrapMoreThanHandStock": "Cannot scrap more than on-hand stock.",
+    "cannotTransitionStockOpnameStatus": "Cannot transition Stock Opname from {{status}} to {{to}}.",
+    "cannotTransitionStockTransferStatus": "Cannot transition Stock Transfer from {{status}} to {{to}}.",
+    "discrepancyReasonRequiredWhenReceivedDamaged": "A discrepancy reason is required when received+damaged+lost is short of quantity sent for {{product_id}}.",
+    "insufficientStockDispatchTransfer": "Insufficient stock to dispatch transfer.",
+    "insufficientStockRequestedQuantityAvailableAvailable": "Insufficient stock: requested {{quantity}}, available {{available}}.",
+    "insufficientStockWarehouseReturnQuantityAvailable": "Insufficient stock in {{warehouse}} to return {{quantity}}: available {{available}}.",
+    "invalidReceiptMovementType": "Invalid receipt movement type.",
+    "missingReceiptDataTransferItemId": "Missing receipt data for transfer item {{id}}.",
+    "onlyApprovedStockOpnamePosted": "Only an approved Stock Opname can be posted.",
+    "onlyPreparedTransferDispatched": "Only a prepared transfer can be dispatched.",
+    "onlySubmittedStockOpnameApproved": "Only a submitted Stock Opname can be approved.",
+    "onlyTransitTransferReceived": "Only an in-transit transfer can be received.",
+    "receivedDamagedLostProductIdExceeds": "Received+damaged+lost for {{product_id}} exceeds quantity sent.",
+    "sourceDestinationWarehouseMustDiffer": "Source and destination warehouse must differ.",
+    "stockOpnameVarianceWouldDriveHand": "Stock opname variance would drive on-hand below zero.",
+    "transferNeedsLeastOneItem": "A transfer needs at least one item."
+  },
+  "invoice": {
+    "cannotRaiseAdjustmentStatusSubscription": "Cannot raise an adjustment for a {{status}} subscription.",
+    "fullyPaidInvoiceCannotVoidedReverse": "A fully paid invoice cannot be voided; reverse the payment first."
+  },
+  "maintenancePackage": {
+    "onlyActivePackageSItemsEdited": "Only an active package's items can be edited this way.",
+    "onlyDraftInactivePackageActivated": "Only a draft or inactive package can be activated.",
+    "primaryThresholdRequiredMustGreaterThan": "The primary threshold is required and must be greater than 0.",
+    "schedulePeriodRequiredPeriodicPackageMust": "Schedule Period is required for a periodic package and must be greater than 0."
+  },
+  "maintenancePolicy": {
+    "onlyActivePeriodicPackageUsedCreate": "Only an active periodic package can be used to create a schedule.",
+    "packageSMaintenancePeriodNotCompatible": "This package's Maintenance Period By is not compatible with periodic scheduling.",
+    "vehicleAlreadyScheduleDate": "This vehicle already has a schedule on this date."
+  },
+  "maintenanceRequest": {
+    "cannotTransitionMaintenanceRequestStatus": "Cannot transition maintenance request from {{status}} to {{to}}.",
+    "initialAssessmentOnlyCreatedEditedCleared": "The Initial Assessment can only be created, edited, or cleared while the request is in Draft.",
+    "maintenanceRequestAlreadyBeenConvertedWork": "This maintenance request has already been converted to a Work Order.",
+    "maintenanceRequestOutsideAssignedDataScope": "This maintenance request is outside your assigned data scope.",
+    "onlyApprovedMaintenanceRequestConvertedWork": "Only an approved maintenance request can be converted to a Work Order."
+  },
+  "maintenanceSchedule": {
+    "onlyDueOverdueScheduledScheduleConverted": "Only a Due, Overdue, or Scheduled schedule can be converted to a Maintenance Request.",
+    "scheduleOutsideAssignedDataScope": "This schedule is outside your assigned data scope."
+  },
+  "masterData": {
+    "categoryRequiredWhenSubcategorySelected": "A Category is required when a Subcategory is selected.",
+    "componentCategoryRequiredItemTypeProduct": "A Component Category is required for Item Type {{productType}}.",
+    "componentGroupNotDeleted": "This Component Group is not deleted.",
+    "componentGroupRequiredItemTypeProduct": "A Component Group is required for Item Type {{productType}}.",
+    "componentGroupRequiredWhenCategorySelected": "A Component Group is required when a Category is selected.",
+    "recordNotDeleted": "This record is not deleted.",
+    "selectedCategoryNotAvailable": "The selected Category is not available.",
+    "selectedComponentGroupNotAvailable": "The selected Component Group is not available.",
+    "selectedSubcategoryNotAvailable": "The selected Subcategory is not available."
+  },
+  "notification": {
+    "addLeastOneWhat": "Add at least one {{what}}.",
+    "channelChannelMissingBody": "Channel '{{channel}}' is missing a body.",
+    "channelChannelMissingSubject": "Channel '{{channel}}' is missing a subject.",
+    "eachConditionNeedsField": "Each condition needs a field.",
+    "escalationNeedsWaitingTimeLeast1": "Escalation needs a waiting time of at least 1 minute.",
+    "eventEventCodePlatformControlledCannot": "Event '{{eventCode}}' is platform-controlled and cannot be configured by a tenant.",
+    "identifierNotValidEmailAddress": "'{{identifier}}' is not a valid email address.",
+    "platformControlledNotificationRuleCannotModified": "This is a platform-controlled notification rule and cannot be modified by a tenant.",
+    "templateRuleNoChannelContent": "Template for this rule has no '{{channel}}' content.",
+    "unknownConditionOperator": "Unknown condition operator.",
+    "unknownNotificationEventEventCode": "Unknown notification event '{{eventCode}}'.",
+    "unknownVariables": "Template references unknown variable(s): {{variables}}",
+    "unknownWhatType": "Unknown {{what}} type.",
+    "unsupportedNotificationChannelChannel": "Unsupported notification channel '{{channel}}'."
+  },
+  "partRequest": {
+    "partRequestOutsideAssignedDataScope": "This part request is outside your assigned data scope."
+  },
+  "partReturn": {
+    "returnOutsideAssignedDataScope": "This return is outside your assigned data scope."
+  },
+  "payment": {
+    "cannotSubmitPaymentAgainstInvoiceStatus": "Cannot submit a payment against an invoice with status {{status}}.",
+    "onlyRejectedPaymentResubmitted": "Only a rejected payment can be resubmitted.",
+    "onlySubmittedPaymentUnderReviewRejected": "Only a submitted payment under review can be rejected.",
+    "onlySubmittedPaymentUnderReviewVerified": "Only a submitted payment under review can be verified."
+  },
+  "predictionHistory": {
+    "entityOutsideAssignedDataScope": "This entity is outside your assigned data scope."
+  },
+  "pricing": {
+    "noActivePricingFoundPriceableType": "No active pricing found for {{priceableType}} {{priceableCode}} ({{billingFrequency}}).",
+    "noActivePricingVersionFoundPriceable": "No active pricing version found for {{priceableType}} {{priceableCode}} on {{date}}.",
+    "onlyActivePricingDeactivated": "Only an ACTIVE pricing can be deactivated.",
+    "onlyArchivedPricingReactivated": "Only an ARCHIVED pricing can be reactivated."
+  },
+  "procurement": {
+    "cannotCancelRfqAlreadyStatus": "Cannot cancel an RFQ already {{status}}.",
+    "cannotDecideApprovalPurchaseOrderStatus": "Cannot decide an approval for a Purchase Order that is {{status}} (must be PENDING_APPROVAL).",
+    "cannotTransitionPurchaseOrderStatus": "Cannot transition Purchase Order from {{status}} to {{to}}.",
+    "cannotTransitionPurchaseOrderStatusApproved": "Cannot transition Purchase Order from {{status}} to APPROVED.",
+    "cannotTransitionPurchaseRequestStatus": "Cannot transition Purchase Request from {{status}} to {{to}}.",
+    "eachPurchaseOrderItemAppearOnly": "Each Purchase Order item can appear only once on a Return Order.",
+    "goodsReceiptNeedsLeastOneLine": "A goods receipt needs at least one line.",
+    "invoiceNumberVendorAlreadyRecordedReceive": "Invoice {{number}} from this vendor is already recorded. To receive more goods against it, use the same invoice as the previous Goods Receipt.",
+    "invoiceVendorInvoiceNumberAlreadyPaid": "Invoice {{vendor_invoice_number}} is already paid.",
+    "invoiceVendorInvoiceNumberAlreadyPaid2": "Invoice {{vendor_invoice_number}} is already paid and cannot be used for another Goods Receipt. Record a new invoice instead.",
+    "onlyIssuedPartiallyReceivedPurchaseOrder": "Only an issued (or partially received) Purchase Order can receive goods.",
+    "onlyIssuedRfqClosed": "Only an issued RFQ can be closed.",
+    "onlyPartiallyReceivedPurchaseOrderReturn": "Only a partially received Purchase Order can return goods to the vendor (this one is {{status}}).",
+    "paymentDateCannotFuture": "The payment date cannot be in the future.",
+    "paymentMustEqualInvoice": "The payment amount must equal the invoice amount ({{amount}}); partial payments are not supported.",
+    "printReturnOrderFirstRedeliveryReceived": "Print the Return Order first — the redelivery can be received after the Return Order was printed.",
+    "purchaseOrderAlreadyOpenReturnOrder": "This Purchase Order already has an open Return Order — finish it first.",
+    "purchaseOrderNeedsLeastOneItem": "A purchase order needs at least one item.",
+    "purchaseRequestNeedsLeastOneItem": "A purchase request needs at least one item.",
+    "qtyReturnedVendorQuantityExceedsReceived": "Qty Returned to Vendor ({{quantity}}) exceeds the received quantity still held for this item ({{returnable}}).",
+    "quotationAlreadyBeenConvertedPurchaseOrder": "This quotation has already been converted to a Purchase Order.",
+    "quotationNeedsLeastOneItem": "A quotation needs at least one item.",
+    "quotationsOnlyRecordedWhileRfqIssued": "Quotations can only be recorded while the RFQ is issued.",
+    "quotationStatusCannotSelected": "This quotation is {{status}} and cannot be selected.",
+    "quotationStatusOnlySelectedQuotationConverted": "This quotation is {{status}}: only a selected quotation can be converted to a Purchase Order.",
+    "receivingExceedsRemaining": "Receiving {{quantity}} exceeds the Remaining Receivable Qty of this line ({{remaining}}).",
+    "refundRequestCoverMostRemainingQuantity": "A Refund Request can cover at most the remaining quantity of this item ({{remaining}}); return the rest as a Redelivery Request.",
+    "returnOrderReturnNumberWaitingVendor": "Return Order {{return_number}} is waiting for the vendor's redelivery — record \"Receive Redelivery\" before posting a Goods Receipt.",
+    "returnOrderStatusNoRedeliveryAwaited": "This Return Order is {{status}}; no redelivery is awaited.",
+    "returnOrderStatusOnlyRequestedRefund": "This Return Order is {{status}}; only a requested refund can be {{verb}} by the vendor.",
+    "rfqNeedsLeastOneItem": "An RFQ needs at least one item.",
+    "rfqStatusVendorOnlySelectedWhile": "This RFQ is {{status}}: a vendor can only be selected while it is ISSUED.",
+    "selectedInvoiceNotReceivedAgainstEarlier": "The selected invoice was not received against an earlier Goods Receipt of this Purchase Order.",
+    "userWhoSubmittedPurchaseOrderApproval": "The user who submitted this Purchase Order for approval cannot also decide its approval steps.",
+    "vendorsCannotInvitedRfqStatus": "Vendors cannot be invited to an RFQ that is {{status}}."
+  },
+  "product": {
+    "productCreatedTiresMustItemType": "A product created from Tires must have Item Type TIRE.",
+    "productCreatedTiresMustWheelTyre": "A product created from Tires must be in the Wheel & Tyre System component group.",
+    "systemProductsCannotModifiedTenant": "System products cannot be modified by a tenant."
+  },
+  "productCatalog": {
+    "cannotPublishBundleNoModules": "Cannot publish a bundle with no modules.",
+    "circularDependency": "Circular module dependency detected: {{path}}",
+    "dependencyWouldCreateCircularDependency": "This dependency would create a circular dependency.",
+    "moduleCannotDependItself": "A module cannot depend on itself.",
+    "onlyDraftBundleModuleCompositionEdited": "Only a DRAFT bundle can have its module composition edited. Amend by creating a new bundle version instead.",
+    "unresolvedDependencies": "Cannot publish bundle: unresolved module dependencies: {{modules}}"
+  },
+  "productCategory": {
+    "categorySubcategoriesCannotDeleted": "This category has subcategories and cannot be deleted.",
+    "productCategoryUsedOneMoreProducts": "This product category is used by one or more products and cannot be deleted."
+  },
+  "productMaster": {
+    "couldNotIssueFreeSkuPrefix": "Could not issue a free SKU for prefix {{ITEMTYPE}}-{{CG}} after"
+  },
+  "purchaseRequest": {
+    "purchaseRequestOutsideAssignedDataScope": "This purchase request is outside your assigned data scope."
+  },
+  "purchaseReturn": {
+    "purchaseOrderOutsideAssignedDataScope": "This purchase order is outside your assigned data scope."
+  },
+  "qualityControl": {
+    "findingAlreadyResolved": "This finding is already resolved.",
+    "onlyPassedQcInspectionCompleted": "Only a passed QC inspection can be completed.",
+    "onlyStartedQcInspectionFailed": "Only a started QC inspection can be failed.",
+    "onlyStartedQcInspectionPassed": "Only a started QC inspection can be passed.",
+    "qcOnlyStartOnceWorkOrder": "QC can only start once the Work Order is pending QC.",
+    "roadTestNotAvailableExternalWork": "Road Test is not available for an External Work Order.",
+    "roadTestOnlyRecordedWhileWork": "A Road Test can only be recorded while the Work Order is pending QC (this one is {{status}}).",
+    "workerWhoPerformedWorkOrderCannot": "The worker who performed this Work Order cannot also perform its QC."
+  },
+  "recommendation": {
+    "recommendationOutsideAssignedDataScope": "This recommendation is outside your assigned data scope."
+  },
+  "rfq": {
+    "rfqOutsideAssignedDataScope": "This RFQ is outside your assigned data scope."
+  },
+  "role": {
+    "nameSystemRoleCannotChanged": "The name of a system role cannot be changed."
+  },
+  "shared": {
+    "couldNotWriteDirectoryFilenameDisk": "Could not write {{directory}}/{{filename}} on disk"
+  },
+  "sparePartSale": {
+    "selectedComponentAssetOutsideAssignedData": "A selected component asset is outside your assigned data scope.",
+    "selectedTireOutsideAssignedDataScope": "A selected tire is outside your assigned data scope."
+  },
+  "stockTransfer": {
+    "sourceWarehouseOutsideAssignedDataScope": "The source warehouse is outside your assigned data scope."
+  },
+  "subscription": {
+    "cannotActivateSubscriptionStatusStatus": "Cannot activate a subscription in status {{status}}.",
+    "onlyPendingSubscriptionActivatedUseReactivate": "Only a PENDING subscription can be activated; use Reactivate for a suspended one.",
+    "onlySuspendedSubscriptionReactivated": "Only a suspended subscription can be reactivated."
+  },
+  "tenantUser": {
+    "invalidStatus": "Invalid status."
+  },
+  "tire": {
+    "actorWhoReceivedTireBackCannot": "The actor who received this tire back cannot also approve its final disposition.",
+    "approvalReasonRequiredPersistedDecision": "An approval reason is required and is persisted with the decision.",
+    "bothTiresAlreadySamePositionNothing": "Both tires are already at the same position — nothing to swap.",
+    "bothTiresMustActiveInstallationSwap": "Both tires must have an active installation to swap positions.",
+    "cannotApproveCycleStatusMustFinal": "Cannot approve a cycle that is {{status}} (must be FINAL_INSPECTED).",
+    "cannotCompleteWorkOrderReplacementTire": "Cannot complete the Work Order: the replacement tire for {{position_code}} has not been consumed (installed) yet.",
+    "cannotReceiveCycleStatusMustSent": "Cannot receive a cycle that is {{status}} (must be SENT).",
+    "cannotRecordFinalInspectionCycleStatus": "Cannot record a final inspection for a cycle that is {{status}} (must be RECEIVED).",
+    "cannotSwapTireItself": "Cannot swap a tire with itself.",
+    "cycleClosedInspectingTireAgainTire": "This cycle is closed by inspecting the tire again (Tire Inspection) — not by a final inspection result.",
+    "cycleOpenedOnlyTireWaitingRetread": "A cycle can be opened only for a tire waiting for retread or repair (this tire is {{current_status}}).",
+    "cycleStatusOnlyCycleProcessReceived": "This cycle is {{status}}; only a cycle in process can be received.",
+    "damageDoesNotBelongInspection": "The damage does not belong to this inspection.",
+    "evidenceOnlyAddedWhileInspectionWaits": "Evidence can only be added while the inspection waits for approval.",
+    "inspectionStatusOnlySubmittedInspectionApproved": "This inspection is {{status}}; only a submitted inspection can be approved.",
+    "inspectionStatusOnlySubmittedInspectionCancelled": "This inspection is {{status}}; only a submitted inspection can be cancelled.",
+    "inspectRemovedTireUsedTireManagement": "Inspect this removed tire in Used Tire Management first; Scrap is one of the inspection outcomes.",
+    "installationDateCannotFuture": "Installation date cannot be in the future.",
+    "installationDateCannotPredateTireS": "Installation date cannot predate this tire's recorded purchase date.",
+    "insufficientUsedTireStockTireSerial": "Insufficient used tire stock for tire {{serial_number}}.",
+    "mdcAlreadySet": "This tire already has a Manufacture Date Code ({{code}}); it is only filled in here when missing.",
+    "noActiveInstallationFoundTire": "No active installation found for this tire.",
+    "onlyCurrentlyInstalledTireRotated": "Only a currently installed tire can be rotated.",
+    "onlyJpgPngPhotosAccepted": "Only JPG or PNG photos are accepted.",
+    "onlyPendingReplacementTireSProduct": "Only {{pending}} replacement tire(s) of this product are still to be installed for the Tire Operation.",
+    "onlyRemovedHoldTireTireReceived": "Only a REMOVED or HOLD tire, or a tire received back from a retread / repair cycle, can be inspected here; this tire is {{current_status}}.",
+    "onlyTiresReuseReplacementTireS": "Only {{tires}} REUSE replacement tire(s) of this product are still to be issued for the Tire Operation.",
+    "openRepairCycleAlreadyExistsTire": "An open repair cycle already exists for this tire — receive and approve it before sending again.",
+    "openRetreadCycleAlreadyExistsTire": "An open retread cycle already exists for this tire — receive and approve it before sending again.",
+    "partnerNotActiveCannotReceiveTires": "This partner is not ACTIVE and cannot receive tires for service.",
+    "partnerNotFoundTenant": "Partner not found for this tenant.",
+    "partnerTypeNotEligibleTireRetread": "This partner type is not eligible for tire retread/repair work (must be EXTERNAL_WORKSHOP or TIRE_SUPPLIER).",
+    "partTireOperationAlreadyBeenCarried": "Part of this Tire Operation has already been carried out; it cannot be {{verb}}.",
+    "photoExceeds3MbMaximumSize": "The photo exceeds the 3 MB maximum size.",
+    "positionNotConfiguredWheelPositionVehicle": "'{{position}}' is not a configured wheel position for this vehicle's category.",
+    "positionNotPositionVehicleSWheel": "'{{position}}' is not a position of this vehicle's wheel configuration.",
+    "registrationNumberAlreadyMappedConfiguration": "{{registration_number}} is already mapped to this configuration.",
+    "registrationNumberAlreadyUsesVersionVersion": "{{registration_number}} already uses version {{version_number}}.",
+    "remapBlocked": "Vehicle cannot be remapped because active tires are installed on positions removed by the target configuration: {{positions}}. Remove or transfer these tires first.",
+    "removeTireVehicleBeforeScrapping": "Remove the tire from its vehicle before scrapping it.",
+    "removeTireVehicleBeforeSelling": "Remove the tire from its vehicle before selling it.",
+    "replacementTiresAlreadyApprovedPartRequests": "The replacement tires are already approved in Part Requests; issue and return them before cancelling this Tire Operation.",
+    "replacementTiresConsumedPerSerialNumber": "Replacement tires are consumed per serial number: use a whole quantity.",
+    "replacementTiresIssuedWorkOrderReturn": "The replacement tires were issued to the Work Order; return them before cancelling this Tire Operation.",
+    "replacementTiresPartRequestAlreadyStatus": "The replacement tires' part request is already {{status}}: the tire products and number of serials can no longer change.",
+    "saleReasonRequired": "A sale reason is required.",
+    "sellOperationalReuseRequiresApprovedUsed": "SELL_FOR_OPERATIONAL_REUSE requires an approved used tire inspection — this tire has not been inspected.",
+    "serialSerialNumberCurrentStatusNot": "Serial {{serial_number}} is {{current_status}}, not available for installation; edit the Tire Operation and choose another serial.",
+    "statusTireOperationCannotVerb": "A {{status}} Tire Operation cannot be {{verb}}.",
+    "targetWheelPositionAlreadyActiveTire": "The target wheel position already has an active tire.",
+    "tireAlreadyActivelyInstalledWheelPosition": "This tire is already actively installed, or this wheel position already has an active tire.",
+    "tireAlreadyBeenSold": "This tire has already been sold.",
+    "tireAlreadyInspectionWaitingApprovalApprove": "This tire already has an inspection waiting for approval — approve or cancel it first.",
+    "tireChangedStatusSinceInspectedTire": "The tire changed status since it was inspected ({{tire_status_before}} → {{current_status}}); cancel this inspection and inspect it again.",
+    "tireCurrentStatusCannotInstalledOnly": "Tire is {{current_status}} and cannot be installed (only new stock or REUSE tires).",
+    "tireCurrentStatusCannotRemovedVehicle": "Tire is {{current_status}} and cannot be removed from a vehicle.",
+    "tireCurrentStatusCannotReplaced": "Tire is {{current_status}} and cannot be replaced.",
+    "tireOperationCancelledReplacementTiresCannot": "This Tire Operation was cancelled; its replacement tires cannot be installed.",
+    "tireOutsideAssignedDataScope": "This tire is outside your assigned data scope.",
+    "tireSerialNumberNoLongerPosition": "Tire {{serial_number}} is no longer on {{position_code}}; the rotation cannot be completed as planned.",
+    "tireSerialNumberNoLongerPosition2": "Tire {{serial_number}} is no longer on {{position_code}} of this vehicle; edit the Tire Operation first.",
+    "tireSLatestInspectionDisposedFinal": "This tire's latest inspection disposed it {{final_disposition}}; only a tire inspected and kept as REUSE can be sold for operational reuse.",
+    "tireUnsafeFinalInspectionResultCannot": "A tire with an UNSAFE final inspection result cannot be approved for RETURN_TO_SERVICE — choose SCRAP or QUARANTINE.",
+    "usedTireLineIssuedOnlyTire": "A used tire line is issued only from a Tire Operation replacement request.",
+    "usedTireSerialNumberNotWarehouse": "Used tire {{serial_number}} is not in this warehouse's used stock.",
+    "vehicleRegistrationNumberOutsideAssignedData": "Vehicle {{registration_number}} is outside your assigned data scope.",
+    "workOrderStatusNoLongerCancelled": "The Work Order is {{status}} and can no longer be cancelled."
+  },
+  "tireOperation": {
+    "actionRequiresPermissionPermission": "This action requires the {{permission}} permission."
+  },
+  "uom": {
+    "unitMeasureUsedOneMoreProducts": "This unit of measure is used by one or more products and cannot be deleted."
+  },
+  "usedPartDisposition": {
+    "onlyRemovedComponentReceivedHere": "Only a removed component is received here.",
+    "recordOutsideAssignedDataScope": "This record is outside your assigned data scope."
+  },
+  "vehicle": {
+    "cannotTransitionTransferStatus": "Cannot transition transfer from {{status}} to {{to}}.",
+    "fileExceeds10mbMaximumSize": "File exceeds the 10MB maximum size.",
+    "targetBranchOutsideAssignedDataScope": "Target branch is outside your assigned data scope.",
+    "unsupportedFileTypeOnlyJpegPng": "Unsupported file type. Only JPEG, PNG, WEBP images or PDF are accepted.",
+    "unsupportedFileTypeOnlyJpgJpeg": "Unsupported file type. Only JPG, JPEG, or PNG images are accepted.",
+    "vehicleAlreadyProgressTransfer": "This vehicle already has an in-progress transfer."
+  },
+  "vehicleBrand": {
+    "brandUsedOneMoreVehiclesCannot": "This brand is used by one or more vehicles and cannot be deleted."
+  },
+  "vehicleModel": {
+    "modelUsedOneMoreVehiclesCannot": "This model is used by one or more vehicles and cannot be deleted."
+  },
+  "vehicleRelease": {
+    "onlyCompletedWorkOrderReleaseVehicle": "Only a completed Work Order can release its vehicle.",
+    "vehicleAnotherActiveWorkOrderCannot": "This vehicle has another active Work Order and cannot be released yet.",
+    "workOrderSVehicleAlreadyBeen": "This Work Order's vehicle has already been released."
+  },
+  "vehicleTransfer": {
+    "transferOutsideAssignedDataScope": "This transfer is outside your assigned data scope."
+  },
+  "vendorQuotation": {
+    "quotationNoDocumentAttached": "This quotation has no document attached."
+  },
+  "warehouseBin": {
+    "binAssignedProductDefaultStorageLocation": "This bin is assigned as a product default storage location and cannot be deleted.",
+    "binCodeAlreadyExistsRack": "A bin with this code already exists in this rack."
+  },
+  "warehouseRack": {
+    "rackCodeAlreadyExistsZone": "A rack with this code already exists in this zone.",
+    "rackStillBinsCannotDeleted": "This rack still has bins and cannot be deleted."
+  },
+  "warehouseZone": {
+    "zoneCodeAlreadyExistsWarehouse": "A zone with this code already exists in this warehouse.",
+    "zoneStillRacksCannotDeleted": "This zone still has racks and cannot be deleted."
+  },
+  "warranty": {
+    "cannotTransitionWarrantyClaimStatus": "Cannot transition Warranty Claim from {{status}} to {{to}}."
+  },
+  "warrantyClaim": {
+    "warrantyClaimOutsideAssignedDataScope": "This warranty claim is outside your assigned data scope."
+  },
+  "worker": {
+    "userNotActiveMemberTenant": "This user is not an active member of this tenant."
+  },
+  "workerType": {
+    "workerTypeAssignedOneMoreWorkers": "This worker type is assigned to one or more workers and cannot be deleted."
+  },
+  "workflow": {
+    "approvalRequestNoLongerPending": "This approval request is no longer pending.",
+    "approvalRuleMustDeclareLeastOne": "An approval rule must declare at least one step.",
+    "approvalStepAlreadyBeenDecided": "This approval step has already been decided.",
+    "approvalStepMissingApproverIdentifier": "Approval step is missing approver_identifier.",
+    "approvalStepsMustUniqueStepNumber": "Approval steps must have unique step_number values.",
+    "invalidApprovalRuleType": "Invalid approval rule type.",
+    "invalidApprovalStepApproverType": "Invalid approval step approver_type.",
+    "invalidConditionRuleEachRuleNeeds": "Invalid condition rule: each rule needs a field and a recognised operator.",
+    "invalidDecisionDecision": "Invalid decision '{{decision}}'.",
+    "youNotEligibleApproverStep": "You are not an eligible approver for this step."
+  },
+  "workflowBuilder": {
+    "unknownWorkflowResourceType": "Unknown workflow resource type."
+  },
+  "workOrder": {
+    "actionActionNotAllowedWhileExternal": "Action \"{{action}}\" is not allowed while this External Invoice is {{status}} / {{work_authorization_status}}.",
+    "actionNotAvailableExternalModeWork": "This action is not available for an External-mode Work Order.",
+    "assetAssetNumberCurrentStatusNo": "Asset {{asset_number}} is {{current_status}}; it can no longer be sold.",
+    "assetAssetNumberCurrentStatusOnly": "Asset {{asset_number}} is {{current_status}}; only a SCRAPPED or REMOVED component asset can be sold.",
+    "assetAssetNumberScrappedOnlySold": "Asset {{asset_number}} is scrapped: it can only be sold as SCRAP_MATERIAL.",
+    "buyerTypeMustBeOneOf": "Buyer type must be one of: {{values}}.",
+    "cannotCancelExternalServiceStatus": "Cannot cancel an external service that is {{status}}.",
+    "cannotCompleteCloseWorkOrderFinding": "Cannot complete/close Work Order: finding '{{description}}' is still OPEN — resolve it first.",
+    "cannotCompleteCloseWorkOrderPlanned": "Cannot complete/close Work Order: planned part '{{description}}' is still {{status}} — consume, return, or cancel it first.",
+    "cannotCompleteCloseWorkOrderQc": "Cannot complete/close Work Order: QC finding '{{description}}' is still unresolved — resolve it first.",
+    "cannotCompleteCloseWorkOrderTire": "Cannot complete/close Work Order: tire serial '{{serial_number}}' removed on this Work Order is still {{status}} — resolve its retread/inspection first.",
+    "cannotCompleteExternalServiceStatus": "Cannot complete an external service that is {{status}}.",
+    "cannotConsumeMoreThanOutstandingIssued": "Cannot consume more than the outstanding issued quantity.",
+    "cannotDecideCancellationAgainstInvoiceStatus": "Cannot decide a cancellation against an invoice that is {{status}} (must be CANCELLATION_REQUESTED).",
+    "cannotDecideCancellationStatusMustPending": "Cannot decide a cancellation that is {{status}} (must be PENDING).",
+    "cannotDecideCorrectionAgainstInvoiceStatus": "Cannot decide a correction against an invoice that is {{status}} (must be CORRECTION_REQUESTED).",
+    "cannotDecideCorrectionStatusMustPending": "Cannot decide a correction that is {{status}} (must be PENDING).",
+    "cannotDecideDispositionDispositionStatusMust": "Cannot decide a disposition that is {{disposition_status}} (must be PENDING_APPROVAL).",
+    "cannotDecideSaleStatusMustPending": "Cannot decide a sale that is {{status}} (must be PENDING_APPROVAL).",
+    "cannotEstimateCostOnceWorkOrder": "Cannot estimate cost once a Work Order is {{status}} — actual costs are tracked from that point on.",
+    "cannotInspectReturnDispositionStatusMust": "Cannot inspect a return that is {{disposition_status}} (must be PENDING_INSPECTION).",
+    "cannotProposeDispositionReturnDispositionStatus": "Cannot propose a disposition for a return that is {{disposition_status}} (must be INSPECTED or REJECTED).",
+    "cannotRecordPaymentInvoiceStatusMust": "Cannot record payment for an invoice that is {{status}} (must be RECORDED, with no pending correction/cancellation).",
+    "cannotRecordPaymentRelatedMaintenanceMemo": "Cannot record payment — the related Maintenance Memo is {{status}} (must be BILLED).",
+    "cannotRecordServiceInvoiceAgainstMemo": "Cannot record a Service Invoice against a memo that is {{status}} (must be COMPLETED).",
+    "cannotRequestCancellationInvoiceStatusMust": "Cannot request cancellation for an invoice that is {{status}} (must be RECORDED).",
+    "cannotRequestCorrectionInvoiceStatusMust": "Cannot request a correction for an invoice that is {{status}} (must be RECORDED).",
+    "cannotSellMoreThanRemainingEligible": "Cannot sell more than the remaining eligible quantity ({{remainingEligibleQuantity}}).",
+    "cannotSubmitSaleStatusMustDraft": "Cannot submit a sale that is {{status}} (must be DRAFT).",
+    "cannotTransitionMaintenanceJobStatusStatus": "Cannot transition maintenance job from {{status}} to {{status}}.",
+    "cannotTransitionWorkOrderStatus": "Cannot transition Work Order from {{status}} to {{to}}.",
+    "conditionMustBeOneOf": "Condition must be one of: {{values}}.",
+    "consumedPartsCannotReturnedThroughIssuance": "Consumed parts cannot be returned through Issuance & Return. Use Removed Components to return components removed from the unit.",
+    "dispositionMustBeOneOf": "Disposition must be one of: {{values}}.",
+    "eachPartRequestLineMustReference": "Each part request line must reference an active Product.",
+    "evidenceAlreadyAttachedConfirmedReturnNo": "This evidence is already attached to a confirmed return and can no longer be removed.",
+    "evidenceAlreadyReturnedRemovedComponentCannot": "Evidence on an already-returned removed component cannot be removed.",
+    "evidencePhotosOnlyChangedWhileItem": "Evidence photos can only be changed while the item is awaiting inspection.",
+    "externalSaleRequiresBuyerName": "An EXTERNAL sale requires buyer_name.",
+    "externalWorkshopModeOnlySelectedWhile": "External Workshop mode can only be selected while the Work Order is Draft.",
+    "fileExceeds3MbMaximumSize": "File exceeds the 3 MB maximum size.",
+    "findingsDiagnosisOnlyAddedRemovedWhile": "Findings and Diagnosis can only be added or removed while status is Draft (currently {{status}}).",
+    "findingsOnlyManagedWhileWorkOrder": "Findings can only be managed while this Work Order is a Draft in External mode.",
+    "jobsMechanicPlannedPartsCannotAdded": "Jobs, Mechanic, and Planned Parts cannot be added while status is {{status}}.",
+    "leastOneFindingRequiredBeforeFinalizing": "At least one Finding is required before finalizing this Work Order as External.",
+    "lineDescriptionGetMessage": "Line \"{{description}}\": {{getMessage}}",
+    "lineDescriptionHoldsSerialNumbersChosen": "Line \"{{description}}\" holds the serial numbers chosen in a Tire Operation: approve its full quantity ({{requested}}) or reject the request.",
+    "lineDescriptionReservedAnotherWarehouseIssue": "Line \"{{description}}\" is reserved in another warehouse — issue it from that warehouse.",
+    "maintenanceMemoAlreadyServiceInvoiceRecorded": "This Maintenance Memo already has a Service Invoice recorded against it.",
+    "maintenanceScheduleAlreadyOpenWorkOrder": "This maintenance schedule already has an open Work Order.",
+    "maintenanceScheduleStatusNotYetReady": "This maintenance schedule is {{status}} and is not yet ready to convert to a Work Order.",
+    "makerWhoProposedDispositionCannotAlso": "The maker who proposed this disposition cannot also approve or reject it.",
+    "makerWhoRequestedCancellationCannotAlso": "The maker who requested this cancellation cannot also verify it.",
+    "makerWhoRequestedCorrectionCannotAlso": "The maker who requested this correction cannot also verify it.",
+    "makerWhoSubmittedSaleCannotAlso": "The maker who submitted this sale cannot also approve or reject it.",
+    "noPublishedSparepartSaleWorkflowConfiguration": "No published sparepart-sale workflow configuration is available for this tenant.",
+    "noPublishedUsedPartDispositionWorkflow": "No published used-part-disposition workflow configuration is available for this tenant.",
+    "nothingLeftConsumePlannedPart": "Nothing left to consume for this planned part.",
+    "nothingLeftIssuePlannedPart": "Nothing left to issue for this planned part.",
+    "onlyApprovedRepairStillPendingCompleted": "Only an approved REPAIR that is still pending can be completed.",
+    "onlyDraftWorkOrderEdited": "Only a DRAFT Work Order can be edited.",
+    "onlyDraftWorkOrderExternalMode": "Only a Draft Work Order in External mode can be finalized as External.",
+    "onlyFinalizedExternalWorkOrderCancelled": "Only a finalized External Work Order can be cancelled through this action.",
+    "onlyFinalizedExternalWorkOrderRevised": "Only a finalized External Work Order can be revised.",
+    "onlyPartConsumedWorkOrderRecorded": "Only a part consumed on this Work Order can be recorded as a removed component.",
+    "onlyPartNotUsedReturnedHere": "Only a part that was not used can be returned here (New Good / New Faulty). Record a component taken off the vehicle under Removed Components.",
+    "onlyQuarantinedReturnRoutedDispositionCurrent": "Only a quarantined return can be routed to a disposition (current status: {{disposition_status}}).",
+    "onlyRequestedAdditionalWorkItemDecided": "Only a requested additional work item can be decided.",
+    "onlyReturnedNewPartProcessedHere": "Only a returned new part is processed here; removed components go through Used Sparepart Processing.",
+    "onlyReturnedNewPartRoutedHere": "Only a returned new part is routed here; removed components go through Used Sparepart Processing.",
+    "onlyReturnFinalizedDispositionSellEligible": "Only a return finalized with disposition SELL_ELIGIBLE can be sold.",
+    "onlySparepartTireConsumableProductsPlanned": "Only Sparepart, Tire, or Consumable products can be planned here.",
+    "onlyTiresIssuedUsedTireS": "Only {{tires}} issued used tire(s) of this line are not installed.",
+    "paidAmountPaidAmountDoesNot": "Paid amount ({{paidAmount}}) does not match the invoice's total amount ({{payableAmount}}). Partial payment is not supported — request a correction first if the invoice total was wrong.",
+    "paidAmountPaidMustExactlyMatch": "Paid amount ({{paid}}) must exactly match the vendor invoice amount ({{invoiceAmount}}) — partial settlement is not supported.",
+    "partnerSaleRequiresPartnerId": "A PARTNER sale requires partner_id.",
+    "partRequestAlreadyBeenIssued": "This part request has already been issued.",
+    "partRequestMustApprovedBeforeIssued": "This part request must be approved before it can be issued.",
+    "partRequestOnlyRequestedApprove": "Only a requested part request can be approved.",
+    "partRequestOnlyRequestedCancel": "Only a requested part request can be cancelled.",
+    "partRequestOnlyRequestedReject": "Only a requested part request can be rejected.",
+    "paymentAlreadyBeenRecordedServiceInvoice": "Payment has already been recorded for this Service Invoice.",
+    "plannedPartNoProductWarehouseResolved": "This planned part has no product/warehouse resolved — reserve it first.",
+    "reasonRequiredRejectPartRequest": "A reason is required to reject a part request.",
+    "receivedQtyExceedsReturned": "Received quantity must be greater than zero and cannot exceed the returned quantity ({{returned}}).",
+    "removedComponentAlreadyBeenReturned": "This removed component has already been returned.",
+    "removedQuantityCannotExceedConsumedQuantity": "Removed quantity cannot exceed the consumed quantity of this product on the Work Order (remaining: {{remaining}}).",
+    "replacementTiresPartRequestAlreadyStatus": "The replacement tires' part request is already {{status}}; its products and quantities can no longer change.",
+    "returnAlreadyBeenProcessedDispositionStatus": "This return has already been processed ({{disposition_status}}).",
+    "returnedRemovedComponentRecordCannotDeleted": "A returned removed-component record cannot be deleted.",
+    "returnExceedsReturnable": "Cannot return more than the returnable quantity ({{returnable}}): consumed quantity is never returnable.",
+    "saleTypeMustBeOneOf": "Sale type must be one of: {{values}}.",
+    "scrappedTireOnlySoldScrapMaterial": "A scrapped tire can only be sold as SCRAP_MATERIAL.",
+    "selectedComponentAssetAlreadyOpenApproved": "A selected component asset is already in an open or approved sale.",
+    "selectedComponentAssetNotFound": "A selected component asset was not found.",
+    "selectedTireAlreadyOpenApprovedSale": "A selected tire is already in an open or approved sale.",
+    "selectedTireNotFound": "A selected tire was not found.",
+    "serviceInvoiceNumberedExternalInvoiceNumber": "A Service Invoice numbered '{{external_invoice_number}}' is already recorded for this service provider.",
+    "statusPartRequestCannotIssued": "A {{status}} part request cannot be issued.",
+    "tireSerialNumberCurrentStatusOnly": "Tire {{serial_number}} is {{current_status}}; only a scrapped tire (Recently Scrapped) can be sold.",
+    "tireSerialNumberCurrentStatusOnly2": "Tire {{serial_number}} is {{current_status}}; only a scrapped tire can be sold.",
+    "unitPriceCannotNegative": "Unit price cannot be negative.",
+    "unknownFileRoleRole": "Unknown file role: {{role}}.",
+    "unsupportedFileExtensionOnlyJpgJpeg": "Unsupported file extension. Only .jpg, .jpeg or .png are accepted.",
+    "unsupportedFileTypeUploadCheckAccepted": "Unsupported file type for this upload — check the accepted formats.",
+    "usedFaultyItemCannotProposedReuse": "A USED_FAULTY item cannot be proposed for REUSE or SELL_ELIGIBLE — propose REPAIR, QUARANTINE, or SCRAP instead.",
+    "usedFaultySourcedItemCannotSold": "A USED_FAULTY-sourced item cannot be sold as OPERATIONAL_REUSE.",
+    "usedTiresIssuedPerSerialNumber": "Used tires are issued per serial number: use a whole quantity.",
+    "usedTiresReturnedPerSerialNumber": "Used tires are returned per serial number: use a whole quantity.",
+    "useExternalWorkOrderCancelAction": "Use the External Work Order cancel action, which requires a reason.",
+    "workOrderExecutionActionsNotAllowed": "Work Order execution actions are not allowed while status is {{status}}.",
+    "workOrderNoLongerRevisedExternal": "This Work Order can no longer be revised — its External Invoice has already moved past New External WO.",
+    "workOrderSExternalInvoiceAlready": "This Work Order's External Invoice is already {{status}} and can no longer be cancelled."
+  },
+  "workshop": {
+    "activateNoLongerAvailableApproveWorkspace": "Activate is no longer available — approve the Workspace Assignment instead.",
+    "cannotAssignWorkerAnotherTenant": "Cannot assign a worker from another tenant.",
+    "cannotAssignWorkerOutsideWorkOrder": "Cannot assign a worker outside the Work Order's workshop.",
+    "cannotCancelReservationAlreadyStatus": "Cannot cancel a reservation already {{status}}.",
+    "cannotStartWorkOrderBecauseNo": "Cannot start this Work Order because no approved Workspace and scheduled work date are assigned.",
+    "onlyApprovedAssignmentTransferredOneStatus": "Only an approved assignment can be transferred; this one is {{status}}.",
+    "onlyPausedLaborLogResumed": "Only a paused labor log can be resumed.",
+    "onlyRequestedReservedAssignmentApprovedOne": "Only a requested (RESERVED) assignment can be approved; this one is {{status}}.",
+    "onlyRunningLaborLogPaused": "Only a running labor log can be paused.",
+    "onlyRunningPausedLaborLogFinished": "Only a running or paused labor log can be finished.",
+    "targetWorkspaceMustBelongSameWorkshop": "The target workspace must belong to the same workshop.",
+    "targetWorkspaceNotFound": "The target workspace was not found.",
+    "workerAlreadyOpenLaborLogJob": "This worker already has an open labor log for this job.",
+    "workOrderAlreadyCurrentWorkspaceAssignment": "This Work Order already has a current workspace assignment — transfer it to another workspace instead.",
+    "workOrderNotFound": "The Work Order was not found.",
+    "workOrderStatusStatusCannotTransferred": "A Work Order in status {{status}} cannot be transferred to another workspace.",
+    "workOrderStatusWorkspaceNoLonger": "The Work Order is {{status}}; its workspace can no longer be approved.",
+    "workspaceAlreadyOverlappingReservationTimeWindow": "This workspace already has an overlapping reservation for that time window.",
+    "workspaceAssignmentCompletesAutomaticallyWhenWork": "A Workspace Assignment completes automatically when its Work Order is completed.",
+    "workspaceCannotScheduledWorkOrderStatus": "A workspace cannot be scheduled for a Work Order in status {{status}}.",
+    "workspaceReservationsNotAvailableExternalWork": "Workspace reservations are not available for an External Work Order.",
+    "workspaceWorkspaceBelongsAnotherWorkshopThan": "Workspace {{workspace}} belongs to another workshop than this Work Order.",
+    "workspaceWorkspaceDoesNotAcceptVehicle": "Workspace {{workspace}} does not accept this vehicle's category.",
+    "workspaceWorkspaceFullTimeWindowCapacity": "Workspace {{workspace}} is full for that time window (capacity {{capacity}}).",
+    "workspaceWorkspaceStatusCannotScheduled": "Workspace {{workspace}} is {{status}} and cannot be scheduled.",
+    "workWorkOrderStartedTransferWorkspace": "Work on this Work Order has started — transfer its workspace instead of cancelling it."
+  },
+  "workshopInvoice": {
+    "serviceInvoiceOutsideAssignedDataScope": "This Service Invoice is outside your assigned data scope."
+  },
+  "workspace": {
+    "workspaceOutsideAssignedDataScope": "This workspace is outside your assigned data scope."
+  },
+  "workspaceReservation": {
+    "reservationOutsideAssignedDataScope": "This reservation is outside your assigned data scope.",
+    "targetWorkspaceOutsideAssignedDataScope": "The target workspace is outside your assigned data scope."
+  }
+}
