@@ -20,10 +20,10 @@ test('Inventory Return / Transfer are labelled Stock Return / Stock Transfer in 
 
   await changeLocale('id');
   assert.equal(navLabel(item('/app/returns')), 'Retur Stok');
-  assert.equal(navLabel(item('/app/stock-transfers')), 'Transfer Stock');
+  assert.equal(navLabel(item('/app/stock-transfers')), 'Transfer Stok');
   assert.equal(segmentLabel('returns'), 'Retur Stok');
-  assert.equal(segmentLabel('stock-transfers'), 'Transfer Stock');
-  assert.equal(t('inventory.titles.stockTransfer'), 'Transfer Stock');
+  assert.equal(segmentLabel('stock-transfers'), 'Transfer Stok');
+  assert.equal(t('inventory.titles.stockTransfer'), 'Transfer Stok');
   assert.ok(searchNav(NAV_GROUPS, 'retur stok').flatMap((g) => g.items).some((i) => i.to === '/app/returns'));
   // Vehicle Transfer keeps its own label.
   assert.equal(navLabel(item('/app/vehicle-transfers')), 'Transfer');

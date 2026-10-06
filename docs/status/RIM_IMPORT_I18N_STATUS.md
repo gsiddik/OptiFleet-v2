@@ -18,7 +18,8 @@ renaming, bilingual alignment & MongoDB work isolation" task.
 | Return → Stock Return, Transfer → Stock Transfer | DONE | `aac91b2` |
 | Seeders (rim demo + functional, permissions) | DONE | `cf73911` |
 | New Rim serial-tracking fix (found by the browser QA) | DONE | `7152a10` |
-| Printed Stock Transfer keeps "Transfer Stok" (found by the regression) | DONE | this commit |
+| Printed Stock Transfer keeps "Transfer Stok" (found by the regression) | DONE | `04b9cba` |
+| Stock Transfer menu uses "Transfer Stok" (owner decision) | DONE | this commit |
 
 ## MongoDB isolation
 
@@ -84,11 +85,10 @@ renaming, bilingual alignment & MongoDB work isolation" task.
 
 ## Owner decisions / notes
 
-- **"Transfer Stock" vs glossary "Transfer Stok":** the menu, title and breadcrumb use the
-  owner-requested "Transfer Stock". Other screens keep the glossary's "Transfer Stok" (e.g. the
-  document type label). Aligning those is an owner decision.
-- **Legacy `rims` catalog records:** not migrated into Rim serials, because the meaning of their
-  `code` as a serial is unknown. They stay readable at `/app/rims/catalog`.
+- **Stock Transfer in Indonesian = "Transfer Stok" everywhere** (owner decision): the menu, title,
+  breadcrumb and buttons use the glossary term, the same as the printed documents and the other screens.
+- **Legacy `rims` catalog records stay as they are** (owner decision): not migrated into Rim serials.
+  They stay readable at `/app/rims/catalog`.
 - **Scope visibility:** a New Stock rim is in a warehouse, so it is visible to warehouse-scoped users.
   Installed rims follow the vehicle's branch.
 
