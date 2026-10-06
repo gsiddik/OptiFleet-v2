@@ -76,6 +76,7 @@ use App\Http\Controllers\Api\Tenant\UserController;
 use App\Http\Controllers\Api\Tenant\VehicleBrandController;
 use App\Http\Controllers\Api\Tenant\VehicleCategoryController;
 use App\Http\Controllers\Api\Tenant\VehicleController;
+use App\Http\Controllers\Api\Tenant\VehicleImportController;
 use App\Http\Controllers\Api\Tenant\VehicleDocumentController;
 use App\Http\Controllers\Api\Tenant\VehiclePhotoController;
 use App\Http\Controllers\Api\Tenant\VehicleModelController;
@@ -236,6 +237,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
         Route::middleware('module:VEHICLE')->group(function () {
             Route::get('/vehicles', [VehicleController::class, 'index'])->middleware('permission:vehicle.view');
             Route::post('/vehicles', [VehicleController::class, 'store'])->middleware('permission:vehicle.create');
+            Route::get('/vehicles/import-template', [VehicleImportController::class, 'template'])->middleware('permission:vehicle.create');
+            Route::post('/vehicles/import/preview', [VehicleImportController::class, 'preview'])->middleware('permission:vehicle.create');
+            Route::post('/vehicles/import', [VehicleImportController::class, 'import'])->middleware('permission:vehicle.create');
             Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show'])->middleware('permission:vehicle.view');
             Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update'])->middleware('permission:vehicle.update');
             Route::post('/vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])->middleware('permission:vehicle.status.update');

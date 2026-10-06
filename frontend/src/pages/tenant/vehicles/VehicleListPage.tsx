@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/client';
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
+import { ExcelImportModal } from '../../../components/ExcelImportModal';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
@@ -25,6 +26,7 @@ export function VehicleListPage() {
   const [status, setStatus] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const { data, loading, error } = useApiList<VehicleItem>('/app/vehicles', { search, status: status || undefined }, reloadKey);
 
   const columns: Column<VehicleItem>[] = [
@@ -52,9 +54,14 @@ export function VehicleListPage() {
         onSearchChange={setSearch}
         actions={
           hasPermission('vehicle.create') ? (
-            <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              {t('vehicle.actions.newVehicle')}
-            </button>
+            <span style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-secondary" onClick={() => setShowImport(true)} data-vehicle-import>
+                {t('vehicle.actions.importVehicles')}
+              </button>
+              <button className="btn-primary" onClick={() => setShowCreate(true)}>
+                {t('vehicle.actions.newVehicle')}
+              </button>
+            </span>
           ) : null
         }
       />
@@ -63,6 +70,18 @@ export function VehicleListPage() {
       {!error && !loading && data.length === 0 && <EmptyState label={t('vehicle.empty.noVehiclesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
+      {showImport && (
+        <ExcelImportModal
+          title={t('vehicle.modals.importVehicles')}
+          intro={t('vehicle.help.importIntro')}
+          templatePath="/app/vehicles/import-template"
+          templateFilename="vehicle-import-template.xlsx"
+          previewPath="/app/vehicles/import/preview"
+          importPath="/app/vehicles/import"
+          onClose={() => setShowImport(false)}
+          onImported={() => setReloadKey((k) => k + 1)}
+        />
+      )}
       <CreateVehicleModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
     </div>
   );
