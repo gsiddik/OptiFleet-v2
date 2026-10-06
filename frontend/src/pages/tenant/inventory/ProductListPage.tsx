@@ -11,6 +11,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { ComponentCategory, ComponentGroup, ComponentSubcategory, ProductItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
 import { CreateProductModal, ITEM_TYPES as PRODUCT_TYPES } from './CreateProductModal';
+import { t as tt } from '../../../i18n/i18n';
 
 export function ProductListPage() {
   const { hasPermission } = useAuth();
@@ -58,29 +59,29 @@ export function ProductListPage() {
   }, [categoryId]);
 
   const columns: Column<ProductItem>[] = [
-    { key: 'code', header: 'Code', render: (p) => <Link to={`/app/products/${p.id}`}>{p.code}</Link> },
-    { key: 'name', header: 'Name', render: (p) => p.name },
+    { key: 'code', header: tt('common.fields.code'), render: (p) => <Link to={`/app/products/${p.id}`}>{p.code}</Link> },
+    { key: 'name', header: tt('common.fields.name'), render: (p) => p.name },
     { key: 'sku', header: 'SKU', render: (p) => p.sku },
-    { key: 'product_type', header: 'Type', render: (p) => p.product_type },
-    { key: 'category', header: 'Category', render: (p) => p.category?.name ?? '—' },
+    { key: 'product_type', header: tt('common.fields.type'), render: (p) => p.product_type },
+    { key: 'category', header: tt('common.fields.category'), render: (p) => p.category?.name ?? '—' },
     {
       key: 'classification',
-      header: 'Component',
+      header: tt('inventory.fields.component'),
       render: (p) =>
         p.component_group
           ? [p.component_group.abbreviation ?? p.component_group.name, p.component_category?.name, p.component_subcategory?.name].filter(Boolean).join(' › ')
           : '—',
     },
-    { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
+    { key: 'status', header: tt('common.fields.status'), render: (p) => <StatusBadge status={p.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Products</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('inventory.titles.products')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {['', ...PRODUCT_TYPES].map((t) => (
           <button key={t} onClick={() => setProductType(t)} className={productType === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {t || 'All'}
+            {t || tt('common.actions.all')}
           </button>
         ))}
       </div>
@@ -90,13 +91,13 @@ export function ProductListPage() {
         actions={
           hasPermission('product.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Product
+              {tt('inventory.actions.newProduct')}
             </button>
           ) : null
         }
       >
         <select
-          aria-label="Component Group filter"
+          aria-label={tt('common.fields.componentGroupFilter')}
           value={groupId}
           onChange={(e) => {
             setGroupId(e.target.value);
@@ -107,7 +108,7 @@ export function ProductListPage() {
           }}
           style={{ ...inputStyle, width: 200 }}
         >
-          <option value="">All component groups</option>
+          <option value="">{tt('common.filters.allComponentGroups')}</option>
           {groups.map((g) => (
             <option key={g.id} value={g.id}>
               {componentGroupLabel(g)}
@@ -115,7 +116,7 @@ export function ProductListPage() {
           ))}
         </select>
         <select
-          aria-label="Component Category filter"
+          aria-label={tt('inventory.fields.componentCategoryFilter')}
           value={categoryId}
           disabled={!groupId}
           onChange={(e) => {
@@ -125,15 +126,15 @@ export function ProductListPage() {
           }}
           style={{ ...inputStyle, width: 180 }}
         >
-          <option value="">All categories</option>
+          <option value="">{tt('common.filters.allCategories')}</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
             </option>
           ))}
         </select>
-        <select aria-label="Component Subcategory filter" value={subcategoryId} disabled={!categoryId} onChange={(e) => setSubcategoryId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
-          <option value="">All subcategories</option>
+        <select aria-label={tt('inventory.fields.componentSubcategoryFilter')} value={subcategoryId} disabled={!categoryId} onChange={(e) => setSubcategoryId(e.target.value)} style={{ ...inputStyle, width: 180 }}>
+          <option value="">{tt('inventory.filters.allSubcategories')}</option>
           {subcategories.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
@@ -144,7 +145,7 @@ export function ProductListPage() {
       </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No products found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('inventory.empty.noProductsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateProductModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />

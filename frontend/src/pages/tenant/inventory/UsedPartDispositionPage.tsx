@@ -13,6 +13,9 @@ import { NumericInput } from '../../../components/NumericInput';
 import { ImageUploadField } from '../../../components/ImageUploadField';
 import { useAuthorizedPreviews } from '../../../hooks/useAuthorizedPreviews';
 import { formatDateTime } from '../../../utils/date';
+import { t } from '../../../i18n/i18n';
+import { Trans } from 'react-i18next';
+import { statusLabel } from '../../../i18n/statusRegistry';
 
 /** Evidence Photo: JPG/PNG only, max 3 MB — validated here and again by the backend. */
 const EVIDENCE_MAX_BYTES = 3 * 1024 * 1024;
@@ -72,16 +75,14 @@ export function UsedPartDispositionPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Used Sparepart Processing</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('inventory.titles.usedSparepartProcessing')}</h1>
       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 0, marginBottom: 16 }}>
-        Old components removed from a vehicle (Work Order → Issuance &amp; Return → Removed Components) are received into a warehouse, inspected, given a
-        proposed disposition, and approved by someone other than the proposer before they can reach available stock. New parts returned unused are
-        processed under Inventory → Return.
+        {t('inventory.help.oldComponentsRemovedVehicleWorkOrder')}
       </p>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUS_FILTERS.map((s) => (
           <button key={s} onClick={() => { setStatusFilter(s); setPage(1); }} className={statusFilter === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 11 }}>
-            {s || 'All'}
+            {s || t('common.actions.all')}
           </button>
         ))}
       </div>
@@ -89,7 +90,7 @@ export function UsedPartDispositionPage() {
       {error && <ErrorState message={error} />}
       {listError && <ErrorState message={listError} />}
       {!listError && loading && <LoadingState />}
-      {!listError && !loading && data.length === 0 && <EmptyState label="No used-sparepart returns found." />}
+      {!listError && !loading && data.length === 0 && <EmptyState label={t('inventory.empty.noUsedSparepartReturnsFound')} />}
       {!listError && !loading && data.map((r) => (
         <RowCard
           key={r.id}
@@ -142,10 +143,10 @@ function RowCard({
     <div className="card" style={{ marginBottom: 10, fontSize: 13 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
         <span>
-          <strong>{item.product?.name ?? item.product_id}</strong> — qty {formatQty(item.quantity)} · {item.condition === 'USED_FAULTY' ? 'Faulty' : 'Good'}
+          <Trans i18nKey="inventory.help.usedPartLine" values={{ product: item.product?.name ?? item.product_id, quantity: formatQty(item.quantity), condition: item.condition === 'USED_FAULTY' ? t('inventory.fields.faulty') : t('inventory.fields.good') }} components={{ strong: <strong /> }} />
           {workOrder && (
             <span style={{ color: '#6b7280' }}>
-              {' '}· WO <Link to={`/app/work-orders/${workOrder.id}`}>{workOrder.wo_number}</Link>
+              {' '}{t('inventory.fields.wo')} <Link to={`/app/work-orders/${workOrder.id}`}>{workOrder.wo_number}</Link>
             </span>
           )}
           {item.work_order?.vehicle && <span style={{ color: '#6b7280' }}> · {item.work_order.vehicle.registration_number}</span>}
@@ -153,7 +154,7 @@ function RowCard({
         <StatusBadge status={item.disposition_status} />
       </div>
       <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-        {item.return_source === 'REMOVED_COMPONENT' ? 'Removed component' : 'Used-part return (legacy)'}
+        {item.return_source === 'REMOVED_COMPONENT' ? t('inventory.fields.removedComponent') : t('inventory.fields.usedPartReturnLegacy')}
         {item.removed_component && ` · removed ${formatDateTime(item.removed_component.removed_at)}`}
         {item.returner && ` by ${item.returner.name}`}
         {item.warehouse && ` · at ${item.warehouse.name}`}
@@ -161,8 +162,8 @@ function RowCard({
       {item.disposition_status === 'PENDING_RETURN' && (
         canInspect ? (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 6 }}>
-            <select aria-label="Receive into warehouse" value={receiveWarehouseId} onChange={(e) => setReceiveWarehouseId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
-              <option value="">Receive into warehouse…</option>
+            <select aria-label={t('inventory.fields.receiveIntoWarehouse')} value={receiveWarehouseId} onChange={(e) => setReceiveWarehouseId(e.target.value)} style={{ ...inputStyle, width: 200 }}>
+              <option value="">{t('inventory.fields.receiveIntoWarehouse2')}</option>
               {warehouses.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
@@ -170,20 +171,20 @@ function RowCard({
               ))}
             </select>
             <button className="btn-primary" disabled={busy || !receiveWarehouseId} onClick={() => onReceive(receiveWarehouseId)}>
-              Receive to Warehouse
+              {t('inventory.actions.receiveToWarehouse')}
             </button>
           </div>
         ) : (
-          <span style={{ fontSize: 12, color: '#6b7280' }}>Awaiting physical return to a warehouse.</span>
+          <span style={{ fontSize: 12, color: '#6b7280' }}>{t('inventory.help.awaitingPhysicalReturnWarehouse')}</span>
         )
       )}
       {(item.reason || item.evidence) && (
         <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-          {item.reason && <span>Reason: {item.reason}</span>}
+          {item.reason && <span>{t('inventory.fields.reasonReason', { reason: item.reason })}</span>}
           {item.evidence && (
             <>
               {item.reason && ' · '}
-              Return evidence:{' '}
+              {t('inventory.fields.returnEvidence')}:{' '}
               <a href={item.evidence} target="_blank" rel="noreferrer">
                 {item.evidence}
               </a>
@@ -194,7 +195,7 @@ function RowCard({
       <EvidencePhotos item={item} editable={item.disposition_status === 'PENDING_INSPECTION' && canInspect} onChanged={onEvidenceChanged} />
       {item.inspection_evidence && (
         <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 6 }}>
-          Inspection evidence (link):{' '}
+          {t('inventory.fields.inspectionEvidenceLink')}:{' '}
           <a href={item.inspection_evidence} target="_blank" rel="noreferrer">
             {item.inspection_evidence}
           </a>
@@ -203,21 +204,21 @@ function RowCard({
 
       {item.disposition_status === 'PENDING_INSPECTION' && canInspect && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <NumericInput integer={!item.product?.uom?.allows_fractional_quantity} placeholder="Accepted qty" value={acceptedQty} onChange={(e) => setAcceptedQty(e.target.value)} style={{ ...inputStyle, width: 100 }} />
+          <NumericInput integer={!item.product?.uom?.allows_fractional_quantity} placeholder={t('inventory.placeholders.acceptedQty')} value={acceptedQty} onChange={(e) => setAcceptedQty(e.target.value)} style={{ ...inputStyle, width: 100 }} />
           <select value={inspectCondition} onChange={(e) => setInspectCondition(e.target.value as 'USED_GOOD' | 'USED_FAULTY')} style={{ ...inputStyle, width: 140 }}>
-            <option value="USED_GOOD">Used — Good</option>
-            <option value="USED_FAULTY">Used — Faulty</option>
+            <option value="USED_GOOD">{t('inventory.fields.usedGood')}</option>
+            <option value="USED_FAULTY">{t('inventory.fields.usedFaulty')}</option>
           </select>
-          <input placeholder="Inspection notes" value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+          <input placeholder={t('inventory.placeholders.inspectionNotes')} value={notes} onChange={(e) => setNotes(e.target.value)} style={{ ...inputStyle, width: 200 }} />
           <button className="btn-primary" disabled={busy || !(Number(acceptedQty) > 0)} onClick={() => onInspect(acceptedQty, inspectCondition, notes)}>
-            Record Inspection
+            {t('inventory.actions.recordInspection')}
           </button>
         </div>
       )}
 
       {(item.disposition_status === 'INSPECTED' || item.disposition_status === 'REJECTED') && canDispose && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          {item.disposition_status === 'REJECTED' && <span style={{ fontSize: 11, color: '#b91c1c', width: '100%' }}>Previous disposition was rejected — propose again.</span>}
+          {item.disposition_status === 'REJECTED' && <span style={{ fontSize: 11, color: '#b91c1c', width: '100%' }}>{t('inventory.help.previousDispositionRejectedProposeAgain')}</span>}
           <select value={disposition} onChange={(e) => setDisposition(e.target.value)} style={{ ...inputStyle, width: 160 }}>
             {DISPOSITIONS.map((d) => (
               <option key={d} value={d} disabled={item.condition === 'USED_FAULTY' && (d === 'REUSE' || d === 'SELL_ELIGIBLE')}>
@@ -225,51 +226,51 @@ function RowCard({
               </option>
             ))}
           </select>
-          <input placeholder="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+          <input placeholder={t('common.placeholders.reasonOptional')} value={reason} onChange={(e) => setReason(e.target.value)} style={{ ...inputStyle, width: 200 }} />
           <button className="btn-primary" disabled={busy} onClick={() => onPropose(disposition, reason)}>
-            Propose Disposition
+            {t('inventory.actions.proposeDisposition')}
           </button>
         </div>
       )}
 
       {item.disposition_status === 'PENDING_APPROVAL' && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 12, color: '#374151' }}>Proposed: {item.disposition}{item.disposition_reason && ` — ${item.disposition_reason}`}</span>
+          <span style={{ fontSize: 12, color: '#374151' }}>{t('inventory.help.proposedDisposition', { disposition: statusLabel(item.disposition) })}{item.disposition_reason && ` — ${item.disposition_reason}`}</span>
           {canApprove ? (
             <>
-              <input placeholder="Note (optional)" value={decideNote} onChange={(e) => setDecideNote(e.target.value)} style={{ ...inputStyle, width: 200 }} />
+              <input placeholder={t('inventory.placeholders.noteOptional')} value={decideNote} onChange={(e) => setDecideNote(e.target.value)} style={{ ...inputStyle, width: 200 }} />
               <button className="btn-primary" disabled={busy} onClick={() => onDecide('APPROVE', decideNote)}>
-                Approve
+                {t('common.actions.approve')}
               </button>
               <button className="btn-secondary" disabled={busy} onClick={() => onDecide('REJECT', decideNote)}>
-                Reject
+                {t('common.actions.reject')}
               </button>
             </>
           ) : (
-            <span style={{ fontSize: 11, color: '#6b7280' }}>Awaiting an approver (the proposer cannot approve their own disposition).</span>
+            <span style={{ fontSize: 11, color: '#6b7280' }}>{t('inventory.help.awaitingApproverProposerCannotApproveTheir')}</span>
           )}
         </div>
       )}
 
       {item.repair_completed_at && (
         <div style={{ fontSize: 12, color: '#374151', marginBottom: 6 }}>
-          Repair completed {formatDateTime(item.repair_completed_at)}
+          {t('inventory.help.repairCompletedAt', { date: formatDateTime(item.repair_completed_at) })}
           {item.repair_notes && ` — ${item.repair_notes}`}
         </div>
       )}
       {item.disposition_status === 'FINALIZED' && (
         <span style={{ fontSize: 12, color: '#065f46' }}>
-          Finalized as {item.disposition}
-          {item.disposition === 'REUSE' && ' — restocked to available inventory.'}
-          {item.disposition === 'REPAIR' && !item.repair_completed_at && ' — repair pending (not available).'}
-          {item.disposition && !['REUSE', 'REPAIR'].includes(item.disposition) && ' — no inventory movement (was never in available stock).'}
+          {t('inventory.help.finalizedAs', { disposition: statusLabel(item.disposition) })}
+          {item.disposition === 'REUSE' && t('inventory.help.restockedToAvailableInventory')}
+          {item.disposition === 'REPAIR' && !item.repair_completed_at && t('inventory.help.repairPendingNotAvailable')}
+          {item.disposition && !['REUSE', 'REPAIR'].includes(item.disposition) && t('inventory.help.noInventoryMovementNeverAvailableStock')}
         </span>
       )}
       {item.disposition_status === 'FINALIZED' && item.disposition === 'REPAIR' && !item.repair_completed_at && canInspect && (
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
-          <input placeholder="Repair notes (optional)" value={repairNotes} onChange={(e) => setRepairNotes(e.target.value)} style={{ ...inputStyle, width: 240 }} />
-          <button className="btn-primary" disabled={busy} onClick={() => onCompleteRepair(repairNotes)} title="The repaired part goes back to Inspected for a new disposition (e.g. Reuse), which needs approval.">
-            Complete Repair
+          <input placeholder={t('inventory.placeholders.repairNotesOptional')} value={repairNotes} onChange={(e) => setRepairNotes(e.target.value)} style={{ ...inputStyle, width: 240 }} />
+          <button className="btn-primary" disabled={busy} onClick={() => onCompleteRepair(repairNotes)} title={t('inventory.tooltips.repairedPartGoesBackInspectedNew')}>
+            {t('tenantComponents.actions.completeRepair')}
           </button>
         </div>
       )}
@@ -292,7 +293,7 @@ function EvidencePhotos({ item, editable, onChanged }: { item: UsedPartItem; edi
 
   return (
     <div style={{ marginBottom: 8 }}>
-      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>Evidence Photo</div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 4 }}>{t('inventory.fields.evidencePhoto')}</div>
       <ImageUploadField
         images={photos.map((p) => ({ id: p.id, previewUrl: previews[p.id] ?? '', name: p.original_filename ?? undefined }))}
         onUpload={async (file) => {
@@ -311,8 +312,8 @@ function EvidencePhotos({ item, editable, onChanged }: { item: UsedPartItem; edi
         }
         disabled={!editable}
         maxSizeBytes={EVIDENCE_MAX_BYTES}
-        uploadLabel="Upload"
-        label="JPG or PNG, max 3 MB"
+        uploadLabel={t('common.actions.upload')}
+        label={t('inventory.fields.jpgPngMax3Mb')}
       />
     </div>
   );

@@ -12,14 +12,15 @@ import { formatDate } from '../../../utils/date';
 import { formatMoney } from '../../../utils/money';
 import { openProtectedFile } from '../../../utils/protectedFile';
 import { PaymentProofModal, VendorInvoicePaymentModal } from './VendorInvoicePaymentModal';
+import { t as tt, withLabels } from '../../../i18n/i18n';
 
-const FILTERS = [
-  { value: '', label: 'All' },
-  { value: 'NEW', label: 'New' },
-  { value: 'DUE_SOON', label: 'Due Soon' },
-  { value: 'LATE', label: 'Late' },
-  { value: 'PAID', label: 'Paid' },
-];
+const FILTERS = withLabels([
+  { value: '', label: 'All', labelKey: 'procurement.filters.all' },
+  { value: 'NEW', label: 'New', labelKey: 'procurement.filters.new' },
+  { value: 'DUE_SOON', label: 'Due Soon', labelKey: 'procurement.filters.dueSoon' },
+  { value: 'LATE', label: 'Late', labelKey: 'procurement.filters.late' },
+  { value: 'PAID', label: 'Paid', labelKey: 'procurement.filters.paid' },
+]);
 
 /**
  * Vendor Invoice References — tracking of the invoices recorded at Goods Receipt (no standalone
@@ -50,32 +51,32 @@ export function VendorInvoiceReferenceListPage() {
   const columns: Column<VendorInvoiceReceiptRow>[] = [
     {
       key: 'gr',
-      header: 'GR#',
+      header: tt('procurement.fields.grNumber2'),
       render: (r) => (
         <div>
           <div>{r.gr_number}</div>
           {r.invoice.has_document && (
             <button type="button" className="btn-link" style={{ fontSize: 12, padding: 0 }} onClick={() => openProtectedFile(`/app/vendor-invoice-references/${r.invoice.id}/download`)}>
-              View Invoice
+              {tt('procurement.actions.viewInvoice')}
             </button>
           )}
         </div>
       ),
     },
-    { key: 'po', header: 'Purchase Order #', render: (r) => (r.purchase_order ? <Link to={`/app/purchase-orders/${r.purchase_order.id}`}>{r.purchase_order.po_number}</Link> : '—') },
-    { key: 'invoice', header: 'Invoice Number', render: (r) => r.invoice.vendor_invoice_number },
-    { key: 'vendor', header: 'Vendor', render: (r) => r.invoice.partner?.name ?? '—' },
-    { key: 'amount', header: 'Amount', render: (r) => <div style={{ textAlign: 'right' }}>{formatMoney(r.invoice.amount)}</div> },
-    { key: 'top', header: 'Terms of Payment (Days)', render: (r) => <div style={{ textAlign: 'right' }}>{r.invoice.terms_of_payment_days ?? '—'}</div> },
-    { key: 'date', header: 'Invoice Date', render: (r) => formatDate(r.invoice.vendor_invoice_date) },
+    { key: 'po', header: tt('procurement.fields.purchaseOrderNumber'), render: (r) => (r.purchase_order ? <Link to={`/app/purchase-orders/${r.purchase_order.id}`}>{r.purchase_order.po_number}</Link> : '—') },
+    { key: 'invoice', header: tt('procurement.fields.invoiceNumber'), render: (r) => r.invoice.vendor_invoice_number },
+    { key: 'vendor', header: tt('common.fields.vendor'), render: (r) => r.invoice.partner?.name ?? '—' },
+    { key: 'amount', header: tt('common.fields.amount'), render: (r) => <div style={{ textAlign: 'right' }}>{formatMoney(r.invoice.amount)}</div> },
+    { key: 'top', header: tt('procurement.fields.termsOfPaymentDays'), render: (r) => <div style={{ textAlign: 'right' }}>{r.invoice.terms_of_payment_days ?? '—'}</div> },
+    { key: 'date', header: tt('common.fields.invoiceDate'), render: (r) => formatDate(r.invoice.vendor_invoice_date) },
     {
       key: 'due',
-      header: 'Due Date / Payment Date',
+      header: tt('procurement.fields.dueDatePaymentDate'),
       render: (r) =>
         r.invoice.payment ? (
           <span>
             {formatDate(r.invoice.due_date)} /{' '}
-            <button type="button" className="btn-link" style={{ padding: 0 }} title="View payment proof" onClick={() => setProofOf(r.invoice)}>
+            <button type="button" className="btn-link" style={{ padding: 0 }} title={tt('procurement.tooltips.viewPaymentProof')} onClick={() => setProofOf(r.invoice)}>
               {formatDate(r.invoice.payment.payment_date)}
             </button>
           </span>
@@ -83,14 +84,14 @@ export function VendorInvoiceReferenceListPage() {
           formatDate(r.invoice.due_date)
         ),
     },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.invoice.status} /> },
+    { key: 'status', header: tt('common.fields.status'), render: (r) => <StatusBadge status={r.invoice.status} /> },
     {
       key: 'action',
-      header: 'Action',
+      header: tt('common.fields.action'),
       render: (r) =>
         r.invoice.status !== 'PAID' && hasPermission('vendor_invoice.pay') ? (
           <button className="btn-secondary" style={{ padding: '3px 10px', fontSize: 12 }} onClick={() => setPaying(r.invoice)}>
-            Payment
+            {tt('procurement.actions.payment')}
           </button>
         ) : null,
     },
@@ -98,10 +99,9 @@ export function VendorInvoiceReferenceListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vendor Invoice References</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('procurement.titles.vendorInvoiceReferences')}</h1>
       <p style={{ fontSize: 12, color: '#9ca3af', marginTop: -10 }}>
-        Recorded when goods are received (Purchase Order → Post Goods Receipt). Due dates count working days (Mon–Fri). Procurement traceability only — separate from tenant SaaS
-        billing invoices under Account &gt; Invoices.
+        {tt('procurement.help.recordedWhenGoodsReceivedPurchaseOrder')}
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         {FILTERS.map((f) => (
@@ -118,8 +118,8 @@ export function VendorInvoiceReferenceListPage() {
           </button>
         ))}
         <input
-          aria-label="Search vendor invoices"
-          placeholder="Search GR#, PO#, invoice or vendor…"
+          aria-label={tt('procurement.fields.searchVendorInvoices')}
+          placeholder={tt('procurement.search.searchGrNumberPoNumberInvoice')}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -130,7 +130,7 @@ export function VendorInvoiceReferenceListPage() {
       </div>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No vendor invoices recorded at Goods Receipt yet." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('procurement.empty.noVendorInvoicesRecordedGoodsReceipt')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
 

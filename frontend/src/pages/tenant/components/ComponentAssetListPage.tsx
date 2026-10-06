@@ -13,6 +13,7 @@ import { inputStyle } from "../../../components/FormField";
 import { useApiList } from "../../../hooks/useApiList";
 import type { ComponentAssetRegisterRow } from "../../../types";
 import { statusLabel } from "../../../i18n/statusRegistry";
+import { t } from '../../../i18n/i18n';
 
 const STATUSES = [
   "",
@@ -58,12 +59,12 @@ export function ComponentAssetListPage() {
   const columns: Column<(typeof rows)[number]>[] = [
     {
       key: "status",
-      header: "Status",
+      header: t('common.fields.status'),
       render: (r) => <StatusBadge status={r.status} />,
     },
     {
       key: "identity",
-      header: "Serials / Asset#",
+      header: t('tenantComponents.fields.serialsAssetNumber'),
       render: (r) => (
         <Link
           to={
@@ -78,7 +79,7 @@ export function ComponentAssetListPage() {
           </span>
           {r.kind === "TIRE" ? (
             <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>
-              Tire · Serial Number = Asset#
+              {t('tenantComponents.actions.tireSerialNumberAssetNumber')}
             </span>
           ) : r.serial_number ? (
             <span style={{ display: "block", fontSize: 11, color: "#6b7280" }}>
@@ -90,13 +91,13 @@ export function ComponentAssetListPage() {
     },
     {
       key: "group",
-      header: "Component Group",
+      header: t('common.fields.componentGroup'),
       render: (r) => r.component_group ?? "—",
     },
-    { key: "product", header: "Product", render: (r) => r.product_name ?? "—" },
+    { key: "product", header: t('common.fields.product'), render: (r) => r.product_name ?? "—" },
     {
       key: "location",
-      header: "Location / Vehicle",
+      header: t('tenantComponents.fields.locationVehicle'),
       render: (r) =>
         !r.location ? (
           "—"
@@ -114,11 +115,9 @@ export function ComponentAssetListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 6 }}>Component Assets</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 6 }}>{t('tenantComponents.titles.componentAssets')}</h1>
       <p style={{ marginTop: 0, fontSize: 13, color: "#6b7280" }}>
-        Physical items tracked individually. Asset# is generated automatically
-        by Goods Receipt for products with Track Serial Number; a tire's Serial
-        Number is its Asset#.
+        {t('tenantComponents.help.physicalItemsTrackedIndividuallyAssetNumber')}
       </p>
       <div
         style={{ display: "flex", gap: 4, marginBottom: 14, flexWrap: "wrap" }}
@@ -133,7 +132,7 @@ export function ComponentAssetListPage() {
             className={status === s ? "btn-primary" : "btn-secondary"}
             style={{ padding: "4px 10px", fontSize: 11 }}
           >
-            {s ? statusLabel(s) : "All"}
+            {s ? statusLabel(s) : t('common.actions.all')}
           </button>
         ))}
       </div>
@@ -145,7 +144,7 @@ export function ComponentAssetListPage() {
         }}
         actions={
           <select
-            aria-label="Asset type"
+            aria-label={t('tenantComponents.fields.assetType')}
             value={kind}
             onChange={(e) => {
               setKind(e.target.value);
@@ -153,16 +152,16 @@ export function ComponentAssetListPage() {
             }}
             style={{ ...inputStyle, width: 160 }}
           >
-            <option value="">All assets</option>
-            <option value="COMPONENT">Components</option>
-            <option value="TIRE">Tires</option>
+            <option value="">{t('tenantComponents.filters.allAssets')}</option>
+            <option value="COMPONENT">{t('tenantComponents.fields.components')}</option>
+            <option value="TIRE">{t('tenantComponents.fields.tires')}</option>
           </select>
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && rows.length === 0 && <LoadingState />}
       {!error && !loading && rows.length === 0 && (
-        <EmptyState label="No component assets found." />
+        <EmptyState label={t('tenantComponents.empty.noComponentAssetsFound')} />
       )}
       {!error && rows.length > 0 && (
         <div style={{ overflowX: "auto" }} data-component-asset-list>

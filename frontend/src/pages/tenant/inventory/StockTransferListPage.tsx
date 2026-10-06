@@ -12,6 +12,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { ProductItem, StockTransferItem, Warehouse } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { t as tt } from '../../../i18n/i18n';
 
 const STATUSES = ['', 'DRAFT', 'REQUESTED', 'APPROVED', 'PREPARED', 'DISPATCHED', 'IN_TRANSIT', 'RECEIVED', 'COMPLETED', 'REJECTED', 'CANCELLED'];
 
@@ -23,19 +24,19 @@ export function StockTransferListPage() {
   const { data, loading, error } = useApiList<StockTransferItem>('/app/stock-transfers', { status: status || undefined }, reloadKey);
 
   const columns: Column<StockTransferItem>[] = [
-    { key: 'number', header: 'Transfer #', render: (t) => <Link to={`/app/stock-transfers/${t.id}`}>{t.transfer_number}</Link> },
-    { key: 'from', header: 'From', render: (t) => t.from_warehouse?.name ?? t.from_warehouse_id },
-    { key: 'to', header: 'To', render: (t) => t.to_warehouse?.name ?? t.to_warehouse_id },
-    { key: 'status', header: 'Status', render: (t) => <StatusBadge status={t.status} /> },
+    { key: 'number', header: tt('inventory.fields.transferNumber'), render: (t) => <Link to={`/app/stock-transfers/${t.id}`}>{t.transfer_number}</Link> },
+    { key: 'from', header: tt('common.fields.from'), render: (t) => t.from_warehouse?.name ?? t.from_warehouse_id },
+    { key: 'to', header: tt('common.fields.to'), render: (t) => t.to_warehouse?.name ?? t.to_warehouse_id },
+    { key: 'status', header: tt('common.fields.status'), render: (t) => <StatusBadge status={t.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Stock Transfers</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('inventory.titles.stockTransfers')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {s ? statusLabel(s) : 'All'}
+            {s ? statusLabel(s) : tt('common.actions.all')}
           </button>
         ))}
       </div>
@@ -43,14 +44,14 @@ export function StockTransferListPage() {
         actions={
           hasPermission('stock_transfer.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Transfer
+              {tt('inventory.actions.newTransfer')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No transfers found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('inventory.empty.noTransfersFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateTransferModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -94,8 +95,8 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
   }
 
   return (
-    <Modal open={open} title="New Stock Transfer" onClose={onClose}>
-      <FormField label="From Warehouse" errors={errors.from_warehouse_id} required>
+    <Modal open={open} title={tt('inventory.modals.newStockTransfer')} onClose={onClose}>
+      <FormField label={tt('inventory.fields.fromWarehouse')} errors={errors.from_warehouse_id} required>
         <select
           value={fromWarehouseId}
           onChange={(e) => {
@@ -104,7 +105,7 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
           }}
           style={inputStyle}
         >
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -112,9 +113,9 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="To Warehouse" errors={errors.to_warehouse_id} required>
+      <FormField label={tt('inventory.fields.toWarehouse')} errors={errors.to_warehouse_id} required>
         <select value={toWarehouseId} onChange={(e) => setToWarehouseId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {/* Backend requires a different destination: never offer the source warehouse. */}
           {warehouses.filter((w) => w.id !== fromWarehouseId).map((w) => (
             <option key={w.id} value={w.id}>
@@ -123,9 +124,9 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="Product" errors={errors['items.0.product_id']} required>
+      <FormField label={tt('common.fields.product')} errors={errors['items.0.product_id']} required>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {products.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -133,15 +134,15 @@ function CreateTransferModal({ open, onClose, onCreated }: { open: boolean; onCl
           ))}
         </select>
       </FormField>
-      <FormField label="Quantity" errors={errors['items.0.quantity']} required>
+      <FormField label={tt('common.fields.quantity')} errors={errors['items.0.quantity']} required>
         <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !fromWarehouseId || !toWarehouseId || !productId || !quantity} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>

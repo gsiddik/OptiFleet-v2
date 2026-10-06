@@ -12,25 +12,26 @@ import type { PurchaseRequestItem, PurchaseRequestItemLine } from '../../../type
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { t } from '../../../i18n/i18n';
 
 const LINE_STATUSES: PurchaseRequestItemLine['line_status'][] = ['PENDING', 'APPROVED', 'ON_HOLD', 'REJECTED'];
 
-const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
-  DRAFT: [{ action: 'submit', label: 'Submit', permission: 'purchase_request.submit', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'purchase_request.create' }],
-  SUBMITTED: [{ action: 'review', label: 'Move to Review', permission: 'purchase_request.approve', primary: true }, { action: 'cancel', label: 'Cancel', permission: 'purchase_request.create' }],
+const LIFECYCLE: Record<string, { action: string; label: string; labelKey?: string; permission: string; primary?: boolean }[]> = {
+  DRAFT: [{ action: 'submit', label: 'Submit', labelKey: 'common.actions.submit', permission: 'purchase_request.submit', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'purchase_request.create' }],
+  SUBMITTED: [{ action: 'review', label: 'Move to Review', labelKey: 'procurement.fields.moveToReview', permission: 'purchase_request.approve', primary: true }, { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'purchase_request.create' }],
   UNDER_REVIEW: [
-    { action: 'approve', label: 'Approve', permission: 'purchase_request.approve', primary: true },
-    { action: 'reject', label: 'Reject', permission: 'purchase_request.approve' },
+    { action: 'approve', label: 'Approve', labelKey: 'common.actions.approve', permission: 'purchase_request.approve', primary: true },
+    { action: 'reject', label: 'Reject', labelKey: 'common.actions.reject', permission: 'purchase_request.approve' },
   ],
 };
 
 /** The module action that moves a purchase request into each status (the workflow decides when it is offered). */
-const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string; primary?: boolean }> = {
-  SUBMITTED: { action: 'submit', label: 'Submit', permission: 'purchase_request.submit', primary: true },
-  UNDER_REVIEW: { action: 'review', label: 'Move to Review', permission: 'purchase_request.approve', primary: true },
-  APPROVED: { action: 'approve', label: 'Approve', permission: 'purchase_request.approve', primary: true },
-  REJECTED: { action: 'reject', label: 'Reject', permission: 'purchase_request.approve' },
-  CANCELLED: { action: 'cancel', label: 'Cancel', permission: 'purchase_request.create' },
+const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; labelKey?: string; permission: string; primary?: boolean }> = {
+  SUBMITTED: { action: 'submit', label: 'Submit', labelKey: 'common.actions.submit', permission: 'purchase_request.submit', primary: true },
+  UNDER_REVIEW: { action: 'review', label: 'Move to Review', labelKey: 'procurement.fields.moveToReview', permission: 'purchase_request.approve', primary: true },
+  APPROVED: { action: 'approve', label: 'Approve', labelKey: 'common.actions.approve', permission: 'purchase_request.approve', primary: true },
+  REJECTED: { action: 'reject', label: 'Reject', labelKey: 'common.actions.reject', permission: 'purchase_request.approve' },
+  CANCELLED: { action: 'cancel', label: 'Cancel', labelKey: 'common.actions.cancelRecord', permission: 'purchase_request.create' },
 };
 
 export function PurchaseRequestDetailPage() {
@@ -77,7 +78,7 @@ export function PurchaseRequestDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/purchase-requests" label="← Back to Purchase Request" />
+      <BackButton fallbackTo="/app/purchase-requests" label={t('procurement.actions.backToPurchaseRequest')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{pr.pr_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -89,7 +90,7 @@ export function PurchaseRequestDetailPage() {
           ))}
           {pr.status === 'APPROVED' && hasPermission('rfq.manage') && (
             <button className="btn-primary" onClick={createRfq}>
-              Create RFQ
+              {t('procurement.actions.createRfq')}
             </button>
           )}
         </div>
@@ -98,19 +99,19 @@ export function PurchaseRequestDetailPage() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13 }}>
-          <strong>Warehouse:</strong> {pr.warehouse?.name ?? pr.warehouse_id} &nbsp; <strong>Source:</strong> {pr.source_type}
+          <strong>{t('common.fields.warehouse')}:</strong> {pr.warehouse?.name ?? pr.warehouse_id} &nbsp; <strong>{t('common.fields.source')}:</strong> {pr.source_type}
           {pr.work_order && <span> ({pr.work_order.wo_number})</span>} &nbsp;
-          <strong>Priority:</strong> {pr.priority}
+          <strong>{t('common.fields.priority')}:</strong> {pr.priority}
         </p>
         {pr.notes && (
           <p style={{ fontSize: 13 }}>
-            <strong>Notes:</strong> {pr.notes}
+            <strong>{t('common.fields.notes')}:</strong> {pr.notes}
           </p>
         )}
       </div>
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.items')}</h3>
         {(pr.items ?? []).map((item) => (
           <ItemRow key={item.id} prId={pr.id} item={item} canApprove={hasPermission('purchase_request.approve')} onChanged={load} />
         ))}
@@ -153,19 +154,19 @@ function ItemRow({
     <div style={{ padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>
-          {item.product?.name ?? item.product_id} — qty {formatQty(item.requested_quantity)}
-          {item.estimated_unit_price && ` @ est. ${formatMoney(item.estimated_unit_price)}`}
+          {t('common.help.productQuantity', { product: item.product?.name ?? item.product_id, quantity: formatQty(item.requested_quantity) })}
+          {item.estimated_unit_price && t('procurement.fields.estEstimatedUnitPrice', { estimated_unit_price: formatMoney(item.estimated_unit_price) })}
         </span>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <StatusBadge status={item.line_status} />
           {canApprove && !editing && (
             <button className="btn-link" onClick={() => setEditing(true)}>
-              Change
+              {t('procurement.actions.change')}
             </button>
           )}
         </div>
       </div>
-      {item.line_reason && !editing && <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>Reason: {item.line_reason}</div>}
+      {item.line_reason && !editing && <div style={{ color: '#6b7280', fontSize: 12, marginTop: 2 }}>{t('procurement.fields.reasonLineReason', { line_reason: item.line_reason })}</div>}
       {editing && (
         <div style={{ display: 'flex', gap: 8, marginTop: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <select value={lineStatus} onChange={(e) => setLineStatus(e.target.value as PurchaseRequestItemLine['line_status'])} style={{ ...inputStyle, width: 130 }}>
@@ -176,16 +177,16 @@ function ItemRow({
             ))}
           </select>
           <input
-            placeholder="Reason (optional)"
+            placeholder={t('common.placeholders.reasonOptional')}
             value={lineReason}
             onChange={(e) => setLineReason(e.target.value)}
             style={{ ...inputStyle, width: 220 }}
           />
           <button className="btn-primary" disabled={busy} onClick={save}>
-            Save
+            {t('common.actions.save')}
           </button>
           <button className="btn-secondary" disabled={busy} onClick={() => setEditing(false)}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
         </div>
       )}

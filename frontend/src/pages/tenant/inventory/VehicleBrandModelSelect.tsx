@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiClient } from '../../../api/client';
 import { inputStyle } from '../../../components/FormField';
+import { t } from '../../../i18n/i18n';
 
 export interface VehicleOption {
   id: string;
@@ -86,19 +87,19 @@ export function VehicleBrandModelSelect({
 
   return (
     <>
-      <select aria-label="Vehicle Brand" value={brandId} disabled={disabled} onChange={(e) => onChange(e.target.value, '')} style={style}>
-        <option value="">{anyLabel ?? 'Brand…'}</option>
-        {brandId && !brands.some((b) => b.id === brandId) && <option value={brandId}>{current?.brandName ?? brandId} (inactive)</option>}
+      <select aria-label={t('inventory.fields.vehicleBrand')} value={brandId} disabled={disabled} onChange={(e) => onChange(e.target.value, '')} style={style}>
+        <option value="">{anyLabel ?? t('inventory.fields.brand')}</option>
+        {brandId && !brands.some((b) => b.id === brandId) && <option value={brandId}>{current?.brandName ?? brandId} {t('masterData.fields.inactive')}</option>}
         {brands.map((b) => (
           <option key={b.id} value={b.id}>
             {b.name}
           </option>
         ))}
       </select>
-      <select aria-label="Vehicle Model" value={modelId} disabled={disabled || !brandId} onChange={(e) => onChange(brandId, e.target.value)} style={style}>
-        <option value="">{brandId ? (anyLabel ?? 'Model…') : 'Select a brand first'}</option>
+      <select aria-label={t('inventory.fields.vehicleModel')} value={modelId} disabled={disabled || !brandId} onChange={(e) => onChange(brandId, e.target.value)} style={style}>
+        <option value="">{brandId ? (anyLabel ?? t('inventory.fields.model')) : t('inventory.fields.selectABrandFirst')}</option>
         {modelId && modelsFor === brandId && !visibleModels.some((m) => m.id === modelId) && (
-          <option value={modelId}>{current?.modelName ?? modelId} (inactive)</option>
+          <option value={modelId}>{current?.modelName ?? modelId} {t('masterData.fields.inactive')}</option>
         )}
         {visibleModels.map((m) => (
           <option key={m.id} value={m.id}>

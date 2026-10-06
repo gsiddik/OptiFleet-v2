@@ -15,27 +15,28 @@ import type { WorkOrderPartReturnItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatDateTime } from '../../../utils/date';
 import { message } from '../../../i18n/messages';
+import { t, translatedRecord } from '../../../i18n/i18n';
 
 const STATUSES = [
-  { value: 'PENDING_PROCESSING', label: 'Pending Processing' },
-  { value: 'RESTOCKED', label: 'Accepted to Stock' },
-  { value: 'QUARANTINED', label: 'Quarantined' },
-  { value: 'WARRANTY_CLAIM', label: 'Warranty Claim' },
-  { value: 'REPAIR', label: 'Repair' },
-  { value: 'SCRAP', label: 'Scrap' },
-  { value: '', label: 'All' },
+  { value: 'PENDING_PROCESSING', label: 'Pending Processing', labelKey: 'inventory.status.pendingProcessing' },
+  { value: 'RESTOCKED', label: 'Accepted to Stock', labelKey: 'inventory.status.acceptedToStock' },
+  { value: 'QUARANTINED', label: 'Quarantined', labelKey: 'inventory.status.quarantined' },
+  { value: 'WARRANTY_CLAIM', label: 'Warranty Claim', labelKey: 'inventory.fields.warrantyClaim' },
+  { value: 'REPAIR', label: 'Repair', labelKey: 'inventory.fields.repair' },
+  { value: 'SCRAP', label: 'Scrap', labelKey: 'inventory.fields.scrap' },
+  { value: '', label: 'All', labelKey: 'inventory.status.all' },
 ];
 
 /** Follow-up for a faulty (quarantined) return. None of them puts the part back into available stock. */
 const FAULTY_DISPOSITIONS = [
-  { value: 'WARRANTY_CLAIM', label: 'Warranty Claim' },
-  { value: 'REPAIR', label: 'Repair' },
-  { value: 'SCRAP', label: 'Scrap' },
+  { value: 'WARRANTY_CLAIM', label: 'Warranty Claim', labelKey: 'inventory.fields.warrantyClaim' },
+  { value: 'REPAIR', label: 'Repair', labelKey: 'inventory.fields.repair' },
+  { value: 'SCRAP', label: 'Scrap', labelKey: 'inventory.fields.scrap' },
 ] as const;
 type FaultyDisposition = (typeof FAULTY_DISPOSITIONS)[number]['value'];
 const DISPOSITION_LABEL: Record<string, string> = Object.fromEntries(FAULTY_DISPOSITIONS.map((d) => [d.value, d.label]));
 
-const CONDITION_LABEL: Record<string, string> = { UNUSED_NEW: 'New Good', UNUSED_FAULTY: 'New Faulty' };
+const CONDITION_LABEL: Record<string, string> = translatedRecord({ UNUSED_NEW: 'New Good', UNUSED_FAULTY: 'New Faulty' }, { UNUSED_NEW: 'inventory.condition.unusedNew', UNUSED_FAULTY: 'inventory.condition.unusedFaulty' });
 
 /**
  * Return: new parts issued to a Work Order and returned unused (Issuance & Return). Each one
@@ -57,7 +58,7 @@ export function ReturnListPage() {
   const columns: Column<WorkOrderPartReturnItem>[] = [
     {
       key: 'return_number',
-      header: 'Return Number',
+      header: t('inventory.fields.returnNumber'),
       render: (r) => (
         <button className="btn-link" onClick={() => setOpenReturn(r)} style={{ fontWeight: 600 }}>
           {r.return_number}
@@ -66,21 +67,20 @@ export function ReturnListPage() {
     },
     {
       key: 'work_order',
-      header: 'Work Order Number',
+      header: t('inventory.fields.workOrderNumber'),
       render: (r) => (r.work_order ? <Link to={`/app/work-orders/${r.work_order.id}`}>{r.work_order.wo_number}</Link> : '—'),
     },
-    { key: 'product', header: 'Returned Product', render: (r) => r.product?.name ?? r.product_id },
-    { key: 'quantity', header: 'Returned Quantity', render: (r) => formatQty(r.quantity) },
-    { key: 'status', header: 'Status', render: (r) => <StatusBadge status={r.disposition_status} /> },
-    { key: 'created_at', header: 'Returned At', render: (r) => formatDateTime(r.created_at) },
+    { key: 'product', header: t('inventory.fields.returnedProduct'), render: (r) => r.product?.name ?? r.product_id },
+    { key: 'quantity', header: t('inventory.fields.returnedQuantity'), render: (r) => formatQty(r.quantity) },
+    { key: 'status', header: t('common.fields.status'), render: (r) => <StatusBadge status={r.disposition_status} /> },
+    { key: 'created_at', header: t('inventory.fields.returnedAt'), render: (r) => formatDateTime(r.created_at) },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Return</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('inventory.titles.return')}</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 14 }}>
-        New parts returned unused from a Work Order. Click a Return Number to inspect it; only an accepted (New Good) return goes back to stock. Faulty
-        returns stay quarantined until routed to Warranty Claim, Repair or Scrap.
+        {t('inventory.help.newPartsReturnedUnusedWorkOrder')}
       </p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
         {STATUSES.map((s) => (
@@ -97,8 +97,8 @@ export function ReturnListPage() {
           </button>
         ))}
         <input
-          aria-label="Search returns"
-          placeholder="Search return, WO or product…"
+          aria-label={t('inventory.fields.searchReturns')}
+          placeholder={t('inventory.search.searchReturnWoProduct')}
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
@@ -109,7 +109,7 @@ export function ReturnListPage() {
       </div>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No returns found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('inventory.empty.noReturnsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
 
@@ -190,80 +190,80 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
   );
 
   return (
-    <Modal open title="Returned Parts Processing" onClose={onClose} width={620}>
+    <Modal open title={t('inventory.modals.returnedPartsProcessing')} onClose={onClose} width={620}>
       {error && <ErrorState message={error} />}
-      <h4 style={{ margin: '0 0 8px', fontSize: 13 }}>Identification</h4>
+      <h4 style={{ margin: '0 0 8px', fontSize: 13 }}>{t('inventory.sections.identification')}</h4>
       <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: '6px 12px', marginBottom: 16 }}>
-        {row('Return Number', <strong>{item.return_number}</strong>)}
-        {row('Work Order Number', item.work_order?.wo_number ?? '—')}
-        {row('Product', item.product?.name ?? item.product_id)}
-        {row('Returned Quantity', formatQty(item.quantity))}
-        {row('Returned By / At', `${item.returner?.name ?? '—'} · ${formatDateTime(item.created_at)}`)}
-        {row('Reported Condition', CONDITION_LABEL[item.condition] ?? item.condition)}
-        {row('Return Warehouse', item.warehouse?.name ?? '—')}
-        {item.reason && row('Reason', item.reason)}
-        {row('Status', <StatusBadge status={item.disposition_status} />)}
+        {row(t('inventory.fields.returnNumber'), <strong>{item.return_number}</strong>)}
+        {row(t('inventory.fields.workOrderNumber'), item.work_order?.wo_number ?? '—')}
+        {row(t('common.fields.product'), item.product?.name ?? item.product_id)}
+        {row(t('inventory.fields.returnedQuantity'), formatQty(item.quantity))}
+        {row(t('inventory.fields.returnedByAt'), `${item.returner?.name ?? '—'} · ${formatDateTime(item.created_at)}`)}
+        {row(t('inventory.fields.reportedCondition'), CONDITION_LABEL[item.condition] ?? item.condition)}
+        {row(t('inventory.fields.returnWarehouse'), item.warehouse?.name ?? '—')}
+        {item.reason && row(t('common.fields.reason'), item.reason)}
+        {row(t('common.fields.status'), <StatusBadge status={item.disposition_status} />)}
       </div>
 
-      <h4 style={{ margin: '0 0 8px', fontSize: 13 }}>Inspection</h4>
+      <h4 style={{ margin: '0 0 8px', fontSize: 13 }}>{t('inventory.sections.inspection')}</h4>
       {pending ? (
         canProcess ? (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <FormField label="Actual Condition" required>
+              <FormField label={t('inventory.fields.actualCondition')} required>
                 <select value={actualCondition} onChange={(e) => setActualCondition(e.target.value as 'UNUSED_NEW' | 'UNUSED_FAULTY')} style={inputStyle}>
-                  <option value="UNUSED_NEW">New Good — accept to stock</option>
-                  <option value="UNUSED_FAULTY">New Faulty — quarantine</option>
+                  <option value="UNUSED_NEW">{t('inventory.fields.newGoodAcceptStock')}</option>
+                  <option value="UNUSED_FAULTY">{t('inventory.fields.newFaultyQuarantine')}</option>
                 </select>
               </FormField>
-              <FormField label="Received Quantity" required>
+              <FormField label={t('inventory.fields.receivedQuantity')} required>
                 <NumericInput min="0" step="any" max={Number(item.quantity)} value={receivedQty} onChange={(e) => setReceivedQty(e.target.value)} style={inputStyle} />
               </FormField>
             </div>
-            <FormField label="Notes">
+            <FormField label={t('common.fields.notes')}>
               <textarea value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={2000} style={{ ...inputStyle, minHeight: 60 }} />
             </FormField>
             <div style={{ fontSize: 12, marginBottom: 12, color: matches ? '#047857' : '#b45309' }}>
-              Inspection result: <strong>{matches ? 'MATCH' : 'MISMATCH'}</strong>
+              {t('inventory.fields.inspectionResult')}: <strong>{matches ? 'MATCH' : 'MISMATCH'}</strong>
               {' — '}
               {actualCondition === 'UNUSED_NEW'
                 ? item.warehouse?.name
                   ? message('inventory.confirm.restockToWarehouse', { quantity: formatQty(receivedQty), warehouseName: item.warehouse.name })
                   : message('inventory.confirm.restockToUnknownWarehouse', { quantity: formatQty(receivedQty) })
-                : 'nothing is added to available stock.'}
+                : t('inventory.empty.nothingAddedAvailableStock')}
             </div>
           </>
         ) : (
-          <p style={{ fontSize: 13, color: '#6b7280' }}>Awaiting inspection by the warehouse.</p>
+          <p style={{ fontSize: 13, color: '#6b7280' }}>{t('inventory.help.awaitingInspectionWarehouse')}</p>
         )
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: '6px 12px' }}>
-          {row('Actual Condition', item.actual_condition ? CONDITION_LABEL[item.actual_condition] : '—')}
-          {row('Received Quantity', formatQty(item.accepted_quantity))}
-          {row('Inspection Result', item.inspection_result ?? '—')}
+          {row(t('inventory.fields.actualCondition'), item.actual_condition ? CONDITION_LABEL[item.actual_condition] : '—')}
+          {row(t('inventory.fields.receivedQuantity'), formatQty(item.accepted_quantity))}
+          {row(t('inventory.fields.inspectionResult2'), item.inspection_result ?? '—')}
           {row(
-            'Outcome',
+            t('tenantComponents.fields.outcome'),
             item.disposition_status === 'RESTOCKED'
-              ? `Accepted — ${formatQty(item.accepted_quantity)} back in stock`
+              ? t('inventory.help.acceptedAcceptedQuantityBackStock', { accepted_quantity: formatQty(item.accepted_quantity) })
               : item.disposition_status === 'QUARANTINED'
-                ? 'Quarantined — not added to available stock; awaiting disposition'
+                ? t('inventory.help.quarantinedAwaitingDisposition')
                 : DISPOSITION_LABEL[item.disposition_status]
                   ? `Faulty — routed to ${DISPOSITION_LABEL[item.disposition_status]}; not added to available stock`
                   : item.disposition_status,
           )}
-          {row('Inspected By / At', `${item.inspector?.name ?? '—'} · ${item.inspected_at ? formatDateTime(item.inspected_at) : '—'}`)}
-          {item.inspection_notes && row('Notes', item.inspection_notes)}
-          {item.routed_at && row('Routed By / At', `${item.router?.name ?? '—'} · ${formatDateTime(item.routed_at)}`)}
-          {item.routed_at && item.disposition_reason && row('Disposition Reason', item.disposition_reason)}
+          {row(t('inventory.fields.inspectedByAt'), `${item.inspector?.name ?? '—'} · ${item.inspected_at ? formatDateTime(item.inspected_at) : '—'}`)}
+          {item.inspection_notes && row(t('common.fields.notes'), item.inspection_notes)}
+          {item.routed_at && row(t('inventory.fields.routedByAt'), `${item.router?.name ?? '—'} · ${formatDateTime(item.routed_at)}`)}
+          {item.routed_at && item.disposition_reason && row(t('inventory.fields.dispositionReason'), item.disposition_reason)}
         </div>
       )}
 
       {canRoute && (
         <>
-          <h4 style={{ margin: '16px 0 8px', fontSize: 13 }}>Faulty Part Disposition</h4>
-          <FormField label="Disposition" required>
-            <select aria-label="Disposition" value={disposition} onChange={(e) => setDisposition(e.target.value as FaultyDisposition | '')} style={inputStyle}>
-              <option value="">Select disposition…</option>
+          <h4 style={{ margin: '16px 0 8px', fontSize: 13 }}>{t('inventory.sections.faultyPartDisposition')}</h4>
+          <FormField label={t('tenantComponents.fields.disposition')} required>
+            <select aria-label={t('tenantComponents.fields.disposition')} value={disposition} onChange={(e) => setDisposition(e.target.value as FaultyDisposition | '')} style={inputStyle}>
+              <option value="">{t('inventory.fields.selectDisposition')}</option>
               {FAULTY_DISPOSITIONS.map((d) => (
                 <option key={d.value} value={d.value}>
                   {d.label}
@@ -271,45 +271,45 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
               ))}
             </select>
           </FormField>
-          <FormField label="Reason">
+          <FormField label={t('common.fields.reason')}>
             <textarea value={routeReason} onChange={(e) => setRouteReason(e.target.value)} maxLength={2000} style={{ ...inputStyle, minHeight: 50 }} />
           </FormField>
-          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>The part stays out of available stock whichever disposition is chosen.</p>
+          <p style={{ fontSize: 12, color: '#6b7280', margin: '0 0 4px' }}>{t('inventory.help.partStaysOutAvailableStockWhichever')}</p>
         </>
       )}
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button className="btn-secondary" onClick={onClose} disabled={busy}>
-          Close
+          {t('common.actions.close')}
         </button>
         {canProcess && (
           <button className="btn-primary" disabled={busy || !(Number(receivedQty) > 0)} onClick={() => setConfirming(true)}>
-            {busy ? 'Processing…' : 'Complete Processing'}
+            {busy ? t('inventory.actions.processing') : t('inventory.actions.completeProcessing')}
           </button>
         )}
         {canRoute && (
           <button className="btn-primary" disabled={busy || !disposition} onClick={() => setConfirmingRoute(true)}>
-            {busy ? 'Routing…' : 'Route Disposition'}
+            {busy ? t('inventory.actions.routing') : t('inventory.actions.routeDisposition')}
           </button>
         )}
       </div>
       <ConfirmDialog
         open={confirming}
-        title="Complete Returned Parts Processing"
+        title={t('inventory.confirm.completeReturnedPartsProcessing')}
         message={
           actualCondition === 'UNUSED_NEW'
-            ? `Accept ${formatQty(receivedQty)} × ${item.product?.name ?? 'part'} back into stock? This cannot be undone.`
-            : `Quarantine ${formatQty(receivedQty)} × ${item.product?.name ?? 'part'}? It will not be added to available stock.`
+            ? t('inventory.confirm.acceptReceivedQtyValueBackInto', { receivedQty: formatQty(receivedQty), value: item.product?.name ?? 'part' })
+            : t('inventory.confirm.quarantineReceivedQtyValueNotAdded', { receivedQty: formatQty(receivedQty), value: item.product?.name ?? 'part' })
         }
-        confirmLabel="Complete"
+        confirmLabel={t('inventory.confirm.complete')}
         onCancel={() => setConfirming(false)}
         onConfirm={submit}
       />
       <ConfirmDialog
         open={confirmingRoute}
-        title="Route Faulty Return"
-        message={`Route ${item.return_number} to ${disposition ? DISPOSITION_LABEL[disposition] : ''}? It stays out of available stock.`}
-        confirmLabel="Route"
+        title={t('inventory.confirm.routeFaultyReturn')}
+        message={t('inventory.confirm.routeReturnNumberValueStaysOut', { return_number: item.return_number, value: disposition ? DISPOSITION_LABEL[disposition] : '' })}
+        confirmLabel={t('inventory.confirm.route')}
         onCancel={() => setConfirmingRoute(false)}
         onConfirm={route}
       />

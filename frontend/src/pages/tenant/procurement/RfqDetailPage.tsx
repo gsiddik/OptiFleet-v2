@@ -12,6 +12,7 @@ import type { PartnerItem, RfqItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
 import { formatQty } from '../../../utils/quantity';
+import { t } from '../../../i18n/i18n';
 
 /** Only these partner types supply purchased goods and can be invited (backend enforces the same). */
 const RFQ_VENDOR_TYPES = ['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER'];
@@ -37,8 +38,8 @@ const QUOTATION_DOC_MAX_BYTES = 10 * 1024 * 1024;
 
 function quotationDocError(file: File): string | null {
   const ext = file.name.split('.').pop()?.toLowerCase() ?? '';
-  if (!QUOTATION_DOC_EXTENSIONS.includes(ext)) return 'The quotation document must be a PDF or Word (DOC/DOCX) file.';
-  if (file.size > QUOTATION_DOC_MAX_BYTES) return 'The quotation document may not be larger than 10 MB.';
+  if (!QUOTATION_DOC_EXTENSIONS.includes(ext)) return t('procurement.validation.quotationDocumentMustPdfWordDoc');
+  if (file.size > QUOTATION_DOC_MAX_BYTES) return t('procurement.help.quotationDocumentMayNotLargerThan');
   return null;
 }
 
@@ -191,14 +192,14 @@ export function RfqDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/rfqs" label="← Back to RFQ" />
+      <BackButton fallbackTo="/app/rfqs" label={t('procurement.actions.backToRfq')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{rfq.rfq_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <StatusBadge status={rfq.status} domain="document" />
           {rfq.status === 'ISSUED' && hasPermission('rfq.manage') && (
             <button className="btn-secondary" disabled={busy} onClick={async () => { setBusy(true); try { await apiClient.post(`/app/rfqs/${id}/close`); load(); } finally { setBusy(false); } }}>
-              Close RFQ
+              {t('procurement.actions.closeRfq')}
             </button>
           )}
         </div>
@@ -206,17 +207,17 @@ export function RfqDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Items</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('common.sections.items')}</h3>
         {(rfq.items ?? []).map((item) => (
           <div key={item.id} style={{ fontSize: 13, padding: '4px 0' }}>
-            {item.product?.name ?? item.product_id} — qty {formatQty(item.quantity)}
+            {t('common.help.productQuantity', { product: item.product?.name ?? item.product_id, quantity: formatQty(item.quantity) })}
           </div>
         ))}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Invited Vendors</h3>
-        {(rfq.vendors ?? []).length === 0 && <EmptyState label="No vendors invited yet." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('procurement.sections.invitedVendors')}</h3>
+        {(rfq.vendors ?? []).length === 0 && <EmptyState label={t('procurement.empty.noVendorsInvitedYet')} />}
         {(rfq.vendors ?? []).map((v) => (
           <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, fontSize: 13, padding: '6px 0', borderBottom: '1px solid #f3f4f6' }}>
             <span>
@@ -224,7 +225,7 @@ export function RfqDetailPage() {
             </span>
             <span style={{ display: 'flex', gap: 6 }}>
               <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} disabled={printingVendorId === v.id} onClick={() => printForVendor(v.id)}>
-                {printingVendorId === v.id ? 'Loading…' : 'Print'}
+                {printingVendorId === v.id ? t('common.actions.loading') : t('common.actions.print')}
               </button>
               <DocumentVersionsButton printPath={`/app/rfqs/${rfq.id}/vendors/${v.id}/print`} />
             </span>
@@ -233,7 +234,7 @@ export function RfqDetailPage() {
         {hasPermission('rfq.manage') && rfq.status !== 'CLOSED' && rfq.status !== 'CANCELLED' && (
           <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
             <select value={invitePartnerId} onChange={(e) => setInvitePartnerId(e.target.value)} style={{ ...inputStyle, width: 240 }}>
-              <option value="">Select vendor…</option>
+              <option value="">{t('procurement.fields.selectVendor')}</option>
               {partners
                 .filter((p) => !(rfq.vendors ?? []).some((v) => v.id === p.id))
                 .map((p) => (
@@ -243,63 +244,62 @@ export function RfqDetailPage() {
                 ))}
             </select>
             <button className="btn-secondary" disabled={busy || !invitePartnerId} onClick={inviteVendor}>
-              Invite
+              {t('procurement.actions.invite')}
             </button>
           </div>
         )}
       </div>
 
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Quotation Comparison</h3>
-        {comparison.length === 0 && <EmptyState label="No quotations submitted yet." />}
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('procurement.sections.quotationComparison')}</h3>
+        {comparison.length === 0 && <EmptyState label={t('procurement.empty.noQuotationsSubmittedYet')} />}
         {comparison.map((c) => (
           <div key={c.quotation_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             <span>
-              {c.partner.name} — total {formatMoney(c.total)} — lead time {c.lead_time_days ?? '—'}d — <StatusBadge status={c.status} />
+              {t('procurement.help.quotationSummary', { vendor: c.partner.name, total: formatMoney(c.total), days: c.lead_time_days ?? '—' })} <StatusBadge status={c.status} />
               {c.has_attachment ? (
                 <span style={{ marginLeft: 8, fontSize: 12 }}>
-                  📎 Document available: {c.attachment_original_filename}{' '}
+                  {t('procurement.help.documentAvailable', { name: c.attachment_original_filename })}{' '}
                   <button className="btn-link" onClick={() => openQuotationDocument(c, false)}>
-                    View
+                    {t('common.actions.view')}
                   </button>{' '}
                   <button className="btn-link" onClick={() => openQuotationDocument(c, true)}>
-                    Download
+                    {t('common.actions.download')}
                   </button>
                 </span>
               ) : (
-                <span style={{ marginLeft: 8, fontSize: 12, color: '#9ca3af' }}>No document uploaded</span>
+                <span style={{ marginLeft: 8, fontSize: 12, color: '#9ca3af' }}>{t('procurement.empty.noDocumentUploaded')}</span>
               )}
             </span>
             <div style={{ display: 'flex', gap: 6 }}>
               {c.status === 'SUBMITTED' && rfq.status === 'ISSUED' && hasPermission('quotation.select') && (
                 <button className="btn-link" disabled={busy} onClick={() => selectVendor(c.quotation_id)}>
-                  Select
+                  {t('procurement.actions.select')}
                 </button>
               )}
               {c.can_create_purchase_order && hasPermission('purchase_order.create') && (
                 <button className="btn-link" onClick={() => createPo(c.quotation_id)}>
-                  Create PO
+                  {t('procurement.actions.createPo')}
                 </button>
               )}
               {c.purchase_order && (
                 <Link to={`/app/purchase-orders/${c.purchase_order.id}`} style={{ fontSize: 13 }}>
-                  PO {c.purchase_order.po_number}
-                </Link>
+                  {t('procurement.actions.poPoNumber', { po_number: c.purchase_order.po_number })}</Link>
               )}
             </div>
           </div>
         ))}
         {!selected && hasPermission('quotation.manage') && rfq.status === 'ISSUED' && (rfq.vendors ?? []).length > 0 && (
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid #e5e7eb' }}>
-            <h4 style={{ margin: '0 0 8px', fontSize: 13 }}>Record Quotation</h4>
+            <h4 style={{ margin: '0 0 8px', fontSize: 13 }}>{t('procurement.actions.recordQuotation')}</h4>
             {quotableVendors.length === 0 ? (
-              <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>Every invited vendor has already submitted a quotation.</p>
+              <p style={{ fontSize: 13, color: '#6b7280', margin: 0 }}>{t('procurement.help.everyInvitedVendorAlreadySubmittedQuotation')}</p>
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  <FormField label="Vendor" errors={quoteErrors.partner_id} required>
-                    <select aria-label="Quotation vendor" value={quotePartnerId} onChange={(e) => setQuotePartnerId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-                      <option value="">Select…</option>
+                  <FormField label={t('common.fields.vendor')} errors={quoteErrors.partner_id} required>
+                    <select aria-label={t('procurement.fields.quotationVendor')} value={quotePartnerId} onChange={(e) => setQuotePartnerId(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+                      <option value="">{t('common.fields.select')}</option>
                       {quotableVendors.map((v) => (
                         <option key={v.id} value={v.id}>
                           {v.name}
@@ -307,19 +307,19 @@ export function RfqDetailPage() {
                       ))}
                     </select>
                   </FormField>
-                  <FormField label="Quotation No." errors={quoteErrors.quotation_number}>
+                  <FormField label={t('procurement.fields.quotationNo')} errors={quoteErrors.quotation_number}>
                     <input value={quoteNumber} onChange={(e) => setQuoteNumber(e.target.value)} maxLength={100} style={{ ...inputStyle, width: 150 }} />
                   </FormField>
-                  <FormField label="Lead Time (days after PO)" errors={quoteErrors.lead_time_days}>
+                  <FormField label={t('procurement.fields.leadTimeDaysAfterPo')} errors={quoteErrors.lead_time_days}>
                     <NumericInput integer value={quoteLeadTime} onChange={(e) => setQuoteLeadTime(e.target.value)} style={{ ...inputStyle, width: 120 }} />
                   </FormField>
                 </div>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 10 }}>
                   <thead>
                     <tr style={{ textAlign: 'left', color: '#6b7280' }}>
-                      <th style={{ padding: 4 }}>Item</th>
-                      <th style={{ padding: 4 }}>Qty</th>
-                      <th style={{ padding: 4, width: 160 }}>Unit Price</th>
+                      <th style={{ padding: 4 }}>{t('account.fields.item')}</th>
+                      <th style={{ padding: 4 }}>{t('common.fields.qty')}</th>
+                      <th style={{ padding: 4, width: 160 }}>{t('common.fields.unitPrice')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -329,7 +329,7 @@ export function RfqDetailPage() {
                         <td style={{ padding: 4 }}>{formatQty(item.quantity)}</td>
                         <td style={{ padding: 4 }}>
                           <NumericInput
-                            aria-label={`Unit price for ${item.product?.name ?? 'item'}`}
+                            aria-label={t('procurement.fields.unitPriceForValue', { value: item.product?.name ?? 'item' })}
                             value={quotePrices[item.id] ?? ''}
                             onChange={(e) => setQuotePrices((prev) => ({ ...prev, [item.id]: e.target.value }))}
                             style={{ ...inputStyle, width: 140 }}
@@ -340,25 +340,25 @@ export function RfqDetailPage() {
                     ))}
                   </tbody>
                 </table>
-                <FormField label="Quotation Document (optional — PDF, DOC, DOCX, max 10 MB)" errors={quoteErrors.attachment ?? (quoteFileError ? [quoteFileError] : undefined)}>
+                <FormField label={t('procurement.fields.quotationDocumentOptionalPdfDocDocx')} errors={quoteErrors.attachment ?? (quoteFileError ? [quoteFileError] : undefined)}>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                     <button type="button" className="btn-secondary" onClick={() => quoteFileInput.current?.click()} disabled={busy}>
-                      {quoteFile ? 'Replace file' : 'Choose file'}
+                      {quoteFile ? t('procurement.actions.replaceFile') : t('common.actions.chooseFile')}
                     </button>
                     {quoteFile ? (
                       <>
                         <span style={{ fontSize: 13 }}>📎 {quoteFile.name}</span>
                         <button type="button" className="btn-link" onClick={() => pickQuoteFile(null)} disabled={busy}>
-                          Remove
+                          {t('common.actions.remove')}
                         </button>
                       </>
                     ) : (
-                      <span style={{ fontSize: 12, color: '#6b7280' }}>No file selected — the quotation can be recorded without a document.</span>
+                      <span style={{ fontSize: 12, color: '#6b7280' }}>{t('procurement.empty.noFileSelectedQuotationRecordedWithout')}</span>
                     )}
                     <input
                       ref={quoteFileInput}
                       type="file"
-                      aria-label="Quotation document"
+                      aria-label={t('procurement.fields.quotationDocument')}
                       accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                       style={{ display: 'none' }}
                       onChange={(e) => pickQuoteFile(e.target.files?.[0] ?? null)}
@@ -366,7 +366,7 @@ export function RfqDetailPage() {
                   </div>
                 </FormField>
                 <button className="btn-primary" disabled={busy || !quotePartnerId || !pricesComplete || Boolean(quoteFileError)} onClick={submitQuotation}>
-                  {busy ? (quoteFile ? 'Uploading…' : 'Saving…') : 'Record Quotation'}
+                  {busy ? (quoteFile ? t('common.actions.uploading') : t('common.actions.saving')) : t('procurement.actions.recordQuotation')}
                 </button>
               </>
             )}

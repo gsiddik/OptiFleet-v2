@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { StockOpnameItem, Warehouse } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 export function StockOpnameListPage() {
   const { hasPermission } = useAuth();
@@ -18,26 +19,26 @@ export function StockOpnameListPage() {
   const { data, loading, error } = useApiList<StockOpnameItem>('/app/stock-opnames', {}, reloadKey);
 
   const columns: Column<StockOpnameItem>[] = [
-    { key: 'number', header: 'Opname #', render: (o) => <Link to={`/app/stock-opnames/${o.id}`}>{o.opname_number}</Link> },
-    { key: 'warehouse', header: 'Warehouse', render: (o) => o.warehouse?.name ?? o.warehouse_id },
-    { key: 'status', header: 'Status', render: (o) => <StatusBadge status={o.status} /> },
+    { key: 'number', header: t('inventory.fields.opnameNumber'), render: (o) => <Link to={`/app/stock-opnames/${o.id}`}>{o.opname_number}</Link> },
+    { key: 'warehouse', header: t('common.fields.warehouse'), render: (o) => o.warehouse?.name ?? o.warehouse_id },
+    { key: 'status', header: t('common.fields.status'), render: (o) => <StatusBadge status={o.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Stock Opname</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('inventory.titles.stockOpname')}</h1>
       <Toolbar
         actions={
           hasPermission('inventory.stock_opname') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Count
+              {t('inventory.actions.newCount')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No stock opnames found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('inventory.empty.noStockOpnamesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateOpnameModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -72,10 +73,10 @@ function CreateOpnameModal({ open, onClose, onCreated }: { open: boolean; onClos
   }
 
   return (
-    <Modal open={open} title="New Stock Opname" onClose={onClose}>
-      <FormField label="Warehouse" errors={errors.warehouse_id} required>
+    <Modal open={open} title={t('inventory.modals.newStockOpname')} onClose={onClose}>
+      <FormField label={t('common.fields.warehouse')} errors={errors.warehouse_id} required>
         <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{t('common.fields.select')}</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -83,13 +84,13 @@ function CreateOpnameModal({ open, onClose, onCreated }: { open: boolean; onClos
           ))}
         </select>
       </FormField>
-      <p style={{ fontSize: 12, color: '#9ca3af' }}>Snapshots current system quantities for every product in this warehouse to count against.</p>
+      <p style={{ fontSize: 12, color: '#9ca3af' }}>{t('inventory.help.snapshotsCurrentSystemQuantitiesEveryProduct')}</p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !warehouseId} onClick={submit}>
-          Start Count
+          {t('inventory.actions.startCount')}
         </button>
       </div>
     </Modal>

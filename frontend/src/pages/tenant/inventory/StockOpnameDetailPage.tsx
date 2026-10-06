@@ -10,12 +10,13 @@ import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { StockOpnameItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatQty } from '../../../utils/quantity';
+import { t } from '../../../i18n/i18n';
 
-const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
-  DRAFT: [{ action: 'counting', label: 'Start Counting', permission: 'inventory.stock_opname', primary: true }],
-  COUNTING: [{ action: 'submit', label: 'Submit', permission: 'inventory.stock_opname', primary: true }],
-  SUBMITTED: [{ action: 'approve', label: 'Approve', permission: 'inventory.stock_opname', primary: true }],
-  APPROVED: [{ action: 'post', label: 'Post Variance', permission: 'inventory.stock_opname', primary: true }],
+const LIFECYCLE: Record<string, { action: string; label: string; labelKey?: string; permission: string; primary?: boolean }[]> = {
+  DRAFT: [{ action: 'counting', label: 'Start Counting', labelKey: 'inventory.fields.startCounting', permission: 'inventory.stock_opname', primary: true }],
+  COUNTING: [{ action: 'submit', label: 'Submit', labelKey: 'common.fields.submit', permission: 'inventory.stock_opname', primary: true }],
+  SUBMITTED: [{ action: 'approve', label: 'Approve', labelKey: 'common.fields.approve', permission: 'inventory.stock_opname', primary: true }],
+  APPROVED: [{ action: 'post', label: 'Post Variance', labelKey: 'inventory.fields.postVariance', permission: 'inventory.stock_opname', primary: true }],
 };
 
 export function StockOpnameDetailPage() {
@@ -69,7 +70,7 @@ export function StockOpnameDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/stock-opnames" label="← Back to Stock Opname" />
+      <BackButton fallbackTo="/app/stock-opnames" label={t('inventory.actions.backToStockOpname')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{opname.opname_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -84,21 +85,21 @@ export function StockOpnameDetailPage() {
       {error && <ErrorState message={error} />}
 
       <div className="card">
-        <h3 style={{ marginTop: 0, fontSize: 15 }}>Count Sheet — {opname.warehouse?.name ?? opname.warehouse_id}</h3>
+        <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('inventory.sections.countSheetValue', { value: opname.warehouse?.name ?? opname.warehouse_id })}</h3>
         {(opname.items ?? []).map((item) => (
           <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid #f3f4f6', fontSize: 13 }}>
             <span>
-              {item.product?.name ?? item.product_id} — system: {formatQty(item.system_quantity)}
-              {item.physical_quantity !== null && ` — counted: ${formatQty(item.physical_quantity)}`}
+              {t('inventory.help.productSystemQuantity', { product: item.product?.name ?? item.product_id, quantity: formatQty(item.system_quantity) })}
+              {item.physical_quantity !== null && t('inventory.fields.countedPhysicalQuantity', { physical_quantity: formatQty(item.physical_quantity) })}
             </span>
             {opname.status === 'COUNTING' && hasPermission('inventory.stock_opname') && (
               <div style={{ display: 'flex', gap: 6 }}>
-                <NumericInput step="0.0001" placeholder="Physical qty" value={counts[item.id] ?? ''}
+                <NumericInput step="0.0001" placeholder={t('inventory.placeholders.physicalQty')} value={counts[item.id] ?? ''}
                   onChange={(e) => setCounts((c) => ({ ...c, [item.id]: e.target.value }))}
                   style={{ ...inputStyle, width: 110 }}
                 />
                 <button className="btn-secondary" disabled={busy || !counts[item.id]} onClick={() => recordCount(item.id)}>
-                  Record
+                  {t('inventory.actions.record')}
                 </button>
               </div>
             )}

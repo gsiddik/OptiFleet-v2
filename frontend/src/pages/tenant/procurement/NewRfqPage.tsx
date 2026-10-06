@@ -8,6 +8,7 @@ import { Pagination } from '../../../components/Pagination';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
 import type { ProductItem, Warehouse } from '../../../types';
+import { t as tt } from '../../../i18n/i18n';
 
 interface Option {
   id: string;
@@ -27,15 +28,15 @@ function allowsFraction(product: ProductItem): boolean {
 /** Quantity rule for a selected line: required, > 0, whole number for counted products. */
 function quantityError(line: Selected): string | null {
   const qty = Number(line.quantity);
-  if (line.quantity.trim() === '' || !Number.isFinite(qty) || qty <= 0) return 'Enter a quantity greater than 0.';
-  if (!allowsFraction(line.product) && !Number.isInteger(qty)) return 'Whole numbers only for this product.';
+  if (line.quantity.trim() === '' || !Number.isFinite(qty) || qty <= 0) return tt('procurement.validation.enterQuantityGreaterThan0');
+  if (!allowsFraction(line.product) && !Number.isInteger(qty)) return tt('procurement.help.wholeNumbersOnlyProduct');
   return null;
 }
 
 function compatibilityLabel(product: ProductItem): string {
   const rows = product.compatibilities ?? [];
   if (rows.length === 0) return '—';
-  const labels = rows.map((c) => [c.vehicle_brand, c.vehicle_model].filter(Boolean).join(' ') || 'Universal');
+  const labels = rows.map((c) => [c.vehicle_brand, c.vehicle_model].filter(Boolean).join(' ') || tt('procurement.fields.universal'));
   const unique = [...new Set(labels)];
   return unique.length > 3 ? `${unique.slice(0, 3).join(', ')} +${unique.length - 3}` : unique.join(', ');
 }
@@ -145,17 +146,17 @@ export function NewRfqPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/rfqs" label="← Back to RFQs" />
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>New RFQ</h1>
+      <BackButton fallbackTo="/app/rfqs" label={tt('procurement.actions.backToRfqs')} />
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{tt('procurement.titles.newRfq')}</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginTop: 0, marginBottom: 16 }}>
-        Choose the destination warehouse and the products to request. The RFQ is saved as a Draft; invite vendors on the next page.
+        {tt('procurement.help.chooseDestinationWarehouseProductsRequestRfq')}
       </p>
       {error && <ErrorState message={error} />}
 
       <div style={{ maxWidth: 360 }}>
-        <FormField label="Warehouse" errors={fieldErrors.warehouse_id ?? (showErrors && !warehouseId ? ['Select the destination warehouse.'] : undefined)} required>
-          <select aria-label="Warehouse" value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
-            <option value="">Select warehouse…</option>
+        <FormField label={tt('common.fields.warehouse')} errors={fieldErrors.warehouse_id ?? (showErrors && !warehouseId ? [tt('procurement.help.selectTheDestinationWarehouse')] : undefined)} required>
+          <select aria-label={tt('common.fields.warehouse')} value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
+            <option value="">{tt('procurement.fields.selectWarehouse')}</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -166,9 +167,9 @@ export function NewRfqPage() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, marginBottom: 12 }}>
-        <input aria-label="Search product name" placeholder="Search product name…" value={search} onChange={(e) => setSearch(e.target.value)} style={inputStyle} />
+        <input aria-label={tt('procurement.fields.searchProductName')} placeholder={tt('procurement.search.searchProductName')} value={search} onChange={(e) => setSearch(e.target.value)} style={inputStyle} />
         <select
-          aria-label="Product Category"
+          aria-label={tt('procurement.fields.productCategory')}
           value={categoryId}
           onChange={(e) => {
             setCategoryId(e.target.value);
@@ -176,7 +177,7 @@ export function NewRfqPage() {
           }}
           style={inputStyle}
         >
-          <option value="">All categories</option>
+          <option value="">{tt('common.filters.allCategories')}</option>
           {categoryOptions.map((c) => (
             <option key={c.id} value={c.id}>
               {c.label}
@@ -184,7 +185,7 @@ export function NewRfqPage() {
           ))}
         </select>
         <select
-          aria-label="Vehicle Brand"
+          aria-label={tt('inventory.fields.vehicleBrand')}
           value={brandId}
           onChange={(e) => {
             setBrandId(e.target.value);
@@ -194,7 +195,7 @@ export function NewRfqPage() {
           }}
           style={inputStyle}
         >
-          <option value="">Any vehicle brand</option>
+          <option value="">{tt('procurement.filters.anyVehicleBrand')}</option>
           {brands.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -202,7 +203,7 @@ export function NewRfqPage() {
           ))}
         </select>
         <select
-          aria-label="Vehicle Model"
+          aria-label={tt('inventory.fields.vehicleModel')}
           value={modelId}
           disabled={!brandId}
           onChange={(e) => {
@@ -211,7 +212,7 @@ export function NewRfqPage() {
           }}
           style={inputStyle}
         >
-          <option value="">{brandId ? 'Any model' : 'Select a brand first'}</option>
+          <option value="">{brandId ? tt('procurement.filters.anyModel') : tt('inventory.fields.selectABrandFirst')}</option>
           {models.map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
@@ -222,18 +223,18 @@ export function NewRfqPage() {
 
       {listError && <ErrorState message={listError} />}
       {!listError && loading && <LoadingState />}
-      {!listError && !loading && products.length === 0 && <EmptyState label="No products match these filters." />}
+      {!listError && !loading && products.length === 0 && <EmptyState label={tt('procurement.empty.noProductsMatchTheseFilters')} />}
       {!listError && !loading && products.length > 0 && (
         <div style={{ overflowX: 'auto', border: '1px solid #e5e7eb', borderRadius: 8 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
             <thead>
               <tr style={{ background: '#f9fafb', textAlign: 'left' }}>
                 <th style={{ padding: 8, width: 36 }} />
-                <th style={{ padding: 8 }}>Code</th>
-                <th style={{ padding: 8 }}>Product Name</th>
-                <th style={{ padding: 8 }}>Product Category</th>
-                <th style={{ padding: 8 }}>Vehicle Compatibility</th>
-                <th style={{ padding: 8, width: 120 }}>Quantity</th>
+                <th style={{ padding: 8 }}>{tt('common.fields.code')}</th>
+                <th style={{ padding: 8 }}>{tt('procurement.fields.productName')}</th>
+                <th style={{ padding: 8 }}>{tt('procurement.fields.productCategory')}</th>
+                <th style={{ padding: 8 }}>{tt('inventory.fields.vehicleCompatibility')}</th>
+                <th style={{ padding: 8, width: 120 }}>{tt('common.fields.quantity')}</th>
               </tr>
             </thead>
             <tbody>
@@ -243,7 +244,7 @@ export function NewRfqPage() {
                 return (
                   <tr key={p.id} style={{ borderTop: '1px solid #f3f4f6', background: line ? '#eff6ff' : undefined }}>
                     <td style={{ padding: 8 }}>
-                      <input type="checkbox" aria-label={`Select ${p.name}`} checked={Boolean(line)} onChange={(e) => toggle(p, e.target.checked)} />
+                      <input type="checkbox" aria-label={tt('procurement.fields.selectName', { name: p.name })} checked={Boolean(line)} onChange={(e) => toggle(p, e.target.checked)} />
                     </td>
                     <td style={{ padding: 8, color: '#6b7280' }}>{p.sku || p.code}</td>
                     <td style={{ padding: 8 }}>{p.name}</td>
@@ -253,7 +254,7 @@ export function NewRfqPage() {
                       {line && (
                         <>
                           <NumericInput
-                            aria-label={`Quantity for ${p.name}`}
+                            aria-label={tt('procurement.fields.quantityForName', { name: p.name })}
                             integer={!allowsFraction(p)}
                             value={line.quantity}
                             onChange={(e) => setQuantity(p.id, e.target.value)}
@@ -274,22 +275,22 @@ export function NewRfqPage() {
       {meta && <Pagination meta={meta} onPageChange={setPage} />}
 
       <div className="card" style={{ marginTop: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Selected products ({lines.length})</div>
+        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>{tt('procurement.fields.selectedProductsLinesCount', { linesCount: lines.length })}</div>
         {lines.length === 0 && (
-          <div style={{ fontSize: 13, color: showErrors ? '#b91c1c' : '#6b7280' }}>Select at least one product.</div>
+          <div style={{ fontSize: 13, color: showErrors ? '#b91c1c' : '#6b7280' }}>{tt('procurement.help.selectLeastOneProduct')}</div>
         )}
         {lines.map((l) => (
           <div key={l.product.id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, padding: '4px 0', flexWrap: 'wrap' }}>
             <span style={{ flex: '1 1 200px' }}>{l.product.name}</span>
             <NumericInput
-              aria-label={`Selected quantity for ${l.product.name}`}
+              aria-label={tt('procurement.fields.selectedQuantityForName', { name: l.product.name })}
               integer={!allowsFraction(l.product)}
               value={l.quantity}
               onChange={(e) => setQuantity(l.product.id, e.target.value)}
               style={{ ...inputStyle, width: 90 }}
             />
             <button type="button" className="btn-link" onClick={() => toggle(l.product, false)}>
-              Remove
+              {tt('common.actions.remove')}
             </button>
             {showErrors && quantityError(l) && <span style={{ color: '#b91c1c', fontSize: 11, flexBasis: '100%' }}>{quantityError(l)}</span>}
           </div>
@@ -298,10 +299,10 @@ export function NewRfqPage() {
 
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button className="btn-secondary" onClick={() => navigate('/app/rfqs')} disabled={saving}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" onClick={save} disabled={saving}>
-          {saving ? 'Saving…' : 'Save as Draft'}
+          {saving ? tt('common.actions.saving') : tt('procurement.actions.saveAsDraft')}
         </button>
       </div>
     </div>

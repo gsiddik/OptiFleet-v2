@@ -2,6 +2,7 @@ import type { GoodsReceiptItem } from '../../../types';
 import { formatDateTime } from '../../../utils/date';
 import { downloadProtectedFile, openProtectedFile } from '../../../utils/protectedFile';
 import { formatQty } from '../../../utils/quantity';
+import { t } from '../../../i18n/i18n';
 
 /**
  * Receipt history of a Purchase Order: one row per Goods Receipt (oldest first), never
@@ -13,18 +14,18 @@ export function GoodsReceiptHistory({ receipts, receivedComplete, canViewDocumen
 
   return (
     <div className="card" style={{ marginTop: 16 }}>
-      <h3 style={{ marginTop: 0, fontSize: 15 }}>Receipt History</h3>
+      <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('procurement.sections.receiptHistory')}</h3>
       {receivedComplete && last && (
         <p style={{ fontSize: 13, marginTop: 0 }}>
-          <strong>Goods received:</strong> {formatDateTime(last.received_at)}
-          {receipts.length > 1 && <span style={{ color: '#6b7280' }}> (completed in {receipts.length} receipts)</span>}
+          <strong>{t('procurement.fields.goodsReceived')}:</strong> {formatDateTime(last.received_at)}
+          {receipts.length > 1 && <span style={{ color: '#6b7280' }}> {t('procurement.help.completedInReceipts', { count: receipts.length })}</span>}
         </p>
       )}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }} aria-label="Receipt history">
+        <table style={{ width: '100%', borderCollapse: 'collapse' }} aria-label={t('procurement.tooltips.receiptHistory')}>
           <thead>
             <tr style={{ textAlign: 'left', fontSize: 12, color: '#6b7280' }}>
-              {['GR#', 'Receipt Date', 'Received Quantity', 'Invoice Number', 'Invoice Document', 'Received By'].map((h) => (
+              {[t('procurement.fields.grNumber2'), t('procurement.fields.receiptDate'), t('inventory.fields.receivedQuantity'), t('procurement.fields.invoiceNumber'), t('procurement.fields.invoiceDocument'), t('procurement.fields.receivedBy')].map((h) => (
                 <th key={h} style={{ ...cell, fontWeight: 600 }}>
                   {h}
                 </th>
@@ -48,20 +49,20 @@ export function GoodsReceiptHistory({ receipts, receivedComplete, canViewDocumen
                   </td>
                   <td style={cell}>
                     {invoice?.vendor_invoice_number ?? '—'}
-                    {invoice?.payment && <span style={{ marginLeft: 6, fontSize: 11, color: '#15803d', fontWeight: 600 }}>PAID</span>}
+                    {invoice?.payment && <span style={{ marginLeft: 6, fontSize: 11, color: '#15803d', fontWeight: 600 }}>{t('procurement.help.paid')}</span>}
                   </td>
                   <td style={cell}>
                     {invoice?.has_document && docPath && canViewDocuments ? (
                       <span style={{ display: 'inline-flex', gap: 10 }}>
                         <button type="button" className="btn-link" onClick={() => openProtectedFile(docPath)}>
-                          View
+                          {t('common.actions.view')}
                         </button>
                         <button type="button" className="btn-link" onClick={() => downloadProtectedFile(docPath, invoice.attachment_original_name ?? `${invoice.vendor_invoice_number}.pdf`)}>
-                          Download
+                          {t('common.actions.download')}
                         </button>
                       </span>
                     ) : invoice?.has_document ? (
-                      invoice.attachment_original_name ?? 'Document uploaded'
+                      invoice.attachment_original_name ?? t('procurement.help.documentUploaded')
                     ) : invoice ? (
                       'No document uploaded'
                     ) : (

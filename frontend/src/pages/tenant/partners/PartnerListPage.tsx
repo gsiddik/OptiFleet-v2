@@ -10,6 +10,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { PartnerItem } from '../../../types';
+import { t as tt } from '../../../i18n/i18n';
 
 const PARTNER_TYPES = ['SUPPLIER', 'SPARE_PART_SUPPLIER', 'TIRE_SUPPLIER', 'EXTERNAL_WORKSHOP', 'TOWING_PROVIDER', 'OTHER_SERVICE_PROVIDER'];
 
@@ -42,30 +43,30 @@ export function PartnerListPage() {
   }
 
   const columns: Column<PartnerItem>[] = [
-    { key: 'code', header: 'Code', render: (p) => <Link to={`/app/partners/${p.id}`}>{p.code}</Link> },
-    { key: 'name', header: 'Name', render: (p) => p.name },
-    { key: 'type', header: 'Type', render: (p) => p.partner_type },
-    { key: 'contact', header: 'Contact', render: (p) => p.contact_name ?? '—' },
-    { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
+    { key: 'code', header: tt('common.fields.code'), render: (p) => <Link to={`/app/partners/${p.id}`}>{p.code}</Link> },
+    { key: 'name', header: tt('common.fields.name'), render: (p) => p.name },
+    { key: 'type', header: tt('common.fields.type'), render: (p) => p.partner_type },
+    { key: 'contact', header: tt('partner.fields.contact'), render: (p) => p.contact_name ?? '—' },
+    { key: 'status', header: tt('common.fields.status'), render: (p) => <StatusBadge status={p.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vendors / Partners</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('partner.titles.vendorsPartners')}</h1>
       <Toolbar
         search={search}
         onSearchChange={setSearch}
         actions={
           hasPermission('partner.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Vendor
+              {tt('partner.actions.newVendor')}
             </button>
           ) : null
         }
       >
-        <select aria-label="Vendor type" value={typeFilter} onChange={(e) => changeType(e.target.value)} style={{ ...inputStyle, width: 220 }}>
-          <option value="">All types</option>
-          <option value="SUPPLIERS">All Suppliers</option>
+        <select aria-label={tt('partner.fields.vendorType')} value={typeFilter} onChange={(e) => changeType(e.target.value)} style={{ ...inputStyle, width: 220 }}>
+          <option value="">{tt('common.filters.allTypes')}</option>
+          <option value="SUPPLIERS">{tt('partner.filters.allSuppliers')}</option>
           {PARTNER_TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -75,7 +76,7 @@ export function PartnerListPage() {
       </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label={typeFilter === 'SUPPLIERS' ? 'No suppliers found.' : 'No vendors found.'} />}
+      {!error && !loading && data.length === 0 && <EmptyState label={typeFilter === 'SUPPLIERS' ? tt('partner.empty.noSuppliersFound') : tt('partner.empty.noVendorsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       {/* Mounted only while open so the default type follows the current filter. */}
@@ -154,14 +155,14 @@ function CreatePartnerModal({
   }
 
   return (
-    <Modal open={open} title="New Vendor" onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required>
+    <Modal open={open} title={tt('partner.modals.newVendor')} onClose={onClose}>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Type" errors={errors.partner_type} required>
+      <FormField label={tt('common.fields.type')} errors={errors.partner_type} required>
         <select value={partnerType} onChange={(e) => setPartnerType(e.target.value)} style={inputStyle}>
           {PARTNER_TYPES.map((t) => (
             <option key={t} value={t}>
@@ -170,40 +171,40 @@ function CreatePartnerModal({
           ))}
         </select>
       </FormField>
-      <FormField label="Contact Name" errors={errors.contact_name}>
+      <FormField label={tt('partner.fields.contactName')} errors={errors.contact_name}>
         <input value={contactName} onChange={(e) => setContactName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Contact Phone" errors={errors.contact_phone}>
+      <FormField label={tt('partner.fields.contactPhone')} errors={errors.contact_phone}>
         <input value={contactPhone} onChange={(e) => setContactPhone(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Province" errors={errors.province}>
+        <FormField label={tt('common.fields.province')} errors={errors.province}>
           <input value={province} onChange={(e) => setProvince(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="City" errors={errors.city}>
+        <FormField label={tt('common.fields.city')} errors={errors.city}>
           <input value={city} onChange={(e) => setCity(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
-      <FormField label="Bank" errors={errors.bank}>
+      <FormField label={tt('common.fields.bank')} errors={errors.bank}>
         <input value={bank} onChange={(e) => setBank(e.target.value)} style={inputStyle} />
       </FormField>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Account Holder" errors={errors.account_holder}>
+        <FormField label={tt('partner.fields.accountHolder')} errors={errors.account_holder}>
           <input value={accountHolder} onChange={(e) => setAccountHolder(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Account Number" errors={errors.account_number}>
+        <FormField label={tt('partner.fields.accountNumber')} errors={errors.account_number}>
           <input value={accountNumber} onChange={(e) => setAccountNumber(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label={tt('common.fields.description')} errors={errors.description}>
         <textarea value={description} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 60 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !code || !name} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>

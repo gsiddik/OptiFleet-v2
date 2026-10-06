@@ -9,6 +9,7 @@ import { formatDate } from '../../../utils/date';
 import { INVOICE_PDF_RULE } from '../../../utils/fileRules';
 import { formatMoney } from '../../../utils/money';
 import { openProtectedFile } from '../../../utils/protectedFile';
+import { t } from '../../../i18n/i18n';
 
 export interface ReceiptLine {
   purchase_order_item_id: string;
@@ -94,41 +95,41 @@ export function RecordVendorInvoiceModal({
   const readOnly = { ...inputStyle, background: '#f3f4f6', color: '#374151' };
 
   return (
-    <Modal open title="Record Vendor Invoice Reference" onClose={onClose} width={560}>
-      <FormField label="Vendor Name">
-        <input value={vendorName} readOnly aria-label="Vendor Name" style={readOnly} />
+    <Modal open title={t('procurement.modals.recordVendorInvoiceReference')} onClose={onClose} width={560}>
+      <FormField label={t('procurement.fields.vendorName')}>
+        <input value={vendorName} readOnly aria-label={t('procurement.fields.vendorName')} style={readOnly} />
       </FormField>
 
       {paidPreviousInvoice && (
         <p style={{ fontSize: 12, color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 6, padding: '6px 10px', margin: '4px 0 12px' }}>
-          The previous invoice {paidPreviousInvoice.vendor_invoice_number} is already paid and cannot be reused — record the new invoice for this receipt.
+          {t('procurement.help.previousInvoicePaid', { number: paidPreviousInvoice.vendor_invoice_number })}
         </p>
       )}
       {previousInvoice && (
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, margin: '4px 0 12px' }}>
           <input type="checkbox" checked={useSame} onChange={(e) => setUseSame(e.target.checked)} />
-          Use the same invoice as the previous Goods Receipt
+          {t('procurement.fields.useSameInvoicePreviousGoodsReceipt')}
         </label>
       )}
 
       {reuse && previousInvoice ? (
         <div style={{ border: '1px solid #e5e7eb', borderRadius: 6, padding: 12, fontSize: 13, display: 'grid', gridTemplateColumns: '150px 1fr', rowGap: 6, marginBottom: 8 }}>
-          <span style={{ color: '#6b7280' }}>Invoice Number</span>
+          <span style={{ color: '#6b7280' }}>{t('procurement.fields.invoiceNumber')}</span>
           <strong>{previousInvoice.vendor_invoice_number}</strong>
-          <span style={{ color: '#6b7280' }}>Invoice Date</span>
+          <span style={{ color: '#6b7280' }}>{t('common.fields.invoiceDate')}</span>
           <span>{formatDate(previousInvoice.vendor_invoice_date)}</span>
-          <span style={{ color: '#6b7280' }}>Amount</span>
+          <span style={{ color: '#6b7280' }}>{t('common.fields.amount')}</span>
           <span>{formatMoney(previousInvoice.amount)}</span>
-          <span style={{ color: '#6b7280' }}>Terms of Payment</span>
-          <span>{previousInvoice.terms_of_payment_days ?? '—'} working days</span>
-          <span style={{ color: '#6b7280' }}>Invoice Document</span>
+          <span style={{ color: '#6b7280' }}>{t('procurement.fields.termsOfPayment')}</span>
+          <span>{previousInvoice.terms_of_payment_days ?? '—'} {t('procurement.fields.workingDays')}</span>
+          <span style={{ color: '#6b7280' }}>{t('procurement.tooltips.invoiceDocument')}</span>
           <span>
             {previousInvoice.has_document ? (
               <>
-                📎 {previousInvoice.attachment_original_name ?? 'Invoice'} (previous invoice){' '}
+                📎 {previousInvoice.attachment_original_name ?? t('account.fields.invoice')} {t('procurement.fields.previousInvoice')}{' '}
                 {canViewDocuments && (
                 <button type="button" className="btn-link" onClick={() => openProtectedFile(`/app/vendor-invoice-references/${previousInvoice.id}/download`)}>
-                  View
+                  {t('common.actions.view')}
                 </button>
                 )}
               </>
@@ -139,20 +140,20 @@ export function RecordVendorInvoiceModal({
         </div>
       ) : (
         <>
-          <FormField label="Invoice Number" errors={errors.vendor_invoice_number} required>
-            <input value={number} onChange={(e) => setNumber(e.target.value)} maxLength={100} aria-label="Invoice Number" style={inputStyle} />
+          <FormField label={t('procurement.fields.invoiceNumber')} errors={errors.vendor_invoice_number} required>
+            <input value={number} onChange={(e) => setNumber(e.target.value)} maxLength={100} aria-label={t('procurement.fields.invoiceNumber')} style={inputStyle} />
           </FormField>
-          <FormField label="Invoice Date" errors={errors.vendor_invoice_date} required>
-            <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} aria-label="Invoice Date" style={inputStyle} />
+          <FormField label={t('common.fields.invoiceDate')} errors={errors.vendor_invoice_date} required>
+            <input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} aria-label={t('common.fields.invoiceDate')} style={inputStyle} />
           </FormField>
-          <FormField label="Amount" errors={errors.amount} required>
-            <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 12500000" aria-label="Amount" style={inputStyle} />
+          <FormField label={t('common.fields.amount')} errors={errors.amount} required>
+            <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="e.g. 12500000" aria-label={t('common.fields.amount')} style={inputStyle} />
           </FormField>
-          <FormField label="Terms of Payment (working days)" errors={errors.terms_of_payment_days} required>
-            <NumericInput integer value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="e.g. 30" aria-label="Terms of Payment" style={inputStyle} />
+          <FormField label={t('procurement.fields.termsPaymentWorkingDays')} errors={errors.terms_of_payment_days} required>
+            <NumericInput integer value={terms} onChange={(e) => setTerms(e.target.value)} placeholder="e.g. 30" aria-label={t('procurement.fields.termsOfPayment')} style={inputStyle} />
           </FormField>
-          <FormField label="Invoice Document (PDF, max 10 MB)" errors={errors.invoice_document}>
-            <FileUploadField file={document} onChange={setDocument} rule={INVOICE_PDF_RULE} ariaLabel="Invoice Document" />
+          <FormField label={t('procurement.fields.invoiceDocumentPdfMax10Mb')} errors={errors.invoice_document}>
+            <FileUploadField file={document} onChange={setDocument} rule={INVOICE_PDF_RULE} ariaLabel={t('procurement.tooltips.invoiceDocument')} />
           </FormField>
         </>
       )}
@@ -162,10 +163,10 @@ export function RecordVendorInvoiceModal({
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose} disabled={submitting}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !complete} onClick={submit}>
-          {submitting ? 'Posting…' : 'Submit & Post Goods Receipt'}
+          {submitting ? t('procurement.actions.posting') : t('procurement.actions.submitPostGoodsReceipt')}
         </button>
       </div>
     </Modal>

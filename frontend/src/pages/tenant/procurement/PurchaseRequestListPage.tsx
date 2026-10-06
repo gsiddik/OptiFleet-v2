@@ -12,6 +12,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { ProductCategoryItem, ProductItem, PurchaseRequestItem, WorkOrderItem, Warehouse } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { t } from '../../../i18n/i18n';
 
 const STATUSES = ['', 'DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'PROCUREMENT', 'REJECTED', 'CANCELLED'];
 
@@ -23,20 +24,20 @@ export function PurchaseRequestListPage() {
   const { data, loading, error } = useApiList<PurchaseRequestItem>('/app/purchase-requests', { status: status || undefined }, reloadKey);
 
   const columns: Column<PurchaseRequestItem>[] = [
-    { key: 'number', header: 'PR #', render: (p) => <Link to={`/app/purchase-requests/${p.id}`}>{p.pr_number}</Link> },
-    { key: 'warehouse', header: 'Warehouse', render: (p) => p.warehouse?.name ?? p.warehouse_id },
-    { key: 'source', header: 'Source', render: (p) => (p.work_order ? `${p.source_type} (${p.work_order.wo_number})` : p.source_type) },
-    { key: 'priority', header: 'Priority', render: (p) => p.priority },
-    { key: 'status', header: 'Status', render: (p) => <StatusBadge status={p.status} /> },
+    { key: 'number', header: t('procurement.fields.prNumber'), render: (p) => <Link to={`/app/purchase-requests/${p.id}`}>{p.pr_number}</Link> },
+    { key: 'warehouse', header: t('common.fields.warehouse'), render: (p) => p.warehouse?.name ?? p.warehouse_id },
+    { key: 'source', header: t('common.fields.source'), render: (p) => (p.work_order ? `${p.source_type} (${p.work_order.wo_number})` : p.source_type) },
+    { key: 'priority', header: t('common.fields.priority'), render: (p) => p.priority },
+    { key: 'status', header: t('common.fields.status'), render: (p) => <StatusBadge status={p.status} /> },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Purchase Requests</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('procurement.titles.purchaseRequests')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '4px 10px', fontSize: 12 }}>
-            {s ? statusLabel(s) : 'All'}
+            {s ? statusLabel(s) : t('common.actions.all')}
           </button>
         ))}
       </div>
@@ -44,14 +45,14 @@ export function PurchaseRequestListPage() {
         actions={
           hasPermission('purchase_request.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Request
+              {t('maintenance.actions.newRequest')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No purchase requests found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('procurement.empty.noPurchaseRequestsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreatePrModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -147,10 +148,10 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
   }
 
   return (
-    <Modal open={open} title="New Purchase Request" onClose={onClose}>
-      <FormField label="Warehouse" errors={errors.warehouse_id} required>
+    <Modal open={open} title={t('procurement.modals.newPurchaseRequest')} onClose={onClose}>
+      <FormField label={t('common.fields.warehouse')} errors={errors.warehouse_id} required>
         <select value={warehouseId} onChange={(e) => setWarehouseId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{t('common.fields.select')}</option>
           {warehouses.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -158,7 +159,7 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
           ))}
         </select>
       </FormField>
-      <FormField label="Source">
+      <FormField label={t('common.fields.source')}>
         <select
           value={sourceType}
           onChange={(e) => {
@@ -168,14 +169,14 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
           }}
           style={inputStyle}
         >
-          <option value="MANUAL">Manual</option>
-          <option value="WORK_ORDER">Work Order</option>
+          <option value="MANUAL">{t('procurement.fields.manual')}</option>
+          <option value="WORK_ORDER">{t('common.fields.workOrder')}</option>
         </select>
       </FormField>
       {sourceType === 'WORK_ORDER' && (
-        <FormField label="Work Order" errors={errors.work_order_id}>
+        <FormField label={t('common.fields.workOrder')} errors={errors.work_order_id}>
           <select value={workOrderId} onChange={(e) => setWorkOrderId(e.target.value)} style={inputStyle}>
-            <option value="">Select…</option>
+            <option value="">{t('common.fields.select')}</option>
             {workOrders.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.wo_number}
@@ -185,9 +186,9 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
         </FormField>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Category (filter)">
+        <FormField label={t('procurement.fields.categoryFilter')}>
           <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} style={inputStyle}>
-            <option value="">All categories</option>
+            <option value="">{t('common.filters.allCategories')}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -195,16 +196,16 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
             ))}
           </select>
         </FormField>
-        <FormField label="Brand (filter)">
-          <input value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} placeholder="e.g. Bosch" style={inputStyle} />
+        <FormField label={t('procurement.fields.brandFilter')}>
+          <input value={brandFilter} onChange={(e) => setBrandFilter(e.target.value)} placeholder={t('procurement.placeholders.eGBosch')} style={inputStyle} />
         </FormField>
-        <FormField label="Model Compatibility (filter)">
-          <input value={modelFilter} onChange={(e) => setModelFilter(e.target.value)} placeholder="e.g. Dutro" style={inputStyle} />
+        <FormField label={t('procurement.fields.modelCompatibilityFilter')}>
+          <input value={modelFilter} onChange={(e) => setModelFilter(e.target.value)} placeholder={t('procurement.placeholders.eGDutro')} style={inputStyle} />
         </FormField>
       </div>
-      <FormField label="Product" errors={errors['items.0.product_id']} required>
+      <FormField label={t('common.fields.product')} errors={errors['items.0.product_id']} required>
         <select value={productId} onChange={(e) => setProductId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{t('common.fields.select')}</option>
           {filteredProducts.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
@@ -213,10 +214,10 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
           ))}
         </select>
       </FormField>
-      <FormField label="Requested Quantity" errors={errors['items.0.requested_quantity']} required>
+      <FormField label={t('procurement.fields.requestedQuantity')} errors={errors['items.0.requested_quantity']} required>
         <NumericInput step="0.0001" value={quantity} onChange={(e) => setQuantity(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Priority" errors={errors.priority}>
+      <FormField label={t('common.fields.priority')} errors={errors.priority}>
         <select value={priority} onChange={(e) => setPriority(e.target.value)} style={inputStyle}>
           {['LOW', 'MEDIUM', 'HIGH', 'URGENT'].map((p) => (
             <option key={p} value={p}>
@@ -227,14 +228,14 @@ function CreatePrModal({ open, onClose, onCreated }: { open: boolean; onClose: (
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button
           className="btn-primary"
           disabled={submitting || !warehouseId || !productId || !quantity || (sourceType === 'WORK_ORDER' && !workOrderId)}
           onClick={submit}
         >
-          Create
+          {t('common.actions.create')}
         </button>
       </div>
     </Modal>
