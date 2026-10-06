@@ -1,22 +1,23 @@
 import { AnalyticsDomainPage } from './AnalyticsDomainPage';
+import { t } from '../../../i18n/i18n';
 
 export function WorkOrderAnalyticsPage() {
   return (
     <AnalyticsDomainPage
       config={{
-        title: 'Work Order Analytics',
-        description: 'Created/completed/overdue Work Orders, cycle time and rework rate.',
+        title: t('analytics.sections.workOrderAnalytics'),
+        description: t('analytics.help.createdCompletedOverdueWorkOrdersCycle'),
         endpoint: '/app/analytics/work-orders',
         exportSlug: 'work-orders',
         permission: 'analytics.work_order.view',
         dimensionField: 'workshop_id',
-        dimensionLabel: 'Workshop',
+        dimensionLabel: t('common.fields.workshop'),
         highlightFields: [
-          { key: 'avg_cycle_time_minutes', label: 'Avg Cycle (min)' },
-          { key: 'created', label: 'Created' },
-          { key: 'completed', label: 'Completed' },
-          { key: 'overdue', label: 'Overdue' },
-          { key: 'rework.rate_percentage', label: 'Rework %' },
+          { key: 'avg_cycle_time_minutes', label: t('analytics.fields.avgCycleMin') },
+          { key: 'created', label: t('platform.tenants.fields.created') },
+          { key: 'completed', label: t('analytics.fields.completed') },
+          { key: 'overdue', label: t('dashboard.fields.overdue') },
+          { key: 'rework.rate_percentage', label: t('analytics.fields.reworkPercent') },
         ],
       }}
     />

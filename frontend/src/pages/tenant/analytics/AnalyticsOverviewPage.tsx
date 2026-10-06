@@ -4,6 +4,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { KpiCard, type KpiResult } from '../../../components/analytics/KpiCard';
 import { FreshnessBanner, type Freshness } from '../../../components/analytics/FreshnessBanner';
 import { useAuth } from '../../../auth/AuthContext';
+import { t } from '../../../i18n/i18n';
 
 interface OverviewResponse {
   kpis: KpiResult[];
@@ -29,21 +30,21 @@ export function AnalyticsOverviewPage() {
   }, [hasPermission]);
 
   if (!hasPermission('analytics.overview.view')) {
-    return <div style={{ padding: 32, color: '#b91c1c' }}>You do not have permission to view analytics.</div>;
+    return <div style={{ padding: 32, color: '#b91c1c' }}>{t('analytics.help.youDoNotPermissionViewAnalytics')}</div>;
   }
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 4 }}>Analytics Overview</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 4 }}>{t('analytics.titles.analyticsOverview')}</h1>
       <p style={{ color: '#6b7280', fontSize: 13, marginTop: 0, marginBottom: 16 }}>
-        Trailing 30 days across the fleet. Drill into each section from the Analytics menu for detail, filters, and export.
+        {t('analytics.help.trailing30DaysAcrossFleetDrill')}
       </p>
 
       {response && <FreshnessBanner freshness={response.freshness} />}
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
       {!error && !loading && response && response.kpis.length === 0 && (
-        <EmptyState label="No analytics data yet — the daily ETL has not produced a snapshot for this tenant." />
+        <EmptyState label={t('analytics.empty.noAnalyticsDataYetDailyEtl')} />
       )}
       {!error && !loading && response && response.kpis.length > 0 && (
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
