@@ -40,6 +40,7 @@
     "workOrderEstimate": "Estimasi Work Order"
   },
   "help": {
+    "amountOnDate": "{{amount}} pada {{date}}",
     "payableAmountPayableAmountPartialPayment": "Jumlah yang harus dibayar: {{payableAmount}}. Pembayaran sebagian tidak didukung — jumlah yang dibayar harus sama persis.",
     "recordedExternallyIssuedDocumentOptiFleet": "Dicatat dari dokumen yang diterbitkan pihak eksternal — OptiFleet tidak menerbitkan faktur ini.",
     "requiresApprovalDifferentUserOriginalValues": "Memerlukan persetujuan dari pengguna lain. Nilai asli tetap disimpan.",

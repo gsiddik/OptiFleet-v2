@@ -6,6 +6,7 @@ import { ComponentGroupManager } from '../../../components/masterdata/ComponentG
 import { useAuth } from '../../../auth/AuthContext';
 import type { ComponentGroup, VehicleCategory } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
+import { t } from '../../../i18n/i18n';
 
 /**
  * Tenant view of the Component Group Master: the platform baseline (System,
@@ -31,7 +32,7 @@ export function ComponentGroupsPage() {
                 setReloadMapping(() => reload);
               }}
             >
-              Vehicle Categories
+              {t('masterData.actions.vehicleCategories')}
             </button>
           ) : null
         }
@@ -96,7 +97,7 @@ function VehicleCategoryMappingModal({
   }
 
   return (
-    <Modal open title={`Vehicle Categories — ${componentGroupLabel(group)}`} onClose={onClose} width={480}>
+    <Modal open title={t('masterData.modals.vehicleCategoriesValue', { value: componentGroupLabel(group) })} onClose={onClose} width={480}>
       {loading ? (
         <LoadingState />
       ) : (
@@ -111,10 +112,10 @@ function VehicleCategoryMappingModal({
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || loading} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save Mapping'}
+          {submitting ? t('common.actions.saving') : t('masterData.actions.saveMapping')}
         </button>
       </div>
     </Modal>

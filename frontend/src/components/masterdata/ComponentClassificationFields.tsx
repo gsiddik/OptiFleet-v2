@@ -4,6 +4,7 @@ import { FormField, inputStyle } from '../FormField';
 import type { ComponentCategory, ComponentGroup, ComponentSubcategory, ItemType } from '../../types';
 import { componentGroupLabel } from '../../utils/componentGroup';
 import type { ClassificationValue } from '../../utils/componentClassification';
+import { t } from '../../i18n/i18n';
 
 const retired = (row: { status?: string; deleted_at?: string | null } | null | undefined) => !!row && (!!row.deleted_at || row.status === 'INACTIVE');
 
@@ -81,10 +82,10 @@ export function ComponentClassificationFields({
 
   return (
     <fieldset style={{ border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 14px 2px', margin: '0 0 14px' }}>
-      <legend style={{ fontSize: 13, fontWeight: 600, color: '#374151', padding: '0 6px' }}>Component Classification</legend>
-      <FormField label="Component Group" errors={errors.component_group_id} required={requireCategory}>
+      <legend style={{ fontSize: 13, fontWeight: 600, color: '#374151', padding: '0 6px' }}>{t('common.sections.componentClassification')}</legend>
+      <FormField label={t('common.fields.componentGroup')} errors={errors.component_group_id} required={requireCategory}>
         <select
-          aria-label="Component Group"
+          aria-label={t('common.fields.componentGroup')}
           value={value.componentGroupId}
           disabled={!!lockedGroupCode}
           onChange={(e) =>
@@ -97,44 +98,44 @@ export function ComponentClassificationFields({
           }
           style={inputStyle}
         >
-          <option value="">{requireCategory ? 'Select…' : '— Not classified —'}</option>
+          <option value="">{requireCategory ? t('common.fields.select') : t('common.fields.notClassified')}</option>
           {groupOptions.map((g) => (
             <option key={g.id} value={g.id}>
               {componentGroupLabel(g)}
-              {retired(g) ? ' (retired)' : ''}
+              {retired(g) ? ` ${t('common.fields.retiredMarker')}` : ''}
             </option>
           ))}
         </select>
       </FormField>
-      <FormField label="Category / Assembly" errors={errors.component_category_id} required={requireCategory}>
+      <FormField label={t('common.fields.categoryAssembly')} errors={errors.component_category_id} required={requireCategory}>
         <select
           value={value.componentCategoryId}
           disabled={!value.componentGroupId}
           onChange={(e) => onChange({ ...value, componentCategoryId: e.target.value, componentSubcategoryId: '' })}
           style={inputStyle}
         >
-          <option value="">{value.componentGroupId ? 'Select…' : 'Select a Component Group first'}</option>
+          <option value="">{value.componentGroupId ? t('common.fields.select') : t('common.fields.selectComponentGroupFirst')}</option>
           {categoryOptions.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name}
-              {retired(c) ? ' (retired)' : ''}
+              {retired(c) ? ` ${t('common.fields.retiredMarker')}` : ''}
             </option>
           ))}
         </select>
       </FormField>
-      <FormField label="Subcategory / Component Family" errors={errors.component_subcategory_id}>
+      <FormField label={t('common.fields.subcategoryComponentFamily')} errors={errors.component_subcategory_id}>
         <select
           value={value.componentSubcategoryId}
           disabled={!value.componentCategoryId}
           onChange={(e) => onChange({ ...value, componentSubcategoryId: e.target.value })}
           style={inputStyle}
         >
-          <option value="">{value.componentCategoryId ? 'Select…' : 'Select a Category first'}</option>
+          <option value="">{value.componentCategoryId ? t('common.fields.select') : t('common.fields.selectACategoryFirst')}</option>
           {subcategoryOptions.map((s) => (
             <option key={s.id} value={s.id} disabled={s.allowed === false && s.id !== value.componentSubcategoryId}>
               {s.name}
-              {retired(s) ? ' (retired)' : ''}
-              {s.allowed === false ? ` — not for ${itemType}` : ''}
+              {retired(s) ? ` ${t('common.fields.retiredMarker')}` : ''}
+              {s.allowed === false ? t('common.fields.notForItemType', { itemType: itemType }) : ''}
             </option>
           ))}
         </select>

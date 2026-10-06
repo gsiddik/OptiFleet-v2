@@ -12,6 +12,7 @@ import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { ComponentGroup, VehicleCategory } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
+import { t } from '../../../i18n/i18n';
 
 export function VehicleCategoriesPage() {
   const { hasPermission } = useAuth();
@@ -37,10 +38,10 @@ export function VehicleCategoriesPage() {
   }
 
   const columns: Column<VehicleCategory>[] = [
-    { key: 'code', header: 'Code', render: (c) => c.code },
-    { key: 'name', header: 'Name', render: (c) => c.name },
-    { key: 'is_system', header: 'Source', render: (c) => (c.is_system ? 'System' : 'Tenant') },
-    { key: 'status', header: 'Status', render: (c) => <StatusBadge status={c.status} /> },
+    { key: 'code', header: t('common.fields.code'), render: (c) => c.code },
+    { key: 'name', header: t('common.fields.name'), render: (c) => c.name },
+    { key: 'is_system', header: t('common.fields.source'), render: (c) => (c.is_system ? t('common.fields.system') : t('common.fields.tenant')) },
+    { key: 'status', header: t('common.fields.status'), render: (c) => <StatusBadge status={c.status} /> },
     {
       key: 'actions',
       header: '',
@@ -48,16 +49,16 @@ export function VehicleCategoriesPage() {
         <div style={{ display: 'flex', gap: 8 }}>
           {hasPermission('component_group.map') && (
             <button className="btn-link" onClick={() => setMapping(c)}>
-              Component Groups
+              {t('masterData.actions.componentGroups')}
             </button>
           )}
           {hasPermission('vehicle_category.update') && !c.is_system && (
             <>
               <button className="btn-link" onClick={() => setEditing(c)}>
-                Edit
+                {t('common.actions.edit')}
               </button>
               <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(c)}>
-                Deactivate
+                {t('masterData.confirm.deactivate')}
               </button>
             </>
           )}
@@ -68,7 +69,7 @@ export function VehicleCategoriesPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Vehicle Categories</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('masterData.titles.vehicleCategories')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -78,14 +79,14 @@ export function VehicleCategoriesPage() {
         actions={
           hasPermission('vehicle_category.create') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Category
+              {t('platform.masterdata.actions.newCategory')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No vehicle categories found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('masterData.empty.noVehicleCategoriesFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -127,9 +128,9 @@ export function VehicleCategoriesPage() {
 
       <ConfirmDialog
         open={!!deleting}
-        title="Deactivate Vehicle Category"
-        message={`Deactivate "${deleting?.name}"? This can be reversed by an administrator.`}
-        confirmLabel="Deactivate"
+        title={t('masterData.confirm.deactivateVehicleCategory')}
+        message={t('masterData.confirm.deactivateNameReversedAdministrator', { name: deleting?.name })}
+        confirmLabel={t('masterData.confirm.deactivate')}
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />
@@ -173,22 +174,22 @@ function CategoryFormModal({
   }
 
   return (
-    <Modal open={open} title={category ? 'Edit Vehicle Category' : 'New Vehicle Category'} onClose={onClose}>
-      <FormField label="Code" errors={errors.code} required={!category}>
+    <Modal open={open} title={category ? t('masterData.modals.editVehicleCategory') : t('masterData.modals.newVehicleCategory')} onClose={onClose}>
+      <FormField label={t('common.fields.code')} errors={errors.code} required={!category}>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!category} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required={!category}>
+      <FormField label={t('common.fields.name')} errors={errors.name} required={!category}>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label={t('common.fields.description')} errors={errors.description}>
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>
@@ -256,7 +257,7 @@ function ComponentGroupMappingModal({
   }
 
   return (
-    <Modal open title={`Component Groups — ${category.name}`} onClose={onClose} width={480}>
+    <Modal open title={t('masterData.modals.componentGroupsName', { name: category.name })} onClose={onClose} width={480}>
       {loading ? (
         <LoadingState />
       ) : (
@@ -272,23 +273,23 @@ function ComponentGroupMappingModal({
               disabled={selectable.length === 0}
               onChange={toggleAll}
             />
-            Select All ({selectedCount}/{selectable.length})
+            {t('masterData.fields.selectAllSelectedCountSelectableCount', { selectedCount, selectableCount: selectable.length })}
           </label>
           {allGroups.map((g) => (
             <label key={g.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, padding: '3px 0' }}>
               <input type="checkbox" checked={selected.has(g.id)} disabled={g.status !== 'ACTIVE' && !selected.has(g.id)} onChange={() => toggle(g.id)} />
               {componentGroupLabel(g)}
-              {g.status !== 'ACTIVE' && <span style={{ fontSize: 11, color: '#9ca3af' }}>(inactive)</span>}
+              {g.status !== 'ACTIVE' && <span style={{ fontSize: 11, color: '#9ca3af' }}>{t('masterData.fields.inactive')}</span>}
             </label>
           ))}
         </div>
       )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || loading} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save Mapping'}
+          {submitting ? t('common.actions.saving') : t('masterData.actions.saveMapping')}
         </button>
       </div>
     </Modal>

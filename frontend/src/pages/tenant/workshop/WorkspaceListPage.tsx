@@ -11,6 +11,7 @@ import { useAuth } from '../../../auth/AuthContext';
 import type { VehicleCategory, WorkspaceItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { t as tt } from '../../../i18n/i18n';
 
 const TYPES = ['GENERAL_SERVICE_BAY', 'HEAVY_VEHICLE_BAY', 'INSPECTION_BAY', 'ELECTRICAL_BAY', 'TIRE_BAY', 'QC_BAY', 'WASHING_BAY', 'PARKING_LOT', 'HOLDING_AREA', 'OTHER'];
 const STATUSES = ['', 'AVAILABLE', 'RESERVED', 'OCCUPIED', 'BLOCKED', 'UNDER_MAINTENANCE', 'INACTIVE'];
@@ -35,13 +36,13 @@ export function WorkspaceListPage() {
   }
 
   const columns: Column<WorkspaceItem>[] = [
-    { key: 'code', header: 'Code', render: (w) => w.code },
-    { key: 'name', header: 'Name', render: (w) => w.name },
-    { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
-    { key: 'type', header: 'Type', render: (w) => w.workspace_type },
-    { key: 'capacity', header: 'Capacity', render: (w) => w.capacity ?? '—' },
-    { key: 'categories', header: 'Vehicle Categories', render: (w) => (w.vehicle_categories ?? []).map((c) => c.name).join(', ') || 'Any' },
-    { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
+    { key: 'code', header: tt('common.fields.code'), render: (w) => w.code },
+    { key: 'name', header: tt('common.fields.name'), render: (w) => w.name },
+    { key: 'workshop', header: tt('common.fields.workshop'), render: (w) => w.workshop?.name ?? '—' },
+    { key: 'type', header: tt('common.fields.type'), render: (w) => w.workspace_type },
+    { key: 'capacity', header: tt('common.fields.capacity'), render: (w) => w.capacity ?? '—' },
+    { key: 'categories', header: tt('workshop.fields.vehicleCategories'), render: (w) => (w.vehicle_categories ?? []).map((c) => c.name).join(', ') || tt('common.fields.any') },
+    { key: 'status', header: tt('common.fields.status'), render: (w) => <StatusBadge status={w.status} /> },
     {
       key: 'actions',
       header: '',
@@ -49,12 +50,12 @@ export function WorkspaceListPage() {
         <div style={{ display: 'flex', gap: 6 }}>
           {hasPermission('workspace.manage') && (
             <button className="btn-secondary" onClick={() => setEditing(w)}>
-              Edit
+              {tt('common.actions.edit')}
             </button>
           )}
           {hasPermission('workspace.block') && ['AVAILABLE', 'BLOCKED'].includes(w.status) && (
             <button className="btn-secondary" disabled={busyId === w.id} onClick={() => toggleBlock(w)}>
-              {w.status === 'BLOCKED' ? 'Unblock' : 'Block'}
+              {w.status === 'BLOCKED' ? tt('workshop.actions.unblock') : tt('workshop.actions.block')}
             </button>
           )}
         </div>
@@ -64,11 +65,11 @@ export function WorkspaceListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Workspaces / Service Bays</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('workshop.titles.workspacesServiceBays')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {STATUSES.map((s) => (
           <button key={s} onClick={() => setStatus(s)} className={status === s ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
-            {s ? statusLabel(s) : 'All'}
+            {s ? statusLabel(s) : tt('common.actions.all')}
           </button>
         ))}
       </div>
@@ -76,14 +77,14 @@ export function WorkspaceListPage() {
         actions={
           hasPermission('workspace.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Workspace
+              {tt('workshop.actions.newWorkspace')}
             </button>
           ) : null
         }
       />
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No workspaces found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('workshop.empty.noWorkspacesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
 
       <CreateWorkspaceModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
@@ -94,16 +95,16 @@ export function WorkspaceListPage() {
 
 function VehicleCategoryChecklist({ categories, selected, onToggle }: { categories: VehicleCategory[]; selected: string[]; onToggle: (id: string) => void }) {
   return (
-    <FormField label="Vehicle Categories" errors={undefined}>
+    <FormField label={tt('workshop.fields.vehicleCategories')} errors={undefined}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 140, overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: 6, padding: 8 }}>
-        {categories.length === 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>No vehicle categories available.</span>}
+        {categories.length === 0 && <span style={{ fontSize: 12, color: '#6b7280' }}>{tt('workshop.empty.noVehicleCategoriesAvailable')}</span>}
         {categories.map((c) => (
           <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
             <input type="checkbox" checked={selected.includes(c.id)} onChange={() => onToggle(c.id)} /> {c.name}
           </label>
         ))}
       </div>
-      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>Leave all unchecked to allow any vehicle category.</div>
+      <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>{tt('workshop.help.leaveAllUncheckedAllowAnyVehicle')}</div>
     </FormField>
   );
 }
@@ -156,10 +157,10 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
   }
 
   return (
-    <Modal open={open} title="New Workspace" onClose={onClose}>
-      <FormField label="Workshop" errors={errors.workshop_id} required>
+    <Modal open={open} title={tt('workshop.modals.newWorkspace')} onClose={onClose}>
+      <FormField label={tt('common.fields.workshop')} errors={errors.workshop_id} required>
         <select value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} style={inputStyle}>
-          <option value="">Select…</option>
+          <option value="">{tt('common.fields.select')}</option>
           {workshops.map((w) => (
             <option key={w.id} value={w.id}>
               {w.name}
@@ -167,13 +168,13 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Code" errors={errors.code} required>
+      <FormField label={tt('common.fields.code')} errors={errors.code} required>
         <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Name" errors={errors.name} required>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Type" errors={errors.workspace_type} required>
+      <FormField label={tt('common.fields.type')} errors={errors.workspace_type} required>
         <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle}>
           {TYPES.map((t) => (
             <option key={t} value={t}>
@@ -182,16 +183,16 @@ function CreateWorkspaceModal({ open, onClose, onCreated }: { open: boolean; onC
           ))}
         </select>
       </FormField>
-      <FormField label="Capacity" errors={errors.capacity}>
+      <FormField label={tt('common.fields.capacity')} errors={errors.capacity}>
         <NumericInput min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
       </FormField>
       <VehicleCategoryChecklist categories={categories} selected={categoryIds} onToggle={toggleCategory} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !workshopId || !code || !name} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>
@@ -243,11 +244,11 @@ function EditWorkspaceModal({ workspace, onClose, onSaved }: { workspace: Worksp
   }
 
   return (
-    <Modal open={!!workspace} title={`Edit Workspace — ${workspace.code}`} onClose={onClose}>
-      <FormField label="Name" errors={errors.name} required>
+    <Modal open={!!workspace} title={tt('workshop.modals.editWorkspaceCode', { code: workspace.code })} onClose={onClose}>
+      <FormField label={tt('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Type" errors={errors.workspace_type} required>
+      <FormField label={tt('common.fields.type')} errors={errors.workspace_type} required>
         <select value={type} onChange={(e) => setType(e.target.value)} style={inputStyle}>
           {TYPES.map((t) => (
             <option key={t} value={t}>
@@ -256,16 +257,16 @@ function EditWorkspaceModal({ workspace, onClose, onSaved }: { workspace: Worksp
           ))}
         </select>
       </FormField>
-      <FormField label="Capacity" errors={errors.capacity}>
+      <FormField label={tt('common.fields.capacity')} errors={errors.capacity}>
         <NumericInput min="1" value={capacity} onChange={(e) => setCapacity(e.target.value)} style={inputStyle} />
       </FormField>
       <VehicleCategoryChecklist categories={categories} selected={categoryIds} onToggle={toggleCategory} />
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !name} onClick={submit}>
-          Save
+          {tt('common.actions.save')}
         </button>
       </div>
     </Modal>

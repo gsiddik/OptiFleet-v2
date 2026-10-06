@@ -13,6 +13,7 @@ import type { WorkerItem, WorkerTypeItem } from '../../../types';
 import { componentGroupLabel } from '../../../utils/componentGroup';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatMoney } from '../../../utils/money';
+import { t as tt } from '../../../i18n/i18n';
 
 export function WorkerListPage() {
   const { hasPermission } = useAuth();
@@ -56,20 +57,20 @@ export function WorkerListPage() {
   }
 
   const columns: Column<WorkerItem>[] = [
-    { key: 'employee_code', header: 'Code', render: (w) => <button className="btn-link" onClick={() => setEditing(w)}>{w.employee_code}</button> },
-    { key: 'name', header: 'Name', render: (w) => w.name },
-    { key: 'worker_type', header: 'Type', render: (w) => w.worker_type_master?.name ?? w.worker_type },
-    { key: 'branch', header: 'Branch', render: (w) => w.branch?.name ?? '—' },
-    { key: 'workshop', header: 'Workshop', render: (w) => w.workshop?.name ?? '—' },
-    { key: 'skills', header: 'Skills', render: (w) => (w.skills ?? []).map((s) => (s.component_group ? componentGroupLabel(s.component_group) : null)).filter(Boolean).join(', ') || '—' },
-    { key: 'status', header: 'Status', render: (w) => <StatusBadge status={w.status} /> },
+    { key: 'employee_code', header: tt('common.fields.code'), render: (w) => <button className="btn-link" onClick={() => setEditing(w)}>{w.employee_code}</button> },
+    { key: 'name', header: tt('common.fields.name'), render: (w) => w.name },
+    { key: 'worker_type', header: tt('common.fields.type'), render: (w) => w.worker_type_master?.name ?? w.worker_type },
+    { key: 'branch', header: tt('common.fields.branch'), render: (w) => w.branch?.name ?? '—' },
+    { key: 'workshop', header: tt('common.fields.workshop'), render: (w) => w.workshop?.name ?? '—' },
+    { key: 'skills', header: tt('workshop.fields.skills'), render: (w) => (w.skills ?? []).map((s) => (s.component_group ? componentGroupLabel(s.component_group) : null)).filter(Boolean).join(', ') || '—' },
+    { key: 'status', header: tt('common.fields.status'), render: (w) => <StatusBadge status={w.status} /> },
     {
       key: 'actions',
       header: '',
       render: (w) =>
         hasPermission('worker.manage') ? (
           <button className="btn-secondary" disabled={busyId === w.id} onClick={() => toggleActive(w)}>
-            {w.status === 'ACTIVE' ? 'Deactivate' : 'Activate'}
+            {w.status === 'ACTIVE' ? tt('common.actions.deactivate') : tt('common.actions.activate')}
           </button>
         ) : null,
     },
@@ -77,7 +78,7 @@ export function WorkerListPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 16 }}>Workers / Mechanics</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('workshop.titles.workersMechanics')}</h1>
       <Toolbar
         search={search}
         onSearchChange={(v) => {
@@ -87,7 +88,7 @@ export function WorkerListPage() {
         actions={
           hasPermission('worker.manage') ? (
             <button className="btn-primary" onClick={() => setShowCreate(true)}>
-              + New Worker
+              {tt('workshop.actions.newWorker')}
             </button>
           ) : null
         }
@@ -100,7 +101,7 @@ export function WorkerListPage() {
           }}
           style={{ ...inputStyle, maxWidth: 180 }}
         >
-          <option value="">All types</option>
+          <option value="">{tt('common.filters.allTypes')}</option>
           {workerTypes.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name}
@@ -115,7 +116,7 @@ export function WorkerListPage() {
           }}
           style={{ ...inputStyle, maxWidth: 180 }}
         >
-          <option value="">All branches</option>
+          <option value="">{tt('history.filters.allBranches')}</option>
           {branches.map((b) => (
             <option key={b.id} value={b.id}>
               {b.name}
@@ -130,14 +131,14 @@ export function WorkerListPage() {
           }}
           style={{ ...inputStyle, maxWidth: 140 }}
         >
-          <option value="">All statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
+          <option value="">{tt('common.filters.allStatuses')}</option>
+          <option value="ACTIVE">{tt('common.fields.active')}</option>
+          <option value="INACTIVE">{tt('common.fields.inactive')}</option>
         </select>
       </Toolbar>
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No workers found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={tt('workshop.empty.noWorkersFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} />
@@ -207,17 +208,17 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
   }
 
   return (
-    <Modal open={open} title="New Worker" onClose={onClose} width={520}>
+    <Modal open={open} title={tt('workshop.modals.newWorker')} onClose={onClose} width={520}>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-        <FormField label="Employee Code" errors={errors.employee_code} required>
+        <FormField label={tt('workshop.fields.employeeCode')} errors={errors.employee_code} required>
           <input value={employeeCode} onChange={(e) => setEmployeeCode(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Name" errors={errors.name} required>
+        <FormField label={tt('common.fields.name')} errors={errors.name} required>
           <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Branch" errors={errors.branch_id} required>
+        <FormField label={tt('common.fields.branch')} errors={errors.branch_id} required>
           <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={inputStyle}>
-            <option value="">Select…</option>
+            <option value="">{tt('common.fields.select')}</option>
             {branches.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
@@ -225,9 +226,9 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
             ))}
           </select>
         </FormField>
-        <FormField label="Workshop (optional)" errors={errors.workshop_id}>
+        <FormField label={tt('workshop.fields.workshopOptional')} errors={errors.workshop_id}>
           <select value={workshopId} onChange={(e) => setWorkshopId(e.target.value)} style={inputStyle}>
-            <option value="">None</option>
+            <option value="">{tt('common.fields.none')}</option>
             {workshops.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}
@@ -235,9 +236,9 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
             ))}
           </select>
         </FormField>
-        <FormField label="Worker Type" errors={errors.worker_type_id} required>
+        <FormField label={tt('workshop.fields.workerType')} errors={errors.worker_type_id} required>
           <select value={workerTypeId} onChange={(e) => setWorkerTypeId(e.target.value)} style={inputStyle}>
-            <option value="">Select…</option>
+            <option value="">{tt('common.fields.select')}</option>
             {workerTypes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -245,28 +246,28 @@ function CreateWorkerModal({ open, onClose, onCreated }: { open: boolean; onClos
             ))}
           </select>
         </FormField>
-        <FormField label="Phone (optional)" errors={errors.phone}>
+        <FormField label={tt('workshop.fields.phoneOptional')} errors={errors.phone}>
           <input value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Email (optional)" errors={errors.email}>
+        <FormField label={tt('workshop.fields.emailOptional')} errors={errors.email}>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Monthly Rate (optional)" errors={errors.monthly_rate}>
+        <FormField label={tt('workshop.fields.monthlyRateOptional')} errors={errors.monthly_rate}>
           <NumericInput step="0.01" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)} style={inputStyle} />
         </FormField>
-        <FormField label="Hourly Rate (optional)" errors={errors.hourly_rate}>
+        <FormField label={tt('workshop.fields.hourlyRateOptional')} errors={errors.hourly_rate}>
           <NumericInput step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} style={inputStyle} />
         </FormField>
       </div>
-      <FormField label="Address (optional)" errors={errors.address}>
+      <FormField label={tt('workshop.fields.addressOptional')} errors={errors.address}>
         <textarea value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, minHeight: 50 }} />
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {tt('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !employeeCode || !name || !branchId} onClick={submit}>
-          Create
+          {tt('common.actions.create')}
         </button>
       </div>
     </Modal>
@@ -388,53 +389,52 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
       <div style={{ marginBottom: 12, display: 'flex', gap: 8, alignItems: 'center' }}>
         <StatusBadge status={worker.status} />
         <span style={{ fontSize: 13, color: '#6b7280' }}>
-          {worker.worker_type_master?.name ?? worker.worker_type} — {worker.branch?.name ?? '—'} / {worker.workshop?.name ?? 'No workshop'}
+          {worker.worker_type_master?.name ?? worker.worker_type} — {worker.branch?.name ?? '—'} / {worker.workshop?.name ?? tt('workshop.empty.noWorkshop')}
         </span>
       </div>
 
       <div style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h4 style={{ fontSize: 13, margin: 0 }}>Contact &amp; Compensation</h4>
+          <h4 style={{ fontSize: 13, margin: 0 }}>{tt('workshop.sections.contactAndCompensation')}</h4>
           {hasPermission('worker.manage') && !editingContact && (
             <button className="btn-link" onClick={() => setEditingContact(true)}>
-              Edit
+              {tt('common.actions.edit')}
             </button>
           )}
         </div>
         {!editingContact ? (
           <div style={{ fontSize: 13, color: '#374151', marginTop: 4 }}>
-            Phone: {worker.phone ?? '—'} &nbsp; Email: {worker.email ?? '—'} &nbsp; Monthly Rate: {formatMoney(worker.monthly_rate)} &nbsp; Hourly
-            Rate: {formatMoney(worker.hourly_rate)}
-            {worker.address && <div>Address: {worker.address}</div>}
+            {tt('workshop.placeholders.phone')}: {worker.phone ?? '—'} {tt('workshop.placeholders.email')}: {worker.email ?? '—'} {tt('workshop.placeholders.monthlyRate')}: {formatMoney(worker.monthly_rate)} {tt('workshop.placeholders.hourlyRate')}: {formatMoney(worker.hourly_rate)}
+            {worker.address && <div>{tt('workshop.fields.addressAddress', { address: worker.address })}</div>}
           </div>
         ) : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
-            <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} style={{ ...inputStyle, width: 130 }} />
-            <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, width: 160 }} />
-            <NumericInput placeholder="Monthly Rate" value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)}
+            <input placeholder={tt('workshop.placeholders.phone')} value={phone} onChange={(e) => setPhone(e.target.value)} style={{ ...inputStyle, width: 130 }} />
+            <input placeholder={tt('workshop.placeholders.email')} value={email} onChange={(e) => setEmail(e.target.value)} style={{ ...inputStyle, width: 160 }} />
+            <NumericInput placeholder={tt('workshop.placeholders.monthlyRate')} value={monthlyRate} onChange={(e) => setMonthlyRate(e.target.value)}
               style={{ ...inputStyle, width: 130 }}
             />
-            <NumericInput placeholder="Hourly Rate" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)}
+            <NumericInput placeholder={tt('workshop.placeholders.hourlyRate')} value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)}
               style={{ ...inputStyle, width: 130 }}
             />
-            <input placeholder="Address" value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
+            <input placeholder={tt('workshop.placeholders.address')} value={address} onChange={(e) => setAddress(e.target.value)} style={{ ...inputStyle, width: '100%' }} />
             <button className="btn-primary" disabled={busy} onClick={saveContact}>
-              Save
+              {tt('common.actions.save')}
             </button>
             <button className="btn-secondary" disabled={busy} onClick={() => setEditingContact(false)}>
-              Cancel
+              {tt('common.actions.cancel')}
             </button>
           </div>
         )}
       </div>
 
-      <h4 style={{ fontSize: 13, marginBottom: 6 }}>Skills</h4>
+      <h4 style={{ fontSize: 13, marginBottom: 6 }}>{tt('workshop.fields.skills')}</h4>
       <table style={{ width: '100%', fontSize: 13, marginBottom: 12, borderCollapse: 'collapse' }}>
         <tbody>
           {(worker.skills ?? []).map((s) => (
             <tr key={s.id} style={{ borderBottom: '1px solid #f3f4f6' }}>
               <td style={{ padding: '6px 4px' }}>{s.component_group ? componentGroupLabel(s.component_group) : s.component_group_id}</td>
-              <td style={{ padding: '6px 4px', color: '#6b7280' }}>Level {s.skill_level ?? '—'}</td>
+              <td style={{ padding: '6px 4px', color: '#6b7280' }}>{tt('workshop.fields.levelL', { l: s.skill_level ?? '—' })}</td>
             </tr>
           ))}
         </tbody>
@@ -442,7 +442,7 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
       {hasPermission('worker.manage') && (
         <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           <select value={componentGroupId} onChange={(e) => setComponentGroupId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-            <option value="">Select component group…</option>
+            <option value="">{tt('workshop.fields.selectComponentGroup')}</option>
             {categories.map((c) => (
               <option key={c.id} value={c.id}>
                 {componentGroupLabel(c)}
@@ -452,22 +452,21 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
           <select value={skillLevel} onChange={(e) => setSkillLevel(e.target.value)} style={{ ...inputStyle, width: 100 }}>
             {[1, 2, 3, 4, 5].map((l) => (
               <option key={l} value={l}>
-                Level {l}
-              </option>
+                {tt('workshop.fields.levelL', { l: l })}</option>
             ))}
           </select>
           <button className="btn-secondary" disabled={busy || !componentGroupId} onClick={addSkill}>
-            Add Skill
+            {tt('workshop.actions.addSkill')}
           </button>
         </div>
       )}
 
       {hasPermission('worker.assign') && (
         <>
-          <h4 style={{ fontSize: 13, marginBottom: 6 }}>Reassign</h4>
+          <h4 style={{ fontSize: 13, marginBottom: 6 }}>{tt('workshop.sections.reassign')}</h4>
           <div style={{ display: 'flex', gap: 8 }}>
             <select value={assignBranchId} onChange={(e) => setAssignBranchId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-              <option value="">Select branch…</option>
+              <option value="">{tt('workshop.fields.selectBranch')}</option>
               {branches.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}
@@ -475,7 +474,7 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
               ))}
             </select>
             <select value={assignWorkshopId} onChange={(e) => setAssignWorkshopId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-              <option value="">No workshop</option>
+              <option value="">{tt('workshop.empty.noWorkshop')}</option>
               {workshops.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name}
@@ -483,7 +482,7 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
               ))}
             </select>
             <button className="btn-secondary" disabled={busy || !assignBranchId} onClick={assign}>
-              Assign
+              {tt('common.actions.assign')}
             </button>
           </div>
         </>
@@ -491,20 +490,20 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
 
       {hasPermission('worker.manage') && (
         <>
-          <h4 style={{ fontSize: 13, marginTop: 16, marginBottom: 6 }}>Login Account</h4>
+          <h4 style={{ fontSize: 13, marginTop: 16, marginBottom: 6 }}>{tt('workshop.sections.loginAccount')}</h4>
           {worker.user_id ? (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
               <span>
-                Linked to {tenantUsers.find((u) => u.user_id === worker.user_id)?.name ?? worker.user_id}
+                {tt('workshop.fields.linkedTo')} {tenantUsers.find((u) => u.user_id === worker.user_id)?.name ?? worker.user_id}
               </span>
               <button className="btn-secondary" disabled={busy} onClick={unlinkUser}>
-                Unlink
+                {tt('workshop.actions.unlink')}
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 8 }}>
               <select value={selectedUserId} onChange={(e) => setSelectedUserId(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                <option value="">Select a login account…</option>
+                <option value="">{tt('workshop.fields.selectALoginAccount')}</option>
                 {tenantUsers.map((u) => (
                   <option key={u.user_id} value={u.user_id}>
                     {u.name} ({u.email})
@@ -512,7 +511,7 @@ function WorkerDetailModal({ workerId, onClose, onChanged }: { workerId: string;
                 ))}
               </select>
               <button className="btn-secondary" disabled={busy || !selectedUserId} onClick={linkUser}>
-                Link
+                {tt('workshop.actions.link')}
               </button>
             </div>
           )}

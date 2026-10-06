@@ -40,6 +40,7 @@
     "workOrderEstimate": "Work Order Estimate"
   },
   "help": {
+    "amountOnDate": "{{amount}} on {{date}}",
     "payableAmountPayableAmountPartialPayment": "Payable amount: {{payableAmount}}. Partial payment is not supported — the paid amount must match exactly.",
     "recordedExternallyIssuedDocumentOptiFleet": "Recorded from an externally-issued document — OptiFleet did not issue this invoice.",
     "requiresApprovalDifferentUserOriginalValues": "Requires approval from a different user. The original values are preserved.",

@@ -8,34 +8,35 @@ import { useAuth } from '../../../auth/AuthContext';
 import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
 import type { WarrantyClaimItem } from '../../../types';
+import { t } from '../../../i18n/i18n';
 
 const LIFECYCLE: Record<string, { action: string; label: string; permission: string; primary?: boolean }[]> = {
-  DRAFT: [{ action: 'submit', label: 'Submit', permission: 'warranty_claim.create', primary: true }],
-  SUBMITTED: [{ action: 'review', label: 'Move to Review', permission: 'warranty_claim.review', primary: true }],
+  DRAFT: [{ action: 'submit', get label() { return t('common.actions.submit'); }, permission: 'warranty_claim.create', primary: true }],
+  SUBMITTED: [{ action: 'review', get label() { return t('common.actions.moveToReview'); }, permission: 'warranty_claim.review', primary: true }],
   UNDER_REVIEW: [
-    { action: 'approve', label: 'Approve', permission: 'warranty_claim.approve', primary: true },
-    { action: 'reject', label: 'Reject', permission: 'warranty_claim.approve' },
+    { action: 'approve', get label() { return t('common.actions.approve'); }, permission: 'warranty_claim.approve', primary: true },
+    { action: 'reject', get label() { return t('common.actions.reject'); }, permission: 'warranty_claim.approve' },
   ],
   APPROVED: [
-    { action: 'replacement', label: 'Resolve via Replacement', permission: 'warranty_claim.approve', primary: true },
-    { action: 'repair', label: 'Resolve via Repair', permission: 'warranty_claim.approve' },
+    { action: 'replacement', get label() { return t('warranty.actions.resolveViaReplacement'); }, permission: 'warranty_claim.approve', primary: true },
+    { action: 'repair', get label() { return t('warranty.actions.resolveViaRepair'); }, permission: 'warranty_claim.approve' },
   ],
-  REPLACEMENT: [{ action: 'settle', label: 'Settle', permission: 'warranty_claim.approve', primary: true }],
-  REPAIR: [{ action: 'settle', label: 'Settle', permission: 'warranty_claim.approve', primary: true }],
-  SETTLED: [{ action: 'close', label: 'Close', permission: 'warranty_claim.approve', primary: true }],
-  REJECTED: [{ action: 'close', label: 'Close', permission: 'warranty_claim.approve', primary: true }],
+  REPLACEMENT: [{ action: 'settle', get label() { return t('warranty.actions.settle'); }, permission: 'warranty_claim.approve', primary: true }],
+  REPAIR: [{ action: 'settle', get label() { return t('warranty.actions.settle'); }, permission: 'warranty_claim.approve', primary: true }],
+  SETTLED: [{ action: 'close', get label() { return t('common.actions.close'); }, permission: 'warranty_claim.approve', primary: true }],
+  REJECTED: [{ action: 'close', get label() { return t('common.actions.close'); }, permission: 'warranty_claim.approve', primary: true }],
 };
 
 /** The module action that moves a claim into each status (the workflow decides when it is offered). */
 const ACTIONS_BY_TARGET: Record<string, { action: string; label: string; permission: string; primary?: boolean }> = {
-  SUBMITTED: { action: 'submit', label: 'Submit', permission: 'warranty_claim.create', primary: true },
-  UNDER_REVIEW: { action: 'review', label: 'Move to Review', permission: 'warranty_claim.review', primary: true },
-  APPROVED: { action: 'approve', label: 'Approve', permission: 'warranty_claim.approve', primary: true },
-  REJECTED: { action: 'reject', label: 'Reject', permission: 'warranty_claim.approve' },
-  REPLACEMENT: { action: 'replacement', label: 'Resolve via Replacement', permission: 'warranty_claim.approve', primary: true },
-  REPAIR: { action: 'repair', label: 'Resolve via Repair', permission: 'warranty_claim.approve' },
-  SETTLED: { action: 'settle', label: 'Settle', permission: 'warranty_claim.approve', primary: true },
-  CLOSED: { action: 'close', label: 'Close', permission: 'warranty_claim.approve', primary: true },
+  SUBMITTED: { action: 'submit', get label() { return t('common.actions.submit'); }, permission: 'warranty_claim.create', primary: true },
+  UNDER_REVIEW: { action: 'review', get label() { return t('common.actions.moveToReview'); }, permission: 'warranty_claim.review', primary: true },
+  APPROVED: { action: 'approve', get label() { return t('common.actions.approve'); }, permission: 'warranty_claim.approve', primary: true },
+  REJECTED: { action: 'reject', get label() { return t('common.actions.reject'); }, permission: 'warranty_claim.approve' },
+  REPLACEMENT: { action: 'replacement', get label() { return t('warranty.actions.resolveViaReplacement'); }, permission: 'warranty_claim.approve', primary: true },
+  REPAIR: { action: 'repair', get label() { return t('warranty.actions.resolveViaRepair'); }, permission: 'warranty_claim.approve' },
+  SETTLED: { action: 'settle', get label() { return t('warranty.actions.settle'); }, permission: 'warranty_claim.approve', primary: true },
+  CLOSED: { action: 'close', get label() { return t('common.actions.close'); }, permission: 'warranty_claim.approve', primary: true },
 };
 
 export function WarrantyClaimDetailPage() {
@@ -76,7 +77,7 @@ export function WarrantyClaimDetailPage() {
 
   return (
     <div>
-      <BackButton fallbackTo="/app/warranty-claims" label="← Back to Claims" />
+      <BackButton fallbackTo="/app/warranty-claims" label={t('warranty.actions.backToClaims')} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, margin: 0 }}>{claim.claim_number}</h1>
         <StatusBadge status={claim.status} />
@@ -85,24 +86,24 @@ export function WarrantyClaimDetailPage() {
 
       <div className="card" style={{ marginBottom: 16 }}>
         <p style={{ fontSize: 13 }}>
-          <strong>Vehicle:</strong> {claim.vehicle?.registration_number ?? claim.vehicle_id} &nbsp; <strong>Failure Date:</strong> {claim.failure_date}
+          <strong>{t('common.fields.vehicle')}:</strong> {claim.vehicle?.registration_number ?? claim.vehicle_id} &nbsp; <strong>{t('warranty.fields.failureDate')}:</strong> {claim.failure_date}
         </p>
         <p style={{ fontSize: 13 }}>
-          <strong>Reason:</strong> {claim.reason}
+          <strong>{t('common.fields.reason')}:</strong> {claim.reason}
         </p>
         {claim.review_note && (
           <p style={{ fontSize: 13 }}>
-            <strong>Review Note:</strong> {claim.review_note}
+            <strong>{t('maintenance.fields.reviewNote')}:</strong> {claim.review_note}
           </p>
         )}
       </div>
 
       {actions.length > 0 && (
         <div className="card">
-          <h3 style={{ marginTop: 0, fontSize: 15 }}>Workflow Actions</h3>
+          <h3 style={{ marginTop: 0, fontSize: 15 }}>{t('maintenance.sections.workflowActions')}</h3>
           {(claim.status === 'UNDER_REVIEW') && (
             <textarea
-              placeholder="Note (required for reject)"
+              placeholder={t('maintenance.placeholders.noteRequiredForReject')}
               value={note}
               onChange={(e) => setNote(e.target.value)}
               style={{ width: '100%', minHeight: 50, marginBottom: 10, padding: 8, borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13 }}

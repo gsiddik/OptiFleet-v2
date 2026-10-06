@@ -213,6 +213,7 @@
     "reject": "Reject",
     "required": "(required)",
     "resource": "Resource",
+    "retiredMarker": "(retired)",
     "roles": "Roles",
     "sale": "Sale",
     "search": "Search",

@@ -14,6 +14,7 @@ import type { ComponentGroup } from '../../types';
 import { abbreviationError, componentGroupLabel, normalizeAbbreviationInput } from '../../utils/componentGroup';
 import { NumericInput } from '../NumericInput';
 import { formatTimestampDate } from '../../utils/date';
+import { t } from '../../i18n/i18n';
 
 type View = 'active' | 'deleted' | 'all';
 
@@ -102,39 +103,39 @@ export function ComponentGroupManager({
   const parentLabel = (id: string | null) => (id ? componentGroupLabel(allGroups.find((g) => g.id === id)) : '—');
 
   const columns: Column<ComponentGroup>[] = [
-    { key: 'code', header: 'Code', sortable: true, render: (g) => g.code },
+    { key: 'code', header: t('common.fields.code'), sortable: true, render: (g) => g.code },
     {
       key: 'abbreviation',
-      header: 'Abbr.',
+      header: t('common.fields.abbr'),
       sortable: true,
       render: (g) =>
         g.abbreviation ? (
           <strong style={{ fontFamily: 'monospace', fontSize: 14, letterSpacing: 1 }}>{g.abbreviation}</strong>
         ) : (
-          <span style={{ color: '#b45309', fontSize: 12 }} title="Legacy group: set a 3-letter abbreviation">
-            Missing
+          <span style={{ color: '#b45309', fontSize: 12 }} title={t('common.tooltips.legacyGroupSet3LetterAbbreviation')}>
+            {t('common.fields.missing')}
           </span>
         ),
     },
-    { key: 'name', header: 'Name', sortable: true, render: (g) => g.name },
-    { key: 'parent_id', header: 'Parent', render: (g) => parentLabel(g.parent_id) },
+    { key: 'name', header: t('common.fields.name'), sortable: true, render: (g) => g.name },
+    { key: 'parent_id', header: t('common.fields.parent'), render: (g) => parentLabel(g.parent_id) },
     {
       key: 'description',
-      header: 'Description',
+      header: t('common.fields.description'),
       render: (g) => (
         <span title={g.description ?? ''} style={{ display: 'inline-block', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {g.description || '—'}
         </span>
       ),
     },
-    { key: 'is_system', header: 'Source', render: (g) => (g.is_system ? 'System' : 'Tenant') },
-    { key: 'status', header: 'Status', sortable: true, render: (g) => (g.is_deleted ? <StatusBadge status="Deleted" /> : <StatusBadge status={g.status} />) },
+    { key: 'is_system', header: t('common.fields.source'), render: (g) => (g.is_system ? t('common.fields.system') : t('common.fields.tenant')) },
+    { key: 'status', header: t('common.fields.status'), sortable: true, render: (g) => (g.is_deleted ? <StatusBadge status="Deleted" /> : <StatusBadge status={g.status} />) },
     {
       key: 'usage',
-      header: 'Usage',
-      render: (g) => (g.is_used ? <span title="Used by Products — abbreviation locked">Used</span> : <span style={muted}>Unused</span>),
+      header: t('common.fields.usage'),
+      render: (g) => (g.is_used ? <span title={t('common.tooltips.usedProductsAbbreviationLocked')}>{t('common.fields.used')}</span> : <span style={muted}>{t('common.fields.unused')}</span>),
     },
-    { key: 'updated_at', header: 'Updated', sortable: true, render: (g) => (g.updated_at ? formatTimestampDate(g.updated_at) : '—') },
+    { key: 'updated_at', header: t('common.fields.updated'), sortable: true, render: (g) => (g.updated_at ? formatTimestampDate(g.updated_at) : '—') },
     {
       key: 'actions',
       header: '',
@@ -143,17 +144,17 @@ export function ComponentGroupManager({
           {extraActions?.(g, reload)}
           {canManageRow(g) && !g.is_deleted && hasPermission('component_group.update') && (
             <button className="btn-link" onClick={() => setEditing(g)}>
-              Edit
+              {t('common.actions.edit')}
             </button>
           )}
           {canManageRow(g) && !g.is_deleted && hasPermission('component_group.delete') && (
             <button className="btn-link" style={{ color: '#b91c1c' }} onClick={() => setDeleting(g)}>
-              Delete
+              {t('common.actions.delete')}
             </button>
           )}
           {canManageRow(g) && g.is_deleted && hasPermission('component_group.delete') && (
             <button className="btn-link" onClick={() => restore(g)}>
-              Restore
+              {t('common.actions.restore')}
             </button>
           )}
         </div>
@@ -162,15 +163,15 @@ export function ComponentGroupManager({
   ];
 
   const deleteMessage = deleting
-    ? `Delete "${componentGroupLabel(deleting)}"? This Component Group will no longer be available for new data. Existing Products and historical transactions will remain unchanged.` +
+    ? t('common.warnings.deleteValueComponentGroupNoLonger', { value: componentGroupLabel(deleting) }) +
       (deleting.is_used
-        ? ` It is already used by Products: their SKUs, classification and history keep "${deleting.abbreviation ?? deleting.name}", and the abbreviation can never be reused.`
+        ? t('common.help.alreadyUsedProductsTheirSkusClassification', { value: deleting.abbreviation ?? deleting.name })
         : '')
     : '';
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, marginBottom: 8 }}>Component Groups</h1>
+      <h1 style={{ fontSize: 22, marginBottom: 8 }}>{t('common.titles.componentGroups')}</h1>
       {intro && <p style={{ ...muted, fontSize: 13, marginTop: 0, marginBottom: 16 }}>{intro}</p>}
       <Toolbar
         search={search}
@@ -181,13 +182,13 @@ export function ComponentGroupManager({
         actions={
           hasPermission('component_group.create') && (
             <button className="btn-primary" onClick={() => setCreating(true)}>
-              New Component Group
+              {t('common.actions.newComponentGroup')}
             </button>
           )
         }
       >
         <select
-          aria-label="Status filter"
+          aria-label={t('common.fields.statusFilter')}
           value={status}
           onChange={(e) => {
             setStatus(e.target.value);
@@ -195,12 +196,12 @@ export function ComponentGroupManager({
           }}
           style={{ ...inputStyle, width: 140 }}
         >
-          <option value="">All statuses</option>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
+          <option value="">{t('common.filters.allStatuses')}</option>
+          <option value="ACTIVE">{t('common.fields.active')}</option>
+          <option value="INACTIVE">{t('common.fields.inactive')}</option>
         </select>
         <select
-          aria-label="Record filter"
+          aria-label={t('common.fields.recordFilter')}
           value={view}
           onChange={(e) => {
             setView(e.target.value as View);
@@ -208,15 +209,15 @@ export function ComponentGroupManager({
           }}
           style={{ ...inputStyle, width: 160 }}
         >
-          <option value="active">Not deleted</option>
-          <option value="deleted">Deleted only</option>
-          <option value="all">All records</option>
+          <option value="active">{t('common.fields.notDeleted')}</option>
+          <option value="deleted">{t('common.fields.deletedOnly')}</option>
+          <option value="all">{t('common.filters.allRecords')}</option>
         </select>
       </Toolbar>
       {actionError && <ErrorState message={actionError} />}
       {error && <ErrorState message={error} />}
       {!error && loading && <LoadingState />}
-      {!error && !loading && data.length === 0 && <EmptyState label="No component groups found." />}
+      {!error && !loading && data.length === 0 && <EmptyState label={t('common.empty.noComponentGroupsFound')} />}
       {!error && !loading && data.length > 0 && (
         <>
           <Table columns={columns} rows={data} sort={sort} direction={direction} onSort={onSort} />
@@ -243,9 +244,9 @@ export function ComponentGroupManager({
 
       <ConfirmDialog
         open={!!deleting}
-        title="Delete Component Group"
+        title={t('common.confirm.deleteComponentGroup')}
         message={deleteMessage}
-        confirmLabel="Delete"
+        confirmLabel={t('common.actions.delete')}
         onCancel={() => setDeleting(null)}
         onConfirm={confirmDelete}
       />
@@ -315,16 +316,16 @@ function ComponentGroupFormModal({
   const abbreviationErrors = [...(inlineAbbreviationError ? [inlineAbbreviationError] : []), ...(errors.abbreviation ?? [])];
 
   return (
-    <Modal open title={group ? 'Edit Component Group' : 'New Component Group'} onClose={onClose}>
+    <Modal open title={group ? t('common.modals.editComponentGroup') : t('common.actions.newComponentGroup')} onClose={onClose}>
       {formError && <ErrorState message={formError} />}
-      <FormField label="Code" errors={errors.code} required={!group}>
-        <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!group} placeholder="e.g. CG-BRAKE" />
+      <FormField label={t('common.fields.code')} errors={errors.code} required={!group}>
+        <input value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} disabled={!!group} placeholder={t('common.placeholders.eGCgBrake')} />
       </FormField>
-      {group && <div style={{ ...muted, marginTop: -10, marginBottom: 12 }}>Code is the stable identifier and cannot be changed.</div>}
-      <FormField label="Name" errors={errors.name} required>
+      {group && <div style={{ ...muted, marginTop: -10, marginBottom: 12 }}>{t('common.help.codeStableIdentifierCannotChanged')}</div>}
+      <FormField label={t('common.fields.name')} errors={errors.name} required>
         <input value={name} onChange={(e) => setName(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Abbreviation" errors={abbreviationErrors} required={!locked}>
+      <FormField label={t('common.fields.abbreviation')} errors={abbreviationErrors} required={!locked}>
         <input
           value={abbreviation}
           onChange={(e) => setAbbreviation(normalizeAbbreviationInput(e.target.value))}
@@ -334,17 +335,17 @@ function ComponentGroupFormModal({
           pattern="[A-Z]{3}"
           disabled={locked}
           style={{ ...inputStyle, width: 110, fontFamily: 'monospace', letterSpacing: 2, textTransform: 'uppercase' }}
-          placeholder="ENG"
+          placeholder={t('common.placeholders.eng')}
         />
       </FormField>
       <div style={{ ...muted, marginTop: -10, marginBottom: 12 }}>
         {locked
-          ? 'This abbreviation is already used by Products (Product SKUs) and can no longer be changed.'
-          : 'Exactly 3 letters. Used as part of Product SKU. Example: ENG, BRK, HYD. It cannot be reused once assigned, and is locked after Products use this group.'}
+          ? t('common.help.abbreviationAlreadyUsedProductsProductSkus')
+          : t('common.help.exactly3LettersUsedPartProduct')}
       </div>
-      <FormField label="Parent Group" errors={errors.parent_id}>
+      <FormField label={t('common.fields.parentGroup')} errors={errors.parent_id}>
         <select value={parentId} onChange={(e) => setParentId(e.target.value)} style={inputStyle}>
-          <option value="">— None (top-level) —</option>
+          <option value="">{t('common.fields.noneTopLevel')}</option>
           {parentOptions
             .filter((g) => g.id !== group?.id)
             .map((g) => (
@@ -354,24 +355,24 @@ function ComponentGroupFormModal({
             ))}
         </select>
       </FormField>
-      <FormField label="Sequence" errors={errors.sequence}>
+      <FormField label={t('common.fields.sequence')} errors={errors.sequence}>
         <NumericInput value={sequence} onChange={(e) => setSequence(e.target.value)} style={inputStyle} />
       </FormField>
-      <FormField label="Description" errors={errors.description}>
+      <FormField label={t('common.fields.description')} errors={errors.description}>
         <textarea value={description ?? ''} onChange={(e) => setDescription(e.target.value)} style={{ ...inputStyle, minHeight: 70 }} />
       </FormField>
-      <FormField label="Status" errors={errors.status}>
+      <FormField label={t('common.fields.status')} errors={errors.status}>
         <select value={status} onChange={(e) => setStatus(e.target.value as 'ACTIVE' | 'INACTIVE')} style={inputStyle}>
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
+          <option value="ACTIVE">{t('common.fields.active')}</option>
+          <option value="INACTIVE">{t('common.fields.inactive')}</option>
         </select>
       </FormField>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
-          Cancel
+          {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || (!group && !code) || !name} onClick={submit}>
-          {submitting ? 'Saving…' : 'Save'}
+          {submitting ? t('common.actions.saving') : t('common.actions.save')}
         </button>
       </div>
     </Modal>

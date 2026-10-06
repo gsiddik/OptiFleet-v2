@@ -52,7 +52,8 @@
     "leaveAllUncheckedAllowAnyVehicle": "Leave all unchecked to allow any vehicle category.",
     "level": "Level",
     "monthlyRateMonthlyRateHourlyRate": "Monthly Rate: {{monthly_rate}} Hourly Rate: {{hourly_rate}}",
-    "occupiedOccupiedCapacity": "Occupied {{occupied}} / {{capacity}}"
+    "occupiedOccupiedCapacity": "Occupied {{occupied}} / {{capacity}}",
+    "occupiedOfCapacity": "Occupied {{occupied}} / {{capacity}}"
   },
   "modals": {
     "editWorkspaceCode": "Edit Workspace — {{code}}",

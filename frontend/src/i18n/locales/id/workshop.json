@@ -52,7 +52,8 @@
     "leaveAllUncheckedAllowAnyVehicle": "Biarkan semua tidak dicentang untuk mengizinkan semua kategori kendaraan.",
     "level": "Level",
     "monthlyRateMonthlyRateHourlyRate": "Tarif Bulanan: {{monthly_rate}} Tarif per Jam: {{hourly_rate}}",
-    "occupiedOccupiedCapacity": "Terisi {{occupied}} / {{capacity}}"
+    "occupiedOccupiedCapacity": "Terisi {{occupied}} / {{capacity}}",
+    "occupiedOfCapacity": "Terisi {{occupied}} / {{capacity}}"
   },
   "modals": {
     "editWorkspaceCode": "Ubah Workspace — {{code}}",
