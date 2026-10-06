@@ -5,6 +5,7 @@ import {
   useRef,
   type CSSProperties,
 } from "react";
+import { t } from '../i18n/i18n';
 
 export interface VariableOption {
   key: string;
@@ -70,11 +71,11 @@ export const VariableTextEditor = forwardRef<
     el.setAttribute("style", chipStyle);
     el.textContent =
       sigil === "#"
-        ? `If ${labelOf(key)}`
+        ? t('common.fields.ifValue', { value: labelOf(key) })
         : sigil === "^"
-          ? `If no ${labelOf(key)}`
+          ? t('common.fields.ifNoValue', { value: labelOf(key) })
           : sigil === "/"
-            ? `End of ${labelOf(key)}`
+            ? t('common.fields.endOfValue', { value: labelOf(key) })
             : labelOf(key);
     el.title = el.textContent;
     return el;

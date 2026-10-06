@@ -18,7 +18,7 @@ Continuation checkpoint for the EN / ID rollout planned in `docs/i18n/16-i18n-im
 | 1 | Locale contract + resource generation | DONE |
 | 2 | Frontend / backend i18n foundation | DONE |
 | 3 | User / tenant locale preference + language selector | DONE |
-| 4 | Shared / global UI | — |
+| 4 | Shared / global UI | DONE |
 | 5+ | Business modules | — |
 | D | Printed documents | — |
 | N | Notifications | — |
@@ -216,4 +216,74 @@ user preference → tenant default → browser (`navigator.languages` / `Accept-
     - The locale middleware no longer re-reads the tenant: `TenantContext` keeps
       `tenantDefaultLocale` from the row already loaded.
 
+## Phase 4 — Shared / global UI
 
+**Migration tool: `frontend/scripts/i18n/strings.mjs`**
+- Commands: `audit [paths]` reports hard-coded user-facing strings; `migrate <paths>` rewrites
+  unambiguous dataset matches to `t('key')`.
+- Uses the TypeScript AST and matches:
+  - JSX text and user-facing attributes (`label`, `placeholder`, `title`, `aria-*`, …);
+  - string and template literals used as text;
+  - mixed JSX children ("Page {n} of {m}") against `{{param}}` templates of the same shape.
+- Key choice:
+  - the dataset row whose `source_file` is this file wins, then `common.*`;
+  - texts with different Indonesian translations stay **ambiguous** for a decision by hand (the
+    Cancel heuristic handles the clear cases from `onClick`);
+  - `status.*` keys are never picked for literals ("Open" button ≠ status Open);
+  - module-level constants are reported, never rewritten (they would freeze one language).
+
+**Navigation**
+- **Sidebar (`tenantNav.ts`):** every group and item carries a `labelKey` (`nav.groups.*` /
+  `nav.items.*`).
+  - The English `label` stays the stable identity: React keys and the remembered expand state, so
+    switching language does not collapse the menu.
+  - `navLabel()` renders the label; menu search matches the shown (translated) label.
+- **Platform nav and header dropdowns:** Account / Organization / Access use keys.
+- **Breadcrumbs:** each static segment resolves to `breadcrumb.<camelCaseSegment>`.
+  - `SEGMENT_LABELS` stays the English canonical text and fallback; a test enforces a 1:1 key and
+    same-English mapping.
+  - Record crumbs use `common.fields.valueDetail`: English singularizes the parent label ("Vehicle
+    Detail"); Indonesian keeps the uninflected noun ("Detail Kendaraan").
+
+**Shared components**
+- Covered: Modal, ConfirmDialog, Pagination, RoleManager, AuditLogTable, Table / ScrollTable, States,
+  SearchableSelect, FileUploadField / ImageUploadField, DocumentViewer, InfoTip, BackButton,
+  RouteGuards, the layouts.
+- 102 strings were migrated by the tool, plus the hand-resolved ones:
+  - the dismiss Cancel in ConfirmDialog / RoleManager → `common.actions.cancel` (Batal);
+  - Pagination and the permission counter as whole-sentence templates;
+  - "Select all shown" / "Clear shown" / "Clear all" as whole keys, replacing a concatenated suffix;
+  - ConfirmDialog's default confirm label;
+  - file-rule descriptions (`labelKey`).
+- **DocumentVersions** (print language / versions dialog): labels translated. Language names are
+  endonyms (`common.language.en/id`).
+
+**New strings (additions 17)**
+- `common.actions.selectAllShown`, `clearShown`, `clearAll`;
+- `documents.versions.button`, `title`, `generateNew`, `notPrinted`, `generated`, `open`.
+
+**Audit after Phase 4 (components, layouts, navigation, App, auth, api, utils)**
+- 0 ambiguous, 0 unmatched.
+- Remaining findings are EXPECTED_NON_TRANSLATED:
+  - the English identity labels in `tenantNav.ts` / `SEGMENT_LABELS` (rendered through keys);
+  - CSS / key templates;
+  - the "PDF" format name.
+
+**Tests**
+- Frontend `i18nSharedUi.test.ts`:
+  - every sidebar entry has a key whose English equals its identity label;
+  - Indonesian labels and search;
+  - every breadcrumb segment maps to a key with the same English;
+  - unknown segments are humanized;
+  - no missing keys.
+- Frontend unit tests 43/43, type-check, lint (0 errors, 27 existing warnings).
+- **Browser `e2e_i18n_shared`, 12 checks:**
+  - EN sidebar, header and breadcrumb;
+  - switch to ID: sidebar groups, header dropdowns, logout, breadcrumb ("Beranda / Kendaraan") and the
+    record breadcrumb all translated;
+  - menu search matches "riwayat";
+  - kept after reload;
+  - no horizontal overflow on a 390 px viewport;
+  - back to EN;
+  - no page errors.
+- Page bodies stay English until their module phase (5+).

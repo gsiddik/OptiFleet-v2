@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { fileRuleError, formatFileSize, type FileRule } from '../utils/fileRules';
+import { fileRuleError, fileRuleLabel, formatFileSize, type FileRule } from '../utils/fileRules';
+import { t } from '../i18n/i18n';
 
 /**
  * File picker for a form that is saved later: choose, replace or remove the file before
@@ -45,10 +46,10 @@ export function FileUploadField({
           {!disabled && (
             <>
               <button type="button" className="btn-link" onClick={() => inputRef.current?.click()}>
-                Replace
+                {t('common.actions.replace')}
               </button>
               <button type="button" className="btn-link" style={{ color: '#b91c1c' }} onClick={() => onChange(null)}>
-                Remove
+                {t('common.actions.remove')}
               </button>
             </>
           )}
@@ -57,17 +58,16 @@ export function FileUploadField({
         <div style={box}>
           <span>📎 {existing.name}</span>
           <button type="button" className="btn-link" onClick={existing.onView}>
-            View
+            {t('common.actions.view')}
           </button>
         </div>
       ) : (
         <div style={box}>
           <button type="button" className="btn-secondary" onClick={() => inputRef.current?.click()} disabled={disabled}>
-            Choose file
+            {t('common.actions.chooseFile')}
           </button>
           <span style={{ color: '#6b7280' }}>
-            {rule.label}, max {formatFileSize(rule.maxBytes)}
-          </span>
+            {t('common.fields.labelMaxMaxBytes', { label: fileRuleLabel(rule), maxBytes: formatFileSize(rule.maxBytes) })}</span>
         </div>
       )}
       {error && <div style={{ color: '#b91c1c', fontSize: 12, marginTop: 4 }}>{error}</div>}

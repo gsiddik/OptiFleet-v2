@@ -1,5 +1,6 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 import { appLocale } from '../i18n/locale';
+import { t } from '../i18n/i18n';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1';
 
@@ -39,7 +40,7 @@ export function extractApiError(error: unknown): ApiErrorShape {
   if (axiosError.response?.data) {
     return axiosError.response.data;
   }
-  return { message: axiosError.message ?? 'Unexpected error occurred' };
+  return { message: axiosError.message ?? t('common.errors.unexpectedErrorOccurred') };
 }
 
 apiClient.interceptors.response.use(

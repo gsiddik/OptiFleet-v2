@@ -147,6 +147,14 @@
     "statusTransferStatusReasonTransferReason": "Status: {{transfer.status}} | Reason: {{transfer.reason}}",
     "vehicleVehicleRegistrationNumberVehicleBrand": "Vehicle: {{vehicle.registration_number}} ({{vehicle.brand}} {{vehicle.model}})"
   },
+  "versions": {
+    "button": "Versions",
+    "generated": "Generated",
+    "generateNew": "Generate New Version",
+    "notPrinted": "Not printed yet. The first Print creates version 1.",
+    "open": "Open",
+    "title": "Document Versions"
+  },
   "warrantyClaim": {
     "failureDateClaimFailureDateSettled": "Failure Date: {{claim.failure_date}} | Settled: {{claim.settled_at}}",
     "reasonClaimReason": "Reason: {{claim.reason}}",

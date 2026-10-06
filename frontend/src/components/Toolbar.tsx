@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { inputStyle } from './FormField';
+import { t } from '../i18n/i18n';
 
 export function Toolbar({
   search,
@@ -18,10 +19,10 @@ export function Toolbar({
       <div className="toolbar-filters" style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', flex: '1 1 auto', minWidth: 0 }}>
         {onSearchChange && (
           <input
-            placeholder="Search…"
+            placeholder={t('common.search.search')}
             value={search ?? ''}
             onChange={(e) => onSearchChange(e.target.value)}
-            aria-label="Search"
+            aria-label={t('common.fields.search')}
             style={{ ...inputStyle, width: 220 }}
           />
         )}

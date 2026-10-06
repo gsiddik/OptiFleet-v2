@@ -147,6 +147,14 @@
     "statusTransferStatusReasonTransferReason": "Status: {{transfer.status}} | Alasan: {{transfer.reason}}",
     "vehicleVehicleRegistrationNumberVehicleBrand": "Kendaraan: {{vehicle.registration_number}} ({{vehicle.brand}} {{vehicle.model}})"
   },
+  "versions": {
+    "button": "Versi",
+    "generated": "Dibuat Pada",
+    "generateNew": "Buat Versi Baru",
+    "notPrinted": "Belum pernah dicetak. Cetak pertama akan membuat versi 1.",
+    "open": "Buka",
+    "title": "Versi Dokumen"
+  },
   "warrantyClaim": {
     "failureDateClaimFailureDateSettled": "Tanggal Kerusakan: {{claim.failure_date}} | Diselesaikan: {{claim.settled_at}}",
     "reasonClaimReason": "Alasan: {{claim.reason}}",

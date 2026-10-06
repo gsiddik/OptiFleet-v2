@@ -1,8 +1,10 @@
+import { t } from '../i18n/i18n';
+
 export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   onConfirm,
   onCancel,
 }: {
@@ -36,10 +38,10 @@ export function ConfirmDialog({
         <p style={{ margin: '0 0 20px', color: '#4b5563', fontSize: 14 }}>{message}</p>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button className="btn-secondary" onClick={onCancel}>
-            Cancel
+            {t('common.actions.cancel')}
           </button>
           <button className="btn-danger" onClick={onConfirm}>
-            {confirmLabel}
+            {confirmLabel ?? t('common.confirm.confirm')}
           </button>
         </div>
       </div>

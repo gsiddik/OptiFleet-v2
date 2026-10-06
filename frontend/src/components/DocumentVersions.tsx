@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../api/client';
 import { Modal } from './Modal';
 import { formatDateTime } from '../utils/date';
+import { t } from '../i18n/i18n';
 
 /** One generated printed document: its language and template version are fixed when it is generated. */
 interface DocumentGeneration {
@@ -12,7 +13,8 @@ interface DocumentGeneration {
   generated_at: string;
 }
 
-const LANGUAGE_LABEL: Record<DocumentGeneration['locale'], string> = { en: 'English', id: 'Bahasa Indonesia' };
+/** A language's own name (endonym), shown the same in every UI language. */
+const languageLabel = (locale: string): string => (locale === 'en' || locale === 'id' ? t(`common.language.${locale}`) : locale);
 
 /** Opens one generation of a printed document (a reprint: its own language and template version). */
 async function openDocumentGeneration(printPath: string, generationId?: string): Promise<void> {
@@ -30,7 +32,7 @@ export function DocumentVersionsButton({ printPath, disabled }: { printPath: str
   return (
     <>
       <button className="btn-secondary" disabled={disabled} onClick={() => setOpen(true)} data-document-versions={printPath}>
-        Versions
+        {t('documents.versions.button')}
       </button>
       {open && <DocumentVersionsModal printPath={printPath} onClose={() => setOpen(false)} />}
     </>
@@ -71,33 +73,33 @@ function DocumentVersionsModal({ printPath, onClose }: { printPath: string; onCl
     });
 
   return (
-    <Modal open title="Document Versions" onClose={onClose} width={560}>
+    <Modal open title={t('documents.versions.title')} onClose={onClose} width={560}>
       {error && <div style={{ color: '#b91c1c', fontSize: 13, marginBottom: 8 }}>{error}</div>}
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 16 }}>
         <label style={{ fontSize: 13, flex: 1 }}>
-          Language
+          {t('common.language.label')}
           <select value={locale} onChange={(e) => setLocale(e.target.value as typeof locale)} style={{ display: 'block', width: '100%', marginTop: 4 }}>
-            <option value="">Default</option>
-            <option value="en">{LANGUAGE_LABEL.en}</option>
-            <option value="id">{LANGUAGE_LABEL.id}</option>
+            <option value="">{t('common.language.default')}</option>
+            <option value="en">{languageLabel('en')}</option>
+            <option value="id">{languageLabel('id')}</option>
           </select>
         </label>
         <button className="btn-primary" disabled={busy} onClick={generate} data-generate-version>
-          Generate New Version
+          {t('documents.versions.generateNew')}
         </button>
       </div>
       {rows === null ? (
-        <div style={{ fontSize: 13, color: '#6b7280' }}>Loading…</div>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>{t('common.actions.loading')}</div>
       ) : rows.length === 0 ? (
-        <div style={{ fontSize: 13, color: '#6b7280' }}>Not printed yet. The first Print creates version 1.</div>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>{t('documents.versions.notPrinted')}</div>
       ) : (
         <table style={{ width: '100%', fontSize: 13 }} data-document-generations>
           <thead>
             <tr>
-              <th style={{ textAlign: 'left' }}>Version</th>
-              <th style={{ textAlign: 'left' }}>Language</th>
-              <th style={{ textAlign: 'left' }}>Template Version</th>
-              <th style={{ textAlign: 'left' }}>Generated</th>
+              <th style={{ textAlign: 'left' }}>{t('configuration.fields.version')}</th>
+              <th style={{ textAlign: 'left' }}>{t('common.language.label')}</th>
+              <th style={{ textAlign: 'left' }}>{t('configuration.labels.templateVersion')}</th>
+              <th style={{ textAlign: 'left' }}>{t('documents.versions.generated')}</th>
               <th />
             </tr>
           </thead>
@@ -105,12 +107,12 @@ function DocumentVersionsModal({ printPath, onClose }: { printPath: string; onCl
             {rows.map((g) => (
               <tr key={g.id} data-generation={g.id}>
                 <td>{g.sequence}</td>
-                <td>{LANGUAGE_LABEL[g.locale] ?? g.locale}</td>
-                <td>{g.template_version ?? 'Default'}</td>
+                <td>{languageLabel(g.locale)}</td>
+                <td>{g.template_version ?? t('common.language.default')}</td>
                 <td>{formatDateTime(g.generated_at)}</td>
                 <td style={{ textAlign: 'right' }}>
                   <button className="btn-secondary" disabled={busy} onClick={() => run(() => openDocumentGeneration(printPath, g.id))}>
-                    Open
+                    {t('documents.versions.open')}
                   </button>
                 </td>
               </tr>
