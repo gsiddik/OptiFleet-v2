@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Shared\Support\StatusLabels;
 use App\Domain\Workflow\Services\WorkflowDefinitionService;
 use App\Domain\Workflow\Support\WorkflowActionVerbs;
@@ -49,7 +50,7 @@ class WorkflowDefaultsSeeder extends Seeder
 
     private function seedPlatformDefault(WorkflowDefinitionService $service, string $resourceType, array $payload): void
     {
-        $set = $service->findOrCreateSet(null, $resourceType, 'TENANT', null, self::RESOURCE_LABELS[$resourceType].' Workflow', true);
+        $set = $service->findOrCreateSet(null, $resourceType, 'TENANT', null, Messages::text('workflow.defaults.setName', ['resourceType' => self::RESOURCE_LABELS[$resourceType]]), true);
         if ($set->publishedVersion()) {
             return;
         }

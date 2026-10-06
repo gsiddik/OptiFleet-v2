@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domain\Configuration\Services\ConfigurationService;
 use App\Domain\Configuration\Services\TemplateValidator;
 use App\Domain\Procurement\Support\RfqDocumentTemplate;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Database\Seeder;
 
 /**
@@ -56,12 +57,12 @@ class ConfigurationDefaultsSeeder extends Seeder
         ];
 
         foreach ($numbering as $code => $payload) {
-            $this->seedPlatformDefault($service, 'NUMBERING', $code, ucwords(str_replace('_', ' ', $code)).' Numbering', $payload);
+            $this->seedPlatformDefault($service, 'NUMBERING', $code, Messages::text('configuration.defaults.numberingSetName', ['documentType' => ucwords(str_replace('_', ' ', $code))]), $payload);
         }
 
         foreach ($this->defaultTemplates() as $code => $html) {
             $this->seedPlatformDefault(
-                $service, 'TEMPLATE', $code, ucwords(str_replace('_', ' ', $code)).' Template',
+                $service, 'TEMPLATE', $code, Messages::text('configuration.defaults.templateSetName', ['documentType' => ucwords(str_replace('_', ' ', $code))]),
                 ['html' => $html],
                 fn (array $payload) => $validator->validate($code, $payload['html'])
             );

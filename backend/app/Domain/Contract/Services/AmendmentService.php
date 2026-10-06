@@ -15,6 +15,7 @@ use App\Domain\Pricing\Services\PricingResolutionService;
 use App\Domain\Pricing\Support\Money;
 use App\Domain\ProductCatalog\Models\Module;
 use App\Domain\ProductCatalog\Services\ModuleDependencyService;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Subscription\Services\EntitlementProvisioningService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -179,7 +180,7 @@ class AmendmentService
             throw new AmendmentException('Only an amendment pending approval can be rejected.');
         }
 
-        $amendment->update(['status' => 'REJECTED', 'reason' => trim(($amendment->reason ?? '')."\nRejected: ".$note)]);
+        $amendment->update(['status' => 'REJECTED', 'reason' => trim(($amendment->reason ?? '')."\n".Messages::text('contract.notes.amendmentRejected', ['note' => $note]))]);
 
         return $amendment->fresh();
     }

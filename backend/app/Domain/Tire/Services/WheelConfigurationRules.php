@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tire\Services;
 
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -112,7 +113,7 @@ class WheelConfigurationRules
                             'axle_number' => $axleNumber,
                             'side' => $side,
                             'wheel_index' => $wheel,
-                            'label' => ($group === 'F' ? 'Front' : 'Rear').' Axle '.($i + 1)." {$sideName} Wheel {$wheel}",
+                            'label' => Messages::text('tire.wheelConfiguration.positionLabel', ['axleGroup' => Messages::text($group === 'F' ? 'common.fields.front' : 'common.fields.rear'), 'axle' => $i + 1, 'side' => $sideName, 'wheel' => $wheel]),
                             'sequence' => ++$sequence,
                         ];
                     }

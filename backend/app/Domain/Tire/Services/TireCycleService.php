@@ -3,6 +3,7 @@
 namespace App\Domain\Tire\Services;
 
 use App\Domain\Shared\Services\PrivateDocumentStorage;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireCyclePhoto;
 use App\Domain\Tire\Models\TireRepair;
@@ -69,7 +70,7 @@ class TireCycleService
             throw ValidationException::withMessages(['estimated_price' => ['Estimated Price must be greater than zero with at most 2 decimals.']]);
         }
         if (count($photos) < 1 || count($photos) > self::MAX_PHOTOS) {
-            throw ValidationException::withMessages(['photos' => ['Upload 1 to '.self::MAX_PHOTOS.' photos.']]);
+            throw ValidationException::withMessages(['photos' => [Messages::text('validation.tire.uploadPhotoRange', ['max' => self::MAX_PHOTOS])]]);
         }
 
         $uploads = [];

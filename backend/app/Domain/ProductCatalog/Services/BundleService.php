@@ -5,6 +5,7 @@ namespace App\Domain\ProductCatalog\Services;
 use App\Domain\ProductCatalog\Models\Bundle;
 use App\Domain\ProductCatalog\Models\BundleVersion;
 use App\Domain\ProductCatalog\Models\Module;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -107,7 +108,7 @@ class BundleService
         $missing = $this->missingDependencies($bundle);
         if ($missing->isNotEmpty()) {
             throw new BundleException(
-                'Cannot publish bundle: unresolved module dependencies: '.$missing->implode(', ')
+                Messages::text('errors.productCatalog.unresolvedDependencies', ['modules' => $missing->implode(', ')])
             );
         }
 

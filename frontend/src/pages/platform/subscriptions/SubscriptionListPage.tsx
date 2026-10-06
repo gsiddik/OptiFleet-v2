@@ -8,6 +8,7 @@ import { EmptyState, ErrorState, LoadingState } from '../../../components/States
 import { useApiList } from '../../../hooks/useApiList';
 import { useAuth } from '../../../auth/AuthContext';
 import type { SubscriptionItem } from '../../../types';
+import { message } from '../../../i18n/messages';
 
 const TABS = ['', 'PENDING', 'ACTIVE', 'EXPIRING', 'PAST_DUE', 'GRACE_PERIOD', 'SUSPENDED', 'EXPIRED', 'CANCELLED'];
 
@@ -29,7 +30,7 @@ export function SubscriptionListPage() {
     setNotice(null);
     try {
       await apiClient.post(`/platform/subscriptions/${sub.id}/generate-billing`);
-      setNotice(`Billing and invoice generated for ${sub.tenant?.name ?? 'the subscription'}.`);
+      setNotice(sub.tenant?.name ? message('platform.subscriptions.messages.billingGenerated', { tenantName: sub.tenant.name }) : message('platform.subscriptions.messages.billingGeneratedNoTenant'));
       setReloadKey((k) => k + 1);
     } catch (err) {
       setError(extractApiError(err).message);

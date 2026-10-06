@@ -1,3 +1,5 @@
+import { message } from '../../../../i18n/messages';
+
 /**
  * Wheel configuration calculations — pure functions with no UI dependency, so the same rules can
  * be re-implemented server-side when the configuration is persisted.
@@ -114,5 +116,10 @@ export function spareCodes(spareTires: number): string[] {
 
 /** Plain-language description of a position, e.g. "Front axle 1 · Left · wheel 1 (closest to body)". */
 export function describePosition(p: { group: AxleGroupKey; axle: number; side: Side; index: number }): string {
-  return `${p.group === 'F' ? 'Front' : 'Rear'} axle ${p.axle} · ${p.side === 'L' ? 'Left' : 'Right'} · wheel ${p.index}${p.index === 1 ? ' (closest to body)' : ''}`;
+  return message(p.index === 1 ? 'tire.wheelConfiguration.positionDescriptionClosestToBody' : 'tire.wheelConfiguration.positionDescription', {
+    axleGroup: message(p.group === 'F' ? 'common.fields.front' : 'common.fields.rear'),
+    axle: p.axle,
+    side: message(p.side === 'L' ? 'common.fields.left' : 'common.fields.right'),
+    index: p.index,
+  });
 }

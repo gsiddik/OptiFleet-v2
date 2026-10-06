@@ -3,6 +3,7 @@
 namespace App\Domain\Vehicle\Services;
 
 use App\Domain\Configuration\Services\DocumentNumberingService;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\Vehicle\Models\VehicleAssignment;
 use App\Domain\Vehicle\Models\VehicleTransfer;
@@ -103,7 +104,7 @@ class VehicleTransferService
             'to_workshop_id' => $transfer->to_workshop_id,
             'effective_from' => $today,
             'assigned_by' => $transfer->approved_by,
-            'notes' => 'Vehicle transfer '.$transfer->id,
+            'notes' => Messages::text('vehicle.notes.vehicleTransfer', ['transferId' => $transfer->id]),
         ]);
 
         $vehicle->update([

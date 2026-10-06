@@ -6,6 +6,7 @@ import { NumericInput } from "../../../components/NumericInput";
 import type { PurchaseOrderItem, PurchaseReturnOption } from "../../../types";
 import { RETURN_OPTION_LABEL } from "./purchaseReturnLabels";
 import { formatQty } from "../../../utils/quantity";
+import { message } from "../../../i18n/messages";
 
 const readonly = { ...inputStyle, background: "#f3f4f6" };
 
@@ -71,7 +72,7 @@ export function ReturnToVendorModal({
     );
     if (over)
       return setError(
-        `${over.product?.name ?? "Item"}: at most ${formatQty(returnable(over.id))} can be returned.`,
+        message("procurement.validation.returnQtyExceeded", { productName: over.product?.name ?? message("account.fields.item"), returnable: formatQty(returnable(over.id)) }),
       );
     setSaving(true);
     try {

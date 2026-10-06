@@ -12,6 +12,7 @@ import type { ComponentAssetItem, PartnerItem, VehicleItem, Warehouse } from '..
 import { componentGroupLabel } from '../../../utils/componentGroup';
 import { formatDateTime, formatTimestampDate } from '../../../utils/date';
 import { statusLabel } from '../../../i18n/statusRegistry';
+import { message } from '../../../i18n/messages';
 
 /** Statuses a Sell Sparepart sale may be raised for (backend ComponentAsset::SELLABLE). */
 const SELLABLE = ['SCRAPPED', 'REMOVED'];
@@ -165,7 +166,7 @@ export function ComponentAssetDetailPage() {
             }
           />
           {asset.purchase_return && <Fact label="Returned to Vendor" value={`Return Order ${asset.purchase_return.return_number} (${statusLabel(asset.purchase_return.status)})`} />}
-          {asset.sale && <Fact label="Sale" value={`${asset.sale.status} · ${asset.sale.buyer_name ?? 'Partner'} · ${formatDateTime(asset.sale.decided_at)}`} />}
+          {asset.sale && <Fact label="Sale" value={message('tenantComponents.fields.saleSummary', { status: statusLabel(asset.sale.status), buyerName: asset.sale.buyer_name ?? message('common.fields.partner'), decidedAt: formatDateTime(asset.sale.decided_at) })} />}
         </dl>
       </div>
 

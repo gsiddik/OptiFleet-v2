@@ -17,6 +17,7 @@ Continuation checkpoint for the structural i18n preparation defined in
 | S1 | Stable tab IDs | STABLE_TAB_ID (21 rows) | DONE |
 | S2 | Status display label registry | STATUS_DISPLAY_REGISTRY (46 → 150 rows) | DONE |
 | S3 | Runtime label mapping (+ workflow action verbs) | RUNTIME_LABEL_GENERATION (115 of 122), WORKFLOW_ACTION_LABEL_CORRECTION (33) | DONE |
+| S4 | Full sentence templates | FULL_SENTENCE_TEMPLATE (192), RUNTIME_LABEL_GENERATION (remaining 7) | DONE |
 
 ## S1 — Stable tab IDs
 
@@ -179,3 +180,63 @@ unchanged and are handled in S3.
 - Scheduler times are 24-hour.
 - Platform money shows two decimals.
 - Automated action checkboxes read "Send notification".
+
+## S4 — Full sentence templates
+
+**Change**
+- Backend `App\Domain\Shared\Support\Messages` and frontend `i18n/messages.ts` are keyed catalogs.
+  - Each entry is one complete English sentence with named `{{param}}` placeholders, keyed by its
+    dataset key.
+  - `Messages::text()` / `message()` render it. A missing parameter stays visible, and an unknown
+    backend key throws.
+  - This is the English source only: no i18n library, no `__()`, no `t()`.
+- 64 backend call sites in 40 files and 12 frontend call sites now render a template instead of
+  concatenating fragments. Areas covered:
+  - entitlement, bundle and module errors;
+  - notification and template validation;
+  - procurement and goods receipt;
+  - work order, part request, return and sale errors;
+  - tire import, inspection reasons, wheel configuration, decision engine;
+  - role permissions, file upload limits, maintenance assessment;
+  - intelligence data-readiness reasons;
+  - seeded set names;
+  - contract notes, default complaints and transfer notes.
+- Grammar-changing branches are separate keys, never a word passed as a parameter:
+  - approve vs cancel part request, each with or without a Work Order number;
+  - repair vs retread form title, and duplicate vs invalid import row;
+  - with or without product code, additional work, detail or leak test;
+  - "closest to body", and updated vs unmapped mapping history;
+  - truck type suffix, and an unset vehicle type;
+  - approved / rejected / cancelled part request.
+- Humanized codes inside sentences (bead and inner-liner conditions) now come from explicit condition
+  keys.
+
+**English output**: unchanged. Every template reproduces the previous concatenated text byte for byte
+(asserted in tests). Existing backend tests that assert error messages pass unchanged.
+
+**Dataset**
+- 25 new split keys with Indonesian translations.
+- 6 templates aligned to the source English.
+- The superseded templates and the 91 retired fragments point to their replacements (`superseded_by`).
+- FULL_SENTENCE_TEMPLATE: 192 of 192 resolved. RUNTIME_LABEL_GENERATION: 122 of 122.
+
+**Tests**
+- Backend `Unit/MessagesTest` (3 tests):
+  - every catalog key exists in `12` with identical English and the same parameters in the
+    Indonesian;
+  - rendering reproduces the previous English;
+  - a missing parameter stays visible and an unknown key throws.
+- Frontend `messages.test.ts` (3 tests): the same parity and rendering checks. A shared CSV reader lives
+  in `tests/unit/support/dataset.ts`.
+- Browser e2e, 4 checks:
+  - the part-request approve confirmation is one whole sentence;
+  - wheel position descriptions render;
+  - no unrendered `{{placeholders}}` appear;
+  - no page errors.
+- Lint: 27 pre-existing warnings, 0 errors. `npm run build` passes.
+
+**Remaining risk**: low.
+- Pluralization still uses "(s)" in English. ICU `_one` / `_other` forms are part of the rollout; the
+  Indonesian strings need no plural forms.
+- System-generated notes stored in records (contract notes, default complaints) are stored as rendered
+  English, as before. Storing `{code, params}` instead is S5 / rollout work.

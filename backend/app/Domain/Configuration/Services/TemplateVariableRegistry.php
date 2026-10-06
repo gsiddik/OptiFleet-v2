@@ -2,6 +2,8 @@
 
 namespace App\Domain\Configuration\Services;
 
+use App\Domain\Shared\Support\Messages;
+
 /**
  * Section 9: the sole source of truth for which variables a tenant
  * template may reference, per document type. TemplateValidator rejects any
@@ -252,7 +254,7 @@ class TemplateVariableRegistry
             'blocks' => array_map(fn ($name, $fields) => [
                 'name' => $name,
                 'label' => self::SECTION_LABELS[$name] ?? ucwords(str_replace('_', ' ', $name)),
-                'description' => 'Repeats its content once for every '.strtolower(self::SECTION_LABELS[$name] ?? $name).' row of the document.',
+                'description' => Messages::text('configuration.help.sectionRepeats', ['section' => strtolower(self::SECTION_LABELS[$name] ?? $name)]),
                 'fields' => array_map(fn ($field) => $describe($field, $name), $fields),
             ], array_keys($definition['sections']), array_values($definition['sections'])),
         ];

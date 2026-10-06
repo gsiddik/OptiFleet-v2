@@ -15,6 +15,7 @@ import type { PartRequestItem } from '../../../types';
 import { lineName } from '../../../utils/stockCondition';
 import { statusLabel } from '../../../i18n/statusRegistry';
 import { formatDateTime } from '../../../utils/date';
+import { message } from '../../../i18n/messages';
 
 const STATUSES = ['', 'REQUESTED', 'APPROVED', 'ISSUED', 'REJECTED', 'CANCELLED'];
 
@@ -152,9 +153,13 @@ export function PartRequestListPage() {
         title={confirming?.action === 'approve' ? 'Approve Part Request' : 'Cancel Part Request'}
         message={
           confirming
-            ? `${confirming.action === 'approve' ? 'Approve' : 'Cancel'} ${lines(confirming.request)
-                .map((l) => `${l.name} × ${formatQty(l.qty)}`)
-                .join(', ')} for ${confirming.request.work_order?.wo_number ?? 'this Work Order'}?`
+            ? partRequestDecisionMessage(
+                confirming.action,
+                lines(confirming.request)
+                  .map((l) => `${l.name} × ${formatQty(l.qty)}`)
+                  .join(', '),
+                confirming.request.work_order?.wo_number,
+              )
             : ''
         }
         confirmLabel={confirming?.action === 'approve' ? 'Approve' : 'Cancel Request'}
@@ -269,4 +274,16 @@ function IssueModal({
       </div>
     </Modal>
   );
+}
+
+/** Approve / cancel confirmation as one whole sentence per case (no verb or fallback passed as a fragment). */
+function partRequestDecisionMessage(action: 'approve' | 'cancel', lineSummary: string, woNumber: string | null | undefined): string {
+  if (action === 'approve') {
+    return woNumber
+      ? message('workOrder.confirm.partRequestApprove', { lines: lineSummary, woNumber })
+      : message('workOrder.confirm.partRequestApproveNoWorkOrder', { lines: lineSummary });
+  }
+  return woNumber
+    ? message('workOrder.confirm.partRequestCancel', { lines: lineSummary, woNumber })
+    : message('workOrder.confirm.partRequestCancelNoWorkOrder', { lines: lineSummary });
 }

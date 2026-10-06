@@ -2,6 +2,8 @@
 
 namespace App\Domain\Configuration\Services;
 
+use App\Domain\Shared\Support\Messages;
+
 /**
  * Section 9/50: the publish-time gate — static AST-vs-registry check that
  * rejects (and blocks publish for) any variable or section a template
@@ -21,7 +23,7 @@ class TemplateValidator
         $unknown = $this->findUnknownVariables($documentType, $template);
         if (! empty($unknown)) {
             throw new TemplateValidationException(
-                'Template references unknown variable(s): '.implode(', ', $unknown)
+                Messages::text('errors.notification.unknownVariables', ['variables' => implode(', ', $unknown)])
             );
         }
     }

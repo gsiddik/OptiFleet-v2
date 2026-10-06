@@ -8,6 +8,7 @@ import { WheelConfigurationPreview } from './WheelConfigurationPreview';
 import { PositionLabel } from '../../../../components/tires/PositionLabel';
 import { PositionPanel } from './PositionPanel';
 import type { PositionInstallation, VehicleWheelConfiguration, VersionPosition } from './masterTypes';
+import { message } from '../../../../i18n/messages';
 
 /**
  * Vehicle Detail → Wheels Configuration. Shows the configuration VERSION mapped to this vehicle
@@ -115,7 +116,9 @@ export function VehicleWheelsConfigurationTab({ vehicleId }: { vehicleId: string
                   <td style={{ padding: '4px 6px', fontFamily: 'monospace' }}>{h.config_code}</td>
                   <td style={{ padding: '4px 6px' }}>v{h.version_number}</td>
                   <td style={{ padding: '4px 6px' }}>{formatDateTime(h.mapped_at)}</td>
-                  <td style={{ padding: '4px 6px' }}>{h.status === 'ACTIVE' ? 'Current' : `Ended ${formatDate(h.ended_at)} (${h.end_reason === 'VERSION_UPDATED' ? 'updated to newer version' : 'unmapped'})`}</td>
+                  <td style={{ padding: '4px 6px' }}>{h.status === 'ACTIVE'
+                      ? message('tire.help.current')
+                      : message(h.end_reason === 'VERSION_UPDATED' ? 'tire.wheelConfiguration.historyEndedUpdated' : 'tire.wheelConfiguration.historyEndedUnmapped', { endedAt: formatDate(h.ended_at) })}</td>
                 </tr>
               ))}
             </tbody>

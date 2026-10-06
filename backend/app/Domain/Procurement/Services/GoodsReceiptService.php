@@ -15,6 +15,7 @@ use App\Domain\Procurement\Models\PurchaseOrderItem;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
 use App\Domain\Shared\Services\PrivateDocumentStorage;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -103,7 +104,7 @@ class GoodsReceiptService
 
                 // Section 22: over-receipt beyond the PO's remaining quantity is rejected by default.
                 if (($accepted + $rejected + $damaged) > $remaining + 0.0001) {
-                    throw new ProcurementException('Receiving '.$this->qty($accepted + $rejected + $damaged).' exceeds the Remaining Receivable Qty of this line ('.$this->qty(max(0, $remaining)).').');
+                    throw new ProcurementException(Messages::text('errors.procurement.receivingExceedsRemaining', ['quantity' => $this->qty($accepted + $rejected + $damaged), 'remaining' => $this->qty(max(0, $remaining))]));
                 }
 
                 $receiptLine = GoodsReceiptItem::query()->create([

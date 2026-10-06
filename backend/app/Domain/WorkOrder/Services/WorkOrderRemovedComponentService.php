@@ -6,6 +6,7 @@ use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartReturn;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
@@ -44,7 +45,7 @@ class WorkOrderRemovedComponentService
             throw new WorkOrderException('Removed quantity must be positive.');
         }
         if (! in_array($attributes['condition'], WorkOrderRemovedComponent::CONDITIONS, true)) {
-            throw new WorkOrderException('Condition must be one of: '.implode(', ', WorkOrderRemovedComponent::CONDITIONS).'.');
+            throw new WorkOrderException(Messages::text('errors.workOrder.conditionMustBeOneOf', ['values' => implode(', ', WorkOrderRemovedComponent::CONDITIONS)]));
         }
 
         QuantityPolicy::assertValidForProductId($attributes['product_id'] ?? null, $attributes['quantity']);

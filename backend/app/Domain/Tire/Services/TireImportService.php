@@ -3,6 +3,7 @@
 namespace App\Domain\Tire\Services;
 
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\Tire;
 use App\Support\Spreadsheet\XlsxException;
 use App\Support\Spreadsheet\XlsxReader;
@@ -56,7 +57,7 @@ class TireImportService
             ['L4GC-95ZR-B1KV-58NDF', '', ''], ['M2SN-76HJ-E5XW-13QAT', '1726', '2026-05-02'],
         ];
         $howTo = [
-            ['How to import New Stock tires — '.$product->name.($product->code ? ' ('.$product->code.')' : '')],
+            [$product->code ? Messages::text('documents.tireImport.howToTitleWithCode', ['productName' => $product->name, 'productCode' => $product->code]) : Messages::text('documents.tireImport.howToTitle', ['productName' => $product->name])],
             [''],
             ['1. Fill the sheet "Fill Here": one tire per row, starting on row 2. Do not rename the sheets or change the header row.'],
             ['2. Serial Number (required): the serial printed on the tire, at most 100 characters. It must not be registered yet for your company — letter case and surrounding spaces are ignored when comparing.'],
@@ -64,7 +65,7 @@ class TireImportService
             ['4. Purchase Date (optional): a date, written as YYYY-MM-DD (e.g. 2026-07-01).'],
             ['5. The tire specification (size, pattern, load index…) comes from this product; every imported tire is registered as New Stock.'],
             ['6. Save the file as .xlsx, then in Tire Detail → New Stock → Import, upload it, review the preview, select the rows to import and confirm.'],
-            ['7. At most '.self::MAX_ROWS.' rows per file. Rows whose serial already exists, or that repeat a serial in the file, are not imported.'],
+            [Messages::text('documents.tireImport.maxRowsNote', ['maxRows' => self::MAX_ROWS])],
             [''],
             ['Examples'],
             self::HEADERS,
@@ -142,7 +143,7 @@ class TireImportService
         try {
             $reader = XlsxReader::open($path);
             if (! in_array(self::SHEET_FILL, $reader->sheetNames(), true)) {
-                throw ValidationException::withMessages(['file' => 'The workbook has no sheet named "'.self::SHEET_FILL.'". Download the template and fill that sheet.']);
+                throw ValidationException::withMessages(['file' => Messages::text('validation.tire.importSheetMissing', ['sheet' => self::SHEET_FILL])]);
             }
             $sheet = $reader->rows(self::SHEET_FILL);
         } catch (XlsxException $e) {
@@ -155,14 +156,14 @@ class TireImportService
             $headers[] = trim($headerRow[$c]['value'] ?? '');
         }
         if ($headers !== self::HEADERS) {
-            throw ValidationException::withMessages(['file' => 'The header row of "'.self::SHEET_FILL.'" must be exactly: '.implode(', ', self::HEADERS).'.']);
+            throw ValidationException::withMessages(['file' => Messages::text('validation.tire.importHeaderMismatch', ['sheet' => self::SHEET_FILL, 'headers' => implode(', ', self::HEADERS)])]);
         }
         unset($sheet[1]);
         if ($sheet === []) {
-            throw ValidationException::withMessages(['file' => 'The sheet "'.self::SHEET_FILL.'" has no tire rows. Fill one tire per row below the header.']);
+            throw ValidationException::withMessages(['file' => Messages::text('validation.tire.importNoRows', ['sheet' => self::SHEET_FILL])]);
         }
         if (count($sheet) > self::MAX_ROWS) {
-            throw ValidationException::withMessages(['file' => 'At most '.self::MAX_ROWS.' tire rows can be imported per file.']);
+            throw ValidationException::withMessages(['file' => Messages::text('validation.tire.importMaxRows', ['maxRows' => self::MAX_ROWS])]);
         }
 
         $rows = [];
@@ -259,7 +260,7 @@ class TireImportService
                 $row['errors'][] = 'This serial number is already registered.';
             } elseif (isset($seen[$key])) {
                 $row['status'] = self::DUPLICATE;
-                $row['errors'][] = 'This serial number is repeated in the file (row '.$seen[$key].').';
+                $row['errors'][] = Messages::text('validation.tire.importSerialRepeated', ['row' => $seen[$key]]);
             } else {
                 $row['status'] = self::VALID;
             }

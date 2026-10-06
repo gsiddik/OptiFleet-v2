@@ -14,6 +14,7 @@ import { formatQty } from '../../../utils/quantity';
 import type { WorkOrderPartReturnItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { formatDateTime } from '../../../utils/date';
+import { message } from '../../../i18n/messages';
 
 const STATUSES = [
   { value: 'PENDING_PROCESSING', label: 'Pending Processing' },
@@ -226,7 +227,9 @@ function ReturnedPartsProcessingModal({ item: listed, onClose, onProcessed }: { 
               Inspection result: <strong>{matches ? 'MATCH' : 'MISMATCH'}</strong>
               {' — '}
               {actualCondition === 'UNUSED_NEW'
-                ? `${formatQty(receivedQty)} will be added back to ${item.warehouse?.name ?? 'the warehouse'} stock.`
+                ? item.warehouse?.name
+                  ? message('inventory.confirm.restockToWarehouse', { quantity: formatQty(receivedQty), warehouseName: item.warehouse.name })
+                  : message('inventory.confirm.restockToUnknownWarehouse', { quantity: formatQty(receivedQty) })
                 : 'nothing is added to available stock.'}
             </div>
           </>

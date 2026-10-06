@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { STATUS_CODES, statusDisplayKey, statusEntry, statusLabel } from '../../src/i18n/statusRegistry.ts';
+import { datasetByKey } from './support/dataset.ts';
 
 const ROOT = join(import.meta.dirname, '../../..');
 
@@ -36,27 +37,6 @@ function canonicalStatusCodes(): Map<string, string> {
   return found;
 }
 
-/** Minimal RFC 4180 CSV reader (quoted fields, escaped quotes, embedded newlines). */
-function readCsv(path: string): Record<string, string>[] {
-  const text = readFileSync(path, 'utf8');
-  const rows: string[][] = [];
-  let row: string[] = [], field = '', quoted = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (quoted) {
-      if (ch === '"' && text[i + 1] === '"') { field += '"'; i++; }
-      else if (ch === '"') quoted = false;
-      else field += ch;
-    } else if (ch === '"') quoted = true;
-    else if (ch === ',') { row.push(field); field = ''; }
-    else if (ch === '\n') { row.push(field.replace(/\r$/, '')); rows.push(row); row = []; field = ''; }
-    else field += ch;
-  }
-  if (field || row.length) { row.push(field); rows.push(row); }
-  const [header, ...body] = rows;
-  return body.map((r) => Object.fromEntries(header.map((h, i) => [h, r[i] ?? ''])));
-}
-
 test('every canonical status code has a registry entry', () => {
   const codes = canonicalStatusCodes();
   assert.ok(codes.size > 100, `extraction found only ${codes.size} codes — the source scan is broken`);
@@ -65,7 +45,7 @@ test('every canonical status code has a registry entry', () => {
 });
 
 test('every registry key has a final Indonesian translation in the EN-ID dataset', () => {
-  const dataset = new Map(readCsv(join(ROOT, 'docs/i18n/12-en-id-translation-dataset-final.csv')).map((r) => [r.translation_key, r]));
+  const dataset = datasetByKey();
   const keys = [...STATUS_CODES.map((c) => statusDisplayKey(c)!), statusDisplayKey('ISSUED', 'document')!, statusDisplayKey('ISSUED', 'stock')!];
   const problems = keys.filter((k) => !dataset.get(k)?.translated_text_id);
   assert.deepEqual(problems, []);

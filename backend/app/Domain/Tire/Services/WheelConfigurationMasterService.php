@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tire\Services;
 
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfigurationMaster;
 use App\Domain\Tire\Models\WheelConfigurationVersion;
@@ -211,7 +212,7 @@ class WheelConfigurationMasterService
     private function throwDuplicate(array $config): never
     {
         throw ValidationException::withMessages([
-            'config_code' => "A wheel configuration {$config['config_code']} already exists for this vehicle type".($config['truck_configuration_type'] ? ' and truck configuration type' : '').'. Edit that configuration instead.',
+            'config_code' => Messages::text($config['truck_configuration_type'] ? 'validation.tire.wheelConfigurationExistsForTruckType' : 'validation.tire.wheelConfigurationExists', ['configCode' => $config['config_code']]),
         ]);
     }
 

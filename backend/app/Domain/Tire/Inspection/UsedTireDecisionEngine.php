@@ -2,6 +2,8 @@
 
 namespace App\Domain\Tire\Inspection;
 
+use App\Domain\Shared\Support\Messages;
+
 /**
  * Pass/fail decision for a used tire inspection — no weighted scoring. Every threshold comes from
  * the tire's rule profile (category + optional model + application); nothing is hardcoded here, and
@@ -31,6 +33,16 @@ namespace App\Domain\Tire\Inspection;
  */
 final class UsedTireDecisionEngine
 {
+    /** Bead / inner liner condition codes → message keys for their display text (no reformatting of the code). */
+    private const CONDITION_LABEL_KEYS = [
+        'TORN' => 'tire.conditions.torn',
+        'DEFORMED' => 'tire.conditions.deformed',
+        'BEAD_WIRE_DAMAGED' => 'tire.conditions.beadWireDamaged',
+        'CRACKED_DELAMINATED' => 'tire.conditions.crackedDelaminated',
+        'WRINKLED_HEAT_DAMAGE' => 'tire.conditions.wrinkledHeatDamage',
+        'CORD_EXPOSED' => 'tire.conditions.cordExposed',
+    ];
+
     public const REUSE = 'REUSE';
 
     public const REPAIR = 'REPAIR';
@@ -114,10 +126,10 @@ final class UsedTireDecisionEngine
             $scrap[] = 'Deep sidewall cut / crack.';
         }
         if (in_array($a('bead_condition'), ['TORN', 'DEFORMED', 'BEAD_WIRE_DAMAGED'], true)) {
-            $scrap[] = 'Bead damage: '.strtolower(str_replace('_', ' ', $a('bead_condition'))).'.';
+            $scrap[] = Messages::text('tire.reasons.beadDamageDetail', ['condition' => Messages::text(self::CONDITION_LABEL_KEYS[$a('bead_condition')])]);
         }
         if (in_array($a('inner_liner_condition'), ['CRACKED_DELAMINATED', 'WRINKLED_HEAT_DAMAGE', 'CORD_EXPOSED'], true)) {
-            $scrap[] = 'Inner liner / casing failure: '.strtolower(str_replace('_', ' ', $a('inner_liner_condition'))).'.';
+            $scrap[] = Messages::text('tire.reasons.innerLinerFailure', ['condition' => Messages::text(self::CONDITION_LABEL_KEYS[$a('inner_liner_condition')])]);
         }
         if ($a('run_flat_overheat') === 'PHYSICAL_SIGN') {
             $scrap[] = 'Physical sign of run-flat / low-pressure / overheat damage.';
@@ -146,14 +158,14 @@ final class UsedTireDecisionEngine
             $dService = $this->hundredths((string) $profile['d_service_mm']);
             $tread = $dMin <= $dPull;
             if ($dMin < $dService) {
-                $treadReasons[] = 'D_min '.$this->mm($dMin).' is below the minimum service depth D_service '.$this->mm($dService).'.';
+                $treadReasons[] = Messages::text('tire.reasons.belowDService', ['dMin' => $this->mm($dMin), 'dService' => $this->mm($dService)]);
             } elseif ($tread) {
-                $treadReasons[] = 'D_min '.$this->mm($dMin).' is at or below the planned removal depth D_pull '.$this->mm($dPull).'.';
+                $treadReasons[] = Messages::text('tire.reasons.atOrBelowDPull', ['dMin' => $this->mm($dMin), 'dPull' => $this->mm($dPull)]);
             }
         }
         if (isset(self::UNSUITABLE_WEAR[$a('wear_pattern')])) {
             $tread = true;
-            $treadReasons[] = 'Tread not suitable to retain: '.self::UNSUITABLE_WEAR[$a('wear_pattern')].'.';
+            $treadReasons[] = Messages::text('tire.reasons.treadNotSuitable', ['wearPattern' => self::UNSUITABLE_WEAR[$a('wear_pattern')]]);
         }
         if (isset(self::WEAR_FOLLOW_UPS[$a('wear_pattern')])) {
             $followUps[] = self::WEAR_FOLLOW_UPS[$a('wear_pattern')];
@@ -235,7 +247,7 @@ final class UsedTireDecisionEngine
             }
         } elseif ($repairNeeded) {
             [$recommendation, $reasons] = $repairAllowed
-                ? [self::REPAIR, [count($damages).' repairable damage(s) within the repair limits; tread still usable.']]
+                ? [self::REPAIR, [Messages::text('tire.reasons.repairableDamages', ['count' => count($damages)])]]
                 : [self::SCRAP, $repairFails];
         } else {
             $recommendation = self::REUSE;
@@ -300,7 +312,7 @@ final class UsedTireDecisionEngine
             }
         }
         if ($missing !== []) {
-            $hold[] = 'Tread depth: at least 6 points are required (3 zones × inner / outer main groove); missing '.implode(', ', $missing).'.';
+            $hold[] = Messages::text('tire.reasons.treadPointsMissing', ['points' => implode(', ', $missing)]);
         }
 
         return $points === [] || $missing !== [] ? null : min($points);
@@ -330,7 +342,7 @@ final class UsedTireDecisionEngine
             };
             foreach ($required as $field) {
                 if (($d[$field] ?? null) === null || $d[$field] === '') {
-                    $hold[] = "{$label}: ".str_replace('_mm', '', $field).' is required.';
+                    $hold[] = Messages::text('tire.reasons.limitFieldRequired', ['label' => $label, 'field' => str_replace('_mm', '', $field)]);
                 }
             }
             if ($limits === null) {

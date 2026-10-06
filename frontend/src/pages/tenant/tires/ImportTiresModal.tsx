@@ -5,6 +5,7 @@ import { ScrollTable, type ScrollColumn } from '../../../components/ScrollTable'
 import { formatDate } from '../../../utils/date';
 import { downloadProtectedFile } from '../../../utils/protectedFile';
 import type { ProductItem } from '../../../types';
+import { message } from '../../../i18n/messages';
 
 type RowStatus = 'VALID' | 'DUPLICATE' | 'INVALID';
 
@@ -146,7 +147,9 @@ export function ImportTiresModal({ product, onClose, onImported }: { product: Pr
       header: 'Check',
       cell: (r) => (
         <span data-row-status={r.status} style={{ color: STATUS_COLOR[r.status], whiteSpace: 'normal' }}>
-          {r.status === 'VALID' ? 'Ready' : `${r.status === 'DUPLICATE' ? 'Duplicate' : 'Invalid'} — ${r.errors.join(' ')}`}
+          {r.status === 'VALID'
+            ? message('tire.fields.ready')
+            : message(r.status === 'DUPLICATE' ? 'tire.import.rowStatusDuplicate' : 'tire.import.rowStatusInvalid', { errors: r.errors.join(' ') })}
         </span>
       ),
     },

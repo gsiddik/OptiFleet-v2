@@ -8,6 +8,7 @@ use App\Domain\Contract\Models\ContractItem;
 use App\Domain\Pricing\Services\PricingResolutionService;
 use App\Domain\Pricing\Support\Money;
 use App\Domain\ProductCatalog\Models\Bundle;
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Subscription\Services\SubscriptionService;
 use Illuminate\Support\Facades\DB;
 
@@ -259,7 +260,7 @@ class ContractService
         }
 
         DB::transaction(function () use ($contract, $reason) {
-            $contract->update(['status' => 'TERMINATED', 'notes' => trim(($contract->notes ?? '')."\nTerminated: ".$reason)]);
+            $contract->update(['status' => 'TERMINATED', 'notes' => trim(($contract->notes ?? '')."\n".Messages::text('contract.notes.contractTerminated', ['reason' => $reason]))]);
 
             $subscription = $contract->subscription;
             if ($subscription) {

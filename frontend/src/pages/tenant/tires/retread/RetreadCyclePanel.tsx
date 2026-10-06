@@ -16,6 +16,7 @@ import type { PartnerItem } from "../../../../types";
 import { formatDate } from "../../../../utils/date";
 import { formatMoney } from "../../../../utils/money";
 import type { CycleListRow } from "./retreadTypes";
+import { message } from "../../../../i18n/messages";
 
 const MAX_PHOTOS = 3;
 const PHOTO_MAX_BYTES = 3 * 1024 * 1024;
@@ -307,7 +308,7 @@ function RetreadFormModal({
   return (
     <Modal
       open
-      title={`${row.kind === "REPAIR" ? "Repair" : "Retread"} Form — ${row.tire.serial_number}`}
+      title={message(row.kind === "REPAIR" ? "tire.retread.repairFormTitle" : "tire.retread.retreadFormTitle", { serialNumber: row.tire.serial_number })}
       onClose={onClose}
       width={620}
     >

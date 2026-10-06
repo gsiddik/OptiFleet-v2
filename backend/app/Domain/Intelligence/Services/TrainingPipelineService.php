@@ -9,6 +9,7 @@ use App\Domain\Intelligence\DataReadiness\TrainingRow;
 use App\Domain\Intelligence\Ml\LogisticRegression;
 use App\Domain\Intelligence\Ml\ModelEvaluator;
 use App\Domain\Intelligence\Models\IntelligenceModel;
+use App\Domain\Shared\Support\Messages;
 
 /**
  * Phase 7 Section 42, 66-67: Dataset Selection -> Data Readiness ->
@@ -58,7 +59,7 @@ class TrainingPipelineService
         $readinessResult = $this->readiness->assess($tenantId, $target);
 
         if ($readinessResult->status === DataReadinessResult::NOT_READY) {
-            return $this->registry->markFailed($model, 'Data readiness NOT_READY: '.implode(' ', $readinessResult->reasons));
+            return $this->registry->markFailed($model, Messages::text('intelligence.reasons.dataNotReady', ['reasons' => implode(' ', $readinessResult->reasons)]));
         }
 
         $model = $this->registry->markTraining($model);

@@ -26,6 +26,7 @@ import {
 } from './tireOperationTypes';
 import { UsageRestrictionWarnings } from './UsageRestrictionWarnings';
 import { outsideAllowedPositions, restrictionText } from './usageRestrictions';
+import { message } from '../../../../i18n/messages';
 
 interface Pair {
   from: string;
@@ -550,7 +551,7 @@ function OperationSection({
                   <h4 style={{ margin: '0 0 8px', fontSize: 13, color: REPLACEMENT_COLOR, textTransform: 'uppercase', letterSpacing: 0.4 }}>Replacing With</h4>
                   <FormField label="Serial Number" required>
                     <select aria-label={`Serial Number ${code}`} value={replacements[code] ?? ''} onChange={(e) => onReplacement(code, e.target.value)} style={inputStyle}>
-                      <option value="">{options === undefined ? 'Loading…' : options.length === 0 ? `No New Stock or Reuse serial of ${tire.product?.name ?? 'this product'}` : 'Select serial number…'}</option>
+                      <option value="">{options === undefined ? 'Loading…' : options.length === 0 ? tire.product?.name ? message('tire.operations.noSerialForProduct', { productName: tire.product.name }) : message('tire.operations.noSerialForThisProduct') : 'Select serial number…'}</option>
                       {(options ?? [])
                         .filter((c) => c.id === replacements[code] || !chosenSerials.includes(c.id))
                         .map((c) => (

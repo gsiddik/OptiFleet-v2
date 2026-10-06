@@ -2,6 +2,7 @@
 
 namespace App\Domain\Tire\Inspection;
 
+use App\Domain\Shared\Support\Messages;
 use App\Domain\Tire\Models\Tire;
 use App\Domain\Tire\Models\TireInspection;
 use App\Domain\Tire\Models\TireRuleProfile;
@@ -152,7 +153,9 @@ class UsedTireInspectionService
             $legacy = TireInspection::query()->create([
                 'tenant_id' => $locked->tenant_id, 'tire_id' => $locked->id,
                 'tread_depth_mm' => $decision['d_min_mm'],
-                'condition' => 'Used tire inspection — recommendation '.$decision['recommendation'].($decision['recommendation_detail'] ? ' ('.str_replace('_', ' ', $decision['recommendation_detail']).')' : ''),
+                'condition' => $decision['recommendation_detail']
+                    ? Messages::text('tire.reasons.inspectionRecommendationWithDetail', ['recommendation' => $decision['recommendation'], 'detail' => str_replace('_', ' ', $decision['recommendation_detail'])])
+                    : Messages::text('tire.reasons.inspectionRecommendation', ['recommendation' => $decision['recommendation']]),
                 'damage' => count($input['damages'] ?? []) > 0 ? count($input['damages']).' damage(s) recorded' : null,
                 'recommendation' => implode(' ', $decision['reasons']),
                 'inspected_by' => $user->id, 'inspected_at' => $now,
@@ -196,7 +199,7 @@ class UsedTireInspectionService
         return DB::transaction(function () use ($tire, $code, $user) {
             $locked = Tire::query()->lockForUpdate()->findOrFail($tire->id);
             if (trim((string) $locked->manufacture_date_code) !== '') {
-                throw new TireException('This tire already has a Manufacture Date Code ('.$locked->manufacture_date_code.'); it is only filled in here when missing.');
+                throw new TireException(Messages::text('errors.tire.mdcAlreadySet', ['code' => $locked->manufacture_date_code]));
             }
             $locked->update(['manufacture_date_code' => $code]);
 
@@ -329,7 +332,9 @@ class UsedTireInspectionService
             ->map(fn ($r) => ['source' => 'REPAIR_CYCLE', 'label' => "Repair cycle {$r->cycle_number} — {$r->status}".($r->approval_disposition ? " ({$r->approval_disposition})" : ''), 'at' => $r->approved_at])
             ->merge(TireUsedInspection::query()->where('tire_id', $tire->id)->where('status', TireUsedInspection::APPROVED)
                 ->where(fn ($q) => $q->where('final_disposition', 'REPAIR')->orWhere('additional_work', 'CASING_REPAIR'))->orderBy('approved_at')->get()
-                ->map(fn ($i) => ['source' => 'INSPECTION', 'label' => 'Inspection disposition '.$i->final_disposition.($i->additional_work ? ' + '.$i->additional_work : ''), 'at' => $i->approved_at?->toIso8601String()]))
+                ->map(fn ($i) => ['source' => 'INSPECTION', 'label' => $i->additional_work
+                    ? Messages::text('tire.history.inspectionDispositionWithWork', ['disposition' => $i->final_disposition, 'additionalWork' => $i->additional_work])
+                    : Messages::text('tire.history.inspectionDisposition', ['disposition' => $i->final_disposition]), 'at' => $i->approved_at?->toIso8601String()]))
             ->values()->all();
 
         return [
@@ -381,7 +386,7 @@ class UsedTireInspectionService
 
         return match ($recommendation) {
             'REUSE' => ['required_work' => 'None.', 'stock_status' => 'Available — reusable used stock (REUSE).', 'return_requirement' => 'Approve the disposition and choose the warehouse.', 'usage_restrictions' => $restrictions],
-            'REPAIR' => ['required_work' => "Repair according to the {$standard} tire repair standard.", 'stock_status' => 'Waiting for Repair — unavailable for installation.', 'return_requirement' => 'Repair complete + final inspection'.($leak ? ' + leak test passed' : '').'.', 'usage_restrictions' => $restrictions],
+            'REPAIR' => ['required_work' => "Repair according to the {$standard} tire repair standard.", 'stock_status' => 'Waiting for Repair — unavailable for installation.', 'return_requirement' => Messages::text($leak ? 'tire.reasons.repairReturnRequirementWithLeakTest' : 'tire.reasons.repairReturnRequirement'), 'usage_restrictions' => $restrictions],
             'RETREAD' => ['required_work' => $additionalWork === 'CASING_REPAIR' ? 'Casing repair, then retread.' : 'Retread.', 'stock_status' => 'Waiting for Retread — unavailable for installation.', 'return_requirement' => 'Retread complete + final assessment + used tire inspection.', 'usage_restrictions' => $restrictions],
             'HOLD' => ['required_work' => $detail === 'RETREAD_CANDIDATE' ? 'Send the casing for the retreader\'s final inspection.' : 'Complete the open inspection items / obtain the specialist decision.', 'stock_status' => 'On Hold — unavailable for installation.', 'return_requirement' => 'Resolve the open items and inspect the tire again.', 'usage_restrictions' => $restrictions],
             default => ['required_work' => 'None — dispose of the tire.', 'stock_status' => 'Scrap — not stock (history is kept).', 'return_requirement' => 'Not applicable.', 'usage_restrictions' => []],

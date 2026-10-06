@@ -1,3 +1,5 @@
+import { message } from '../i18n/messages';
+
 /**
  * Tire position codes — one parser/formatter for every screen.
  *
@@ -27,8 +29,14 @@ export function parsePositionCode(raw: string): ParsedPosition {
 /** "Front Left, Axle 1, Pos. 1" · "Spare 1" · legacy "FRONT_LEFT" → "Front Left". */
 export function describePositionCode(raw: string): string {
   const p = parsePositionCode(raw);
-  if (p.kind === 'AXLE') return `${p.group === 'F' ? 'Front' : 'Rear'} ${p.side === 'L' ? 'Left' : 'Right'}, Axle ${p.axle}, Pos. ${p.index}`;
-  if (p.kind === 'SPARE') return `Spare ${p.index}`;
+  if (p.kind === 'AXLE')
+    return message('common.tire.positionLabel', {
+      axleGroup: message(p.group === 'F' ? 'common.fields.front' : 'common.fields.rear'),
+      side: message(p.side === 'L' ? 'common.fields.left' : 'common.fields.right'),
+      axle: p.axle,
+      index: p.index,
+    });
+  if (p.kind === 'SPARE') return message('common.fields.spareIndex', { index: p.index });
   return p.code
     .toLowerCase()
     .split(/[_\s-]+/)

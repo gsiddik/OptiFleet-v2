@@ -4,6 +4,7 @@ namespace App\Domain\Notification\Services;
 
 use App\Domain\Configuration\Services\TemplateParser;
 use App\Domain\Configuration\Services\TemplateValidationException;
+use App\Domain\Shared\Support\Messages;
 
 /**
  * Section 33: the same missing-variable publish gate as Document Templates
@@ -55,7 +56,7 @@ class NotificationTemplateValidator
         $this->walk($ast, $definition['scalars'], $definition['sections'], $definition['scalars'], $unknown);
 
         if (! empty($unknown)) {
-            throw new TemplateValidationException('Template references unknown variable(s): '.implode(', ', array_unique($unknown)));
+            throw new TemplateValidationException(Messages::text('errors.notification.unknownVariables', ['variables' => implode(', ', array_unique($unknown))]));
         }
     }
 
