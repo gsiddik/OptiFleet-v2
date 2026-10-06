@@ -39,6 +39,8 @@
   "help": {
     "inspectionCreatedStatusStatus": "Inspection created (status: {{status}})",
     "maintenanceRequestCreatedInspectionSResult": "Maintenance Request created from this inspection's result",
+    "reviewedOn": "Reviewed on {{date}}",
+    "statusChangedFromTo": "Status changed from {{from}} to {{to}}",
     "statusChangedStatusStatus": "Status changed from {{status}} to {{status}}",
     "system": "System"
   },

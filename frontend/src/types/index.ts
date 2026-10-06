@@ -36,6 +36,8 @@ export interface Tenant {
   name: string;
   legal_name?: string | null;
   industry?: string | null;
+  /** Default UI / document language for the tenant's users ('en' | 'id'); null = none. */
+  default_locale?: 'en' | 'id' | null;
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   created_at: string;
 }

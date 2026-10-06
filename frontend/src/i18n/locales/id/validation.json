@@ -266,6 +266,10 @@
     "abbreviationMustContainLettersZOnly": "Singkatan hanya boleh berisi huruf A-Z (mis. ENG, BRK, HYD).",
     "abbreviationMustExactly3Letters": "Singkatan harus tepat 3 huruf."
   },
+  "vehicle": {
+    "selectVehicleBrand": "Pilih Merek Kendaraan.",
+    "selectVehicleModel": "Pilih Model Kendaraan."
+  },
   "vehicleBrand": {
     "selectOnlyActiveVehicleCategories": "Pilih hanya Kategori Kendaraan yang aktif."
   },

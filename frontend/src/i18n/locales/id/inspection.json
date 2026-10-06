@@ -39,6 +39,8 @@
   "help": {
     "inspectionCreatedStatusStatus": "Inspeksi dibuat (status: {{status}})",
     "maintenanceRequestCreatedInspectionSResult": "Permintaan Pemeliharaan dibuat dari hasil inspeksi ini",
+    "reviewedOn": "Ditinjau pada {{date}}",
+    "statusChangedFromTo": "Status berubah dari {{from}} menjadi {{to}}",
     "statusChangedStatusStatus": "Status berubah dari {{status}} menjadi {{status}}",
     "system": "Sistem"
   },

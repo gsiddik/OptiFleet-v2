@@ -90,7 +90,7 @@ export function RoleManager({ rolesEndpoint, permissionsEndpoint }: { rolesEndpo
               {role.is_system && <span style={{ fontSize: 11, color: '#9ca3af' }}>{t('common.fields.system2')}</span>}
             </div>
             {role.description && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4 }}>{role.description}</div>}
-            <div style={{ fontSize: 12, color: '#6b7280', margin: '6px 0 10px' }}>{role.permissions.length} permissions</div>
+            <div style={{ fontSize: 12, color: '#6b7280', margin: '6px 0 10px' }}>{t('common.fields.permissionCount', { count: role.permissions.length })}</div>
             {canEdit && role.editable !== false && (
               <button className="btn-link" onClick={() => setEditingRole(role)}>
                 {t('common.actions.editRoleAndPermissions')}

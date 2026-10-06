@@ -61,6 +61,7 @@
     "suspension": "Suspension",
     "toBranch": "To Branch",
     "transmission": "Transmission",
+    "valueLegacy": "{{value}} (legacy)",
     "vinOptional": "VIN (optional)",
     "wheelsConfiguration": "Wheels Configuration",
     "wheelsInclSpare": "Wheels (incl. spare)",

@@ -1,3 +1,4 @@
+// i18n-audit: canonical-english — shown through breadcrumb.<camelCaseSegment> (tests/unit/i18nSharedUi.test.ts).
 import { translated } from '../i18n/i18n';
 
 /**

@@ -120,6 +120,7 @@
       "totalCurrencyToLocaleString": "Total: {{currency}} {{toLocaleString}}"
     },
     "help": {
+      "activePriceFloor": "Harga aktif: {{price}} (harga satuan tidak boleh di bawah harga ini)",
       "activePriceToLocaleStringUnit": "Harga Aktif: {{toLocaleString}} (harga satuan tidak boleh di bawah nilai ini)",
       "backToContractManagement": "← Kembali ke Manajemen Kontrak",
       "backToTenantContracts": "← Kembali ke Kontrak Penyewa",

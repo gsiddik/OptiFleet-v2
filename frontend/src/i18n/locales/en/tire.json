@@ -133,6 +133,7 @@
   "errors": {
     "codeAlreadyOpenValueWorkOrder": "{{code}} is already in an open {{value}} (Work Order {{value}}).",
     "nameExceeds3MbMaximumSize": "\"{{name}}\" exceeds the 3 MB maximum size.",
+    "positionInOpenOperation": "{{code}} is already in an open {{operation}} (Work Order {{workOrder}}).",
     "required": "Required."
   },
   "fields": {
@@ -481,6 +482,7 @@
     "allPositionsSelectedInspectionClickPosition": "All positions are selected for inspection. Click a position to leave it out.",
     "aMaxMonthsMo": "{{a_max_months}} mo",
     "answerQuestionsSeeRecommendation": "Answer the questions to see the recommendation.",
+    "approvedByOnDisposition": "Approved by {{approver}} on {{date}} — disposition {{final_disposition}}",
     "approvedValueValueDispositionFinalDisposition": "Approved by {{value}} on {{value}} — disposition {{final_disposition}}",
     "cancelsToLowerCaseWorkOrder": "This cancels the {{toLowerCase}} and its Work Order",
     "changesPositionListConfigurationCurrentVersion": "Changes to the position list of this configuration (the current version keeps its positions as history)",

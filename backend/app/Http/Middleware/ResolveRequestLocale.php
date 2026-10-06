@@ -4,8 +4,10 @@ namespace App\Http\Middleware;
 
 use App\Domain\DocumentGeneration\Support\DocumentLocale;
 use App\Domain\Identity\Models\Tenant;
+use App\Domain\Shared\Support\ResponseMessageLocalizer;
 use App\Support\TenantContext;
 use Closure;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -39,6 +41,25 @@ class ResolveRequestLocale
         $tenantDefault = $tenantId ? ($this->context->tenantDefaultLocale() ?? Tenant::query()->whereKey($tenantId)->value('default_locale')) : null;
         app()->setLocale(DocumentLocale::resolve($user?->preferred_locale, $tenantDefault, DocumentLocale::fromLanguages($request->getLanguages())));
 
-        return $next($request);
+        return $this->localizeMessages($next($request));
+    }
+
+    /**
+     * English domain messages (errors raised anywhere below, already rendered to JSON) in the request
+     * locale; see ResponseMessageLocalizer. Only `message` / `errors` change, never codes or data.
+     */
+    private function localizeMessages(Response $response): Response
+    {
+        $locale = app()->getLocale();
+        if ($locale === 'en' || ! $response instanceof JsonResponse) {
+            return $response;
+        }
+        $payload = $response->getData(true);
+        if (! is_array($payload) || (! isset($payload['message']) && ! isset($payload['errors']))) {
+            return $response;
+        }
+        $response->setData(ResponseMessageLocalizer::localizePayload($payload, $locale));
+
+        return $response;
     }
 }

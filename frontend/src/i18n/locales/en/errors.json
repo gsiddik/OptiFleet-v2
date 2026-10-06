@@ -21,6 +21,7 @@
     "onlyBreakdownAssessedRepairRequiredConverted": "Only a breakdown assessed as repair-required can be converted to a maintenance request."
   },
   "common": {
+    "andCountMoreErrors": "(and {{count}} more errors)",
     "branchOutsideAssignedDataScope": "This branch is outside your assigned data scope.",
     "fileExceeds5mbMaximumSize": "File exceeds the 5MB maximum size.",
     "missingRequiredPermissionPermission": "Missing required permission: {{permission}}",

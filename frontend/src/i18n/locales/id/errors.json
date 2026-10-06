@@ -21,6 +21,7 @@
     "onlyBreakdownAssessedRepairRequiredConverted": "Hanya kerusakan yang dinilai perlu perbaikan yang dapat dikonversi menjadi permintaan pemeliharaan."
   },
   "common": {
+    "andCountMoreErrors": "(dan {{count}} kesalahan lainnya)",
     "branchOutsideAssignedDataScope": "Cabang ini berada di luar lingkup data Anda.",
     "fileExceeds5mbMaximumSize": "File melebihi ukuran maksimum 5MB.",
     "missingRequiredPermissionPermission": "Izin yang diperlukan tidak dimiliki: {{permission}}",

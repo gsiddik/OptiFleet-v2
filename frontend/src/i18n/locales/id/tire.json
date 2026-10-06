@@ -133,6 +133,7 @@
   "errors": {
     "codeAlreadyOpenValueWorkOrder": "{{code}} sudah berada dalam {{value}} yang terbuka (Work Order {{value}}).",
     "nameExceeds3MbMaximumSize": "\"{{name}}\" melebihi ukuran maksimum 3 MB.",
+    "positionInOpenOperation": "{{code}} sudah berada dalam {{operation}} yang terbuka (Work Order {{workOrder}}).",
     "required": "Wajib diisi."
   },
   "fields": {
@@ -481,6 +482,7 @@
     "allPositionsSelectedInspectionClickPosition": "Semua posisi dipilih untuk inspeksi. Klik posisi untuk mengecualikannya.",
     "aMaxMonthsMo": "{{a_max_months}} bln",
     "answerQuestionsSeeRecommendation": "Jawab pertanyaan untuk melihat rekomendasi.",
+    "approvedByOnDisposition": "Disetujui oleh {{approver}} pada {{date}} — disposisi {{final_disposition}}",
     "approvedValueValueDispositionFinalDisposition": "Disetujui oleh {{value}} pada {{value}} — disposisi {{final_disposition}}",
     "cancelsToLowerCaseWorkOrder": "Tindakan ini membatalkan {{toLowerCase}} beserta Work Order-nya",
     "changesPositionListConfigurationCurrentVersion": "Perubahan pada daftar posisi konfigurasi ini (versi saat ini menyimpan posisinya sebagai riwayat)",

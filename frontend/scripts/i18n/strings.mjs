@@ -26,6 +26,8 @@ const SRC = join(FRONTEND, 'src');
 const LOCALES = join(SRC, 'i18n/locales');
 
 const TEXT_ATTRS = new Set(['label', 'placeholder', 'title', 'alt', 'header', 'emptyLabel', 'emptyText', 'description', 'confirmLabel', 'cancelLabel', 'text', 'message', 'hint', 'helperText', 'tooltip', 'subtitle', 'heading', 'caption', 'legend', 'noun', 'buttonLabel', 'submitLabel', 'loadingLabel', 'busyLabel']);
+/** Custom component props carrying shown text: emptyHint, confirmText, sectionTitle, errorMessage… */
+const TEXT_SUFFIX = /[a-z](Label|Hint|Text|Title|Message|Placeholder|Tooltip|Description|Caption|Heading|Subtitle)$/;
 const TEXT_PROPS = new Set([...TEXT_ATTRS, 'labelText', 'shortLabel', 'columnLabel', 'reason', 'error', 'warning', 'summary', 'detail', 'details', 'help', 'title']);
 const NON_TEXT_ATTRS = new Set(['className', 'style', 'href', 'to', 'type', 'id', 'name', 'key', 'value', 'htmlFor', 'role', 'src', 'target', 'rel', 'accept', 'autoComplete', 'method', 'action', 'lang', 'inputMode', 'pattern', 'step', 'min', 'max', 'width', 'height', 'd', 'viewBox', 'fill', 'stroke', 'path', 'data-testid', 'domain', 'status', 'icon', 'variant', 'size', 'align', 'tab', 'mode']);
 const CODE_CALLEES = /(^|\.)(t|tt|translated|message|includes|startsWith|endsWith|indexOf|split|replace|replaceAll|get|post|put|patch|delete|getItem|setItem|removeItem|querySelector|querySelectorAll|getElementById|addEventListener|createElement|match|test|hasPermission|statusLabel|statusDisplayKey|actionVerbLabel|navigate|useParams|useSearchParams|setSearchParams|resolveTabId|require|join|padStart|padEnd|toLocaleString|localeCompare|warn|log|info|debug|getAttribute|setAttribute|closest|matches|has|delete|append|set|useTabParam|useBreadcrumbLabel|setTab|setActiveTab|setStatus|setFilter|setMode|setSort|setView|fetchProtectedFile|download|apiClient\.\w+)$/;
@@ -89,6 +91,9 @@ function choose(keys, fileRel, index, params) {
   // is almost always a verb or an adjective (Buka / Baru), not the status (Terbuka / Baru). Decide by hand.
   if (keys.every((k) => k.startsWith('status.'))) return { ambiguous: true, keys };
   keys = keys.filter((k) => !k.startsWith('status.'));
+  // A template repeating a placeholder name ("on {{value}} … {{value}}") cannot carry two values: never use it.
+  keys = keys.filter((k) => { const n = paramNames(index.en.get(k)); return n.length === new Set(n).size; });
+  if (!keys.length) return null;
   const valid = params ? keys.filter((k) => paramNames(index.en.get(k)).length === params.length) : keys;
   if (!valid.length) return null;
   // Templates whose translations differ only in their placeholder names are equivalent (params are passed by position).
@@ -119,6 +124,8 @@ function isCodeLiteral(node) {
   if (ts.isImportDeclaration(p) || ts.isExportDeclaration(p) || ts.isExternalModuleReference(p)) return true;
   if (ts.isLiteralTypeNode(p)) return true;
   if (ts.isPropertyAssignment(p) && p.name === node) return true;
+  // Identifier-valued properties: { action: 'approve' }, { value: 'MONTHLY' }, { status: 'DRAFT' }…
+  if (ts.isPropertyAssignment(p) && p.initializer === node && /^(action|value|code|key|id|status|permission|type|kind|mode|endpoint|domain|field|name|tab|to|path|icon|variant|module|scope|unit|format|parentField)$/.test(p.name.getText())) return true;
   if (ts.isElementAccessExpression(p) && p.argumentExpression === node) return true;
   if (ts.isBinaryExpression(p) && [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken, ts.SyntaxKind.EqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsToken, ts.SyntaxKind.InKeyword].includes(p.operatorToken.kind)) return true;
   if (ts.isCaseClause(p)) return true;
@@ -135,7 +142,7 @@ function isCodeLiteral(node) {
 function textAttribute(node) {
   let p = node.parent;
   if (ts.isJsxExpression(p)) p = p.parent;
-  return ts.isJsxAttribute(p) && (TEXT_ATTRS.has(p.name.getText()) || /^aria-(label|description|valuetext)$/.test(p.name.getText())) ? p : null;
+  return ts.isJsxAttribute(p) && (TEXT_ATTRS.has(p.name.getText()) || TEXT_SUFFIX.test(p.name.getText()) || /^aria-(label|description|valuetext)$/.test(p.name.getText())) ? p : null;
 }
 
 /** True when the expression can safely be passed as a t() parameter (no JSX inside). */
@@ -146,6 +153,13 @@ const plainExpression = (expr) => { let ok = true; const v = (n) => { if (ts.isJ
  * cancel a business record = common.actions.cancelRecord (Batalkan). Decided from the button's onClick.
  */
 function cancelMeaning(node) {
+  // { label: 'Cancel', action: 'cancel' }: a module action that cancels the record.
+  const prop = node.parent;
+  if (prop && ts.isPropertyAssignment(prop) && ts.isObjectLiteralExpression(prop.parent)) {
+    const sibling = prop.parent.properties.find((q) => ts.isPropertyAssignment(q) && /^(action|key|id)$/.test(q.name.getText()));
+    if (sibling && /cancel/i.test(sibling.initializer.getText())) return 'common.actions.cancelRecord';
+    if (sibling && /close|dismiss|back/i.test(sibling.initializer.getText())) return 'common.actions.cancel';
+  }
   let el = node.parent;
   while (el && !ts.isJsxElement(el)) el = el.parent;
   const opening = el?.openingElement;
@@ -163,6 +177,8 @@ export function analyze(file, index) {
   const sf = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, file.endsWith('.tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS);
   const fileRel = relative(ROOT, file);
   const found = [];
+  // A file whose English constants are the canonical text shown through keys (enforced by its own test).
+  if (/i18n-audit: canonical-english/.test(text)) return { file, fileRel, text, sf, found };
   const covered = new Set();
   const line = (pos) => sf.getLineAndCharacterOfPosition(pos).line + 1;
   const record = (entry) => found.push({ ...entry, line: line(entry.start) });
@@ -175,6 +191,7 @@ export function analyze(file, index) {
     if (n === 'Cancel') { const key = cancelMeaning(node); match = key ? { key, keys: [key] } : { ambiguous: true, keys: ['common.actions.cancel', 'common.actions.cancelRecord'] }; }
     if (!match && /:$/.test(n)) { match = choose(index.byText.get(n.slice(0, -1).trim()) ?? [], fileRel, index); if (match) suffix = ':'; }
     if (keyedLabel(node)) return; // `label: 'X', labelKey: '…'`: shown through labelText()
+    if (inTranslatedRecord(node)) return; // a keyed entry of translatedRecord({ CODE: 'English' }, { CODE: 'key' })
     record({ kind, text: n, start, end, match, suffix, moduleLevel: !insideFunction(node), node });
   };
 
@@ -206,8 +223,8 @@ export function analyze(file, index) {
     } else if ((ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) && !isCodeLiteral(node)) {
       const attr = textAttribute(node);
       const p = node.parent;
-      const userText = attr || ts.isJsxExpression(p) || (ts.isPropertyAssignment(p) && TEXT_PROPS.has(p.name.getText())) || ts.isConditionalExpression(p) || ts.isBinaryExpression(p) || ts.isReturnStatement(p) || ts.isCallExpression(p) || ts.isArrayLiteralExpression(p) || ts.isVariableDeclaration(p) || ts.isPropertyAssignment(p) || ts.isArrowFunction(p);
-      if (userText && (attr || looksLikeText(node.text) || index.byText.has(normalize(node.text)))) tryText(node, attr && !ts.isJsxExpression(node.parent) ? 'jsx-attr' : 'string', node.text, node.getStart(sf), node.getEnd());
+      const userText = attr || ts.isJsxExpression(p) || (ts.isPropertyAssignment(p) && (TEXT_PROPS.has(p.name.getText()) || TEXT_SUFFIX.test(p.name.getText()))) || ts.isConditionalExpression(p) || ts.isBinaryExpression(p) || ts.isReturnStatement(p) || ts.isCallExpression(p) || ts.isArrayLiteralExpression(p) || ts.isVariableDeclaration(p) || ts.isPropertyAssignment(p) || ts.isArrowFunction(p);
+      if (userText && (attr || looksLikeText(node.text) || (index.byText.has(normalize(node.text)) && !/^[A-Z][A-Z0-9_]*$/.test(node.text) && !/^[a-z][a-z0-9_.:/-]*$/.test(node.text)))) tryText(node, attr && !ts.isJsxExpression(node.parent) ? 'jsx-attr' : 'string', node.text, node.getStart(sf), node.getEnd());
     } else if (ts.isTemplateExpression(node) && !isCodeLiteral(node)) {
       const shape = normalize(node.head.text + node.templateSpans.map((s) => '{{#}}' + s.literal.text).join(''));
       if (hasWords(shape.replace(/\{\{#\}\}/g, ''))) {
@@ -240,6 +257,70 @@ function paramsObject(keyText, exprs, sf) {
   return '{ ' + names.map((name, i) => `${/^[A-Za-z_$][\w$]*$/.test(name) ? name : JSON.stringify(name)}: ${exprs[i].getText(sf)}`).join(', ') + ' }';
 }
 
+/**
+ * Module-level constants read in many places (render sites unchanged):
+ * - an array of `{ label: … }` objects whose labels all have keys → `withLabels([...])` (label becomes a getter);
+ * - a `{ CODE: 'English' }` map with keyed values → `translatedRecord({...}, { CODE: 'key' })`.
+ */
+function constantWraps(sf, found) {
+  const keyOf = (lit) => { const f = found.find((x) => x.node === lit); return f && f.match && !f.match.ambiguous && !f.exprs ? f.match.key : null; };
+  const labelOf = (obj) => obj.properties.find((q) => ts.isPropertyAssignment(q) && q.name.getText(sf) === 'label' && ts.isStringLiteralLike(q.initializer));
+  const edits = [];
+  for (const stmt of sf.statements) {
+    if (!ts.isVariableStatement(stmt)) continue;
+    for (const decl of stmt.declarationList.declarations) {
+      const init = decl.initializer;
+      if (!init) continue;
+      const inner = ts.isAsExpression(init) || ts.isSatisfiesExpression(init) ? init.expression : init;
+      if (ts.isArrayLiteralExpression(inner) && inner.elements.length && inner.elements.every((e) => ts.isObjectLiteralExpression(e) && labelOf(e))) {
+        const ok = inner.elements.every((e) => keyedLabel(labelOf(e).initializer) || keyOf(labelOf(e).initializer));
+        if (ok) {
+          edits.push({ start: init.getStart(sf), end: init.getStart(sf), replacement: 'withLabels(', helper: 'withLabels' });
+          edits.push({ start: init.getEnd(), end: init.getEnd(), replacement: ')', helper: 'withLabels' });
+        }
+      } else if (ts.isObjectLiteralExpression(inner) && inner.properties.length && inner.properties.every((q) => ts.isPropertyAssignment(q) && ts.isStringLiteralLike(q.initializer))) {
+        const keyed = inner.properties.map((q) => [q.name.getText(sf), keyOf(q.initializer)]).filter(([, k]) => k);
+        if (keyed.length) {
+          const text = `translatedRecord(${init.getText(sf)}, { ${keyed.map(([n, k]) => `${n}: '${k}'`).join(', ')} })`;
+          edits.push({ start: init.getStart(sf), end: init.getEnd(), replacement: text, helper: 'translatedRecord' });
+        }
+      }
+    }
+  }
+  return edits;
+}
+
+/** A `CODE: 'English'` entry of `translatedRecord(english, keys)` whose CODE has a key. */
+function inTranslatedRecord(node) {
+  const prop = node.parent;
+  if (!prop || !ts.isPropertyAssignment(prop) || !ts.isObjectLiteralExpression(prop.parent)) return false;
+  const call = prop.parent.parent;
+  if (!call || !ts.isCallExpression(call) || call.expression.getText() !== 'translatedRecord' || call.arguments[0] !== prop.parent) return false;
+  const keys = call.arguments[1];
+  return Boolean(keys && ts.isObjectLiteralExpression(keys) && keys.properties.some((q) => q.name?.getText() === prop.name.getText()));
+}
+
+/** A `label` inside an array that constantWraps turns into withLabels([...]) (a module-level array of label objects). */
+function inWrappableArray(node) {
+  const obj = node.parent.parent;
+  let arr = obj.parent;
+  if (!arr || !ts.isArrayLiteralExpression(arr)) return false;
+  let init = arr.parent;
+  if (init && (ts.isAsExpression(init) || ts.isSatisfiesExpression(init))) init = init.parent;
+  return Boolean(init && ts.isVariableDeclaration(init) && ts.isVariableStatement(init.parent.parent) && ts.isSourceFile(init.parent.parent.parent));
+}
+
+/** A string property inside an object literal that is not a flat `{ CODE: 'English' }` map (those use translatedRecord). */
+function getterCandidate(node) {
+  const prop = node.parent;
+  if (!prop || !ts.isPropertyAssignment(prop) || prop.initializer !== node || !ts.isObjectLiteralExpression(prop.parent)) return false;
+  if (ts.isComputedPropertyName(prop.name)) return false;
+  const obj = prop.parent;
+  const flatMap = obj.properties.every((q) => ts.isPropertyAssignment(q) && ts.isStringLiteralLike(q.initializer));
+  const declInit = (n) => { let p = n.parent; if (p && (ts.isAsExpression(p) || ts.isSatisfiesExpression(p))) p = p.parent; return p && ts.isVariableDeclaration(p); };
+  return !(flatMap && declInit(obj));
+}
+
 /** A `label: '…'` property whose object already carries a `labelKey`. */
 function keyedLabel(node) {
   const p = node.parent;
@@ -263,8 +344,15 @@ export function migrateFile(file, index, { dry = false } = {}) {
   for (const f of found) {
     // Module-level `label: 'X'` in an object literal: keep the English (identity / legacy matching) and add
     // its key beside it; the render site shows it through labelText(). No import needed.
-    if (f.moduleLevel && f.match && !f.match.ambiguous && !f.exprs && labelProperty(f.node)) {
+    if (f.moduleLevel && f.match && !f.match.ambiguous && !f.exprs && labelProperty(f.node) && inWrappableArray(f.node)) {
       edits.push({ start: f.end, end: f.end, replacement: `, labelKey: '${f.match.key}'`, key: f.match.key, keyOnly: true });
+      continue;
+    }
+    // Any other module-level `prop: 'Text'` inside an object (nested option lists, question hints…) becomes a getter,
+    // so every read follows the current language: `get label() { return t('key'); }`.
+    if (f.moduleLevel && f.match && !f.match.ambiguous && !f.exprs && getterCandidate(f.node)) {
+      const prop = f.node.parent;
+      edits.push({ start: prop.getStart(sf), end: prop.getEnd(), replacement: `get ${prop.name.getText(sf)}() { return ${fn}('${f.match.key}'); }`, key: f.match.key });
       continue;
     }
     if (statusOf(f) !== 'matched') continue;
@@ -277,7 +365,8 @@ export function migrateFile(file, index, { dry = false } = {}) {
     else replacement = f.suffix ? `${call} + '${f.suffix}'` : call;
     edits.push({ start: f.start, end: f.end, replacement, key });
   }
-  edits.sort((a, b) => b.start - a.start);
+  edits.push(...constantWraps(sf, found));
+  edits.sort((a, b) => b.start - a.start || (a.replacement === ')' ? -1 : 1));
   let out = text;
   let lastStart = Infinity;
   const applied = [];
@@ -287,10 +376,17 @@ export function migrateFile(file, index, { dry = false } = {}) {
     lastStart = e.start;
     applied.push(e);
   }
-  if (applied.some((e) => !e.keyOnly) && !importsT) {
+  const helpers = [...new Set(applied.map((e) => e.helper).filter(Boolean))];
+  const existing = out.match(/import \{([^}]*)\} from '([./]*\/?(?:\.\.\/)*i18n\/i18n)';/);
+  const missingHelpers = helpers.filter((h) => !existing || !new RegExp(`\\b${h}\\b`).test(existing[1]));
+  if (existing && missingHelpers.length) {
+    out = out.replace(existing[0], `import {${existing[1].trimEnd()}, ${missingHelpers.join(', ')} } from '${existing[2]}';`);
+  }
+  if ((applied.some((e) => !e.keyOnly && !e.helper) && !importsT) || (!existing && missingHelpers.length)) {
     const rel = relative(dirname(file), join(SRC, 'i18n/i18n')).replace(/\\/g, '/');
     const spec = rel.startsWith('.') ? rel : `./${rel}`;
-    const imp = fn === 't' ? `import { t } from '${spec}';\n` : `import { t as tt } from '${spec}';\n`;
+    const names = [...(applied.some((e) => !e.keyOnly && !e.helper) && !importsT ? [fn === 't' ? 't' : 't as tt'] : []), ...(existing ? [] : missingHelpers)];
+    const imp = `import { ${names.join(', ')} } from '${spec}';\n`;
     const imports = [...out.matchAll(/^import [^;]+;\n/gm)];
     const at = imports.length ? imports[imports.length - 1].index + imports[imports.length - 1][0].length : 0;
     out = out.slice(0, at) + imp + out.slice(at);

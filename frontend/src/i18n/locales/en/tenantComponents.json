@@ -48,6 +48,7 @@
   "help": {
     "approvalMarksAssetSold": "; approval marks this asset SOLD.",
     "draftSaleCreatedSubmitApproval": "Draft sale created. Submit it for approval in",
+    "installationLine": "{{vehicle}} — {{position}} — installed {{date}}",
     "physicalItemsTrackedIndividuallyAssetNumber": "Physical items tracked individually. Asset# is generated automatically by Goods Receipt for products with Track Serial Number; a tire's Serial Number is its Asset#."
   },
   "sections": {

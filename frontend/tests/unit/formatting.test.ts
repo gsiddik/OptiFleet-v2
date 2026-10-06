@@ -4,6 +4,7 @@ import { appLocale, monthNames, setAppLocale } from '../../src/i18n/locale.ts';
 import { formatDate, formatDateTime, formatTime, formatTimestampDate } from '../../src/utils/date.ts';
 import { formatNumber } from '../../src/utils/number.ts';
 import { formatQty } from '../../src/utils/quantity.ts';
+import { formatMoney } from '../../src/utils/money.ts';
 
 test('default locale is the system fallback en', () => {
   assert.equal(appLocale(), 'en');
@@ -43,4 +44,12 @@ test('numbers use the locale grouping; values are not altered', () => {
   assert.equal(formatNumber(null), '—');
   assert.equal(formatQty('2.5000'), '2.5');
   assert.equal(formatQty('1500.0000', 'id'), '1.500');
+});
+
+test('money separators follow the locale; the value and its rounding do not change', () => {
+  assert.equal(formatMoney('5000000.0000', 'IDR', 'en'), 'IDR 5,000,000.00');
+  assert.equal(formatMoney('5000000.0000', 'IDR', 'id'), 'IDR 5.000.000,00');
+  assert.equal(formatMoney('1234.565', null, 'id'), '1.234,57');
+  assert.equal(formatMoney('-0.001', null, 'id'), '0,00');
+  assert.equal(formatMoney('-12.5', undefined, 'id'), '-12,50');
 });

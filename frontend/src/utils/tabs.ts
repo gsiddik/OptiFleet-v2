@@ -1,3 +1,5 @@
+import { labelText } from '../i18n/i18n';
+
 /**
  * Stable tab identity (i18n structural preparation).
  *
@@ -7,7 +9,10 @@
  */
 export interface TabDef<Id extends string = string> {
   readonly id: Id;
+  /** English label: also matched by legacy `?tab=<Label>` links. */
   readonly label: string;
+  /** Translation key of the shown label. */
+  readonly labelKey?: string;
 }
 
 const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -30,11 +35,14 @@ export function resolveTabId<Id extends string>(
   if (!key) return fallback;
   const alias = Object.keys(aliases).find((k) => normalize(k) === key);
   if (alias) return aliases[alias];
-  const match = tabs.find((t) => normalize(t.id) === key || normalize(t.label) === key);
+  // Legacy links carry the English label; `labelEn` keeps it when `label` is shown translated (withLabels).
+  const english = (t: TabDef<Id>) => (t as { labelEn?: string }).labelEn ?? t.label;
+  const match = tabs.find((t) => normalize(t.id) === key || normalize(english(t)) === key || normalize(t.label) === key);
   return match ? match.id : fallback;
 }
 
-/** Display label for a tab id; falls back to the id itself. */
+/** Display label for a tab id, in the current language; falls back to the id itself. */
 export function tabLabel<Id extends string>(tabs: readonly TabDef<Id>[], id: Id): string {
-  return tabs.find((t) => t.id === id)?.label ?? id;
+  const tab = tabs.find((t) => t.id === id);
+  return tab ? labelText(tab) : id;
 }

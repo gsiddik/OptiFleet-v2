@@ -74,6 +74,43 @@ export function translated(key: string, english: string, params?: Readonly<Recor
   return params ? english.replace(/\{\{(\w+)\}\}/g, (whole, name: string) => (name in params ? String(params[name]) : whole)) : english;
 }
 
+/**
+ * The shown text of a module-level option / tab / menu entry. Constants keep their English `label` (a stable
+ * identity, e.g. for legacy links) and carry a `labelKey`; translating at render time follows the language.
+ */
+export function labelText(entry: { readonly label: string; readonly labelKey?: string }): string {
+  return entry.labelKey ? translated(entry.labelKey, entry.label) : entry.label;
+}
+
+/**
+ * A module-level option list whose `label` is read in many places: each item's `label` becomes a getter that
+ * returns the text in the current language (its English when it has no `labelKey`). `labelEn` keeps the
+ * English. The items are new objects; the source list is not changed.
+ */
+export function withLabels<T extends { readonly label: string; readonly labelKey?: string }>(items: readonly T[]): (T & { readonly labelEn: string })[] {
+  return items.map((item) => {
+    // Copy the descriptors, not the values: getters on the item (e.g. a translated `help`) keep reading live.
+    const copy = Object.defineProperties({}, Object.getOwnPropertyDescriptors(item)) as T & { labelEn: string };
+    Object.defineProperty(copy, 'labelEn', { value: item.label, enumerable: false });
+    Object.defineProperty(copy, 'label', { get: () => labelText(item), enumerable: true });
+    return copy;
+  });
+}
+
+/**
+ * A module-level code → English label map, read as `MAP[code]`: every entry with a key reads in the current
+ * language (a getter); entries without a key stay English. Iteration order and the codes are unchanged.
+ */
+export function translatedRecord<K extends string>(english: Readonly<Record<K, string>>, keys: Readonly<Partial<Record<K, string>>>): Readonly<Record<K, string>> {
+  const out = {} as Record<K, string>;
+  for (const code of Object.keys(english) as K[]) {
+    const key = keys[code];
+    if (key) Object.defineProperty(out, code, { get: () => translated(key, english[code]), enumerable: true });
+    else out[code] = english[code];
+  }
+  return out;
+}
+
 /** True when the key exists in English (the complete locale). */
 export function hasKey(key: string): boolean {
   return i18n.isInitialized && i18n.exists(key, { lng: DEFAULT_LOCALE });

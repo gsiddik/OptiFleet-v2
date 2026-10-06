@@ -48,6 +48,7 @@
   "help": {
     "approvalMarksAssetSold": "; persetujuan menandai aset ini SOLD.",
     "draftSaleCreatedSubmitApproval": "Draf penjualan dibuat. Ajukan untuk persetujuan di",
+    "installationLine": "{{vehicle}} — {{position}} — dipasang {{date}}",
     "physicalItemsTrackedIndividuallyAssetNumber": "Barang fisik yang dilacak satu per satu. Asset# dibuat otomatis oleh Goods Receipt untuk produk dengan Lacak Nomor Seri; Nomor Seri ban adalah Asset#-nya."
   },
   "sections": {

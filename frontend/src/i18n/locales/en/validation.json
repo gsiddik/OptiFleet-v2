@@ -266,6 +266,10 @@
     "abbreviationMustContainLettersZOnly": "The abbreviation must contain letters A-Z only (e.g. ENG, BRK, HYD).",
     "abbreviationMustExactly3Letters": "The abbreviation must be exactly 3 letters."
   },
+  "vehicle": {
+    "selectVehicleBrand": "Select a Vehicle Brand.",
+    "selectVehicleModel": "Select a Vehicle Model."
+  },
   "vehicleBrand": {
     "selectOnlyActiveVehicleCategories": "Select only active Vehicle Categories."
   },

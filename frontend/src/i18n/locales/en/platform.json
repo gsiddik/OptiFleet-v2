@@ -120,6 +120,7 @@
       "totalCurrencyToLocaleString": "Total: {{currency}} {{toLocaleString}}"
     },
     "help": {
+      "activePriceFloor": "Active price: {{price}} (unit price may not go below this)",
       "activePriceToLocaleStringUnit": "Active Price: {{toLocaleString}} (unit price may not go below this)",
       "backToContractManagement": "← Back to Contract Management",
       "backToTenantContracts": "← Back to Tenant Contracts",
