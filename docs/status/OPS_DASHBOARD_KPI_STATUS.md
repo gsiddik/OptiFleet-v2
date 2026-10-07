@@ -82,13 +82,25 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
 - Widget-specific filters (`paramRules()`, part of the cache key).
 - Tests: `WorkIntervalTest` (4), `DashboardConfigurationTest` (3); impacted suites 320 passed.
 
+## CP3 — cost and mechanic widgets (implemented)
+
+- `OperatingCostQuery` (PARTS ledger × issue snapshot / LABOR from WorkTimeQuery / EXTERNAL_PAID
+  payments) behind **FN-07 Most Costly Vehicle** (all vehicles in scope incl. 0, top 10 stacked bar,
+  in-card category / vehicle filters, drill ranking → vehicle WOs → WO lines) and **FN-08 Cost mix**
+  (monthly, same totals; month → lines). Permission `dashboard.finance.view`, module WORK_ORDER.
+- **WS-07 Mechanic Performance** (per maintenance type, scatter X = WOs completed, Y = average hours,
+  baseline line, status table, baseline dialog for `mechanic_baseline.manage`, "ask an authorized
+  user" otherwise). Permission `work_order.view` + `worker.view`.
+- **WS-08 Rework / first-pass rate** (complete histories only, per month and workshop).
+- Tests: `DashboardOperatingCostTest` (2), `DashboardMechanicPerformanceTest` (2).
+
 ## Checkpoints
 
 | # | Checkpoint | Status | Commit |
 |---|---|---|---|
 | 1 | Audit, metric definitions, decisions | DONE | this commit |
 | 2 | Work intervals, assignment attribution, snapshots, configuration | DONE | CP2 commit |
-| 3 | Most Costly Vehicle + Mechanic Performance | TODO | |
+| 3 | Most Costly Vehicle + Mechanic Performance (+ FN-08, WS-08) | DONE | CP3 commit |
 | 4 | Consumption, installed, inventory value, low stock (+ extras) | TODO | |
 | 5 | Layout + bilingual | TODO | |
 | 6 | Seeders, regression, final QA | TODO | |

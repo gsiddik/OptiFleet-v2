@@ -28,12 +28,16 @@ final class WidgetRegistry
         'WS-04' => Widgets\Workshop\WorkOrderTurnaroundWidget::class,
         'WS-05' => Widgets\Workshop\WorkspaceOccupancyWidget::class,
         'WS-06' => Widgets\Workshop\WaitingPartsWidget::class,
+        'WS-07' => Widgets\Workshop\MechanicPerformanceWidget::class,
+        'WS-08' => Widgets\Workshop\ReworkRateWidget::class,
         'FN-01' => Widgets\Finance\ServiceCostMonthlyWidget::class,
         'FN-02' => Widgets\Finance\ServiceCostByVehicleWidget::class,
         'FN-03' => Widgets\Finance\ServiceCostByBranchWidget::class,
         'FN-04' => Widgets\Finance\PayablesAgingWidget::class,
         'FN-05' => Widgets\Finance\InventoryValueWidget::class,
         'FN-06' => Widgets\Finance\VendorRefundsWidget::class,
+        'FN-07' => Widgets\Finance\MostCostlyVehicleWidget::class,
+        'FN-08' => Widgets\Finance\CostMixWidget::class,
         'WH-01' => Widgets\Warehouse\StockHealthWidget::class,
         'WH-02' => Widgets\Warehouse\CriticalStockWidget::class,
         'WH-03' => Widgets\Warehouse\StockTransfersWidget::class,
@@ -58,10 +62,10 @@ final class WidgetRegistry
     public const PRESETS = [
         'summary' => ['FL-01', 'FL-03', 'FN-04', 'FN-05', 'FN-01', 'FN-03', 'FL-04', 'WS-01', 'MT-02', 'AL-01'],
         'fleet' => ['FL-01', 'FL-03', 'MT-01', 'FL-06', 'MT-02', 'FL-02', 'FL-05', 'FL-04', 'MT-03', 'TR-02'],
-        'workshop' => ['WS-01', 'WS-02', 'WS-05', 'WS-06', 'WS-03', 'WS-04', 'MT-01', 'MT-03'],
+        'workshop' => ['WS-01', 'WS-02', 'WS-05', 'WS-06', 'WS-07', 'WS-08', 'WS-03', 'WS-04', 'MT-01', 'MT-03'],
         'warehouse' => ['FN-05', 'WH-01', 'WH-02', 'WH-03', 'WH-04', 'WH-05', 'TR-01', 'TR-03'],
         'procurement' => ['PR-01', 'PR-02', 'WH-02', 'PR-03', 'FN-04', 'FN-06', 'PR-04'],
-        'finance' => ['FN-01', 'FN-02', 'FN-03', 'FN-04', 'FN-05', 'FN-06', 'PR-03', 'TR-04'],
+        'finance' => ['FN-07', 'FN-08', 'FN-01', 'FN-02', 'FN-03', 'FN-04', 'FN-05', 'FN-06', 'PR-03', 'TR-04'],
     ];
 
     /** @var array<string, Widget> */

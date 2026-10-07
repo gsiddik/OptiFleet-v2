@@ -166,6 +166,20 @@ abstract class Widget
         ];
     }
 
+    /** Paginate an already computed (and ordered) list: items + meta. */
+    protected function paginateList(array $items, array $params, ?callable $map = null): array
+    {
+        $perPage = max(1, min(100, (int) ($params['per_page'] ?? 20)));
+        $page = max(1, (int) ($params['page'] ?? 1));
+        $total = count($items);
+        $slice = array_slice(array_values($items), ($page - 1) * $perPage, $perPage);
+
+        return [
+            'items' => $map ? array_map($map, $slice) : $slice,
+            'meta' => ['page' => $page, 'per_page' => $perPage, 'total' => $total, 'last_page' => max(1, (int) ceil($total / $perPage))],
+        ];
+    }
+
     /** Count rows grouped by a column, keyed by value, including zero for every expected key. */
     protected static function countsByKey(Builder $query, string $column, array $keys): array
     {
