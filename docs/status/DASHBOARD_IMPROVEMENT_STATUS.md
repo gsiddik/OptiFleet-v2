@@ -40,9 +40,110 @@ Continuation checkpoint for the "Dashboard Tenant improvement" task, specified b
 
 | # | Checkpoint | Status | Commit |
 |---|---|---|---|
-| 1 | Revalidation, scope, decisions | DONE | this commit |
-| 2 | Dashboard security + API contract | TODO | |
-| 3 | UI foundation + current-state widgets | TODO | |
-| 4 | Service cost, payables, reconciliation | TODO | |
-| 5 | Trends, alerts, supporting widgets | TODO | |
-| 6 | Seeders, bilingual, visual QA, regression | TODO | |
+| 1 | Revalidation, scope, decisions | DONE | `83e9909` |
+| 2 | Dashboard security + API contract | DONE | `1cec9ee` |
+| 3 | UI foundation + current-state widgets | DONE | `48d179c` |
+| 4 | Service cost, payables, reconciliation | DONE | `c6a42e4` |
+| 5 | Trends, alerts, supporting widgets | DONE | `5c40eeb` |
+| 6 | Seeders, bilingual, visual QA, regression | DONE | (CP6 commit on this branch) |
+
+## Widget matrix (all K1/K2 widgets implemented; K3/K4 not implemented)
+
+Endpoint for every widget: `GET /api/v1/app/dashboard/widgets/{ID}`; drill-down:
+`GET /api/v1/app/dashboard/widgets/{ID}/details` (same permission, module, tenant and scope rules).
+Kind `current` = situation now (not period-filtered); `period` = follows the trend-period filter.
+
+| ID | Kind | Unit | Module | Permission (server-side) | Class |
+|---|---|---|---|---|---|
+| AL-01 | current | count | per source | each source widget's own permission/module/scope | ActionCenterWidget |
+| FL-01 | current | count | VEHICLE | vehicle.view | FleetStatusWidget |
+| FL-02 | current | count | VEHICLE | vehicle.view | FleetByBranchWidget |
+| FL-03 | current | mixed | MAINTENANCE | breakdown.view | ActiveBreakdownsWidget |
+| FL-04 | period | count | MAINTENANCE | breakdown.view | BreakdownTrendWidget |
+| FL-05 | period | count | MAINTENANCE | breakdown.view | TopBreakdownVehiclesWidget |
+| FL-06 | current | count | VEHICLE | vehicle.view | VehicleDocumentsWidget |
+| FN-01 | period | money | WORK_ORDER | dashboard.finance.view | ServiceCostMonthlyWidget |
+| FN-02 | period | money | WORK_ORDER | dashboard.finance.view | ServiceCostByVehicleWidget |
+| FN-03 | period | money | WORK_ORDER | dashboard.finance.view | ServiceCostByBranchWidget |
+| FN-04 | current | money | per source | per source: `vendor_invoice.view` (PROCUREMENT), `workshop_invoice.view` / `external_work_order_invoice.view` (WORK_ORDER) | PayablesAgingWidget |
+| FN-05 | current | money | INVENTORY | dashboard.finance.view | InventoryValueWidget |
+| FN-06 | period | money | PROCUREMENT | dashboard.finance.view | VendorRefundsWidget |
+| MT-01 | current | count | MAINTENANCE | maintenance_schedule.view | ScheduleStatusWidget |
+| MT-02 | current | count | MAINTENANCE | maintenance_schedule.view | OverdueMaintenanceWidget |
+| MT-03 | current | count | MAINTENANCE | maintenance_request.view | OpenRequestsWidget |
+| PR-01 | current | count | PROCUREMENT | (purchase_request.view or purchase_order.view) | ProcurementPipelineWidget |
+| PR-02 | current | count | PROCUREMENT | purchase_order.view | LatePurchaseOrdersWidget |
+| PR-03 | period | money | PROCUREMENT | purchase_order.view + dashboard.finance.view | PurchaseOrderValueWidget |
+| PR-04 | period | mixed | PROCUREMENT | purchase_order.view | VendorPerformanceWidget |
+| TR-01 | current | count | TIRE | tire.view | TireStatusWidget |
+| TR-02 | current | count | TIRE | tire.view | TiresDueReplacementWidget |
+| TR-03 | current | count | TIRE | tire.view | TiresAtVendorWidget |
+| TR-04 | period | money | TIRE | tire.view + dashboard.finance.view | TireServiceCostWidget |
+| WH-01 | current | count | INVENTORY | inventory.view | StockHealthWidget |
+| WH-02 | current | count | INVENTORY | inventory.view | CriticalStockWidget |
+| WH-03 | current | count | INVENTORY | stock_transfer.view | StockTransfersWidget |
+| WH-04 | period | money | INVENTORY | inventory.view + dashboard.finance.view | StockMovementWidget |
+| WH-05 | current | money | INVENTORY | inventory.view + dashboard.finance.view | SlowMovingStockWidget |
+| WS-01 | current | count | WORK_ORDER | work_order.view | WorkOrderBacklogWidget |
+| WS-02 | current | count | WORK_ORDER | work_order.view | OpenWorkOrderAgingWidget |
+| WS-03 | period | count | WORK_ORDER | work_order.view | CompletedWorkOrdersWidget |
+| WS-04 | period | mixed | WORK_ORDER | work_order.view | WorkOrderTurnaroundWidget |
+| WS-05 | current | count | WORKSHOP | workspace.view | WorkspaceOccupancyWidget |
+| WS-06 | current | count | WORK_ORDER | work_order.view | WaitingPartsWidget |
+
+Tests: `backend/tests/Feature/Dashboard/` — Security (8), CurrentWidgets (6), FinanceWidgets (4),
+TrendWidgets (6), DemoSeeder (1); plus `DashboardSupplyChainTest` (legacy endpoint) and
+`frontend/tests/unit/dashboard.test.ts` (EN/ID keys for all 35 widgets).
+
+## Service Cost (FN-01 / FN-02 / FN-03 — one query, `ServiceCostQuery`)
+
+Base currency only (`DASHBOARD_BASE_CURRENCY`, default IDR); other currencies are reported as a
+limitation, never summed or converted. Three disjoint sources, each document counted once:
+
+| Source | Value | Recognition date | Included |
+|---|---|---|---|
+| PARTS | per line `round(consumed × round(issue total_cost / issued, 4), 2)` | WO `completed_at` | WO COMPLETED / CLOSED |
+| EXTERNAL_SERVICE | Service Invoice `total_amount` (document value incl. tax) | `invoice_date` | status ≠ CANCELLED |
+| EXTERNAL_WO | External WO invoice `vendor_invoice_amount` | `vendor_invoice_date` | BILLED / PAID |
+
+Not counted: estimates, payments (a payment never adds cost), memos without an invoice (shown as
+"not yet invoiced"), parts on open WOs ("not yet recognized"), tire/component purchases, retread and
+repair (TR-04), internal labor (no labor cost is recorded — stated in the widget). Months in the
+tenant time zone; empty months shown as 0; running month marked. Reconciliation: Σ months (FN-01) =
+FN-02 total (incl. "other") = FN-03 total = Σ drill-down transactions (tests + demo DB check:
+IDR 27,774,380.00 on the demo data).
+
+## Demo seeder (`DashboardDemoSeeder`, demo layer only)
+
+Registered in `DevDemoSeeder::seedDemoLayer` (runs only in `APP_ENV=local` or with `SEED_DEMO_DATA=true`); production
+seeding only adds the `dashboard.finance.view` permission (`PermissionSeeder` + migration).
+ALPHA tenant, 3 dedicated vehicles (Jakarta / Bandung / Semarang, each serviced at its own branch
+workshop), 12 full months + running month with one empty month (7 months ago), all through
+application services under a controlled clock (`Carbon::setTestNow`; a caller's frozen clock is
+respected and restored). Scenarios: WO completed / waiting-part / cancelled / external (billed,
+settled); vendor invoices paid / not due / overdue; Service Invoices paid / unpaid /
+cancelled-by-maker-checker and re-recorded; resolved breakdowns + one open immobilized; transfer in
+transit 10 days; low stock. Other demo seeders supply transfers with discrepancy, expired / due
+documents, retread cycles open / received, FTEST second tenant. Idempotent (marker `[DASH-DEMO]`).
+Verified on a disposable DB: `migrate:fresh --seed` then `db:seed` → identical row counts; no
+cross-tenant references; no negative stock; FN-01 = FN-03.
+
+## Known limitations (documented, not estimated)
+
+- Partially paid invoices cannot be seeded or shown: every invoice source allows exactly one full
+  payment.
+- Pending vendor refunds have no amount (count only); adjustments/scrap have no unit cost and stock
+  opname has no direction (WH-04 limitations); WS-04 is "turnaround", not MTTR.
+- Analytics (MongoDB) cost definitions differ and were not changed; MongoDB tests NOT RUN.
+- The "Desain Dashboard UI UX" chat was not accessible; the existing design system was used.
+- Not implemented by scope (K3/K4): availability/utilization, cost/km, PM compliance, actual labor,
+  inventory value trend, ROI/savings/budget, MTBF/MTTR, Intelligence, Warranty.
+
+## Deployment
+
+1. `php artisan migrate` (adds and grants `dashboard.finance.view` to roles holding
+   `analytics.cost.view`; idempotent). Alternatively `php artisan db:seed --class=PermissionSeeder`.
+2. Frontend: `npm ci && npm run build` (new dependency `recharts`).
+3. Optional (`DASHBOARD_BASE_CURRENCY`, default `IDR`). No MongoDB dependency; cache uses the default
+   cache store (TTL 120 s current / 300 s period; per tenant, scope, permissions, filters, version).
+4. Demo only: `SEED_DEMO_DATA=true php artisan db:seed`.
