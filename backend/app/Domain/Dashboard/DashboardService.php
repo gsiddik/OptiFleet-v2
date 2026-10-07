@@ -138,7 +138,7 @@ final class DashboardService
     {
         $result = $widget->detail($context, $params);
 
-        return $this->envelope($context, $widget, ['data' => $result['items'], 'limitations' => $result['limitations'] ?? []]) + ['meta' => $result['meta'] ?? null];
+        return $this->envelope($context, $widget, ['data' => $result['items'], 'limitations' => $result['limitations'] ?? [], 'basis' => $result['basis'] ?? null]) + ['meta' => $result['meta'] ?? null];
     }
 
     private function envelope(DashboardContext $context, Widget $widget, array $computed): array
@@ -161,6 +161,7 @@ final class DashboardService
             'period' => $period,
             'filters' => $this->appliedFilters($context, $widget),
             'limitations' => array_values($computed['limitations'] ?? []),
+            'basis' => $computed['basis'] ?? null,
             'data' => $computed['data'],
         ];
     }

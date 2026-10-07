@@ -3,6 +3,7 @@
 namespace App\Domain\Dashboard\Widgets\Workshop;
 
 use App\Domain\Dashboard\DashboardContext;
+use App\Domain\Dashboard\DataBasis;
 use App\Domain\Dashboard\WorkTime\WorkTimeQuery;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection;
@@ -36,6 +37,11 @@ class ReworkRateWidget extends WorkOrderWidget
         return ['branch', 'workshop', 'period'];
     }
 
+    public function version(): int
+    {
+        return 2; // completeness basis
+    }
+
     public function compute(DashboardContext $context): array
     {
         $rows = $this->rows($context);
@@ -56,6 +62,13 @@ class ReworkRateWidget extends WorkOrderWidget
         }
 
         return [
+            'basis' => DataBasis::make(
+                [['key' => 'SAMPLE', 'code' => 'WORK_ORDER_COMPLETED_DATE']],
+                ['COMPLETED_INTERNAL_WORK_ORDERS_WITH_COMPLETE_HISTORY'],
+                ['EXTERNAL_WORK_ORDERS', 'WORK_ORDERS_WITHOUT_COMPLETE_WORK_TIME_HISTORY'],
+                DataBasis::completeness($rows->count(), $valid->count(), ['WORK_TIME_HISTORY_INCOMPLETE' => $excluded]),
+                \App\Domain\Dashboard\WorkTime\WorkTimeQuery::historyAvailableFrom($context),
+            ),
             'data' => [
                 'totals' => $summary($valid),
                 'months' => array_map(fn ($m) => ['month' => $m, 'is_current' => $m === $context->currentMonth()] + $summary($byMonth[$m] ?? collect()), $context->months()),

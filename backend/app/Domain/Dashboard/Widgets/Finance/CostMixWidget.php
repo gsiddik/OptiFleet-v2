@@ -44,6 +44,11 @@ class CostMixWidget extends Widget
         return ['branch', 'workshop', 'period'];
     }
 
+    public function version(): int
+    {
+        return 2; // completeness basis, payment anomalies
+    }
+
     public function compute(DashboardContext $context): array
     {
         $lines = OperatingCostQuery::lines($context, $context->periodStartDate(), $context->periodEndDateExclusive());
@@ -52,9 +57,13 @@ class CostMixWidget extends Widget
             'month' => $month, 'is_current' => $month === $context->currentMonth(),
         ] + OperatingCostQuery::totals($byMonth[$month] ?? collect()), $context->months());
 
+        $coverage = OperatingCostQuery::laborCoverage($context, $lines, $context->periodStartDate(), $context->periodEndDateExclusive());
+        $anomalies = OperatingCostQuery::paymentAnomalies($context, $context->periodStartDate(), $context->periodEndDateExclusive());
+
         return [
-            'data' => ['months' => $months, 'totals' => OperatingCostQuery::totals($lines)],
-            'limitations' => OperatingCostQuery::limitations($context, $lines),
+            'data' => ['months' => $months, 'totals' => OperatingCostQuery::totals($lines), 'payment_anomalies' => $anomalies->count()],
+            'limitations' => OperatingCostQuery::limitations($context, $lines, $coverage, $anomalies),
+            'basis' => OperatingCostQuery::basis($context, $coverage),
         ];
     }
 

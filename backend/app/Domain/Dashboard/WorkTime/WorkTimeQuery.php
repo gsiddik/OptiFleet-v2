@@ -119,6 +119,59 @@ final class WorkTimeQuery
         return $rows->mapWithKeys(fn ($r) => [$r->id => $r->first_start !== null && $r->started_at !== null && self::epoch($r->first_start) === self::epoch($r->started_at)])->all();
     }
 
+    public const COMPLETE = 'COMPLETE';
+
+    public const PARTIAL = 'PARTIAL';
+
+    public const UNAVAILABLE = 'UNAVAILABLE';
+
+    public const NOT_STARTED = 'NOT_STARTED';
+
+    /**
+     * State of each Work Order's work-time history (nothing is estimated for the ones without):
+     *  NOT_STARTED  never started — no work time is expected (a valid zero);
+     *  UNAVAILABLE  started but no interval was ever recorded (started before intervals existed);
+     *  PARTIAL      intervals exist but the first one does not begin when the Work Order started;
+     *  COMPLETE     the first interval begins exactly when the Work Order started.
+     * An open interval does not make a history incomplete (see openWorkOrders()).
+     *
+     * @param  list<string>  $workOrderIds
+     * @return array<string, string>
+     */
+    public static function historyState(DashboardContext $context, array $workOrderIds): array
+    {
+        if ($workOrderIds === []) {
+            return [];
+        }
+        $rows = DB::table('work_orders as wo')
+            ->leftJoinSub(DB::table('work_order_work_intervals')->where('tenant_id', $context->tenantId)
+                ->groupBy('work_order_id')->selectRaw('work_order_id, min(started_at) as first_start'), 'f', 'f.work_order_id', '=', 'wo.id')
+            ->where('wo.tenant_id', $context->tenantId)->whereIn('wo.id', $workOrderIds)
+            ->get(['wo.id', 'wo.started_at', 'f.first_start']);
+
+        return $rows->mapWithKeys(fn ($r) => [$r->id => match (true) {
+            $r->started_at === null => self::NOT_STARTED,
+            $r->first_start === null => self::UNAVAILABLE,
+            self::epoch($r->first_start) === self::epoch($r->started_at) => self::COMPLETE,
+            default => self::PARTIAL,
+        }])->all();
+    }
+
+    /** Work Orders (of the given ids) with an interval still open: their time so far counts, up to now. */
+    public static function openWorkOrders(DashboardContext $context, array $workOrderIds): array
+    {
+        return $workOrderIds === [] ? [] : DB::table('work_order_work_intervals')->where('tenant_id', $context->tenantId)->whereNull('ended_at')
+            ->whereIn('work_order_id', $workOrderIds)->pluck('work_order_id')->unique()->values()->all();
+    }
+
+    /** Tenant-local date of the oldest recorded work interval: work time exists from this date on, nothing earlier. */
+    public static function historyAvailableFrom(DashboardContext $context): ?string
+    {
+        $first = DB::table('work_order_work_intervals')->where('tenant_id', $context->tenantId)->min('started_at');
+
+        return $first === null ? null : CarbonImmutable::createFromTimestampUTC(self::epoch($first))->setTimezone($context->timezone)->toDateString();
+    }
+
     /** Seconds → hours, 2 decimals (display / averages only; costs use seconds). */
     public static function hours(int $seconds): string
     {

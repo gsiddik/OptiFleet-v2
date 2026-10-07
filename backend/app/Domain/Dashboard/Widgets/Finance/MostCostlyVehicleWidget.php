@@ -56,10 +56,17 @@ class MostCostlyVehicleWidget extends Widget
         return ['vehicle_category_id' => ['nullable', 'uuid'], 'vehicle_id' => ['nullable', 'uuid']];
     }
 
+    public function version(): int
+    {
+        return 2; // labor shown as unavailable (not 0) without work-time history; completeness basis; payment anomalies
+    }
+
     public function compute(DashboardContext $context): array
     {
         $lines = $this->lines($context);
-        $ranking = $this->ranking($context, $lines);
+        $coverage = $this->coverage($context, $lines);
+        $ranking = $this->ranking($context, $lines, $coverage);
+        $anomalies = $this->anomalies($context);
 
         return [
             'data' => [
@@ -67,19 +74,41 @@ class MostCostlyVehicleWidget extends Widget
                 'vehicles' => array_slice($ranking, 0, self::TOP),
                 'vehicles_total' => count($ranking),
                 'vehicles_with_cost' => count(array_filter($ranking, fn ($v) => BigDecimal::of($v['total'])->isPositive())),
+                'vehicles_cost_incomplete' => count(array_filter($ranking, fn ($v) => ! $v['cost_complete'])),
+                'payment_anomalies' => $anomalies->count(),
                 'options' => $this->options($context),
             ],
-            'limitations' => OperatingCostQuery::limitations($context, $lines),
+            'limitations' => OperatingCostQuery::limitations($context, $lines, $coverage, $anomalies),
+            'basis' => OperatingCostQuery::basis($context, $coverage),
         ];
+    }
+
+    private function coverage(DashboardContext $context, Collection $lines, array $narrow = []): array
+    {
+        return OperatingCostQuery::laborCoverage($context, $lines, $context->periodStartDate(), $context->periodEndDateExclusive(), $narrow + array_filter([
+            'vehicle_category_id' => $context->filters->param('vehicle_category_id'),
+            'vehicle_id' => $context->filters->param('vehicle_id'),
+        ]));
+    }
+
+    private function anomalies(DashboardContext $context)
+    {
+        return OperatingCostQuery::paymentAnomalies($context, $context->periodStartDate(), $context->periodEndDateExclusive(), array_filter([
+            'vehicle_category_id' => $context->filters->param('vehicle_category_id'),
+            'vehicle_id' => $context->filters->param('vehicle_id'),
+        ]));
     }
 
     public function detailRules(): ?array
     {
-        return ['vehicle_id' => ['nullable', 'uuid'], 'work_order_id' => ['nullable', 'uuid']];
+        return ['vehicle_id' => ['nullable', 'uuid'], 'work_order_id' => ['nullable', 'uuid'], 'view' => ['nullable', 'in:payment_anomalies']];
     }
 
     public function detail(DashboardContext $context, array $params): array
     {
+        if (($params['view'] ?? null) === 'payment_anomalies') {
+            return $this->paginateList($this->anomalies($context)->sortBy([['payment_date', 'asc'], ['wo_number', 'asc']])->values()->all(), $params);
+        }
         if (! empty($params['work_order_id'])) {
             $lines = $this->lines($context, ['work_order_id' => $params['work_order_id']]);
 
@@ -87,10 +116,30 @@ class MostCostlyVehicleWidget extends Widget
         }
         if (! empty($params['vehicle_id'])) {
             $lines = $this->lines($context, ['vehicle_id' => $params['vehicle_id']]);
-            $complete = WorkTimeQuery::historyComplete($context, $lines->pluck('work_order_id')->unique()->values()->all());
-            $rows = $lines->groupBy('work_order_id')->map(fn (Collection $rows, $id) => [
-                'work_order_id' => $id, 'wo_number' => $rows->first()['wo_number'], 'history_complete' => $complete[$id] ?? false,
-            ] + OperatingCostQuery::totals($rows))->sortByDesc(fn ($r) => (float) $r['total'])->values()->all();
+            $coverage = $this->coverage($context, $lines, ['vehicle_id' => $params['vehicle_id']]);
+            $states = collect($coverage['population'])->pluck('state', 'id');
+            $unvalued = $lines->where('component', 'LABOR')->whereNull('amount')->pluck('work_order_id')->flip();
+            $assigned = DB::table('work_order_mechanic_assignments')->whereIn('work_order_id', $states->keys())->pluck('work_order_id')->unique()->flip();
+            // Work Orders of the vehicle with work-time history problems but no cost line in the period are listed too.
+            $ids = $lines->pluck('work_order_id')->merge($states->keys())->unique()->values();
+            $woNumbers = DB::table('work_orders')->whereIn('id', $ids)->pluck('wo_number', 'id');
+            $rows = $ids->map(function ($id) use ($lines, $states, $unvalued, $assigned, $woNumbers) {
+                $set = $lines->where('work_order_id', $id);
+                $state = $states[$id] ?? WorkTimeQuery::NOT_STARTED;
+                $totals = OperatingCostQuery::totals($set);
+                $laborStatus = match (true) {
+                    $state === WorkTimeQuery::NOT_STARTED => 'NONE',
+                    $state === WorkTimeQuery::UNAVAILABLE, $state === WorkTimeQuery::COMPLETE && ! isset($assigned[$id]) => 'UNAVAILABLE',
+                    $state === WorkTimeQuery::PARTIAL, isset($unvalued[$id]) => 'PARTIAL',
+                    default => 'AVAILABLE',
+                };
+                if ($laborStatus === 'UNAVAILABLE') {
+                    $totals['LABOR'] = null; // not 0: nothing was recorded
+                }
+
+                return ['work_order_id' => $id, 'wo_number' => $woNumbers[$id] ?? null, 'history_complete' => $state === WorkTimeQuery::COMPLETE,
+                    'work_time_state' => $state, 'labor_status' => $laborStatus, 'cost_complete' => in_array($laborStatus, ['NONE', 'AVAILABLE'], true)] + $totals;
+            })->sortByDesc(fn ($r) => (float) $r['total'])->values()->all();
 
             return $this->paginateList($rows, $params);
         }
@@ -109,8 +158,9 @@ class MostCostlyVehicleWidget extends Widget
     }
 
     /** All vehicles in scope (plus any vehicle with cost on an accessible Work Order), highest total first. */
-    private function ranking(DashboardContext $context, Collection $lines): array
+    private function ranking(DashboardContext $context, Collection $lines, ?array $coverage = null): array
     {
+        $coverage ??= $this->coverage($context, $lines);
         $perVehicle = OperatingCostQuery::perVehicle($lines);
         $inScope = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at')
             ->when($context->filters->param('vehicle_category_id'), fn ($q, $id) => $q->where('v.vehicle_category_id', $id))
@@ -123,8 +173,17 @@ class MostCostlyVehicleWidget extends Widget
             ->leftJoin('vehicle_categories as c', 'c.id', '=', 'v.vehicle_category_id')
             ->whereIn('v.id', $ids)->where('v.tenant_id', $context->tenantId)
             ->get(['v.id', 'v.registration_number', 'b.name as branch_name', 'c.name as category_name'])
-            ->map(fn ($v) => ['vehicle_id' => $v->id, 'registration_number' => $v->registration_number, 'branch_name' => $v->branch_name,
-                'category_name' => $v->category_name] + ($perVehicle[$v->id] ?? $zero))
+            ->map(function ($v) use ($perVehicle, $zero, $coverage) {
+                $totals = $perVehicle[$v->id] ?? $zero;
+                // A vehicle with no started Work Order has a true zero; one whose mechanic time was never recorded has none (not 0).
+                $laborStatus = $coverage['vehicles'][$v->id] ?? 'NONE';
+                if ($laborStatus === 'UNAVAILABLE') {
+                    $totals['LABOR'] = null;
+                }
+
+                return ['vehicle_id' => $v->id, 'registration_number' => $v->registration_number, 'branch_name' => $v->branch_name, 'category_name' => $v->category_name]
+                    + $totals + ['labor_status' => $laborStatus, 'cost_complete' => in_array($laborStatus, ['NONE', 'AVAILABLE'], true)];
+            })
             ->all();
         usort($rows, fn ($a, $b) => BigDecimal::of($b['total'])->compareTo($a['total']) ?: strcmp((string) $a['registration_number'], (string) $b['registration_number']));
 

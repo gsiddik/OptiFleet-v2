@@ -4,6 +4,7 @@ namespace App\Domain\Dashboard\Widgets\Workshop;
 
 use App\Domain\Dashboard\DashboardContext;
 use App\Domain\Dashboard\DashboardPermissions;
+use App\Domain\Dashboard\DataBasis;
 use App\Domain\Dashboard\Models\MechanicPerformanceBaseline;
 use App\Domain\Dashboard\WorkTime\WorkTimeQuery;
 use Brick\Math\BigDecimal;
@@ -59,6 +60,11 @@ class MechanicPerformanceWidget extends WorkOrderWidget
         return ['maintenance_type' => ['nullable', Rule::in(MechanicPerformanceBaseline::MAINTENANCE_TYPES)]];
     }
 
+    public function version(): int
+    {
+        return 2; // exclusion counts, unavailable average, completeness basis
+    }
+
     public function compute(DashboardContext $context): array
     {
         $stats = $this->stats($context);
@@ -69,7 +75,17 @@ class MechanicPerformanceWidget extends WorkOrderWidget
         $mechanics = $stats->where('type', $type)->map(fn ($s) => $this->present($s, $baseline))
             ->sortBy([['valid_samples', 'desc'], ['worker_name', 'asc']])->values()->all();
 
-        return ['data' => [
+        $forType = $stats->where('type', $type);
+        $reasons = ['WORK_TIME_UNAVAILABLE' => (int) $forType->sum('excluded_unavailable'), 'WORK_TIME_PARTIAL' => (int) $forType->sum('excluded_partial'), 'NO_ATTRIBUTED_TIME' => (int) $forType->sum('excluded_no_time')];
+        $completeness = DataBasis::completeness((int) $forType->sum('completed_total'), (int) $forType->sum('valid_samples'), $reasons);
+
+        return ['basis' => DataBasis::make(
+            [['key' => 'SAMPLE', 'code' => 'WORK_ORDER_COMPLETED_DATE'], ['key' => 'HOURS', 'code' => 'WORK_INTERVALS']],
+            ['COMPLETED_INTERNAL_WORK_ORDERS_OF_TYPE', 'MECHANIC_OWN_HOURS'],
+            ['EXTERNAL_WORK_ORDERS', 'WORK_ORDERS_WITHOUT_COMPLETE_WORK_TIME_HISTORY', 'ESTIMATED_TIME'],
+            $completeness,
+            WorkTimeQuery::historyAvailableFrom($context),
+        ), 'data' => [
             'maintenance_type' => $type,
             'baseline_hours' => $baseline,
             'min_samples' => self::MIN_SAMPLES,
@@ -77,7 +93,9 @@ class MechanicPerformanceWidget extends WorkOrderWidget
             'types' => array_map(fn ($t) => [
                 'maintenance_type' => $t, 'baseline_hours' => $baselines[$t] ?? null,
                 'valid_samples' => (int) $stats->where('type', $t)->sum('valid_samples'),
+                'completed_total' => (int) $stats->where('type', $t)->sum('completed_total'),
             ], MechanicPerformanceBaseline::MAINTENANCE_TYPES),
+            'completeness' => $completeness,
             'mechanics' => $mechanics,
         ]];
     }
@@ -92,19 +110,25 @@ class MechanicPerformanceWidget extends WorkOrderWidget
         $type = $context->filters->param('maintenance_type');
         $rows = collect(WorkTimeQuery::attribute($context, WorkTimeQuery::intervals($context, $this->completed($context, $type)->select('wo.id'))))
             ->where('worker_id', $params['worker_id'])->groupBy('work_order_id');
-        $ids = $rows->keys()->all();
-        $complete = WorkTimeQuery::historyComplete($context, $ids);
+        // Every completed Work Order the mechanic was assigned to: those without recorded work time are listed too
+        // (hours unavailable, not 0), so the list adds up to the completed total and shows why a sample is excluded.
+        $assigned = DB::table('work_order_mechanic_assignments')->where('worker_id', $params['worker_id'])
+            ->whereIn('work_order_id', $this->completed($context, $type)->select('wo.id'))->distinct()->pluck('work_order_id')->all();
+        $ids = array_values(array_unique(array_merge($rows->keys()->all(), $assigned)));
+        $state = WorkTimeQuery::historyState($context, $ids);
         $cycles = DB::table('work_order_work_intervals')->whereIn('work_order_id', $ids)->groupBy('work_order_id')
             ->selectRaw('work_order_id, max(cycle) as c')->pluck('c', 'work_order_id');
         $info = $this->withListColumns(DB::table('work_orders as wo')->whereIn('wo.id', $ids))->get()->keyBy('id');
 
-        $items = $rows->map(fn (Collection $r, $id) => [
+        $items = collect($ids)->map(fn ($id) => [
             'work_order_id' => $id, 'wo_number' => $info[$id]->wo_number, 'maintenance_type' => $info[$id]->maintenance_type,
             'vehicle_id' => $info[$id]->vehicle_id, 'registration_number' => $info[$id]->registration_number,
             'completed_at' => self::isoUtc($info[$id]->completed_at),
-            'worker_hours' => WorkTimeQuery::hours((int) $r->sum('seconds')),
-            'rework_cycles' => max(0, (int) ($cycles[$id] ?? 1) - 1),
-            'history_complete' => $complete[$id] ?? false,
+            'worker_hours' => isset($rows[$id]) ? WorkTimeQuery::hours((int) $rows[$id]->sum('seconds')) : null,
+            'rework_cycles' => isset($cycles[$id]) ? max(0, (int) $cycles[$id] - 1) : null,
+            'history_complete' => ($state[$id] ?? null) === WorkTimeQuery::COMPLETE,
+            'work_time_state' => $state[$id] ?? WorkTimeQuery::UNAVAILABLE,
+            'valid_sample' => ($state[$id] ?? null) === WorkTimeQuery::COMPLETE && isset($rows[$id]),
         ])->sortByDesc('completed_at')->values()->all();
 
         return $this->paginateList($items, $params);
@@ -121,16 +145,27 @@ class MechanicPerformanceWidget extends WorkOrderWidget
         $typeOf = $types($handled->pluck('work_order_id')->merge($done->pluck('work_order_id'))->unique()->values());
         $complete = WorkTimeQuery::historyComplete($context, $done->pluck('work_order_id')->unique()->values()->all());
 
-        $keys = $handled->concat($done)->map(fn ($r) => $r['worker_id'].'|'.$typeOf[$r['work_order_id']])->unique();
+        // Population = completed Work Orders the mechanic was assigned to (with or without recorded time), so Work Orders
+        // that have no work-time history are counted as excluded instead of silently disappearing.
+        $completedIds = $this->completed($context, null)->pluck('wo.id')->all();
+        $assigned = $completedIds === [] ? collect() : DB::table('work_order_mechanic_assignments')->whereIn('work_order_id', $completedIds)
+            ->select('worker_id', 'work_order_id')->distinct()->get();
+        $typeOf = $typeOf->merge(DB::table('work_orders')->whereIn('id', $assigned->pluck('work_order_id')->unique()->values())->pluck('maintenance_type', 'id'));
+        $state = WorkTimeQuery::historyState($context, $assigned->pluck('work_order_id')->unique()->values()->all());
+
+        $keys = $handled->concat($done)->map(fn ($r) => $r['worker_id'].'|'.$typeOf[$r['work_order_id']])
+            ->concat($assigned->map(fn ($a) => $a->worker_id.'|'.$typeOf[$a->work_order_id]))->unique();
         $workers = DB::table('workers as w')->leftJoin('workshops as s', 's.id', '=', 'w.workshop_id')
             ->where('w.tenant_id', $context->tenantId)->whereIn('w.id', $keys->map(fn ($k) => explode('|', $k)[0])->unique()->values())
             ->get(['w.id', 'w.name', 'w.employee_code', 's.name as workshop_name'])->keyBy('id');
 
-        return $keys->map(function (string $key) use ($handled, $done, $typeOf, $complete, $workers) {
+        return $keys->map(function (string $key) use ($handled, $done, $typeOf, $complete, $workers, $assigned, $state) {
             [$workerId, $type] = explode('|', $key);
             $mine = fn (Collection $rows) => $rows->where('worker_id', $workerId)->filter(fn ($r) => $typeOf[$r['work_order_id']] === $type);
             $perWo = $mine($done)->groupBy('work_order_id')->map(fn ($rows) => (int) $rows->sum('seconds'));
             $valid = $perWo->filter(fn ($seconds, $id) => $complete[$id] ?? false);
+            $population = $assigned->where('worker_id', $workerId)->pluck('work_order_id')->unique()->filter(fn ($id) => $typeOf[$id] === $type)->values();
+            $excluded = fn (string $s) => $population->filter(fn ($id) => ($state[$id] ?? null) === $s)->count();
 
             return [
                 'worker_id' => $workerId, 'type' => $type,
@@ -140,6 +175,10 @@ class MechanicPerformanceWidget extends WorkOrderWidget
                 'wo_completed' => $perWo->count(),
                 'valid_samples' => $valid->count(),
                 'valid_seconds' => (int) $valid->sum(),
+                'completed_total' => $population->count(),
+                'excluded_unavailable' => $excluded(WorkTimeQuery::UNAVAILABLE),
+                'excluded_partial' => $excluded(WorkTimeQuery::PARTIAL),
+                'excluded_no_time' => max(0, $population->count() - $valid->count() - $excluded(WorkTimeQuery::UNAVAILABLE) - $excluded(WorkTimeQuery::PARTIAL)),
             ];
         })->values();
     }
@@ -158,6 +197,10 @@ class MechanicPerformanceWidget extends WorkOrderWidget
         return [
             'worker_id' => $s['worker_id'], 'worker_name' => $s['worker_name'], 'employee_code' => $s['employee_code'], 'workshop_name' => $s['workshop_name'],
             'wo_handled' => $s['wo_handled'], 'wo_completed' => $s['wo_completed'], 'valid_samples' => $s['valid_samples'],
+            'completed_total' => $s['completed_total'], 'excluded_samples' => $s['completed_total'] - $s['valid_samples'],
+            'excluded_reasons' => ['WORK_TIME_UNAVAILABLE' => $s['excluded_unavailable'], 'WORK_TIME_PARTIAL' => $s['excluded_partial'], 'NO_ATTRIBUTED_TIME' => $s['excluded_no_time']],
+            // No valid sample → the average is unavailable (null), never 0.
+            'avg_state' => $avg === null ? 'UNAVAILABLE' : 'AVAILABLE',
             'avg_hours' => $avg === null ? null : (string) $avg,
             'baseline_hours' => $baseline,
             'diff_hours' => $avg !== null && $baseline !== null ? (string) $avg->minus($baseline)->toScale(2) : null,

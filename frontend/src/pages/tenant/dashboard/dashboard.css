@@ -406,3 +406,19 @@
   outline: 2px solid #2563eb;
   outline-offset: 1px;
 }
+
+/* ---- data basis, completeness and unavailable values ---- */
+.dash-unavailable { color: #6b7280; font-style: italic; font-size: 0.92em; }
+.dash-basis { display: grid; gap: 4px; font-size: 12px; color: #4b5563; }
+.dash-basis-key { font-weight: 600; }
+.dash-completeness { padding: 4px 8px; border-radius: 6px; border: 1px solid; font-weight: 600; }
+.dash-completeness-partial { color: #92400e; background: #fffbeb; border-color: #fde68a; }
+.dash-completeness-unavailable { color: #991b1b; background: #fef2f2; border-color: #fecaca; }
+.dash-basis-details summary { cursor: pointer; color: #1d4ed8; width: fit-content; }
+.dash-basis-details summary:focus-visible { outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.dash-basis-details > div { margin-top: 6px; }
+.dash-basis-details ul { margin: 2px 0 0; padding-left: 18px; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .dash-unavailable, :root:not([data-theme="light"]) .dash-basis { color: #9ca3af; }
+  :root:not([data-theme="light"]) .dash-basis-details summary { color: #93c5fd; }
+}

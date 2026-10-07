@@ -5,12 +5,14 @@ namespace Database\Seeders;
 use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\Breakdown\Services\BreakdownService;
 use App\Domain\ComponentAsset\Models\ComponentAsset;
+use App\Domain\ComponentAsset\Services\ComponentAssetException;
 use App\Domain\ComponentAsset\Services\ComponentAssetRegisterService;
 use App\Domain\ComponentAsset\Services\ComponentAssetService;
 use App\Domain\Dashboard\Models\MechanicPerformanceBaseline;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Inventory\Models\StockTransfer;
 use App\Domain\Inventory\Models\WarehouseStock;
+use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Inventory\Services\StockTransferService;
 use App\Domain\MasterData\Models\ComponentGroup;
 use App\Domain\MasterData\Models\VehicleCategory;
@@ -33,6 +35,7 @@ use App\Domain\WorkOrder\Services\WorkOrderExternalInvoiceService;
 use App\Domain\WorkOrder\Services\WorkOrderExternalServiceService;
 use App\Domain\WorkOrder\Services\WorkOrderPartRequestService;
 use App\Domain\WorkOrder\Services\WorkOrderPartService;
+use App\Domain\WorkOrder\Services\WorkOrderRemovedComponentService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use App\Domain\WorkOrder\Services\WorkshopInvoiceService;
 use App\Domain\Workshop\Models\Worker;
@@ -43,6 +46,7 @@ use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Seeder;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Demo layer only (never production): 12 full months + the running month of history for the ALPHA
@@ -470,6 +474,8 @@ class DashboardDemoSeeder extends Seeder
         }
 
         $this->movedComponent($vehicles);
+        $this->serializedInstallations($vehicles);
+        $this->legacyHistoryWorkOrders($vehicles);
 
         // Thresholds (stock settings, as set on the warehouse stock screen): brake pads below their
         // reorder point in Jakarta; oil filters in Jakarta intentionally 0 (never "low", but set);
@@ -488,6 +494,111 @@ class DashboardDemoSeeder extends Seeder
     }
 
     /**
+     * Serial batteries received through PO → Goods Receipt (the ledger +3, one component asset per unit), then:
+     *  1. one installed straight from the warehouse (DIRECT_ISSUE: the ledger −1 at installation);
+     *  2. the same installation repeated (rejected — nothing moves twice);
+     *  3. one issued through a Work Order Part Request (ledger −1 at issue), consumed, then installed on that
+     *     Work Order (WO_ISSUE: the installation does not deduct again);
+     *  4. the old battery recorded as removed on that Work Order and received back in the warehouse through the
+     *     Removed Components flow (a zero-balance marker: the unit does not become available stock);
+     *  the third unit stays in stock. Also an opening balance without a unit cost (stock pending valuation).
+     */
+    private function serializedInstallations(array $vehicles): void
+    {
+        $product = $this->product('Truck Battery 12V 100Ah');
+        $warehouse = $this->warehouse();
+        $service = app(PurchaseOrderService::class);
+        $this->at($this->realNow->subDays(14));
+        $po = $service->create($this->vendor('VND-SINAR'), $warehouse, ['expected_delivery_date' => $this->realNow->subDays(12)->toDateString(), 'notes' => self::MARKER.' serial batteries'], [
+            ['product_id' => $product->id, 'quantity_ordered' => 3, 'unit_price' => 1800000],
+        ], $this->admin->id);
+        $service->transition($service->approve($service->transition($po, 'SUBMITTED'), $this->admin->id), 'ISSUED');
+        $this->at($this->realNow->subDays(12));
+        $po = PurchaseOrder::query()->with('items')->findOrFail($po->id);
+        $receipt = app(GoodsReceiptService::class)->post($po, $warehouse, [['purchase_order_item_id' => $po->items->first()->id, 'quantity_accepted' => 3, 'quantity_rejected' => 0]], $this->admin->id, null, [
+            'mode' => 'NEW', 'vendor_invoice_number' => 'DASH-INV-BAT', 'vendor_invoice_date' => $this->realNow->subDays(12)->toDateString(),
+            'amount' => (string) $po->total, 'terms_of_payment_days' => 30, 'document' => $this->pdf('DASH-INV-BAT'),
+        ]);
+        $assets = ComponentAsset::query()->whereIn('goods_receipt_item_id', DB::table('goods_receipt_items')->where('goods_receipt_id', $receipt->id)->select('id'))->orderBy('asset_number')->get()->values();
+        $components = app(ComponentAssetService::class);
+        $vehicle = $vehicles['jkt']->fresh();
+
+        $this->at($this->realNow->subDays(10));
+        $components->install($assets[0], $vehicle, 'BATTERY_BOX_A', 53000, null, $this->admin->id);
+        try {
+            $components->install($assets[0]->fresh(), $vehicle, 'BATTERY_BOX_A', 53000, null, $this->admin->id); // a retry: rejected, nothing moves
+        } catch (ComponentAssetException) {
+        }
+
+        $workOrders = app(WorkOrderService::class);
+        $this->at($this->realNow->subDays(8));
+        $wo = $workOrders->create($vehicle, ['workshop_id' => $this->workshop($vehicle)->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
+            'complaint' => self::MARKER.' battery replacement'], $this->admin->id);
+        $wo = $workOrders->assign($workOrders->approve($workOrders->submit($wo)));
+        $this->assignMechanic($wo, $this->mechanics($vehicle)[0], 'PRIMARY');
+        DemoWorkspaceAssignment::approve($wo, $this->admin->id, null, $this->realNow->subDays(8), 8);
+        $this->at($this->realNow->subDays(8)->addHour());
+        $wo = $workOrders->start($workOrders->schedule($wo->fresh()));
+        $requests = app(WorkOrderPartRequestService::class);
+        $this->at($this->realNow->subDays(8)->addHours(2));
+        $request = $requests->request($wo->fresh(), [['product_id' => $product->id, 'quantity_requested' => 1]], null, $this->admin->id);
+        $request = $requests->issue($requests->approve($request, null, $this->admin->id, null), $warehouse, $this->admin->id);
+        foreach ($request->items as $item) {
+            app(WorkOrderPartService::class)->consume(WorkOrderPlannedPart::query()->findOrFail($item->planned_part_id), null, $this->admin->id);
+        }
+        $components->install($assets[1]->fresh(), $vehicle, 'BATTERY_BOX_B', 53100, $wo->id, $this->admin->id);
+        $removedComponents = app(WorkOrderRemovedComponentService::class);
+        $removed = $removedComponents->remove($wo->fresh(), ['product_id' => $product->id, 'quantity' => 1, 'condition' => 'GOOD', 'notes' => 'Old battery taken off during the replacement.'], $this->admin->id);
+        $removedComponents->returnToWarehouse($removed, $warehouse->id, 'Old battery received in the warehouse.', $this->admin->id);
+        $this->at($this->realNow->subDays(8)->addHours(5));
+        $workOrders->complete($workOrders->submitToQc($wo->fresh()));
+
+        // Stock held without a recorded unit cost: pending valuation, not a value of 0 (a tool with no stock yet at Bandung).
+        $bandung = $this->warehouse('ALPHA-BDG-WH1');
+        $tool = Product::query()->where('tenant_id', $this->tenant->id)->where('product_type', 'TOOL')->orderBy('name')->first();
+        if ($tool && ! WarehouseStock::query()->where('warehouse_id', $bandung->id)->where('product_id', $tool->id)->where('quantity_on_hand', '>', 0)->exists()) {
+            $this->at($this->realNow->subDays(3));
+            app(InventoryService::class)->receive($bandung, $tool, 4, 0, 'OPENING', null, null, $this->admin->id, 'Demo: opening balance without a unit cost.');
+        }
+    }
+
+    /**
+     * Two Work Orders that look like work done BEFORE work-time tracking existed: the interval rows are removed
+     * after the fact, because that history genuinely cannot exist for them (it is never reconstructed or
+     * estimated). One has no interval at all (unavailable), the other lost only its first interval after a rework
+     * (partial: history starts part-way). Their mechanic cost / work time must show as unavailable or partial.
+     */
+    private function legacyHistoryWorkOrders(array $vehicles): void
+    {
+        $workOrders = app(WorkOrderService::class);
+        foreach ([['none', $this->realNow->subDays(40), false], ['partial', $this->realNow->subDays(34), true]] as [$kind, $start, $partial]) {
+            $vehicle = $vehicles['jkt']->fresh();
+            $this->at($start);
+            $wo = $workOrders->create($vehicle, ['workshop_id' => $this->workshop($vehicle)->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
+                'complaint' => self::MARKER.' legacy work (before work-time tracking) — '.$kind], $this->admin->id);
+            $wo = $workOrders->assign($workOrders->approve($workOrders->submit($wo)));
+            $this->assignMechanic($wo, $this->mechanics($vehicle)[0], 'PRIMARY');
+            DemoWorkspaceAssignment::approve($wo, $this->admin->id, null, $start, 8);
+            $this->at($start->addHour());
+            $wo = $workOrders->start($workOrders->schedule($wo->fresh()));
+            $this->at($start->addHours(5));
+            $workOrders->submitToQc($wo->fresh());
+            if ($partial) {
+                $this->at($start->addHours(6));
+                $workOrders->rework($wo->fresh());
+                $this->at($start->addHours(7));
+                $workOrders->resume($wo->fresh());
+                $this->at($start->addHours(9));
+                $workOrders->submitToQc($wo->fresh());
+            }
+            $this->at($start->addHours(12));
+            $workOrders->complete($wo->fresh());
+            $intervals = DB::table('work_order_work_intervals')->where('work_order_id', $wo->id);
+            $partial ? (clone $intervals)->where('cycle', 1)->delete() : $intervals->delete();
+        }
+    }
+
+    /**
      * A serialized battery installed on the Jakarta truck 60 days ago, removed for reuse 20 days ago and
      * installed on the Bandung truck the same day: one open installation, so Installed Components
      * counts it once (on Bandung).
@@ -503,6 +614,10 @@ class DashboardDemoSeeder extends Seeder
             ]);
         if ($asset->current_status !== 'IN_STOCK') {
             return;
+        }
+        if ($asset->wasRecentlyCreated) {
+            // Received into the warehouse ledger like any stock, so installing it takes it out exactly once.
+            app(InventoryService::class)->receive($this->warehouse(), $this->product('Truck Battery 12V 100Ah'), 1, 1850000, 'RECEIPT', null, null, $this->admin->id, 'Demo: serial battery DASH-BAT-01 received.');
         }
         $components = app(ComponentAssetService::class);
         $this->at($this->realNow->subDays(60));

@@ -23,6 +23,8 @@ class ComponentAssetTest extends TestCase
         $product = $this->makeProduct($tenant);
         // An in-stock asset is always in a warehouse (component_assets_location_check).
         $this->warehouse = $this->makeWarehouse($tenant, $branch);
+        // The units these tests put in the warehouse are in the ledger too (installing takes one out of it).
+        app(\App\Domain\Inventory\Services\InventoryService::class)->receive($this->warehouse, $product, 10, 1500000, 'RECEIPT', null, null, null);
 
         return [$tenant, $vehicle, $componentGroup, $product];
     }
@@ -172,6 +174,7 @@ class ComponentAssetTest extends TestCase
         $vehicleB = $this->makeVehicle($tenant, $branchB, $category, ['registration_number' => 'REG-B']);
         $product = $this->makeProduct($tenant);
         $warehouse = $this->makeWarehouse($tenant, $branchA);
+        app(\App\Domain\Inventory\Services\InventoryService::class)->receive($warehouse, $product, 2, 1500000, 'RECEIPT', null, null, null);
 
         [, $ownerToken] = $this->makeTenantUser($tenant, $this->permissions());
         $assetA = ComponentAsset::query()->create(['tenant_id' => $tenant->id, 'product_id' => $product->id, 'serial_number' => 'BAT-BR-A', 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $warehouse->id]);
