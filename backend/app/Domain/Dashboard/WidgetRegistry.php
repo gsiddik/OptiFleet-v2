@@ -16,12 +16,16 @@ final class WidgetRegistry
         'FL-01' => Widgets\Fleet\FleetStatusWidget::class,
         'FL-02' => Widgets\Fleet\FleetByBranchWidget::class,
         'FL-03' => Widgets\Fleet\ActiveBreakdownsWidget::class,
+        'FL-04' => Widgets\Fleet\BreakdownTrendWidget::class,
+        'FL-05' => Widgets\Fleet\TopBreakdownVehiclesWidget::class,
         'FL-06' => Widgets\Fleet\VehicleDocumentsWidget::class,
         'MT-01' => Widgets\Maintenance\ScheduleStatusWidget::class,
         'MT-02' => Widgets\Maintenance\OverdueMaintenanceWidget::class,
         'MT-03' => Widgets\Maintenance\OpenRequestsWidget::class,
         'WS-01' => Widgets\Workshop\WorkOrderBacklogWidget::class,
         'WS-02' => Widgets\Workshop\OpenWorkOrderAgingWidget::class,
+        'WS-03' => Widgets\Workshop\CompletedWorkOrdersWidget::class,
+        'WS-04' => Widgets\Workshop\WorkOrderTurnaroundWidget::class,
         'WS-05' => Widgets\Workshop\WorkspaceOccupancyWidget::class,
         'WS-06' => Widgets\Workshop\WaitingPartsWidget::class,
         'FN-01' => Widgets\Finance\ServiceCostMonthlyWidget::class,
@@ -33,11 +37,17 @@ final class WidgetRegistry
         'WH-01' => Widgets\Warehouse\StockHealthWidget::class,
         'WH-02' => Widgets\Warehouse\CriticalStockWidget::class,
         'WH-03' => Widgets\Warehouse\StockTransfersWidget::class,
+        'WH-04' => Widgets\Warehouse\StockMovementWidget::class,
+        'WH-05' => Widgets\Warehouse\SlowMovingStockWidget::class,
         'PR-01' => Widgets\Procurement\ProcurementPipelineWidget::class,
         'PR-02' => Widgets\Procurement\LatePurchaseOrdersWidget::class,
+        'PR-03' => Widgets\Procurement\PurchaseOrderValueWidget::class,
+        'PR-04' => Widgets\Procurement\VendorPerformanceWidget::class,
         'TR-01' => Widgets\Tire\TireStatusWidget::class,
         'TR-02' => Widgets\Tire\TiresDueReplacementWidget::class,
         'TR-03' => Widgets\Tire\TiresAtVendorWidget::class,
+        'TR-04' => Widgets\Tire\TireServiceCostWidget::class,
+        'AL-01' => Widgets\Alert\ActionCenterWidget::class,
     ];
 
     /**
@@ -46,7 +56,7 @@ final class WidgetRegistry
      * package (FN-02 by vehicle instead of the FN-03 branch comparison).
      */
     public const PRESETS = [
-        'summary' => ['FL-01', 'FL-03', 'FN-04', 'FN-05', 'FN-01', 'FN-03', 'FL-04', 'WS-01', 'AL-01'],
+        'summary' => ['FL-01', 'FL-03', 'FN-04', 'FN-05', 'FN-01', 'FN-03', 'FL-04', 'WS-01', 'MT-02', 'AL-01'],
         'fleet' => ['FL-01', 'FL-03', 'MT-01', 'FL-06', 'MT-02', 'FL-02', 'FL-05', 'FL-04', 'MT-03', 'TR-02'],
         'workshop' => ['WS-01', 'WS-02', 'WS-05', 'WS-06', 'WS-03', 'WS-04', 'MT-01', 'MT-03'],
         'warehouse' => ['FN-05', 'WH-01', 'WH-02', 'WH-03', 'WH-04', 'WH-05', 'TR-01', 'TR-03'],

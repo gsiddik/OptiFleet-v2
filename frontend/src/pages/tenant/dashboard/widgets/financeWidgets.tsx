@@ -64,7 +64,7 @@ function PendingNote({ pending, currency }: { pending: { parts_on_open_work_orde
 }
 
 const FN01: WidgetDefinition<{ months: (SourceSums & { month: string; is_current: boolean; work_orders: number; vehicles: number })[]; totals: SourceSums; vehicles: number; pending: Parameters<typeof PendingNote>[0]['pending'] }> = {
-  size: 'l',
+  size: 'xl',
   render: (env, ctx) => {
     const current = env.data.months.find((m) => m.is_current);
     return (
@@ -152,7 +152,7 @@ const payableLink = (r: Row) => {
   return '/app/vendor-invoice-references';
 };
 
-const payableColumns: Column<Row>[] = [
+export const payableColumns: Column<Row>[] = [
   { key: 'source', label: col('payableSource'), value: (r) => t(`dashboard.labels.payable_${r.source}`) },
   { key: 'document_number', label: col('document'), link: payableLink },
   { key: 'vendor_name', label: col('vendor') },

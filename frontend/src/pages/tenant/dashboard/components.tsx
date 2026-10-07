@@ -214,7 +214,7 @@ export interface BarSeries {
   color: string;
 }
 
-function ChartTooltip({ active, payload, label, series, unit, currency, labelFormatter, footer }: {
+function ChartTooltip({ active, payload, label, series, unit, currency, labelFormatter, footer, hideTotal }: {
   active?: boolean;
   payload?: { dataKey?: string | number; value?: number }[];
   label?: string;
@@ -223,6 +223,7 @@ function ChartTooltip({ active, payload, label, series, unit, currency, labelFor
   currency?: string;
   labelFormatter?: (label: string) => string;
   footer?: (label: string) => ReactNode;
+  hideTotal?: boolean;
 }) {
   if (!active || !payload?.length || label === undefined) return null;
   const fmt = (v: number) => (unit === 'money' ? money(v, currency) : count(v));
@@ -243,7 +244,7 @@ function ChartTooltip({ active, payload, label, series, unit, currency, labelFor
           </div>
         );
       })}
-      {series.length > 1 && (
+      {series.length > 1 && !hideTotal && (
         <div className="dash-chart-tooltip-row" style={{ borderTop: '1px solid #e5e7eb', marginTop: 4, paddingTop: 4 }}>
           <span>{t('dashboard.chart.total')}</span>
           <span>{fmt(total)}</span>
@@ -258,7 +259,7 @@ function ChartTooltip({ active, payload, label, series, unit, currency, labelFor
  * Vertical columns (stacked when several series) on one value axis — months or ordered buckets on X.
  * Clicking a column calls onSelect with its category.
  */
-export function ColumnChart({ data, categoryKey, series, unit, currency, height = 240, labelFormatter, tickFormatter, onSelect, highlight, colorFor, footer, allTicks }: {
+export function ColumnChart({ data, categoryKey, series, unit, currency, height = 240, labelFormatter, tickFormatter, onSelect, highlight, colorFor, footer, allTicks, grouped }: {
   data: Record<string, unknown>[];
   categoryKey: string;
   series: BarSeries[];
@@ -268,6 +269,8 @@ export function ColumnChart({ data, categoryKey, series, unit, currency, height 
   labelFormatter?: (label: string) => string;
   /** Shorter axis tick text (the tooltip keeps labelFormatter). */
   tickFormatter?: (label: string) => string;
+  /** Side-by-side columns instead of a stack, and no summed total in the tooltip (e.g. value in vs out). */
+  grouped?: boolean;
   /** Show every category tick (ordered buckets) instead of thinning them. */
   allTicks?: boolean;
   onSelect?: (category: string) => void;
@@ -288,10 +291,10 @@ export function ColumnChart({ data, categoryKey, series, unit, currency, height 
           <YAxis tick={tick} tickLine={false} axisLine={false} width={unit === 'money' ? 56 : 36} allowDecimals={unit === 'money'}
             tickFormatter={(v: number) => (unit === 'money' ? compactMoney(v) : count(v))} />
           <Tooltip cursor={{ fill: 'rgba(17,24,39,0.04)' }}
-            content={(props) => <ChartTooltip {...(props as object)} series={series} unit={unit} currency={currency} labelFormatter={labelFormatter} footer={footer} />} />
+            content={(props) => <ChartTooltip {...(props as object)} series={series} unit={unit} currency={currency} labelFormatter={labelFormatter} footer={footer} hideTotal={grouped} />} />
           {series.map((s, i) => (
-            <Bar key={s.key} dataKey={s.key} stackId="a" fill={s.color} stroke="#fff" strokeWidth={series.length > 1 ? 1 : 0}
-              radius={i === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} maxBarSize={44}
+            <Bar key={s.key} dataKey={s.key} stackId={grouped ? undefined : 'a'} fill={s.color} stroke="#fff" strokeWidth={series.length > 1 && !grouped ? 1 : 0}
+              radius={grouped || i === series.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} maxBarSize={grouped ? 22 : 44}
               cursor={onSelect ? 'pointer' : undefined} onClick={(entry: { payload?: Record<string, unknown> }) => onSelect?.(String(entry.payload?.[categoryKey]))}>
               {data.map((row) => {
                 const cat = String(row[categoryKey]);

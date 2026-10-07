@@ -8,6 +8,23 @@
     "showTable": "Show as table",
     "viewDetails": "View details"
   },
+  "alerts": {
+    "breakdown_immobilized": "Immobilized vehicles with an open breakdown: {{n}}",
+    "breakdown_open": "Other open breakdowns: {{n}}",
+    "documents_due_30": "Vehicle documents expiring within 30 days: {{n}}",
+    "documents_expired": "Vehicle documents past their expiry date: {{n}}",
+    "extension_due_30": "Vehicle documents to extend within 30 days: {{n}}",
+    "extension_overdue": "Vehicle documents past their extension deadline: {{n}}",
+    "maintenance_overdue": "Overdue maintenance schedules: {{n}}",
+    "payables_overdue": "Overdue unpaid invoices: {{n}}",
+    "po_late": "Late Purchase Orders: {{n}}",
+    "stockout_needed": "Out-of-stock or low items needed by open Work Orders: {{n}}",
+    "tires_due": "Installed tires at or below D_pull: {{n}}",
+    "transfer_discrepancy": "Stock transfers received with a discrepancy (30 days): {{n}}",
+    "transfers_late": "Stock transfers in transit for more than 7 days: {{n}}",
+    "wo_aged": "Work Orders open more than 14 days (not waiting for parts): {{n}}",
+    "wo_waiting_parts": "Work Orders waiting for parts: {{n}}"
+  },
   "buckets": {
     "d0_3": "0–3 days",
     "d15_30": "15–30 days",
@@ -37,6 +54,7 @@
   },
   "columns": {
     "acceptedAt": "Accepted by vendor",
+    "acceptedQty": "Accepted quantity",
     "age": "Age",
     "amount": "Amount",
     "available": "Available",
@@ -45,6 +63,7 @@
     "brand": "Brand",
     "bucket": "Range",
     "category": "Category",
+    "completedAt": "Completed",
     "costSource": "Component",
     "count": "Count",
     "createdAt": "Created",
@@ -56,6 +75,7 @@
     "daysLeft": "Days left",
     "daysOverdue": "Days overdue",
     "deadline": "Deadline",
+    "direction": "Direction",
     "dispatchedAt": "Dispatched",
     "document": "Document",
     "documentNumber": "Document number",
@@ -64,15 +84,21 @@
     "dPullMm": "D_pull (mm)",
     "dueDate": "Due date",
     "dueOdometer": "Due odometer (km)",
+    "durationHours": "Duration (hours)",
     "expectedDelivery": "Expected delivery",
     "fromWarehouse": "From",
+    "idleDays": "Idle days",
     "inspectedAt": "Inspected",
     "invoiceDate": "Invoice date",
     "kmOver": "Km over",
+    "lastMovement": "Last movement",
     "model": "Model",
     "month": "Month",
+    "movementType": "Movement",
     "neededByWorkOrder": "Needed by a Work Order",
     "onHand": "On hand",
+    "onTime": "On time",
+    "orderDate": "Order date",
     "outstanding": "Outstanding",
     "package": "Package",
     "partRequestedAt": "Oldest part request",
@@ -82,13 +108,17 @@
     "priority": "Priority",
     "product": "Product",
     "purchaseOrder": "Purchase Order",
+    "quantity": "Quantity",
+    "receipts": "Receipts",
     "receivedAt": "Received",
     "recognizedOn": "Recognized on",
     "recommendation": "Recommendation",
     "refundAmount": "Refund",
     "remainingTreadPct": "Remaining tread (%)",
     "reorderPoint": "Reorder point",
+    "reportedAt": "Reported",
     "request": "Request",
+    "resolvedAt": "Resolved",
     "return": "Return",
     "returnedAt": "Returned",
     "runningHours": "Running (hours)",
@@ -98,6 +128,7 @@
     "shortage": "Shortage",
     "sku": "SKU",
     "skuCount": "Items in stock",
+    "startedAt": "Started",
     "state": "State",
     "status": "Status",
     "total": "Total",
@@ -105,6 +136,7 @@
     "transfer": "Transfer",
     "treadMm": "Tread (mm)",
     "type": "Type",
+    "unvalued": "Without unit cost",
     "value": "Value",
     "vehicle": "Vehicle",
     "vehicles": "Vehicles",
@@ -165,8 +197,22 @@
     "costSource_EXTERNAL_SERVICE": "External services (internal WO)",
     "costSource_EXTERNAL_WO": "External Work Orders",
     "costSource_PARTS": "Parts consumed",
+    "direction_IN": "In",
+    "direction_OUT": "Out",
+    "direction_UNKNOWN": "Not recorded",
     "hold": "Hold",
     "inUse": "In Use",
+    "movement_ADJUSTMENT_MINUS": "Adjustment −",
+    "movement_ADJUSTMENT_PLUS": "Adjustment +",
+    "movement_ISSUE": "Issue",
+    "movement_OPENING": "Opening",
+    "movement_RECEIPT": "Goods receipt",
+    "movement_RETURN": "Return to stock",
+    "movement_RETURN_TO_VENDOR": "Return to vendor",
+    "movement_SCRAP": "Scrap",
+    "movement_STOCK_OPNAME": "Stock opname variance",
+    "movement_TRANSFER_IN": "Transfer in",
+    "movement_TRANSFER_OUT": "Transfer out",
     "payable_EXTERNAL_WO": "External WO invoices",
     "payable_SERVICE_INVOICE": "Service invoices",
     "payable_VENDOR_INVOICE": "Vendor invoices",
@@ -193,9 +239,14 @@
     "typePreventive": "Preventive"
   },
   "limitations": {
+    "cyclesWithoutCost": "{{count}} received retread/repair cycles have no recorded cost.",
     "foreignCurrencyExcluded": "{{count}} invoice(s) in {{currency}} ({{amount}}) are not included: amounts in another currency are never added to the totals.",
+    "opnameExcluded": "{{count}} stock opname variances are excluded: their direction is not recorded.",
+    "poWithoutOrderDate": "{{count}} committed Purchase Orders have no order date and are not placed in a month.",
     "tiresWithoutRuleProfile": "{{count}} installed tires have no applicable active rule profile (D_pull) and could not be assessed.",
-    "tiresWithoutTreadReading": "{{count}} installed tires have no tread depth reading and could not be assessed."
+    "tiresWithoutTreadReading": "{{count}} installed tires have no tread depth reading and could not be assessed.",
+    "turnaroundWithoutStart": "{{count}} completed Work Orders have no start time and are not measured.",
+    "unvaluedMovements": "{{count}} movements have no unit cost (e.g. adjustments, scrap) and are counted but not valued."
   },
   "presets": {
     "finance": "Finance",
@@ -223,6 +274,11 @@
     "workshopOperations": "Workshop Operations",
     "workshops": "Workshops"
   },
+  "severity": {
+    "critical": "Critical",
+    "high": "High",
+    "medium": "Medium"
+  },
   "states": {
     "loadFailed": "This widget could not be loaded.",
     "noRows": "No records.",
@@ -235,9 +291,15 @@
   },
   "units": {
     "days_one": "{{count}} day",
-    "days_other": "{{count}} days"
+    "days_other": "{{count}} days",
+    "hours": "{{value}} h"
   },
   "widgets": {
+    "al01": {
+      "empty": "Nothing needs attention right now.",
+      "help": "What needs attention now, from the dashboard data you are allowed to see. Each line opens the same list as its source widget.",
+      "title": "Action Center"
+    },
     "fl01": {
       "empty": "No vehicles in your scope yet.",
       "help": "Vehicles by their current status, in your branch scope. Disposed vehicles are not part of the fleet. Click a segment for the vehicle list.",
@@ -255,6 +317,18 @@
       "kpiOpen": "Open breakdowns",
       "note": "Longest running first.",
       "title": "Active Breakdowns"
+    },
+    "fl04": {
+      "empty": "No breakdowns reported in this period.",
+      "help": "Breakdowns reported per month (company time zone), by severity.",
+      "kpi": "Breakdowns reported",
+      "title": "Breakdown Trend"
+    },
+    "fl05": {
+      "empty": "No breakdowns reported in this period.",
+      "help": "The 10 vehicles with the most breakdowns reported in the period. Click a bar for the list.",
+      "series": "Breakdowns",
+      "title": "Vehicles with Most Breakdowns"
     },
     "fl06": {
       "empty": "No document deadlines in the next 90 days.",
@@ -342,6 +416,18 @@
       "kpi": "Late Purchase Orders",
       "title": "Late Purchase Orders"
     },
+    "pr03": {
+      "empty": "No committed Purchase Orders in this period.",
+      "help": "Purchase Order total (document value incl. tax and freight) by order date, for approved, issued, received and closed POs. Drafts, pending approvals, rejected and cancelled POs are left out.",
+      "kpi": "Committed ({{n}} POs)",
+      "series": "PO value",
+      "title": "Committed Purchase Order Value"
+    },
+    "pr04": {
+      "empty": "No goods receipts in this period.",
+      "help": "Per vendor, over posted goods receipts in the period: on time = received on or before the PO's expected delivery date (receipts without that date are left out of the rate); accepted = accepted quantity ÷ received quantity (accepted + rejected + damaged).",
+      "title": "Vendor Performance"
+    },
     "tr01": {
       "empty": "No tires in your scope.",
       "help": "Where the tires are now (scrapped, sold and lost tires are not counted). Visibility follows the tire's vehicle, warehouse or last branch.",
@@ -359,6 +445,11 @@
       "empty": "No tires at a vendor.",
       "help": "Retread and repair cycles sent to a vendor and not yet received, oldest first.",
       "title": "Tires at Vendor"
+    },
+    "tr04": {
+      "empty": "No retread or repair cost in this period.",
+      "help": "Retread and repair cycle cost by the month the tire came back from the vendor. Not part of Service Cost.",
+      "title": "Tire Service Cost"
     },
     "wh01": {
       "empty": "No stock in your warehouses yet.",
@@ -385,6 +476,21 @@
       "open": "Open transfers",
       "title": "Stock Transfers"
     },
+    "wh04": {
+      "empty": "No valued stock movements in this period.",
+      "help": "Value of stock coming in and going out per month (quantity × unit cost recorded on the movement), shown separately and never netted. Movements without a unit cost and stock opname variances are reported, not valued.",
+      "in": "Value in",
+      "out": "Value out",
+      "title": "Stock Movement Value"
+    },
+    "wh05": {
+      "empty": "No slow-moving stock.",
+      "help": "Stock with quantity on hand whose last movement is older than 90 days, valued at moving-average cost. Stock without any movement record cannot be dated and is shown separately.",
+      "kpiNoHistory": "{{n}} items without movement history",
+      "kpiSlow": "{{n}} items idle > {{days}} days",
+      "noHistory": "Without movement history",
+      "title": "Slow-moving Stock"
+    },
     "ws01": {
       "empty": "No open Work Orders.",
       "help": "Open Work Orders by status, in the workshops you can access (the same rule as the Work Order list). Drafts are shown separately.",
@@ -398,6 +504,21 @@
       "kpiOver14": "Older than 14 days",
       "legend": "Green: up to 7 days · Amber: 8–14 days · Red: more than 14 days",
       "title": "Open Work Order Aging"
+    },
+    "ws03": {
+      "empty": "No Work Orders completed in this period.",
+      "help": "Work Orders completed or closed per month of completion, by maintenance type.",
+      "kpi": "Completed in the period",
+      "title": "Completed Work Orders"
+    },
+    "ws04": {
+      "empty": "No measurable Work Orders in this period.",
+      "help": "Median hours from start to completion of the Work Orders completed in each month. Pauses are not subtracted. This is not MTTR.",
+      "kpi": "Median turnaround",
+      "kpiCount": "Work Orders measured",
+      "note": "Start → completion, pauses included.",
+      "series": "Median hours",
+      "title": "Work Order Turnaround"
     },
     "ws05": {
       "empty": "No workspaces in your scope.",

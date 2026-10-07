@@ -190,7 +190,7 @@ const requestColumns: Column<Row>[] = [{ key: 'request_number', label: col('requ
   { key: 'created_at', label: col('createdAt'), kind: 'datetime' }];
 
 const MT03: WidgetDefinition<{ total: number; by_status: Counts }> = {
-  size: 's',
+  size: 'm',
   isEmpty: (d) => d.total === 0,
   render: (env, ctx) => (
     <>
@@ -308,7 +308,7 @@ const stockColumns: Column<Row>[] = [{ key: 'product_name', label: col('product'
   { key: 'shortage', label: col('shortage'), kind: 'num' }, { key: 'needed_by_work_order', label: col('neededByWorkOrder'), kind: 'bool' }];
 
 const WH01: WidgetDefinition<{ total: number; by_state: Counts }> = {
-  size: 's',
+  size: 'm',
   isEmpty: (d) => d.total === 0,
   render: (env, ctx) => (
     <>
@@ -322,7 +322,7 @@ const WH01: WidgetDefinition<{ total: number; by_state: Counts }> = {
 };
 
 const WH02: WidgetDefinition<{ count: number; needed_by_work_orders: number; items: Row[] }> = {
-  size: 'l',
+  size: 'xl',
   isEmpty: (d) => d.count === 0,
   render: (env, ctx) => (
     <>
@@ -424,7 +424,7 @@ const PR02: WidgetDefinition<{ count: number; items: Row[] }> = {
 const TIRE_GROUP_COLORS = { IN_SERVICE: SERIES[0], IN_STOCK: SERIES[2], IN_PROCESS: SERIES[3], AT_VENDOR: SERIES[6] };
 
 const TR01: WidgetDefinition<{ total: number; by_group: Counts; by_status: Counts }> = {
-  size: 's',
+  size: 'm',
   isEmpty: (d) => d.total === 0,
   render: (env) => (
     <>
@@ -489,7 +489,7 @@ const inventoryValueColumns: Column<Row>[] = [{ key: 'product_name', label: col(
   { key: 'average_unit_cost', label: col('averageUnitCost'), kind: 'money' }, { key: 'value', label: col('value'), kind: 'money' }];
 
 const FN05: WidgetDefinition<{ total: string; warehouses: { warehouse_id: string; warehouse_name: string; value: string; sku_count: number }[] }> = {
-  size: 's',
+  size: 'm',
   render: (env, ctx) => (
     <>
       <Kpi value={money(env.data.total, env.currency)} label={t('dashboard.widgets.fn05.kpi')} />
@@ -506,6 +506,12 @@ const FN05: WidgetDefinition<{ total: string; warehouses: { warehouse_id: string
     rows: env.data.warehouses.map((w) => ({ id: w.warehouse_id, ...w })),
   }),
   detail: { columns: inventoryValueColumns },
+};
+
+/** Column sets reused by the Action Center drill-downs (same rows as the source widgets). */
+export const SOURCE_COLUMNS: Record<string, Column<Row>[]> = {
+  'FL-03': breakdownColumns, 'MT-02': scheduleColumns, 'WS-06': waitingColumns, 'WH-02': stockColumns,
+  'PR-02': latePoColumns, 'TR-02': tireDueColumns, 'FL-06': docColumns, 'WH-03': transferColumns, 'AL-01': woColumns,
 };
 
 export const CURRENT_WIDGETS: Record<string, WidgetDefinition> = {
