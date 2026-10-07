@@ -10,7 +10,7 @@ Continuation checkpoint between sessions; the repository is the source of truth.
 | 1 | Revalidation + minimal design | DONE | this commit |
 | 2 | Valuation status + data / API compatibility | DONE (backend; widget use in CP4) | see git log |
 | 3 | Reconciliation, opname evidence, approved adjustments | DONE (API + UI) | see git log |
-| 4 | Widgets, scope labels, bilingual | TODO | |
+| 4 | Widgets, scope labels, bilingual | DONE | see git log |
 | 5 | Seeders, regression, visual QA | TODO | |
 
 ## CP1 — what exists (verified in code) and the gaps
@@ -102,3 +102,14 @@ journal, rebuilding stock opname. Opname gaps found are reported, not fixed.
 - UI: Inventory → Stock Valuation, Inventory → Stock Reconciliation (Report / Adjustments), EN + ID via the CSV pipeline.
 - Opname gaps found, NOT rebuilt: posted variance applies to current on-hand (flagged `snapshot_stale`); opname movements now
   carry `reference_id` going forward (older ones stay unlinked).
+
+## CP4 — delivered
+- FN-05 now splits by explicit `valuation_status` (never the cost number): headline = verified value; recorded-unverified and
+  mixed values apart; verified zero counted apart; used tire stock / NOT_VALUED / no-unit-cost carry quantity per UOM only.
+  `total` keeps its old meaning (recorded value, excl. NOT_VALUED) for compatibility; `data.verification` flags a partial figure.
+  Drill-down shows status, basis, recorded cost and why a row is outside the value; filter `valuation_status`.
+- Other valuation surfaces audited: legacy `GET /app/dashboard` `inventory_total_value` (unchanged, plus `inventory_value_basis`
+  split), Slow-moving stock detail rows (`valuation_status` added). The Mongo analytics projection (`InventoryMetricsExtractor`)
+  still multiplies quantity × average cost without status — analytical only, NOT changed here (left for a Phase-6 follow-up).
+- Installed Sparepart (FL-07): scope line + tooltip (provable installations only; consumption ≠ installed). PR metrics already
+  labelled "Since PR creation" (PR #30), verified unchanged.
