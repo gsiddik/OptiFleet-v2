@@ -8,7 +8,7 @@ Continuation checkpoint between sessions; the repository is the source of truth.
 | # | Checkpoint | Status | Commit |
 |---|---|---|---|
 | 1 | Revalidation + minimal design | DONE | this commit |
-| 2 | Valuation status + data / API compatibility | TODO | |
+| 2 | Valuation status + data / API compatibility | DONE (backend; widget use in CP4) | see git log |
 | 3 | Reconciliation, opname evidence, approved adjustments | TODO | |
 | 4 | Widgets, scope labels, bilingual | TODO | |
 | 5 | Seeders, regression, visual QA | TODO | |
@@ -52,7 +52,7 @@ Grain follows the existing model: provenance on the **movement**, status on the 
   (`stock_transfer_items.valuation_status`). The incoming status combines with the existing balance
   (empty → incoming; same → same; both verified kinds → verified; otherwise `MIXED`). Costs are never changed.
 - Review (`stock_valuation_reviews`, append-only): actor, time, from/to status, basis, reason, evidence reference,
-  quantity and unit cost at review. Backend permission `inventory.valuation.verify`; a review never edits the cost
+  quantity and unit cost at review. Backend permission `inventory_valuation.verify`; a review never edits the cost
   (revaluation = costing-method change, out of scope); verifying a `MIXED` balance needs an explicit
   acknowledgement; `VERIFIED` needs a positive cost, `VERIFIED_ZERO` a documented basis.
 - Backfill (separate migration, new columns only, deterministic, never invents evidence): a movement is `VERIFIED`
@@ -78,10 +78,17 @@ count, variance) and flags `snapshot_stale` (movements between the opname's crea
 `movements_after`. Opname evidence proves the quantity at that time, not the historical cause — the report says so.
 
 ### 4. Permissions / scope
-`inventory.valuation.view`, `inventory.valuation.verify`, `inventory.reconcile.view`, `inventory.reconcile.manage`
-(propose, apply), `inventory.reconcile.approve`. Module INVENTORY, warehouse data scope on every query / action.
+`inventory_valuation.view`, `inventory_valuation.verify`, `inventory_reconcile.view`, `inventory_reconcile.manage`
+(propose, apply), `inventory_reconcile.approve`. Module INVENTORY, warehouse data scope on every query / action.
 Granted to existing tenants like `mechanic_baseline.manage` (migration, roles holding `role.assign_permission`).
 
 ## Out of scope (kept)
 Used-stock valuation method, non-serial installation tracking, PR approval timestamp, any new costing method or
 journal, rebuilding stock opname. Opname gaps found are reported, not fixed.
+
+## CP2 — delivered
+- Migrations `2026_10_19_000001..3` (schema / backfill of new columns only / permissions), `ValuationStatus`,
+  `InventoryService::receive` provenance, `StockValuationService` + `InventoryValuationController`
+  (`GET /app/inventory/valuation`, `GET .../{id}`, `POST .../{id}/review`), opname movements now carry `reference_id`.
+- Tests: `tests/Feature/Valuation/ValuationStatusTest.php` (9) + regression of stock-integrity, dashboard, inventory,
+  transfer, goods receipt, WO stock, used stock suites (121 passed).

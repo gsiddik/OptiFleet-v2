@@ -112,6 +112,8 @@ class PermissionSeeder extends Seeder
             // Phase 4: Supply Chain & Asset Lifecycle (Section 46)
             'product' => ['view', 'create', 'update', 'delete'],
             'inventory' => ['view', 'issue', 'return', 'adjust', 'stock_opname', 'scrap'],
+            'inventory_valuation' => ['view', 'verify'],
+            'inventory_reconcile' => ['view', 'manage', 'approve'],
             'sparepart_sale' => ['view', 'create', 'approve'],
             'stock_transfer' => ['view', 'create', 'approve', 'dispatch', 'receive'],
             'purchase_request' => ['view', 'create', 'submit', 'approve'],

@@ -15,7 +15,7 @@ class WarehouseStock extends Model
 
     protected $fillable = [
         'tenant_id', 'warehouse_id', 'product_id', 'quantity_on_hand', 'quantity_reserved',
-        'minimum_stock', 'maximum_stock', 'reorder_point', 'average_unit_cost',
+        'minimum_stock', 'maximum_stock', 'reorder_point', 'average_unit_cost', 'valuation_status', 'valuation_basis',
     ];
 
     protected function casts(): array

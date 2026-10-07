@@ -13,7 +13,7 @@ class StockTransferItem extends Model
 
     protected $fillable = [
         'stock_transfer_id', 'product_id', 'quantity_sent', 'quantity_received',
-        'quantity_damaged', 'quantity_lost', 'unit_cost', 'discrepancy_reason',
+        'quantity_damaged', 'quantity_lost', 'unit_cost', 'discrepancy_reason', 'valuation_status',
     ];
 
     protected function casts(): array
