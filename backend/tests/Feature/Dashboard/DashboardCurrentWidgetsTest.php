@@ -141,13 +141,17 @@ class DashboardCurrentWidgetsTest extends TestCase
             'created_at' => now(), 'updated_at' => now()]);
         [, $token] = $this->makeTenantUser($tenant, ['inventory.view', 'dashboard.finance.view']);
 
-        $this->widget($token, 'WH-01')->assertOk()->assertJsonPath('data.data.by_state', ['OUT' => 1, 'LOW' => 1, 'NORMAL' => 1]);
+        $this->widget($token, 'WH-01')->assertOk()->assertJsonPath('data.data.by_state', ['OUT' => 1, 'LOW' => 1, 'NORMAL' => 0, 'NOT_SET' => 1]);
         $critical = $this->widget($token, 'WH-02')->assertOk()->json('data.data');
         $this->assertSame(2, $critical['count']);
         $this->assertSame(1, $critical['needed_by_work_orders']);
-        $this->assertSame('Out filter', $critical['items'][0]['product_name']);
-        $this->assertTrue($critical['items'][0]['needed_by_work_order']);
-        $this->assertSame('2.00', $critical['items'][1]['shortage']);
+        // Rows are grouped by UOM (these products have different UOMs), lowest stock first within one.
+        $items = collect($critical['items'])->keyBy('product_name');
+        // The out-of-stock row has no reorder point: no shortage figure (not 0), threshold reported as not set.
+        $this->assertNull($items['Out filter']['reorder_point']);
+        $this->assertNull($items['Out filter']['shortage']);
+        $this->assertTrue($items['Out filter']['needed_by_work_order']);
+        $this->assertSame('2.00', $items['Low belt']['shortage']);
 
         // 3 × 20 + 50 × 1.10 = 115.00 (the zeroed row contributes nothing); detail rows reconcile with the total.
         $value = $this->widget($token, 'FN-05')->assertOk()->json('data');

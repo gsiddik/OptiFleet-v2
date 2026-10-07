@@ -5,6 +5,7 @@ namespace Tests\Feature\Dashboard;
 use App\Domain\Identity\Models\Tenant;
 use Brick\Math\BigDecimal;
 use Carbon\Carbon;
+use Database\Seeders\BootstrapSeeder;
 use Database\Seeders\DashboardDemoSeeder;
 use Database\Seeders\DevDemoSeeder;
 use Illuminate\Support\Facades\DB;
@@ -20,7 +21,8 @@ class DashboardDemoSeederTest extends TestCase
     use DashboardTestHelpers;
 
     private const TABLES = ['work_orders', 'purchase_orders', 'goods_receipts', 'vendor_invoice_references', 'vendor_invoice_payments',
-        'workshop_invoices', 'workshop_invoice_payments', 'work_order_external_invoices', 'breakdowns', 'stock_transfers', 'stock_movements', 'partners', 'vehicles'];
+        'workshop_invoices', 'workshop_invoice_payments', 'work_order_external_invoices', 'breakdowns', 'stock_transfers', 'stock_movements', 'partners', 'vehicles',
+        'work_order_work_intervals', 'work_order_mechanic_assignments', 'workers', 'component_installations', 'mechanic_performance_baselines'];
 
     private function counts(): array
     {
@@ -87,10 +89,77 @@ class DashboardDemoSeederTest extends TestCase
         $this->assertGreaterThan(0, collect($aging)->whereIn('bucket', ['d1_30', 'd31_60', 'd61_90', 'd90_plus'])->sum('count'), 'no overdue payable');
         $this->assertGreaterThan(0, collect($aging)->firstWhere('bucket', 'not_due')['count']);
 
+        // Operations KPIs: work intervals recorded by the transitions, rework cycles, one running WO.
+        $demoIds = (clone $demo)->select('id');
+        $intervals = DB::table('work_order_work_intervals')->whereIn('work_order_id', $demoIds);
+        $this->assertGreaterThan(20, (clone $intervals)->count());
+        $this->assertSame(1, (clone $intervals)->whereNull('ended_at')->count(), 'exactly the running Work Order has an open interval');
+        $this->assertSame(3, (int) (clone $intervals)->max('cycle'), 'two rework cycles on one Work Order');
+        $this->assertTrue((clone $intervals)->where('end_to_status', 'WAITING_PART')->exists());
+        $this->assertSame(0, (clone $intervals)->where('tenant_id', '!=', $alpha->id)->count());
+        // Mechanics: assistants, a hand-over (two PRIMARY rows on one WO), a rate change kept as snapshots, one mechanic without a rate.
+        $assignments = DB::table('work_order_mechanic_assignments as a')->join('workers as w', 'w.id', '=', 'a.worker_id')->whereIn('a.work_order_id', $demoIds);
+        $this->assertGreaterThanOrEqual(6, (clone $assignments)->distinct()->count('a.worker_id'));
+        $this->assertTrue((clone $assignments)->where('a.role', 'ASSISTANT')->exists());
+        $this->assertTrue((clone $assignments)->where('a.role', 'PRIMARY')->groupBy('a.work_order_id')->havingRaw('count(*) > 1')->select('a.work_order_id')->exists());
+        $this->assertEquals(['55000.0000', '60000.0000'], (clone $assignments)->where('w.employee_code', 'DASH-JKT-M1')->distinct()->orderBy('a.hourly_rate_snapshot')->pluck('a.hourly_rate_snapshot')->all());
+        $this->assertTrue((clone $assignments)->whereNull('a.hourly_rate_snapshot')->exists());
+        // Thresholds: set, intentionally 0, and not set. Baseline: CORRECTIVE set, PREVENTIVE not set.
+        $jkt = DB::table('warehouse_stocks as ws')->join('warehouses as wh', 'wh.id', '=', 'ws.warehouse_id')->join('products as p', 'p.id', '=', 'ws.product_id')
+            ->where('wh.code', 'ALPHA-JKT-WH1')->pluck('ws.reorder_point', 'p.name');
+        $this->assertEquals(80, $jkt['Brake Pad Set (Front)']);
+        $this->assertSame('0.0000', (string) $jkt['Engine Oil Filter']);
+        $this->assertTrue(DB::table('warehouse_stocks')->where('tenant_id', $alpha->id)->whereNull('reorder_point')->exists());
+        $this->assertSame(['CORRECTIVE'], DB::table('mechanic_performance_baselines')->where('tenant_id', $alpha->id)->pluck('maintenance_type')->all());
+        $this->assertSame(0, DB::table('mechanic_performance_baselines')->where('tenant_id', '!=', $alpha->id)->count(), 'no baseline outside the demo tenant');
+
+        // FN-07 reconciles with FN-08 on the same basis; labor and running labor are visible.
+        $fn07 = $this->widget($token, 'FN-07', ['months' => 12])->assertOk()->json('data');
+        $fn08 = $this->widget($token, 'FN-08', ['months' => 12])->assertOk()->json('data.data');
+        $this->assertSame($fn07['data']['totals'], $fn08['totals']);
+        foreach (['PARTS', 'LABOR', 'EXTERNAL_PAID'] as $component) {
+            $this->assertTrue(BigDecimal::of($fn07['data']['totals'][$component])->isPositive(), "no {$component} cost");
+        }
+        $codes = collect($fn07['limitations'])->pluck('code');
+        $this->assertContains('dashboard.limitations.laborRateMissing', $codes);
+        $this->assertContains('dashboard.limitations.laborRunning', $codes);
+
+        // WS-07: the Jakarta lead mechanic has enough CORRECTIVE samples against the demo baseline.
+        $ws07 = $this->widget($token, 'WS-07', ['months' => 12, 'maintenance_type' => 'CORRECTIVE'])->assertOk()->json('data.data');
+        $this->assertSame('6.00', $ws07['baseline_hours']);
+        $lead = collect($ws07['mechanics'])->firstWhere('employee_code', 'DASH-JKT-M1');
+        $this->assertGreaterThanOrEqual(5, $lead['valid_samples']);
+        $this->assertContains($lead['status'], ['MEETS', 'ABOVE']);
+        $this->assertNull($this->widget($token, 'WS-07', ['months' => 12, 'maintenance_type' => 'PREVENTIVE'])->json('data.data.baseline_hours'));
+
+        // FL-07: the moved battery is installed once, on the Bandung truck only.
+        $battery = DB::table('component_assets')->where('tenant_id', $alpha->id)->where('serial_number', 'DASH-BAT-01')->first();
+        $this->assertSame(2, DB::table('component_installations')->where('component_asset_id', $battery->id)->count());
+        $vehicleIds = DB::table('vehicles')->where('tenant_id', $alpha->id)->pluck('id', 'registration_number');
+        $installed = fn ($reg) => collect($this->details($token, 'FL-07', ['vehicle_id' => $vehicleIds[$reg], 'per_page' => 100])->assertOk()->json('data.data'))->where('asset_id', $battery->id)->count();
+        $this->assertSame(0, $installed('B 4101 ALP'));
+        $this->assertSame(1, $installed('D 4102 ALP'));
+
+        // WH-02: the intentional 0 is a set threshold (never "not set"); unset rows are listed as NOT_SET.
+        $notSet = collect($this->details($token, 'WH-02', ['state' => 'NOT_SET', 'per_page' => 100])->assertOk()->json('data.data'));
+        $this->assertFalse($notSet->contains(fn ($r) => $r['product_name'] === 'Engine Oil Filter' && $r['warehouse_name'] === DB::table('warehouses')->where('code', 'ALPHA-JKT-WH1')->value('name')));
+        $this->assertTrue($notSet->isNotEmpty());
+
         // Re-run: nothing duplicated.
         $before = $this->counts();
         $this->seed(DashboardDemoSeeder::class);
         $this->assertSame($before, $this->counts());
         Carbon::setTestNow();
+    }
+
+    public function test_production_bootstrap_adds_the_permission_but_never_a_baseline_or_threshold(): void
+    {
+        $this->seed(BootstrapSeeder::class);
+        $this->seed(BootstrapSeeder::class);
+
+        $this->assertSame(1, DB::table('permissions')->where('name', 'mechanic_baseline.manage')->count());
+        $this->assertSame(0, DB::table('mechanic_performance_baselines')->count());
+        $this->assertSame(0, DB::table('warehouse_stocks')->whereNotNull('reorder_point')->count());
+        $this->assertSame(0, DB::table('work_orders')->where('complaint', 'like', '[DASH-DEMO]%')->count());
     }
 }

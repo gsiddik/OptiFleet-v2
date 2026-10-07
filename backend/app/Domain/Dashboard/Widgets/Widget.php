@@ -95,6 +95,16 @@ abstract class Widget
         return null;
     }
 
+    /**
+     * Widget-specific filters accepted by the widget endpoint (and its drill-down), as validation
+     * rules. Ids are re-checked inside the widget's scoped queries: an id outside the scope matches
+     * nothing.
+     */
+    public function paramRules(): array
+    {
+        return [];
+    }
+
     /** Drill-down rows with the same metric and scope rules as compute(). */
     public function detail(DashboardContext $context, array $params): array
     {
@@ -152,6 +162,20 @@ abstract class Widget
 
         return [
             'items' => $map ? $rows->map($map)->values()->all() : $rows->all(),
+            'meta' => ['page' => $page, 'per_page' => $perPage, 'total' => $total, 'last_page' => max(1, (int) ceil($total / $perPage))],
+        ];
+    }
+
+    /** Paginate an already computed (and ordered) list: items + meta. */
+    protected function paginateList(array $items, array $params, ?callable $map = null): array
+    {
+        $perPage = max(1, min(100, (int) ($params['per_page'] ?? 20)));
+        $page = max(1, (int) ($params['page'] ?? 1));
+        $total = count($items);
+        $slice = array_slice(array_values($items), ($page - 1) * $perPage, $perPage);
+
+        return [
+            'items' => $map ? array_map($map, $slice) : $slice,
             'meta' => ['page' => $page, 'per_page' => $perPage, 'total' => $total, 'last_page' => max(1, (int) ceil($total / $perPage))],
         ];
     }

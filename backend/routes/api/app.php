@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Tenant\ComponentSubcategoryController;
 use App\Http\Controllers\Api\Tenant\ConfigurationController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\DashboardWidgetController;
+use App\Http\Controllers\Api\Tenant\MechanicBaselineController;
 use App\Http\Controllers\Api\Tenant\DataScopeController;
 use App\Http\Controllers\Api\Tenant\GoodsReceiptController;
 use App\Http\Controllers\Api\Tenant\InspectionController;
@@ -160,6 +161,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
         Route::get('/dashboard/catalog', [DashboardWidgetController::class, 'catalog']);
         Route::get('/dashboard/widgets/{widget}', [DashboardWidgetController::class, 'show'])->where('widget', '[A-Z]{2}-[0-9]{2}');
         Route::get('/dashboard/widgets/{widget}/details', [DashboardWidgetController::class, 'detail'])->where('widget', '[A-Z]{2}-[0-9]{2}');
+        Route::get('/dashboard/mechanic-baselines', [MechanicBaselineController::class, 'index'])->middleware(['module:WORK_ORDER', 'permission:mechanic_baseline.manage']);
+        Route::put('/dashboard/mechanic-baselines', [MechanicBaselineController::class, 'update'])->middleware(['module:WORK_ORDER', 'permission:mechanic_baseline.manage']);
 
         Route::middleware('module:ORGANIZATION')->group(function () {
             Route::get('/branches', [BranchController::class, 'index'])->middleware('permission:branch.view');

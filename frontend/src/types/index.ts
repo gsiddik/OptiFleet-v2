@@ -1568,7 +1568,7 @@ export interface WarehouseStockItem {
   quantity_available: number;
   minimum_stock: string;
   maximum_stock: string | null;
-  reorder_point: string;
+  reorder_point: string | null;
   average_unit_cost: string;
   reorder_status: 'HEALTHY' | 'LOW_STOCK' | 'REORDER_REQUIRED' | 'OUT_OF_STOCK';
   warehouse?: Warehouse;

@@ -31,7 +31,8 @@ test('column headers are translation keys resolved at render time in both langua
 test('every widget has a title, help and empty text in English and Indonesian', async () => {
   const ids = ['FL-01', 'FL-02', 'FL-03', 'FL-06', 'MT-01', 'MT-02', 'MT-03', 'WS-01', 'WS-02', 'WS-05', 'WS-06',
     'WH-01', 'WH-02', 'WH-03', 'PR-01', 'PR-02', 'TR-01', 'TR-02', 'TR-03', 'FN-01', 'FN-02', 'FN-03', 'FN-04', 'FN-05', 'FN-06',
-    'FL-04', 'FL-05', 'WS-03', 'WS-04', 'WH-04', 'WH-05', 'PR-03', 'PR-04', 'TR-04', 'AL-01'];
+    'FL-04', 'FL-05', 'WS-03', 'WS-04', 'WH-04', 'WH-05', 'PR-03', 'PR-04', 'TR-04', 'AL-01',
+    'FN-07', 'FN-08', 'WS-07', 'WS-08', 'WH-06', 'WH-07', 'FL-07', 'PR-05'];
   for (const locale of ['en', 'id'] as const) {
     await changeLocale(locale);
     for (const id of ids) {

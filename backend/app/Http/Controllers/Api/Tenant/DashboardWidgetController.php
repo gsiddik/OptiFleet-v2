@@ -98,11 +98,14 @@ class DashboardWidgetController extends Controller
             }
         }
 
+        $params = array_filter($request->validate($instance->paramRules()), fn ($v) => $v !== null && $v !== '');
+
         $filters = new DashboardFilters(
             branchId: $validated['branch_id'] ?? null,
             workshopId: $validated['workshop_id'] ?? null,
             warehouseId: $validated['warehouse_id'] ?? null,
             months: (int) ($validated['months'] ?? DashboardFilters::DEFAULT_MONTHS),
+            params: $params,
         );
 
         return [$this->dashboard->context($base->user, $base->tenantId, $filters), $instance];

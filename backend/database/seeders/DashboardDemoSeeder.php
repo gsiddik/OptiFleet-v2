@@ -4,6 +4,10 @@ namespace Database\Seeders;
 
 use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\Breakdown\Services\BreakdownService;
+use App\Domain\ComponentAsset\Models\ComponentAsset;
+use App\Domain\ComponentAsset\Services\ComponentAssetRegisterService;
+use App\Domain\ComponentAsset\Services\ComponentAssetService;
+use App\Domain\Dashboard\Models\MechanicPerformanceBaseline;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Inventory\Models\StockTransfer;
 use App\Domain\Inventory\Models\WarehouseStock;
@@ -31,6 +35,8 @@ use App\Domain\WorkOrder\Services\WorkOrderPartRequestService;
 use App\Domain\WorkOrder\Services\WorkOrderPartService;
 use App\Domain\WorkOrder\Services\WorkOrderService;
 use App\Domain\WorkOrder\Services\WorkshopInvoiceService;
+use App\Domain\Workshop\Models\Worker;
+use App\Domain\Workshop\Services\MechanicAssignmentService;
 use App\Models\User;
 use App\Support\TenantContext;
 use Carbon\Carbon;
@@ -51,6 +57,15 @@ use Illuminate\Http\UploadedFile;
  * vendor invoices; paid, unpaid and cancelled-then-re-recorded Service Invoices; billed and settled External WO invoices; resolved
  * breakdowns + one open immobilized breakdown; a transfer in transit for 10 days; a low-stock part.
  * Partially paid invoices are not seeded: the application only allows one full payment per invoice.
+ *
+ * Operations KPIs (work intervals are recorded by the Work Order transitions themselves): dedicated
+ * demo mechanics per branch with hourly rates (one without a rate, one rate raised mid-history, so
+ * earlier assignments keep their snapshot), assistants, a mid-work change of PRIMARY mechanic,
+ * waiting-for-part and waiting-for-QC gaps, rework cycles (one Work Order with two), a monthly
+ * labor-only corrective Work Order in Jakarta (enough samples for Mechanic Performance), one Work
+ * Order still in progress, a component moved from one vehicle to another, thresholds left unset /
+ * intentionally 0 / set, and a demo-only CORRECTIVE baseline (PREVENTIVE left unset). Production
+ * seeders never set a baseline or a threshold.
  *
  * Idempotent: vehicles are matched by registration number; the history is created once (marker in
  * the Work Order complaint "[DASH-DEMO]"); a re-run leaves everything unchanged.
@@ -131,6 +146,30 @@ class DashboardDemoSeeder extends Seeder
         return Workshop::query()->where('tenant_id', $this->tenant->id)->where('branch_id', $vehicle->branch_id)->orderBy('code')->firstOrFail();
     }
 
+    /** Demo mechanics per branch workshop: [code, name, worker type, hourly rate (null = not set)]. */
+    private const MECHANICS = [
+        'jkt' => [['DASH-JKT-M1', 'Rudi Hartono', 'LEAD_MECHANIC', 55000], ['DASH-JKT-M2', 'Agus Salim', 'MECHANIC', 45000]],
+        'bdg' => [['DASH-BDG-M1', 'Asep Sunandar', 'LEAD_MECHANIC', 50000], ['DASH-BDG-M2', 'Ujang Permana', 'MECHANIC', null]],
+        'smg' => [['DASH-SMG-M1', 'Slamet Riyadi', 'LEAD_MECHANIC', 48000], ['DASH-SMG-M2', 'Joko Purnomo', 'MECHANIC', 42000]],
+    ];
+
+    /** @return array{0: Worker, 1: Worker} lead + second mechanic of the vehicle's workshop (created once; a re-run never resets a rate). */
+    private function mechanics(Vehicle $vehicle): array
+    {
+        $key = array_search($vehicle->registration_number, ['jkt' => 'B 4101 ALP', 'bdg' => 'D 4102 ALP', 'smg' => 'H 4103 ALP'], true);
+        $workshop = $this->workshop($vehicle);
+
+        return array_map(fn ($def) => Worker::query()->firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'employee_code' => $def[0]],
+            ['name' => $def[1], 'branch_id' => $vehicle->branch_id, 'workshop_id' => $workshop->id, 'worker_type' => $def[2], 'status' => 'ACTIVE', 'hourly_rate' => $def[3]]
+        ), self::MECHANICS[$key]);
+    }
+
+    private function assignMechanic(WorkOrder $wo, Worker $worker, string $role): void
+    {
+        app(MechanicAssignmentService::class)->assign($wo->fresh(), $worker, $role, null, $this->admin->id);
+    }
+
     private function warehouse(string $code = 'ALPHA-JKT-WH1'): Warehouse
     {
         return Warehouse::query()->where('tenant_id', $this->tenant->id)->where('code', $code)->firstOrFail();
@@ -179,8 +218,14 @@ class DashboardDemoSeeder extends Seeder
             }
 
             $this->procurement($ago, $time);
+            if ($ago === 6) {
+                // Rate raised: assignments made before keep their 55,000 snapshot.
+                $this->at($time(8));
+                $this->mechanics($vehicles['jkt'])[0]->update(['hourly_rate' => 60000]);
+            }
             $vehicle = $vehicles[$rotation[$ago % 3]];
             $this->internalWorkOrder($vehicle, $ago, $time);
+            $this->laborOnlyWorkOrder($vehicles['jkt'], $ago, $time);
             if ($ago % 4 === 0) {
                 $this->externalWorkOrder($vehicles['smg'], $ago, $time);
             }
@@ -223,17 +268,29 @@ class DashboardDemoSeeder extends Seeder
         }
     }
 
-    /** Full internal Work Order with consumed parts; every third month also a maintenance memo → Service Invoice. */
+    /**
+     * Full internal Work Order with consumed parts. Timeline (day 9 of the month): start 01:00 with the
+     * branch lead (+ an assistant in odd months; the PRIMARY changes mid-work when ago % 5 = 2), part
+     * request 03:00 issued after 1 h — or, every third month, the Work Order waits for the part until
+     * 07:00 —, submitted to QC 09:00, completed the next day; when ago % 4 = 1 QC sends it back to rework
+     * (two cycles 9 months ago). Every third month also a maintenance memo → Service Invoice.
+     */
     private function internalWorkOrder(Vehicle $vehicle, int $ago, callable $time): void
     {
         $workOrders = app(WorkOrderService::class);
+        [$lead, $second] = $this->mechanics($vehicle);
         $this->at($time(9));
         $wo = $workOrders->create($vehicle->fresh(), [
             'workshop_id' => $this->workshop($vehicle)->id, 'maintenance_type' => $ago % 2 === 0 ? 'PREVENTIVE' : 'CORRECTIVE', 'priority' => 'MEDIUM',
             'complaint' => self::MARKER.' periodic service '.$time(9)->format('Y-m'),
         ], $this->admin->id);
         $wo = $workOrders->assign($workOrders->approve($workOrders->submit($wo)));
+        $this->assignMechanic($wo, $lead, 'PRIMARY');
+        if ($ago % 2 === 1) {
+            $this->assignMechanic($wo, $second, 'ASSISTANT');
+        }
         DemoWorkspaceAssignment::approve($wo, $this->admin->id, null, $time(9));
+        $this->at($time(9, 1));
         $wo = $workOrders->start($workOrders->schedule($wo->fresh()));
 
         $this->at($time(9, 2));
@@ -242,23 +299,53 @@ class DashboardDemoSeeder extends Seeder
             ['product_id' => $this->product('Brake Pad Set (Front)')->id, 'quantity_requested' => 1],
             ['product_id' => $this->product('Engine Oil Filter')->id, 'quantity_requested' => 2],
         ], null, $this->admin->id);
+        $waits = $ago % 3 === 0;
+        if ($waits) {
+            $workOrders->waitForPart($wo->fresh());
+        }
+        $this->at($time(9, $waits ? 6 : 3));
         $request = $requests->issue($requests->approve($request, null, $this->admin->id, null), $this->warehouse(), $this->admin->id);
+        if ($waits) {
+            $workOrders->resume($wo->fresh());
+        }
         foreach ($request->items as $item) {
             app(WorkOrderPartService::class)->consume(WorkOrderPlannedPart::query()->findOrFail($item->planned_part_id), null, $this->admin->id);
         }
+        if ($ago % 5 === 2) {
+            $this->at($time(9, 7));
+            $this->assignMechanic($wo, $second, 'PRIMARY'); // hand-over: the lead's assignment ends here
+        }
 
+        $memo = null;
         if ($ago % 3 === 1) {
             $memos = app(WorkOrderExternalServiceService::class);
             $memo = $memos->create($wo->fresh(), $this->vendor('VND-MITRA'), ['description' => 'Brake drum machining (external)', 'priority' => 'MEDIUM'], $this->admin->id);
             $memo = $memos->complete($memo, $this->admin->id);
-            $this->at($time(10));
+        }
+
+        $this->at($time(9, 8));
+        $workOrders->submitToQc($wo->fresh());
+        $cycles = $ago === 9 ? 2 : ($ago % 4 === 1 ? 1 : 0);
+        for ($cycle = 0; $cycle < $cycles; $cycle++) {
+            $this->at($time(10, 1 + 4 * $cycle));
+            $workOrders->rework($wo->fresh());
+            $this->at($time(10, 2 + 4 * $cycle));
+            $workOrders->resume($wo->fresh());
+            $this->at($time(10, 4 + 4 * $cycle));
+            $workOrders->submitToQc($wo->fresh());
+        }
+        $this->at($time(10, 12));
+        $workOrders->complete($wo->fresh());
+
+        if ($memo !== null) {
+            $this->at($time(11));
             $invoices = app(WorkshopInvoiceService::class);
-            $number = 'DASH-SI-'.$time(10)->format('Ym');
+            $number = 'DASH-SI-'.$time(11)->format('Ym');
             if ($ago === 4) {
                 // Recorded with a wrong amount, cancelled through maker-checker, then re-recorded: the
                 // cancelled document must never reach Service Cost or payables.
                 $wrong = $invoices->record($memo, [
-                    'external_invoice_number' => $number.'-X', 'invoice_date' => $time(10)->toDateString(), 'due_date' => $time(40)->toDateString(),
+                    'external_invoice_number' => $number.'-X', 'invoice_date' => $time(11)->toDateString(), 'due_date' => $time(41)->toDateString(),
                     'total_amount' => '9999999', 'invoice_attachment_url' => 'demo/workshop-invoices/'.$number.'-X.pdf',
                 ], $this->admin->id);
                 $cancellation = $invoices->requestCancellation($wrong, 'Wrong amount keyed in.', $this->admin->id);
@@ -267,7 +354,7 @@ class DashboardDemoSeeder extends Seeder
                 $memo = $memo->fresh();
             }
             $invoice = $invoices->record($memo, [
-                'external_invoice_number' => $number, 'invoice_date' => $time(10)->toDateString(), 'due_date' => $time(40)->toDateString(),
+                'external_invoice_number' => $number, 'invoice_date' => $time(11)->toDateString(), 'due_date' => $time(41)->toDateString(),
                 'total_amount' => (string) (550000 + 25000 * $ago), 'invoice_attachment_url' => 'demo/workshop-invoices/'.$number.'.pdf',
             ], $this->admin->id);
             if ($ago >= 2) {
@@ -276,9 +363,26 @@ class DashboardDemoSeeder extends Seeder
                     'payment_method' => 'BANK_TRANSFER', 'evidence_url' => 'demo/workshop-invoices/'.$number.'-paid.pdf'], $this->admin->id);
             }
         }
+    }
 
-        $this->at($time(10, 4));
-        $workOrders->complete($workOrders->submitToQc($wo->fresh()));
+    /** Monthly labor-only corrective Work Order in Jakarta by the lead mechanic: 4–7 working hours, so Mechanic Performance has samples. */
+    private function laborOnlyWorkOrder(Vehicle $vehicle, int $ago, callable $time): void
+    {
+        $workOrders = app(WorkOrderService::class);
+        $this->at($time(14));
+        $wo = $workOrders->create($vehicle->fresh(), [
+            'workshop_id' => $this->workshop($vehicle)->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'MEDIUM',
+            'complaint' => self::MARKER.' electrical fault diagnosis '.$time(14)->format('Y-m'),
+        ], $this->admin->id);
+        $wo = $workOrders->assign($workOrders->approve($workOrders->submit($wo)));
+        $this->assignMechanic($wo, $this->mechanics($vehicle)[0], 'PRIMARY');
+        DemoWorkspaceAssignment::approve($wo, $this->admin->id, null, $time(14), 8);
+        $this->at($time(14, 1));
+        $wo = $workOrders->start($workOrders->schedule($wo->fresh()));
+        $this->at($time(14, 1 + 4 + $ago % 4));
+        $workOrders->submitToQc($wo->fresh());
+        $this->at($time(14, 7 + 4));
+        $workOrders->complete($wo->fresh());
     }
 
     /** External WO: WAL → delivered → acknowledged → billed; settled when older than 6 months. */
@@ -335,6 +439,15 @@ class DashboardDemoSeeder extends Seeder
         app(WorkOrderPartRequestService::class)->request($wo->fresh(), [['product_id' => $this->product('Brake Pad Set (Front)')->id, 'quantity_requested' => 2]], null, $this->admin->id);
         $workOrders->waitForPart($wo->fresh());
 
+        // A Work Order in progress for 3 hours (open work interval: labor counted up to now).
+        $this->at($this->realNow->subHours(3));
+        $running = $workOrders->create($vehicles['jkt']->fresh(), ['workshop_id' => $this->workshop($vehicles['jkt'])->id, 'maintenance_type' => 'CORRECTIVE', 'priority' => 'HIGH',
+            'complaint' => self::MARKER.' air brake leak, work in progress'], $this->admin->id);
+        $running = $workOrders->assign($workOrders->approve($workOrders->submit($running)));
+        $this->assignMechanic($running, $this->mechanics($vehicles['jkt'])[1], 'PRIMARY');
+        DemoWorkspaceAssignment::approve($running, $this->admin->id, null, $this->realNow->subHours(3), 6);
+        $workOrders->start($workOrders->schedule($running->fresh()));
+
         // A cancelled Work Order (no cost).
         $this->at($this->realNow->subDays(4));
         $cancelled = $workOrders->create($vehicles['bdg']->fresh(), ['workshop_id' => $this->workshop($vehicles['bdg'])->id, 'maintenance_type' => 'INSPECTION', 'priority' => 'LOW',
@@ -356,9 +469,47 @@ class DashboardDemoSeeder extends Seeder
             $transfers->transition($transfers->dispatch($transfer, $this->admin->id), 'IN_TRANSIT');
         }
 
-        // Brake pads below their reorder point in Jakarta (stock setting, as set on the warehouse stock screen).
+        $this->movedComponent($vehicles);
+
+        // Thresholds (stock settings, as set on the warehouse stock screen): brake pads below their
+        // reorder point in Jakarta; oil filters in Jakarta intentionally 0 (never "low", but set);
+        // every other row is left unset ("threshold not set", never assumed 0).
         Carbon::setTestNow();
         WarehouseStock::query()->where('warehouse_id', $this->warehouse()->id)->where('product_id', $this->product('Brake Pad Set (Front)')->id)
             ->update(['reorder_point' => 80]);
+        WarehouseStock::query()->where('warehouse_id', $this->warehouse()->id)->where('product_id', $this->product('Engine Oil Filter')->id)
+            ->update(['reorder_point' => 0]);
+
+        // Demo-only Mechanic Performance baseline: CORRECTIVE set, PREVENTIVE deliberately left unset.
+        MechanicPerformanceBaseline::query()->firstOrCreate(
+            ['tenant_id' => $this->tenant->id, 'maintenance_type' => 'CORRECTIVE'],
+            ['baseline_hours' => '6.00', 'updated_by' => $this->admin->id]
+        );
+    }
+
+    /**
+     * A serialized battery installed on the Jakarta truck 60 days ago, removed for reuse 20 days ago and
+     * installed on the Bandung truck the same day: one open installation, so Installed Components
+     * counts it once (on Bandung).
+     */
+    private function movedComponent(array $vehicles): void
+    {
+        $this->at($this->realNow->subDays(90));
+        $asset = ComponentAsset::query()->where('tenant_id', $this->tenant->id)->where('serial_number', 'DASH-BAT-01')->first()
+            ?? ComponentAsset::query()->create([
+                'tenant_id' => $this->tenant->id, 'serial_number' => 'DASH-BAT-01', 'asset_number' => app(ComponentAssetRegisterService::class)->nextAssetNumber($this->tenant->id),
+                'product_id' => $this->product('Truck Battery 12V 100Ah')->id, 'component_group_id' => ComponentGroup::query()->whereNull('tenant_id')->where('code', 'CG-ELEC')->value('id'),
+                'purchase_date' => $this->realNow->subDays(90)->toDateString(), 'purchase_cost' => 1850000, 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse()->id,
+            ]);
+        if ($asset->current_status !== 'IN_STOCK') {
+            return;
+        }
+        $components = app(ComponentAssetService::class);
+        $this->at($this->realNow->subDays(60));
+        $components->install($asset, $vehicles['jkt']->fresh(), 'ENGINE_BAY', 52000, null, $this->admin->id);
+        $this->at($this->realNow->subDays(20));
+        $components->remove($asset->fresh(), 'Moved to the Bandung unit', 'REUSE', 58000, 'GOOD', null, null, $this->admin->id, $this->warehouse()->id);
+        $this->at($this->realNow->subDays(20)->addHours(3));
+        $components->install($asset->fresh(), $vehicles['bdg']->fresh(), 'ENGINE_BAY', 51000, null, $this->admin->id);
     }
 }

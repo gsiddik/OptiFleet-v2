@@ -15,7 +15,14 @@ final class DashboardFilters
         public readonly ?string $workshopId = null,
         public readonly ?string $warehouseId = null,
         public readonly int $months = self::DEFAULT_MONTHS,
+        /** Widget-specific filters (validated by the widget's paramRules()); part of the cache key. */
+        public readonly array $params = [],
     ) {}
+
+    public function param(string $key): mixed
+    {
+        return $this->params[$key] ?? null;
+    }
 
     public function toArray(): array
     {
@@ -24,6 +31,7 @@ final class DashboardFilters
             'workshop_id' => $this->workshopId,
             'warehouse_id' => $this->warehouseId,
             'months' => $this->months,
+            'params' => $this->params,
         ];
     }
 }

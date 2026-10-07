@@ -8,10 +8,10 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * WH-01 Stock Health — product × warehouse stock rows by availability, with the application's own
- * availability rule (on hand − reserved; the retired Inventory Reservation feature no longer writes
- * reservations, so reserved is normally zero — no "reserved" KPI is shown):
- *  OUT  available ≤ 0 · LOW  0 < available ≤ reorder point · NORMAL otherwise.
+ * WH-01 Stock Health — product × warehouse stock rows by quantity on hand compared with the reorder
+ * point (owner decision: on hand; the retired Inventory Reservation feature is not revived):
+ *  OUT  on hand ≤ 0 · LOW  0 < on hand ≤ reorder point · NOT_SET  in stock, no reorder point
+ *  (never treated as 0) · NORMAL  above its reorder point.
  */
 class StockHealthWidget extends Widget
 {
@@ -40,20 +40,26 @@ class StockHealthWidget extends Widget
         $row = $this->stocks($context)->selectRaw(
             'count(*) filter (where '.self::OUT.') as out_count,
              count(*) filter (where '.self::LOW.') as low_count,
-             count(*) filter (where not ('.self::OUT.') and not ('.self::LOW.')) as normal_count'
+             count(*) filter (where not ('.self::OUT.') and ws.reorder_point is null) as not_set_count,
+             count(*) filter (where not ('.self::OUT.') and ws.reorder_point is not null and not ('.self::LOW.')) as normal_count'
         )->first();
 
         return ['data' => [
-            'total' => (int) $row->out_count + (int) $row->low_count + (int) $row->normal_count,
-            'by_state' => ['OUT' => (int) $row->out_count, 'LOW' => (int) $row->low_count, 'NORMAL' => (int) $row->normal_count],
+            'total' => (int) $row->out_count + (int) $row->low_count + (int) $row->not_set_count + (int) $row->normal_count,
+            'by_state' => ['OUT' => (int) $row->out_count, 'LOW' => (int) $row->low_count, 'NORMAL' => (int) $row->normal_count, 'NOT_SET' => (int) $row->not_set_count],
         ]];
     }
 
-    public const AVAILABLE = '(ws.quantity_on_hand - ws.quantity_reserved)';
+    public function version(): int
+    {
+        return 3; // on-hand basis, NOT_SET state (nullable reorder point)
+    }
 
-    public const OUT = '(ws.quantity_on_hand - ws.quantity_reserved) <= 0';
+    public const AVAILABLE = 'ws.quantity_on_hand';
 
-    public const LOW = '(ws.quantity_on_hand - ws.quantity_reserved) > 0 and (ws.quantity_on_hand - ws.quantity_reserved) <= ws.reorder_point';
+    public const OUT = 'ws.quantity_on_hand <= 0';
+
+    public const LOW = 'ws.quantity_on_hand > 0 and ws.quantity_on_hand <= ws.reorder_point';
 
     protected function stocks(DashboardContext $context): Builder
     {

@@ -182,6 +182,11 @@ class WarehouseStockController extends Controller
             'maximum_stock' => ['nullable', 'numeric', 'min:0'],
             'reorder_point' => ['nullable', 'numeric', 'min:0'],
         ]);
+        // reorder_point: null = "threshold not set" (distinct from an intentional 0). minimum_stock
+        // has no "not set" state (NOT NULL, default 0), so clearing it stores 0 instead of failing.
+        if (array_key_exists('minimum_stock', $validated) && $validated['minimum_stock'] === null) {
+            $validated['minimum_stock'] = 0;
+        }
         $warehouseStock->update($validated);
 
         return $this->ok($warehouseStock->fresh());

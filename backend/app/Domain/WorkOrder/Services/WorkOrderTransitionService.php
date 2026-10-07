@@ -5,6 +5,7 @@ namespace App\Domain\WorkOrder\Services;
 use App\Domain\Tire\Services\TireOperationExecutionService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
+use App\Domain\WorkOrder\Models\WorkOrderWorkInterval;
 use App\Domain\Workshop\Services\WorkspaceReservationService;
 use Illuminate\Support\Facades\DB;
 
@@ -63,13 +64,15 @@ class WorkOrderTransitionService
                 $this->tireOperations->applyOnWorkOrderCompleted($locked, auth()->id());
             }
 
+            $now = now();
             $timestamps = match ($to) {
-                'IN_PROGRESS' => ['started_at' => $locked->started_at ?? now()],
-                'COMPLETED' => ['completed_at' => now()],
-                'CLOSED' => ['closed_at' => now()],
+                'IN_PROGRESS' => ['started_at' => $locked->started_at ?? $now],
+                'COMPLETED' => ['completed_at' => $now],
+                'CLOSED' => ['closed_at' => $now],
                 default => [],
             };
 
+            $this->recordWorkInterval($locked, $to, $now);
             $locked->update(array_merge($timestamps, $extra, ['status' => $to]));
 
             if (in_array($to, ['CANCELLED', 'REJECTED'], true)) {
@@ -86,5 +89,29 @@ class WorkOrderTransitionService
 
             return $locked->fresh();
         });
+    }
+
+    /**
+     * Work time (owner rule): leaving IN_PROGRESS closes the open interval (QC, hold, waiting for
+     * parts, cancel...), entering IN_PROGRESS opens a new one; entering from REWORK starts the next
+     * rework cycle. Runs inside the transition's transaction on the row-locked Work Order, so a
+     * repeated or concurrent request cannot open two intervals (also enforced by a partial unique
+     * index) and a failed transition leaves no interval behind.
+     */
+    private function recordWorkInterval(WorkOrder $locked, string $to, \DateTimeInterface $now): void
+    {
+        $userId = auth()->id();
+        if ($locked->status === 'IN_PROGRESS' && $to !== 'IN_PROGRESS') {
+            WorkOrderWorkInterval::query()->where('work_order_id', $locked->id)->whereNull('ended_at')
+                ->update(['ended_at' => $now, 'end_to_status' => $to, 'ended_by' => $userId, 'updated_at' => $now]);
+        }
+        if ($to === 'IN_PROGRESS' && $locked->status !== 'IN_PROGRESS') {
+            $lastCycle = (int) WorkOrderWorkInterval::query()->where('work_order_id', $locked->id)->max('cycle');
+            WorkOrderWorkInterval::query()->create([
+                'tenant_id' => $locked->tenant_id, 'work_order_id' => $locked->id,
+                'cycle' => $locked->status === 'REWORK' ? $lastCycle + 1 : max($lastCycle, 1),
+                'started_at' => $now, 'start_from_status' => $locked->status, 'started_by' => $userId,
+            ]);
+        }
     }
 }

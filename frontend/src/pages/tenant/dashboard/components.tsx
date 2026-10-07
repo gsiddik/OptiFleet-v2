@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis } from 'recharts';
 import { Modal } from '../../../components/Modal';
 import { Pagination } from '../../../components/Pagination';
 import { t } from '../../../i18n/i18n';
@@ -338,6 +338,64 @@ export function HBarChart({ data, categoryKey, series, unit, currency, onSelect,
               cursor={onSelect ? 'pointer' : undefined} onClick={(entry: { payload?: Record<string, unknown> }) => entry.payload && onSelect?.(entry.payload)} />
           ))}
         </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+export interface ScatterPoint {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  color: string;
+  /** Extra tooltip lines (already formatted). */
+  lines?: string[];
+}
+
+/**
+ * Two-measure comparison (e.g. Work Orders handled × average hours) with an optional reference
+ * line (baseline). Points carry their own status color; identity is always repeated in the
+ * tooltip and in the table view, never color alone.
+ */
+export function ScatterPlot({ points, xLabel, yLabel, reference, referenceLabel, onSelect, height = 260 }: {
+  points: ScatterPoint[];
+  xLabel: string;
+  yLabel: string;
+  reference?: number | null;
+  referenceLabel?: string;
+  onSelect?: (point: ScatterPoint) => void;
+  height?: number;
+}) {
+  const maxY = Math.max(reference ?? 0, ...points.map((p) => p.y)) * 1.15 || 1;
+  return (
+    <div style={{ width: '100%', height }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ top: 12, right: 16, bottom: 18, left: 0 }}>
+          <CartesianGrid stroke={INK.grid} />
+          <XAxis type="number" dataKey="x" allowDecimals={false} tick={{ fontSize: 11, fill: INK.muted }} tickLine={false} axisLine={{ stroke: INK.axis }}
+            label={{ value: xLabel, position: 'insideBottom', offset: -10, fontSize: 11, fill: INK.secondary }} />
+          <YAxis type="number" dataKey="y" domain={[0, Math.ceil(maxY)]} tick={{ fontSize: 11, fill: INK.muted }} tickLine={false} axisLine={false} width={44}
+            label={{ value: yLabel, angle: -90, position: 'insideLeft', offset: 12, fontSize: 11, fill: INK.secondary }} />
+          {reference != null && (
+            <ReferenceLine y={reference} stroke={INK.secondary} strokeDasharray="5 4" strokeWidth={1.5}
+              label={{ value: referenceLabel ?? '', position: 'insideTopRight', fontSize: 11, fill: INK.secondary }} />
+          )}
+          <Tooltip cursor={{ strokeDasharray: '3 3' }} content={({ active, payload }) => {
+            const p = active ? (payload?.[0]?.payload as ScatterPoint | undefined) : undefined;
+            return p ? (
+              <div className="dash-chart-tooltip">
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>{p.label}</div>
+                {(p.lines ?? []).map((line) => <div key={line} className="dash-chart-tooltip-row"><span>{line}</span></div>)}
+              </div>
+            ) : null;
+          }} />
+          <Scatter data={points} cursor={onSelect ? 'pointer' : undefined}
+            onClick={(entry: { payload?: ScatterPoint }) => entry.payload && onSelect?.(entry.payload)}
+            shape={(props: { cx?: number; cy?: number; payload?: ScatterPoint }) => (
+              <circle cx={props.cx} cy={props.cy} r={7} fill={props.payload?.color} stroke="#fff" strokeWidth={2} />
+            )} />
+        </ScatterChart>
       </ResponsiveContainer>
     </div>
   );
