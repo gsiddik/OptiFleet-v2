@@ -110,19 +110,25 @@ class MechanicPerformanceWidget extends WorkOrderWidget
         $type = $context->filters->param('maintenance_type');
         $rows = collect(WorkTimeQuery::attribute($context, WorkTimeQuery::intervals($context, $this->completed($context, $type)->select('wo.id'))))
             ->where('worker_id', $params['worker_id'])->groupBy('work_order_id');
-        $ids = $rows->keys()->all();
-        $complete = WorkTimeQuery::historyComplete($context, $ids);
+        // Every completed Work Order the mechanic was assigned to: those without recorded work time are listed too
+        // (hours unavailable, not 0), so the list adds up to the completed total and shows why a sample is excluded.
+        $assigned = DB::table('work_order_mechanic_assignments')->where('worker_id', $params['worker_id'])
+            ->whereIn('work_order_id', $this->completed($context, $type)->select('wo.id'))->distinct()->pluck('work_order_id')->all();
+        $ids = array_values(array_unique(array_merge($rows->keys()->all(), $assigned)));
+        $state = WorkTimeQuery::historyState($context, $ids);
         $cycles = DB::table('work_order_work_intervals')->whereIn('work_order_id', $ids)->groupBy('work_order_id')
             ->selectRaw('work_order_id, max(cycle) as c')->pluck('c', 'work_order_id');
         $info = $this->withListColumns(DB::table('work_orders as wo')->whereIn('wo.id', $ids))->get()->keyBy('id');
 
-        $items = $rows->map(fn (Collection $r, $id) => [
+        $items = collect($ids)->map(fn ($id) => [
             'work_order_id' => $id, 'wo_number' => $info[$id]->wo_number, 'maintenance_type' => $info[$id]->maintenance_type,
             'vehicle_id' => $info[$id]->vehicle_id, 'registration_number' => $info[$id]->registration_number,
             'completed_at' => self::isoUtc($info[$id]->completed_at),
-            'worker_hours' => WorkTimeQuery::hours((int) $r->sum('seconds')),
-            'rework_cycles' => max(0, (int) ($cycles[$id] ?? 1) - 1),
-            'history_complete' => $complete[$id] ?? false,
+            'worker_hours' => isset($rows[$id]) ? WorkTimeQuery::hours((int) $rows[$id]->sum('seconds')) : null,
+            'rework_cycles' => isset($cycles[$id]) ? max(0, (int) $cycles[$id] - 1) : null,
+            'history_complete' => ($state[$id] ?? null) === WorkTimeQuery::COMPLETE,
+            'work_time_state' => $state[$id] ?? WorkTimeQuery::UNAVAILABLE,
+            'valid_sample' => ($state[$id] ?? null) === WorkTimeQuery::COMPLETE && isset($rows[$id]),
         ])->sortByDesc('completed_at')->values()->all();
 
         return $this->paginateList($items, $params);

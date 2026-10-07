@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { InfoTip } from '../../../components/InfoTip';
 import { t } from '../../../i18n/i18n';
 import { useWidget, widgetParams } from './api';
+import { BasisNote } from './BasisNote';
 import { DataTable, Skeleton, StateBox, type Column, type DetailRequest } from './components';
 import { updatedAt } from './format';
 import { widgetKey, widgetTitle } from './labels';
@@ -86,6 +87,7 @@ export function WidgetCard({ widget, definition, filters, currency, onDetail, fu
         {empty ? <StateBox>{t(`dashboard.widgets.${widgetKey(widget.id)}.empty`)}</StateBox>
           : tableView ? <DataTable columns={tableView.columns} rows={tableView.rows} currency={envelope.currency} caption={title} />
             : definition.render(envelope, ctx)}
+        <BasisNote basis={envelope.basis} />
         {envelope.limitations.length > 0 && (
           <ul className="dash-limitations">
             {envelope.limitations.map((l) => <li key={l.code}>{t(l.code, l.params)}</li>)}

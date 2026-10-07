@@ -37,6 +37,21 @@ export interface Limitation {
   params?: Record<string, string | number>;
 }
 
+export type CompletenessStatus = 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE';
+
+/** How a figure was computed: date basis per part, what is / is not counted, how complete the data is (all codes are i18n keys). */
+export interface DataBasisInfo {
+  date_basis: { key: string; code: string }[];
+  includes: string[];
+  excludes: string[];
+  completeness: {
+    status: CompletenessStatus; total: number; valid: number; excluded: number; ongoing: number;
+    reasons: { code: string; n: number }[];
+  } | null;
+  /** Tenant-local date from which the underlying history exists (null = not applicable / none yet). */
+  history_from: string | null;
+}
+
 export interface WidgetEnvelope<T = Record<string, unknown>> {
   id: string;
   kind: WidgetKind;
@@ -48,6 +63,7 @@ export interface WidgetEnvelope<T = Record<string, unknown>> {
   period: { months: string[]; current_month: string; from: string; to_exclusive: string } | null;
   filters: Record<string, string | number | null>;
   limitations: Limitation[];
+  basis: DataBasisInfo | null;
   data: T;
 }
 

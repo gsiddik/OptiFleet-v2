@@ -43,6 +43,47 @@ class DashboardDataCompletenessTest extends TestCase
         ];
     }
 
+
+    /** Every code the API emits in a basis / limitation has English and Indonesian text in the frontend resources. */
+    private function assertTranslated(array $envelope): void
+    {
+        $dictionaries = [];
+        foreach (['en', 'id'] as $locale) {
+            $dictionaries[$locale] = json_decode((string) file_get_contents(base_path("../frontend/src/i18n/locales/{$locale}/dashboard.json")), true, 512, JSON_THROW_ON_ERROR);
+        }
+        $has = function (array $dictionary, string $path): bool {
+            $node = $dictionary;
+            foreach (explode('.', $path) as $part) {
+                if (! is_array($node) || ! array_key_exists($part, $node)) {
+                    return false;
+                }
+                $node = $node[$part];
+            }
+
+            return is_string($node);
+        };
+        $paths = [];
+        $basis = $envelope['basis'] ?? null;
+        foreach ($basis['date_basis'] ?? [] as $d) {
+            $paths[] = 'basis.date.'.$d['code'];
+        }
+        foreach (array_merge($basis['includes'] ?? [], $basis['excludes'] ?? []) as $code) {
+            $paths[] = 'basis.item.'.$code;
+        }
+        foreach ($basis['completeness']['reasons'] ?? [] as $reason) {
+            $paths[] = 'basis.reason.'.$reason['code'].'_other';
+        }
+        foreach ($envelope['limitations'] ?? [] as $limitation) {
+            $paths[] = preg_replace('/^dashboard\./', '', $limitation['code']);
+        }
+        foreach (['en', 'id'] as $locale) {
+            foreach ($paths as $path) {
+                $this->assertTrue($has($dictionaries[$locale], $path), "missing {$locale} text for dashboard.{$path}");
+            }
+        }
+        $this->assertNotEmpty($paths);
+    }
+
     private function interval(string $woId, string $start, ?string $end, int $cycle = 1): void
     {
         DB::table('work_order_work_intervals')->insert(['id' => (string) Str::uuid(), 'tenant_id' => $this->s['tenant']->id, 'work_order_id' => $woId, 'cycle' => $cycle,
@@ -100,6 +141,7 @@ class DashboardDataCompletenessTest extends TestCase
 
         $this->assertSame(['NONE', '0.00', true], [$rows['B 3 CMP']['labor_status'], $rows['B 3 CMP']['LABOR'], $rows['B 3 CMP']['cost_complete']], 'a vehicle with no started Work Order has a true zero');
 
+        $this->assertTranslated($res);
         $completeness = $res['basis']['completeness'];
         $this->assertSame(['PARTIAL', 2, 1, 1], [$completeness['status'], $completeness['total'], $completeness['valid'], $completeness['excluded']]);
         $this->assertContains(['code' => 'WORK_TIME_UNAVAILABLE', 'n' => 1], $completeness['reasons']);
@@ -142,6 +184,7 @@ class DashboardDataCompletenessTest extends TestCase
         $this->assertSame(['WORK_TIME_UNAVAILABLE' => 1, 'WORK_TIME_PARTIAL' => 1, 'NO_ATTRIBUTED_TIME' => 0], $row['excluded_reasons']);
         $this->assertSame('3.00', $row['avg_hours'], 'only the two complete Work Orders (4 h and 2 h) are averaged');
         $this->assertSame('AVAILABLE', $row['avg_state']);
+        $this->assertTranslated($res);
         $completeness = $res['basis']['completeness'];
         $this->assertSame(['PARTIAL', 4, 2, 2], [$completeness['status'], $completeness['total'], $completeness['valid'], $completeness['excluded']]);
         $this->assertSame($completeness, $res['data']['completeness']);
@@ -190,6 +233,7 @@ class DashboardDataCompletenessTest extends TestCase
 
         // Counted: the matching service payment (500000) and the external payment actually made (1500000) — the amounts paid, once each.
         $this->assertSame(2000000.0 + 300000.0, (float) $res['data']['totals']['EXTERNAL_PAID'], 'valid payment + partial payment actually made + external paid amount; cancelled / foreign-currency / unpaid excluded');
+        $this->assertTranslated($res);
         $this->assertSame(4, $res['data']['payment_anomalies']);
         $this->assertContains('dashboard.limitations.paymentAnomalies', array_column($res['limitations'], 'code'));
         $anomalies = collect($this->details($token, 'FN-07', ['months' => 3, 'view' => 'payment_anomalies'])->assertOk()->json('data.data'));
@@ -225,6 +269,7 @@ class DashboardDataCompletenessTest extends TestCase
         $res = $this->widget($token, 'FN-05')->assertOk()->json('data');
         $data = $res['data'];
 
+        $this->assertTranslated($res);
         $this->assertSame('14000.00', $data['total'], 'recorded valuation only: 4 × 1000 + 2 × 5000');
         $this->assertSame(2, $data['valued_skus']);
         $this->assertSame(['skus' => 2, 'used_skus' => 1, 'no_cost_skus' => 1], array_intersect_key($data['pending_valuation'], array_flip(['skus', 'used_skus', 'no_cost_skus'])));
@@ -265,6 +310,7 @@ class DashboardDataCompletenessTest extends TestCase
         [, $token] = $this->makeTenantUser($t, ['vehicle.view', 'tire.view', 'dashboard.finance.view']);
         $res = $this->widget($token, 'FL-07')->assertOk()->json('data');
 
+        $this->assertTranslated($res);
         $this->assertSame(1, $res['data']['totals']['items'], 'only the serial tire is installed; the consumed filter is not');
         $this->assertSame(['lines' => 1, 'products' => 1], array_intersect_key($res['data']['untracked'], array_flip(['lines', 'products'])));
         $this->assertSame([['uom' => $pcs->code, 'quantity' => '2.0000']], $res['data']['untracked']['quantities']);
@@ -292,6 +338,7 @@ class DashboardDataCompletenessTest extends TestCase
         [, $buyer] = $this->makeTenantUser($t, ['purchase_order.view']);
         $res = $this->widget($buyer, 'PR-05', ['months' => 3])->assertOk()->json('data');
 
+        $this->assertTranslated($res);
         $this->assertContains(['key' => 'PR_TO_PO', 'code' => 'PR_CREATED_TO_PO_ORDER_DATE'], $res['basis']['date_basis']);
         $this->assertContains('PR_APPROVAL_DATE_NOT_RECORDED', $res['basis']['excludes']);
         $this->assertSame(['PARTIAL', 2, 1], [$res['basis']['completeness']['status'], $res['basis']['completeness']['total'], $res['basis']['completeness']['valid']]);

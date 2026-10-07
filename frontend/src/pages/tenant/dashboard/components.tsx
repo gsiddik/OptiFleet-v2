@@ -136,6 +136,8 @@ export interface Column<Row> {
   link?: (row: Row) => string | null;
   /** Next drill-down level opened from this cell (inside the detail modal). */
   drill?: (row: Row) => DrillStep | null;
+  /** A missing value in this column means "unavailable" (shown as such), not "no value" (—) and never 0. */
+  unavailable?: boolean;
 }
 
 export interface DrillStep {
@@ -146,8 +148,13 @@ export interface DrillStep {
   widgetId?: string;
 }
 
-export function renderCell(kind: CellKind | undefined, value: unknown, currency?: string): ReactNode {
-  if (value === null || value === undefined || value === '') return '—';
+/** Muted "Unavailable" marker: the figure could not be determined (nothing recorded), which is different from 0. */
+export function Unavailable() {
+  return <span className="dash-unavailable">{t('dashboard.states.unavailable')}</span>;
+}
+
+export function renderCell(kind: CellKind | undefined, value: unknown, currency?: string, unavailable = false): ReactNode {
+  if (value === null || value === undefined || value === '') return unavailable ? <Unavailable /> : '—';
   switch (kind) {
     case 'num':
       return count(value as number);
@@ -188,7 +195,7 @@ export function DataTable<Row extends Record<string, unknown>>({ columns, rows, 
             <tr key={(row.id as string) ?? i}>
               {columns.map((c) => {
                 const raw = c.value ? c.value(row) : row[c.key];
-                const content = renderCell(c.kind, raw, currency);
+                const content = renderCell(c.kind, raw, currency, c.unavailable);
                 const href = c.link?.(row);
                 const step = onDrill ? c.drill?.(row) : null;
                 return (
@@ -227,7 +234,7 @@ function ChartTooltip({ active, payload, label, series, unit, currency, labelFor
 }) {
   if (!active || !payload?.length || label === undefined) return null;
   const fmt = (v: number) => (unit === 'money' ? money(v, currency) : count(v));
-  const total = payload.reduce((s, p) => s + (Number(p.value) || 0), 0);
+  const total = payload.reduce((s, p) => s + (p.value === null || p.value === undefined ? 0 : Number(p.value) || 0), 0);
   return (
     <div className="dash-chart-tooltip">
       <div style={{ fontWeight: 600, marginBottom: 4 }}>{labelFormatter ? labelFormatter(label) : label}</div>
@@ -240,7 +247,7 @@ function ChartTooltip({ active, payload, label, series, unit, currency, labelFor
               <span className="dash-swatch" style={{ background: s.color, marginRight: 6 }} />
               {s.label}
             </span>
-            <span>{fmt(Number(p.value) || 0)}</span>
+            <span>{p.value === null || p.value === undefined ? t('dashboard.states.unavailable') : fmt(Number(p.value) || 0)}</span>
           </div>
         );
       })}

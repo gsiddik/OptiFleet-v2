@@ -6,7 +6,7 @@ import { Modal } from '../../../../components/Modal';
 import { NumericInput } from '../../../../components/NumericInput';
 import { t } from '../../../../i18n/i18n';
 import { BaselineSettings } from '../BaselineSettings';
-import { ColumnChart, DataTable, HBarChart, Kpi, Legend, Pill, ScatterPlot, StateBox, type Column } from '../components';
+import { ColumnChart, DataTable, HBarChart, Kpi, Legend, Pill, ScatterPlot, StateBox, Unavailable, type Column } from '../components';
 import { count, monthLabel, money } from '../format';
 import { codeLabel, col, itemTypeLabel } from '../labels';
 import { stockColumns } from './currentWidgets';
@@ -14,7 +14,7 @@ import { NEUTRAL, SERIES, STATUS } from '../palette';
 import type { WidgetDefinition } from '../WidgetCard';
 
 type Row = Record<string, unknown>;
-type CostSums = { PARTS: string; LABOR: string; EXTERNAL_PAID: string; total: string };
+type CostSums = { PARTS: string; LABOR: string | null; EXTERNAL_PAID: string; total: string };
 
 // ------------------------------------------------------------------ operating cost (FN-07 / FN-08)
 
@@ -27,11 +27,21 @@ const COST_SERIES = [
 
 const componentLabel = (key: string) => t(`dashboard.labels.opCost_${key}`);
 const costSeries = () => COST_SERIES.map((s) => ({ key: s.key, label: componentLabel(s.key), color: s.color }));
-const costNumbers = (r: CostSums) => ({ PARTS: Number(r.PARTS), LABOR: Number(r.LABOR), EXTERNAL_PAID: Number(r.EXTERNAL_PAID) });
+/** Chart values per component; an unavailable component stays null (no bar, "Unavailable" in the tooltip), never 0. */
+const costNumbers = (r: { PARTS: string | null; LABOR: string | null; EXTERNAL_PAID: string | null }) => ({
+  PARTS: r.PARTS === null ? null : Number(r.PARTS), LABOR: r.LABOR === null ? null : Number(r.LABOR), EXTERNAL_PAID: r.EXTERNAL_PAID === null ? null : Number(r.EXTERNAL_PAID),
+});
 const costColumns = (): Column<Row>[] => [
-  ...COST_SERIES.map((s) => ({ key: s.key, label: `dashboard.labels.opCost_${s.key}`, kind: 'money' as const })),
+  ...COST_SERIES.map((s) => ({ key: s.key, label: `dashboard.labels.opCost_${s.key}`, kind: 'money' as const, unavailable: s.key === 'LABOR' })),
   { key: 'total', label: col('total'), kind: 'money' },
 ];
+
+/** Whether a row's mechanic cost is recorded in full: otherwise its total covers recorded costs only. */
+const costCompletenessColumn = (): Column<Row> => ({
+  key: 'cost_complete', label: col('costCompleteness'),
+  value: (r) => t(r.cost_complete ? 'dashboard.labels.costComplete' : 'dashboard.labels.costRecordedOnly'),
+});
+const laborStatusColumn = (): Column<Row> => ({ key: 'labor_status', label: col('mechanicCostStatus'), value: (r) => t(`dashboard.labels.laborStatus_${r.labor_status}`) });
 
 const lineColumns: Column<Row>[] = [
   { key: 'on', label: col('date'), kind: 'date' },
@@ -50,7 +60,17 @@ const workOrderColumns: Column<Row>[] = [
     drill: (r) => ({ title: String(r.wo_number ?? '—'), params: { work_order_id: r.work_order_id }, columns: lineColumns }),
   },
   ...costColumns(),
-  { key: 'history_complete', label: col('workHistory'), value: (r) => (r.history_complete ? t('dashboard.labels.historyComplete') : t('dashboard.labels.historyIncomplete')) },
+  { key: 'work_time_state', label: col('workHistory'), value: (r) => t(`dashboard.labels.workTime_${r.work_time_state}`) },
+  laborStatusColumn(),
+];
+
+const anomalyColumns: Column<Row>[] = [
+  { key: 'kind', label: col('anomalyKind'), value: (r) => t(`dashboard.labels.paymentAnomaly_${r.kind}`) },
+  { key: 'wo_number', label: col('workOrder'), link: (r) => (r.work_order_id ? `/app/work-orders/${r.work_order_id}` : null) },
+  { key: 'document', label: col('document') },
+  { key: 'payment_date', label: col('paymentDate'), kind: 'date' },
+  { key: 'expected', label: col('expectedAmount'), kind: 'money' },
+  { key: 'paid', label: col('paidAmount'), kind: 'money' },
 ];
 
 const rankingColumns: Column<Row>[] = [
@@ -61,11 +81,12 @@ const rankingColumns: Column<Row>[] = [
   { key: 'category_name', label: col('category') },
   { key: 'branch_name', label: col('branch') },
   ...costColumns(),
+  costCompletenessColumn(),
 ];
 
 type Option = { id: string; name: string };
 
-const FN07: WidgetDefinition<{ totals: CostSums; vehicles: (CostSums & Row)[]; vehicles_total: number; vehicles_with_cost: number; options: { categories: Option[]; vehicles: (Option & { category_id: string | null })[] } }> = {
+const FN07: WidgetDefinition<{ totals: CostSums; vehicles: (CostSums & Row)[]; vehicles_total: number; vehicles_with_cost: number; vehicles_cost_incomplete: number; payment_anomalies: number; options: { categories: Option[]; vehicles: (Option & { category_id: string | null })[] } }> = {
   size: 'xl',
   controls: (data, value, set) => data && (
     <>
@@ -86,21 +107,33 @@ const FN07: WidgetDefinition<{ totals: CostSums; vehicles: (CostSums & Row)[]; v
       </label>
     </>
   ),
-  render: (env, ctx) => (
-    <>
-      <div className="dash-kpi-row">
-        <Kpi value={money(env.data.totals.total, env.currency)} label={t('dashboard.widgets.fn07.kpiTotal')} />
-        <Kpi value={`${count(env.data.vehicles_with_cost)} / ${count(env.data.vehicles_total)}`} label={t('dashboard.widgets.fn07.kpiVehicles')} />
-      </div>
-      {Number(env.data.totals.total) === 0 ? <StateBox>{t('dashboard.widgets.fn07.empty')}</StateBox> : (
-        <HBarChart unit="money" currency={env.currency} labelWidth={110} categoryKey="vehicle" series={costSeries()}
-          data={env.data.vehicles.filter((v) => Number(v.total) > 0).map((v) => ({ vehicle: String(v.registration_number ?? '—'), vehicle_id: v.vehicle_id, ...costNumbers(v) }))}
-          onSelect={(row) => ctx.openDetail(String(row.vehicle), { vehicle_id: row.vehicle_id }, workOrderColumns)} />
-      )}
-      <Legend items={costSeries().map((s) => ({ key: s.key, label: s.label, color: s.color, value: money((env.data.totals as Record<string, string>)[s.key], env.currency) }))} />
-      <span className="dash-kpi-sub">{t('dashboard.widgets.fn07.note')}</span>
-    </>
-  ),
+  render: (env, ctx) => {
+    const incomplete = env.data.vehicles_cost_incomplete > 0;
+    const partial = env.basis?.completeness?.status !== 'COMPLETE' && env.basis?.completeness != null;
+    return (
+      <>
+        <div className="dash-kpi-row">
+          <Kpi value={money(env.data.totals.total, env.currency)} label={t(partial ? 'dashboard.widgets.fn07.kpiTotalRecorded' : 'dashboard.widgets.fn07.kpiTotal')} />
+          <Kpi value={`${count(env.data.vehicles_with_cost)} / ${count(env.data.vehicles_total)}`} label={t('dashboard.widgets.fn07.kpiVehicles')} />
+        </div>
+        {Number(env.data.totals.total) === 0 ? <StateBox>{t('dashboard.widgets.fn07.empty')}</StateBox> : (
+          <HBarChart unit="money" currency={env.currency} labelWidth={118} categoryKey="vehicle" series={costSeries()}
+            data={env.data.vehicles.filter((v) => Number(v.total) > 0).map((v) => ({
+              vehicle: `${String(v.registration_number ?? '—')}${v.cost_complete ? '' : ' *'}`, vehicle_id: v.vehicle_id, ...costNumbers(v),
+            }))}
+            onSelect={(row) => ctx.openDetail(String(row.vehicle).replace(/ \*$/, ''), { vehicle_id: row.vehicle_id }, workOrderColumns)} />
+        )}
+        <Legend items={costSeries().map((s) => ({ key: s.key, label: s.label, color: s.color, value: money((env.data.totals as Record<string, string>)[s.key], env.currency) }))} />
+        {incomplete && <span className="dash-kpi-sub" role="note">{t('dashboard.widgets.fn07.recordedOnlyNote', { count: env.data.vehicles_cost_incomplete })}</span>}
+        {env.data.payment_anomalies > 0 && (
+          <button type="button" className="dash-link-btn" onClick={() => ctx.openDetail(t('dashboard.widgets.fn07.anomaliesTitle'), { view: 'payment_anomalies' }, anomalyColumns)}>
+            {t('dashboard.widgets.fn07.anomaliesLink', { count: env.data.payment_anomalies })}
+          </button>
+        )}
+        <span className="dash-kpi-sub">{t('dashboard.widgets.fn07.note')}</span>
+      </>
+    );
+  },
   table: (env) => ({ columns: rankingColumns, rows: env.data.vehicles.map((v) => ({ ...v, id: String(v.vehicle_id) })) }),
   detail: { columns: rankingColumns },
 };
@@ -143,7 +176,7 @@ const FN08: WidgetDefinition<{ months: (CostSums & { month: string; is_current: 
 
 type MechanicRow = {
   worker_id: string; worker_name: string | null; employee_code: string | null; workshop_name: string | null;
-  wo_handled: number; wo_completed: number; valid_samples: number; avg_hours: string | null;
+  wo_handled: number; wo_completed: number; valid_samples: number; completed_total: number; excluded_samples: number; avg_state: 'AVAILABLE' | 'UNAVAILABLE'; avg_hours: string | null;
   baseline_hours: string | null; diff_hours: string | null; ratio: string | null;
   status: 'MEETS' | 'ABOVE' | 'INSUFFICIENT_SAMPLE' | 'NO_BASELINE';
 };
@@ -160,9 +193,10 @@ const mechanicWoColumns: Column<Row>[] = [
   { key: 'wo_number', label: col('workOrder'), link: (r) => `/app/work-orders/${r.work_order_id}` },
   { key: 'registration_number', label: col('vehicle'), link: (r) => (r.vehicle_id ? `/app/vehicles/${r.vehicle_id}` : null) },
   { key: 'completed_at', label: col('completedAt'), kind: 'datetime' },
-  { key: 'worker_hours', label: col('workHours') },
-  { key: 'rework_cycles', label: col('reworkCycles'), kind: 'num' },
-  { key: 'history_complete', label: col('workHistory'), value: (r) => (r.history_complete ? t('dashboard.labels.historyComplete') : t('dashboard.labels.historyIncomplete')) },
+  { key: 'worker_hours', label: col('workHours'), unavailable: true },
+  { key: 'rework_cycles', label: col('reworkCycles'), kind: 'num', unavailable: true },
+  { key: 'work_time_state', label: col('workHistory'), value: (r) => t(`dashboard.labels.workTime_${r.work_time_state}`) },
+  { key: 'valid_sample', label: col('countsAsSample'), kind: 'bool' },
 ];
 
 const mechanicColumns: Column<Row>[] = [
@@ -171,7 +205,8 @@ const mechanicColumns: Column<Row>[] = [
   { key: 'wo_handled', label: col('woHandled'), kind: 'num' },
   { key: 'wo_completed', label: col('woCompleted'), kind: 'num' },
   { key: 'valid_samples', label: col('validSamples'), kind: 'num' },
-  { key: 'avg_hours', label: col('avgHours') },
+  { key: 'excluded_samples', label: col('excludedSamples'), kind: 'num' },
+  { key: 'avg_hours', label: col('avgHours'), unavailable: true },
   { key: 'baseline_hours', label: col('baselineHours') },
   { key: 'diff_hours', label: col('diffHours') },
   { key: 'ratio', label: col('ratio') },
@@ -222,6 +257,7 @@ const WS07: WidgetDefinition<{ maintenance_type: string; baseline_hours: string 
         </div>
         {d.mechanics.length === 0 ? <StateBox>{t('dashboard.widgets.ws07.empty')}</StateBox> : (
           <>
+            {plotted.length === 0 && <StateBox>{t('dashboard.widgets.ws07.noValidSamples')}</StateBox>}
             {plotted.length > 0 && (
               <ScatterPlot xLabel={t('dashboard.widgets.ws07.axisX')} yLabel={t('dashboard.widgets.ws07.axisY')}
                 reference={d.baseline_hours === null ? null : Number(d.baseline_hours)} referenceLabel={t('dashboard.widgets.ws07.baselineLine')}
@@ -229,6 +265,7 @@ const WS07: WidgetDefinition<{ maintenance_type: string; baseline_hours: string 
                   id: m.worker_id, label: m.worker_name ?? '—', x: m.wo_completed, y: Number(m.avg_hours), color: KPI_STATUS[m.status].color,
                   lines: [
                     t('dashboard.widgets.ws07.tipAvg', { value: m.avg_hours, n: m.valid_samples }),
+                    ...(m.excluded_samples > 0 ? [t('dashboard.widgets.ws07.tipExcluded', { count: m.excluded_samples, total: m.completed_total })] : []),
                     kpiStatusLabel(m.status),
                   ],
                 }))}
@@ -238,7 +275,8 @@ const WS07: WidgetDefinition<{ maintenance_type: string; baseline_hours: string 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {d.mechanics.slice(0, 8).map((m) => (
                 <Pill key={m.worker_id} tone={KPI_STATUS[m.status].tone === 'neutral' ? 'neutral' : KPI_STATUS[m.status].tone}>
-                  {m.worker_name ?? '—'} · {m.avg_hours === null ? '—' : t('dashboard.units.hours', { value: m.avg_hours })} · {kpiStatusLabel(m.status)}
+                  {m.worker_name ?? '—'} · {m.avg_hours === null ? t('dashboard.states.unavailable') : t('dashboard.units.hours', { value: m.avg_hours })} · {kpiStatusLabel(m.status)}
+                  {m.excluded_samples > 0 ? ` · ${t('dashboard.widgets.ws07.excludedShort', { count: m.excluded_samples })}` : ''}
                 </Pill>
               ))}
             </div>
@@ -410,22 +448,33 @@ const WH02: WidgetDefinition<WH02Data> = {
 // ------------------------------------------------------------------ FN-05 inventory value by item type / warehouse
 
 type ItemTypeRow = { item_type: string; sku_count: number; value: string; quantities: { uom: string | null; quantity: string }[]; warehouses: { warehouse_id: string; warehouse_name: string; value: string }[] };
-type FN05Data = { total: string; warehouses: { warehouse_id: string; warehouse_name: string; value: string; sku_count: number }[]; item_types: ItemTypeRow[]; in_transit: { transfers: number; value: string } };
+type PendingValuation = { skus: number; used_skus: number; no_cost_skus: number; quantities: { reason: 'USED_STOCK' | 'NO_UNIT_COST'; item_type: string; uom: string | null; quantity: string }[] };
+type FN05Data = { total: string; valued_skus: number; pending_valuation: PendingValuation; warehouses: { warehouse_id: string; warehouse_name: string; value: string; sku_count: number }[]; item_types: ItemTypeRow[]; in_transit: { transfers: number; value: string } };
 
 const inventoryValueColumns: Column<Row>[] = [{ key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
   { key: 'item_type', label: col('itemType'), value: (r) => itemTypeLabel(String(r.item_type ?? '')) },
   { key: 'warehouse_name', label: col('warehouse') }, { key: 'quantity_on_hand', label: col('onHand'), kind: 'num' },
   { key: 'average_unit_cost', label: col('averageUnitCost'), kind: 'money' }, { key: 'value', label: col('value'), kind: 'money' }];
 
+const pendingColumns: Column<Row>[] = [
+  { key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
+  { key: 'item_type', label: col('itemType'), value: (r) => itemTypeLabel(String(r.item_type ?? '')) },
+  { key: 'warehouse_name', label: col('warehouse') },
+  { key: 'reason', label: col('reason'), value: (r) => t(`dashboard.labels.pendingReason_${r.reason}`) },
+  { key: 'quantity_on_hand', label: col('onHand'), kind: 'num' }, { key: 'uom', label: col('uom') },
+  { key: 'value', label: col('value'), kind: 'money', unavailable: true },
+];
+
 const quantityText = (q: ItemTypeRow['quantities']) => q.map((x) => `${count(x.quantity)} ${x.uom ?? ''}`.trim()).join(' · ');
 
-function InventoryValueBody({ env, openDetail }: { env: { data: FN05Data; currency: string }; openDetail: (title: string, params: Record<string, unknown>) => void }) {
+function InventoryValueBody({ env, openDetail, openPending }: { env: { data: FN05Data; currency: string }; openDetail: (title: string, params: Record<string, unknown>) => void; openPending: () => void }) {
   const [view, setView] = useState<'item_type' | 'warehouse'>('item_type');
   const d = env.data;
   return (
     <>
       <div className="dash-kpi-row">
         <Kpi value={money(d.total, env.currency)} label={t('dashboard.widgets.fn05.kpi')} />
+        {d.pending_valuation.skus > 0 && <Kpi value={count(d.pending_valuation.skus)} label={t('dashboard.widgets.fn05.pendingKpi')} tone="warning" />}
         {d.in_transit.transfers > 0 && <Kpi value={money(d.in_transit.value, env.currency)} label={t('dashboard.widgets.fn05.inTransit', { n: d.in_transit.transfers })} />}
       </div>
       <div className="dash-segmented" role="group" aria-label={t('dashboard.widgets.fn05.groupBy')}>
@@ -444,6 +493,13 @@ function InventoryValueBody({ env, openDetail }: { env: { data: FN05Data; curren
           categoryKey="warehouse" series={[{ key: 'value', label: t('dashboard.columns.value'), color: SERIES[0] }]}
           onSelect={(row) => openDetail(String(row.warehouse), { warehouse_id: row.warehouse_id })} />
       )}
+      {d.pending_valuation.skus > 0 && (
+        <div className="dash-notice" role="note">
+          <span>{t('dashboard.widgets.fn05.pendingNote', { used: d.pending_valuation.used_skus, nocost: d.pending_valuation.no_cost_skus })}
+            {' '}{d.pending_valuation.quantities.map((q) => `${t(`dashboard.labels.pendingReason_${q.reason}`)}: ${count(q.quantity)} ${q.uom ?? ''}`.trim()).join(' · ')}</span>
+          <button type="button" className="dash-link-btn" onClick={openPending}>{t('dashboard.widgets.fn05.pendingLink')}</button>
+        </div>
+      )}
       <span className="dash-kpi-sub">{t('dashboard.widgets.fn05.note')}</span>
     </>
   );
@@ -452,7 +508,8 @@ function InventoryValueBody({ env, openDetail }: { env: { data: FN05Data; curren
 const FN05: WidgetDefinition<FN05Data> = {
   size: 'm',
   isEmpty: (d) => d.item_types.length === 0 && d.warehouses.length === 0,
-  render: (env, ctx) => <InventoryValueBody env={env} openDetail={(title, params) => ctx.openDetail(title, params, inventoryValueColumns)} />,
+  render: (env, ctx) => <InventoryValueBody env={env} openDetail={(title, params) => ctx.openDetail(title, params, inventoryValueColumns)}
+    openPending={() => ctx.openDetail(t('dashboard.widgets.fn05.pendingTitle'), { view: 'pending_valuation' }, pendingColumns)} />,
   table: (env) => ({
     columns: [{ key: 'item_type', label: col('itemType') }, { key: 'sku_count', label: col('skuCount'), kind: 'num' },
       { key: 'quantity', label: col('quantityPerUom') }, { key: 'value', label: col('value'), kind: 'money' }, { key: 'by_warehouse', label: col('byWarehouse') }],
@@ -557,7 +614,7 @@ const WH07: WidgetDefinition<{ totals: LeadStats; months: (LeadStats & { month: 
           <Kpi value={count(d.open.requests)} label={t('dashboard.widgets.wh07.kpiOpen')} tone={d.open.requests > 0 ? 'warning' : undefined} />
         </div>
         <ColumnChart unit="count" categoryKey="month" height={180}
-          data={d.months.map((m) => ({ month: m.month, median_hours: m.median_hours ?? 0 }))}
+          data={d.months.map((m) => ({ month: m.month, median_hours: m.median_hours }))}
           series={[{ key: 'median_hours', label: t('dashboard.widgets.wh07.medianHours'), color: SERIES[0] }]}
           labelFormatter={(m) => monthLabel(m)} highlight={d.months.find((m) => m.is_current)?.month}
           onSelect={(month) => ctx.openDetail(monthLabel(month, 'long'), { month }, leadColumns)} />
@@ -589,19 +646,20 @@ const installedItemColumns: Column<Row>[] = [
   { key: 'position', label: col('position') },
   { key: 'installed_at', label: col('installedAt'), kind: 'date' },
   { key: 'wo_number', label: col('workOrder'), link: (r) => (r.work_order_id ? `/app/work-orders/${r.work_order_id}` : null) },
-  { key: 'cost', label: col('installationCost'), kind: 'money' },
+  { key: 'cost', label: col('installationCost'), kind: 'money', unavailable: true },
   { key: 'cost_basis', label: col('costBasis'), value: (r) => t(`dashboard.labels.costBasis_${r.cost_basis}`) },
 ];
 const installedVehicleColumns: Column<Row>[] = [
   { key: 'registration_number', label: col('vehicle'), drill: (r) => ({ title: String(r.registration_number ?? '—'), params: { vehicle_id: r.vehicle_id }, columns: installedItemColumns }) },
   { key: 'items', label: col('installedItems'), kind: 'num' },
   { key: 'unvalued', label: col('withoutCost'), kind: 'num' },
-  { key: 'value', label: col('installationCost'), kind: 'money' },
+  { key: 'value', label: col('installationCost'), kind: 'money', unavailable: true },
 ];
 
 type InstalledGroup = { items: number; unvalued: number; value: string | null };
+type Untracked = { lines: number; products: number; quantities: { uom: string | null; quantity: string }[] };
 
-const FL07: WidgetDefinition<{ values_visible: boolean; totals: InstalledGroup & { vehicles: number }; by_type: (InstalledGroup & { item_type: string })[];
+const FL07: WidgetDefinition<{ values_visible: boolean; untracked: Untracked; totals: InstalledGroup & { vehicles: number }; by_type: (InstalledGroup & { item_type: string })[];
   vehicles: (InstalledGroup & { vehicle_id: string; registration_number: string })[] }> = {
   size: 'm',
   isEmpty: (d) => d.totals.items === 0,
@@ -610,12 +668,12 @@ const FL07: WidgetDefinition<{ values_visible: boolean; totals: InstalledGroup &
     return (
       <>
         <div className="dash-kpi-row">
-          {d.values_visible && <Kpi value={money(d.totals.value, env.currency)} label={t('dashboard.widgets.fl07.kpiValue')} />}
+          {d.values_visible && <Kpi value={d.totals.value === null ? <Unavailable /> : money(d.totals.value, env.currency)} label={t('dashboard.widgets.fl07.kpiValue')} />}
           <Kpi value={count(d.totals.items)} label={t('dashboard.widgets.fl07.kpiItems', { n: d.totals.vehicles })} />
           <Kpi value={count(d.totals.unvalued)} label={t('dashboard.widgets.fl07.kpiUnvalued')} />
         </div>
         <HBarChart unit={d.values_visible ? 'money' : 'count'} currency={env.currency} labelWidth={110} categoryKey="vehicle"
-          data={d.vehicles.map((v) => ({ vehicle: v.registration_number, vehicle_id: v.vehicle_id, value: d.values_visible ? Number(v.value) : v.items }))}
+          data={d.vehicles.map((v) => ({ vehicle: v.registration_number, vehicle_id: v.vehicle_id, value: d.values_visible ? (v.value === null ? null : Number(v.value)) : v.items }))}
           series={[{ key: 'value', label: d.values_visible ? t('dashboard.columns.installationCost') : t('dashboard.columns.installedItems'), color: SERIES[0] }]}
           onSelect={(row) => ctx.openDetail(String(row.vehicle), { vehicle_id: row.vehicle_id }, installedItemColumns)} />
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -626,6 +684,12 @@ const FL07: WidgetDefinition<{ values_visible: boolean; totals: InstalledGroup &
             </Pill>
           ))}
         </div>
+        {d.untracked.lines > 0 && (
+          <div className="dash-notice" role="note">
+            {t('dashboard.widgets.fl07.untracked', { lines: d.untracked.lines, products: d.untracked.products })}{' '}
+            {d.untracked.quantities.map((q) => `${count(q.quantity)} ${q.uom ?? ''}`.trim()).join(' · ')}
+          </div>
+        )}
         <span className="dash-kpi-sub">{t('dashboard.widgets.fl07.note')}</span>
       </>
     );
@@ -664,7 +728,7 @@ const PR05: WidgetDefinition<{ totals: CycleStats; months: (CycleStats & { month
           <Kpi value={daysText(d.totals.pr_to_gr)} label={t('dashboard.widgets.pr05.kpiTotal', { n: d.totals.orders })} />
         </div>
         <ColumnChart unit="count" categoryKey="month" height={180} grouped
-          data={d.months.map((m) => ({ month: m.month, pr_to_po: m.pr_to_po ?? 0, po_to_gr: m.po_to_gr ?? 0 }))}
+          data={d.months.map((m) => ({ month: m.month, pr_to_po: m.pr_to_po, po_to_gr: m.po_to_gr }))}
           series={[{ key: 'pr_to_po', label: t('dashboard.widgets.pr05.kpiPrPo'), color: SERIES[0] }, { key: 'po_to_gr', label: t('dashboard.widgets.pr05.kpiPoGr'), color: SERIES[1] }]}
           labelFormatter={(m) => monthLabel(m)} highlight={d.months.find((m) => m.is_current)?.month}
           onSelect={(month) => ctx.openDetail(monthLabel(month, 'long'), { month }, cycleColumns)} />
