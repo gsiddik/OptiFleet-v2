@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 class DashboardSupplyChainTest extends TestCase
 {
-    public function test_dashboard_reports_phase4_supply_chain_metrics(): void
+    public function test_dashboard_reports_phase4_supply_chain_metrics_behind_permissions(): void
     {
         $tenant = $this->makeTenant(['code' => 'DASH-'.\Illuminate\Support\Str::random(4)]);
         $this->grantModule($tenant, 'VEHICLE');
@@ -60,17 +60,26 @@ class DashboardSupplyChainTest extends TestCase
         ], null);
         $claimService->transition($claim, 'SUBMITTED');
 
-        [, $token] = $this->makeTenantUser($tenant, []);
+        // Sections are gated by module AND view permission; money needs dashboard.finance.view.
+        [, $token] = $this->makeTenantUser($tenant, ['inventory.view', 'purchase_order.view', 'tire.view', 'dashboard.finance.view']);
         $response = $this->getJson('/api/v1/app/dashboard', $this->authHeaders($token))->assertOk();
         $data = $response->json('data');
 
-        $this->assertSame(50.0, (float) $data['inventory_total_value']); // 5 on_hand * 10 unit_cost
-        $this->assertSame(2.0, (float) $data['inventory_reserved_stock']);
+        $this->assertSame('50.00', $data['inventory_total_value']); // 5 on_hand * 10 unit_cost
         $this->assertSame(1, $data['inventory_low_stock']);
         $this->assertSame(0, $data['inventory_out_of_stock']);
         $this->assertSame(1, $data['purchase_orders_open']);
         $this->assertSame(1, $data['goods_receipts_pending']);
         $this->assertSame(1, $data['tires_in_use']);
-        $this->assertSame(1, $data['warranty_claims_active']);
+        // Retired from the payload: orphaned Warranty, retired reservations.
+        $this->assertArrayNotHasKey('warranty_claims_active', $data);
+        $this->assertArrayNotHasKey('inventory_reserved_stock', $data);
+
+        // Without permissions nothing but the organization counts is returned.
+        [, $bare] = $this->makeTenantUser($tenant, []);
+        $bareData = $this->getJson('/api/v1/app/dashboard', $this->authHeaders($bare))->assertOk()->json('data');
+        $this->assertArrayNotHasKey('inventory_total_value', $bareData);
+        $this->assertArrayNotHasKey('inventory_low_stock', $bareData);
+        $this->assertArrayNotHasKey('tires_in_use', $bareData);
     }
 }

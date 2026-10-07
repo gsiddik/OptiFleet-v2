@@ -265,6 +265,9 @@ class RewiredPermissionsTest extends TestCase
         // Configuration permissions are resolved per document type inside ConfigurationController.
         $configuration = ['document_template.manage', 'document_template.publish', 'numbering.manage', 'numbering.publish',
             'workflow.manage', 'workflow.publish', 'workflow.simulate'];
+        // Dashboard permissions are resolved per widget inside DashboardWidgetController / DashboardController
+        // (covered by tests/Feature/Dashboard/DashboardSecurityTest).
+        $configuration[] = \App\Domain\Dashboard\DashboardPermissions::FINANCE;
 
         $unused = Permission::query()->pluck('name')->unique()
             ->reject(fn ($name) => $enforced->contains($name) || in_array($name, $configuration, true))

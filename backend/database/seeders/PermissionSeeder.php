@@ -213,6 +213,13 @@ class PermissionSeeder extends Seeder
             );
         }
 
+        // Tenant Dashboard: monetary widgets (service cost, inventory value, refunds, PO value, stock
+        // values, tire service cost). Payables use the per-source invoice permissions instead.
+        Permission::query()->updateOrCreate(
+            ['name' => 'dashboard.finance.view', 'scope' => 'tenant'],
+            ['group' => 'dashboard', 'description' => 'View financial dashboard widgets']
+        );
+
         // Phase 6 Section 49: ETL operational controls are platform-scope
         // — running/retrying/backfilling analytics is an infrastructure
         // operation, not a tenant business action.

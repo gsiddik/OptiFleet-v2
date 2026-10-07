@@ -311,6 +311,7 @@ class SupplyChainSeeder extends Seeder
         $admin = User::query()->where('email', 'alpha.admin@optifleet.test')->first() ?? $warehouseManager;
         $transfers = app(\App\Domain\Inventory\Services\StockTransferService::class);
         $context = app(TenantContext::class);
+        $callerNow = Carbon::getTestNow();
         $start = now()->subDays(3)->setTime(8, 30);
         $step = function (User $actor, int $minutes, callable $action) use ($context, $start) {
             Carbon::setTestNow($start->copy()->addMinutes($minutes));
@@ -333,7 +334,7 @@ class SupplyChainSeeder extends Seeder
                 'discrepancy_reason' => 'One filter crushed in transit, one missing from the carton.',
             ]], $warehouseManager->id));
         } finally {
-            Carbon::setTestNow();
+            Carbon::setTestNow($callerNow); // a caller's frozen clock (if any) is handed back
             $context->setUser(null);
         }
     }

@@ -1,6 +1,161 @@
 {
+  "actions": {
+    "back": "Kembali",
+    "refresh": "Muat ulang",
+    "refreshWidget": "Muat ulang {{title}}",
+    "retry": "Coba lagi",
+    "showChart": "Tampilkan sebagai grafik",
+    "showTable": "Tampilkan sebagai tabel",
+    "viewDetails": "Lihat rincian"
+  },
+  "alerts": {
+    "breakdown_immobilized": "Kendaraan tidak dapat beroperasi dengan kerusakan terbuka: {{n}}",
+    "breakdown_open": "Kerusakan terbuka lainnya: {{n}}",
+    "documents_due_30": "Dokumen kendaraan kedaluwarsa dalam 30 hari: {{n}}",
+    "documents_expired": "Dokumen kendaraan melewati tanggal kedaluwarsa: {{n}}",
+    "extension_due_30": "Dokumen kendaraan perlu diperpanjang dalam 30 hari: {{n}}",
+    "extension_overdue": "Dokumen kendaraan melewati batas perpanjangan: {{n}}",
+    "maintenance_overdue": "Jadwal perawatan terlambat: {{n}}",
+    "payables_overdue": "Faktur belum dibayar lewat jatuh tempo: {{n}}",
+    "po_late": "Purchase Order terlambat: {{n}}",
+    "stockout_needed": "Item habis/kritis yang dibutuhkan Work Order terbuka: {{n}}",
+    "tires_due": "Ban terpasang ≤ D_pull: {{n}}",
+    "transfer_discrepancy": "Transfer stok diterima dengan selisih (30 hari): {{n}}",
+    "transfers_late": "Transfer stok dalam perjalanan lebih dari 7 hari: {{n}}",
+    "wo_aged": "Work Order terbuka lebih dari 14 hari (tidak menunggu suku cadang): {{n}}",
+    "wo_waiting_parts": "Work Order menunggu suku cadang: {{n}}"
+  },
+  "buckets": {
+    "d0_3": "0–3 hari",
+    "d15_30": "15–30 hari",
+    "d30_plus": "> 30 hari",
+    "d4_7": "4–7 hari",
+    "d8_14": "8–14 hari",
+    "doc_d30": "≤ 30 hari",
+    "doc_d60": "31–60 hari",
+    "doc_d90": "61–90 hari",
+    "doc_expired": "Sudah lewat",
+    "pay_d1_30": "Lewat 1–30 hari",
+    "pay_d31_60": "Lewat 31–60 hari",
+    "pay_d61_90": "Lewat 61–90 hari",
+    "pay_d90_plus": "Lewat > 90 hari",
+    "pay_no_due": "Tanpa jatuh tempo",
+    "pay_not_due": "Belum jatuh tempo",
+    "payShort_d1_30": "1–30",
+    "payShort_d31_60": "31–60",
+    "payShort_d61_90": "61–90",
+    "payShort_d90_plus": "> 90",
+    "payShort_no_due": "Tanpa JT",
+    "payShort_not_due": "Belum JT"
+  },
+  "chart": {
+    "shareOfTotal": "Porsi dari total",
+    "total": "Total"
+  },
+  "columns": {
+    "acceptedAt": "Disetujui vendor",
+    "acceptedQty": "Kuantitas diterima baik",
+    "age": "Umur",
+    "amount": "Nilai",
+    "available": "Tersedia",
+    "averageUnitCost": "Biaya satuan rata-rata",
+    "branch": "Cabang",
+    "brand": "Merek",
+    "bucket": "Rentang",
+    "category": "Kategori",
+    "completedAt": "Selesai",
+    "costSource": "Komponen",
+    "count": "Jumlah",
+    "createdAt": "Dibuat",
+    "currentOdometer": "Odometer saat ini (km)",
+    "cycle": "Siklus",
+    "daysAtVendor": "Hari di vendor",
+    "daysInTransit": "Hari dalam perjalanan",
+    "daysLate": "Hari terlambat",
+    "daysLeft": "Sisa hari",
+    "daysOverdue": "Hari terlambat",
+    "deadline": "Batas waktu",
+    "direction": "Arah",
+    "dispatchedAt": "Dikirim",
+    "document": "Dokumen",
+    "documentNumber": "Nomor dokumen",
+    "documentType": "Jenis dokumen",
+    "downtimeStart": "Berhenti sejak",
+    "dPullMm": "D_pull (mm)",
+    "dueDate": "Jatuh tempo",
+    "dueOdometer": "Odometer jatuh tempo (km)",
+    "durationHours": "Durasi (jam)",
+    "expectedDelivery": "Perkiraan kirim",
+    "fromWarehouse": "Dari",
+    "idleDays": "Hari tidak bergerak",
+    "inspectedAt": "Diinspeksi",
+    "invoiceDate": "Tanggal faktur",
+    "kmOver": "Kelebihan km",
+    "lastMovement": "Pergerakan terakhir",
+    "model": "Model",
+    "month": "Bulan",
+    "movementType": "Pergerakan",
+    "neededByWorkOrder": "Dibutuhkan Work Order",
+    "onHand": "Stok fisik",
+    "onTime": "Tepat waktu",
+    "orderDate": "Tanggal order",
+    "outstanding": "Sisa tagihan",
+    "package": "Paket",
+    "partRequestedAt": "Permintaan part tertua",
+    "payableSource": "Sumber",
+    "pendingItems": "Item tertunda",
+    "position": "Posisi",
+    "priority": "Prioritas",
+    "product": "Produk",
+    "purchaseOrder": "Purchase Order",
+    "quantity": "Kuantitas",
+    "receipts": "Penerimaan",
+    "receivedAt": "Diterima",
+    "recognizedOn": "Diakui pada",
+    "recommendation": "Rekomendasi",
+    "refundAmount": "Refund",
+    "remainingTreadPct": "Sisa tapak (%)",
+    "reorderPoint": "Titik pemesanan ulang",
+    "reportedAt": "Dilaporkan",
+    "request": "Permintaan",
+    "resolvedAt": "Diselesaikan",
+    "return": "Retur",
+    "returnedAt": "Diretur",
+    "runningHours": "Berjalan (jam)",
+    "sentAt": "Dikirim",
+    "serial": "Nomor seri",
+    "severity": "Tingkat",
+    "shortage": "Kekurangan",
+    "sku": "SKU",
+    "skuCount": "Item tersedia",
+    "startedAt": "Dimulai",
+    "state": "Kondisi",
+    "status": "Status",
+    "total": "Total",
+    "toWarehouse": "Ke",
+    "transfer": "Transfer",
+    "treadMm": "Tapak (mm)",
+    "type": "Jenis",
+    "unvalued": "Tanpa biaya satuan",
+    "value": "Nilai",
+    "vehicle": "Kendaraan",
+    "vehicles": "Kendaraan",
+    "vendor": "Vendor",
+    "waiting": "Menunggu",
+    "warehouse": "Gudang",
+    "workOrder": "Work Order",
+    "workOrders": "Work Order",
+    "workshop": "Bengkel"
+  },
   "empty": {
     "noModulesEntitled": "Tidak ada modul yang menjadi hak akses."
+  },
+  "errors": {
+    "filterOutOfScope": "Filter yang dipilih berada di luar cakupan data Anda.",
+    "moduleInactive": "Modul untuk widget ini belum aktif untuk perusahaan Anda.",
+    "noDrilldown": "Widget ini tidak memiliki tampilan rincian.",
+    "unknownWidget": "Widget dasbor ini tidak ada.",
+    "widgetForbidden": "Anda tidak memiliki izin untuk melihat widget ini."
   },
   "fields": {
     "breakdown": "Kerusakan",
@@ -27,6 +182,84 @@
     "workspacesAvailable": "Workspace Tersedia",
     "workspacesOccupied": "Workspace Terisi"
   },
+  "filters": {
+    "allInScope": "Semua dalam cakupan saya",
+    "branch": "Cabang",
+    "label": "Filter dasbor",
+    "monthsOption": "{{months}} bulan terakhir + bulan berjalan",
+    "period": "Periode tren",
+    "periodNote": "Periode tren hanya berlaku untuk grafik periode; widget \"Kondisi saat ini\" selalu menampilkan keadaan sekarang.",
+    "timezoneNote": "Tanggal dan bulan mengikuti zona waktu perusahaan ({{timezone}}).",
+    "warehouse": "Gudang",
+    "workshop": "Bengkel"
+  },
+  "labels": {
+    "costSource_EXTERNAL_SERVICE": "Jasa eksternal (WO internal)",
+    "costSource_EXTERNAL_WO": "Work Order eksternal",
+    "costSource_PARTS": "Suku cadang terpakai",
+    "direction_IN": "Masuk",
+    "direction_OUT": "Keluar",
+    "direction_UNKNOWN": "Tidak dicatat",
+    "hold": "Tahan",
+    "inUse": "Digunakan",
+    "movement_ADJUSTMENT_MINUS": "Penyesuaian −",
+    "movement_ADJUSTMENT_PLUS": "Penyesuaian +",
+    "movement_ISSUE": "Pengeluaran",
+    "movement_OPENING": "Saldo awal",
+    "movement_RECEIPT": "Penerimaan barang",
+    "movement_RETURN": "Retur ke stok",
+    "movement_RETURN_TO_VENDOR": "Retur ke vendor",
+    "movement_SCRAP": "Afkir",
+    "movement_STOCK_OPNAME": "Selisih stok opname",
+    "movement_TRANSFER_IN": "Transfer masuk",
+    "movement_TRANSFER_OUT": "Transfer keluar",
+    "payable_EXTERNAL_WO": "Faktur WO eksternal",
+    "payable_SERVICE_INVOICE": "Faktur layanan",
+    "payable_VENDOR_INVOICE": "Faktur vendor",
+    "purchaseOrder": "Purchase Order",
+    "purchaseRequest": "Purchase Request",
+    "repair": "Perbaikan",
+    "retread": "Vulkanisir",
+    "reuse": "Pakai Ulang",
+    "scrap": "Afkir",
+    "severityImmobilized": "Tidak Dapat Beroperasi",
+    "severityMajor": "Berat",
+    "severityMinor": "Ringan",
+    "stockLow": "Di bawah titik pemesanan ulang",
+    "stockNormal": "Normal",
+    "stockOut": "Stok habis",
+    "tireGroup_AT_VENDOR": "Vulkanisir / perbaikan",
+    "tireGroup_IN_PROCESS": "Dilepas / inspeksi",
+    "tireGroup_IN_SERVICE": "Terpasang",
+    "tireGroup_IN_STOCK": "Di gudang",
+    "typeBreakdown": "Kerusakan",
+    "typeCampaign": "Kampanye",
+    "typeCorrective": "Korektif",
+    "typeInspection": "Inspeksi",
+    "typePreventive": "Preventif"
+  },
+  "limitations": {
+    "cyclesWithoutCost": "{{count}} siklus vulkanisir/perbaikan yang diterima tidak memiliki biaya tercatat.",
+    "foreignCurrencyExcluded": "{{count}} faktur dalam {{currency}} ({{amount}}) tidak dihitung: nilai dalam mata uang lain tidak pernah dijumlahkan ke total.",
+    "opnameExcluded": "{{count}} selisih stok opname tidak dihitung: arahnya tidak dicatat.",
+    "poWithoutOrderDate": "{{count}} Purchase Order yang sudah dikomitkan tidak memiliki tanggal order sehingga tidak masuk ke bulan mana pun.",
+    "tiresWithoutRuleProfile": "{{count}} ban terpasang tidak memiliki rule profile aktif yang berlaku (D_pull) sehingga tidak dapat dinilai.",
+    "tiresWithoutTreadReading": "{{count}} ban terpasang belum memiliki pengukuran kedalaman tapak sehingga tidak dapat dinilai.",
+    "turnaroundWithoutStart": "{{count}} Work Order selesai tidak memiliki waktu mulai sehingga tidak diukur.",
+    "unvaluedMovements": "{{count}} pergerakan tidak memiliki biaya satuan (mis. penyesuaian, afkir) sehingga dihitung tetapi tidak dinilai."
+  },
+  "presets": {
+    "finance": "Keuangan",
+    "fleet": "Armada",
+    "procurement": "Pengadaan",
+    "summary": "Ringkasan",
+    "warehouse": "Gudang",
+    "workshop": "Bengkel"
+  },
+  "scope": {
+    "current": "Kondisi saat ini",
+    "period": "{{months}} bulan + bulan berjalan"
+  },
   "sections": {
     "activeModules": "Modul Aktif",
     "activeUsers": "Pengguna Aktif",
@@ -41,7 +274,263 @@
     "workshopOperations": "Operasional Bengkel",
     "workshops": "Bengkel"
   },
+  "severity": {
+    "critical": "Kritis",
+    "high": "Tinggi",
+    "medium": "Sedang"
+  },
+  "states": {
+    "loadFailed": "Widget ini gagal dimuat.",
+    "noRows": "Tidak ada data.",
+    "noWidgets": "Tidak ada widget dasbor yang tersedia untuk izin dan modul aktif Anda.",
+    "updatedAt": "Diperbarui {{time}}"
+  },
   "titles": {
-    "dashboard": "Dasbor"
+    "dashboard": "Dasbor",
+    "presets": "Tampilan dasbor"
+  },
+  "units": {
+    "days_one": "{{count}} hari",
+    "days_other": "{{count}} hari",
+    "hours": "{{value}} jam"
+  },
+  "widgets": {
+    "al01": {
+      "empty": "Tidak ada yang perlu ditangani saat ini.",
+      "help": "Hal yang perlu ditangani sekarang, dari data dasbor yang boleh Anda lihat. Setiap baris membuka daftar yang sama dengan widget sumbernya.",
+      "title": "Pusat Tindakan"
+    },
+    "fl01": {
+      "empty": "Belum ada kendaraan dalam cakupan Anda.",
+      "help": "Kendaraan menurut status saat ini, dalam cakupan cabang Anda. Kendaraan yang sudah dilepas (disposed) tidak dihitung. Klik segmen untuk melihat daftar kendaraan.",
+      "kpiTotal": "Kendaraan dalam armada",
+      "title": "Status Armada"
+    },
+    "fl02": {
+      "empty": "Belum ada kendaraan dalam cakupan Anda.",
+      "help": "Status kendaraan saat ini per cabang (cabang tempat kendaraan terdaftar sekarang). Klik batang untuk melihat kendaraan cabang tersebut.",
+      "title": "Armada per Cabang"
+    },
+    "fl03": {
+      "empty": "Tidak ada kerusakan yang terbuka.",
+      "help": "Kerusakan yang belum diselesaikan. Durasi berjalan = sekarang − mulai berhenti (atau waktu laporan bila mulai berhenti tidak dicatat). Ini durasi berjalan, bukan MTTR.",
+      "kpiOpen": "Kerusakan terbuka",
+      "note": "Durasi terlama ditampilkan lebih dulu.",
+      "title": "Kerusakan Aktif"
+    },
+    "fl04": {
+      "empty": "Tidak ada kerusakan yang dilaporkan pada periode ini.",
+      "help": "Kerusakan yang dilaporkan per bulan (zona waktu perusahaan), menurut tingkat.",
+      "kpi": "Kerusakan dilaporkan",
+      "title": "Tren Kerusakan"
+    },
+    "fl05": {
+      "empty": "Tidak ada kerusakan yang dilaporkan pada periode ini.",
+      "help": "10 kendaraan dengan kerusakan terbanyak yang dilaporkan pada periode ini. Klik batang untuk melihat daftarnya.",
+      "series": "Kerusakan",
+      "title": "Kendaraan Paling Sering Rusak"
+    },
+    "fl06": {
+      "empty": "Tidak ada tenggat dokumen dalam 90 hari ke depan.",
+      "expiry": "Tanggal kedaluwarsa",
+      "extension": "Batas perpanjangan",
+      "help": "Dokumen terbaru per kendaraan dan jenis (menurut tanggal terbit) yang dinilai; dokumen LAINNYA dinilai satu per satu. Tanggal kedaluwarsa dan batas perpanjangan dihitung terpisah, hingga 90 hari ke depan.",
+      "title": "Tenggat Dokumen Kendaraan"
+    },
+    "fn01": {
+      "empty": "Tidak ada biaya servis pada periode ini.",
+      "help": "Biaya servis yang diakui per bulan untuk semua kendaraan dalam cakupan, tanpa pembanding anggaran. Suku cadang: biaya terpakai (retur tidak dihitung) dari Work Order yang selesai atau ditutup, pada tanggal selesai. Jasa eksternal: Faktur Layanan (nilai dokumen termasuk pajak) pada tanggal faktur; yang dibatalkan tidak dihitung. Work Order eksternal: faktur vendor yang sudah ditagih (nilai dokumen) pada tanggal faktur. Tidak termasuk: estimasi, pembayaran, tenaga kerja internal (tidak ada pencatatan biaya), vulkanisir/perbaikan ban (lihat Biaya Layanan Ban). Bulan mengikuti zona waktu perusahaan; bulan berjalan ditampilkan lebih terang.",
+      "kpiCurrent": "Bulan berjalan (sejauh ini)",
+      "kpiTotal": "Total, {{months}} bulan terakhir + berjalan",
+      "kpiVehicles": "Kendaraan dengan biaya",
+      "laborExcluded": "Tenaga kerja internal tidak termasuk (biaya tenaga kerja tidak dicatat).",
+      "pendingMemos": "Belum ditagih: {{n}} memo jasa eksternal selesai (estimasi {{amount}}).",
+      "pendingParts": "Belum diakui: suku cadang pada {{n}} Work Order terbuka ({{amount}}).",
+      "runningMonth": "bulan berjalan",
+      "title": "Biaya Servis",
+      "workOrdersVehicles": "{{wo}} Work Order · {{vehicles}} kendaraan"
+    },
+    "fn02": {
+      "empty": "Tidak ada biaya servis pada periode ini.",
+      "help": "10 kendaraan dengan biaya servis tertinggi pada periode ini (definisi sama dengan Biaya Servis). Klik batang untuk melihat transaksinya.",
+      "other": "Lainnya: {{n}} kendaraan, {{amount}}",
+      "title": "Biaya Servis per Kendaraan",
+      "total": "Total periode: {{amount}}"
+    },
+    "fn03": {
+      "empty": "Tidak ada biaya servis pada periode ini.",
+      "help": "Biaya servis menurut cabang Work Order (dicatat saat Work Order dibuat), definisi sama dengan Biaya Servis. Hanya Work Order yang dapat Anda akses yang dihitung.",
+      "title": "Biaya Servis per Cabang"
+    },
+    "fn04": {
+      "empty": "Tidak ada faktur yang belum dibayar.",
+      "help": "Faktur vendor, Faktur Layanan, dan faktur WO eksternal yang belum dibayar, menurut hari lewat jatuh tempo. Setiap sumber hanya muncul bila Anda memiliki izin lihatnya. Faktur WO eksternal memiliki termin pembayaran teks bebas, sehingga ditampilkan sebagai \"Tanpa jatuh tempo\". Refund tidak dikurangkan.",
+      "kpiOverdue": "Lewat jatuh tempo",
+      "kpiTotal": "Sisa tagihan ({{n}} faktur)",
+      "termPrefix": "Termin:",
+      "title": "Umur Hutang"
+    },
+    "fn05": {
+      "empty": "Tidak ada nilai persediaan.",
+      "help": "Stok fisik × biaya satuan rata-rata bergerak, per gudang, saat ini. Tidak ada histori, sehingga tren tidak ditampilkan.",
+      "kpi": "Total nilai persediaan",
+      "title": "Nilai Persediaan"
+    },
+    "fn06": {
+      "empty": "Tidak ada refund pada periode ini.",
+      "help": "Refund yang disetujui vendor per bulan (tanggal persetujuan), dan permintaan refund yang masih menunggu vendor. Permintaan yang tertunda belum memiliki nilai sampai disetujui vendor. Penerimaan uang tidak dicatat.",
+      "kpiAccepted": "Refund disetujui ({{n}})",
+      "kpiPending": "Permintaan menunggu vendor",
+      "note": "Nilai adalah refund yang disetujui, bukan pembayaran yang diterima.",
+      "series": "Refund disetujui",
+      "title": "Refund Retur ke Vendor"
+    },
+    "mt01": {
+      "empty": "Tidak ada jadwal perawatan terbuka.",
+      "help": "Jadwal perawatan terbuka menurut status yang dihitung sistem dari tanggal dan odometer jatuh tempo.",
+      "title": "Status Jadwal Perawatan"
+    },
+    "mt02": {
+      "empty": "Tidak ada perawatan yang terlambat.",
+      "help": "Jadwal berstatus Terlambat, yang paling terlambat lebih dulu: hari melewati jatuh tempo, lalu km melewati odometer jatuh tempo (dari odometer kendaraan saat ini).",
+      "kpi": "Jadwal terlambat",
+      "title": "Perawatan Terlambat"
+    },
+    "mt03": {
+      "empty": "Tidak ada permintaan perawatan terbuka.",
+      "help": "Permintaan yang menunggu keputusan atau Work Order (Draf, Diajukan, Ditinjau, Disetujui).",
+      "kpi": "Permintaan terbuka",
+      "title": "Permintaan Perawatan Terbuka"
+    },
+    "pr01": {
+      "empty": "Tidak ada dokumen pengadaan terbuka.",
+      "grPending": "Menunggu goods receipt: {{n}}",
+      "help": "Purchase Request dan Purchase Order terbuka menurut tahap, dalam cakupan gudang Anda. Setiap bagian muncul hanya bila Anda memiliki izin lihatnya.",
+      "orders": "Purchase Order terbuka: {{n}}",
+      "requests": "Purchase Request terbuka: {{n}}",
+      "title": "Alur Pengadaan"
+    },
+    "pr02": {
+      "empty": "Tidak ada Purchase Order terlambat.",
+      "help": "Purchase Order berstatus Issued atau Diterima Sebagian yang melewati perkiraan tanggal kirim.",
+      "kpi": "Purchase Order terlambat",
+      "title": "Purchase Order Terlambat"
+    },
+    "pr03": {
+      "empty": "Tidak ada Purchase Order dikomitkan pada periode ini.",
+      "help": "Total Purchase Order (nilai dokumen termasuk pajak dan ongkos kirim) menurut tanggal order, untuk PO yang disetujui, diterbitkan, diterima, dan ditutup. Draf, menunggu persetujuan, ditolak, dan dibatalkan tidak dihitung.",
+      "kpi": "Dikomitkan ({{n}} PO)",
+      "series": "Nilai PO",
+      "title": "Nilai Purchase Order Dikomitkan"
+    },
+    "pr04": {
+      "empty": "Tidak ada goods receipt pada periode ini.",
+      "help": "Per vendor, atas goods receipt yang diposting pada periode: tepat waktu = diterima pada atau sebelum perkiraan tanggal kirim PO (penerimaan tanpa tanggal tersebut tidak masuk perhitungan); diterima baik = kuantitas diterima ÷ kuantitas datang (diterima + ditolak + rusak).",
+      "title": "Kinerja Vendor"
+    },
+    "tr01": {
+      "empty": "Tidak ada ban dalam cakupan Anda.",
+      "help": "Posisi ban saat ini (ban afkir, terjual, dan hilang tidak dihitung). Visibilitas mengikuti kendaraan, gudang, atau cabang terakhir ban.",
+      "kpi": "Ban",
+      "title": "Status Ban"
+    },
+    "tr02": {
+      "empty": "Tidak ada ban yang perlu diganti.",
+      "help": "Ban terpasang yang pengukuran tapak terakhirnya sama dengan atau di bawah D_pull rule profile aktif yang berlaku, ditambah inspeksi ban bekas yang menunggu persetujuan. Catatan teks bebas tidak digunakan.",
+      "installed": "Terpasang ≤ D_pull",
+      "title": "Ban Perlu Diganti",
+      "used": "Inspeksi ban bekas menunggu persetujuan"
+    },
+    "tr03": {
+      "empty": "Tidak ada ban di vendor.",
+      "help": "Siklus vulkanisir dan perbaikan yang dikirim ke vendor dan belum diterima, yang paling lama lebih dulu.",
+      "title": "Ban di Vendor"
+    },
+    "tr04": {
+      "empty": "Tidak ada biaya vulkanisir atau perbaikan pada periode ini.",
+      "help": "Biaya siklus vulkanisir dan perbaikan menurut bulan ban kembali dari vendor. Tidak termasuk dalam Biaya Servis.",
+      "title": "Biaya Layanan Ban"
+    },
+    "wh01": {
+      "empty": "Belum ada stok di gudang Anda.",
+      "help": "Baris stok (produk × gudang) menurut ketersediaan (stok fisik − dipesan): habis (≤ 0), di bawah titik pemesanan ulang, normal.",
+      "kpiCritical": "Baris stok kritis",
+      "title": "Kesehatan Stok"
+    },
+    "wh02": {
+      "empty": "Tidak ada stok kritis.",
+      "help": "Item habis dan di bawah titik pemesanan ulang. Item yang masih dibutuhkan Work Order terbuka dari gudang tersebut ditampilkan lebih dulu.",
+      "kpi": "Item kritis",
+      "kpiNeeded": "Dibutuhkan Work Order terbuka",
+      "neededFlag": "dibutuhkan WO",
+      "showNeeded": "Tampilkan hanya item yang dibutuhkan Work Order",
+      "title": "Stok Habis & di Bawah Titik Pesan"
+    },
+    "wh03": {
+      "discrepancy": "Diterima dengan selisih",
+      "discrepancyWindow": "Dengan selisih ({{days}} hari terakhir)",
+      "empty": "Tidak ada transfer terbuka atau terbaru.",
+      "help": "Transfer terbuka, transfer dalam perjalanan (ditandai setelah ambang batas), dan transfer yang baru diterima dengan selisih (diterima kurang dari dikirim, rusak, atau hilang).",
+      "inTransit": "Dalam perjalanan",
+      "inTransitOver": "Dalam perjalanan · {{n}} lebih dari {{days}} hari",
+      "open": "Transfer terbuka",
+      "title": "Transfer Stok"
+    },
+    "wh04": {
+      "empty": "Tidak ada pergerakan stok bernilai pada periode ini.",
+      "help": "Nilai stok masuk dan keluar per bulan (kuantitas × biaya satuan yang tercatat pada pergerakan), ditampilkan terpisah dan tidak pernah dinetkan. Pergerakan tanpa biaya satuan dan selisih stok opname dilaporkan, tidak dinilai.",
+      "in": "Nilai masuk",
+      "out": "Nilai keluar",
+      "title": "Nilai Pergerakan Stok"
+    },
+    "wh05": {
+      "empty": "Tidak ada stok yang tidak bergerak.",
+      "help": "Stok dengan kuantitas fisik yang pergerakan terakhirnya lebih dari 90 hari, dinilai dengan biaya rata-rata bergerak. Stok tanpa catatan pergerakan tidak dapat ditentukan umurnya dan ditampilkan terpisah.",
+      "kpiNoHistory": "{{n}} item tanpa riwayat pergerakan",
+      "kpiSlow": "{{n}} item diam > {{days}} hari",
+      "noHistory": "Tanpa riwayat pergerakan",
+      "title": "Stok Tidak Bergerak"
+    },
+    "ws01": {
+      "empty": "Tidak ada Work Order terbuka.",
+      "help": "Work Order terbuka menurut status, di bengkel yang dapat Anda akses (aturan yang sama dengan daftar Work Order). Draf ditampilkan terpisah.",
+      "kpiOpen": "Work Order terbuka",
+      "title": "Antrean Work Order"
+    },
+    "ws02": {
+      "empty": "Tidak ada Work Order terbuka.",
+      "help": "Work Order terbuka menurut umur sejak dibuat, dalam hari lokal perusahaan. Hijau ≤ 7 hari, kuning 8–14, merah > 14. Lama di status saat ini tidak diukur.",
+      "kpiOpen": "Work Order terbuka",
+      "kpiOver14": "Lebih dari 14 hari",
+      "legend": "Hijau: hingga 7 hari · Kuning: 8–14 hari · Merah: lebih dari 14 hari",
+      "title": "Umur Work Order Terbuka"
+    },
+    "ws03": {
+      "empty": "Tidak ada Work Order yang selesai pada periode ini.",
+      "help": "Work Order yang selesai atau ditutup per bulan penyelesaian, menurut jenis perawatan.",
+      "kpi": "Selesai pada periode",
+      "title": "Work Order Selesai"
+    },
+    "ws04": {
+      "empty": "Tidak ada Work Order yang dapat diukur pada periode ini.",
+      "help": "Median jam dari mulai sampai selesai untuk Work Order yang selesai di setiap bulan. Jeda tidak dikurangkan. Ini bukan MTTR.",
+      "kpi": "Median durasi penyelesaian",
+      "kpiCount": "Work Order yang diukur",
+      "note": "Mulai → selesai, termasuk jeda.",
+      "series": "Median jam",
+      "title": "Durasi Penyelesaian Work Order"
+    },
+    "ws05": {
+      "empty": "Tidak ada workspace dalam cakupan Anda.",
+      "help": "Status bay bengkel saat ini (bay nonaktif tidak dihitung).",
+      "kpiTotal": "Bay aktif",
+      "title": "Okupansi Workspace"
+    },
+    "ws06": {
+      "empty": "Tidak ada Work Order yang menunggu suku cadang.",
+      "help": "Work Order berstatus Menunggu Part, beserta permintaan part yang belum dikeluarkan. Lama menunggu dihitung dari permintaan part tertunda yang paling lama.",
+      "kpi": "Menunggu suku cadang",
+      "title": "Work Order Menunggu Suku Cadang"
+    }
   }
 }
