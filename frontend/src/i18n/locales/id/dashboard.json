@@ -115,7 +115,7 @@
     "installedItems": "Item terpasang",
     "invoiceDate": "Tanggal faktur",
     "issuedAt": "Waktu dikeluarkan",
-    "itemType": "Item type",
+    "itemType": "Jenis item",
     "kmOver": "Kelebihan km",
     "kpiStatus": "Status KPI",
     "lastMovement": "Pergerakan terakhir",
@@ -242,7 +242,7 @@
     "all": "Semua",
     "allInScope": "Semua dalam cakupan saya",
     "branch": "Cabang",
-    "itemType": "Item type",
+    "itemType": "Jenis item",
     "label": "Filter dasbor",
     "maintenanceType": "Jenis maintenance",
     "monthsOption": "{{months}} bulan terakhir + bulan berjalan",
@@ -475,15 +475,15 @@
       "title": "Umur Hutang"
     },
     "fn05": {
-      "by_item_type": "Item type",
+      "by_item_type": "Jenis item",
       "by_warehouse": "Gudang",
       "empty": "Tidak ada nilai persediaan.",
       "groupBy": "Kelompokkan menurut",
-      "help": "Stok fisik × biaya satuan rata-rata bergerak dari buku stok, saat ini, per Item Type (atau per gudang). Ban dan rim dihitung sekali, melalui stok produknya. Stok dalam perjalanan antargudang ditampilkan terpisah dan tidak dijumlahkan; stok bekas tidak memiliki valuasi dan dilaporkan, tidak pernah dinilai 0 atau dengan harga baru. Kuantitas tidak pernah dijumlahkan lintas satuan. Tidak ada histori, sehingga tren tidak ditampilkan.",
+      "help": "Stok fisik × biaya satuan rata-rata bergerak dari buku stok, saat ini, per Jenis Item (atau per gudang). Ban dan rim dihitung sekali, melalui stok produknya. Stok dalam perjalanan antargudang ditampilkan terpisah dan tidak dijumlahkan; stok bekas tidak memiliki valuasi dan dilaporkan, tidak pernah dinilai 0 atau dengan harga baru. Kuantitas tidak pernah dijumlahkan lintas satuan. Tidak ada histori, sehingga tren tidak ditampilkan.",
       "inTransit": "Dalam perjalanan, tidak dijumlahkan ({{n}} transfer)",
       "kpi": "Total nilai persediaan",
       "note": "Hanya nilai saat ini; kuantitas tidak dijumlahkan lintas satuan.",
-      "title": "Nilai Persediaan per Item Type"
+      "title": "Nilai Persediaan per Jenis Item"
     },
     "fn06": {
       "empty": "Tidak ada refund pada periode ini.",

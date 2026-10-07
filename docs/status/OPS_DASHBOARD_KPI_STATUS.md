@@ -126,13 +126,41 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
 - All new strings through `docs/i18n/17-i18n-additions.csv` (i18n:check up to date; audit shows no
   untranslated dashboard UI text).
 
+## CP6 — seeders, regression, final QA
+
+- `DashboardDemoSeeder` (demo layer only, every step through the application services under a
+  controlled clock, idempotent by marker / natural keys):
+  - demo mechanics per branch workshop (`DASH-*-M1/M2`) with hourly rates; `DASH-BDG-M2` without a
+    rate (labor not valued, limitation shown); `DASH-JKT-M1` raised 55,000 → 60,000 six months ago
+    (earlier assignments keep the 55,000 snapshot);
+  - assistants (odd months), a PRIMARY hand-over mid-work (ago % 5 = 2);
+  - Work Order timelines: start → part request → waiting for part (every third month) → issue →
+    resume → consume → QC (waiting for QC not counted) → rework 1 cycle (ago % 4 = 1) / 2 cycles
+    (9 months ago) → complete; Service Invoice recorded / paid after completion;
+  - a monthly labor-only CORRECTIVE Work Order in Jakarta (lead mechanic reaches ≥ 5 samples);
+  - one Work Order in progress for 3 h (open interval, labor counted up to now);
+  - component `DASH-BAT-01` installed on B 4101 ALP 60 days ago, removed (REUSE) 20 days ago,
+    installed on D 4102 ALP — one open installation;
+  - thresholds: brake pads JKT 80 (set), oil filter JKT 0 (intentional zero), everything else unset;
+  - demo-only baseline CORRECTIVE 6.00 h; PREVENTIVE unset.
+- Production (`BootstrapSeeder`) only adds the `mechanic_baseline.manage` permission: no baseline, no
+  threshold (test `test_production_bootstrap_adds_the_permission_but_never_a_baseline_or_threshold`).
+- Not seeded (would need writing around the services): Work Orders without interval history — the
+  "history incomplete" state is covered by tests; partial payments (the application allows only full
+  payment).
+- Fresh `migrate:fresh --seed` + re-run on the disposable DB: identical row counts (12 tables).
+- Reconciliation on the seeded DB: FN-07 = FN-08 totals; PARTS 22,799,380.00 and EXTERNAL_PAID
+  11,850,000.00 equal independent SQL; LABOR equals SQL for closed intervals (running interval differs
+  only by the sub-second clock between the two reads).
+- Bilingual: Indonesian dashboard strings use the application term "Jenis Item".
+
 ## Checkpoints
 
 | # | Checkpoint | Status | Commit |
 |---|---|---|---|
-| 1 | Audit, metric definitions, decisions | DONE | this commit |
-| 2 | Work intervals, assignment attribution, snapshots, configuration | DONE | CP2 commit |
-| 3 | Most Costly Vehicle + Mechanic Performance (+ FN-08, WS-08) | DONE | CP3 commit |
-| 4 | Consumption, installed, inventory value, low stock (+ extras) | DONE | CP4 commit |
-| 5 | Layout + bilingual | DONE | CP5 commit |
-| 6 | Seeders, regression, final QA | TODO | |
+| 1 | Audit, metric definitions, decisions | DONE | 49cd5d4 |
+| 2 | Work intervals, assignment attribution, snapshots, configuration | DONE | 4109c3d |
+| 3 | Most Costly Vehicle + Mechanic Performance (+ FN-08, WS-08) | DONE | fc1ebf4 |
+| 4 | Consumption, installed, inventory value, low stock (+ extras) | DONE | c55ae64 |
+| 5 | Layout + bilingual | DONE | c4f0f63 |
+| 6 | Seeders, regression, final QA | DONE | CP6 commit |
