@@ -1,7 +1,7 @@
 import { t } from '../../../../i18n/i18n';
 import { ColumnChart, DataTable, HBarChart, Kpi, SegmentBar, type Column } from '../components';
-import { count, money } from '../format';
-import { codeLabel, col, documentTypeLabel } from '../labels';
+import { count } from '../format';
+import { codeLabel, col, documentTypeLabel, itemTypeLabel } from '../labels';
 import { NEUTRAL, ORDINAL_BLUE, SERIES, STATUS } from '../palette';
 import type { WidgetDefinition } from '../WidgetCard';
 
@@ -302,10 +302,13 @@ const WS06: WidgetDefinition<{ count: number; items: Row[] }> = {
 // ------------------------------------------------------------------ WH — warehouse
 
 const STOCK_COLORS = { OUT: STATUS.critical, LOW: STATUS.warning, NORMAL: STATUS.good, NOT_SET: NEUTRAL };
-const stockColumns: Column<Row>[] = [{ key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
+export const stockColumns: Column<Row>[] = [{ key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
+  { key: 'item_type', label: col('itemType'), value: (r) => itemTypeLabel(String(r.item_type ?? '')) },
   { key: 'warehouse_name', label: col('warehouse') }, { key: 'state', label: col('state'), value: (r) => codeLabel(String(r.state), 'stock') },
-  { key: 'available', label: col('available'), kind: 'num' }, { key: 'reorder_point', label: col('reorderPoint'), kind: 'num' },
-  { key: 'shortage', label: col('shortage'), kind: 'num' }, { key: 'needed_by_work_order', label: col('neededByWorkOrder'), kind: 'bool' }];
+  { key: 'on_hand', label: col('onHand'), kind: 'num' }, { key: 'reorder_point', label: col('threshold'), kind: 'num' },
+  { key: 'shortage', label: col('shortage'), kind: 'num' }, { key: 'uom', label: col('uom') },
+  { key: 'ratio', label: col('ratioToThreshold'), value: (r) => (r.ratio == null ? null : `${r.ratio}%`) },
+  { key: 'needed_by_work_order', label: col('neededByWorkOrder'), kind: 'bool' }];
 
 const WH01: WidgetDefinition<{ total: number; by_state: Counts }> = {
   size: 'm',
@@ -321,28 +324,6 @@ const WH01: WidgetDefinition<{ total: number; by_state: Counts }> = {
   table: (env) => countTable(env.data.by_state, 'stock'),
 };
 
-const WH02: WidgetDefinition<{ count: number; needed_by_work_orders: number; items: Row[] }> = {
-  size: 'xl',
-  isEmpty: (d) => d.count === 0,
-  render: (env, ctx) => (
-    <>
-      <div className="dash-kpi-row">
-        <Kpi value={count(env.data.count)} label={t('dashboard.widgets.wh02.kpi')} tone="warning" />
-        <Kpi value={count(env.data.needed_by_work_orders)} label={t('dashboard.widgets.wh02.kpiNeeded')} tone={env.data.needed_by_work_orders > 0 ? 'critical' : undefined} />
-      </div>
-      <DataTable rows={env.data.items}
-        columns={[...stockColumns.filter((c) => ['product_name', 'warehouse_name', 'available', 'reorder_point', 'shortage'].includes(c.key)),
-          { key: 'flags', label: col('state'), value: (r) => `${codeLabel(String(r.state), 'stock')}${r.needed_by_work_order ? ` · ${t('dashboard.widgets.wh02.neededFlag')}` : ''}` }]} />
-      {env.data.needed_by_work_orders > 0 && (
-        <button type="button" className="dash-link-btn" style={{ justifySelf: 'start' }}
-          onClick={() => ctx.openDetail(t('dashboard.widgets.wh02.kpiNeeded'), { needed: 1 }, stockColumns)}>
-          {t('dashboard.widgets.wh02.showNeeded')}
-        </button>
-      )}
-    </>
-  ),
-  detail: { columns: stockColumns },
-};
 
 const transferColumns: Column<Row>[] = [{ key: 'transfer_number', label: col('transfer'), link: link.transfer }, statusCol,
   { key: 'from_warehouse', label: col('fromWarehouse') }, { key: 'to_warehouse', label: col('toWarehouse') },
@@ -482,32 +463,6 @@ const TR03: WidgetDefinition<{ total: number; retread: number; repair: number; i
   detail: { columns: vendorTireColumns },
 };
 
-// ------------------------------------------------------------------ FN-05 inventory value
-
-const inventoryValueColumns: Column<Row>[] = [{ key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
-  { key: 'warehouse_name', label: col('warehouse') }, { key: 'quantity_on_hand', label: col('onHand'), kind: 'num' },
-  { key: 'average_unit_cost', label: col('averageUnitCost'), kind: 'money' }, { key: 'value', label: col('value'), kind: 'money' }];
-
-const FN05: WidgetDefinition<{ total: string; warehouses: { warehouse_id: string; warehouse_name: string; value: string; sku_count: number }[] }> = {
-  size: 'm',
-  render: (env, ctx) => (
-    <>
-      <Kpi value={money(env.data.total, env.currency)} label={t('dashboard.widgets.fn05.kpi')} />
-      {env.data.warehouses.length > 1 && (
-        <HBarChart unit="money" currency={env.currency}
-          data={env.data.warehouses.slice(0, 6).map((w) => ({ warehouse: w.warehouse_name, warehouse_id: w.warehouse_id, value: Number(w.value) }))}
-          categoryKey="warehouse" series={[{ key: 'value', label: t('dashboard.columns.value'), color: SERIES[0] }]}
-          onSelect={(row) => ctx.openDetail(String(row.warehouse), { warehouse_id: row.warehouse_id }, inventoryValueColumns)} />
-      )}
-    </>
-  ),
-  table: (env) => ({
-    columns: [{ key: 'warehouse_name', label: col('warehouse') }, { key: 'value', label: col('value'), kind: 'money' }, { key: 'sku_count', label: col('skuCount'), kind: 'num' }],
-    rows: env.data.warehouses.map((w) => ({ id: w.warehouse_id, ...w })),
-  }),
-  detail: { columns: inventoryValueColumns },
-};
-
 /** Column sets reused by the Action Center drill-downs (same rows as the source widgets). */
 export const SOURCE_COLUMNS: Record<string, Column<Row>[]> = {
   'FL-03': breakdownColumns, 'MT-02': scheduleColumns, 'WS-06': waitingColumns, 'WH-02': stockColumns,
@@ -518,9 +473,8 @@ export const CURRENT_WIDGETS: Record<string, WidgetDefinition> = {
   'FL-01': FL01, 'FL-02': FL02, 'FL-03': FL03, 'FL-06': FL06,
   'MT-01': MT01, 'MT-02': MT02, 'MT-03': MT03,
   'WS-01': WS01, 'WS-02': WS02, 'WS-05': WS05, 'WS-06': WS06,
-  'WH-01': WH01, 'WH-02': WH02, 'WH-03': WH03,
+  'WH-01': WH01, 'WH-03': WH03,
   'PR-01': PR01, 'PR-02': PR02,
   'TR-01': TR01, 'TR-02': TR02, 'TR-03': TR03,
-  'FN-05': FN05,
 };
 

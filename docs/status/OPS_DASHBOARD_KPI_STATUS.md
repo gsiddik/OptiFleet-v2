@@ -94,6 +94,23 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
 - **WS-08 Rework / first-pass rate** (complete histories only, per month and workshop).
 - Tests: `DashboardOperatingCostTest` (2), `DashboardMechanicPerformanceTest` (2).
 
+## CP4 — consumption / inventory widgets (implemented)
+
+- **WH-06 Most Used** (Used Times = distinct WOs; CONSUME ledger + reused-tire installations via the
+  used-stock ISSUE of that part line; quantity per product/UOM only; item type / category filters;
+  product → consumption events). `inventory.view`, modules INVENTORY + WORK_ORDER, warehouse scope.
+- **FL-07 Installed Components** (current; tires = installing WO issue cost, rims / serialized =
+  GR purchase cost, else "cost not available"; removed / moved items counted once; values only with
+  `dashboard.finance.view`; non-serialized parts reported as not tracked).
+- **FN-05 extended** to Item Type (SKU count, quantity per UOM, value, per-warehouse split); in-transit
+  transfers shown separately; used tire stock reported as not valued.
+- **WH-02 Low Stock** (on hand vs reorder point; OUT / LOW / NOT_SET; least stock first within a UOM;
+  ratio; UOM / item type filters; set threshold via existing endpoint for `inventory.adjust`, else
+  "ask an authorized user"). WH-01 moved to the on-hand basis.
+- **WH-07 Part fulfilment** (request → issue median / p90, open requests, WAITING_PART episodes from
+  intervals) and **PR-05 Procurement cycle** (PR created → PO order date → first posted GR, medians).
+- Tests: `DashboardInventoryKpiTest` (4); dashboard suites 96 passed.
+
 ## Checkpoints
 
 | # | Checkpoint | Status | Commit |
@@ -101,6 +118,6 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
 | 1 | Audit, metric definitions, decisions | DONE | this commit |
 | 2 | Work intervals, assignment attribution, snapshots, configuration | DONE | CP2 commit |
 | 3 | Most Costly Vehicle + Mechanic Performance (+ FN-08, WS-08) | DONE | CP3 commit |
-| 4 | Consumption, installed, inventory value, low stock (+ extras) | TODO | |
+| 4 | Consumption, installed, inventory value, low stock (+ extras) | DONE | CP4 commit |
 | 5 | Layout + bilingual | TODO | |
 | 6 | Seeders, regression, final QA | TODO | |

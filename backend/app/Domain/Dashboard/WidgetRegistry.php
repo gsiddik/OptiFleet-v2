@@ -19,6 +19,7 @@ final class WidgetRegistry
         'FL-04' => Widgets\Fleet\BreakdownTrendWidget::class,
         'FL-05' => Widgets\Fleet\TopBreakdownVehiclesWidget::class,
         'FL-06' => Widgets\Fleet\VehicleDocumentsWidget::class,
+        'FL-07' => Widgets\Fleet\InstalledComponentsWidget::class,
         'MT-01' => Widgets\Maintenance\ScheduleStatusWidget::class,
         'MT-02' => Widgets\Maintenance\OverdueMaintenanceWidget::class,
         'MT-03' => Widgets\Maintenance\OpenRequestsWidget::class,
@@ -43,10 +44,13 @@ final class WidgetRegistry
         'WH-03' => Widgets\Warehouse\StockTransfersWidget::class,
         'WH-04' => Widgets\Warehouse\StockMovementWidget::class,
         'WH-05' => Widgets\Warehouse\SlowMovingStockWidget::class,
+        'WH-06' => Widgets\Warehouse\MostUsedPartsWidget::class,
+        'WH-07' => Widgets\Warehouse\PartFulfilmentWidget::class,
         'PR-01' => Widgets\Procurement\ProcurementPipelineWidget::class,
         'PR-02' => Widgets\Procurement\LatePurchaseOrdersWidget::class,
         'PR-03' => Widgets\Procurement\PurchaseOrderValueWidget::class,
         'PR-04' => Widgets\Procurement\VendorPerformanceWidget::class,
+        'PR-05' => Widgets\Procurement\ProcurementCycleWidget::class,
         'TR-01' => Widgets\Tire\TireStatusWidget::class,
         'TR-02' => Widgets\Tire\TiresDueReplacementWidget::class,
         'TR-03' => Widgets\Tire\TiresAtVendorWidget::class,
@@ -61,10 +65,10 @@ final class WidgetRegistry
      */
     public const PRESETS = [
         'summary' => ['FL-01', 'FL-03', 'FN-04', 'FN-05', 'FN-01', 'FN-03', 'FL-04', 'WS-01', 'MT-02', 'AL-01'],
-        'fleet' => ['FL-01', 'FL-03', 'MT-01', 'FL-06', 'MT-02', 'FL-02', 'FL-05', 'FL-04', 'MT-03', 'TR-02'],
+        'fleet' => ['FL-01', 'FL-03', 'MT-01', 'FL-06', 'MT-02', 'FL-07', 'FL-02', 'FL-05', 'FL-04', 'MT-03', 'TR-02'],
         'workshop' => ['WS-01', 'WS-02', 'WS-05', 'WS-06', 'WS-07', 'WS-08', 'WS-03', 'WS-04', 'MT-01', 'MT-03'],
-        'warehouse' => ['FN-05', 'WH-01', 'WH-02', 'WH-03', 'WH-04', 'WH-05', 'TR-01', 'TR-03'],
-        'procurement' => ['PR-01', 'PR-02', 'WH-02', 'PR-03', 'FN-04', 'FN-06', 'PR-04'],
+        'warehouse' => ['FN-05', 'WH-01', 'WH-02', 'WH-06', 'WH-07', 'WH-03', 'WH-04', 'WH-05', 'TR-01', 'TR-03'],
+        'procurement' => ['PR-01', 'PR-02', 'WH-02', 'PR-05', 'PR-03', 'FN-04', 'FN-06', 'PR-04'],
         'finance' => ['FN-07', 'FN-08', 'FN-01', 'FN-02', 'FN-03', 'FN-04', 'FN-05', 'FN-06', 'PR-03', 'TR-04'],
     ];
 

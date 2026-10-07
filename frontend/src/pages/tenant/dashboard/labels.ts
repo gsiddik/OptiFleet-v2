@@ -56,3 +56,11 @@ export const widgetKey = (id: string) => id.replace('-', '').toLowerCase();
 export function widgetTitle(id: string): string {
   return t(`dashboard.widgets.${widgetKey(id)}.title`);
 }
+
+/** Product item type (products.product_type) — the catalog's own labels where they exist. */
+export function itemTypeLabel(code: string): string {
+  if (!code) return '—';
+  const key = `dashboard.itemTypes.${code}`;
+  const label = t(key);
+  return label === key ? code : label;
+}

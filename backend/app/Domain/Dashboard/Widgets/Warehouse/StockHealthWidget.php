@@ -8,10 +8,9 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * WH-01 Stock Health — product × warehouse stock rows by availability, with the application's own
- * availability rule (on hand − reserved; the retired Inventory Reservation feature no longer writes
- * reservations, so reserved is normally zero — no "reserved" KPI is shown):
- *  OUT  available ≤ 0 · LOW  0 < available ≤ reorder point · NOT_SET  in stock, no reorder point
+ * WH-01 Stock Health — product × warehouse stock rows by quantity on hand compared with the reorder
+ * point (owner decision: on hand; the retired Inventory Reservation feature is not revived):
+ *  OUT  on hand ≤ 0 · LOW  0 < on hand ≤ reorder point · NOT_SET  in stock, no reorder point
  *  (never treated as 0) · NORMAL  above its reorder point.
  */
 class StockHealthWidget extends Widget
@@ -53,14 +52,14 @@ class StockHealthWidget extends Widget
 
     public function version(): int
     {
-        return 2; // NOT_SET state (nullable reorder point)
+        return 3; // on-hand basis, NOT_SET state (nullable reorder point)
     }
 
-    public const AVAILABLE = '(ws.quantity_on_hand - ws.quantity_reserved)';
+    public const AVAILABLE = 'ws.quantity_on_hand';
 
-    public const OUT = '(ws.quantity_on_hand - ws.quantity_reserved) <= 0';
+    public const OUT = 'ws.quantity_on_hand <= 0';
 
-    public const LOW = '(ws.quantity_on_hand - ws.quantity_reserved) > 0 and (ws.quantity_on_hand - ws.quantity_reserved) <= ws.reorder_point';
+    public const LOW = 'ws.quantity_on_hand > 0 and ws.quantity_on_hand <= ws.reorder_point';
 
     protected function stocks(DashboardContext $context): Builder
     {
