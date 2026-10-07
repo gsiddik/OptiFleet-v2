@@ -22,7 +22,7 @@ interface OpnameEvidence {
   opname_number: string; snapshot_at: string; posted_at: string; system_quantity: string; physical_quantity: string; variance: string; snapshot_stale: boolean; movements_after: number;
 }
 interface Candidate {
-  id: string; installation_id: string; kind: string; serial: string | null; installed_at: string; registration_number: string | null; category: string; evidence: string | null;
+  id: string; installation_id: string; kind: string; serial: string | null; installed_at: string; registration_number: string | null; category: string; evidence_code: string; evidence_params: Record<string, string>;
   warehouse_id: string | null; product_id: string; opname: OpnameEvidence | null; adjustment: { id: string; status: string } | null;
   warehouse_evidence: { warehouse_id: string; warehouse: string; system_quantity: string; opname: OpnameEvidence | null }[];
 }
@@ -77,16 +77,23 @@ function ReportTab({ canManage, onProposed }: { canManage: boolean; onProposed: 
   const [report, setReport] = useState<Report | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [proposing, setProposing] = useState<Candidate | null>(null);
-  const { data, meta, loading, error } = useApiList<Candidate>('/app/inventory/reconciliation', { category: category || undefined, page }, 0, (res) => setReport({ summary: res.summary as Report['summary'], balance: res.balance as Report['balance'] }));
+  const { data: rawData, meta, loading, error } = useApiList<Candidate>('/app/inventory/reconciliation', { category: category || undefined, page }, 0, (res) => setReport({ summary: res.summary as Report['summary'], balance: res.balance as Report['balance'] }));
 
+  // The report rows are keyed by installation; the shared Table keys rows by `id`.
+  const data = rawData.map((c) => ({ ...c, id: c.installation_id }));
   const columns: Column<Candidate>[] = [
     { key: 'serial', header: t('common.fields.serialNumber'), render: (c) => <span>{c.serial ?? '—'} <small style={{ color: '#6b7280' }}>{c.kind === 'TIRE' ? t('reconciliation.kind.tire') : t('reconciliation.kind.component')}</small></span> },
     { key: 'vehicle', header: t('common.fields.vehicle'), render: (c) => c.registration_number ?? '—' },
     { key: 'installed', header: t('reconciliation.columns.installedAt'), render: (c) => formatDateTime(c.installed_at) },
     { key: 'category', header: t('reconciliation.columns.classification'), render: (c) => <CategoryBadge category={c.category} /> },
+    { key: 'action', header: '', render: (c) => {
+      if (c.category !== 'PROVABLE_UNDEDUCTED') return null;
+      if (c.adjustment && c.adjustment.status !== 'REJECTED') return <small>{t(`reconciliation.adjustmentStatus.${c.adjustment.status}`)}</small>;
+      return canManage ? <button className="btn-primary" onClick={() => setProposing(c)}>{t('reconciliation.actions.propose')}</button> : null;
+    } },
     { key: 'evidence', header: t('reconciliation.columns.evidence'), render: (c) => (
       <div style={{ maxWidth: 380 }}>
-        <div style={{ fontSize: 12 }}>{c.evidence}</div>
+        <div style={{ fontSize: 12 }}>{t(`reconciliation.evidence.${c.evidence_code}`, c.evidence_params)}</div>
         {c.opname && <OpnameLine o={c.opname} />}
         {c.warehouse_evidence.length > 0 && (
           <button className="btn-secondary" style={{ marginTop: 4 }} onClick={() => setExpanded((s) => { const n = new Set(s); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })}>
@@ -95,11 +102,6 @@ function ReportTab({ canManage, onProposed }: { canManage: boolean; onProposed: 
         )}
       </div>
     ) },
-    { key: 'action', header: '', render: (c) => {
-      if (c.category !== 'PROVABLE_UNDEDUCTED') return null;
-      if (c.adjustment && c.adjustment.status !== 'REJECTED') return <small>{t(`reconciliation.adjustmentStatus.${c.adjustment.status}`)}</small>;
-      return canManage ? <button className="btn-primary" onClick={() => setProposing(c)}>{t('reconciliation.actions.propose')}</button> : null;
-    } },
   ];
 
   return (
@@ -200,9 +202,6 @@ function AdjustmentsTab({ canManage, canApprove }: { canManage: boolean; canAppr
   const columns: Column<Adjustment>[] = [
     { key: 'serial', header: t('common.fields.serialNumber'), render: (a) => a.serial ?? '—' },
     { key: 'status', header: t('common.fields.status'), render: (a) => <strong>{t(`reconciliation.adjustmentStatus.${a.status}`)}</strong> },
-    { key: 'reason', header: t('common.fields.reason'), render: (a) => <span style={{ fontSize: 12 }}>{a.reason}{a.decision_note ? ` — ${a.decision_note}` : ''}</span> },
-    { key: 'evidence', header: t('reconciliation.columns.evidence'), render: (a) => <span style={{ fontSize: 12 }}>{a.evidence.ledger_on_hand_at_proposal ? t('reconciliation.adjustment.ledgerAtProposal', { quantity: formatQty(a.evidence.ledger_on_hand_at_proposal) }) : '—'}{a.evidence.opname && <><br /><OpnameLine o={a.evidence.opname} /></>}</span> },
-    { key: 'when', header: t('reconciliation.columns.timeline'), render: (a) => <span style={{ fontSize: 12 }}>{t('reconciliation.adjustment.proposedAt', { time: formatDateTime(a.proposed_at) })}{a.decided_at && <><br />{t('reconciliation.adjustment.decidedAt', { time: formatDateTime(a.decided_at) })}</>}{a.applied_at && <><br />{t('reconciliation.adjustment.appliedAt', { time: formatDateTime(a.applied_at) })}</>}</span> },
     { key: 'action', header: '', render: (a) => (
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {a.status === 'PENDING_APPROVAL' && canApprove && a.proposed_by !== user?.id && (
@@ -215,6 +214,9 @@ function AdjustmentsTab({ canManage, canApprove }: { canManage: boolean; canAppr
         {a.status === 'APPROVED' && canManage && <button className="btn-primary" onClick={() => setApplying(a)}>{t('reconciliation.actions.apply')}</button>}
       </div>
     ) },
+    { key: 'reason', header: t('common.fields.reason'), render: (a) => <span style={{ fontSize: 12 }}>{a.reason}{a.decision_note ? ` — ${a.decision_note}` : ''}</span> },
+    { key: 'evidence', header: t('reconciliation.columns.evidence'), render: (a) => <span style={{ fontSize: 12 }}>{a.evidence.ledger_on_hand_at_proposal ? t('reconciliation.adjustment.ledgerAtProposal', { quantity: formatQty(a.evidence.ledger_on_hand_at_proposal) }) : '—'}{a.evidence.opname && <><br /><OpnameLine o={a.evidence.opname} /></>}</span> },
+    { key: 'when', header: t('reconciliation.columns.timeline'), render: (a) => <span style={{ fontSize: 12 }}>{t('reconciliation.adjustment.proposedAt', { time: formatDateTime(a.proposed_at) })}{a.decided_at && <><br />{t('reconciliation.adjustment.decidedAt', { time: formatDateTime(a.decided_at) })}</>}{a.applied_at && <><br />{t('reconciliation.adjustment.appliedAt', { time: formatDateTime(a.applied_at) })}</>}</span> },
   ];
 
   return (

@@ -181,4 +181,29 @@ class ValuationStatusTest extends TestCase
         $this->getJson("/api/v1/app/inventory/valuation/{$mine}", $this->authHeaders($ft))->assertNotFound();
         $this->getJson('/api/v1/app/inventory/valuation', $this->authHeaders($ft))->assertOk()->assertJsonCount(0, 'data');
     }
+
+    public function test_service_errors_follow_the_request_locale(): void
+    {
+        $this->scenario();
+        $this->receive(5, 1000);
+        $stockId = $this->balance()->id;
+        $review = fn () => app(\App\Domain\Inventory\Services\StockValuationService::class)->review($this->s['tenant']->id, $stockId, 'VERIFIED', 'SUPPLIER_DOCUMENT', '  ', 'INV-1', false, (string) Str::uuid());
+
+        app()->setLocale('en');
+        try {
+            $review();
+            $this->fail('a blank reason must be rejected');
+        } catch (\App\Domain\Inventory\Services\InventoryException $e) {
+            $this->assertSame('A reason is required.', $e->getMessage());
+        }
+        app()->setLocale('id');
+        try {
+            $review();
+            $this->fail('a blank reason must be rejected');
+        } catch (\App\Domain\Inventory\Services\InventoryException $e) {
+            $this->assertSame('Alasan wajib diisi.', $e->getMessage());
+        } finally {
+            app()->setLocale('en');
+        }
+    }
 }

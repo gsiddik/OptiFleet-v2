@@ -325,6 +325,20 @@
   "recommendation": {
     "recommendationOutsideAssignedDataScope": "This recommendation is outside your assigned data scope."
   },
+  "reconciliation": {
+    "alreadyApplied": "This adjustment was already applied.",
+    "duplicate": "An adjustment for this installation already exists (pending, approved or applied).",
+    "invalidDecision": "Invalid decision '{{decision}}': must be APPROVE or REJECT.",
+    "makerChecker": "The maker who proposed this adjustment cannot also approve or reject it.",
+    "notApproved": "Only an approved adjustment can be applied; this one is {{status}}.",
+    "notCandidate": "This installation is not a reconciliation candidate (it already has a stock exit record or does not exist).",
+    "noteRequired": "A note is required to reject an adjustment.",
+    "notPending": "Cannot decide an adjustment that is {{status}} (must be PENDING_APPROVAL).",
+    "notProvable": "Only a provable undeducted installation can be adjusted; this one is {{category}}.",
+    "noWorkflow": "No published stock reconciliation workflow configuration is available for this tenant.",
+    "supersededEvidence": "Evidence changed since approval ({{category}}); the adjustment was superseded and nothing was booked.",
+    "supersededExit": "The installation already has a stock exit record; nothing left to correct."
+  },
   "rfq": {
     "rfqOutsideAssignedDataScope": "This RFQ is outside your assigned data scope."
   },
@@ -427,6 +441,17 @@
   "usedPartDisposition": {
     "onlyRemovedComponentReceivedHere": "Only a removed component is received here.",
     "recordOutsideAssignedDataScope": "This record is outside your assigned data scope."
+  },
+  "valuation": {
+    "acknowledgeMixed": "The balance combines sources of different status; acknowledge this to verify it as a whole.",
+    "basisInvalid": "Basis {{basis}} is not valid for status {{status}}.",
+    "evidenceRequired": "An evidence reference is required to verify a valuation.",
+    "noStock": "Only a balance with stock on hand can be reviewed.",
+    "positiveCostRequired": "A positive unit cost is required to verify a valuation; a zero cost can only be verified as zero value.",
+    "reasonRequired": "A reason is required.",
+    "sameStatus": "The balance already has this valuation status.",
+    "statusNotReviewable": "Status can not be set by review: {{status}}.",
+    "zeroCostRequired": "Verified zero value requires a recorded unit cost of 0."
   },
   "vehicle": {
     "cannotTransitionTransferStatus": "Cannot transition transfer from {{status}} to {{to}}.",

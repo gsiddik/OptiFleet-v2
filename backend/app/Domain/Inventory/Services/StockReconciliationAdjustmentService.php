@@ -11,6 +11,7 @@ use App\Domain\Workflow\Models\WorkflowApprovalRequest;
 use App\Domain\Workflow\Services\WorkflowApprovalService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Database\UniqueConstraintViolationException;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -43,18 +44,18 @@ class StockReconciliationAdjustmentService
     {
         $reason = trim($reason);
         if ($reason === '') {
-            throw new InventoryException('A reason is required.');
+            throw new InventoryException(Messages::localized('errors.valuation.reasonRequired'));
         }
         $candidate = $this->reconciliation->evaluate($tenantId, $installationId);
         if ($candidate === null) {
-            throw new InventoryException('This installation is not a reconciliation candidate (it already has a stock exit record or does not exist).');
+            throw new InventoryException(Messages::localized('errors.reconciliation.notCandidate'));
         }
         if ($candidate['category'] !== SerializedStockReconciliationService::UNDEDUCTED) {
-            throw new InventoryException("Only a provable undeducted installation can be adjusted; this one is {$candidate['category']}.");
+            throw new InventoryException(Messages::localized('errors.reconciliation.notProvable', ['category' => $candidate['category']]));
         }
         $version = $this->workflow->resolveEffective(self::RESOURCE_TYPE, $tenantId);
         if (! $version) {
-            throw new InventoryException('No published stock reconciliation workflow configuration is available for this tenant.');
+            throw new InventoryException(Messages::localized('errors.reconciliation.noWorkflow'));
         }
 
         try {
@@ -76,27 +77,27 @@ class StockReconciliationAdjustmentService
                 return $adjustment->fresh();
             });
         } catch (UniqueConstraintViolationException) {
-            throw new InventoryException('An adjustment for this installation already exists (pending, approved or applied).');
+            throw new InventoryException(Messages::localized('errors.reconciliation.duplicate'));
         }
     }
 
     public function decide(string $tenantId, string $adjustmentId, string $decision, string $userId, ?string $note = null): Adjustment
     {
         if (! in_array($decision, ['APPROVE', 'REJECT'], true)) {
-            throw new InventoryException("Invalid decision '{$decision}' — must be APPROVE or REJECT.");
+            throw new InventoryException(Messages::localized('errors.reconciliation.invalidDecision', ['decision' => $decision]));
         }
         if ($decision === 'REJECT' && trim((string) $note) === '') {
-            throw new InventoryException('A note is required to reject an adjustment.');
+            throw new InventoryException(Messages::localized('errors.reconciliation.noteRequired'));
         }
 
         return DB::transaction(function () use ($tenantId, $adjustmentId, $decision, $userId, $note) {
             $locked = Adjustment::query()->where('tenant_id', $tenantId)->lockForUpdate()->findOrFail($adjustmentId);
             if ($locked->status !== Adjustment::PENDING) {
-                throw new InventoryException("Cannot decide an adjustment that is {$locked->status} (must be PENDING_APPROVAL).");
+                throw new InventoryException(Messages::localized('errors.reconciliation.notPending', ['status' => $locked->status]));
             }
             // WorkflowApprovalService does not compare maker and checker: enforced here.
             if ($locked->proposed_by === $userId) {
-                throw new InventoryException('The maker who proposed this adjustment cannot also approve or reject it.');
+                throw new InventoryException(Messages::localized('errors.reconciliation.makerChecker'));
             }
             $request = WorkflowApprovalRequest::query()->findOrFail($locked->workflow_approval_request_id);
             $step = $request->steps()->where('status', 'PENDING')->orderBy('step_number')->firstOrFail();
@@ -113,15 +114,15 @@ class StockReconciliationAdjustmentService
         $result = DB::transaction(function () use ($tenantId, $adjustmentId, $userId, &$superseded) {
             $locked = Adjustment::query()->where('tenant_id', $tenantId)->lockForUpdate()->findOrFail($adjustmentId);
             if ($locked->status === Adjustment::APPLIED) {
-                throw new InventoryException('This adjustment was already applied.');
+                throw new InventoryException(Messages::localized('errors.reconciliation.alreadyApplied'));
             }
             if ($locked->status !== Adjustment::APPROVED) {
-                throw new InventoryException("Only an approved adjustment can be applied; this one is {$locked->status}.");
+                throw new InventoryException(Messages::localized('errors.reconciliation.notApproved', ['status' => $locked->status]));
             }
             // Serialise with a concurrent install / reconciliation of the same unit.
             DB::table('component_assets')->where('id', $locked->asset_id)->lockForUpdate()->first();
             if (InstallationStockExit::query()->where('installation_id', $locked->installation_id)->exists()) {
-                $superseded = 'The installation already has a stock exit record; nothing left to correct.';
+                $superseded = Messages::localized('errors.reconciliation.supersededExit');
                 $locked->update(['status' => Adjustment::SUPERSEDED, 'decision_note' => trim(($locked->decision_note ?? '').' [superseded: exit record exists]')]);
 
                 return $locked;
@@ -129,7 +130,7 @@ class StockReconciliationAdjustmentService
             $candidate = $this->reconciliation->evaluate($tenantId, $locked->installation_id);
             if ($candidate === null || $candidate['category'] !== SerializedStockReconciliationService::UNDEDUCTED) {
                 $category = $candidate['category'] ?? 'NO_LONGER_A_CANDIDATE';
-                $superseded = "Evidence changed since approval ({$category}); the adjustment was superseded and nothing was booked.";
+                $superseded = Messages::localized('errors.reconciliation.supersededEvidence', ['category' => $category]);
                 $locked->update(['status' => Adjustment::SUPERSEDED, 'decision_note' => trim(($locked->decision_note ?? '')." [superseded: {$category}]")]);
 
                 return $locked;
@@ -162,7 +163,7 @@ class StockReconciliationAdjustmentService
         $onHand = DB::table('warehouse_stocks')->where('tenant_id', $tenantId)->where('warehouse_id', $c['warehouse_id'])->where('product_id', $c['product_id'])->value('quantity_on_hand');
 
         return [
-            'category' => $c['category'], 'evidence' => $c['evidence'], 'goods_receipt_item_id' => $c['goods_receipt_item_id'], 'work_order_id' => $c['work_order_id'],
+            'category' => $c['category'], 'evidence' => $c['evidence'], 'evidence_code' => $c['evidence_code'] ?? null, 'goods_receipt_item_id' => $c['goods_receipt_item_id'], 'work_order_id' => $c['work_order_id'],
             'vehicle' => $c['registration_number'] ?? null, 'movement_check' => 'NO_COVERING_WO_ISSUE_AND_NO_EXIT_RECORD',
             'ledger_on_hand_at_proposal' => number_format((float) $onHand, 4, '.', ''), 'opname' => $c['opname'] ?? null,
         ];

@@ -112,6 +112,8 @@ class SerializedReconciliationTest extends TestCase
 
         $tenant = $plan['tenants'][0];
         $byId = collect($tenant['candidates'])->keyBy('installation_id');
+        $this->assertSame([], collect($tenant['candidates'])->filter(fn ($c) => trim((string) $c['evidence']) === '')->pluck('installation_id')->all(), 'every classification explains itself');
+        $this->assertSame([], collect($tenant['candidates'])->filter(fn ($c) => empty($c['evidence_code']))->pluck('installation_id')->all(), 'and carries a code the UI translates');
         $this->assertSame('PROVABLE_UNDEDUCTED', $byId[$s['undeducted']->id]['category']);
         $this->assertSame('COVERED_BY_WO_ISSUE', $byId[$s['covered']->id]['category']);
         $this->assertSame('AMBIGUOUS_NO_RECEIPT', $byId[ComponentInstallation::query()->where('component_asset_id', $noReceipt->id)->value('id')]['category']);

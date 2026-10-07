@@ -6,6 +6,7 @@ use App\Domain\Inventory\Models\StockMovement;
 use App\Domain\Inventory\Models\StockValuationReview;
 use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Inventory\Support\ValuationStatus;
+use App\Domain\Shared\Support\Messages;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -34,16 +35,16 @@ class StockValuationService
         $reason = trim($reason);
         $evidence = $evidence !== null ? trim($evidence) : null;
         if (! isset(ValuationStatus::REVIEW_BASES[$toStatus])) {
-            throw new InventoryException('Status can not be set by review: '.$toStatus);
+            throw new InventoryException(Messages::localized('errors.valuation.statusNotReviewable', ['status' => $toStatus]));
         }
         if (! in_array($basis, ValuationStatus::REVIEW_BASES[$toStatus], true)) {
-            throw new InventoryException("Basis {$basis} is not valid for status {$toStatus}.");
+            throw new InventoryException(Messages::localized('errors.valuation.basisInvalid', ['basis' => $basis, 'status' => $toStatus]));
         }
         if ($reason === '') {
-            throw new InventoryException('A reason is required.');
+            throw new InventoryException(Messages::localized('errors.valuation.reasonRequired'));
         }
         if ($toStatus !== ValuationStatus::UNVERIFIED && ($evidence === null || $evidence === '')) {
-            throw new InventoryException('An evidence reference is required to verify a valuation.');
+            throw new InventoryException(Messages::localized('errors.valuation.evidenceRequired'));
         }
 
         return DB::transaction(function () use ($tenantId, $warehouseStockId, $toStatus, $basis, $reason, $evidence, $acknowledgedMixed, $userId) {
@@ -51,20 +52,20 @@ class StockValuationService
             $quantity = (float) $stock->quantity_on_hand;
             $cost = (float) $stock->average_unit_cost;
             if ($quantity <= 0) {
-                throw new InventoryException('Only a balance with stock on hand can be reviewed.');
+                throw new InventoryException(Messages::localized('errors.valuation.noStock'));
             }
             $from = $stock->valuation_status;
             if ($from === $toStatus) {
-                throw new InventoryException('The balance already has this valuation status.');
+                throw new InventoryException(Messages::localized('errors.valuation.sameStatus'));
             }
             if ($toStatus === ValuationStatus::VERIFIED && $cost <= 0) {
-                throw new InventoryException('A positive unit cost is required to verify a valuation; a zero cost can only be verified as zero value.');
+                throw new InventoryException(Messages::localized('errors.valuation.positiveCostRequired'));
             }
             if ($toStatus === ValuationStatus::VERIFIED_ZERO && $cost > 0) {
-                throw new InventoryException('Verified zero value requires a recorded unit cost of 0.');
+                throw new InventoryException(Messages::localized('errors.valuation.zeroCostRequired'));
             }
             if ($from === ValuationStatus::MIXED && in_array($toStatus, [ValuationStatus::VERIFIED, ValuationStatus::VERIFIED_ZERO], true) && ! $acknowledgedMixed) {
-                throw new InventoryException('The balance combines sources of different status; acknowledge this to verify it as a whole.');
+                throw new InventoryException(Messages::localized('errors.valuation.acknowledgeMixed'));
             }
 
             $stock->update([

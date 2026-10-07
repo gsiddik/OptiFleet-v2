@@ -130,7 +130,7 @@ class ValuationReconciliationDemoSeeder extends Seeder
         $this->legacyInstall($starterAssets[0], $vehicle, now()->subDays(50));
         $tireProduct = $this->product('VR Demo Tire 295/80R22.5', 'TIRE', serial: true);
         app(InventoryService::class)->receive($sby, $tireProduct, 4, 0, 'OPENING', null, null, $this->maker->id, 'VR demo: opening balance of the tire stock (no cost recorded).');
-        $tire = Tire::query()->create(['tenant_id' => $this->tenant->id, 'product_id' => $tireProduct->id, 'serial_number' => 'VR-TIRE-01', 'current_status' => 'INSTALLED', 'current_vehicle_id' => $vehicle->id]);
+        $tire = Tire::query()->create(['tenant_id' => $this->tenant->id, 'product_id' => $tireProduct->id, 'serial_number' => 'VRDEMOTIRE0000000001', 'current_status' => 'INSTALLED', 'current_vehicle_id' => $vehicle->id]);
         TireInstallation::query()->create(['tenant_id' => $this->tenant->id, 'tire_id' => $tire->id, 'vehicle_id' => $vehicle->id, 'wheel_position' => 'FL', 'installed_at' => now()->subDays(70)]);
 
         // Physical count of Surabaya: the tire stock is one short and the starter stock is one short (variance −1 each).

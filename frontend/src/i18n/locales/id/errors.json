@@ -325,6 +325,20 @@
   "recommendation": {
     "recommendationOutsideAssignedDataScope": "Rekomendasi ini berada di luar lingkup data Anda."
   },
+  "reconciliation": {
+    "alreadyApplied": "Penyesuaian ini sudah diterapkan.",
+    "duplicate": "Penyesuaian untuk pemasangan ini sudah ada (menunggu, disetujui, atau diterapkan).",
+    "invalidDecision": "Keputusan '{{decision}}' tidak valid: harus APPROVE atau REJECT.",
+    "makerChecker": "Pengaju penyesuaian ini tidak dapat menyetujui atau menolaknya sendiri.",
+    "notApproved": "Hanya penyesuaian yang disetujui yang dapat diterapkan; yang ini berstatus {{status}}.",
+    "notCandidate": "Pemasangan ini bukan kandidat rekonsiliasi (sudah memiliki catatan keluar stok atau tidak ada).",
+    "noteRequired": "Catatan wajib diisi untuk menolak penyesuaian.",
+    "notPending": "Penyesuaian berstatus {{status}} tidak dapat diputuskan (harus PENDING_APPROVAL).",
+    "notProvable": "Hanya pemasangan yang terbukti belum dikurangi yang dapat disesuaikan; yang ini {{category}}.",
+    "noWorkflow": "Tidak ada konfigurasi workflow rekonsiliasi stok yang dipublikasikan untuk tenant ini.",
+    "supersededEvidence": "Bukti berubah sejak persetujuan ({{category}}); penyesuaian digantikan dan tidak ada yang dicatat.",
+    "supersededExit": "Pemasangan sudah memiliki catatan keluar stok; tidak ada yang perlu dikoreksi."
+  },
   "rfq": {
     "rfqOutsideAssignedDataScope": "RFQ ini berada di luar lingkup data Anda."
   },
@@ -427,6 +441,17 @@
   "usedPartDisposition": {
     "onlyRemovedComponentReceivedHere": "Hanya komponen terlepas yang diterima di sini.",
     "recordOutsideAssignedDataScope": "Data ini berada di luar lingkup data Anda."
+  },
+  "valuation": {
+    "acknowledgeMixed": "Saldo menggabungkan sumber dengan status berbeda; setujui pengakuan ini untuk memverifikasinya secara keseluruhan.",
+    "basisInvalid": "Dasar {{basis}} tidak valid untuk status {{status}}.",
+    "evidenceRequired": "Referensi bukti wajib diisi untuk memverifikasi valuasi.",
+    "noStock": "Hanya saldo yang memiliki stok yang dapat direview.",
+    "positiveCostRequired": "Biaya satuan positif diperlukan untuk memverifikasi valuasi; biaya nol hanya dapat diverifikasi sebagai nilai nol.",
+    "reasonRequired": "Alasan wajib diisi.",
+    "sameStatus": "Saldo sudah memiliki status valuasi ini.",
+    "statusNotReviewable": "Status tidak dapat ditetapkan melalui review: {{status}}.",
+    "zeroCostRequired": "Nilai nol terverifikasi mensyaratkan biaya satuan tercatat 0."
   },
   "vehicle": {
     "cannotTransitionTransferStatus": "Tidak dapat mengubah status transfer dari {{status}} ke {{to}}.",

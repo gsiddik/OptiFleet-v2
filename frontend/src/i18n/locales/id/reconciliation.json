@@ -50,6 +50,14 @@
     "adjustments": "Belum ada penyesuaian.",
     "report": "Tidak ada pemasangan yang perlu direkonsiliasi."
   },
+  "evidence": {
+    "NO_RECEIPT": "Tanpa tautan Goods Receipt: asal unit tidak dapat dibuktikan.",
+    "NOT_WAREHOUSE": "Didaftarkan langsung pada kendaraan (registrasi awal): tidak pernah menjadi stok gudang.",
+    "PROVABLE": "Unit dihasilkan Goods Receipt yang diposting; tidak ada baris WO yang sudah diissue mencakupnya; tidak ada catatan keluar stok.",
+    "RESOLVED_BY_OPNAME": "Stock opname terposting {{number}} ({{date}}) lebih baru dari pemasangan: hitung fisik sudah menyelesaikan kuantitas ini.",
+    "TIRE_NO_RECEIPT": "Serial ban tidak tertaut ke Goods Receipt: tidak dapat dibuktikan apakah ledger memegang unit ini.",
+    "WO_ISSUE_COVERS": "Baris part WO untuk unit ini sudah diissue: ledger sudah berkurang."
+  },
   "filters": {
     "allStatuses": "Semua status"
   },

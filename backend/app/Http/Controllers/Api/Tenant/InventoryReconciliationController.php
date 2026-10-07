@@ -53,6 +53,10 @@ class InventoryReconciliationController extends Controller
         $summary[Report::CORRECTED] = Adjustment::query()->where('tenant_id', $tenantId)->where('status', Adjustment::APPLIED)
             ->when($allowed !== null, fn ($q) => $q->whereIn('warehouse_id', $allowed))->count();
 
+        // Actionable cases first, then the ones that need evidence, then the settled ones; installation date within a class.
+        $rank = [Report::UNDEDUCTED => 0, Report::RESOLVED_BY_OPNAME => 1, Report::AMBIGUOUS_TIRE => 2, Report::AMBIGUOUS_NO_RECEIPT => 3, Report::COVERED => 4, Report::NOT_WAREHOUSE => 5];
+        $candidates = $candidates->sortBy([fn ($a, $b) => ($rank[$a['category']] ?? 9) <=> ($rank[$b['category']] ?? 9), fn ($a, $b) => strcmp((string) $a['installed_at'], (string) $b['installed_at'])])->values();
+
         $filtered = isset($data['category']) ? $candidates->where('category', $data['category'])->values() : $candidates;
         $perPage = (int) ($data['per_page'] ?? 25);
         $page = (int) ($data['page'] ?? 1);

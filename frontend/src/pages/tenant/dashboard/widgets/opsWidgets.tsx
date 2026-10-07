@@ -482,9 +482,11 @@ function InventoryValueBody({ env, openDetail, openPending }: { env: { data: FN0
         <Kpi value={money(d.verified_value, env.currency)} label={t('dashboard.widgets.fn05.kpiVerified', { n: d.status_balances.VERIFIED })} tone="good" />
         {d.status_balances.UNVERIFIED > 0 && <Kpi value={money(d.unverified_value, env.currency)} label={t('dashboard.widgets.fn05.kpiUnverified', { n: d.status_balances.UNVERIFIED })} tone="warning" />}
         {d.status_balances.MIXED > 0 && <Kpi value={money(d.mixed_value, env.currency)} label={t('dashboard.widgets.fn05.kpiMixed', { n: d.status_balances.MIXED })} tone="serious" />}
-        {d.verified_zero.balances > 0 && <Kpi value={count(d.verified_zero.balances)} label={t('dashboard.widgets.fn05.kpiVerifiedZero')} />}
-        {d.pending_valuation.skus > 0 && <Kpi value={count(d.pending_valuation.skus)} label={t('dashboard.widgets.fn05.pendingKpi')} tone="warning" />}
-        {d.in_transit.transfers > 0 && <Kpi value={money(d.in_transit.value, env.currency)} label={t('dashboard.widgets.fn05.inTransit', { n: d.in_transit.transfers })} />}
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {d.verified_zero.balances > 0 && <Pill tone="good">{t('dashboard.widgets.fn05.kpiVerifiedZero')}: {count(d.verified_zero.balances)}</Pill>}
+        {d.pending_valuation.skus > 0 && <Pill tone="warning">{t('dashboard.widgets.fn05.pendingKpi')}: {count(d.pending_valuation.skus)}</Pill>}
+        {d.in_transit.transfers > 0 && <Pill tone="neutral">{t('dashboard.widgets.fn05.inTransit', { n: d.in_transit.transfers })}: {money(d.in_transit.value, env.currency)}</Pill>}
       </div>
       {d.verification.status !== 'COMPLETE' && (
         <div className="dash-notice" role="note">
@@ -512,10 +514,14 @@ function InventoryValueBody({ env, openDetail, openPending }: { env: { data: FN0
           categoryKey="warehouse" series={[{ key: 'verified', label: t('dashboard.widgets.fn05.seriesVerified'), color: SERIES[0] }, { key: 'unverified', label: t('dashboard.widgets.fn05.seriesUnverified'), color: SERIES[3] }]}
           onSelect={(row) => openDetail(String(row.warehouse), { warehouse_id: row.warehouse_id })} />
       )}
+      <Legend items={[{ key: 'verified', label: t('dashboard.widgets.fn05.seriesVerified'), color: SERIES[0] }, { key: 'unverified', label: t('dashboard.widgets.fn05.seriesUnverified'), color: SERIES[3] }]} />
       {d.pending_valuation.skus > 0 && (
         <div className="dash-notice" role="note">
-          <span>{t('dashboard.widgets.fn05.pendingNote', { used: d.pending_valuation.used_skus, nocost: d.pending_valuation.no_cost_skus, notvalued: d.pending_valuation.not_valued_skus })}
-            {' '}{d.pending_valuation.quantities.map((q) => `${t(`dashboard.labels.pendingReason_${q.reason}`)}: ${count(q.quantity)} ${q.uom ?? ''}`.trim()).join(' · ')}</span>
+          <span>{t('dashboard.widgets.fn05.pendingLead')}{' '}
+            {[d.pending_valuation.used_skus > 0 && t('dashboard.widgets.fn05.pendingUsed', { n: d.pending_valuation.used_skus }),
+              d.pending_valuation.no_cost_skus > 0 && t('dashboard.widgets.fn05.pendingNoCost', { n: d.pending_valuation.no_cost_skus }),
+              d.pending_valuation.not_valued_skus > 0 && t('dashboard.widgets.fn05.pendingNotValued', { n: d.pending_valuation.not_valued_skus })].filter(Boolean).join(' · ')}
+            {' — '}{d.pending_valuation.quantities.map((q) => `${t(`dashboard.labels.pendingReason_${q.reason}`)}: ${count(q.quantity)} ${q.uom ?? ''}`.trim()).join(' · ')}</span>
           <button type="button" className="dash-link-btn" onClick={openPending}>{t('dashboard.widgets.fn05.pendingLink')}</button>
         </div>
       )}
