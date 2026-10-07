@@ -2,6 +2,13 @@
   "empty": {
     "noModulesEntitled": "Tidak ada modul yang menjadi hak akses."
   },
+  "errors": {
+    "filterOutOfScope": "Filter yang dipilih berada di luar cakupan data Anda.",
+    "moduleInactive": "Modul untuk widget ini belum aktif untuk perusahaan Anda.",
+    "noDrilldown": "Widget ini tidak memiliki tampilan rincian.",
+    "unknownWidget": "Widget dasbor ini tidak ada.",
+    "widgetForbidden": "Anda tidak memiliki izin untuk melihat widget ini."
+  },
   "fields": {
     "breakdown": "Kerusakan",
     "componentAssetsInstalled": "Aset Komponen Terpasang",
@@ -26,6 +33,10 @@
     "upcoming": "Akan Datang",
     "workspacesAvailable": "Workspace Tersedia",
     "workspacesOccupied": "Workspace Terisi"
+  },
+  "limitations": {
+    "tiresWithoutRuleProfile": "{{count}} ban terpasang tidak memiliki rule profile aktif yang berlaku (D_pull) sehingga tidak dapat dinilai.",
+    "tiresWithoutTreadReading": "{{count}} ban terpasang belum memiliki pengukuran kedalaman tapak sehingga tidak dapat dinilai."
   },
   "sections": {
     "activeModules": "Modul Aktif",

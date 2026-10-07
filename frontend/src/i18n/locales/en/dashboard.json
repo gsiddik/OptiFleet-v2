@@ -2,6 +2,13 @@
   "empty": {
     "noModulesEntitled": "No modules entitled."
   },
+  "errors": {
+    "filterOutOfScope": "The selected filter is outside your data scope.",
+    "moduleInactive": "The module for this widget is not active for your company.",
+    "noDrilldown": "This widget has no details view.",
+    "unknownWidget": "This dashboard widget does not exist.",
+    "widgetForbidden": "You do not have permission to view this widget."
+  },
   "fields": {
     "breakdown": "Breakdown",
     "componentAssetsInstalled": "Component Assets Installed",
@@ -26,6 +33,10 @@
     "upcoming": "Upcoming",
     "workspacesAvailable": "Workspaces Available",
     "workspacesOccupied": "Workspaces Occupied"
+  },
+  "limitations": {
+    "tiresWithoutRuleProfile": "{{count}} installed tires have no applicable active rule profile (D_pull) and could not be assessed.",
+    "tiresWithoutTreadReading": "{{count}} installed tires have no tread depth reading and could not be assessed."
   },
   "sections": {
     "activeModules": "Active Modules",
