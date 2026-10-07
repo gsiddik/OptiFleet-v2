@@ -1590,7 +1590,7 @@ return [
     'dashboard.widgets.tr04.help' => 'Retread and repair cycle cost by the month the tire came back from the vendor. Not part of Service Cost.',
     'dashboard.widgets.tr04.title' => 'Tire Service Cost',
     'dashboard.widgets.wh01.empty' => 'No stock in your warehouses yet.',
-    'dashboard.widgets.wh01.help' => 'Stock rows (product × warehouse) by availability (on hand − reserved): out of stock (≤ 0), below reorder point, normal.',
+    'dashboard.widgets.wh01.help' => 'Stock rows (product × warehouse) by quantity on hand compared with the reorder point: out of stock (≤ 0), at or below the reorder point, normal, and in stock without a threshold ("threshold not set", never treated as 0).',
     'dashboard.widgets.wh01.kpiCritical' => 'Critical stock rows',
     'dashboard.widgets.wh01.title' => 'Stock Health',
     'dashboard.widgets.wh02.askAuthorized' => 'Ask a user authorized to adjust inventory to set them.',

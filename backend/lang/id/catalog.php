@@ -1590,7 +1590,7 @@ return [
     'dashboard.widgets.tr04.help' => 'Biaya siklus vulkanisir dan perbaikan menurut bulan ban kembali dari vendor. Tidak termasuk dalam Biaya Servis.',
     'dashboard.widgets.tr04.title' => 'Biaya Layanan Ban',
     'dashboard.widgets.wh01.empty' => 'Belum ada stok di gudang Anda.',
-    'dashboard.widgets.wh01.help' => 'Baris stok (produk × gudang) menurut ketersediaan (stok fisik − dipesan): habis (≤ 0), di bawah titik pemesanan ulang, normal.',
+    'dashboard.widgets.wh01.help' => 'Baris stok (produk × gudang) menurut stok fisik dibandingkan titik pemesanan ulang: habis (≤ 0), pada atau di bawah titik pemesanan ulang, normal, dan ber-stok tanpa threshold ("threshold belum diatur", tidak pernah dianggap 0).',
     'dashboard.widgets.wh01.kpiCritical' => 'Baris stok kritis',
     'dashboard.widgets.wh01.title' => 'Kesehatan Stok',
     'dashboard.widgets.wh02.askAuthorized' => 'Hubungi pengguna yang berwenang menyesuaikan persediaan untuk mengaturnya.',

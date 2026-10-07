@@ -39,7 +39,7 @@ export function TenantDashboardPage() {
       <div>
         <h1 style={{ fontSize: 22, marginBottom: 20 }}>{t('dashboard.titles.dashboard')}</h1>
         <div className="dash-grid">
-          {[0, 1, 2].map((i) => <div key={i} className="dash-card dash-s"><Skeleton height={80} /></div>)}
+          {[0, 1, 2].map((i) => <div key={i} className="dash-card dash-s" style={{ gridRowEnd: 'span 14' }}><Skeleton height={80} /></div>)}
         </div>
       </div>
     );
@@ -130,7 +130,8 @@ function Dashboard({ catalog }: { catalog: DashboardCatalog }) {
 
       <div className="dash-grid">
         {widgets.map((w) => (
-          <WidgetCard key={`${preset.id}-${w.id}`} widget={w} definition={WIDGET_DEFINITIONS[w.id]} filters={filters} currency={catalog.currency} onDetail={(request) => setDetail([request])} />
+          <WidgetCard key={`${preset.id}-${w.id}`} widget={w} definition={WIDGET_DEFINITIONS[w.id]} filters={filters} currency={catalog.currency}
+            fullWidth={widgets.length === 1} onDetail={(request) => setDetail([request])} />
         ))}
       </div>
 

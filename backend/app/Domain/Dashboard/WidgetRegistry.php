@@ -64,12 +64,14 @@ final class WidgetRegistry
      * package (FN-02 by vehicle instead of the FN-03 branch comparison).
      */
     public const PRESETS = [
-        'summary' => ['FL-01', 'FL-03', 'FN-04', 'FN-05', 'FN-01', 'FN-03', 'FL-04', 'WS-01', 'MT-02', 'AL-01'],
-        'fleet' => ['FL-01', 'FL-03', 'MT-01', 'FL-06', 'MT-02', 'FL-07', 'FL-02', 'FL-05', 'FL-04', 'MT-03', 'TR-02'],
-        'workshop' => ['WS-01', 'WS-02', 'WS-05', 'WS-06', 'WS-07', 'WS-08', 'WS-03', 'WS-04', 'MT-01', 'MT-03'],
-        'warehouse' => ['FN-05', 'WH-01', 'WH-02', 'WH-06', 'WH-07', 'WH-03', 'WH-04', 'WH-05', 'TR-01', 'TR-03'],
-        'procurement' => ['PR-01', 'PR-02', 'WH-02', 'PR-05', 'PR-03', 'FN-04', 'FN-06', 'PR-04'],
-        'finance' => ['FN-07', 'FN-08', 'FN-01', 'FN-02', 'FN-03', 'FN-04', 'FN-05', 'FN-06', 'PR-03', 'TR-04'],
+        // Compact current-state KPIs first, then actions and the main charts, then supporting
+        // detail; widths are paired (two half-width cards) so the masonry grid packs without gaps.
+        'summary' => ['FL-01', 'FL-03', 'WS-01', 'FN-04', 'AL-01', 'FN-07', 'FN-01', 'FN-05', 'MT-02', 'FN-03'],
+        'fleet' => ['FL-01', 'FL-03', 'FL-06', 'MT-02', 'FL-07', 'MT-01', 'FL-05', 'FL-04', 'FL-02', 'TR-02'],
+        'workshop' => ['WS-01', 'WS-02', 'WS-06', 'WS-05', 'WS-07', 'WS-08', 'WS-04', 'WS-03', 'MT-03'],
+        'warehouse' => ['WH-01', 'FN-05', 'WH-03', 'WH-02', 'WH-06', 'WH-04', 'WH-07', 'WH-05', 'TR-01', 'TR-03'],
+        'procurement' => ['PR-01', 'PR-02', 'PR-05', 'PR-04', 'WH-02', 'PR-03', 'FN-04', 'FN-06'],
+        'finance' => ['FN-07', 'FN-08', 'FN-01', 'FN-04', 'FN-05', 'FN-02', 'FN-03', 'FN-06', 'PR-03', 'TR-04'],
     ];
 
     /** @var array<string, Widget> */

@@ -584,7 +584,7 @@
     },
     "wh01": {
       "empty": "Belum ada stok di gudang Anda.",
-      "help": "Baris stok (produk × gudang) menurut ketersediaan (stok fisik − dipesan): habis (≤ 0), di bawah titik pemesanan ulang, normal.",
+      "help": "Baris stok (produk × gudang) menurut stok fisik dibandingkan titik pemesanan ulang: habis (≤ 0), pada atau di bawah titik pemesanan ulang, normal, dan ber-stok tanpa threshold (\"threshold belum diatur\", tidak pernah dianggap 0).",
       "kpiCritical": "Baris stok kritis",
       "title": "Kesehatan Stok"
     },

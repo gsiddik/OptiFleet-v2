@@ -584,7 +584,7 @@
     },
     "wh01": {
       "empty": "No stock in your warehouses yet.",
-      "help": "Stock rows (product × warehouse) by availability (on hand − reserved): out of stock (≤ 0), below reorder point, normal.",
+      "help": "Stock rows (product × warehouse) by quantity on hand compared with the reorder point: out of stock (≤ 0), at or below the reorder point, normal, and in stock without a threshold (\"threshold not set\", never treated as 0).",
       "kpiCritical": "Critical stock rows",
       "title": "Stock Health"
     },

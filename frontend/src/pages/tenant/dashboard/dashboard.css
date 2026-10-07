@@ -60,12 +60,22 @@
   outline-offset: -2px;
 }
 
+/*
+ * Masonry without reordering: cards keep DOM (= reading and keyboard) order — no `dense` packing —
+ * and each card spans as many 8px rows as its measured height (+ the 16px gap, see WidgetCard), so a
+ * short card never leaves a gap the height of its taller neighbour. Columns stay a 12-track grid.
+ */
 .dash-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  grid-auto-flow: row dense;
+  grid-auto-flow: row;
+  grid-auto-rows: 8px;
   align-items: start;
-  gap: 16px;
+  column-gap: 16px;
+  row-gap: 0;
+}
+.dash-grid > .dash-card {
+  align-self: start;
 }
 .dash-s { grid-column: span 4; }
 .dash-m { grid-column: span 6; }

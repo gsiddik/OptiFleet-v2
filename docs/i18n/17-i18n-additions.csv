@@ -550,7 +550,7 @@ dashboard.widgets.ws06.help,"Work Orders in Waiting for Part, with their part re
 dashboard.widgets.ws06.empty,No Work Orders waiting for parts.,Tidak ada Work Order yang menunggu suku cadang.,WS-06 empty,dashboard,Tenant Dashboard improvement (new UI)
 dashboard.widgets.ws06.kpi,Waiting for parts,Menunggu suku cadang,WS-06 KPI,dashboard,Tenant Dashboard improvement (new UI)
 dashboard.widgets.wh01.title,Stock Health,Kesehatan Stok,WH-01,dashboard,Tenant Dashboard improvement (new UI)
-dashboard.widgets.wh01.help,"Stock rows (product × warehouse) by availability (on hand − reserved): out of stock (≤ 0), below reorder point, normal.","Baris stok (produk × gudang) menurut ketersediaan (stok fisik − dipesan): habis (≤ 0), di bawah titik pemesanan ulang, normal.",WH-01 help,dashboard,Tenant Dashboard improvement (new UI)
+dashboard.widgets.wh01.help,"Stock rows (product × warehouse) by quantity on hand compared with the reorder point: out of stock (≤ 0), at or below the reorder point, normal, and in stock without a threshold (""threshold not set"", never treated as 0).","Baris stok (produk × gudang) menurut stok fisik dibandingkan titik pemesanan ulang: habis (≤ 0), pada atau di bawah titik pemesanan ulang, normal, dan ber-stok tanpa threshold (""threshold belum diatur"", tidak pernah dianggap 0).",WH-01 help,dashboard,Tenant Dashboard improvement (new UI)
 dashboard.widgets.wh01.empty,No stock in your warehouses yet.,Belum ada stok di gudang Anda.,WH-01 empty,dashboard,Tenant Dashboard improvement (new UI)
 dashboard.widgets.wh01.kpiCritical,Critical stock rows,Baris stok kritis,WH-01 KPI,dashboard,Tenant Dashboard improvement (new UI)
 dashboard.widgets.wh02.title,Low Stock,Stok Menipis,WH-02,dashboard,Tenant Dashboard improvement (new UI)

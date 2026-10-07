@@ -111,6 +111,21 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
   intervals) and **PR-05 Procurement cycle** (PR created → PO order date → first posted GR, medians).
 - Tests: `DashboardInventoryKpiTest` (4); dashboard suites 96 passed.
 
+## CP5 — layout and bilingual (implemented)
+
+- Whitespace causes found: `grid-auto-flow: dense` with rows as tall as the tallest card (gap under
+  every shorter neighbour, and visual order ≠ DOM / keyboard order); fixed skeleton heights.
+- Fix: measured masonry on the 12-column grid — 8px row tracks, each card spans its measured height
+  (ResizeObserver), no `dense` (reading / keyboard order = DOM order), no absolute positioning or
+  clipping; a tab's only widget spans the full width; widgets the user may not see are never in the
+  catalog, empty tabs are hidden.
+- Tabs recomposed (6–10 widgets, compact KPIs first, then actions / main charts, half-width cards
+  paired): summary 10, fleet 10, workshop 9, warehouse 10, procurement 8, finance 10.
+- Verified: 1440 / 820 / 390 px, EN + ID, many / few (mechanic) / one / no widgets; no horizontal
+  overflow on any tab (scrollWidth = viewport at 390 and 820).
+- All new strings through `docs/i18n/17-i18n-additions.csv` (i18n:check up to date; audit shows no
+  untranslated dashboard UI text).
+
 ## Checkpoints
 
 | # | Checkpoint | Status | Commit |
@@ -119,5 +134,5 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
 | 2 | Work intervals, assignment attribution, snapshots, configuration | DONE | CP2 commit |
 | 3 | Most Costly Vehicle + Mechanic Performance (+ FN-08, WS-08) | DONE | CP3 commit |
 | 4 | Consumption, installed, inventory value, low stock (+ extras) | DONE | CP4 commit |
-| 5 | Layout + bilingual | TODO | |
+| 5 | Layout + bilingual | DONE | CP5 commit |
 | 6 | Seeders, regression, final QA | TODO | |

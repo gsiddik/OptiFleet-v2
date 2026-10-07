@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { InfoTip } from '../../../components/InfoTip';
 import { t } from '../../../i18n/i18n';
 import { useWidget, widgetParams } from './api';
@@ -34,14 +34,17 @@ export interface WidgetDefinition<T = any> {
 }
 
 /** One widget: its own request, skeleton, empty / error / no-access states, retry and drill-down. */
-export function WidgetCard({ widget, definition, filters, currency, onDetail }: {
+export function WidgetCard({ widget, definition, filters, currency, onDetail, fullWidth = false }: {
   widget: CatalogWidget;
+  /** Span the whole row (e.g. the only widget of a tab) instead of the definition's size. */
+  fullWidth?: boolean;
   definition: WidgetDefinition;
   filters: DashboardFilters;
   currency: string;
   onDetail: (request: DetailRequest) => void;
 }) {
   const [local, setLocal] = useState<Record<string, string>>({});
+  const span = useMasonrySpan();
   const params = { ...widgetParams(filters, widget.filters), ...Object.fromEntries(Object.entries(local).filter(([, v]) => v !== '')) };
   const { state, envelope, error, reload } = useWidget<any>(widget.id, params);
   const [showTable, setShowTable] = useState(false);
@@ -93,7 +96,7 @@ export function WidgetCard({ widget, definition, filters, currency, onDetail }: 
   }
 
   return (
-    <section className={`dash-card dash-${definition.size}`} aria-labelledby={titleId} data-widget={widget.id} aria-busy={state === 'loading'}>
+    <section ref={span.ref} style={span.style} className={`dash-card dash-${fullWidth ? 'xl' : definition.size}`} aria-labelledby={titleId} data-widget={widget.id} aria-busy={state === 'loading'}>
       <div className="dash-card-head">
         <div style={{ minWidth: 0 }}>
           <h3 className="dash-card-title" id={titleId}>
@@ -131,4 +134,27 @@ export function WidgetCard({ widget, definition, filters, currency, onDetail }: 
       )}
     </section>
   );
+}
+
+/** Grid row unit and gap of `.dash-grid` (dashboard.css). */
+const ROW = 8;
+const GAP = 16;
+
+/**
+ * Masonry span: the card occupies ceil((height + gap) / row) grid rows, re-measured whenever its
+ * content (loading → data, table toggle, resize) changes height.
+ */
+function useMasonrySpan() {
+  const ref = useRef<HTMLElement | null>(null);
+  const [rows, setRows] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === 'undefined') return undefined;
+    const measure = () => setRows(Math.max(1, Math.ceil((el.getBoundingClientRect().height + GAP) / ROW)));
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return { ref, style: rows === null ? undefined : { gridRowEnd: `span ${rows}` } };
 }
