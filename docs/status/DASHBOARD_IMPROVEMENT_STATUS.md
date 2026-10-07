@@ -128,6 +128,20 @@ documents, retread cycles open / received, FTEST second tenant. Idempotent (mark
 Verified on a disposable DB: `migrate:fresh --seed` then `db:seed` → identical row counts; no
 cross-tenant references; no negative stock; FN-01 = FN-03.
 
+## Validation (CP6, executed in this session)
+
+| Check | Result |
+|---|---|
+| Backend full regression (non-Mongo; Analytics/Intelligence set aside) | PASS — 1226 tests, 21790 assertions |
+| Dashboard + seeder + permission tests on final code | PASS — 65 tests, 715 assertions |
+| MongoDB (Analytics / Intelligence) tests | NOT RUN — no MongoDB in this environment |
+| Frontend `tsc -b`, `npm run build` | PASS |
+| Frontend `oxlint` | PASS (0 errors; warnings of rule classes already present in the codebase) |
+| Frontend unit tests | PASS — 52 |
+| `i18n:check` / `i18n:audit` | PASS (up to date) / no untranslated dashboard UI text |
+| Demo seed fresh + rerun on disposable DB | PASS — identical counts, 0 cross-tenant refs |
+| Visual QA 1440 / 820 / 390 px, EN + ID, tenant-wide and branch-scoped user, drill-downs | PASS — no console/page errors from the dashboard; empty states only where data is legitimately empty |
+
 ## Known limitations (documented, not estimated)
 
 - Partially paid invoices cannot be seeded or shown: every invoice source allows exactly one full
