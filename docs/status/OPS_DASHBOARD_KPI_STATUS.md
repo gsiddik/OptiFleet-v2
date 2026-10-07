@@ -153,6 +153,11 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
   11,850,000.00 equal independent SQL; LABOR equals SQL for closed intervals (running interval differs
   only by the sub-second clock between the two reads).
 - Bilingual: Indonesian dashboard strings use the application term "Jenis Item".
+- Regression (non-Mongo backend, serial): 1241 passed, 1 failed — `DemoDatasetSeederTest` (demo
+  battery without an asset number duplicated the existing null); fixed by numbering it through
+  `ComponentAssetRegisterService::nextAssetNumber`; re-run of Dashboard + Seeder + ComponentAsset
+  suites: 91 passed. MongoDB analytics / intelligence suites: NOT RUN (no MongoDB in this
+  environment). Frontend: tsc, oxlint (0 errors), 52 unit tests, i18n check / audit, build — all pass.
 
 ## Checkpoints
 

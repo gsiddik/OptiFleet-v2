@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\Breakdown\Services\BreakdownService;
 use App\Domain\ComponentAsset\Models\ComponentAsset;
+use App\Domain\ComponentAsset\Services\ComponentAssetRegisterService;
 use App\Domain\ComponentAsset\Services\ComponentAssetService;
 use App\Domain\Dashboard\Models\MechanicPerformanceBaseline;
 use App\Domain\Identity\Models\Tenant;
@@ -494,11 +495,12 @@ class DashboardDemoSeeder extends Seeder
     private function movedComponent(array $vehicles): void
     {
         $this->at($this->realNow->subDays(90));
-        $asset = ComponentAsset::query()->firstOrCreate(
-            ['tenant_id' => $this->tenant->id, 'serial_number' => 'DASH-BAT-01'],
-            ['product_id' => $this->product('Truck Battery 12V 100Ah')->id, 'component_group_id' => ComponentGroup::query()->whereNull('tenant_id')->where('code', 'CG-ELEC')->value('id'),
-                'purchase_date' => $this->realNow->subDays(90)->toDateString(), 'purchase_cost' => 1850000, 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse()->id]
-        );
+        $asset = ComponentAsset::query()->where('tenant_id', $this->tenant->id)->where('serial_number', 'DASH-BAT-01')->first()
+            ?? ComponentAsset::query()->create([
+                'tenant_id' => $this->tenant->id, 'serial_number' => 'DASH-BAT-01', 'asset_number' => app(ComponentAssetRegisterService::class)->nextAssetNumber($this->tenant->id),
+                'product_id' => $this->product('Truck Battery 12V 100Ah')->id, 'component_group_id' => ComponentGroup::query()->whereNull('tenant_id')->where('code', 'CG-ELEC')->value('id'),
+                'purchase_date' => $this->realNow->subDays(90)->toDateString(), 'purchase_cost' => 1850000, 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $this->warehouse()->id,
+            ]);
         if ($asset->current_status !== 'IN_STOCK') {
             return;
         }
