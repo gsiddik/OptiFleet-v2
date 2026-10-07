@@ -162,6 +162,27 @@ class DashboardDataCompletenessTest extends TestCase
         $this->assertSame($res['data']['totals'], $mix['data']['totals']);
     }
 
+    public function test_work_with_complete_history_but_no_assigned_mechanic_has_unavailable_mechanic_cost(): void
+    {
+        $this->base();
+        ['tenant' => $t, 'branch' => $b, 'workshop' => $ws] = $this->s;
+        $wo = $this->makeWorkOrder($t, $b, $ws, $this->s['idle'], ['status' => 'COMPLETED', 'started_at' => '2026-09-05 01:00:00', 'completed_at' => '2026-09-06 03:00:00']);
+        $this->interval($wo->id, '2026-09-05 01:00:00', '2026-09-05 05:00:00'); // time recorded, but nobody was assigned
+        $this->consume($wo->id, $this->makeProduct($t, null, null, ['name' => 'Gasket'])->id, '2026-09-05 03:00:00');
+        [, $token] = $this->makeTenantUser($t, ['dashboard.finance.view']);
+
+        $res = $this->widget($token, 'FN-07', ['months' => 3])->assertOk()->json('data');
+        $row = collect($res['data']['vehicles'])->firstWhere('registration_number', 'B 3 CMP');
+
+        $this->assertSame(['UNAVAILABLE', null, false], [$row['labor_status'], $row['LABOR'], $row['cost_complete']], 'no mechanic assigned: the mechanic cost is unknown, not 0');
+        $this->assertContains(['code' => 'NO_MECHANIC_ASSIGNED', 'n' => 1], $res['basis']['completeness']['reasons']);
+        $this->assertSame('UNAVAILABLE', $res['basis']['completeness']['status']);
+        $this->assertContains('dashboard.limitations.noMechanicAssigned', array_column($res['limitations'], 'code'));
+        $this->assertTranslated($res);
+        $detail = collect($this->details($token, 'FN-07', ['months' => 3, 'vehicle_id' => $this->s['idle']->id])->assertOk()->json('data.data'));
+        $this->assertSame(['UNAVAILABLE', null], [$detail[0]['labor_status'], $detail[0]['LABOR']]);
+    }
+
     public function test_mechanic_performance_never_averages_work_orders_without_history_and_reports_the_exclusions(): void
     {
         $this->base();

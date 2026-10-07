@@ -147,6 +147,7 @@ final class OperatingCostQuery
             $code = match ($reason['code']) {
                 'WORK_TIME_UNAVAILABLE' => 'dashboard.limitations.workTimeUnavailable',
                 'WORK_TIME_PARTIAL' => 'dashboard.limitations.workTimePartial',
+                'NO_MECHANIC_ASSIGNED' => 'dashboard.limitations.noMechanicAssigned',
                 default => null,
             };
             if ($code) {
@@ -190,6 +191,9 @@ final class OperatingCostQuery
         $labor = $lines->where('component', 'LABOR');
         $unvalued = $labor->whereNull('amount');
         $valued = $labor->whereNotNull('amount');
+        // A started Work Order with no mechanic ever assigned has no attributable mechanic cost: unknown, not 0.
+        $assigned = array_flip(DB::table('work_order_mechanic_assignments')->whereIn('work_order_id', $ids->pluck('id'))->pluck('work_order_id')->unique()->all());
+        $unassigned = collect($population)->filter(fn ($w) => $w['state'] === WorkTimeQuery::COMPLETE && ! isset($assigned[$w['id']]))->pluck('id')->flip();
         $count = fn (string $s) => count(array_filter($population, fn ($w) => $w['state'] === $s));
         $complete = $count(WorkTimeQuery::COMPLETE);
         $total = count($population);
@@ -197,16 +201,17 @@ final class OperatingCostQuery
 
         $vehicles = [];
         foreach (collect($population)->groupBy('vehicle_id') as $vehicleId => $set) {
-            $bad = $set->filter(fn ($w) => $w['state'] !== WorkTimeQuery::COMPLETE)->count()
+            $bad = $set->filter(fn ($w) => $w['state'] !== WorkTimeQuery::COMPLETE || isset($unassigned[$w['id']]))->count()
                 + $set->filter(fn ($w) => $w['state'] === WorkTimeQuery::COMPLETE && $unvalued->contains('work_order_id', $w['id']))->count();
             $hasValue = $valued->where('vehicle_id', $vehicleId)->isNotEmpty();
             $vehicles[$vehicleId] = $bad === 0 ? 'AVAILABLE' : ($hasValue ? 'PARTIAL' : 'UNAVAILABLE');
         }
 
-        $completeness = DataBasis::completeness($total, max(0, $complete - $rateMissing), [
+        $completeness = DataBasis::completeness($total, max(0, $complete - $rateMissing - $unassigned->count()), [
             'WORK_TIME_PARTIAL' => $count(WorkTimeQuery::PARTIAL),
             'WORK_TIME_UNAVAILABLE' => $count(WorkTimeQuery::UNAVAILABLE),
             'RATE_MISSING' => $rateMissing,
+            'NO_MECHANIC_ASSIGNED' => $unassigned->count(),
         ], count($open));
 
         return ['population' => $population, 'completeness' => $completeness, 'vehicles' => $vehicles];

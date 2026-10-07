@@ -119,16 +119,17 @@ class MostCostlyVehicleWidget extends Widget
             $coverage = $this->coverage($context, $lines, ['vehicle_id' => $params['vehicle_id']]);
             $states = collect($coverage['population'])->pluck('state', 'id');
             $unvalued = $lines->where('component', 'LABOR')->whereNull('amount')->pluck('work_order_id')->flip();
+            $assigned = DB::table('work_order_mechanic_assignments')->whereIn('work_order_id', $states->keys())->pluck('work_order_id')->unique()->flip();
             // Work Orders of the vehicle with work-time history problems but no cost line in the period are listed too.
             $ids = $lines->pluck('work_order_id')->merge($states->keys())->unique()->values();
             $woNumbers = DB::table('work_orders')->whereIn('id', $ids)->pluck('wo_number', 'id');
-            $rows = $ids->map(function ($id) use ($lines, $states, $unvalued, $woNumbers) {
+            $rows = $ids->map(function ($id) use ($lines, $states, $unvalued, $assigned, $woNumbers) {
                 $set = $lines->where('work_order_id', $id);
                 $state = $states[$id] ?? WorkTimeQuery::NOT_STARTED;
                 $totals = OperatingCostQuery::totals($set);
                 $laborStatus = match (true) {
                     $state === WorkTimeQuery::NOT_STARTED => 'NONE',
-                    $state === WorkTimeQuery::UNAVAILABLE => 'UNAVAILABLE',
+                    $state === WorkTimeQuery::UNAVAILABLE, $state === WorkTimeQuery::COMPLETE && ! isset($assigned[$id]) => 'UNAVAILABLE',
                     $state === WorkTimeQuery::PARTIAL, isset($unvalued[$id]) => 'PARTIAL',
                     default => 'AVAILABLE',
                 };

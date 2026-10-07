@@ -1038,3 +1038,6 @@ dashboard.widgets.fn05.pendingNote,Not in the total — used stock: {{used}} ite
 dashboard.widgets.fn05.pendingLink,Show,Tampilkan,FN-05 link,dashboard,Ops dashboard KPIs (new UI)
 dashboard.widgets.fn05.pendingTitle,Stock pending valuation,Stok menunggu valuasi,FN-05 drill-down title,dashboard,Ops dashboard KPIs (new UI)
 dashboard.widgets.fl07.untracked,Not tracked as installed: {{lines}} consumed non-serial part line(s) ({{products}} product(s)) —,Tidak terlacak sebagai terpasang: {{lines}} baris part non-serial yang terpakai ({{products}} produk) —,FL-07 coverage,dashboard,Ops dashboard KPIs (new UI)
+dashboard.basis.reason.NO_MECHANIC_ASSIGNED_one,{{count}} Work Order has no mechanic assigned,{{count}} WO tanpa mekanik yang ditugaskan,Data basis reason,dashboard,Ops dashboard KPIs (new UI)
+dashboard.basis.reason.NO_MECHANIC_ASSIGNED_other,{{count}} Work Orders have no mechanic assigned,{{count}} WO tanpa mekanik yang ditugaskan,Data basis reason,dashboard,Ops dashboard KPIs (new UI)
+dashboard.limitations.noMechanicAssigned,"{{n}} Work Order(s) were worked on with no mechanic assigned: their mechanic cost is unavailable, not 0.","{{n}} WO dikerjakan tanpa mekanik yang ditugaskan: biaya mekaniknya tidak tersedia, bukan 0.",Limitation,dashboard,Ops dashboard KPIs (new UI)

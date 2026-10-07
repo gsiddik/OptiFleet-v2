@@ -22,7 +22,8 @@ class DashboardDemoSeederTest extends TestCase
 
     private const TABLES = ['work_orders', 'purchase_orders', 'goods_receipts', 'vendor_invoice_references', 'vendor_invoice_payments',
         'workshop_invoices', 'workshop_invoice_payments', 'work_order_external_invoices', 'breakdowns', 'stock_transfers', 'stock_movements', 'partners', 'vehicles',
-        'work_order_work_intervals', 'work_order_mechanic_assignments', 'workers', 'component_installations', 'mechanic_performance_baselines'];
+        'work_order_work_intervals', 'work_order_mechanic_assignments', 'workers', 'component_installations', 'mechanic_performance_baselines',
+        'component_assets', 'installation_stock_exits'];
 
     private function counts(): array
     {
@@ -144,6 +145,37 @@ class DashboardDemoSeederTest extends TestCase
         $notSet = collect($this->details($token, 'WH-02', ['state' => 'NOT_SET', 'per_page' => 100])->assertOk()->json('data.data'));
         $this->assertFalse($notSet->contains(fn ($r) => $r['product_name'] === 'Engine Oil Filter' && $r['warehouse_name'] === DB::table('warehouses')->where('code', 'ALPHA-JKT-WH1')->value('name')));
         $this->assertTrue($notSet->isNotEmpty());
+
+        // Serialized installations settle with the ledger exactly once (fresh seed): every demo installation has one exit
+        // record, direct and Work-Order-issued paths both exist, and the reconciliation finds nothing left to correct.
+        $exits = DB::table('installation_stock_exits')->where('tenant_id', $alpha->id);
+        $this->assertGreaterThan(0, (clone $exits)->where('source', 'DIRECT_ISSUE')->count());
+        $this->assertGreaterThan(0, (clone $exits)->where('source', 'WO_ISSUE')->count());
+        $this->assertSame(0, (int) DB::selectOne('select count(*) c from (select installation_id from installation_stock_exits group by installation_id having count(*) > 1) x')->c);
+        $this->assertSame(
+            (clone $exits)->where('source', 'DIRECT_ISSUE')->count(),
+            DB::table('stock_movements')->where('tenant_id', $alpha->id)->where('movement_type', 'ISSUE')->whereIn('reference_type', [\App\Domain\ComponentAsset\Models\ComponentInstallation::class, \App\Domain\Tire\Models\TireInstallation::class])->count(),
+            'one ISSUE movement per direct installation, none for Work-Order-issued ones'
+        );
+        $plan = app(\App\Domain\Inventory\Services\SerializedStockReconciliationService::class)->plan($alpha->id)['tenants'][0];
+        $this->assertSame(0, $plan['summary']['PROVABLE_UNDEDUCTED'], 'no installation made through the services leaves the ledger behind');
+        $this->assertSame([], collect($plan['balance'])->where('ledger_on_hand', '!=', null)->filter(fn ($b) => $b['explained_by_provable_undeducted'] > 0)->values()->all());
+
+        // Work Orders that predate work-time tracking: unavailable / partial, never 0 and never averaged.
+        $legacy = DB::table('work_orders')->where('tenant_id', $alpha->id)->where('complaint', 'like', '%legacy work%')->pluck('id');
+        $this->assertCount(2, $legacy);
+        $this->assertSame(1, DB::table('work_order_work_intervals')->whereIn('work_order_id', $legacy)->count(), 'only the second interval of the partial one remains');
+        $fn07a = $this->widget($token, 'FN-07', ['months' => 3])->assertOk()->json('data');
+        $this->assertContains('dashboard.limitations.workTimeUnavailable', array_column($fn07a['limitations'], 'code'));
+        $this->assertContains('dashboard.limitations.workTimePartial', array_column($fn07a['limitations'], 'code'));
+        $this->assertSame('PARTIAL', $fn07a['basis']['completeness']['status']);
+        $jkt = collect($this->widget($token, 'FN-07', ['months' => 3])->json('data.data.vehicles'))->firstWhere('registration_number', 'B 4101 ALP');
+        $this->assertFalse($jkt['cost_complete']);
+
+        // Used stock and zero-cost stock are pending valuation, apart from the valued total.
+        $fn05 = $this->widget($token, 'FN-05')->assertOk()->json('data');
+        $this->assertGreaterThan(0, $fn05['data']['pending_valuation']['used_skus']);
+        $this->assertGreaterThan(0, $fn05['data']['pending_valuation']['no_cost_skus']);
 
         // Re-run: nothing duplicated.
         $before = $this->counts();
