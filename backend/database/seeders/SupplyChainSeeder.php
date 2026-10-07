@@ -268,6 +268,10 @@ class SupplyChainSeeder extends Seeder
             ['tenant_id' => $tenant->id, 'serial_number' => 'BAT-ALPHA-01'],
             ['product_id' => $battery->id, 'component_group_id' => $elecGroup->id, 'purchase_date' => now()->subMonths(4), 'purchase_cost' => 1800000, 'current_status' => 'IN_STOCK', 'current_warehouse_id' => $jktWarehouse->id]
         );
+        if ($batteryAsset->wasRecentlyCreated) {
+            // The serial unit is received into the warehouse ledger like any stock, so installing it takes it out exactly once.
+            app(\App\Domain\Inventory\Services\InventoryService::class)->receive($jktWarehouse, $battery, 1, 1800000, 'RECEIPT', null, null, $warehouseManager->id, 'Seed: serial battery BAT-ALPHA-01 received.');
+        }
         if ($batteryAsset->current_status === 'IN_STOCK') {
             app(ComponentAssetService::class)->install($batteryAsset, $vehicle2, 'ENGINE_BAY', (float) $vehicle2->current_odometer, null, $warehouseManager->id);
         }

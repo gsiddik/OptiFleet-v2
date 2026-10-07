@@ -6,6 +6,7 @@ use App\Domain\ComponentAsset\Models\ComponentAsset;
 use App\Domain\ComponentAsset\Models\ComponentInstallation;
 use App\Domain\ComponentAsset\Models\ComponentRemoval;
 use App\Domain\ComponentAsset\Models\ComponentRepair;
+use App\Domain\Inventory\Services\SerializedStockExitService;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\WorkOrder\Models\SparePartSale;
 use Illuminate\Database\QueryException;
@@ -21,35 +22,47 @@ use Illuminate\Support\Facades\DB;
  */
 class ComponentAssetService
 {
+    public function __construct(private readonly SerializedStockExitService $exits) {}
+
     public function install(ComponentAsset $asset, Vehicle $vehicle, ?string $positionLocation, ?float $odometer, ?string $workOrderId, ?string $userId): ComponentInstallation
     {
-        if (in_array($asset->current_status, ['INSTALLED', 'ACTIVE'], true)) {
-            throw new ComponentAssetException('This component asset is already installed on a vehicle.');
-        }
-        if (in_array($asset->current_status, ['SCRAPPED', ...ComponentAsset::NO_LOCATION], true)) {
-            throw new ComponentAssetException("A {$asset->current_status} component asset cannot be installed.");
-        }
-        if (SparePartSale::query()->withoutGlobalScopes()->where('component_asset_id', $asset->id)->whereIn('status', SparePartSale::ACTIVE_STATUSES)->exists()) {
-            throw new ComponentAssetException('This component asset is in an open sale (Sell Sparepart) and cannot be installed.');
-        }
-
         return DB::transaction(function () use ($asset, $vehicle, $positionLocation, $odometer, $workOrderId, $userId) {
+            // The row lock serialises concurrent installs of the same unit; the guards run on the locked row.
+            $locked = ComponentAsset::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($asset->id);
+            if (in_array($locked->current_status, ['INSTALLED', 'ACTIVE'], true)) {
+                throw new ComponentAssetException('This component asset is already installed on a vehicle.');
+            }
+            if (in_array($locked->current_status, ['SCRAPPED', ...ComponentAsset::NO_LOCATION], true)) {
+                throw new ComponentAssetException("A {$locked->current_status} component asset cannot be installed.");
+            }
+            if ($vehicle->tenant_id !== $locked->tenant_id) {
+                throw new ComponentAssetException('The vehicle belongs to another company.');
+            }
+            $this->exits->assertWorkOrderMatches($locked->tenant_id, $workOrderId, $vehicle->id);
+            if (SparePartSale::query()->withoutGlobalScopes()->where('component_asset_id', $locked->id)->whereIn('status', SparePartSale::ACTIVE_STATUSES)->exists()) {
+                throw new ComponentAssetException('This component asset is in an open sale (Sell Sparepart) and cannot be installed.');
+            }
+
             try {
-                $installation = ComponentInstallation::query()->create([
-                    'tenant_id' => $asset->tenant_id,
-                    'component_asset_id' => $asset->id,
+                $installation = DB::transaction(fn () => ComponentInstallation::query()->create([
+                    'tenant_id' => $locked->tenant_id,
+                    'component_asset_id' => $locked->id,
                     'vehicle_id' => $vehicle->id,
                     'position_location' => $positionLocation,
                     'installation_odometer' => $odometer,
                     'installed_at' => now(),
                     'work_order_id' => $workOrderId,
                     'performed_by' => $userId,
-                ]);
+                ]));
             } catch (QueryException $e) {
                 throw new ComponentAssetException('This component asset is already actively installed on a vehicle.');
             }
 
-            $asset->update(['current_status' => 'INSTALLED', 'current_vehicle_id' => $vehicle->id, 'current_warehouse_id' => null]);
+            // Takes the unit out of the warehouse ledger exactly once (or records why it is not in it).
+            $this->exits->recordInstallation($locked, $installation, $workOrderId, $userId);
+
+            $locked->update(['current_status' => 'INSTALLED', 'current_vehicle_id' => $vehicle->id, 'current_warehouse_id' => null]);
+            $asset->setRawAttributes($locked->getAttributes(), true);
 
             return $installation;
         });

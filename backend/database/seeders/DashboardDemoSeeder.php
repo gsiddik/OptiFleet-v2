@@ -11,6 +11,7 @@ use App\Domain\Dashboard\Models\MechanicPerformanceBaseline;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Inventory\Models\StockTransfer;
 use App\Domain\Inventory\Models\WarehouseStock;
+use App\Domain\Inventory\Services\InventoryService;
 use App\Domain\Inventory\Services\StockTransferService;
 use App\Domain\MasterData\Models\ComponentGroup;
 use App\Domain\MasterData\Models\VehicleCategory;
@@ -503,6 +504,10 @@ class DashboardDemoSeeder extends Seeder
             ]);
         if ($asset->current_status !== 'IN_STOCK') {
             return;
+        }
+        if ($asset->wasRecentlyCreated) {
+            // Received into the warehouse ledger like any stock, so installing it takes it out exactly once.
+            app(InventoryService::class)->receive($this->warehouse(), $this->product('Truck Battery 12V 100Ah'), 1, 1850000, 'RECEIPT', null, null, $this->admin->id, 'Demo: serial battery DASH-BAT-01 received.');
         }
         $components = app(ComponentAssetService::class);
         $this->at($this->realNow->subDays(60));

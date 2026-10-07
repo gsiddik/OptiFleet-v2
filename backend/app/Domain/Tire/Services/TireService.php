@@ -17,6 +17,7 @@ use App\Domain\Tire\Models\TireUsedInspection;
 use App\Domain\Tire\Models\VehicleWheelConfigurationMapping;
 use App\Domain\Tire\Models\WheelConfiguration;
 use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
+use App\Domain\Inventory\Services\SerializedStockExitService;
 use App\Domain\Tire\Support\TireStatus;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Domain\WorkOrder\Models\WorkOrder;
@@ -35,6 +36,7 @@ class TireService
 {
     public function __construct(
         private readonly UsedTireStockService $usedStock,
+        private readonly SerializedStockExitService $exits,
     ) {}
 
     /**
@@ -73,10 +75,20 @@ class TireService
         }
 
         return DB::transaction(function () use ($tire, $vehicle, $wheelPosition, $odometer, $workOrderId, $userId, $installedAt, $installedAtSource, $baselineTreadDepthMm, $baselineCondition) {
+            // The row lock serialises concurrent installs of the same tire; the guards run on the locked row.
+            $original = $tire;
+            $tire = Tire::query()->withoutGlobalScopes()->lockForUpdate()->findOrFail($original->id);
+            if (! in_array($tire->current_status, TireStatus::AVAILABLE_FOR_INSTALLATION, true)) {
+                throw new TireException("Tire is {$tire->current_status} and cannot be installed (only new stock or REUSE tires).");
+            }
+            if ($vehicle->tenant_id !== $tire->tenant_id) {
+                throw new TireException('The vehicle belongs to another company.');
+            }
+            $this->exits->assertWorkOrderMatches($tire->tenant_id, $workOrderId, $vehicle->id);
             $this->assertValidWheelPosition($vehicle, $wheelPosition);
 
             try {
-                $installation = TireInstallation::query()->create([
+                $installation = DB::transaction(fn () => TireInstallation::query()->create([
                     'tenant_id' => $tire->tenant_id,
                     'tire_id' => $tire->id,
                     'vehicle_id' => $vehicle->id,
@@ -86,10 +98,13 @@ class TireService
                     'installation_odometer' => $odometer,
                     'work_order_id' => $workOrderId,
                     'performed_by' => $userId,
-                ]);
+                ]));
             } catch (QueryException $e) {
                 throw new TireException('This tire is already actively installed, or this wheel position already has an active tire.');
             }
+
+            // Takes a new-stock tire out of the warehouse ledger exactly once (or records why it is not in it).
+            $this->exits->recordInstallation($tire, $installation, $workOrderId, $userId);
 
             // A REUSE tire still counted in used stock (installed without a Part Request issue) leaves it.
             $this->usedStock->release($tire, 'INSTALL', $workOrderId ? WorkOrder::class : null, $workOrderId, $userId);
@@ -112,6 +127,8 @@ class TireService
                     'inspected_at' => $installedAt,
                 ]);
             }
+
+            $original->setRawAttributes($tire->fresh()->getAttributes(), true);
 
             return $installation;
         });
