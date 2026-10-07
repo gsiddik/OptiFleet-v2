@@ -23,7 +23,7 @@ interface OpnameEvidence {
 }
 interface Candidate {
   id: string; installation_id: string; kind: string; serial: string | null; installed_at: string; registration_number: string | null; category: string; evidence: string | null;
-  warehouse_id: string | null; product_id: string; opname: OpnameEvidence | null;
+  warehouse_id: string | null; product_id: string; opname: OpnameEvidence | null; adjustment: { id: string; status: string } | null;
   warehouse_evidence: { warehouse_id: string; warehouse: string; system_quantity: string; opname: OpnameEvidence | null }[];
 }
 interface Adjustment {
@@ -95,7 +95,11 @@ function ReportTab({ canManage, onProposed }: { canManage: boolean; onProposed: 
         )}
       </div>
     ) },
-    { key: 'action', header: '', render: (c) => canManage && c.category === 'PROVABLE_UNDEDUCTED' ? <button className="btn-primary" onClick={() => setProposing(c)}>{t('reconciliation.actions.propose')}</button> : null },
+    { key: 'action', header: '', render: (c) => {
+      if (c.category !== 'PROVABLE_UNDEDUCTED') return null;
+      if (c.adjustment && c.adjustment.status !== 'REJECTED') return <small>{t(`reconciliation.adjustmentStatus.${c.adjustment.status}`)}</small>;
+      return canManage ? <button className="btn-primary" onClick={() => setProposing(c)}>{t('reconciliation.actions.propose')}</button> : null;
+    } },
   ];
 
   return (

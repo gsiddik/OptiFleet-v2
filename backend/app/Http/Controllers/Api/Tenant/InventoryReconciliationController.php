@@ -36,7 +36,10 @@ class InventoryReconciliationController extends Controller
         $inScope = fn (?string $warehouseId) => $allowed === null || ($warehouseId !== null && in_array($warehouseId, $allowed, true));
 
         $tenant = $this->report->plan($tenantId)['tenants'][0] ?? ['summary' => [], 'candidates' => [], 'balance' => []];
-        $candidates = collect($tenant['candidates'])->map(function (array $c) use ($inScope) {
+        // The latest adjustment of each installation, so a case already proposed / approved / rejected is not offered again blindly.
+        $latest = Adjustment::query()->where('tenant_id', $tenantId)->orderBy('proposed_at')->get(['id', 'installation_id', 'status'])->keyBy('installation_id');
+        $candidates = collect($tenant['candidates'])->map(function (array $c) use ($inScope, $latest) {
+            $c['adjustment'] = isset($latest[$c['installation_id']]) ? ['id' => $latest[$c['installation_id']]->id, 'status' => $latest[$c['installation_id']]->status] : null;
             if ($c['warehouse_evidence']) {
                 $c['warehouse_evidence'] = array_values(array_filter($c['warehouse_evidence'], fn ($w) => $inScope($w['warehouse_id'])));
             }
