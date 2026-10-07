@@ -3,6 +3,7 @@
 namespace App\Domain\Dashboard\Widgets\Fleet;
 
 use App\Domain\Dashboard\DashboardContext;
+use App\Domain\Dashboard\DataBasis;
 use App\Domain\Dashboard\Widgets\Widget;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
 use Brick\Math\BigDecimal;
@@ -23,6 +24,11 @@ use Illuminate\Support\Facades\DB;
  * not installed). A component moved to another vehicle has one open installation only, so it is
  * never counted twice. Current position only — there is no installed-value history.
  * Values are returned only with dashboard.finance.view.
+ *
+ * Coverage is explicit: only units with an installation record are "installed". Non-serial spare parts and
+ * consumables that Work Orders consumed have NO installation / removal record, so they are reported as
+ * "untracked" (lines / products / quantity per UOM, no value) — never as 0 installed and never assumed to
+ * still be on the vehicle. Each installed item carries the cost basis of its snapshot (or why it has none).
  */
 class InstalledComponentsWidget extends Widget
 {
@@ -48,6 +54,11 @@ class InstalledComponentsWidget extends Widget
         return ['vehicle.view'];
     }
 
+    public function version(): int
+    {
+        return 2; // coverage (untracked non-serial parts) and completeness basis
+    }
+
     public function isAvailable(DashboardContext $context): bool
     {
         return parent::isAvailable($context) && ($this->tires($context) || $this->components($context));
@@ -57,7 +68,7 @@ class InstalledComponentsWidget extends Widget
     {
         $items = $this->items($context);
         $finance = $context->canFinance();
-        $value = fn (Collection $set) => $finance ? self::moneySum($set->pluck('cost')->filter(fn ($c) => $c !== null)) : null;
+        $value = fn (Collection $set) => $this->valueOf($set, $finance);
 
         $vehicles = $items->groupBy('vehicle_id')->map(fn (Collection $set) => [
             'vehicle_id' => $set->first()->vehicle_id, 'registration_number' => $set->first()->registration_number,
@@ -72,8 +83,18 @@ class InstalledComponentsWidget extends Widget
                     ->sortByDesc('items')->values()->all(),
                 'vehicles' => $vehicles->take(self::TOP)->all(),
                 'sources' => array_keys(array_filter(['TIRE' => $this->tires($context), 'COMPONENT' => $this->components($context)])),
+                'untracked' => $this->untracked($context),
             ],
             'limitations' => [['code' => 'dashboard.limitations.nonSerializedNotTracked', 'params' => []]],
+            'basis' => DataBasis::make(
+                [['key' => 'INSTALLED', 'code' => 'INSTALLATION_DATE'], ['key' => 'COST', 'code' => 'COST_SNAPSHOT_AT_ISSUE_OR_PURCHASE']],
+                ['SERIAL_TIRES_OPEN_INSTALLATIONS', 'SERIAL_RIMS_AND_COMPONENTS_OPEN_INSTALLATIONS'],
+                ['NON_SERIAL_PARTS_CONSUMED', 'CONSUMABLES', 'REMOVED_OR_MOVED_UNITS', 'BOOK_VALUE'],
+                DataBasis::completeness($items->count(), $items->whereNotNull('cost')->count(), [
+                    'REUSED_NO_VALUATION' => $items->where('basis', 'REUSED_NO_VALUATION')->count(),
+                    'NO_COST_BASIS' => $items->where('basis', 'NO_COST_BASIS')->count(),
+                ]),
+            ),
         ];
     }
 
@@ -99,10 +120,40 @@ class InstalledComponentsWidget extends Widget
         $vehicles = $items->groupBy('vehicle_id')->map(fn (Collection $set) => [
             'vehicle_id' => $set->first()->vehicle_id, 'registration_number' => $set->first()->registration_number,
             'items' => $set->count(), 'unvalued' => $set->whereNull('cost')->count(),
-            'value' => $finance ? self::moneySum($set->pluck('cost')->filter(fn ($c) => $c !== null)) : null,
+            'value' => $this->valueOf($set, $finance),
         ])->sortByDesc(fn ($v) => $finance ? (float) $v['value'] : $v['items'])->values()->all();
 
         return $this->paginateList($vehicles, $params);
+    }
+
+    /**
+     * Non-serial parts consumed on Work Orders of vehicles in scope: no installation record exists, so they are
+     * neither counted as installed nor valued. Lines / products and quantity per UOM only.
+     *
+     * @return array{lines: int, products: int, quantities: list<array{uom: ?string, quantity: string}>}
+     */
+    private function untracked(DashboardContext $context): array
+    {
+        $vehicles = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at');
+        $context->scopeBranch($vehicles, 'v.branch_id');
+        $rows = DB::table('work_order_planned_parts as pp')->join('work_orders as wo', 'wo.id', '=', 'pp.work_order_id')->join('products as p', 'p.id', '=', 'pp.product_id')
+            ->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')
+            ->where('pp.tenant_id', $context->tenantId)->whereNull('wo.deleted_at')->whereIn('wo.vehicle_id', $vehicles->select('v.id'))
+            ->where('pp.consumed_quantity', '>', 0)->where('p.product_type', '!=', 'TIRE')->where(fn ($q) => $q->where('p.track_serial_number', false)->orWhereNull('p.track_serial_number'))
+            ->groupBy('u.code')->selectRaw('u.code as uom, count(*) as lines, count(distinct pp.product_id) as products, sum(pp.consumed_quantity) as quantity')->get();
+
+        return [
+            'lines' => (int) $rows->sum('lines'), 'products' => (int) $rows->sum('products'),
+            'quantities' => $rows->map(fn ($r) => ['uom' => $r->uom, 'quantity' => self::decimal($r->quantity, 4)])->values()->all(),
+        ];
+    }
+
+    /** Sum of the recorded costs of a set; null (unavailable, never 0) when no item has a cost basis or the user may not see values. */
+    private function valueOf(Collection $set, bool $finance): ?string
+    {
+        $costs = $set->pluck('cost')->filter(fn ($c) => $c !== null);
+
+        return $finance && $costs->isNotEmpty() ? self::moneySum($costs) : null;
     }
 
     private function tires(DashboardContext $context): bool

@@ -3,6 +3,7 @@
 namespace App\Domain\Dashboard\Widgets\Finance;
 
 use App\Domain\Dashboard\DashboardContext;
+use App\Domain\Dashboard\DataBasis;
 use App\Domain\Dashboard\DashboardService;
 use App\Domain\Dashboard\WorkTime\WorkTimeQuery;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
@@ -124,8 +125,12 @@ final class OperatingCostQuery
         return $lines->groupBy('vehicle_id')->map(fn (Collection $rows) => self::totals($rows));
     }
 
-    /** Lines whose cost could not be valued (labor without a rate snapshot). */
-    public static function limitations(DashboardContext $context, Collection $lines): array
+    /**
+     * What a reader must know about the figure: labor rows without a rate snapshot, work still running,
+     * Work Orders whose work-time history is missing / starts late, and payment records that break the
+     * payment contract. Each is a count, never folded into a value.
+     */
+    public static function limitations(DashboardContext $context, Collection $lines, ?array $coverage = null, ?Collection $anomalies = null): array
     {
         $out = [];
         $missing = $lines->where('component', 'LABOR')->whereNull('amount');
@@ -138,15 +143,136 @@ final class OperatingCostQuery
         if ($open->isNotEmpty()) {
             $out[] = ['code' => 'dashboard.limitations.laborRunning', 'params' => ['n' => $open->count()]];
         }
-        $started = $lines->pluck('work_order_id')->unique()->values()->all();
-        $incomplete = collect(WorkTimeQuery::historyComplete($context, $started))
-            ->filter(fn ($complete, $id) => ! $complete)->keys();
-        $incomplete = DB::table('work_orders')->whereIn('id', $incomplete)->whereNotNull('started_at')->count();
-        if ($incomplete > 0) {
-            $out[] = ['code' => 'dashboard.limitations.laborHistoryIncomplete', 'params' => ['n' => $incomplete]];
+        foreach ($coverage['completeness']['reasons'] ?? [] as $reason) {
+            $code = match ($reason['code']) {
+                'WORK_TIME_UNAVAILABLE' => 'dashboard.limitations.workTimeUnavailable',
+                'WORK_TIME_PARTIAL' => 'dashboard.limitations.workTimePartial',
+                default => null,
+            };
+            if ($code) {
+                $out[] = ['code' => $code, 'params' => ['n' => $reason['n']]];
+            }
+        }
+        if ($anomalies && $anomalies->isNotEmpty()) {
+            $out[] = ['code' => 'dashboard.limitations.paymentAnomalies', 'params' => ['n' => $anomalies->count()]];
         }
 
         return $out;
+    }
+
+    /**
+     * Work-time coverage of the Work Orders behind a cost total. Population = internal Work Orders in
+     * scope that were started and either carry a cost line in the period or were started / completed in it.
+     * Per Work Order (WorkTimeQuery::historyState): COMPLETE counts as valid; PARTIAL (history starts late)
+     * and UNAVAILABLE (started before intervals existed) are excluded from "complete" — their recorded
+     * cost, if any, is still shown but flagged; nothing is estimated. Rows without a rate snapshot are
+     * counted too. Returns per-Work-Order states and per-vehicle labor status:
+     *  NONE         no started Work Order — a valid zero;
+     *  AVAILABLE    every started Work Order has complete history and every row is valued;
+     *  PARTIAL      some value recorded, some Work Order / row not valued or incomplete;
+     *  UNAVAILABLE  started Work Orders exist but no mechanic cost can be valued — never shown as 0.
+     *
+     * @return array{population: list<array{id: string, vehicle_id: string, state: string, open: bool}>, completeness: array<string, mixed>, vehicles: array<string, string>}
+     */
+    public static function laborCoverage(DashboardContext $context, Collection $lines, string $fromDate, string $toDateExclusive, array $narrow = []): array
+    {
+        [$fromUtc, $toUtc] = $context->utcBounds($fromDate, $toDateExclusive);
+        $withLines = $lines->pluck('work_order_id')->unique()->values()->all();
+        $ids = self::workOrders($context, $narrow)->where('wo.execution_mode', 'INTERNAL')->whereNotNull('wo.started_at')
+            ->where(fn ($q) => $q->whereIn('wo.id', $withLines)
+                ->orWhere(fn ($r) => $r->where('wo.started_at', '>=', $fromUtc)->where('wo.started_at', '<', $toUtc))
+                ->orWhere(fn ($r) => $r->where('wo.completed_at', '>=', $fromUtc)->where('wo.completed_at', '<', $toUtc)))
+            ->get(['wo.id', 'wo.vehicle_id']);
+        $state = WorkTimeQuery::historyState($context, $ids->pluck('id')->all());
+        $open = array_flip(WorkTimeQuery::openWorkOrders($context, $ids->pluck('id')->all()));
+        $population = $ids->map(fn ($r) => ['id' => $r->id, 'vehicle_id' => $r->vehicle_id, 'state' => $state[$r->id] ?? WorkTimeQuery::UNAVAILABLE, 'open' => isset($open[$r->id])])->all();
+
+        $labor = $lines->where('component', 'LABOR');
+        $unvalued = $labor->whereNull('amount');
+        $valued = $labor->whereNotNull('amount');
+        $count = fn (string $s) => count(array_filter($population, fn ($w) => $w['state'] === $s));
+        $complete = $count(WorkTimeQuery::COMPLETE);
+        $total = count($population);
+        $rateMissing = $unvalued->pluck('work_order_id')->unique()->count();
+
+        $vehicles = [];
+        foreach (collect($population)->groupBy('vehicle_id') as $vehicleId => $set) {
+            $bad = $set->filter(fn ($w) => $w['state'] !== WorkTimeQuery::COMPLETE)->count()
+                + $set->filter(fn ($w) => $w['state'] === WorkTimeQuery::COMPLETE && $unvalued->contains('work_order_id', $w['id']))->count();
+            $hasValue = $valued->where('vehicle_id', $vehicleId)->isNotEmpty();
+            $vehicles[$vehicleId] = $bad === 0 ? 'AVAILABLE' : ($hasValue ? 'PARTIAL' : 'UNAVAILABLE');
+        }
+
+        $completeness = DataBasis::completeness($total, max(0, $complete - $rateMissing), [
+            'WORK_TIME_PARTIAL' => $count(WorkTimeQuery::PARTIAL),
+            'WORK_TIME_UNAVAILABLE' => $count(WorkTimeQuery::UNAVAILABLE),
+            'RATE_MISSING' => $rateMissing,
+        ], count($open));
+
+        return ['population' => $population, 'completeness' => $completeness, 'vehicles' => $vehicles];
+    }
+
+    /** Standard basis block of the operating-cost widgets (FN-07 / FN-08). */
+    public static function basis(DashboardContext $context, array $coverage): array
+    {
+        return DataBasis::make(
+            [['key' => 'PARTS', 'code' => 'CONSUMPTION_DATE'], ['key' => 'LABOR', 'code' => 'WORK_INTERVAL_END'], ['key' => 'EXTERNAL_PAID', 'code' => 'PAYMENT_DATE']],
+            ['PARTS_CONSUMED', 'MECHANIC_TIME', 'EXTERNAL_PAYMENTS'],
+            ['ESTIMATES', 'UNPAID_INVOICES', 'PURCHASE_PRICE', 'NON_BASE_CURRENCY', 'WORK_TIME_BEFORE_HISTORY'],
+            $coverage['completeness'],
+            WorkTimeQuery::historyAvailableFrom($context),
+        );
+    }
+
+    /**
+     * Payment records that do not follow the application's payment contract (one full payment per
+     * invoice; no partial payment, no reversal). They are REPORTED, never altered or dropped silently:
+     *  EXTERNAL_PARTIAL      a PAID external invoice whose paid amount differs from the vendor invoice amount;
+     *  EXTERNAL_INCOMPLETE   a PAID external invoice without payment date or paid amount (not counted);
+     *  SERVICE_PARTIAL       a Service Invoice payment whose amount differs from the invoice total;
+     *  SERVICE_CANCELLED_PAID a cancelled Service Invoice that still has a payment row (money recorded as paid, not counted);
+     *  NON_BASE_CURRENCY     a Service Invoice payment in another currency (not added to base-currency cost).
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public static function paymentAnomalies(DashboardContext $context, string $fromDate, string $toDateExclusive, array $narrow = []): Collection
+    {
+        $base = DashboardService::baseCurrency();
+        $external = self::workOrders($context, $narrow)->join('work_order_external_invoices as ei', 'ei.work_order_id', '=', 'wo.id')->where('ei.status', 'PAID')
+            ->where(fn ($q) => $q->where(fn ($r) => $r->whereBetween('ei.payment_date', [$fromDate, date('Y-m-d', strtotime($toDateExclusive.' -1 day'))]))->orWhereNull('ei.payment_date'))
+            ->get(['wo.id as work_order_id', 'wo.wo_number', 'wo.vehicle_id', 'ei.id as ref_id', 'ei.wal_number as document', 'ei.payment_date', 'ei.vendor_invoice_amount as expected', 'ei.paid_amount as paid'])
+            ->map(function ($r) {
+                $kind = match (true) {
+                    $r->payment_date === null || $r->paid === null => 'EXTERNAL_INCOMPLETE',
+                    $r->expected !== null && BigDecimal::of((string) $r->expected)->compareTo((string) $r->paid) !== 0 => 'EXTERNAL_PARTIAL',
+                    default => null,
+                };
+
+                return $kind ? self::anomaly($kind, $r) : null;
+            })->filter();
+
+        $service = self::workOrders($context, $narrow)->join('workshop_invoices as wi', 'wi.work_order_id', '=', 'wo.id')->join('workshop_invoice_payments as wp', 'wp.workshop_invoice_id', '=', 'wi.id')
+            ->whereNull('wi.deleted_at')->where('wp.payment_date', '>=', $fromDate)->where('wp.payment_date', '<', $toDateExclusive)
+            ->get(['wo.id as work_order_id', 'wo.wo_number', 'wo.vehicle_id', 'wp.id as ref_id', 'wi.external_invoice_number as document', 'wp.payment_date', 'wi.total_amount as expected', 'wp.paid_amount as paid', 'wi.status', 'wi.currency'])
+            ->map(function ($r) use ($base) {
+                $kind = match (true) {
+                    $r->status === 'CANCELLED' => 'SERVICE_CANCELLED_PAID',
+                    $r->currency !== $base => 'NON_BASE_CURRENCY',
+                    BigDecimal::of((string) $r->expected)->compareTo((string) $r->paid) !== 0 => 'SERVICE_PARTIAL',
+                    default => null,
+                };
+
+                return $kind ? self::anomaly($kind, $r) : null;
+            })->filter();
+
+        return $external->concat($service)->values();
+    }
+
+    private static function anomaly(string $kind, object $r): array
+    {
+        return ['kind' => $kind, 'work_order_id' => $r->work_order_id, 'wo_number' => $r->wo_number, 'vehicle_id' => $r->vehicle_id, 'ref_id' => $r->ref_id, 'document' => $r->document,
+            'payment_date' => $r->payment_date === null ? null : (string) $r->payment_date,
+            'expected' => $r->expected === null ? null : self::money($r->expected), 'paid' => $r->paid === null ? null : self::money($r->paid)];
     }
 
     /** Accessible Work Orders (scope + filters + optional vehicle / category / WO narrowing). */

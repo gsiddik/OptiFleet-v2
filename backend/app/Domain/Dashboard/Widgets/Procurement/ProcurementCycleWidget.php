@@ -3,6 +3,7 @@
 namespace App\Domain\Dashboard\Widgets\Procurement;
 
 use App\Domain\Dashboard\DashboardContext;
+use App\Domain\Dashboard\DataBasis;
 use App\Domain\Dashboard\Widgets\Widget;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,11 @@ class ProcurementCycleWidget extends Widget
         return ['branch', 'warehouse', 'period'];
     }
 
+    public function version(): int
+    {
+        return 2; // basis: since PR creation, completeness
+    }
+
     public function compute(DashboardContext $context): array
     {
         $median = fn (string $col) => "percentile_cont(0.5) within group (order by {$col})";
@@ -68,7 +74,19 @@ class ProcurementCycleWidget extends Widget
             $limitations[] = ['code' => 'dashboard.limitations.poWithoutOrderDate', 'params' => ['count' => $noDate]];
         }
 
+        // The start of the cycle is the PR CREATION date: the application records no approval timestamp, so nothing
+        // here is "since approval". Orders without a PR (or an order date) have no full cycle and are counted as excluded.
+        $completeness = DataBasis::completeness($totals['orders'] + $noDate, $totals['with_pr'], [
+            'NO_PURCHASE_REQUEST' => $totals['orders'] - $totals['with_pr'], 'NO_ORDER_DATE' => $noDate,
+        ]);
+
         return [
+            'basis' => DataBasis::make(
+                [['key' => 'PR_TO_PO', 'code' => 'PR_CREATED_TO_PO_ORDER_DATE'], ['key' => 'PO_TO_GR', 'code' => 'PO_ORDER_DATE_TO_FIRST_RECEIPT'], ['key' => 'PERIOD', 'code' => 'FIRST_POSTED_RECEIPT_DATE']],
+                ['FIRST_POSTED_GOODS_RECEIPT_PER_PO'],
+                ['PR_APPROVAL_DATE_NOT_RECORDED', 'PO_WITHOUT_PURCHASE_REQUEST_FOR_PR_STEP', 'UNPOSTED_RECEIPTS'],
+                $completeness,
+            ),
             'data' => [
                 'totals' => $totals,
                 'months' => array_map(fn ($m) => ['month' => $m, 'is_current' => $m === $context->currentMonth()]
