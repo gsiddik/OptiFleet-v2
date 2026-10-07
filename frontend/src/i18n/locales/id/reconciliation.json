@@ -1,0 +1,98 @@
+{
+  "actions": {
+    "apply": "Terapkan",
+    "hideWarehouses": "Sembunyikan gudang",
+    "propose": "Ajukan",
+    "showWarehouses": "Tampilkan {{count}} gudang",
+    "submitProposal": "Kirim pengajuan"
+  },
+  "adjustment": {
+    "appliedAt": "Diterapkan {{time}}",
+    "decidedAt": "Diputuskan {{time}}",
+    "ledgerAtProposal": "Ledger saat pengajuan: {{quantity}}",
+    "proposedAt": "Diajukan {{time}}"
+  },
+  "adjustmentStatus": {
+    "APPLIED": "Diterapkan",
+    "APPROVED": "Disetujui, belum diterapkan",
+    "PENDING_APPROVAL": "Menunggu persetujuan",
+    "REJECTED": "Ditolak",
+    "SUPERSEDED": "Digantikan bukti yang lebih baru"
+  },
+  "balance": {
+    "line": "ledger {{ledger}}, terdaftar di stok {{units}}, selisih {{difference}}"
+  },
+  "category": {
+    "AMBIGUOUS_NO_RECEIPT": "Ambigu: tanpa tautan receipt",
+    "AMBIGUOUS_TIRE": "Ban ambigu",
+    "CORRECTED_BY_RECONCILIATION": "Sudah dikoreksi",
+    "COVERED_BY_WO_ISSUE": "Tercakup issue WO",
+    "NOT_WAREHOUSE_ORIGIN": "Bukan dari gudang",
+    "PROVABLE_UNDEDUCTED": "Terbukti belum dikurangi",
+    "RESOLVED_BY_OPNAME": "Diselesaikan opname berikutnya"
+  },
+  "columns": {
+    "classification": "Klasifikasi",
+    "evidence": "Bukti",
+    "installedAt": "Dipasang",
+    "timeline": "Linimasa"
+  },
+  "definition": {
+    "AMBIGUOUS_NO_RECEIPT": "Komponen tanpa tautan Goods Receipt: asalnya tidak dapat dibuktikan, sehingga tidak ada yang disesuaikan.",
+    "AMBIGUOUS_TIRE": "Pemasangan ban tanpa tautan receipt dan tanpa issue yang mencakup: tidak dapat dibuktikan apakah ledger memegang unit ini. Tidak pernah disesuaikan otomatis.",
+    "CORRECTED_BY_RECONCILIATION": "Sudah dikoreksi melalui penyesuaian yang disetujui; ditampilkan sebagai catatan.",
+    "COVERED_BY_WO_ISSUE": "Issue part WO sudah mengeluarkan satu unit dari stok: tidak ada yang dikoreksi, tidak dikurangi lagi.",
+    "NOT_WAREHOUSE_ORIGIN": "Ban yang didaftarkan langsung pada kendaraan (registrasi awal): tidak pernah menjadi stok gudang.",
+    "PROVABLE_UNDEDUCTED": "Unit berasal dari Goods Receipt yang diposting, tidak ada baris WO yang sudah diissue mencakupnya, dan tidak ada opname berikutnya yang menyelesaikannya. Hanya kelas ini yang dapat disesuaikan.",
+    "RESOLVED_BY_OPNAME": "Stock opname terposting untuk gudang dan produk ini lebih baru dari pemasangan: hitung fisik sudah menyelesaikan kuantitasnya. Penyesuaian tidak diizinkan."
+  },
+  "empty": {
+    "adjustments": "Belum ada penyesuaian.",
+    "report": "Tidak ada pemasangan yang perlu direkonsiliasi."
+  },
+  "evidence": {
+    "NO_RECEIPT": "Tanpa tautan Goods Receipt: asal unit tidak dapat dibuktikan.",
+    "NOT_WAREHOUSE": "Didaftarkan langsung pada kendaraan (registrasi awal): tidak pernah menjadi stok gudang.",
+    "PROVABLE": "Unit dihasilkan Goods Receipt yang diposting; tidak ada baris WO yang sudah diissue mencakupnya; tidak ada catatan keluar stok.",
+    "RESOLVED_BY_OPNAME": "Stock opname terposting {{number}} ({{date}}) lebih baru dari pemasangan: hitung fisik sudah menyelesaikan kuantitas ini.",
+    "TIRE_NO_RECEIPT": "Serial ban tidak tertaut ke Goods Receipt: tidak dapat dibuktikan apakah ledger memegang unit ini.",
+    "WO_ISSUE_COVERS": "Baris part WO untuk unit ini sudah diissue: ledger sudah berkurang."
+  },
+  "filters": {
+    "allStatuses": "Semua status"
+  },
+  "help": {
+    "applyConfirm": "Catat satu pengeluaran stok untuk unit {{serial}} sekarang? Bertanggal hari ini, merujuk pemasangan lama, dan tidak dapat diterapkan dua kali.",
+    "makerCannotApprove": "Anda yang mengajukan: orang lain harus memutuskan.",
+    "noStockMovesYet": "Stok tidak berubah saat mengajukan atau menyetujui. Hanya penerapan penyesuaian yang disetujui yang mencatat satu pengeluaran, bertanggal saat ini.",
+    "opnameProves": "Stock opname membuktikan kuantitas fisik pada saat itu, bukan penyebab selisih ledger. Ini bukti untuk review, bukan sebab historis.",
+    "page": "Unit berserial yang dipasang sebelum pemasangan terhubung ke ledger stok mungkin masih terhitung sebagai stok. Tidak ada yang berubah sampai penyesuaian diajukan, disetujui orang kedua, dan diterapkan; riwayat asli tidak pernah diubah.",
+    "proposeSummary": "Unit {{serial}}, dipasang {{date}}, tidak pernah keluar dari ledger gudang. Pengajuan akan dikirim untuk disetujui orang kedua.",
+    "tireNotAdjusted": "Ban tanpa tautan Goods Receipt tidak pernah disesuaikan otomatis dan tidak ada receipt yang ditebak. Selesaikan dengan stock opname fisik per gudang."
+  },
+  "kind": {
+    "component": "Komponen",
+    "tire": "Ban"
+  },
+  "opname": {
+    "line": "Opname {{number}} ({{time}}): sistem {{system}}, fisik {{physical}}, selisih {{variance}}",
+    "movementsAfter": "{{count}} pergerakan sejak itu",
+    "stale": "snapshot sistem sudah usang saat diposting"
+  },
+  "tabs": {
+    "adjustments": "Penyesuaian",
+    "report": "Laporan"
+  },
+  "tire": {
+    "noOpname": "belum ada opname terposting",
+    "systemQuantity": "kuantitas sistem {{quantity}}"
+  },
+  "titles": {
+    "apply": "Terapkan penyesuaian",
+    "balance": "Ledger vs unit terdaftar",
+    "page": "Rekonsiliasi Stok",
+    "propose": "Ajukan penyesuaian",
+    "reject": "Tolak penyesuaian",
+    "tireEvidence": "Bukti hitung fisik per gudang"
+  }
+}

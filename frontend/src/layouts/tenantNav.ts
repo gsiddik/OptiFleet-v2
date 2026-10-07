@@ -107,6 +107,8 @@ export const NAV_GROUPS: NavGroup[] = [
       // same route, permission and module, so nobody loses access.
       { to: '/app/goods-receipts', label: 'Goods Receipt', labelKey: 'nav.items.goodsReceipt', permission: 'goods_receipt.view', module: 'PROCUREMENT' },
       { to: '/app/stock-opnames', label: 'Stock Opname', labelKey: 'nav.items.stockOpname', permission: 'inventory.stock_opname', module: 'INVENTORY' },
+      { to: '/app/inventory-valuation', label: 'Stock Valuation', labelKey: 'nav.items.stockValuation', permission: 'inventory_valuation.view', module: 'INVENTORY' },
+      { to: '/app/inventory-reconciliation', label: 'Stock Reconciliation', labelKey: 'nav.items.stockReconciliation', permission: 'inventory_reconcile.view', module: 'INVENTORY' },
       { to: '/app/stock-movements', label: 'Stock Movement', labelKey: 'nav.items.stockMovement', permission: 'inventory.view', module: 'INVENTORY' },
       { to: '/app/used-part-returns', label: 'Used Sparepart Processing', labelKey: 'nav.items.usedSparepartProcessing', permission: 'used_part.view', module: 'INVENTORY' },
       { to: '/app/sparepart-sales', label: 'Sell Sparepart', labelKey: 'nav.items.sellSparepart', permission: 'sparepart_sale.view', module: 'INVENTORY' },

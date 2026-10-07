@@ -2,33 +2,29 @@
 
 namespace App\Domain\Inventory\Services;
 
-use App\Domain\Inventory\Models\InstallationStockExit;
-use App\Domain\Inventory\Models\StockMovement;
-use App\Domain\Organization\Models\Warehouse;
-use App\Domain\ProductMaster\Models\Product;
-use App\Support\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Finds serialized units (component assets / rims, tires) that were installed straight from a warehouse
  * BEFORE installations settled with the ledger, so the ledger may still count them (the stock bug fixed
- * by SerializedStockExitService), and optionally books the missing issue.
+ * by SerializedStockExitService).
  *
- * READ-ONLY by default (plan): nothing is written. Each installation with no exit record, taking the
- * unit's FIRST installation only, falls into exactly one category:
+ * READ-ONLY: nothing here writes. Corrections go through StockReconciliationAdjustmentService (proposal ->
+ * approval -> apply). Each installation with no exit record, taking the unit's FIRST installation only, falls
+ * into exactly one category:
  *   COVERED_BY_WO_ISSUE     a Work Order Part Request issue of that product / warehouse already took a
  *                           unit out and has capacity left for this serial — nothing to correct;
- *   PROVABLE_UNDEDUCTED     the unit came from a posted Goods Receipt (warehouse known), and no issued
- *                           Work Order line covers it — the ledger still holds it. The only actionable class;
+ *   RESOLVED_BY_OPNAME      a posted stock opname of that warehouse / product is LATER than the installation: the
+ *                           physical count already settled the quantity — no adjustment may be proposed;
+ *   PROVABLE_UNDEDUCTED     the unit came from a posted Goods Receipt (warehouse known), no issued Work Order
+ *                           line covers it and no later opname settled it — the only actionable class;
  *   AMBIGUOUS_NO_RECEIPT    a component without a Goods Receipt link (initial registration / legacy) — origin unknown;
  *   AMBIGUOUS_TIRE          a standard tire installation with no receipt link and no covering issue — origin unknown;
  *   NOT_WAREHOUSE_ORIGIN    a tire registered directly on a vehicle (initial registration) — never in stock.
- * Only PROVABLE_UNDEDUCTED is ever corrected, and only through apply() with the plan hash of a reviewed
- * plan. The correction is a normal ISSUE movement booked now (never back-dated) whose reason names the
- * original installation date, plus an exit record (reason RECONCILED) — the unique exit row makes a second
- * apply a no-op. A unit the ledger cannot cover (insufficient stock) is skipped and reported, never forced.
- * Nothing is deleted or rewritten; installation history is untouched.
+ * Installations already corrected through an approved adjustment have an exit record and are counted separately
+ * (CORRECTED_BY_RECONCILIATION). Opname evidence proves the PHYSICAL QUANTITY at a point in time — never the
+ * historical cause; ambiguous tires are only ever reported with that evidence and never adjusted automatically.
  */
 class SerializedStockReconciliationService
 {
@@ -42,89 +38,37 @@ class SerializedStockReconciliationService
 
     public const NOT_WAREHOUSE = 'NOT_WAREHOUSE_ORIGIN';
 
-    public function __construct(private readonly InventoryService $inventory, private readonly TenantContext $context) {}
+    public const RESOLVED_BY_OPNAME = 'RESOLVED_BY_OPNAME';
 
-    /** @return array{generated_at: string, tenants: list<array<string, mixed>>, plan_hash: string} */
+    public const CORRECTED = 'CORRECTED_BY_RECONCILIATION';
+
+    /** @return array{generated_at: string, tenants: list<array<string, mixed>>} */
     public function plan(?string $tenantId = null): array
     {
         $tenants = DB::table('tenants')->when($tenantId, fn ($q) => $q->where('id', $tenantId))->orderBy('code')->get(['id', 'code']);
-        $report = $tenants->map(fn ($t) => $this->planTenant($t->id, $t->code))->filter(fn ($r) => $r['summary']['installations'] > 0 || $r['balance'] !== [])->values()->all();
+        $report = $tenants->map(fn ($t) => $this->planTenant($t->id, $t->code))->filter(fn ($r) => $r['summary']['installations'] > 0 || $r['balance'] !== [] || $r['summary'][self::CORRECTED] > 0)->values()->all();
 
-        return ['generated_at' => now()->toIso8601String(), 'tenants' => $report, 'plan_hash' => $this->hash($report)];
+        return ['generated_at' => now()->toIso8601String(), 'tenants' => $report];
     }
 
-    /**
-     * Books the missing issue for every PROVABLE_UNDEDUCTED installation of a plan the caller reviewed.
-     *
-     * @return array{applied: int, skipped: list<array<string, string>>, already_done: int}
-     */
-    public function apply(string $expectedPlanHash, ?string $tenantId = null, ?string $userId = null): array
+    /** The CURRENT classification of one installation of a tenant (null when it is no longer a candidate, e.g. it already has an exit record). */
+    public function evaluate(string $tenantId, string $installationId): ?array
     {
-        $plan = $this->plan($tenantId);
-        if (! hash_equals($plan['plan_hash'], $expectedPlanHash)) {
-            throw new InventoryException('The data changed since the plan was reviewed; run the dry-run again and confirm the new plan.');
-        }
-
-        $result = ['applied' => 0, 'skipped' => [], 'already_done' => 0];
-        foreach ($plan['tenants'] as $tenant) {
-            foreach (array_filter($tenant['candidates'], fn ($c) => $c['category'] === self::UNDEDUCTED) as $c) {
-                $outcome = $this->correct($tenant['tenant_id'], $c, $userId);
-                if ($outcome === 'APPLIED') {
-                    $result['applied']++;
-                } elseif ($outcome === 'ALREADY_DONE') {
-                    $result['already_done']++;
-                } else {
-                    $result['skipped'][] = ['installation_id' => $c['installation_id'], 'reason' => $outcome];
-                }
-            }
-        }
-
-        return $result;
-    }
-
-    private function correct(string $tenantId, array $c, ?string $userId): string
-    {
-        $previous = $this->context->tenantId();
-        $this->context->setTenantId($tenantId);
-        try {
-            return DB::transaction(function () use ($tenantId, $c, $userId) {
-                // Serialise with a concurrent install / reconciliation of the same unit.
-                DB::table('component_assets')->where('id', $c['asset_id'])->lockForUpdate()->first();
-                if (InstallationStockExit::query()->where('installation_id', $c['installation_id'])->exists()) {
-                    return 'ALREADY_DONE';
-                }
-                $warehouse = Warehouse::query()->findOrFail($c['warehouse_id']);
-                $product = Product::query()->findOrFail($c['product_id']);
-                try {
-                    $this->inventory->issue($warehouse, $product, 1, $c['installation_class'], $c['installation_id'], $userId,
-                        "Reconciliation: unit {$c['serial']} was installed on {$c['installed_at']} without a warehouse issue.");
-                } catch (InventoryException $e) {
-                    return 'INSUFFICIENT_STOCK';
-                }
-                $movement = StockMovement::query()->where('reference_type', $c['installation_class'])->where('reference_id', $c['installation_id'])->where('movement_type', 'ISSUE')->value('id');
-                InstallationStockExit::query()->create([
-                    'tenant_id' => $tenantId, 'asset_type' => InstallationStockExit::TYPE_COMPONENT, 'asset_id' => $c['asset_id'], 'installation_id' => $c['installation_id'],
-                    'product_id' => $c['product_id'], 'warehouse_id' => $c['warehouse_id'], 'source' => InstallationStockExit::SOURCE_DIRECT, 'reason' => 'RECONCILED',
-                    'stock_movement_id' => $movement, 'created_by' => $userId,
-                ]);
-
-                return 'APPLIED';
-            });
-        } finally {
-            $this->context->setTenantId($previous);
-        }
+        return collect($this->planTenant($tenantId, '')['candidates'])->firstWhere('installation_id', $installationId);
     }
 
     /** @return array<string, mixed> */
     private function planTenant(string $tenantId, string $code): array
     {
         $candidates = $this->componentCandidates($tenantId)->concat($this->tireCandidates($tenantId))->sortBy([['installed_at', 'asc'], ['installation_id', 'asc']])->values();
-        $candidates = $this->classify($tenantId, $candidates)->all();
+        $candidates = $this->withOpnameEvidence($tenantId, $this->classify($tenantId, $candidates))->all();
 
         $summary = ['installations' => count($candidates)];
-        foreach ([self::UNDEDUCTED, self::COVERED, self::AMBIGUOUS_NO_RECEIPT, self::AMBIGUOUS_TIRE, self::NOT_WAREHOUSE] as $category) {
+        foreach ([self::UNDEDUCTED, self::COVERED, self::RESOLVED_BY_OPNAME, self::AMBIGUOUS_NO_RECEIPT, self::AMBIGUOUS_TIRE, self::NOT_WAREHOUSE] as $category) {
             $summary[$category] = count(array_filter($candidates, fn ($c) => $c['category'] === $category));
         }
+
+        $summary[self::CORRECTED] = DB::table('installation_stock_exits')->where('tenant_id', $tenantId)->where('reason', 'RECONCILED')->count();
 
         return ['tenant_id' => $tenantId, 'tenant_code' => $code, 'summary' => $summary, 'candidates' => $candidates, 'balance' => $this->balance($tenantId, $candidates)];
     }
@@ -170,7 +114,7 @@ class SerializedStockReconciliationService
         return $candidates->map(function (array $c) use ($tenantId, &$capacity) {
             $c['evidence'] = null;
             if ($c['initial']) {
-                return $c + ['category' => self::NOT_WAREHOUSE, 'evidence' => 'Registered directly on the vehicle (initial registration).'];
+                return array_merge($c, ['category' => self::NOT_WAREHOUSE, 'evidence' => 'Registered directly on the vehicle (initial registration).', 'evidence_code' => 'NOT_WAREHOUSE', 'evidence_params' => []]);
             }
             if ($c['work_order_id']) {
                 $lines = DB::table('work_order_planned_parts')->where('tenant_id', $tenantId)->where('work_order_id', $c['work_order_id'])->where('product_id', $c['product_id'])
@@ -183,17 +127,17 @@ class SerializedStockReconciliationService
                     if ($capacity[$line->id] >= 1) {
                         $capacity[$line->id]--;
 
-                        return $c + ['category' => self::COVERED, 'evidence' => "Work Order part line {$line->id} was issued (ledger already reduced)."];
+                        return array_merge($c, ['category' => self::COVERED, 'evidence' => "Work Order part line {$line->id} was issued (ledger already reduced).", 'evidence_code' => 'WO_ISSUE_COVERS', 'evidence_params' => ['line' => $line->id]]);
                     }
                 }
             }
             if ($c['kind'] === 'COMPONENT' && $c['warehouse_id']) {
-                return $c + ['category' => self::UNDEDUCTED, 'evidence' => 'Unit generated by a posted Goods Receipt; no issued Work Order line covers it; no exit record.'];
+                return array_merge($c, ['category' => self::UNDEDUCTED, 'evidence' => 'Unit generated by a posted Goods Receipt; no issued Work Order line covers it; no exit record.', 'evidence_code' => 'PROVABLE', 'evidence_params' => []]);
             }
 
-            return $c + ($c['kind'] === 'COMPONENT'
-                ? ['category' => self::AMBIGUOUS_NO_RECEIPT, 'evidence' => 'No Goods Receipt link: the unit\'s origin cannot be proven.']
-                : ['category' => self::AMBIGUOUS_TIRE, 'evidence' => 'Tire serials are not linked to a Goods Receipt: whether the ledger held this unit cannot be proven.']);
+            return array_merge($c, $c['kind'] === 'COMPONENT'
+                ? ['category' => self::AMBIGUOUS_NO_RECEIPT, 'evidence' => 'No Goods Receipt link: the unit\'s origin cannot be proven.', 'evidence_code' => 'NO_RECEIPT', 'evidence_params' => []]
+                : ['category' => self::AMBIGUOUS_TIRE, 'evidence' => 'Tire serials are not linked to a Goods Receipt: whether the ledger held this unit cannot be proven.', 'evidence_code' => 'TIRE_NO_RECEIPT', 'evidence_params' => []]);
         });
     }
 
@@ -218,10 +162,69 @@ class SerializedStockReconciliationService
             })->filter(fn ($b) => (float) $b['difference'] !== 0.0)->values()->all();
     }
 
-    private function hash(array $report): string
+    /**
+     * Opname evidence per candidate: the latest POSTED opname of the warehouse / product with its number, snapshot
+     * time, system snapshot, physical count and variance. A component candidate later settled by a posted opname
+     * becomes RESOLVED_BY_OPNAME. Tires have no warehouse: they get the evidence of EVERY warehouse holding that
+     * product (never an adjustment, never a guessed receipt link).
+     */
+    private function withOpnameEvidence(string $tenantId, Collection $candidates): Collection
     {
-        $actionable = collect($report)->flatMap(fn ($t) => collect($t['candidates'])->where('category', self::UNDEDUCTED)->map(fn ($c) => $c['installation_id']))->sort()->values()->all();
+        return $candidates->map(function (array $c) use ($tenantId) {
+            $c['opname'] = null;
+            $c['warehouse_evidence'] = [];
+            if ($c['kind'] === 'TIRE' && $c['category'] === self::AMBIGUOUS_TIRE) {
+                $c['warehouse_evidence'] = $this->warehouseEvidence($tenantId, $c['product_id']);
 
-        return hash('sha256', json_encode($actionable));
+                return $c;
+            }
+            if (! $c['warehouse_id']) {
+                return $c;
+            }
+            $c['opname'] = $this->latestPostedOpname($tenantId, $c['warehouse_id'], $c['product_id']);
+            if ($c['category'] === self::UNDEDUCTED && $c['opname'] && $c['opname']['posted_at'] > $c['installed_at']) {
+                $c['category'] = self::RESOLVED_BY_OPNAME;
+                $c['evidence'] = "Posted stock opname {$c['opname']['opname_number']} ({$c['opname']['posted_at']}) is later than the installation: the physical count already settled this quantity.";
+                $c['evidence_code'] = 'RESOLVED_BY_OPNAME';
+                $c['evidence_params'] = ['number' => $c['opname']['opname_number'], 'date' => substr((string) $c['opname']['posted_at'], 0, 10)];
+            }
+
+            return $c;
+        });
+    }
+
+    /** @return list<array<string, mixed>> */
+    private function warehouseEvidence(string $tenantId, string $productId): array
+    {
+        return DB::table('warehouse_stocks as ws')->join('warehouses as w', 'w.id', '=', 'ws.warehouse_id')
+            ->where('ws.tenant_id', $tenantId)->where('ws.product_id', $productId)->orderBy('w.name')
+            ->get(['ws.warehouse_id', 'w.name as warehouse', 'ws.quantity_on_hand'])
+            ->map(fn ($r) => ['warehouse_id' => $r->warehouse_id, 'warehouse' => $r->warehouse, 'system_quantity' => number_format((float) $r->quantity_on_hand, 4, '.', ''),
+                'opname' => $this->latestPostedOpname($tenantId, $r->warehouse_id, $productId)])->all();
+    }
+
+    /** @return array<string, mixed>|null */
+    public function latestPostedOpname(string $tenantId, string $warehouseId, string $productId): ?array
+    {
+        $row = DB::table('stock_opname_items as i')->join('stock_opnames as o', 'o.id', '=', 'i.stock_opname_id')
+            ->where('o.tenant_id', $tenantId)->where('o.warehouse_id', $warehouseId)->where('i.product_id', $productId)
+            ->where('o.status', 'POSTED')->whereNotNull('i.physical_quantity')->orderByDesc('o.posted_at')->orderByDesc('o.id')
+            ->first(['o.id', 'o.opname_number', 'o.created_at', 'o.posted_at', 'i.system_quantity', 'i.physical_quantity']);
+        if (! $row) {
+            return null;
+        }
+        $base = DB::table('stock_movements')->where('tenant_id', $tenantId)->where('warehouse_id', $warehouseId)->where('product_id', $productId)
+            ->where(fn ($q) => $q->where('movement_type', '!=', 'STOCK_OPNAME')->orWhere('reference_id', '!=', $row->id)->orWhereNull('reference_id'));
+
+        return [
+            'opname_id' => $row->id, 'opname_number' => $row->opname_number,
+            'snapshot_at' => \Illuminate\Support\Carbon::parse($row->created_at)->toIso8601String(), 'posted_at' => \Illuminate\Support\Carbon::parse($row->posted_at)->toIso8601String(),
+            'system_quantity' => number_format((float) $row->system_quantity, 4, '.', ''), 'physical_quantity' => number_format((float) $row->physical_quantity, 4, '.', ''),
+            'variance' => number_format((float) $row->physical_quantity - (float) $row->system_quantity, 4, '.', ''),
+            // The posted variance was applied to the on-hand of the POSTING time: movements between the snapshot and the posting make it stale.
+            'snapshot_stale' => (clone $base)->where('created_at', '>', $row->created_at)->where('created_at', '<', $row->posted_at)->exists(),
+            'movements_after' => (clone $base)->where('created_at', '>', $row->posted_at)->count(),
+            'proves' => 'PHYSICAL_QUANTITY_AT_THAT_TIME',
+        ];
     }
 }

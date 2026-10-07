@@ -10,15 +10,21 @@ use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
 
 /**
- * FN-05 Inventory Value — Σ quantity_on_hand × average_unit_cost (the moving-average valuation the
- * inventory already keeps), per warehouse. Current value only: there is no stock-value history, so no
- * trend is shown. Requires dashboard.finance.view.
+ * FN-05 Inventory Value — Σ quantity_on_hand × average_unit_cost (the moving-average valuation the inventory
+ * already keeps), per warehouse. Current value only: there is no stock-value history, so no trend is shown.
+ * Requires dashboard.finance.view.
  *
- * The total covers STOCK WITH A RECORDED VALUATION only (ledger rows with a unit cost > 0). Stock without
- * a valuation — used (REUSE) tire stock, and ledger rows holding quantity at no recorded unit cost — is
- * reported separately as "pending valuation" with its SKU count and quantities per UOM; it is never valued at
- * 0, at the new price or at the latest master price, and never added to the total. Serialized tires and rims
- * are counted once, through the ledger of their product.
+ * Every balance carries an explicit VALUATION STATUS (warehouse_stocks.valuation_status — never inferred from the
+ * cost number). The figure is therefore split, never one number that looks complete:
+ *   verified_value     balances VERIFIED (positive cost with a traceable source);
+ *   unverified_value   recorded cost whose source is not verified ("status valuasi belum terverifikasi");
+ *   mixed_value        balances combining sources of different status — cannot be separated reliably, so flagged;
+ *   verified zero      VERIFIED_ZERO balances — a legitimate zero, counted apart;
+ *   not valued         used (REUSE) tire stock and NOT_VALUED balances — quantity per UOM only, never a value;
+ *   no unit cost       balances with quantity but a cost of 0 and no verified-zero basis — never read as 0 value.
+ * `total` keeps its earlier meaning (recorded value of balances with a positive cost, excluding NOT_VALUED) for API
+ * compatibility; it is NOT the verified value. Completeness is PARTIAL whenever anything is not verified. Serialized
+ * tires and rims are counted once, through the ledger of their product; quantities are never added across UOMs.
  */
 class InventoryValueWidget extends Widget
 {
@@ -49,65 +55,120 @@ class InventoryValueWidget extends Widget
 
     public function version(): int
     {
-        return 3; // total = recorded valuation only; stock pending valuation reported apart; completeness basis
+        return 4; // explicit valuation status: verified / unverified / mixed value, verified zero and not valued reported apart
     }
+
+    /** SQL of the balance's valuation status; a missing status is "unverified" (pre-status rows), never "verified". */
+    private const STATUS = "coalesce(ws.valuation_status, 'UNVERIFIED')";
 
     public function compute(DashboardContext $context): array
     {
+        $split = fn (string $status) => "sum(case when ".self::STATUS." = '{$status}' then ws.quantity_on_hand * ws.average_unit_cost else 0 end)";
         $rows = $this->valued($context)
-            ->selectRaw('ws.warehouse_id, w.name as warehouse_name, sum(ws.quantity_on_hand * ws.average_unit_cost) as value, count(*) as sku_count')
+            ->selectRaw("ws.warehouse_id, w.name as warehouse_name, sum(ws.quantity_on_hand * ws.average_unit_cost) as value, count(*) as sku_count,
+                {$split('VERIFIED')} as verified_value, {$split('UNVERIFIED')} as unverified_value, {$split('MIXED')} as mixed_value")
             ->groupBy('ws.warehouse_id', 'w.name')
             ->get();
         $warehouses = $rows->map(fn ($r) => [
             'warehouse_id' => $r->warehouse_id, 'warehouse_name' => $r->warehouse_name,
             'value' => self::money($r->value), 'sku_count' => (int) $r->sku_count,
+            'verified_value' => self::money($r->verified_value), 'unverified_value' => self::money($r->unverified_value), 'mixed_value' => self::money($r->mixed_value),
         ])->sortByDesc(fn ($r) => (float) $r['value'])->values()->all();
         $valuedSkus = (int) $this->valued($context)->distinct()->count('ws.product_id');
+        $byStatus = $this->valued($context)->groupByRaw(self::STATUS)->selectRaw(self::STATUS.' as status, count(*) as balances, sum(ws.quantity_on_hand * ws.average_unit_cost) as value')->get()->keyBy('status');
         $pending = $this->pending($context);
+        $zero = $this->verifiedZero($context);
+        $count = fn (string $status) => (int) ($byStatus[$status]->balances ?? 0);
+        $value = fn (string $status) => self::money($byStatus[$status]->value ?? 0);
+
+        $valuedBalances = $count('VERIFIED') + $count('UNVERIFIED') + $count('MIXED');
+        $population = $valuedBalances + $zero['balances'] + $pending['balances'];
+        $reasons = ['USED_STOCK_NOT_VALUED' => $pending['used_balances'], 'NO_UNIT_COST' => $pending['no_cost_balances'], 'VALUATION_NOT_PERFORMED' => $pending['not_valued_balances']];
+        // Two separate questions: does the balance carry a value at all (completeness), and is that value verified (verification)?
+        $verification = DataBasis::completeness($population, $count('VERIFIED') + $zero['balances'],
+            ['VALUATION_UNVERIFIED' => $count('UNVERIFIED'), 'VALUATION_MIXED_SOURCES' => $count('MIXED')] + $reasons);
+        $limitations = [];
+        if ($pending['skus'] > 0) {
+            $limitations[] = ['code' => 'dashboard.limitations.valuationPending', 'params' => ['n' => $pending['skus']]];
+        }
+        if ($count('UNVERIFIED') + $count('MIXED') > 0) {
+            $limitations[] = ['code' => 'dashboard.limitations.valuationUnverified', 'params' => ['n' => $count('UNVERIFIED') + $count('MIXED')]];
+        }
 
         return [
             'data' => [
                 'total' => self::moneySum($rows->pluck('value')), 'valued_skus' => $valuedSkus, 'warehouses' => $warehouses,
+                'verified_value' => $value('VERIFIED'), 'unverified_value' => $value('UNVERIFIED'), 'mixed_value' => $value('MIXED'),
+                'status_balances' => ['VERIFIED' => $count('VERIFIED'), 'UNVERIFIED' => $count('UNVERIFIED'), 'MIXED' => $count('MIXED')],
+                'verified_zero' => $zero, 'verification' => $verification,
                 'item_types' => $this->itemTypes($context), 'in_transit' => $this->inTransit($context), 'pending_valuation' => $pending,
             ],
-            'limitations' => $pending['skus'] > 0 ? [['code' => 'dashboard.limitations.valuationPending', 'params' => ['n' => $pending['skus']]]] : [],
+            'limitations' => $limitations,
             'basis' => DataBasis::make(
                 [['key' => 'VALUE', 'code' => 'CURRENT_BALANCE']],
-                ['LEDGER_STOCK_WITH_RECORDED_COST', 'SERIAL_TIRES_AND_RIMS_ONCE_VIA_PRODUCT_LEDGER'],
+                ['LEDGER_STOCK_WITH_RECORDED_COST', 'VALUATION_STATUS_PER_BALANCE', 'SERIAL_TIRES_AND_RIMS_ONCE_VIA_PRODUCT_LEDGER'],
                 ['USED_STOCK_PENDING_VALUATION', 'STOCK_WITHOUT_UNIT_COST', 'IN_TRANSIT', 'NEW_PRICE_FOR_USED_STOCK'],
-                DataBasis::completeness($valuedSkus + $pending['skus'], $valuedSkus, ['USED_STOCK_NOT_VALUED' => $pending['used_skus'], 'NO_UNIT_COST' => $pending['no_cost_skus']]),
+                DataBasis::completeness($population, $valuedBalances + $zero['balances'], $reasons),
             ),
         ];
     }
 
-    /** Ledger rows with quantity and a recorded unit cost (the valued stock). */
+    /** Ledger rows with quantity and a recorded unit cost that are valued (a NOT_VALUED review is never valued, whatever the cost). */
     private function valued(DashboardContext $context): Builder
     {
-        return $this->stocks($context)->where('ws.quantity_on_hand', '>', 0)->where('ws.average_unit_cost', '>', 0);
+        return $this->stocks($context)->where('ws.quantity_on_hand', '>', 0)->where('ws.average_unit_cost', '>', 0)->whereRaw(self::STATUS." <> 'NOT_VALUED'");
     }
 
     /**
-     * Stock without a recorded valuation: used tire stock (never valued) and ledger rows holding quantity at no
-     * unit cost. SKU counts and quantities per UOM (never added across UOMs); no value.
+     * Legitimate zero value: balances reviewed VERIFIED_ZERO. Quantities per UOM, value 0 — counted apart from every other bucket.
      *
-     * @return array{skus: int, used_skus: int, no_cost_skus: int, quantities: list<array<string, mixed>>}
+     * @return array{skus: int, balances: int, quantities: list<array<string, mixed>>}
+     */
+    private function verifiedZero(DashboardContext $context): array
+    {
+        $q = $this->stocks($context)->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')->where('ws.quantity_on_hand', '>', 0)->whereRaw(self::STATUS." = 'VERIFIED_ZERO'");
+        $rows = (clone $q)->groupBy('u.code', 'p.product_type')->selectRaw('p.product_type, u.code as uom, sum(ws.quantity_on_hand) as quantity')->get();
+
+        return ['skus' => (int) (clone $q)->distinct()->count('ws.product_id'), 'balances' => (int) (clone $q)->count(),
+            'quantities' => $rows->map(fn ($r) => ['item_type' => $r->product_type, 'uom' => $r->uom, 'quantity' => self::decimal($r->quantity, 4)])->values()->all()];
+    }
+
+    /**
+     * Stock that cannot carry a value: used tire stock (never valued), NOT_VALUED balances, and balances holding
+     * quantity at no unit cost without a verified-zero basis. SKU counts and quantities per UOM (never added across
+     * UOMs); no value, and never read as 0.
+     *
+     * @return array{skus: int, used_skus: int, no_cost_skus: int, not_valued_skus: int, balances: int, used_balances: int, no_cost_balances: int, not_valued_balances: int, quantities: list<array<string, mixed>>}
      */
     private function pending(DashboardContext $context): array
     {
         $used = DB::table('used_tire_stocks as ws')->join('products as p', 'p.id', '=', 'ws.product_id')->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')
             ->where('ws.tenant_id', $context->tenantId)->where('ws.quantity_on_hand', '>', 0);
         $context->scopeWarehouse($used, 'ws.warehouse_id');
-        $noCost = $this->stocks($context)->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')->where('ws.quantity_on_hand', '>', 0)
-            ->where(fn ($q) => $q->whereNull('ws.average_unit_cost')->orWhere('ws.average_unit_cost', '<=', 0));
+        $noCost = $this->noCost($context);
+        $notValued = $this->stocks($context)->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')->where('ws.quantity_on_hand', '>', 0)->whereRaw(self::STATUS." = 'NOT_VALUED'");
 
-        $usedRows = (clone $used)->groupBy('u.code', 'p.product_type')->selectRaw('p.product_type, u.code as uom, sum(ws.quantity_on_hand) as quantity, count(distinct ws.product_id) as skus')->get();
-        $noCostRows = (clone $noCost)->groupBy('u.code', 'p.product_type')->selectRaw('p.product_type, u.code as uom, sum(ws.quantity_on_hand) as quantity, count(distinct ws.product_id) as skus')->get();
-        $quantities = collect()->concat($usedRows->map(fn ($r) => ['reason' => 'USED_STOCK', 'item_type' => $r->product_type, 'uom' => $r->uom, 'quantity' => self::decimal($r->quantity, 4)]))
-            ->concat($noCostRows->map(fn ($r) => ['reason' => 'NO_UNIT_COST', 'item_type' => $r->product_type, 'uom' => $r->uom, 'quantity' => self::decimal($r->quantity, 4)]))->values()->all();
-        $usedSkus = (int) (clone $used)->distinct()->count('ws.product_id');
-        $noCostSkus = (int) (clone $noCost)->distinct()->count('ws.product_id');
+        $quantities = collect();
+        foreach (['USED_STOCK' => $used, 'NO_UNIT_COST' => $noCost, 'NOT_VALUED' => $notValued] as $reason => $query) {
+            $quantities = $quantities->concat((clone $query)->groupBy('u.code', 'p.product_type')->selectRaw('p.product_type, u.code as uom, sum(ws.quantity_on_hand) as quantity')->get()
+                ->map(fn ($r) => ['reason' => $reason, 'item_type' => $r->product_type, 'uom' => $r->uom, 'quantity' => self::decimal($r->quantity, 4)]));
+        }
+        $skus = fn ($q) => (int) (clone $q)->distinct()->count('ws.product_id');
+        $balances = fn ($q) => (int) (clone $q)->count();
 
-        return ['skus' => $usedSkus + $noCostSkus, 'used_skus' => $usedSkus, 'no_cost_skus' => $noCostSkus, 'quantities' => $quantities];
+        return [
+            'skus' => $skus($used) + $skus($noCost) + $skus($notValued), 'used_skus' => $skus($used), 'no_cost_skus' => $skus($noCost), 'not_valued_skus' => $skus($notValued),
+            'balances' => $balances($used) + $balances($noCost) + $balances($notValued), 'used_balances' => $balances($used), 'no_cost_balances' => $balances($noCost), 'not_valued_balances' => $balances($notValued),
+            'quantities' => $quantities->values()->all(),
+        ];
+    }
+
+    /** Balances with quantity and no usable unit cost, other than a documented zero / not-valued review. */
+    private function noCost(DashboardContext $context): Builder
+    {
+        return $this->stocks($context)->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')->where('ws.quantity_on_hand', '>', 0)
+            ->where(fn ($q) => $q->whereNull('ws.average_unit_cost')->orWhere('ws.average_unit_cost', '<=', 0))
+            ->whereRaw(self::STATUS." not in ('VERIFIED_ZERO', 'NOT_VALUED')");
     }
 
     /**
@@ -117,11 +178,16 @@ class InventoryValueWidget extends Widget
      */
     private function itemTypes(DashboardContext $context): array
     {
+        $st = self::STATUS;
+        $cost = 'ws.quantity_on_hand * ws.average_unit_cost';
         $rows = $this->valued($context)
             ->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')
             ->groupBy('p.product_type', 'u.code', 'ws.warehouse_id', 'w.name')
-            ->selectRaw('p.product_type, u.code as uom, ws.warehouse_id, w.name as warehouse_name, count(distinct ws.product_id) as products,
-                sum(ws.quantity_on_hand) as quantity, sum(ws.quantity_on_hand * ws.average_unit_cost) as value')
+            ->selectRaw("p.product_type, u.code as uom, ws.warehouse_id, w.name as warehouse_name, count(distinct ws.product_id) as products,
+                sum(ws.quantity_on_hand) as quantity, sum({$cost}) as value,
+                sum(case when {$st} = 'VERIFIED' then {$cost} else 0 end) as verified_value,
+                sum(case when {$st} = 'UNVERIFIED' then {$cost} else 0 end) as unverified_value,
+                sum(case when {$st} = 'MIXED' then {$cost} else 0 end) as mixed_value")
             ->get();
         $skus = $this->valued($context)->groupBy('p.product_type')
             ->selectRaw('p.product_type, count(distinct ws.product_id) as c')->pluck('c', 'p.product_type');
@@ -130,9 +196,12 @@ class InventoryValueWidget extends Widget
             'item_type' => $type,
             'sku_count' => (int) ($skus[$type] ?? 0),
             'value' => self::moneySum($set->pluck('value')),
+            'verified_value' => self::moneySum($set->pluck('verified_value')),
+            'unverified_value' => self::moneySum($set->pluck('unverified_value')),
+            'mixed_value' => self::moneySum($set->pluck('mixed_value')),
             'quantities' => $set->groupBy('uom')->map(fn ($u, $uom) => ['uom' => $uom ?: null, 'quantity' => self::decimal($u->sum('quantity'), 4)])->values()->all(),
             'warehouses' => $set->groupBy('warehouse_id')->map(fn ($w) => ['warehouse_id' => $w->first()->warehouse_id, 'warehouse_name' => $w->first()->warehouse_name,
-                'value' => self::moneySum($w->pluck('value'))])->sortByDesc(fn ($w) => (float) $w['value'])->values()->all(),
+                'value' => self::moneySum($w->pluck('value')), 'verified_value' => self::moneySum($w->pluck('verified_value'))])->sortByDesc(fn ($w) => (float) $w['value'])->values()->all(),
         ])->sortByDesc(fn ($r) => (float) $r['value'])->values()->all();
     }
 
@@ -149,7 +218,8 @@ class InventoryValueWidget extends Widget
 
     public function detailRules(): ?array
     {
-        return ['warehouse_id' => ['nullable', 'uuid'], 'item_type' => ['nullable', 'string', 'max:40'], 'view' => ['nullable', 'in:pending_valuation']];
+        return ['warehouse_id' => ['nullable', 'uuid'], 'item_type' => ['nullable', 'string', 'max:40'], 'view' => ['nullable', 'in:pending_valuation'],
+            'valuation_status' => ['nullable', 'in:VERIFIED,UNVERIFIED,MIXED']];
     }
 
     public function detail(DashboardContext $context, array $params): array
@@ -160,32 +230,43 @@ class InventoryValueWidget extends Widget
         $query = $this->valued($context)
             ->when($params['warehouse_id'] ?? null, fn ($q, $w) => $q->where('ws.warehouse_id', $w))
             ->when($params['item_type'] ?? null, fn ($q, $type) => $q->where('p.product_type', $type))
+            ->when($params['valuation_status'] ?? null, fn ($q, $status) => $q->whereRaw(self::STATUS.' = ?', [$status]))
             ->selectRaw('ws.id, ws.product_id, p.name as product_name, p.sku, p.product_type, w.name as warehouse_name, ws.quantity_on_hand, ws.average_unit_cost,
-                (ws.quantity_on_hand * ws.average_unit_cost) as value')
+                (ws.quantity_on_hand * ws.average_unit_cost) as value, '.self::STATUS.' as valuation_status, ws.valuation_basis')
             ->orderByRaw('(ws.quantity_on_hand * ws.average_unit_cost) desc');
 
         return $this->paginate($query, $params, fn ($r) => [
             'id' => $r->id, 'product_id' => $r->product_id, 'product_name' => $r->product_name, 'sku' => $r->sku, 'item_type' => $r->product_type,
             'warehouse_name' => $r->warehouse_name, 'quantity_on_hand' => self::decimal($r->quantity_on_hand),
             'average_unit_cost' => self::decimal($r->average_unit_cost, 4), 'value' => self::money($r->value),
+            'valuation_status' => $r->valuation_status, 'valuation_basis' => $r->valuation_basis,
         ]);
     }
 
-    /** Stock pending valuation, row by row: used tire stock and zero-cost ledger rows — quantity per UOM, never a value. */
+    /**
+     * Stock that carries no value, row by row: used tire stock, NOT_VALUED balances and balances at no unit cost, plus
+     * verified-zero balances for completeness. Shows the source, quantity, the cost as recorded (never as a value) and
+     * why the row is outside the value.
+     */
     private function pendingDetail(DashboardContext $context, array $params): array
     {
         $used = DB::table('used_tire_stocks as ws')->join('products as p', 'p.id', '=', 'ws.product_id')->join('warehouses as w', 'w.id', '=', 'ws.warehouse_id')->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')
             ->where('ws.tenant_id', $context->tenantId)->where('ws.quantity_on_hand', '>', 0);
         $context->scopeWarehouse($used, 'ws.warehouse_id');
-        $used->selectRaw("ws.id::text as id, 'USED_STOCK' as reason, p.id as product_id, p.name as product_name, p.sku, p.product_type, w.name as warehouse_name, u.code as uom, ws.quantity_on_hand");
-        $ledger = $this->stocks($context)->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')->where('ws.quantity_on_hand', '>', 0)
-            ->where(fn ($q) => $q->whereNull('ws.average_unit_cost')->orWhere('ws.average_unit_cost', '<=', 0))
-            ->selectRaw("ws.id::text as id, 'NO_UNIT_COST' as reason, p.id as product_id, p.name as product_name, p.sku, p.product_type, w.name as warehouse_name, u.code as uom, ws.quantity_on_hand");
-        $query = DB::query()->fromSub($used->unionAll($ledger), 'x')->when($params['item_type'] ?? null, fn ($q, $t) => $q->where('x.product_type', $t))->orderBy('x.product_name');
+        $used->selectRaw("ws.id::text as id, 'USED_STOCK' as reason, 'NOT_VALUED' as valuation_status, null::numeric as average_unit_cost, p.id as product_id, p.name as product_name, p.sku, p.product_type, w.name as warehouse_name, u.code as uom, ws.quantity_on_hand");
+        $ledger = fn (string $reason, string $where) => $this->stocks($context)->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')->where('ws.quantity_on_hand', '>', 0)->whereRaw($where)
+            ->selectRaw("ws.id::text as id, '{$reason}' as reason, ".self::STATUS.' as valuation_status, ws.average_unit_cost, p.id as product_id, p.name as product_name, p.sku, p.product_type, w.name as warehouse_name, u.code as uom, ws.quantity_on_hand');
+        $noCost = $ledger('NO_UNIT_COST', '(ws.average_unit_cost is null or ws.average_unit_cost <= 0) and '.self::STATUS." not in ('VERIFIED_ZERO', 'NOT_VALUED')");
+        $notValued = $ledger('NOT_VALUED', self::STATUS." = 'NOT_VALUED'");
+        $zero = $ledger('VERIFIED_ZERO', self::STATUS." = 'VERIFIED_ZERO'");
+        $query = DB::query()->fromSub($used->unionAll($noCost)->unionAll($notValued)->unionAll($zero), 'x')
+            ->when($params['item_type'] ?? null, fn ($q, $t) => $q->where('x.product_type', $t))->orderBy('x.product_name');
 
         return $this->paginate($query, $params, fn ($r) => [
-            'id' => $r->id, 'reason' => $r->reason, 'product_id' => $r->product_id, 'product_name' => $r->product_name, 'sku' => $r->sku, 'item_type' => $r->product_type,
-            'warehouse_name' => $r->warehouse_name, 'uom' => $r->uom, 'quantity_on_hand' => self::decimal($r->quantity_on_hand), 'value' => null,
+            'id' => $r->id, 'reason' => $r->reason, 'valuation_status' => $r->valuation_status, 'product_id' => $r->product_id, 'product_name' => $r->product_name, 'sku' => $r->sku, 'item_type' => $r->product_type,
+            'warehouse_name' => $r->warehouse_name, 'uom' => $r->uom, 'quantity_on_hand' => self::decimal($r->quantity_on_hand),
+            'average_unit_cost' => $r->average_unit_cost === null ? null : self::decimal($r->average_unit_cost, 4),
+            'value' => $r->reason === 'VERIFIED_ZERO' ? self::money(0) : null,
         ]);
     }
 

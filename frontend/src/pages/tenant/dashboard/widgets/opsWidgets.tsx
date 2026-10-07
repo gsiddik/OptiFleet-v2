@@ -447,21 +447,27 @@ const WH02: WidgetDefinition<WH02Data> = {
 
 // ------------------------------------------------------------------ FN-05 inventory value by item type / warehouse
 
-type ItemTypeRow = { item_type: string; sku_count: number; value: string; quantities: { uom: string | null; quantity: string }[]; warehouses: { warehouse_id: string; warehouse_name: string; value: string }[] };
-type PendingValuation = { skus: number; used_skus: number; no_cost_skus: number; quantities: { reason: 'USED_STOCK' | 'NO_UNIT_COST'; item_type: string; uom: string | null; quantity: string }[] };
-type FN05Data = { total: string; valued_skus: number; pending_valuation: PendingValuation; warehouses: { warehouse_id: string; warehouse_name: string; value: string; sku_count: number }[]; item_types: ItemTypeRow[]; in_transit: { transfers: number; value: string } };
+type ItemTypeRow = { item_type: string; sku_count: number; value: string; verified_value: string; unverified_value: string; mixed_value: string; quantities: { uom: string | null; quantity: string }[]; warehouses: { warehouse_id: string; warehouse_name: string; value: string }[] };
+type PendingValuation = { skus: number; used_skus: number; no_cost_skus: number; not_valued_skus: number; quantities: { reason: 'USED_STOCK' | 'NO_UNIT_COST' | 'NOT_VALUED'; item_type: string; uom: string | null; quantity: string }[] };
+type VerifiedZero = { skus: number; balances: number; quantities: { item_type: string; uom: string | null; quantity: string }[] };
+type Verification = { status: 'COMPLETE' | 'PARTIAL' | 'UNAVAILABLE'; total: number; valid: number; excluded: number; reasons: { code: string; n: number }[] };
+type FN05Data = { total: string; verified_value: string; unverified_value: string; mixed_value: string; status_balances: { VERIFIED: number; UNVERIFIED: number; MIXED: number }; verified_zero: VerifiedZero; verification: Verification; valued_skus: number; pending_valuation: PendingValuation; warehouses: { warehouse_id: string; warehouse_name: string; value: string; verified_value: string; unverified_value: string; mixed_value: string; sku_count: number }[]; item_types: ItemTypeRow[]; in_transit: { transfers: number; value: string } };
 
 const inventoryValueColumns: Column<Row>[] = [{ key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
   { key: 'item_type', label: col('itemType'), value: (r) => itemTypeLabel(String(r.item_type ?? '')) },
   { key: 'warehouse_name', label: col('warehouse') }, { key: 'quantity_on_hand', label: col('onHand'), kind: 'num' },
-  { key: 'average_unit_cost', label: col('averageUnitCost'), kind: 'money' }, { key: 'value', label: col('value'), kind: 'money' }];
+  { key: 'average_unit_cost', label: col('averageUnitCost'), kind: 'money' }, { key: 'value', label: col('value'), kind: 'money' },
+  { key: 'valuation_status', label: col('valuationStatus'), value: (r) => t(`valuation.status.${String(r.valuation_status ?? 'UNVERIFIED')}`) },
+  { key: 'valuation_basis', label: col('valuationBasis'), value: (r) => (r.valuation_basis ? t(`valuation.basis.${String(r.valuation_basis)}`) : '—') }];
 
 const pendingColumns: Column<Row>[] = [
   { key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
   { key: 'item_type', label: col('itemType'), value: (r) => itemTypeLabel(String(r.item_type ?? '')) },
   { key: 'warehouse_name', label: col('warehouse') },
-  { key: 'reason', label: col('reason'), value: (r) => t(`dashboard.labels.pendingReason_${r.reason}`) },
+  { key: 'reason', label: col('exclusionReason'), value: (r) => t(`dashboard.labels.pendingReason_${r.reason}`) },
+  { key: 'valuation_status', label: col('valuationStatus'), value: (r) => t(`valuation.status.${String(r.valuation_status ?? 'UNVERIFIED')}`) },
   { key: 'quantity_on_hand', label: col('onHand'), kind: 'num' }, { key: 'uom', label: col('uom') },
+  { key: 'average_unit_cost', label: col('recordedUnitCost'), kind: 'money', unavailable: true },
   { key: 'value', label: col('value'), kind: 'money', unavailable: true },
 ];
 
@@ -473,10 +479,25 @@ function InventoryValueBody({ env, openDetail, openPending }: { env: { data: FN0
   return (
     <>
       <div className="dash-kpi-row">
-        <Kpi value={money(d.total, env.currency)} label={t('dashboard.widgets.fn05.kpi')} />
-        {d.pending_valuation.skus > 0 && <Kpi value={count(d.pending_valuation.skus)} label={t('dashboard.widgets.fn05.pendingKpi')} tone="warning" />}
-        {d.in_transit.transfers > 0 && <Kpi value={money(d.in_transit.value, env.currency)} label={t('dashboard.widgets.fn05.inTransit', { n: d.in_transit.transfers })} />}
+        <Kpi value={money(d.verified_value, env.currency)} label={t('dashboard.widgets.fn05.kpiVerified', { n: d.status_balances.VERIFIED })} tone="good" />
+        {d.status_balances.UNVERIFIED > 0 && <Kpi value={money(d.unverified_value, env.currency)} label={t('dashboard.widgets.fn05.kpiUnverified', { n: d.status_balances.UNVERIFIED })} tone="warning" />}
+        {d.status_balances.MIXED > 0 && <Kpi value={money(d.mixed_value, env.currency)} label={t('dashboard.widgets.fn05.kpiMixed', { n: d.status_balances.MIXED })} tone="serious" />}
       </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {d.verified_zero.balances > 0 && <Pill tone="good">{t('dashboard.widgets.fn05.kpiVerifiedZero')}: {count(d.verified_zero.balances)}</Pill>}
+        {d.pending_valuation.skus > 0 && <Pill tone="warning">{t('dashboard.widgets.fn05.pendingKpi')}: {count(d.pending_valuation.skus)}</Pill>}
+        {d.in_transit.transfers > 0 && <Pill tone="neutral">{t('dashboard.widgets.fn05.inTransit', { n: d.in_transit.transfers })}: {money(d.in_transit.value, env.currency)}</Pill>}
+      </div>
+      {d.verification.status !== 'COMPLETE' && (
+        <div className="dash-notice" role="note">
+          <span>
+            <strong>{t('dashboard.widgets.fn05.incomplete')}</strong>{' '}
+            {t('dashboard.widgets.fn05.recordedTotal', { total: money(d.total, env.currency), verified: money(d.verified_value, env.currency) })}{' '}
+            {d.verification.reasons.map((r) => t(`dashboard.basis.reason.${r.code}`, { count: r.n })).join(' · ')}
+          </span>
+          <button type="button" className="dash-link-btn" onClick={() => openDetail(t('dashboard.widgets.fn05.unverifiedTitle'), { valuation_status: 'UNVERIFIED' })}>{t('dashboard.widgets.fn05.unverifiedLink')}</button>
+        </div>
+      )}
       <div className="dash-segmented" role="group" aria-label={t('dashboard.widgets.fn05.groupBy')}>
         {(['item_type', 'warehouse'] as const).map((v) => (
           <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>{t(`dashboard.widgets.fn05.by_${v}`)}</button>
@@ -484,19 +505,23 @@ function InventoryValueBody({ env, openDetail, openPending }: { env: { data: FN0
       </div>
       {view === 'item_type' ? (
         <HBarChart unit="money" currency={env.currency} labelWidth={120}
-          data={d.item_types.map((r) => ({ type: itemTypeLabel(r.item_type), item_type: r.item_type, value: Number(r.value) }))}
-          categoryKey="type" series={[{ key: 'value', label: t('dashboard.columns.value'), color: SERIES[0] }]}
+          data={d.item_types.map((r) => ({ type: itemTypeLabel(r.item_type), item_type: r.item_type, verified: Number(r.verified_value), unverified: Number(r.unverified_value) + Number(r.mixed_value) }))}
+          categoryKey="type" series={[{ key: 'verified', label: t('dashboard.widgets.fn05.seriesVerified'), color: SERIES[0] }, { key: 'unverified', label: t('dashboard.widgets.fn05.seriesUnverified'), color: SERIES[3] }]}
           onSelect={(row) => openDetail(String(row.type), { item_type: row.item_type })} />
       ) : (
         <HBarChart unit="money" currency={env.currency}
-          data={d.warehouses.slice(0, 8).map((w) => ({ warehouse: w.warehouse_name, warehouse_id: w.warehouse_id, value: Number(w.value) }))}
-          categoryKey="warehouse" series={[{ key: 'value', label: t('dashboard.columns.value'), color: SERIES[0] }]}
+          data={d.warehouses.slice(0, 8).map((w) => ({ warehouse: w.warehouse_name, warehouse_id: w.warehouse_id, verified: Number(w.verified_value), unverified: Number(w.unverified_value) + Number(w.mixed_value) }))}
+          categoryKey="warehouse" series={[{ key: 'verified', label: t('dashboard.widgets.fn05.seriesVerified'), color: SERIES[0] }, { key: 'unverified', label: t('dashboard.widgets.fn05.seriesUnverified'), color: SERIES[3] }]}
           onSelect={(row) => openDetail(String(row.warehouse), { warehouse_id: row.warehouse_id })} />
       )}
+      <Legend items={[{ key: 'verified', label: t('dashboard.widgets.fn05.seriesVerified'), color: SERIES[0] }, { key: 'unverified', label: t('dashboard.widgets.fn05.seriesUnverified'), color: SERIES[3] }]} />
       {d.pending_valuation.skus > 0 && (
         <div className="dash-notice" role="note">
-          <span>{t('dashboard.widgets.fn05.pendingNote', { used: d.pending_valuation.used_skus, nocost: d.pending_valuation.no_cost_skus })}
-            {' '}{d.pending_valuation.quantities.map((q) => `${t(`dashboard.labels.pendingReason_${q.reason}`)}: ${count(q.quantity)} ${q.uom ?? ''}`.trim()).join(' · ')}</span>
+          <span>{t('dashboard.widgets.fn05.pendingLead')}{' '}
+            {[d.pending_valuation.used_skus > 0 && t('dashboard.widgets.fn05.pendingUsed', { n: d.pending_valuation.used_skus }),
+              d.pending_valuation.no_cost_skus > 0 && t('dashboard.widgets.fn05.pendingNoCost', { n: d.pending_valuation.no_cost_skus }),
+              d.pending_valuation.not_valued_skus > 0 && t('dashboard.widgets.fn05.pendingNotValued', { n: d.pending_valuation.not_valued_skus })].filter(Boolean).join(' · ')}
+            {' — '}{d.pending_valuation.quantities.map((q) => `${t(`dashboard.labels.pendingReason_${q.reason}`)}: ${count(q.quantity)} ${q.uom ?? ''}`.trim()).join(' · ')}</span>
           <button type="button" className="dash-link-btn" onClick={openPending}>{t('dashboard.widgets.fn05.pendingLink')}</button>
         </div>
       )}
@@ -512,9 +537,11 @@ const FN05: WidgetDefinition<FN05Data> = {
     openPending={() => ctx.openDetail(t('dashboard.widgets.fn05.pendingTitle'), { view: 'pending_valuation' }, pendingColumns)} />,
   table: (env) => ({
     columns: [{ key: 'item_type', label: col('itemType') }, { key: 'sku_count', label: col('skuCount'), kind: 'num' },
-      { key: 'quantity', label: col('quantityPerUom') }, { key: 'value', label: col('value'), kind: 'money' }, { key: 'by_warehouse', label: col('byWarehouse') }],
+      { key: 'quantity', label: col('quantityPerUom') }, { key: 'verified_value', label: col('verifiedValue'), kind: 'money' },
+      { key: 'unverified_value', label: col('unverifiedRecordedValue'), kind: 'money' }, { key: 'by_warehouse', label: col('byWarehouse') }],
     rows: env.data.item_types.map((r) => ({
-      id: r.item_type, item_type: itemTypeLabel(r.item_type), sku_count: r.sku_count, quantity: quantityText(r.quantities), value: r.value,
+      id: r.item_type, item_type: itemTypeLabel(r.item_type), sku_count: r.sku_count, quantity: quantityText(r.quantities), verified_value: r.verified_value,
+      unverified_value: (Number(r.unverified_value) + Number(r.mixed_value)).toFixed(2),
       by_warehouse: r.warehouses.map((w) => `${w.warehouse_name}: ${money(w.value, env.currency)}`).join(' · '),
     })),
   }),
@@ -690,7 +717,7 @@ const FL07: WidgetDefinition<{ values_visible: boolean; untracked: Untracked; to
             {d.untracked.quantities.map((q) => `${count(q.quantity)} ${q.uom ?? ''}`.trim()).join(' · ')}
           </div>
         )}
-        <span className="dash-kpi-sub">{t('dashboard.widgets.fl07.note')}</span>
+        <span className="dash-kpi-sub" title={t('dashboard.widgets.fl07.scopeHelp')}>{t('dashboard.widgets.fl07.note')} {t('dashboard.widgets.fl07.scope')}</span>
       </>
     );
   },

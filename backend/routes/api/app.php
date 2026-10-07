@@ -91,6 +91,8 @@ use App\Http\Controllers\Api\Tenant\WarehouseController;
 use App\Http\Controllers\Api\Tenant\WarehouseZoneController;
 use App\Http\Controllers\Api\Tenant\WarehouseRackController;
 use App\Http\Controllers\Api\Tenant\WarehouseBinController;
+use App\Http\Controllers\Api\Tenant\InventoryReconciliationController;
+use App\Http\Controllers\Api\Tenant\InventoryValuationController;
 use App\Http\Controllers\Api\Tenant\WarehouseStockController;
 use App\Http\Controllers\Api\Tenant\WarrantyClaimController;
 use App\Http\Controllers\Api\Tenant\WarrantyController;
@@ -574,6 +576,15 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::delete('/products/{product}/image', [ProductController::class, 'destroyImage'])->middleware('permission:product.delete');
 
             Route::get('/inventory', [WarehouseStockController::class, 'index'])->middleware('permission:inventory.view');
+            Route::get('/inventory/reconciliation', [InventoryReconciliationController::class, 'report'])->middleware('permission:inventory_reconcile.view');
+            Route::get('/inventory/reconciliation/adjustments', [InventoryReconciliationController::class, 'adjustments'])->middleware('permission:inventory_reconcile.view');
+            Route::post('/inventory/reconciliation/adjustments', [InventoryReconciliationController::class, 'propose'])->middleware('permission:inventory_reconcile.manage');
+            Route::post('/inventory/reconciliation/adjustments/{adjustment}/approve', [InventoryReconciliationController::class, 'approve'])->middleware('permission:inventory_reconcile.approve');
+            Route::post('/inventory/reconciliation/adjustments/{adjustment}/reject', [InventoryReconciliationController::class, 'reject'])->middleware('permission:inventory_reconcile.approve');
+            Route::post('/inventory/reconciliation/adjustments/{adjustment}/apply', [InventoryReconciliationController::class, 'apply'])->middleware('permission:inventory_reconcile.manage');
+            Route::get('/inventory/valuation', [InventoryValuationController::class, 'index'])->middleware('permission:inventory_valuation.view');
+            Route::get('/inventory/valuation/{warehouseStock}', [InventoryValuationController::class, 'show'])->middleware('permission:inventory_valuation.view');
+            Route::post('/inventory/valuation/{warehouseStock}/review', [InventoryValuationController::class, 'review'])->middleware('permission:inventory_valuation.verify');
             Route::post('/inventory/adjust', [WarehouseStockController::class, 'adjust'])->middleware('permission:inventory.adjust');
             Route::post('/inventory/scrap', [WarehouseStockController::class, 'scrap'])->middleware('permission:inventory.scrap');
             Route::get('/inventory/used-spareparts', [WarehouseStockController::class, 'usedSpareparts'])->middleware('permission:inventory.view');

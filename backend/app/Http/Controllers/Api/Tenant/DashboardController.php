@@ -120,6 +120,17 @@ class DashboardController extends Controller
             // Monetary value: only with the dashboard finance permission, never sent and hidden.
             if ($can(DashboardPermissions::FINANCE)) {
                 $data['inventory_total_value'] = (string) BigDecimal::of((string) ((clone $stockQuery)->selectRaw('COALESCE(SUM(quantity_on_hand * average_unit_cost), 0) AS total')->value('total') ?? '0'))->toScale(2, RoundingMode::HALF_UP);
+                // `inventory_total_value` is the RECORDED value of the ledger; it is not a verified figure. The split says how much of it
+                // has a verified valuation source — anything else (unverified, mixed, no unit cost) is flagged, never counted as verified.
+                $split = (clone $stockQuery)->selectRaw("COALESCE(SUM(CASE WHEN valuation_status = 'VERIFIED' THEN quantity_on_hand * average_unit_cost ELSE 0 END), 0) AS verified,
+                    COALESCE(SUM(CASE WHEN COALESCE(valuation_status, 'UNVERIFIED') IN ('UNVERIFIED', 'MIXED') THEN quantity_on_hand * average_unit_cost ELSE 0 END), 0) AS unverified,
+                    COUNT(*) FILTER (WHERE quantity_on_hand > 0 AND COALESCE(valuation_status, 'UNVERIFIED') NOT IN ('VERIFIED', 'VERIFIED_ZERO')) AS unverified_balances")->first();
+                $data['inventory_value_basis'] = [
+                    'verified_value' => (string) BigDecimal::of((string) $split->verified)->toScale(2, RoundingMode::HALF_UP),
+                    'unverified_recorded_value' => (string) BigDecimal::of((string) $split->unverified)->toScale(2, RoundingMode::HALF_UP),
+                    'unverified_balances' => (int) $split->unverified_balances,
+                    'completeness' => (int) $split->unverified_balances === 0 ? 'COMPLETE' : 'PARTIAL',
+                ];
             }
         }
 

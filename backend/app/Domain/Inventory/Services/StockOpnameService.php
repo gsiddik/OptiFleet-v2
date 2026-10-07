@@ -113,7 +113,7 @@ class StockOpnameService
                     continue;
                 }
                 $product = Product::query()->findOrFail($item->product_id);
-                $this->inventory->postOpnameVariance($warehouse, $product, $variance, $userId, "Stock opname {$locked->opname_number}");
+                $this->inventory->postOpnameVariance($warehouse, $product, $variance, $userId, "Stock opname {$locked->opname_number}", $locked->id);
             }
 
             $locked->update(['status' => 'POSTED', 'posted_at' => now()]);

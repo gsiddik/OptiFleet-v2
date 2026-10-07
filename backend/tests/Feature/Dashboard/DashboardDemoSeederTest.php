@@ -23,7 +23,7 @@ class DashboardDemoSeederTest extends TestCase
     private const TABLES = ['work_orders', 'purchase_orders', 'goods_receipts', 'vendor_invoice_references', 'vendor_invoice_payments',
         'workshop_invoices', 'workshop_invoice_payments', 'work_order_external_invoices', 'breakdowns', 'stock_transfers', 'stock_movements', 'partners', 'vehicles',
         'work_order_work_intervals', 'work_order_mechanic_assignments', 'workers', 'component_installations', 'mechanic_performance_baselines',
-        'component_assets', 'installation_stock_exits'];
+        'component_assets', 'installation_stock_exits', 'stock_reconciliation_adjustments', 'stock_valuation_reviews', 'stock_opnames'];
 
     private function counts(): array
     {
@@ -153,13 +153,17 @@ class DashboardDemoSeederTest extends TestCase
         $this->assertGreaterThan(0, (clone $exits)->where('source', 'WO_ISSUE')->count());
         $this->assertSame(0, (int) DB::selectOne('select count(*) c from (select installation_id from installation_stock_exits group by installation_id having count(*) > 1) x')->c);
         $this->assertSame(
-            (clone $exits)->where('source', 'DIRECT_ISSUE')->count(),
+            (clone $exits)->where('source', 'DIRECT_ISSUE')->whereRaw("reason is distinct from 'RECONCILED'")->count(),
             DB::table('stock_movements')->where('tenant_id', $alpha->id)->where('movement_type', 'ISSUE')->whereIn('reference_type', [\App\Domain\ComponentAsset\Models\ComponentInstallation::class, \App\Domain\Tire\Models\TireInstallation::class])->count(),
             'one ISSUE movement per direct installation, none for Work-Order-issued ones'
         );
         $plan = app(\App\Domain\Inventory\Services\SerializedStockReconciliationService::class)->plan($alpha->id)['tenants'][0];
-        $this->assertSame(0, $plan['summary']['PROVABLE_UNDEDUCTED'], 'no installation made through the services leaves the ledger behind');
-        $this->assertSame([], collect($plan['balance'])->where('ledger_on_hand', '!=', null)->filter(fn ($b) => $b['explained_by_provable_undeducted'] > 0)->values()->all());
+        // Installations made through the services never leave the ledger behind: the only provable-undeducted cases are the
+        // deliberate legacy scenarios of the valuation / reconciliation demo layer (product "VR Demo Alternator").
+        $leftBehind = collect($plan['candidates'])->where('category', 'PROVABLE_UNDEDUCTED');
+        $this->assertSame([], $leftBehind->filter(fn ($c) => ! DB::table('products')->where('id', $c['product_id'])->where('name', 'VR Demo Alternator')->exists())->values()->all());
+        $this->assertSame(4, $plan['summary']['PROVABLE_UNDEDUCTED']);
+        $this->assertSame(['VR Demo Alternator'], collect($plan['balance'])->filter(fn ($b) => $b['explained_by_provable_undeducted'] > 0)->pluck('product')->unique()->values()->all());
 
         // Work Orders that predate work-time tracking: unavailable / partial, never 0 and never averaged.
         $legacy = DB::table('work_orders')->where('tenant_id', $alpha->id)->where('complaint', 'like', '%legacy work%')->pluck('id');

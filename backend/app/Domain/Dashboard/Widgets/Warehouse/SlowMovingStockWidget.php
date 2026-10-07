@@ -78,7 +78,7 @@ class SlowMovingStockWidget extends Widget
     {
         return [
             'id' => $r->id, 'product_id' => $r->product_id, 'product_name' => $r->product_name, 'sku' => $r->sku, 'warehouse_name' => $r->warehouse_name,
-            'quantity_on_hand' => self::decimal($r->quantity_on_hand), 'value' => self::money($r->value), 'state' => $r->state,
+            'quantity_on_hand' => self::decimal($r->quantity_on_hand), 'value' => self::money($r->value), 'valuation_status' => $r->valuation_status, 'state' => $r->state,
             'last_movement_at' => self::isoUtc($r->last_movement_at),
             'idle_days' => $r->last_movement_at ? (int) CarbonImmutable::parse($r->last_movement_at, 'UTC')->diffInDays($context->now, false) : null,
         ];
@@ -93,7 +93,7 @@ class SlowMovingStockWidget extends Widget
             ->join('warehouses as w', 'w.id', '=', 'ws.warehouse_id')
             ->where('ws.tenant_id', $context->tenantId)->whereNull('w.deleted_at')->where('ws.quantity_on_hand', '>', 0)
             ->selectRaw("ws.id, ws.product_id, p.name as product_name, p.sku, w.name as warehouse_name, ws.quantity_on_hand,
-                ws.quantity_on_hand * ws.average_unit_cost as value, lm.last_movement_at,
+                ws.quantity_on_hand * ws.average_unit_cost as value, coalesce(ws.valuation_status, 'UNVERIFIED') as valuation_status, lm.last_movement_at,
                 case when lm.last_movement_at is null then 'NO_HISTORY' when lm.last_movement_at < {$threshold}::timestamp then 'SLOW' else 'ACTIVE' end as state")
             ->leftJoinSub(DB::table('stock_movements')->where('tenant_id', $context->tenantId)->whereRaw("movement_type in ({$types})")
                 ->groupBy('warehouse_id', 'product_id')->selectRaw('warehouse_id, product_id, max(occurred_at) as last_movement_at'),

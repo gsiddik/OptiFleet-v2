@@ -103,7 +103,7 @@ class StockTransferService
                 $product = Product::query()->findOrFail($item->product_id);
                 $stockBefore = WarehouseStock::query()->where('warehouse_id', $from->id)->where('product_id', $product->id)->first();
                 $this->inventory->transferOut($from, $product, (float) $item->quantity_sent, StockTransfer::class, $locked->id, $userId);
-                $item->update(['unit_cost' => $stockBefore?->average_unit_cost ?? 0]);
+                $item->update(['unit_cost' => $stockBefore?->average_unit_cost ?? 0, 'valuation_status' => $stockBefore?->valuation_status ?? 'UNVERIFIED']);
             }
 
             $locked->update(['status' => 'DISPATCHED', 'dispatched_at' => now(), 'dispatched_by' => $userId]);
@@ -146,7 +146,8 @@ class StockTransferService
 
                 if ($received > 0) {
                     $product = Product::query()->findOrFail($item->product_id);
-                    $this->inventory->receive($to, $product, $received, (float) ($item->unit_cost ?? 0), 'TRANSFER_IN', StockTransfer::class, $locked->id, $userId);
+                    $this->inventory->receive($to, $product, $received, (float) ($item->unit_cost ?? 0), 'TRANSFER_IN', StockTransfer::class, $locked->id, $userId, null,
+                        ['status' => $item->valuation_status ?? 'UNVERIFIED', 'basis' => 'TRANSFER_FROM_SOURCE_BALANCE']);
                 }
 
                 $item->update([

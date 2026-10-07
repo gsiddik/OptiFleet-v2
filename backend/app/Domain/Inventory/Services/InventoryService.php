@@ -7,6 +7,7 @@ use App\Domain\Inventory\Models\WarehouseStock;
 use App\Domain\Notification\Services\NotificationDispatchService;
 use App\Domain\Organization\Models\Warehouse;
 use App\Domain\ProductMaster\Models\Product;
+use App\Domain\Inventory\Support\ValuationStatus;
 use App\Domain\ProductMaster\Support\QuantityPolicy;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -129,7 +130,9 @@ class InventoryService
 
         return DB::transaction(function () use ($warehouse, $product, $quantity, $referenceType, $referenceId, $userId, $reason) {
             $stock = $this->lockOrCreateStock($warehouse, $product);
+            $before = (float) $stock->quantity_on_hand;
             $stock->increment('quantity_on_hand', $quantity);
+            $this->inheritValuation($stock, $before);
             $this->writeMovement($stock, 'RETURN', $quantity, (float) $stock->average_unit_cost, $referenceType, $referenceId, $userId, $reason);
 
             return $stock->fresh();
@@ -220,15 +223,29 @@ class InventoryService
             }
 
             $type = $direction === 'PLUS' ? 'ADJUSTMENT_PLUS' : 'ADJUSTMENT_MINUS';
+            $before = (float) $stock->quantity_on_hand;
             $direction === 'PLUS' ? $stock->increment('quantity_on_hand', $quantity) : $stock->decrement('quantity_on_hand', $quantity);
+            if ($direction === 'PLUS') {
+                $this->inheritValuation($stock, $before);
+            }
             $this->writeMovement($stock, $type, $quantity, null, $referenceType, $referenceId, $userId, $reason);
 
             return $stock->fresh();
         });
     }
 
-    /** Receives purchased/transferred-in stock, updating the moving weighted average cost. */
-    public function receive(Warehouse $warehouse, Product $product, float $quantity, float $unitCost, string $movementType, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null): WarehouseStock
+    /**
+     * Receives purchased / transferred-in stock, updating the moving weighted average cost (unchanged). Every
+     * receipt also records WHERE its value comes from — purchase price, valuation basis and valuation status are
+     * separate facts, and a cost of 0 never implies a status:
+     *  - Goods Receipt at a PO price > 0 → VERIFIED (PO_UNIT_PRICE); at price 0 (free goods) → UNVERIFIED, no basis;
+     *  - opening balance → UNVERIFIED; transfer receipt → the status the source balance had at dispatch
+     *    ($valuation['status'], UNVERIFIED when not given); anything else → UNVERIFIED.
+     * The balance then combines the statuses (ValuationStatus::combine): a balance mixing sources is MIXED.
+     *
+     * @param  array{status?: string, basis?: string, purchase_unit_price?: float}|null  $valuation  explicit provenance (overrides the default)
+     */
+    public function receive(Warehouse $warehouse, Product $product, float $quantity, float $unitCost, string $movementType, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason = null, ?array $valuation = null): WarehouseStock
     {
         QuantityPolicy::assertValid($product, $quantity);
 
@@ -238,8 +255,9 @@ class InventoryService
         if (! in_array($movementType, ['OPENING', 'RECEIPT', 'TRANSFER_IN'], true)) {
             throw new InventoryException('Invalid receipt movement type.');
         }
+        $provenance = $this->provenance($movementType, $referenceType, $unitCost, $valuation);
 
-        return DB::transaction(function () use ($warehouse, $product, $quantity, $unitCost, $movementType, $referenceType, $referenceId, $userId, $reason) {
+        return DB::transaction(function () use ($warehouse, $product, $quantity, $unitCost, $movementType, $referenceType, $referenceId, $userId, $reason, $provenance) {
             $stock = $this->lockOrCreateStock($warehouse, $product);
 
             $existingQty = (float) $stock->quantity_on_hand;
@@ -248,13 +266,42 @@ class InventoryService
             $newAvgCost = $newQty > 0
                 ? round((($existingQty * $existingCost) + ($quantity * $unitCost)) / $newQty, 4)
                 : $unitCost;
+            $status = ValuationStatus::combine($stock->valuation_status, $existingQty, $provenance['valuation_status']);
 
             $stock->increment('quantity_on_hand', $quantity);
-            $stock->update(['average_unit_cost' => $newAvgCost]);
-            $this->writeMovement($stock, $movementType, $quantity, $unitCost, $referenceType, $referenceId, $userId, $reason);
+            $stock->update(['average_unit_cost' => $newAvgCost, 'valuation_status' => $status,
+                'valuation_basis' => $status === $provenance['valuation_status'] ? $provenance['valuation_basis'] : ($status === ValuationStatus::MIXED ? 'MIXED_SOURCES' : $stock->valuation_basis)]);
+            $this->writeMovement($stock, $movementType, $quantity, $unitCost, $referenceType, $referenceId, $userId, $reason, $provenance);
 
             return $stock->fresh();
         });
+    }
+
+    /** @return array{valuation_status: string, valuation_basis: ?string, purchase_unit_price: ?float} */
+    private function provenance(string $movementType, ?string $referenceType, float $unitCost, ?array $valuation): array
+    {
+        if ($valuation !== null && isset($valuation['status'])) {
+            return ['valuation_status' => $valuation['status'], 'valuation_basis' => $valuation['basis'] ?? null, 'purchase_unit_price' => $valuation['purchase_unit_price'] ?? null];
+        }
+        if ($movementType === 'RECEIPT' && $referenceType === \App\Domain\Procurement\Models\GoodsReceipt::class) {
+            return $unitCost > 0
+                ? ['valuation_status' => ValuationStatus::VERIFIED, 'valuation_basis' => 'PO_UNIT_PRICE', 'purchase_unit_price' => $unitCost]
+                : ['valuation_status' => ValuationStatus::UNVERIFIED, 'valuation_basis' => null, 'purchase_unit_price' => 0.0];
+        }
+
+        return ['valuation_status' => ValuationStatus::UNVERIFIED, 'valuation_basis' => $movementType === 'OPENING' ? 'OPENING_BALANCE_UNREVIEWED' : 'SOURCE_NOT_VERIFIED', 'purchase_unit_price' => null];
+    }
+
+    /**
+     * Quantity that enters a balance without value provenance (return to stock, plus-adjustment, opname gain, ...):
+     * it joins at the existing average cost and inherits the balance's status; into an empty balance there is no
+     * valuation behind it, so the status is UNVERIFIED.
+     */
+    private function inheritValuation(WarehouseStock $stock, float $quantityBefore): void
+    {
+        if ($quantityBefore <= 0 && $stock->valuation_status !== ValuationStatus::UNVERIFIED) {
+            $stock->update(['valuation_status' => ValuationStatus::UNVERIFIED, 'valuation_basis' => 'SOURCE_NOT_VERIFIED']);
+        }
     }
 
     public function scrap(Warehouse $warehouse, Product $product, float $quantity, ?string $userId, string $reason, ?string $referenceType = null, ?string $referenceId = null): WarehouseStock
@@ -321,13 +368,13 @@ class InventoryService
         });
     }
 
-    public function postOpnameVariance(Warehouse $warehouse, Product $product, float $variance, ?string $userId, ?string $reason = null): ?WarehouseStock
+    public function postOpnameVariance(Warehouse $warehouse, Product $product, float $variance, ?string $userId, ?string $reason = null, ?string $referenceId = null): ?WarehouseStock
     {
         if ($variance === 0.0) {
             return null;
         }
 
-        return DB::transaction(function () use ($warehouse, $product, $variance, $userId, $reason) {
+        return DB::transaction(function () use ($warehouse, $product, $variance, $userId, $reason, $referenceId) {
             $stock = $this->lockOrCreateStock($warehouse, $product);
             $magnitude = abs($variance);
 
@@ -335,8 +382,12 @@ class InventoryService
                 throw new InventoryException('Stock opname variance would drive on-hand below zero.');
             }
 
+            $before = (float) $stock->quantity_on_hand;
             $variance > 0 ? $stock->increment('quantity_on_hand', $magnitude) : $stock->decrement('quantity_on_hand', $magnitude);
-            $this->writeMovement($stock, 'STOCK_OPNAME', $magnitude, null, 'StockOpname', null, $userId, $reason);
+            if ($variance > 0) {
+                $this->inheritValuation($stock, $before);
+            }
+            $this->writeMovement($stock, 'STOCK_OPNAME', $magnitude, null, 'StockOpname', $referenceId, $userId, $reason);
 
             return $stock->fresh();
         });
@@ -398,9 +449,9 @@ class InventoryService
         }
     }
 
-    private function writeMovement(WarehouseStock $stock, string $type, float $quantity, ?float $unitCost, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason): StockMovement
+    private function writeMovement(WarehouseStock $stock, string $type, float $quantity, ?float $unitCost, ?string $referenceType, ?string $referenceId, ?string $userId, ?string $reason, array $provenance = []): StockMovement
     {
-        return StockMovement::query()->create([
+        return StockMovement::query()->create($provenance + [
             'tenant_id' => $stock->tenant_id,
             'warehouse_id' => $stock->warehouse_id,
             'product_id' => $stock->product_id,
