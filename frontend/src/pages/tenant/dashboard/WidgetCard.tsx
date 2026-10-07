@@ -11,7 +11,7 @@ export type WidgetSize = 's' | 'm' | 'l' | 'xl';
 
 export interface RenderContext {
   /** Opens the drill-down for this widget with extra parameters (validated server-side). */
-  openDetail: (title: string, params: Record<string, unknown>, columns: Column<Record<string, unknown>>[]) => void;
+  openDetail: (title: string, params: Record<string, unknown>, columns: Column<Record<string, unknown>>[], widgetId?: string) => void;
   currency: string;
 }
 
@@ -42,8 +42,8 @@ export function WidgetCard({ widget, definition, filters, currency, onDetail }: 
 
   const ctx: RenderContext = {
     currency,
-    openDetail: (subtitle, extra, columns) => onDetail({
-      widgetId: widget.id,
+    openDetail: (subtitle, extra, columns, widgetId) => onDetail({
+      widgetId: widgetId ?? widget.id,
       title: subtitle ? `${title} — ${subtitle}` : title,
       params: { ...params, ...extra },
       columns,

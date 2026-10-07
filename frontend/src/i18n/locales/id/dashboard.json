@@ -1,5 +1,6 @@
 {
   "actions": {
+    "back": "Kembali",
     "refresh": "Muat ulang",
     "refreshWidget": "Muat ulang {{title}}",
     "retry": "Coba lagi",
@@ -16,20 +17,35 @@
     "doc_d30": "≤ 30 hari",
     "doc_d60": "31–60 hari",
     "doc_d90": "61–90 hari",
-    "doc_expired": "Sudah lewat"
+    "doc_expired": "Sudah lewat",
+    "pay_d1_30": "Lewat 1–30 hari",
+    "pay_d31_60": "Lewat 31–60 hari",
+    "pay_d61_90": "Lewat 61–90 hari",
+    "pay_d90_plus": "Lewat > 90 hari",
+    "pay_no_due": "Tanpa jatuh tempo",
+    "pay_not_due": "Belum jatuh tempo",
+    "payShort_d1_30": "1–30",
+    "payShort_d31_60": "31–60",
+    "payShort_d61_90": "61–90",
+    "payShort_d90_plus": "> 90",
+    "payShort_no_due": "Tanpa JT",
+    "payShort_not_due": "Belum JT"
   },
   "chart": {
     "shareOfTotal": "Porsi dari total",
     "total": "Total"
   },
   "columns": {
+    "acceptedAt": "Disetujui vendor",
     "age": "Umur",
+    "amount": "Nilai",
     "available": "Tersedia",
     "averageUnitCost": "Biaya satuan rata-rata",
     "branch": "Cabang",
     "brand": "Merek",
     "bucket": "Rentang",
     "category": "Kategori",
+    "costSource": "Komponen",
     "count": "Jumlah",
     "createdAt": "Dibuat",
     "currentOdometer": "Odometer saat ini (km)",
@@ -51,22 +67,30 @@
     "expectedDelivery": "Perkiraan kirim",
     "fromWarehouse": "Dari",
     "inspectedAt": "Diinspeksi",
+    "invoiceDate": "Tanggal faktur",
     "kmOver": "Kelebihan km",
     "model": "Model",
+    "month": "Bulan",
     "neededByWorkOrder": "Dibutuhkan Work Order",
     "onHand": "Stok fisik",
+    "outstanding": "Sisa tagihan",
     "package": "Paket",
     "partRequestedAt": "Permintaan part tertua",
+    "payableSource": "Sumber",
     "pendingItems": "Item tertunda",
     "position": "Posisi",
     "priority": "Prioritas",
     "product": "Produk",
     "purchaseOrder": "Purchase Order",
     "receivedAt": "Diterima",
+    "recognizedOn": "Diakui pada",
     "recommendation": "Rekomendasi",
+    "refundAmount": "Refund",
     "remainingTreadPct": "Sisa tapak (%)",
     "reorderPoint": "Titik pemesanan ulang",
     "request": "Permintaan",
+    "return": "Retur",
+    "returnedAt": "Diretur",
     "runningHours": "Berjalan (jam)",
     "sentAt": "Dikirim",
     "serial": "Nomor seri",
@@ -83,6 +107,7 @@
     "type": "Jenis",
     "value": "Nilai",
     "vehicle": "Kendaraan",
+    "vehicles": "Kendaraan",
     "vendor": "Vendor",
     "waiting": "Menunggu",
     "warehouse": "Gudang",
@@ -137,8 +162,14 @@
     "workshop": "Bengkel"
   },
   "labels": {
+    "costSource_EXTERNAL_SERVICE": "Jasa eksternal (WO internal)",
+    "costSource_EXTERNAL_WO": "Work Order eksternal",
+    "costSource_PARTS": "Suku cadang terpakai",
     "hold": "Tahan",
     "inUse": "Digunakan",
+    "payable_EXTERNAL_WO": "Faktur WO eksternal",
+    "payable_SERVICE_INVOICE": "Faktur layanan",
+    "payable_VENDOR_INVOICE": "Faktur vendor",
     "purchaseOrder": "Purchase Order",
     "purchaseRequest": "Purchase Request",
     "repair": "Perbaikan",
@@ -162,6 +193,7 @@
     "typePreventive": "Preventif"
   },
   "limitations": {
+    "foreignCurrencyExcluded": "{{count}} faktur dalam {{currency}} ({{amount}}) tidak dihitung: nilai dalam mata uang lain tidak pernah dijumlahkan ke total.",
     "tiresWithoutRuleProfile": "{{count}} ban terpasang tidak memiliki rule profile aktif yang berlaku (D_pull) sehingga tidak dapat dinilai.",
     "tiresWithoutTreadReading": "{{count}} ban terpasang belum memiliki pengukuran kedalaman tapak sehingga tidak dapat dinilai."
   },
@@ -231,11 +263,53 @@
       "help": "Dokumen terbaru per kendaraan dan jenis (menurut tanggal terbit) yang dinilai; dokumen LAINNYA dinilai satu per satu. Tanggal kedaluwarsa dan batas perpanjangan dihitung terpisah, hingga 90 hari ke depan.",
       "title": "Tenggat Dokumen Kendaraan"
     },
+    "fn01": {
+      "empty": "Tidak ada biaya servis pada periode ini.",
+      "help": "Biaya servis yang diakui per bulan untuk semua kendaraan dalam cakupan, tanpa pembanding anggaran. Suku cadang: biaya terpakai (retur tidak dihitung) dari Work Order yang selesai atau ditutup, pada tanggal selesai. Jasa eksternal: Faktur Layanan (nilai dokumen termasuk pajak) pada tanggal faktur; yang dibatalkan tidak dihitung. Work Order eksternal: faktur vendor yang sudah ditagih (nilai dokumen) pada tanggal faktur. Tidak termasuk: estimasi, pembayaran, tenaga kerja internal (tidak ada pencatatan biaya), vulkanisir/perbaikan ban (lihat Biaya Layanan Ban). Bulan mengikuti zona waktu perusahaan; bulan berjalan ditampilkan lebih terang.",
+      "kpiCurrent": "Bulan berjalan (sejauh ini)",
+      "kpiTotal": "Total, {{months}} bulan terakhir + berjalan",
+      "kpiVehicles": "Kendaraan dengan biaya",
+      "laborExcluded": "Tenaga kerja internal tidak termasuk (biaya tenaga kerja tidak dicatat).",
+      "pendingMemos": "Belum ditagih: {{n}} memo jasa eksternal selesai (estimasi {{amount}}).",
+      "pendingParts": "Belum diakui: suku cadang pada {{n}} Work Order terbuka ({{amount}}).",
+      "runningMonth": "bulan berjalan",
+      "title": "Biaya Servis",
+      "workOrdersVehicles": "{{wo}} Work Order · {{vehicles}} kendaraan"
+    },
+    "fn02": {
+      "empty": "Tidak ada biaya servis pada periode ini.",
+      "help": "10 kendaraan dengan biaya servis tertinggi pada periode ini (definisi sama dengan Biaya Servis). Klik batang untuk melihat transaksinya.",
+      "other": "Lainnya: {{n}} kendaraan, {{amount}}",
+      "title": "Biaya Servis per Kendaraan",
+      "total": "Total periode: {{amount}}"
+    },
+    "fn03": {
+      "empty": "Tidak ada biaya servis pada periode ini.",
+      "help": "Biaya servis menurut cabang Work Order (dicatat saat Work Order dibuat), definisi sama dengan Biaya Servis. Hanya Work Order yang dapat Anda akses yang dihitung.",
+      "title": "Biaya Servis per Cabang"
+    },
+    "fn04": {
+      "empty": "Tidak ada faktur yang belum dibayar.",
+      "help": "Faktur vendor, Faktur Layanan, dan faktur WO eksternal yang belum dibayar, menurut hari lewat jatuh tempo. Setiap sumber hanya muncul bila Anda memiliki izin lihatnya. Faktur WO eksternal memiliki termin pembayaran teks bebas, sehingga ditampilkan sebagai \"Tanpa jatuh tempo\". Refund tidak dikurangkan.",
+      "kpiOverdue": "Lewat jatuh tempo",
+      "kpiTotal": "Sisa tagihan ({{n}} faktur)",
+      "termPrefix": "Termin:",
+      "title": "Umur Hutang"
+    },
     "fn05": {
       "empty": "Tidak ada nilai persediaan.",
       "help": "Stok fisik × biaya satuan rata-rata bergerak, per gudang, saat ini. Tidak ada histori, sehingga tren tidak ditampilkan.",
       "kpi": "Total nilai persediaan",
       "title": "Nilai Persediaan"
+    },
+    "fn06": {
+      "empty": "Tidak ada refund pada periode ini.",
+      "help": "Refund yang disetujui vendor per bulan (tanggal persetujuan), dan permintaan refund yang masih menunggu vendor. Permintaan yang tertunda belum memiliki nilai sampai disetujui vendor. Penerimaan uang tidak dicatat.",
+      "kpiAccepted": "Refund disetujui ({{n}})",
+      "kpiPending": "Permintaan menunggu vendor",
+      "note": "Nilai adalah refund yang disetujui, bukan pembayaran yang diterima.",
+      "series": "Refund disetujui",
+      "title": "Refund Retur ke Vendor"
     },
     "mt01": {
       "empty": "Tidak ada jadwal perawatan terbuka.",

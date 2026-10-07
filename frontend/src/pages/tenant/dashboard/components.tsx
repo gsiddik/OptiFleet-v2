@@ -134,6 +134,16 @@ export interface Column<Row> {
   kind?: CellKind;
   value?: (row: Row) => unknown;
   link?: (row: Row) => string | null;
+  /** Next drill-down level opened from this cell (inside the detail modal). */
+  drill?: (row: Row) => DrillStep | null;
+}
+
+export interface DrillStep {
+  title: string;
+  params: Record<string, unknown>;
+  columns: Column<Record<string, unknown>>[];
+  /** Another widget's drill-down with the same definition (e.g. FN-03 vehicle → FN-02 transactions). */
+  widgetId?: string;
 }
 
 export function renderCell(kind: CellKind | undefined, value: unknown, currency?: string): ReactNode {
@@ -158,7 +168,7 @@ export function renderCell(kind: CellKind | undefined, value: unknown, currency?
   }
 }
 
-export function DataTable<Row extends Record<string, unknown>>({ columns, rows, currency, caption }: { columns: Column<Row>[]; rows: Row[]; currency?: string; caption?: string }) {
+export function DataTable<Row extends Record<string, unknown>>({ columns, rows, currency, caption, onDrill }: { columns: Column<Row>[]; rows: Row[]; currency?: string; caption?: string; onDrill?: (step: DrillStep) => void }) {
   if (rows.length === 0) return <StateBox>{t('dashboard.states.noRows')}</StateBox>;
   return (
     <div className="dash-table-wrap">
@@ -180,9 +190,11 @@ export function DataTable<Row extends Record<string, unknown>>({ columns, rows, 
                 const raw = c.value ? c.value(row) : row[c.key];
                 const content = renderCell(c.kind, raw, currency);
                 const href = c.link?.(row);
+                const step = onDrill ? c.drill?.(row) : null;
                 return (
                   <td key={c.key} className={c.kind === 'num' || c.kind === 'money' || c.kind === 'days' ? 'num' : undefined}>
-                    {href ? <Link className="entity-link" to={href}>{content}</Link> : content}
+                    {step ? <button type="button" className="dash-link-btn" onClick={() => onDrill!(step)}>{content}</button>
+                      : href ? <Link className="entity-link" to={href}>{content}</Link> : content}
                   </td>
                 );
               })}
@@ -246,7 +258,7 @@ function ChartTooltip({ active, payload, label, series, unit, currency, labelFor
  * Vertical columns (stacked when several series) on one value axis — months or ordered buckets on X.
  * Clicking a column calls onSelect with its category.
  */
-export function ColumnChart({ data, categoryKey, series, unit, currency, height = 240, labelFormatter, onSelect, highlight, colorFor, footer }: {
+export function ColumnChart({ data, categoryKey, series, unit, currency, height = 240, labelFormatter, tickFormatter, onSelect, highlight, colorFor, footer, allTicks }: {
   data: Record<string, unknown>[];
   categoryKey: string;
   series: BarSeries[];
@@ -254,6 +266,10 @@ export function ColumnChart({ data, categoryKey, series, unit, currency, height 
   currency?: string;
   height?: number;
   labelFormatter?: (label: string) => string;
+  /** Shorter axis tick text (the tooltip keeps labelFormatter). */
+  tickFormatter?: (label: string) => string;
+  /** Show every category tick (ordered buckets) instead of thinning them. */
+  allTicks?: boolean;
   onSelect?: (category: string) => void;
   /** Category drawn with a lighter fill (e.g. the running month). */
   highlight?: string;
@@ -267,7 +283,8 @@ export function ColumnChart({ data, categoryKey, series, unit, currency, height 
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="22%">
           <CartesianGrid vertical={false} stroke={INK.grid} />
-          <XAxis dataKey={categoryKey} tick={tick} tickLine={false} axisLine={{ stroke: INK.axis }} tickFormatter={labelFormatter} interval="preserveStartEnd" minTickGap={4} />
+          <XAxis dataKey={categoryKey} tick={tick} tickLine={false} axisLine={{ stroke: INK.axis }} tickFormatter={tickFormatter ?? labelFormatter}
+            interval={allTicks ? 0 : 'preserveStartEnd'} minTickGap={4} />
           <YAxis tick={tick} tickLine={false} axisLine={false} width={unit === 'money' ? 56 : 36} allowDecimals={unit === 'money'}
             tickFormatter={(v: number) => (unit === 'money' ? compactMoney(v) : count(v))} />
           <Tooltip cursor={{ fill: 'rgba(17,24,39,0.04)' }}
@@ -332,15 +349,38 @@ export interface DetailRequest {
   columns: Column<Record<string, unknown>>[];
 }
 
-export function DetailModal({ request, currency, onClose }: { request: DetailRequest | null; currency?: string; onClose: () => void }) {
+/** Drill-down modal. Nested levels (month → vehicle → transactions) stack, with a Back step. */
+export function DetailModal({ stack, currency, onPush, onBack, onClose }: {
+  stack: DetailRequest[];
+  currency?: string;
+  onPush: (request: DetailRequest) => void;
+  onBack: () => void;
+  onClose: () => void;
+}) {
+  const request = stack[stack.length - 1] ?? null;
   return (
-    <Modal open={request !== null} title={request?.title ?? ''} onClose={onClose} width={880}>
-      {request && <DetailBody request={request} currency={currency} />}
+    <Modal open={request !== null} title={request?.title ?? ''} onClose={onClose} width={920}>
+      {request && (
+        <div style={{ display: 'grid', gap: 12 }}>
+          {stack.length > 1 && (
+            <button type="button" className="dash-link-btn" style={{ justifySelf: 'start' }} onClick={onBack}>
+              ← {t('dashboard.actions.back')}
+            </button>
+          )}
+          <DetailBody key={`${request.widgetId}-${stack.length}-${JSON.stringify(request.params)}`} request={request} currency={currency}
+            onDrill={(step) => onPush({
+              widgetId: step.widgetId ?? request.widgetId,
+              title: `${request.title} — ${step.title}`,
+              params: { ...request.params, ...step.params },
+              columns: step.columns,
+            })} />
+        </div>
+      )}
     </Modal>
   );
 }
 
-function DetailBody({ request, currency }: { request: DetailRequest; currency?: string }) {
+function DetailBody({ request, currency, onDrill }: { request: DetailRequest; currency?: string; onDrill: (step: DrillStep) => void }) {
   const { state, result, error, page, setPage, reload } = useDetails<Record<string, unknown>>(request.widgetId, request.params);
   if (state === 'loading' && !result) return <Skeleton height={160} />;
   if (state === 'error' || state === 'forbidden') {
@@ -354,7 +394,7 @@ function DetailBody({ request, currency }: { request: DetailRequest; currency?: 
   if (!result) return null;
   return (
     <div style={{ display: 'grid', gap: 12 }}>
-      <DataTable columns={request.columns} rows={result.data} currency={currency ?? result.currency} caption={request.title} />
+      <DataTable columns={request.columns} rows={result.data} currency={currency ?? result.currency} caption={request.title} onDrill={onDrill} />
       {result.meta && result.meta.last_page > 1 && (
         <Pagination meta={{ current_page: page, last_page: result.meta.last_page, total: result.meta.total, per_page: result.meta.per_page }} onPageChange={setPage} />
       )}

@@ -56,7 +56,7 @@ function Dashboard({ catalog }: { catalog: DashboardCatalog }) {
   );
   const [active, setActive] = useTabParam(tabs, (tabs[0]?.id ?? 'summary') as string);
   const [filters, setFilters] = useState<DashboardFilters>({ branch_id: '', workshop_id: '', warehouse_id: '', months: catalog.filters.default_months });
-  const [detail, setDetail] = useState<DetailRequest | null>(null);
+  const [detail, setDetail] = useState<DetailRequest[]>([]);
 
   if (tabs.length === 0) {
     return (
@@ -130,11 +130,12 @@ function Dashboard({ catalog }: { catalog: DashboardCatalog }) {
 
       <div className="dash-grid">
         {widgets.map((w) => (
-          <WidgetCard key={`${preset.id}-${w.id}`} widget={w} definition={WIDGET_DEFINITIONS[w.id]} filters={filters} currency={catalog.currency} onDetail={setDetail} />
+          <WidgetCard key={`${preset.id}-${w.id}`} widget={w} definition={WIDGET_DEFINITIONS[w.id]} filters={filters} currency={catalog.currency} onDetail={(request) => setDetail([request])} />
         ))}
       </div>
 
-      <DetailModal request={detail} currency={catalog.currency} onClose={() => setDetail(null)} />
+      <DetailModal stack={detail} currency={catalog.currency} onPush={(request) => setDetail((s) => [...s, request])}
+        onBack={() => setDetail((s) => s.slice(0, -1))} onClose={() => setDetail([])} />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 {
   "actions": {
+    "back": "Back",
     "refresh": "Refresh",
     "refreshWidget": "Refresh {{title}}",
     "retry": "Try again",
@@ -16,20 +17,35 @@
     "doc_d30": "Within 30 days",
     "doc_d60": "31–60 days",
     "doc_d90": "61–90 days",
-    "doc_expired": "Overdue"
+    "doc_expired": "Overdue",
+    "pay_d1_30": "1–30 days overdue",
+    "pay_d31_60": "31–60 days overdue",
+    "pay_d61_90": "61–90 days overdue",
+    "pay_d90_plus": "> 90 days overdue",
+    "pay_no_due": "No due date",
+    "pay_not_due": "Not due",
+    "payShort_d1_30": "1–30",
+    "payShort_d31_60": "31–60",
+    "payShort_d61_90": "61–90",
+    "payShort_d90_plus": "> 90",
+    "payShort_no_due": "No due date",
+    "payShort_not_due": "Not due"
   },
   "chart": {
     "shareOfTotal": "Share of total",
     "total": "Total"
   },
   "columns": {
+    "acceptedAt": "Accepted by vendor",
     "age": "Age",
+    "amount": "Amount",
     "available": "Available",
     "averageUnitCost": "Average unit cost",
     "branch": "Branch",
     "brand": "Brand",
     "bucket": "Range",
     "category": "Category",
+    "costSource": "Component",
     "count": "Count",
     "createdAt": "Created",
     "currentOdometer": "Current odometer (km)",
@@ -51,22 +67,30 @@
     "expectedDelivery": "Expected delivery",
     "fromWarehouse": "From",
     "inspectedAt": "Inspected",
+    "invoiceDate": "Invoice date",
     "kmOver": "Km over",
     "model": "Model",
+    "month": "Month",
     "neededByWorkOrder": "Needed by a Work Order",
     "onHand": "On hand",
+    "outstanding": "Outstanding",
     "package": "Package",
     "partRequestedAt": "Oldest part request",
+    "payableSource": "Source",
     "pendingItems": "Pending items",
     "position": "Position",
     "priority": "Priority",
     "product": "Product",
     "purchaseOrder": "Purchase Order",
     "receivedAt": "Received",
+    "recognizedOn": "Recognized on",
     "recommendation": "Recommendation",
+    "refundAmount": "Refund",
     "remainingTreadPct": "Remaining tread (%)",
     "reorderPoint": "Reorder point",
     "request": "Request",
+    "return": "Return",
+    "returnedAt": "Returned",
     "runningHours": "Running (hours)",
     "sentAt": "Sent",
     "serial": "Serial",
@@ -83,6 +107,7 @@
     "type": "Type",
     "value": "Value",
     "vehicle": "Vehicle",
+    "vehicles": "Vehicles",
     "vendor": "Vendor",
     "waiting": "Waiting",
     "warehouse": "Warehouse",
@@ -137,8 +162,14 @@
     "workshop": "Workshop"
   },
   "labels": {
+    "costSource_EXTERNAL_SERVICE": "External services (internal WO)",
+    "costSource_EXTERNAL_WO": "External Work Orders",
+    "costSource_PARTS": "Parts consumed",
     "hold": "Hold",
     "inUse": "In Use",
+    "payable_EXTERNAL_WO": "External WO invoices",
+    "payable_SERVICE_INVOICE": "Service invoices",
+    "payable_VENDOR_INVOICE": "Vendor invoices",
     "purchaseOrder": "Purchase Order",
     "purchaseRequest": "Purchase Request",
     "repair": "Repair",
@@ -162,6 +193,7 @@
     "typePreventive": "Preventive"
   },
   "limitations": {
+    "foreignCurrencyExcluded": "{{count}} invoice(s) in {{currency}} ({{amount}}) are not included: amounts in another currency are never added to the totals.",
     "tiresWithoutRuleProfile": "{{count}} installed tires have no applicable active rule profile (D_pull) and could not be assessed.",
     "tiresWithoutTreadReading": "{{count}} installed tires have no tread depth reading and could not be assessed."
   },
@@ -231,11 +263,53 @@
       "help": "The latest document per vehicle and type (by issue date) is assessed; OTHER documents one by one. Expiry dates and extension deadlines are counted separately, up to 90 days ahead.",
       "title": "Vehicle Document Deadlines"
     },
+    "fn01": {
+      "empty": "No service cost in this period.",
+      "help": "Recognized service cost per month for every vehicle in scope, without a budget comparison. Parts: consumed cost (returns excluded) of Work Orders completed or closed, on the completion date. External services: Service Invoices (document value incl. tax) on the invoice date; cancelled ones excluded. External Work Orders: billed vendor invoice (document value) on the invoice date. Not included: estimates, payments, internal labor (no cost record), retread/repair (see Tire Service Cost). Months follow the company time zone; the running month is shown lighter.",
+      "kpiCurrent": "Running month (so far)",
+      "kpiTotal": "Total, last {{months}} months + current",
+      "kpiVehicles": "Vehicles with cost",
+      "laborExcluded": "Internal labor is not included (no labor cost is recorded).",
+      "pendingMemos": "Not yet invoiced: {{n}} completed external service memos (estimate {{amount}}).",
+      "pendingParts": "Not yet recognized: parts on {{n}} open Work Orders ({{amount}}).",
+      "runningMonth": "running month",
+      "title": "Service Cost",
+      "workOrdersVehicles": "{{wo}} Work Orders · {{vehicles}} vehicles"
+    },
+    "fn02": {
+      "empty": "No service cost in this period.",
+      "help": "The 10 vehicles with the highest service cost in the period (same definition as Service Cost). Click a bar for its transactions.",
+      "other": "Other: {{n}} vehicles, {{amount}}",
+      "title": "Service Cost by Vehicle",
+      "total": "Total for the period: {{amount}}"
+    },
+    "fn03": {
+      "empty": "No service cost in this period.",
+      "help": "Service cost by the Work Order's branch (recorded when the Work Order was created), same definition as Service Cost. Only Work Orders you can access are included.",
+      "title": "Service Cost by Branch"
+    },
+    "fn04": {
+      "empty": "No unpaid invoices.",
+      "help": "Unpaid vendor invoices, Service Invoices and External WO invoices by days past the due date. Each source appears only with its view permission. External WO invoices have a free-text payment term, so they are shown as \"No due date\". Refunds are not netted.",
+      "kpiOverdue": "Overdue",
+      "kpiTotal": "Outstanding ({{n}} invoices)",
+      "termPrefix": "Term:",
+      "title": "Payables Aging"
+    },
     "fn05": {
       "empty": "No inventory value.",
       "help": "On hand × moving-average unit cost, per warehouse, now. No history is kept, so no trend is shown.",
       "kpi": "Total inventory value",
       "title": "Inventory Value"
+    },
+    "fn06": {
+      "empty": "No refunds in this period.",
+      "help": "Refunds accepted by the vendor per month (date of acceptance), and refund requests still waiting for the vendor. A pending request has no amount until the vendor accepts it. Receipt of the money is not recorded.",
+      "kpiAccepted": "Accepted refunds ({{n}})",
+      "kpiPending": "Requests waiting for the vendor",
+      "note": "Values are agreed refunds, not received payments.",
+      "series": "Accepted refunds",
+      "title": "Return-to-Vendor Refunds"
     },
     "mt01": {
       "empty": "No open maintenance schedules.",
