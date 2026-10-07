@@ -33,6 +33,8 @@
   "inspectionTemplates": "Templat Inspeksi",
   "intelligence": "Kecerdasan Pemeliharaan",
   "inventory": "Stok Gudang",
+  "inventoryReconciliation": "Rekonsiliasi Stok",
+  "inventoryValuation": "Valuasi Stok",
   "invoices": "Faktur",
   "login": "Masuk",
   "maintenance": "Pemeliharaan",

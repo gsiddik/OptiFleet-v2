@@ -9,7 +9,7 @@ Continuation checkpoint between sessions; the repository is the source of truth.
 |---|---|---|---|
 | 1 | Revalidation + minimal design | DONE | this commit |
 | 2 | Valuation status + data / API compatibility | DONE (backend; widget use in CP4) | see git log |
-| 3 | Reconciliation, opname evidence, approved adjustments | TODO | |
+| 3 | Reconciliation, opname evidence, approved adjustments | DONE (API + UI) | see git log |
 | 4 | Widgets, scope labels, bilingual | TODO | |
 | 5 | Seeders, regression, visual QA | TODO | |
 
@@ -92,3 +92,13 @@ journal, rebuilding stock opname. Opname gaps found are reported, not fixed.
   (`GET /app/inventory/valuation`, `GET .../{id}`, `POST .../{id}/review`), opname movements now carry `reference_id`.
 - Tests: `tests/Feature/Valuation/ValuationStatusTest.php` (9) + regression of stock-integrity, dashboard, inventory,
   transfer, goods receipt, WO stock, used stock suites (121 passed).
+
+## CP3 — delivered
+- `stock_reconciliation_adjustments` (partial unique index: one live adjustment per installation), workflow resource type
+  `stock_reconciliation` (run `BootstrapSeeder` / `WorkflowDefaultsSeeder` on deploy), `StockReconciliationAdjustmentService`
+  (propose → approve/reject with maker ≠ checker → apply, re-validated under row locks, ISSUE booked now referencing the
+  adjustment), report with opname evidence (`RESOLVED_BY_OPNAME`, `snapshot_stale`, `movements_after`), tires report-only.
+- The hash-based `--apply` of PR #30 is removed; the command now only dry-runs or files proposals (`--propose --user --reason`).
+- UI: Inventory → Stock Valuation, Inventory → Stock Reconciliation (Report / Adjustments), EN + ID via the CSV pipeline.
+- Opname gaps found, NOT rebuilt: posted variance applies to current on-hand (flagged `snapshot_stale`); opname movements now
+  carry `reference_id` going forward (older ones stay unlinked).

@@ -1,0 +1,67 @@
+{
+  "actions": {
+    "details": "Details",
+    "saveReview": "Save review"
+  },
+  "basis": {
+    "COSTING_REVIEW": "Costing review",
+    "DONATION_DOCUMENTED": "Documented donation",
+    "FREE_OF_CHARGE_DOCUMENTED": "Documented free of charge",
+    "LEGACY_UNTRACED": "Legacy, source not traceable",
+    "LEGACY_ZERO_COST": "Legacy zero cost",
+    "MIXED_SOURCES": "Mixed sources",
+    "NO_COST_BASIS_DOCUMENTED": "Documented: no cost basis",
+    "OPENING_BALANCE_UNREVIEWED": "Opening balance, not reviewed",
+    "PO_UNIT_PRICE": "Purchase order unit price",
+    "PURCHASE_ORDER_PRICE": "Purchase order price",
+    "REVIEW_REVOKED": "Review revoked",
+    "SOURCE_NOT_VERIFIED": "Source not verified",
+    "SUPPLIER_DOCUMENT": "Supplier document",
+    "TRANSFER_FROM_SOURCE_BALANCE": "Transfer from the source balance",
+    "VALUATION_NOT_PERFORMED": "Valuation not performed"
+  },
+  "columns": {
+    "basis": "Basis",
+    "evidence": "Evidence reference",
+    "movements": "Movements",
+    "newStatus": "New status",
+    "quantity": "Quantity",
+    "reason": "Reason",
+    "recordedCost": "Recorded unit cost",
+    "status": "Valuation status"
+  },
+  "definition": {
+    "MIXED": "The balance combines quantities with different valuation status. It is never presented as verified as a whole.",
+    "NOT_VALUED": "Evidence shows the stock was not valued (for example used stock, which has no valuation method yet). It is not a zero value.",
+    "UNVERIFIED": "The recorded cost has no verified source (legacy zero cost, free goods without a basis, opening balance). The amount is shown as recorded, not as a confirmed value.",
+    "VERIFIED": "A positive cost with a traceable source (e.g. the purchase order price of a posted Goods Receipt, or a documented review).",
+    "VERIFIED_ZERO": "A zero inventory value with a documented basis (e.g. documented free-of-charge receipt). A purchase price of 0 alone does not make it verified."
+  },
+  "empty": "No stock balances match this filter.",
+  "filters": {
+    "allStatuses": "All valuation statuses",
+    "search": "Search product or SKU"
+  },
+  "help": {
+    "acknowledgeMixed": "I understand this balance combines sources of different status and confirm the review applies to the whole balance.",
+    "costNeverChanged": "The recorded unit cost is shown as it is. A review changes the status only, never the cost.",
+    "noReviews": "No review has been recorded.",
+    "noSources": "No inbound movement with a recorded valuation source.",
+    "page": "Shows, per warehouse balance, whether the recorded cost has a verified source. A cost of 0 is never read as 'free' or 'verified': only a documented review can say so.",
+    "reviewNeverEditsCost": "Saving a review records who, when, why and the evidence. It does not change the cost or any stock quantity."
+  },
+  "status": {
+    "MIXED": "Mixed valuation sources",
+    "NOT_VALUED": "Not valued",
+    "UNVERIFIED": "Valuation status unverified",
+    "VERIFIED": "Valuation verified",
+    "VERIFIED_ZERO": "Verified zero value"
+  },
+  "titles": {
+    "detail": "Valuation detail",
+    "history": "Review history",
+    "page": "Stock Valuation",
+    "review": "Review valuation status",
+    "sources": "Sources of this balance"
+  }
+}

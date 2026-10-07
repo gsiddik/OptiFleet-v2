@@ -1,0 +1,67 @@
+{
+  "actions": {
+    "details": "Detail",
+    "saveReview": "Simpan review"
+  },
+  "basis": {
+    "COSTING_REVIEW": "Review biaya",
+    "DONATION_DOCUMENTED": "Donasi (terdokumentasi)",
+    "FREE_OF_CHARGE_DOCUMENTED": "Gratis (terdokumentasi)",
+    "LEGACY_UNTRACED": "Data lama, sumber tidak dapat ditelusuri",
+    "LEGACY_ZERO_COST": "Biaya nol lama",
+    "MIXED_SOURCES": "Sumber campuran",
+    "NO_COST_BASIS_DOCUMENTED": "Terdokumentasi: tanpa dasar biaya",
+    "OPENING_BALANCE_UNREVIEWED": "Saldo awal, belum direview",
+    "PO_UNIT_PRICE": "Harga satuan PO",
+    "PURCHASE_ORDER_PRICE": "Harga PO",
+    "REVIEW_REVOKED": "Review dicabut",
+    "SOURCE_NOT_VERIFIED": "Sumber belum diverifikasi",
+    "SUPPLIER_DOCUMENT": "Dokumen pemasok",
+    "TRANSFER_FROM_SOURCE_BALANCE": "Transfer dari saldo asal",
+    "VALUATION_NOT_PERFORMED": "Valuasi tidak dilakukan"
+  },
+  "columns": {
+    "basis": "Dasar",
+    "evidence": "Referensi bukti",
+    "movements": "Pergerakan",
+    "newStatus": "Status baru",
+    "quantity": "Kuantitas",
+    "reason": "Alasan",
+    "recordedCost": "Biaya satuan tercatat",
+    "status": "Status valuasi"
+  },
+  "definition": {
+    "MIXED": "Saldo menggabungkan kuantitas dengan status valuasi berbeda. Tidak pernah ditampilkan sebagai terverifikasi secara keseluruhan.",
+    "NOT_VALUED": "Ada bukti bahwa stok ini tidak dinilai (mis. stok bekas yang belum punya metode valuasi). Ini bukan nilai nol.",
+    "UNVERIFIED": "Biaya yang tercatat belum memiliki sumber terverifikasi (biaya nol lama, barang gratis tanpa dasar, saldo awal). Nominal ditampilkan sesuai catatan, bukan sebagai nilai yang dikonfirmasi.",
+    "VERIFIED": "Biaya positif dengan sumber yang dapat ditelusuri (mis. harga PO pada Goods Receipt yang diposting, atau review yang terdokumentasi).",
+    "VERIFIED_ZERO": "Nilai persediaan nol dengan dasar yang terdokumentasi (mis. penerimaan gratis yang terdokumentasi). Harga beli 0 saja tidak membuatnya terverifikasi."
+  },
+  "empty": "Tidak ada saldo stok yang sesuai filter.",
+  "filters": {
+    "allStatuses": "Semua status valuasi",
+    "search": "Cari produk atau SKU"
+  },
+  "help": {
+    "acknowledgeMixed": "Saya memahami saldo ini menggabungkan sumber dengan status berbeda dan menegaskan review berlaku untuk seluruh saldo.",
+    "costNeverChanged": "Biaya satuan yang tercatat ditampilkan apa adanya. Review hanya mengubah status, tidak pernah mengubah biaya.",
+    "noReviews": "Belum ada review yang tercatat.",
+    "noSources": "Tidak ada pergerakan masuk dengan sumber valuasi yang tercatat.",
+    "page": "Menampilkan, per saldo gudang, apakah biaya yang tercatat memiliki sumber terverifikasi. Biaya 0 tidak pernah dianggap 'gratis' atau 'terverifikasi': hanya review yang terdokumentasi yang dapat menyatakannya.",
+    "reviewNeverEditsCost": "Menyimpan review mencatat siapa, kapan, alasan, dan bukti. Biaya maupun kuantitas stok tidak berubah."
+  },
+  "status": {
+    "MIXED": "Sumber valuasi campuran",
+    "NOT_VALUED": "Belum dinilai",
+    "UNVERIFIED": "Status valuasi belum terverifikasi",
+    "VERIFIED": "Valuasi terverifikasi",
+    "VERIFIED_ZERO": "Nilai nol terverifikasi"
+  },
+  "titles": {
+    "detail": "Detail valuasi",
+    "history": "Riwayat review",
+    "page": "Valuasi Stok",
+    "review": "Review status valuasi",
+    "sources": "Sumber saldo ini"
+  }
+}

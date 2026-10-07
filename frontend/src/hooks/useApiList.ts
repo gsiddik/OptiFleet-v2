@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../api/client';
 import type { PaginationMeta } from '../components/Pagination';
 
-export function useApiList<T>(endpoint: string, params: Record<string, unknown>, reloadKey = 0) {
+export function useApiList<T>(endpoint: string, params: Record<string, unknown>, reloadKey = 0, onResponse?: (body: Record<string, unknown>) => void) {
   const [data, setData] = useState<T[]>([]);
   const [meta, setMeta] = useState<PaginationMeta | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,6 +18,7 @@ export function useApiList<T>(endpoint: string, params: Record<string, unknown>,
       .then((res) => {
         setData(res.data.data);
         setMeta(res.data.meta ?? null);
+        onResponse?.(res.data);
       })
       .catch((err) => setError(extractApiError(err).message))
       .finally(() => setLoading(false));

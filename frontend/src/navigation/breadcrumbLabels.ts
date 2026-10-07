@@ -96,6 +96,8 @@ export const SEGMENT_LABELS: Record<string, string> = {
   inventory: 'Warehouse Stock',
   'stock-transfers': 'Stock Transfer',
   'stock-opnames': 'Stock Opname',
+  'inventory-valuation': 'Stock Valuation',
+  'inventory-reconciliation': 'Stock Reconciliation',
   'stock-movements': 'Stock Movements',
   'used-part-returns': 'Used Sparepart Processing',
   'sparepart-sales': 'Sparepart Sales',

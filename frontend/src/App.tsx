@@ -91,6 +91,8 @@ import { WarehouseStockListPage } from './pages/tenant/inventory/WarehouseStockL
 import { StockTransferListPage } from './pages/tenant/inventory/StockTransferListPage';
 import { StockTransferDetailPage } from './pages/tenant/inventory/StockTransferDetailPage';
 import { StockOpnameListPage } from './pages/tenant/inventory/StockOpnameListPage';
+import { StockValuationPage } from './pages/tenant/inventory/StockValuationPage';
+import { StockReconciliationPage } from './pages/tenant/inventory/StockReconciliationPage';
 import { StockOpnameDetailPage } from './pages/tenant/inventory/StockOpnameDetailPage';
 import { StockMovementListPage } from './pages/tenant/inventory/StockMovementListPage';
 import { UsedPartDispositionPage } from './pages/tenant/inventory/UsedPartDispositionPage';
@@ -781,6 +783,8 @@ export default function App() {
             <Route path="inventory" element={<RequirePermission permission="inventory.view"><WarehouseStockListPage /></RequirePermission>} />
             <Route path="stock-transfers" element={<RequirePermission permission="stock_transfer.view"><StockTransferListPage /></RequirePermission>} />
             <Route path="stock-transfers/:id" element={<RequirePermission permission="stock_transfer.view"><StockTransferDetailPage /></RequirePermission>} />
+            <Route path="inventory-valuation" element={<RequirePermission permission="inventory_valuation.view"><StockValuationPage /></RequirePermission>} />
+            <Route path="inventory-reconciliation" element={<RequirePermission permission="inventory_reconcile.view"><StockReconciliationPage /></RequirePermission>} />
             <Route path="stock-opnames" element={<RequirePermission permission="inventory.stock_opname"><StockOpnameListPage /></RequirePermission>} />
             <Route path="stock-opnames/:id" element={<RequirePermission permission="inventory.stock_opname"><StockOpnameDetailPage /></RequirePermission>} />
             <Route path="stock-movements" element={<RequirePermission permission="inventory.view"><StockMovementListPage /></RequirePermission>} />

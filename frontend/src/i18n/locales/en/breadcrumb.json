@@ -33,6 +33,8 @@
   "inspectionTemplates": "Inspection Templates",
   "intelligence": "Maintenance Intelligence",
   "inventory": "Warehouse Stock",
+  "inventoryReconciliation": "Stock Reconciliation",
+  "inventoryValuation": "Stock Valuation",
   "invoices": "Invoices",
   "login": "Login",
   "maintenance": "Maintenance",
