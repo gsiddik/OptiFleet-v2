@@ -14,6 +14,7 @@ const EXTRA: Record<string, string> = {
   OUT: 'dashboard.labels.stockOut',
   LOW: 'dashboard.labels.stockLow',
   NORMAL: 'dashboard.labels.stockNormal',
+  NOT_SET: 'dashboard.labels.stockNotSet',
   RETREAD: 'dashboard.labels.retread',
   REPAIR: 'dashboard.labels.repair',
   SCRAP: 'dashboard.labels.scrap',

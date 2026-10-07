@@ -66,12 +66,28 @@ Not proposed (data not verifiable today): mechanic utilization (no shift/capacit
 - **FN-07 Most Costly Vehicle** = parts/tires consumed (consumption date) + mechanic cost (interval
   end month) + external paid (payment date). Not the same basis as Service Cost FN-01/02/03.
 
+## CP2 — foundation (implemented)
+
+- `work_order_work_intervals` (migration `2026_10_17_000001`): written in `WorkOrderTransitionService`
+  inside the row-locked transition (open on → IN_PROGRESS, close on IN_PROGRESS → any; cycle +1
+  from REWORK); partial unique index = one open interval per WO; CHECK ended ≥ started.
+- `WorkTimeQuery`: intervals by end-month, per-(interval, mechanic) overlap seconds and cost
+  (BigDecimal, rate snapshot of the most recent active assignment; missing rate ⇒ cost null),
+  history-complete flag. Labor logs untouched.
+- `mechanic_performance_baselines` + `GET/PUT /app/dashboard/mechanic-baselines`
+  (module WORK_ORDER + `mechanic_baseline.manage`); null = not set.
+- `warehouse_stocks.reorder_point` nullable, existing 0 → null; WH-01 gains NOT_SET state, WH-02 no
+  longer fails on rows without a threshold; threshold endpoint stores 0 for a cleared minimum stock
+  (pre-existing 500 error fixed).
+- Widget-specific filters (`paramRules()`, part of the cache key).
+- Tests: `WorkIntervalTest` (4), `DashboardConfigurationTest` (3); impacted suites 320 passed.
+
 ## Checkpoints
 
 | # | Checkpoint | Status | Commit |
 |---|---|---|---|
 | 1 | Audit, metric definitions, decisions | DONE | this commit |
-| 2 | Work intervals, assignment attribution, snapshots, configuration | TODO | |
+| 2 | Work intervals, assignment attribution, snapshots, configuration | DONE | CP2 commit |
 | 3 | Most Costly Vehicle + Mechanic Performance | TODO | |
 | 4 | Consumption, installed, inventory value, low stock (+ extras) | TODO | |
 | 5 | Layout + bilingual | TODO | |

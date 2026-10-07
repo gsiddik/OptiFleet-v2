@@ -10,4 +10,7 @@ final class DashboardPermissions
      * service cost (TR-04). Owner decision 2. Payables (FN-04) use the per-source invoice permissions.
      */
     public const FINANCE = 'dashboard.finance.view';
+
+    /** Set the Mechanic Performance baselines (WS-07). */
+    public const BASELINE_MANAGE = 'mechanic_baseline.manage';
 }

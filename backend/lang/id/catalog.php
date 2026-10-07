@@ -1312,6 +1312,7 @@ return [
     'dashboard.labels.severityMinor' => 'Ringan',
     'dashboard.labels.stockLow' => 'Di bawah titik pemesanan ulang',
     'dashboard.labels.stockNormal' => 'Normal',
+    'dashboard.labels.stockNotSet' => 'Threshold belum diatur',
     'dashboard.labels.stockOut' => 'Stok habis',
     'dashboard.labels.tireGroup_AT_VENDOR' => 'Vulkanisir / perbaikan',
     'dashboard.labels.tireGroup_IN_PROCESS' => 'Dilepas / inspeksi',

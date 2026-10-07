@@ -182,6 +182,11 @@ final class DashboardService
         if (in_array('period', $declared, true)) {
             $applied['months'] = $f->months;
         }
+        if ($f->params !== []) {
+            $params = $f->params;
+            ksort($params);
+            $applied['params'] = $params;
+        }
 
         return $applied;
     }

@@ -95,6 +95,16 @@ abstract class Widget
         return null;
     }
 
+    /**
+     * Widget-specific filters accepted by the widget endpoint (and its drill-down), as validation
+     * rules. Ids are re-checked inside the widget's scoped queries: an id outside the scope matches
+     * nothing.
+     */
+    public function paramRules(): array
+    {
+        return [];
+    }
+
     /** Drill-down rows with the same metric and scope rules as compute(). */
     public function detail(DashboardContext $context, array $params): array
     {

@@ -755,3 +755,4 @@ dashboard.widgets.tr04.empty,No retread or repair cost in this period.,Tidak ada
 dashboard.widgets.al01.title,Action Center,Pusat Tindakan,AL-01,dashboard,Tenant Dashboard improvement (new UI)
 dashboard.widgets.al01.help,"What needs attention now, from the dashboard data you are allowed to see. Each line opens the same list as its source widget.","Hal yang perlu ditangani sekarang, dari data dasbor yang boleh Anda lihat. Setiap baris membuka daftar yang sama dengan widget sumbernya.",AL-01 help,dashboard,Tenant Dashboard improvement (new UI)
 dashboard.widgets.al01.empty,Nothing needs attention right now.,Tidak ada yang perlu ditangani saat ini.,AL-01 empty,dashboard,Tenant Dashboard improvement (new UI)
+dashboard.labels.stockNotSet,Threshold not set,Threshold belum diatur,Stock state: in stock but no reorder point configured,dashboard,Ops dashboard KPIs (new UI)

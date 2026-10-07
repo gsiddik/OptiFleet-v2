@@ -74,13 +74,15 @@ class CriticalStockWidget extends StockHealthWidget
     private function present(object $r): array
     {
         $available = self::decimal($r->available, 2);
-        $shortage = BigDecimal::of((string) $r->reorder_point)->minus($available);
+        // An out-of-stock row may have no reorder point ("not set"): no shortage figure, never 0.
+        $shortage = $r->reorder_point === null ? null : BigDecimal::of((string) $r->reorder_point)->minus($available);
 
         return [
             'id' => $r->id, 'product_id' => $r->product_id, 'product_name' => $r->product_name, 'sku' => $r->sku,
             'warehouse_id' => $r->warehouse_id, 'warehouse_name' => $r->warehouse_name,
-            'on_hand' => self::decimal($r->quantity_on_hand), 'available' => $available, 'reorder_point' => self::decimal($r->reorder_point),
-            'shortage' => $shortage->isPositive() ? self::decimal((string) $shortage) : '0.00',
+            'on_hand' => self::decimal($r->quantity_on_hand), 'available' => $available,
+            'reorder_point' => $r->reorder_point === null ? null : self::decimal($r->reorder_point),
+            'shortage' => $shortage === null ? null : ($shortage->isPositive() ? self::decimal((string) $shortage) : '0.00'),
             'state' => $r->is_out ? 'OUT' : 'LOW', 'needed_by_work_order' => (bool) $r->needed,
         ];
     }

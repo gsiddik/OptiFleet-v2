@@ -227,6 +227,7 @@
     "severityMinor": "Minor",
     "stockLow": "Below reorder point",
     "stockNormal": "Normal",
+    "stockNotSet": "Threshold not set",
     "stockOut": "Out of stock",
     "tireGroup_AT_VENDOR": "Retread / repair",
     "tireGroup_IN_PROCESS": "Removed / inspection",

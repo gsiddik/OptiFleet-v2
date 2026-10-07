@@ -11,7 +11,8 @@ use Illuminate\Support\Facades\DB;
  * WH-01 Stock Health — product × warehouse stock rows by availability, with the application's own
  * availability rule (on hand − reserved; the retired Inventory Reservation feature no longer writes
  * reservations, so reserved is normally zero — no "reserved" KPI is shown):
- *  OUT  available ≤ 0 · LOW  0 < available ≤ reorder point · NORMAL otherwise.
+ *  OUT  available ≤ 0 · LOW  0 < available ≤ reorder point · NOT_SET  in stock, no reorder point
+ *  (never treated as 0) · NORMAL  above its reorder point.
  */
 class StockHealthWidget extends Widget
 {
@@ -40,13 +41,19 @@ class StockHealthWidget extends Widget
         $row = $this->stocks($context)->selectRaw(
             'count(*) filter (where '.self::OUT.') as out_count,
              count(*) filter (where '.self::LOW.') as low_count,
-             count(*) filter (where not ('.self::OUT.') and not ('.self::LOW.')) as normal_count'
+             count(*) filter (where not ('.self::OUT.') and ws.reorder_point is null) as not_set_count,
+             count(*) filter (where not ('.self::OUT.') and ws.reorder_point is not null and not ('.self::LOW.')) as normal_count'
         )->first();
 
         return ['data' => [
-            'total' => (int) $row->out_count + (int) $row->low_count + (int) $row->normal_count,
-            'by_state' => ['OUT' => (int) $row->out_count, 'LOW' => (int) $row->low_count, 'NORMAL' => (int) $row->normal_count],
+            'total' => (int) $row->out_count + (int) $row->low_count + (int) $row->not_set_count + (int) $row->normal_count,
+            'by_state' => ['OUT' => (int) $row->out_count, 'LOW' => (int) $row->low_count, 'NORMAL' => (int) $row->normal_count, 'NOT_SET' => (int) $row->not_set_count],
         ]];
+    }
+
+    public function version(): int
+    {
+        return 2; // NOT_SET state (nullable reorder point)
     }
 
     public const AVAILABLE = '(ws.quantity_on_hand - ws.quantity_reserved)';

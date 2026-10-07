@@ -227,6 +227,7 @@
     "severityMinor": "Ringan",
     "stockLow": "Di bawah titik pemesanan ulang",
     "stockNormal": "Normal",
+    "stockNotSet": "Threshold belum diatur",
     "stockOut": "Stok habis",
     "tireGroup_AT_VENDOR": "Vulkanisir / perbaikan",
     "tireGroup_IN_PROCESS": "Dilepas / inspeksi",

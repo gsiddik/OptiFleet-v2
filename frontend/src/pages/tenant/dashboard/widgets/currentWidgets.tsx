@@ -301,7 +301,7 @@ const WS06: WidgetDefinition<{ count: number; items: Row[] }> = {
 
 // ------------------------------------------------------------------ WH — warehouse
 
-const STOCK_COLORS = { OUT: STATUS.critical, LOW: STATUS.warning, NORMAL: STATUS.good };
+const STOCK_COLORS = { OUT: STATUS.critical, LOW: STATUS.warning, NORMAL: STATUS.good, NOT_SET: NEUTRAL };
 const stockColumns: Column<Row>[] = [{ key: 'product_name', label: col('product') }, { key: 'sku', label: col('sku') },
   { key: 'warehouse_name', label: col('warehouse') }, { key: 'state', label: col('state'), value: (r) => codeLabel(String(r.state), 'stock') },
   { key: 'available', label: col('available'), kind: 'num' }, { key: 'reorder_point', label: col('reorderPoint'), kind: 'num' },
@@ -315,7 +315,7 @@ const WH01: WidgetDefinition<{ total: number; by_state: Counts }> = {
       <Kpi value={count(env.data.by_state.OUT + env.data.by_state.LOW)} label={t('dashboard.widgets.wh01.kpiCritical')}
         tone={env.data.by_state.OUT > 0 ? 'critical' : undefined} />
       <SegmentBar segments={segments(env.data.by_state, STOCK_COLORS, 'stock')} ariaLabel={t('dashboard.widgets.wh01.title')}
-        onSelect={(state) => state !== 'NORMAL' && ctx.openDetail(codeLabel(state, 'stock'), { state }, stockColumns)} />
+        onSelect={(state) => (state === 'OUT' || state === 'LOW') && ctx.openDetail(codeLabel(state, 'stock'), { state }, stockColumns)} />
     </>
   ),
   table: (env) => countTable(env.data.by_state, 'stock'),

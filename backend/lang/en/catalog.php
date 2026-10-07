@@ -1312,6 +1312,7 @@ return [
     'dashboard.labels.severityMinor' => 'Minor',
     'dashboard.labels.stockLow' => 'Below reorder point',
     'dashboard.labels.stockNormal' => 'Normal',
+    'dashboard.labels.stockNotSet' => 'Threshold not set',
     'dashboard.labels.stockOut' => 'Out of stock',
     'dashboard.labels.tireGroup_AT_VENDOR' => 'Retread / repair',
     'dashboard.labels.tireGroup_IN_PROCESS' => 'Removed / inspection',

@@ -219,6 +219,11 @@ class PermissionSeeder extends Seeder
             ['name' => 'dashboard.finance.view', 'scope' => 'tenant'],
             ['group' => 'dashboard', 'description' => 'View financial dashboard widgets']
         );
+        // Mechanic Performance (WS-07): expected work hours per maintenance type.
+        Permission::query()->updateOrCreate(
+            ['name' => 'mechanic_baseline.manage', 'scope' => 'tenant'],
+            ['group' => 'dashboard', 'description' => 'Manage mechanic performance baselines']
+        );
 
         // Phase 6 Section 49: ETL operational controls are platform-scope
         // — running/retrying/backfilling analytics is an infrastructure
