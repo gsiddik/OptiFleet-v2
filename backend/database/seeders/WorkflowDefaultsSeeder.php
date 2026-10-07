@@ -37,6 +37,7 @@ class WorkflowDefaultsSeeder extends Seeder
         'warranty_claim' => 'Warranty Claim',
         'used_part_disposition' => 'Used Part Disposition',
         'sparepart_sale' => 'Sparepart Sale',
+        'stock_reconciliation' => 'Stock Reconciliation',
     ];
 
     public function run(): void
@@ -248,6 +249,18 @@ class WorkflowDefaultsSeeder extends Seeder
                 'transitions' => [
                     $this->transition('DRAFT', 'PENDING_APPROVAL'),
                     $this->transition('DRAFT', 'CANCELLED'),
+                    $this->transition('PENDING_APPROVAL', 'APPROVED'),
+                    $this->transition('PENDING_APPROVAL', 'REJECTED'),
+                ],
+            ],
+            // Approval of a stock reconciliation adjustment (correction of an old installation that never left
+            // the ledger). Stamps the configuration version on the WorkflowApprovalRequest; the apply step is a
+            // separate permission-gated action (inventory_reconcile.manage), not a workflow transition.
+            'stock_reconciliation' => [
+                'statuses' => [
+                    $this->status('PENDING_APPROVAL', true), $this->status('APPROVED'), $this->status('REJECTED'),
+                ],
+                'transitions' => [
                     $this->transition('PENDING_APPROVAL', 'APPROVED'),
                     $this->transition('PENDING_APPROVAL', 'REJECTED'),
                 ],

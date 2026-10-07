@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Domain\Inventory\Services\InventoryException;
 use App\Domain\Inventory\Services\SerializedStockReconciliationService;
+use App\Domain\Inventory\Services\StockReconciliationAdjustmentService;
+use App\Support\TenantContext;
 use Illuminate\Console\Command;
 
 class ReconcileSerializedInstallationsCommand extends Command
@@ -11,37 +13,17 @@ class ReconcileSerializedInstallationsCommand extends Command
     protected $signature = 'inventory:reconcile-serialized-installations
         {--tenant= : Tenant id (default: every tenant)}
         {--json= : Write the full plan (every installation with its evidence) to this file}
-        {--apply : Book the missing issue for the PROVABLE_UNDEDUCTED installations of a reviewed plan}
-        {--plan-hash= : The plan hash printed by the dry-run (required with --apply)}';
+        {--propose : Create PENDING_APPROVAL adjustment proposals for the PROVABLE_UNDEDUCTED installations (no stock moves)}
+        {--user= : Maker (user id) recorded on the proposals; required with --propose}
+        {--reason= : Reason recorded on the proposals; required with --propose}';
 
-    protected $description = 'Dry-run (default) or apply the reconciliation of serialized units installed before installations settled with the warehouse ledger. Applying needs the hash of a reviewed plan; it is idempotent.';
+    protected $description = 'Dry-run (default) of the reconciliation of serialized units installed before installations settled with the warehouse ledger. --propose only files proposals for approval; stock is changed solely by an approved adjustment applied through the API.';
 
-    public function handle(SerializedStockReconciliationService $service): int
+    public function handle(SerializedStockReconciliationService $service, StockReconciliationAdjustmentService $adjustments, TenantContext $context): int
     {
         $tenant = $this->option('tenant') ?: null;
-
-        if ($this->option('apply')) {
-            if (! $this->option('plan-hash')) {
-                $this->error('--apply needs --plan-hash from a reviewed dry-run.');
-
-                return self::FAILURE;
-            }
-            try {
-                $result = $service->apply((string) $this->option('plan-hash'), $tenant);
-            } catch (InventoryException $e) {
-                $this->error($e->getMessage());
-
-                return self::FAILURE;
-            }
-            $this->info("Applied: {$result['applied']}; already done: {$result['already_done']}; skipped: ".count($result['skipped']));
-            foreach ($result['skipped'] as $skipped) {
-                $this->warn("  skipped {$skipped['installation_id']}: {$skipped['reason']}");
-            }
-
-            return self::SUCCESS;
-        }
-
         $plan = $service->plan($tenant);
+
         if ($this->option('json')) {
             file_put_contents((string) $this->option('json'), json_encode($plan, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
             $this->line("Full plan written to {$this->option('json')}");
@@ -54,8 +36,30 @@ class ReconcileSerializedInstallationsCommand extends Command
                 $this->line("  ledger vs registered units — {$b['warehouse']} / {$b['product']}: ledger {$b['ledger_on_hand']}, units {$b['registered_in_stock_units']}, difference {$b['difference']} (provable undeducted: {$b['explained_by_provable_undeducted']})");
             }
         }
-        $this->line('Plan hash: '.$plan['plan_hash']);
-        $this->line('Apply only after review: php artisan inventory:reconcile-serialized-installations --apply --plan-hash='.$plan['plan_hash']);
+
+        if (! $this->option('propose')) {
+            $this->line('To file proposals for approval: --propose --user=<maker id> --reason="..."');
+
+            return self::SUCCESS;
+        }
+        if (! $this->option('user') || ! trim((string) $this->option('reason'))) {
+            $this->error('--propose needs --user and --reason.');
+
+            return self::FAILURE;
+        }
+        $filed = 0;
+        foreach ($plan['tenants'] as $t) {
+            $context->setTenantId($t['tenant_id']);
+            foreach (array_filter($t['candidates'], fn ($c) => $c['category'] === SerializedStockReconciliationService::UNDEDUCTED) as $c) {
+                try {
+                    $adjustments->propose($t['tenant_id'], $c['installation_id'], (string) $this->option('reason'), (string) $this->option('user'));
+                    $filed++;
+                } catch (InventoryException $e) {
+                    $this->warn("  skipped {$c['installation_id']}: {$e->getMessage()}");
+                }
+            }
+        }
+        $this->info("Proposals filed (pending approval, stock untouched): {$filed}");
 
         return self::SUCCESS;
     }
