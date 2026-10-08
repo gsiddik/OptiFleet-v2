@@ -104,6 +104,12 @@ class OptinexusOidcClient
      */
     public function verifyLogoutToken(string $jwt): array
     {
+        // An id_token is typed "JWT"; it must never pass for a logout token. An untyped token is still accepted.
+        $header = json_decode((string) base64_decode(strtr(explode('.', $jwt)[0], '-_', '+/'), true), true);
+        if (is_array($header) && isset($header['typ']) && strtolower((string) $header['typ']) !== 'logout+jwt') {
+            throw new SsoException('logout_token_invalid');
+        }
+
         $issuer = $this->discovery()['issuer'];
         $claims = $this->verifier->verify($jwt, $this->jwks());
         if (! $claims) {

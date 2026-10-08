@@ -74,10 +74,10 @@ class BackchannelLogoutTest extends TestCase
         return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
     }
 
-    private function jwt(array $claims, $key = null): string
+    private function jwt(array $claims, $key = null, string $type = 'logout+jwt'): string
     {
         $key ??= $this->signingKey;
-        $input = $this->b64(json_encode(['alg' => 'RS256', 'typ' => 'JWT', 'kid' => 'k1'])).'.'.$this->b64(json_encode($claims));
+        $input = $this->b64(json_encode(['alg' => 'RS256', 'typ' => $type, 'kid' => 'k1'])).'.'.$this->b64(json_encode($claims));
         openssl_sign($input, $sig, $key, OPENSSL_ALGO_SHA256);
 
         return $input.'.'.$this->b64($sig);
@@ -91,7 +91,7 @@ class BackchannelLogoutTest extends TestCase
     }
 
     /** A logout token as OptiNexus sends it. */
-    private function logoutToken(array $override = [], ?array $revoked = null, $key = null): string
+    private function logoutToken(array $override = [], ?array $revoked = null, $key = null, string $type = 'logout+jwt'): string
     {
         $events = [self::LOGOUT => new \stdClass];
         if ($revoked !== null) {
@@ -101,7 +101,7 @@ class BackchannelLogoutTest extends TestCase
         return $this->jwt(array_merge([
             'iss' => self::NEXUS, 'aud' => self::CLIENT_ID, 'iat' => time(), 'exp' => time() + 120, 'jti' => (string) Str::uuid(),
             'sub' => $this->subject, 'email' => $this->user->email, 'events' => $events,
-        ], $override), $key);
+        ], $override), $key, $type);
     }
 
     private function push(string $token)
@@ -248,6 +248,7 @@ class BackchannelLogoutTest extends TestCase
             'no logout event' => $this->jwt(['iss' => self::NEXUS, 'aud' => self::CLIENT_ID, 'iat' => time(), 'jti' => 'x1', 'sub' => $this->subject, 'events' => ['other' => new \stdClass]]),
             'no subject' => $this->logoutToken(['sub' => ''], ['scope' => 'user']),
             'no jti' => $this->logoutToken(['jti' => ''], ['scope' => 'user']),
+            'typed as an id_token' => $this->logoutToken(revoked: ['scope' => 'user'], type: 'JWT'),
             'not a jwt' => 'garbage',
         ];
 
