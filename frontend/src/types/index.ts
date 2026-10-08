@@ -30,6 +30,13 @@ export interface CurrentUser {
   tenant_default_locale?: string | null;
 }
 
+/** What OptiNexus told us about an SSO session: the tenant it signed in to and the apps the user may open. */
+export interface SsoSession {
+  tenant_id: string;
+  apps: { code: string; name: string; launch_url: string | null }[];
+  logout_url: string | null;
+}
+
 export interface Tenant {
   id: string;
   code: string;
@@ -2711,4 +2718,22 @@ export interface ExcelImportResult {
   imported: number;
   created: { row: number; id: string; label: string }[];
   failed: { row: number; values: Record<string, string | number | boolean | null>; status: ExcelImportRowStatus; reason: string }[];
+}
+
+export interface TelematicsLinkItem {
+  id: string;
+  vehicle_id: string;
+  registration_number: string;
+  current_odometer: string;
+  device_ref: string;
+  odometer_offset_km: string | null;
+  calibrated: boolean;
+  calibrated_at: string | null;
+  latest_reading: {
+    kind: 'DEVICE_ODOMETER' | 'GPS_DISTANCE';
+    reported_km: string;
+    effective_km: string | null;
+    applied: boolean;
+    recorded_at: string;
+  } | null;
 }

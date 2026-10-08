@@ -143,7 +143,7 @@ class SsoLoginTest extends TestCase
         parse_str(parse_url($location, PHP_URL_QUERY), $q);
 
         $exchange = $this->postJson('/api/v1/auth/sso/exchange', ['ticket' => $q['ticket']])->assertOk();
-        $exchange->assertJsonPath('data.user.id', $user->id)->assertJsonPath('data.sso.apps.0.code', 'optiradar');
+        $exchange->assertJsonPath('data.user.id', $user->id)->assertJsonPath('data.sso.apps.0.code', 'optiradar')->assertJsonPath('data.sso.tenant_id', $tenant->id);
         $this->assertSame($sub, $user->fresh()->optinexus_subject);
 
         $this->getJson('/api/v1/auth/me', $this->authHeaders($exchange->json('data.token')))->assertOk()->assertJsonPath('data.id', $user->id);

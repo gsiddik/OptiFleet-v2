@@ -3,6 +3,7 @@ import { LanguageSelector } from '../components/LanguageSelector';
 import { Outlet } from 'react-router-dom';
 import { apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { AppSwitcher } from '../components/AppSwitcher';
 import { Breadcrumb } from '../components/Breadcrumb';
 import { NavDropdown } from '../components/NavDropdown';
 import { NAV_GROUPS, navItemAllowed } from './tenantNav';
@@ -55,7 +56,7 @@ const ACCESS_NAV = [
 ];
 
 export function TenantLayout() {
-  const { user, logout, hasPermission, activeTenantId, switchTenant } = useAuth();
+  const { user, logout, hasPermission, activeTenantId, switchTenant, sso } = useAuth();
   const [activeModules, setActiveModules] = useState<string[] | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -190,6 +191,7 @@ export function TenantLayout() {
                 ))}
               </select>
             )}
+            <AppSwitcher sso={sso} />
             <LanguageSelector compact />
             <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
             <button className="btn-secondary" onClick={() => logout()}>

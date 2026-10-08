@@ -1,17 +1,37 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
+import { API_BASE_URL, apiClient } from '../api/client';
 import { useAuth } from '../auth/AuthContext';
+import { ssoErrorKey } from '../auth/ssoErrors';
 import { inputStyle } from '../components/FormField';
 import { LanguageSelector } from '../components/LanguageSelector';
 
 export function LoginPage() {
   const { t } = useTranslation();
   const { user, login } = useAuth();
+  const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const ssoErrorMessageKey = ssoErrorKey(params.get('sso_error'));
+  const [error, setError] = useState<string | null>(ssoErrorMessageKey ? t(ssoErrorMessageKey) : null);
   const [submitting, setSubmitting] = useState(false);
+  const [ssoEnabled, setSsoEnabled] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    apiClient
+      .get<{ data: { enabled: boolean } }>('/auth/sso/status')
+      .then((res) => {
+        if (!cancelled) setSsoEnabled(res.data.data.enabled === true);
+      })
+      .catch(() => {
+        // Password login keeps working when the status cannot be read.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   if (user) {
     return <Navigate to={user.scope === 'platform' ? '/platform/dashboard' : '/app/dashboard'} replace />;
@@ -72,6 +92,24 @@ export function LoginPage() {
         <button type="submit" disabled={submitting} className="btn-primary" style={{ width: '100%' }}>
           {submitting ? t('auth.actions.signingIn') : t('auth.actions.signIn')}
         </button>
+
+        {ssoEnabled && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '18px 0', color: '#9ca3af', fontSize: 12 }}>
+              <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+              {t('auth.help.or')}
+              <span style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+            </div>
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ width: '100%' }}
+              onClick={() => window.location.assign(`${API_BASE_URL}/auth/sso/redirect`)}
+            >
+              {t('auth.actions.signInWithOptinexus')}
+            </button>
+          </>
+        )}
       </form>
     </div>
   );

@@ -87,7 +87,7 @@ class SsoController extends Controller
         return $this->ok([
             'token' => $token,
             'user' => $this->presenter->present($user),
-            'sso' => ['apps' => $apps, 'logout_url' => $this->oidc->logoutUrl()],
+            'sso' => ['tenant_id' => $tenant->id, 'apps' => $apps, 'logout_url' => $this->oidc->logoutUrl()],
         ]);
     }
 

@@ -52,6 +52,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: '/app/vehicles', label: 'List', labelKey: 'nav.items.list', permission: 'vehicle.view', module: 'VEHICLE' },
       { to: '/app/vehicle-transfers', label: 'Transfer', labelKey: 'nav.items.transfer', permission: 'vehicle.transfer', module: 'VEHICLE' },
       { to: '/app/vehicle-history', label: 'History', labelKey: 'nav.items.history', permission: 'maintenance_history.view', module: 'VEHICLE' },
+      { to: '/app/telematics-links', label: 'Telematics', labelKey: 'nav.items.telematics', permission: 'telematics_link.view', module: 'VEHICLE' },
     ],
   },
   {
