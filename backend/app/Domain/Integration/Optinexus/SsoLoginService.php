@@ -19,6 +19,8 @@ use Illuminate\Support\Str;
  */
 class SsoLoginService
 {
+    public function __construct(private readonly BackchannelLogoutService $lifecycle) {}
+
     /**
      * @param  array<string, mixed>  $claims
      * @return string one-time ticket the SPA exchanges for a session token
@@ -95,6 +97,11 @@ class SsoLoginService
 
             $user->forceFill(['optinexus_subject' => $claims['sub']])->save();
         }
+
+        // OptiNexus has just let this user in. If an earlier logout event from OptiNexus is what
+        // switched the account off, undo exactly that (an administrator's own deactivation stays).
+        $this->lifecycle->reactivate($user, $tenant);
+        $user->refresh();
 
         if ($user->status !== 'active') {
             throw new SsoException('user_inactive');

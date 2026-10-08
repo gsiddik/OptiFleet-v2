@@ -93,6 +93,48 @@ class OptinexusOidcClient
         return $claims;
     }
 
+    /**
+     * Validates a logout token pushed by OptiNexus (OIDC Back-Channel Logout
+     * 1.0 section 2.6): signature, issuer, audience, freshness, the logout
+     * event, a subject, no nonce, and a jti we have not seen before.
+     *
+     * @return array<string, mixed>
+     *
+     * @throws SsoException
+     */
+    public function verifyLogoutToken(string $jwt): array
+    {
+        $issuer = $this->discovery()['issuer'];
+        $claims = $this->verifier->verify($jwt, $this->jwks());
+        if (! $claims) {
+            // The signing key may have rotated since we cached the key set.
+            Cache::forget('optinexus.jwks');
+            $claims = $this->verifier->verify($jwt, $this->jwks());
+        }
+
+        $now = time();
+        $audience = (array) ($claims['aud'] ?? []);
+        $valid = $claims
+            && ($claims['iss'] ?? null) === $issuer
+            && in_array(config('optinexus.sso.client_id'), $audience, true)
+            && is_int($claims['iat'] ?? null) && $claims['iat'] <= $now + 60 && $claims['iat'] >= $now - 600
+            && (! isset($claims['exp']) || (is_int($claims['exp']) && $claims['exp'] >= $now - 60))
+            && is_array($claims['events'] ?? null) && array_key_exists(BackchannelLogoutService::EVENT_BACKCHANNEL_LOGOUT, $claims['events'])
+            && ! array_key_exists('nonce', $claims)
+            && is_string($claims['sub'] ?? null) && $claims['sub'] !== ''
+            && is_string($claims['jti'] ?? null) && $claims['jti'] !== '';
+
+        if (! $valid) {
+            throw new SsoException('logout_token_invalid');
+        }
+
+        if (! Cache::add('optinexus.logout.jti.'.hash('sha256', $claims['jti']), 1, 900)) {
+            throw new SsoException('logout_token_replayed');
+        }
+
+        return $claims;
+    }
+
     public function logoutUrl(): ?string
     {
         $endpoint = $this->discovery()['end_session_endpoint'] ?? null;
