@@ -26,6 +26,7 @@ class User extends Authenticatable
         'user_type',
         'status',
         'last_login_at',
+        'optinexus_subject',
     ];
 
     protected $hidden = [

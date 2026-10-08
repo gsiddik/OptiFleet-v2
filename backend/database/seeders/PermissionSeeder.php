@@ -108,6 +108,7 @@ class PermissionSeeder extends Seeder
             'qc' => ['view', 'perform', 'approve', 'reject'],
             'vehicle_release' => ['perform'],
             'maintenance_history' => ['view'],
+            'telematics_link' => ['view', 'manage'],
 
             // Phase 4: Supply Chain & Asset Lifecycle (Section 46)
             'product' => ['view', 'create', 'update', 'delete'],

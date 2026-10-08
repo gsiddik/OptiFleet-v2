@@ -39,6 +39,7 @@ export const SEGMENT_LABELS: Record<string, string> = {
   vehicles: 'Vehicles',
   'vehicle-transfers': 'Vehicle Transfers',
   'vehicle-history': 'Vehicle History',
+  'telematics-links': 'Telematics Links',
 
   // Inspection
   inspections: 'Inspections',
@@ -141,6 +142,8 @@ export const SEGMENT_LABELS: Record<string, string> = {
   edit: 'Edit',
   inspection: 'Inspection',
   login: 'Login',
+  sso: 'Single Sign-On',
+  callback: 'Callback',
   new: 'New',
   returns: 'Stock Return',
   'tire-history': 'Tire History',

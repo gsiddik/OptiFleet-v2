@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\Tenant\Analytics\WorkOrderAnalyticsController;
 use App\Http\Controllers\Api\Tenant\Analytics\WorkshopAnalyticsController;
 use App\Http\Controllers\Api\Tenant\AuditLogController;
 use App\Http\Controllers\Api\Tenant\BranchController;
+use App\Http\Controllers\Api\Tenant\TelematicsLinkController;
 use App\Http\Controllers\Api\Tenant\BreakdownController;
 use App\Http\Controllers\Api\Tenant\CompanyProfileController;
 use App\Http\Controllers\Api\Tenant\ComponentAssetController;
@@ -256,6 +257,8 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update'])->middleware('permission:vehicle.update');
             Route::post('/vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])->middleware('permission:vehicle.status.update');
             Route::post('/vehicles/{vehicle}/assign', [VehicleController::class, 'assign'])->middleware('permission:vehicle.assign');
+            Route::get('/telematics-links', [TelematicsLinkController::class, 'index'])->middleware('permission:telematics_link.view');
+            Route::put('/telematics-links/{link}/calibration', [TelematicsLinkController::class, 'calibrate'])->middleware('permission:telematics_link.manage');
             Route::get('/vehicles/{vehicle}/assignments', [VehicleController::class, 'assignmentHistory'])->middleware('permission:vehicle.view');
             Route::get('/vehicles/{vehicle}/history', [VehicleController::class, 'history'])->middleware('permission:maintenance_history.view');
             // Maintenance History across every vehicle in the user's data scope (no vehicle selection needed).

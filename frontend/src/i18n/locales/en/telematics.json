@@ -1,0 +1,46 @@
+{
+  "actions": {
+    "calibrate": "Calibrate"
+  },
+  "calibrate": {
+    "actualHint": "The real odometer at the time of the latest GPS reading. The offset is this value minus that reading.",
+    "help": "Choose how GPS distance maps to this vehicle's odometer. Readings from now on are shifted by the offset and can only raise the odometer.",
+    "methodActual": "Enter the actual odometer",
+    "methodOffset": "Enter an offset",
+    "offsetHint": "Kilometres added to the GPS distance to get the odometer. May be negative.",
+    "title": "Calibrate {{registration_number}}"
+  },
+  "empty": {
+    "noLinks": "No vehicles are linked to a telematics device yet."
+  },
+  "fields": {
+    "actualOdometer": "Actual odometer (km)",
+    "calibration": "Calibration",
+    "device": "Device",
+    "fleetOdometer": "OptiFleet odometer (km)",
+    "lastReadingResult": "Result",
+    "latestReading": "Latest reading (km)",
+    "offset": "Offset (km)"
+  },
+  "filters": {
+    "needsCalibration": "Needs calibration"
+  },
+  "help": {
+    "intro": "Vehicles linked to a telematics device (OptiRadar). A device that reports a real odometer updates the vehicle directly. GPS distance is only kept as a reading until the link is calibrated against the odometer recorded here; after that it can only raise the odometer, never lower it."
+  },
+  "kind": {
+    "device": "Device odometer",
+    "gps": "GPS distance"
+  },
+  "status": {
+    "applied": "Applied",
+    "calibrated": "Calibrated",
+    "held": "Held until calibrated",
+    "needsCalibration": "Needs calibration",
+    "notHigher": "Not higher than current",
+    "notNeeded": "Not needed"
+  },
+  "titles": {
+    "links": "Telematics Links"
+  }
+}

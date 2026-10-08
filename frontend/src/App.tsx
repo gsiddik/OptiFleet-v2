@@ -6,6 +6,7 @@ import { RequirePermission, RequirePlatform, RequireTenant } from './components/
 import { PlatformLayout } from './layouts/PlatformLayout';
 import { TenantLayout } from './layouts/TenantLayout';
 import { LoginPage } from './pages/LoginPage';
+import { SsoCallbackPage } from './pages/SsoCallbackPage';
 import { BreadcrumbLabelProvider } from './navigation/BreadcrumbLabelContext';
 import { NavigationTrailProvider } from './navigation/NavigationTrailContext';
 
@@ -63,6 +64,7 @@ import { LoadingState } from './components/States';
 import { VehicleListPage } from './pages/tenant/vehicles/VehicleListPage';
 import { VehicleDetailPage } from './pages/tenant/vehicles/VehicleDetailPage';
 import { VehicleTransferListPage } from './pages/tenant/vehicles/VehicleTransferListPage';
+import { TelematicsLinkPage } from './pages/tenant/vehicles/TelematicsLinkPage';
 import { MaintenanceHistoryPage } from './pages/tenant/history/MaintenanceHistoryPage';
 import { VehicleHistoryPage } from './pages/tenant/vehicles/VehicleHistoryPage';
 import { InspectionListPage } from './pages/tenant/inspections/InspectionListPage';
@@ -172,6 +174,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<RootRedirect />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/sso/callback" element={<SsoCallbackPage />} />
 
           <Route
             path="/platform"
@@ -390,6 +393,14 @@ export default function App() {
               element={
                 <RequirePermission permission="vehicle.transfer">
                   <VehicleTransferListPage />
+                </RequirePermission>
+              }
+            />
+            <Route
+              path="telematics-links"
+              element={
+                <RequirePermission permission="telematics_link.view">
+                  <TelematicsLinkPage />
                 </RequirePermission>
               }
             />

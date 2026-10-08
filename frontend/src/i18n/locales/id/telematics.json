@@ -1,0 +1,46 @@
+{
+  "actions": {
+    "calibrate": "Kalibrasi"
+  },
+  "calibrate": {
+    "actualHint": "Odometer sebenarnya pada saat pembacaan GPS terakhir. Selisih adalah nilai ini dikurangi pembacaan tersebut.",
+    "help": "Pilih bagaimana jarak GPS dipetakan ke odometer kendaraan ini. Pembacaan berikutnya digeser sebesar selisih dan hanya dapat menaikkan odometer.",
+    "methodActual": "Masukkan odometer sebenarnya",
+    "methodOffset": "Masukkan selisih",
+    "offsetHint": "Kilometer yang ditambahkan ke jarak GPS untuk mendapatkan odometer. Boleh negatif.",
+    "title": "Kalibrasi {{registration_number}}"
+  },
+  "empty": {
+    "noLinks": "Belum ada kendaraan yang ditautkan ke perangkat telematika."
+  },
+  "fields": {
+    "actualOdometer": "Odometer sebenarnya (km)",
+    "calibration": "Kalibrasi",
+    "device": "Perangkat",
+    "fleetOdometer": "Odometer OptiFleet (km)",
+    "lastReadingResult": "Hasil",
+    "latestReading": "Pembacaan terakhir (km)",
+    "offset": "Selisih (km)"
+  },
+  "filters": {
+    "needsCalibration": "Perlu kalibrasi"
+  },
+  "help": {
+    "intro": "Kendaraan yang ditautkan ke perangkat telematika (OptiRadar). Perangkat yang melaporkan odometer asli memperbarui kendaraan secara langsung. Jarak GPS hanya disimpan sebagai pembacaan sampai tautan dikalibrasi terhadap odometer yang tercatat di sini; setelah itu hanya dapat menaikkan odometer, tidak pernah menurunkannya."
+  },
+  "kind": {
+    "device": "Odometer perangkat",
+    "gps": "Jarak GPS"
+  },
+  "status": {
+    "applied": "Diterapkan",
+    "calibrated": "Terkalibrasi",
+    "held": "Ditahan sampai dikalibrasi",
+    "needsCalibration": "Perlu kalibrasi",
+    "notHigher": "Tidak lebih tinggi dari saat ini",
+    "notNeeded": "Tidak diperlukan"
+  },
+  "titles": {
+    "links": "Tautan Telematika"
+  }
+}

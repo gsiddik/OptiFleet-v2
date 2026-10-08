@@ -38,6 +38,7 @@ class Tenant extends Model
         'timezone',
         'default_locale',
         'workshop_working_days',
+        'optinexus_tenant_id',
     ];
 
     protected $casts = [
