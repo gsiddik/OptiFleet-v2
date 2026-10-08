@@ -15,6 +15,11 @@ release status live in `docs/status/*.md`.
 - Do not start the next phase without explicit owner instruction, even
   if a prior phase's status file says it is complete.
 
+## Branching
+
+- `main` is the baseline of this repository. Start every new piece of work from the latest `main` on a new branch,
+  and bring it back to `main` by pull request. Do not keep working on a branch whose pull request is already merged.
+
 ## Architecture invariants
 
 - PostgreSQL remains the operational transactional source of truth

@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Domain\Integration\Optinexus\BackchannelLogoutService;
 use App\Domain\Integration\Optinexus\OptinexusOidcClient;
 use App\Domain\Integration\Optinexus\SsoException;
 use App\Domain\Integration\Optinexus\SsoLoginService;
 use App\Http\Controllers\Controller;
 use App\Http\Support\CurrentUserPresenter;
 use App\Support\TenantContext;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -26,6 +28,7 @@ class SsoController extends Controller
         private readonly SsoLoginService $login,
         private readonly CurrentUserPresenter $presenter,
         private readonly TenantContext $context,
+        private readonly BackchannelLogoutService $lifecycle,
     ) {}
 
     public function status()
@@ -89,6 +92,29 @@ class SsoController extends Controller
             'user' => $this->presenter->present($user),
             'sso' => ['tenant_id' => $tenant->id, 'apps' => $apps, 'logout_url' => $this->oidc->logoutUrl()],
         ]);
+    }
+
+    /**
+     * OIDC Back-Channel Logout 1.0 receiver. Called by the OptiNexus server (no
+     * browser, no bearer token): authenticity comes from the signed logout token.
+     */
+    public function backchannelLogout(Request $request): JsonResponse
+    {
+        $headers = ['Cache-Control' => 'no-store'];
+
+        if (! $this->oidc->enabled()) {
+            return response()->json(['error' => 'sso_disabled'], 400, $headers);
+        }
+
+        try {
+            $claims = $this->oidc->verifyLogoutToken((string) $request->input('logout_token'));
+        } catch (SsoException $e) {
+            return response()->json(['error' => 'invalid_request', 'error_description' => $e->getMessage()], 400, $headers);
+        }
+
+        $this->lifecycle->apply($claims);
+
+        return response()->json((object) [], 200, $headers);
     }
 
     private function failure(string $code): RedirectResponse

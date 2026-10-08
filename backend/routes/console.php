@@ -42,3 +42,4 @@ Schedule::command('intelligence:evaluate-outcomes')->dailyAt(config('intelligenc
 // OptiNexus integration: publish vehicles and pull telematics odometer readings.
 // A no-op unless OPTINEXUS_ENABLED=true; every step is idempotent.
 Schedule::command('optinexus:sync')->everyMinute()->withoutOverlapping()->when(fn () => config('optinexus.enabled'));
+Schedule::command('optinexus:relay-events')->everyMinute()->withoutOverlapping()->when(fn () => config('optinexus.enabled') && config('optinexus.events.enabled'));

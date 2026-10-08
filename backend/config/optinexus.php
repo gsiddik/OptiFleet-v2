@@ -22,6 +22,15 @@ return [
         'ticket_ttl_seconds' => 60,
     ],
 
+    // Integration events (invoice and memo events from the outbox) reported to OptiNexus POST /api/v1/events.
+    // Needs the gateway service account below, bound to the OptiFleet application with the event.write scope.
+    'events' => [
+        'enabled' => (bool) env('OPTINEXUS_EVENTS_ENABLED', false),
+        'batch_size' => 100,
+        // After this many failed attempts an event is parked as FAILED (optinexus:relay-events --retry-failed puts it back).
+        'max_attempts' => 20,
+    ],
+
     // API Gateway: platform-level service account (acts per tenant via X-Tenant-Id).
     'gateway' => [
         'client_id' => env('OPTINEXUS_GATEWAY_CLIENT_ID'),

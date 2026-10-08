@@ -3,6 +3,7 @@
 namespace App\Domain\Integration\Optinexus;
 
 use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -15,7 +16,7 @@ use RuntimeException;
  */
 class OptinexusGatewayClient
 {
-    private const SCOPES = 'gateway.fleet.write gateway.fleet.read gateway.telematics.read';
+    private const SCOPES = 'gateway.fleet.write gateway.fleet.read gateway.telematics.read event.write';
 
     /**
      * @param  array<int, array{id: string, registration_number: string, vin: ?string, status: string}>  $vehicles
@@ -32,6 +33,26 @@ class OptinexusGatewayClient
     public function readings(string $optinexusTenantId, int $cursor, int $limit): array
     {
         return $this->request($optinexusTenantId)->get('/telematics/odometer-readings', ['cursor' => $cursor, 'limit' => $limit])->throw()->json('data');
+    }
+
+    /**
+     * Reports one event to OptiNexus (POST /api/v1/events). The answer is returned as is, because the caller
+     * decides what each status means for the outbox row. An expired token is renewed once.
+     */
+    public function publishEvent(array $envelope): Response
+    {
+        $send = fn () => Http::withToken($this->token())
+            ->acceptJson()
+            ->timeout(config('optinexus.gateway.timeout_seconds'))
+            ->post(config('optinexus.base_url').'/api/v1/events', $envelope);
+
+        $response = $send();
+        if ($response->status() === 401) {
+            Cache::forget('optinexus.gateway.token');
+            $response = $send();
+        }
+
+        return $response;
     }
 
     private function request(string $optinexusTenantId): PendingRequest
