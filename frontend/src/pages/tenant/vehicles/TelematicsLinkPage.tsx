@@ -78,11 +78,13 @@ export function TelematicsLinkPage() {
     columns.push({
       key: 'actions',
       header: '',
-      render: (l) => (
-        <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 13 }} onClick={() => setEditing(l)}>
-          {tt('telematics.actions.calibrate')}
-        </button>
-      ),
+      // A device that reports a real odometer has nothing to calibrate; a calibrated link can be recalibrated.
+      render: (l) =>
+        l.calibrated || l.needs_calibration ? (
+          <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 13 }} onClick={() => setEditing(l)}>
+            {tt('telematics.actions.calibrate')}
+          </button>
+        ) : null,
     });
   }
 
