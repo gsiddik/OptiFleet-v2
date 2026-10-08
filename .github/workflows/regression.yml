@@ -1,0 +1,158 @@
+name: Regression
+
+# Full regression of OptiFleet on an environment that has what the test suite
+# needs and a developer machine often lacks: PostgreSQL 16, MongoDB 7 (the
+# Phase 6 analytics projection) and PHP's GD with JPEG support (image
+# processing in document and photo features). Tests that need one of them fail
+# when it is missing; none is skipped, so a green run means they really ran.
+#
+# Runs on every pull request to main and on demand (Actions > Regression > Run
+# workflow, for example against a release branch).
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: regression-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (PHPUnit with PostgreSQL, MongoDB and GD JPEG)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: optifleet_test
+          POSTGRES_USER: optifleet
+          POSTGRES_PASSWORD: optifleet
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U optifleet -d optifleet_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval \"db.adminCommand('ping')\""
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ext-mongodb is pinned to 1.21.x, the same as docker/backend/Dockerfile:
+      # composer.lock resolves mongodb/mongodb 1.21.x, which needs ext-mongodb ^1.21.
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, gd, intl, mbstring, mongodb-1.21.9, pdo_pgsql, pgsql, redis, zip
+          tools: composer:v2
+          coverage: none
+          ini-values: memory_limit=-1
+
+      - name: Check the environment has what the suite needs
+        run: |
+          php -r '
+            $gd = function_exists("gd_info") ? gd_info() : [];
+            $checks = [
+              "GD JPEG support" => !empty($gd["JPEG Support"]) && function_exists("imagejpeg"),
+              "ext-mongodb" => extension_loaded("mongodb"),
+              "pdo_pgsql" => extension_loaded("pdo_pgsql"),
+            ];
+            foreach ($checks as $name => $ok) { echo ($ok ? "ok      " : "MISSING ") . $name . PHP_EOL; }
+            echo "ext-mongodb " . phpversion("mongodb") . PHP_EOL;
+            exit(in_array(false, $checks, true) ? 1 : 0);
+          '
+
+      - name: Get the Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Prepare the application
+        run: |
+          cp .env.example .env
+          php artisan key:generate --ansi
+
+      - name: Run the test suite
+        run: >-
+          vendor/bin/phpunit
+          --display-skipped
+          --display-warnings
+          --log-junit "$RUNNER_TEMP/phpunit-junit.xml"
+
+      - name: Summarise the result
+        if: always()
+        run: |
+          if [ -f "$RUNNER_TEMP/phpunit-junit.xml" ]; then
+            python3 - "$RUNNER_TEMP/phpunit-junit.xml" >> "$GITHUB_STEP_SUMMARY" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+
+          root = ET.parse(sys.argv[1]).getroot()
+          suite = root if root.tag == 'testsuite' else root.find('testsuite')
+          a = suite.attrib
+          print('### Backend PHPUnit')
+          print(f"- tests: {a.get('tests')}, assertions: {a.get('assertions')}, failures: {a.get('failures')}, errors: {a.get('errors')}, skipped: {a.get('skipped')}")
+          PY
+          fi
+
+      - name: Keep the JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-phpunit-junit
+          path: ${{ runner.temp }}/phpunit-junit.xml
+          if-no-files-found: ignore
+
+  frontend:
+    name: Frontend (lint, unit tests, i18n check, build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run i18n:check
+      - run: npm run test:unit
+      - run: npm run build
