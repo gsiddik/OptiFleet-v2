@@ -45,7 +45,7 @@ class CostTireComponentWarrantyAnalyticsTest extends TestCase
         $wo->forceFill(['completed_at' => $this->at('10:00:00')])->save();
 
         DB::table('work_order_planned_parts')->insert([
-            'id' => Str::uuid(), 'work_order_id' => $wo->id, 'description' => 'Brake pad',
+            'id' => Str::uuid(), 'tenant_id' => $tenant->id, 'work_order_id' => $wo->id, 'description' => 'Brake pad',
             'quantity' => 1, 'total_cost' => 250.50, 'created_at' => now(), 'updated_at' => now(),
         ]);
 
