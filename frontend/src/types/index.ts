@@ -2728,6 +2728,8 @@ export interface TelematicsLinkItem {
   device_ref: string;
   odometer_offset_km: string | null;
   calibrated: boolean;
+  /** GPS distance is not an odometer: true until calibrated, unless the device reports a real odometer. */
+  needs_calibration: boolean;
   calibrated_at: string | null;
   latest_reading: {
     kind: 'DEVICE_ODOMETER' | 'GPS_DISTANCE';

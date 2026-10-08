@@ -24,9 +24,9 @@ const pill = (background: string, color: string) => ({ background, color, paddin
 export function TelematicsLinkPage() {
   const { hasPermission } = useAuth();
   const canManage = hasPermission('telematics_link.manage');
-  const [onlyUncalibrated, setOnlyUncalibrated] = useState(false);
+  const [onlyNeedsCalibration, setOnlyNeedsCalibration] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
-  const { data, loading, error } = useApiList<TelematicsLinkItem>('/app/telematics-links', { calibrated: onlyUncalibrated ? 'false' : undefined, per_page: 100 }, reloadKey);
+  const { data, loading, error } = useApiList<TelematicsLinkItem>('/app/telematics-links', { needs_calibration: onlyNeedsCalibration ? 'true' : undefined, per_page: 100 }, reloadKey);
   const [editing, setEditing] = useState<TelematicsLinkItem | null>(null);
 
   const columns: Column<TelematicsLinkItem>[] = [
@@ -51,12 +51,14 @@ export function TelematicsLinkPage() {
     {
       key: 'calibration',
       header: tt('telematics.fields.calibration'),
-      render: (l) =>
-        l.calibrated ? (
-          <span style={pill('#dcfce7', '#15803d')}>{tt('telematics.status.calibrated')}</span>
+      render: (l) => {
+        if (l.calibrated) return <span style={pill('#dcfce7', '#15803d')}>{tt('telematics.status.calibrated')}</span>;
+        return l.needs_calibration ? (
+          <span style={pill('#fef3c7', '#a16207')}>{tt('telematics.status.needsCalibration')}</span>
         ) : (
-          <span style={pill('#fef3c7', '#a16207')}>{tt('telematics.status.notCalibrated')}</span>
-        ),
+          <span style={pill('#f3f4f6', '#6b7280')}>{tt('telematics.status.notNeeded')}</span>
+        );
+      },
     },
     {
       key: 'applied',
@@ -89,10 +91,10 @@ export function TelematicsLinkPage() {
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('telematics.titles.links')}</h1>
       <p style={{ fontSize: 13, color: '#6b7280', marginBottom: 14, maxWidth: 760 }}>{tt('telematics.help.intro')}</p>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14 }}>
-        <button onClick={() => setOnlyUncalibrated(false)} className={!onlyUncalibrated ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
+        <button onClick={() => setOnlyNeedsCalibration(false)} className={!onlyNeedsCalibration ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
           {tt('common.actions.all')}
         </button>
-        <button onClick={() => setOnlyUncalibrated(true)} className={onlyUncalibrated ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
+        <button onClick={() => setOnlyNeedsCalibration(true)} className={onlyNeedsCalibration ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
           {tt('telematics.filters.needsCalibration')}
         </button>
       </div>

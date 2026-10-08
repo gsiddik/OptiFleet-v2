@@ -244,13 +244,26 @@ class OdometerSyncTest extends TestCase
         $this->service()->record($this->tenant->id, $this->item('800', 'GPS_DISTANCE'));
         $link = VehicleTelematicsLink::query()->firstOrFail();
 
-        $this->getJson('/api/v1/app/telematics-links?calibrated=false', $this->authHeaders($token))
-            ->assertOk()->assertJsonPath('data.0.calibrated', false)->assertJsonPath('data.0.latest_reading.kind', 'GPS_DISTANCE');
+        $this->getJson('/api/v1/app/telematics-links?needs_calibration=true', $this->authHeaders($token))
+            ->assertOk()->assertJsonPath('data.0.calibrated', false)->assertJsonPath('data.0.needs_calibration', true)
+            ->assertJsonPath('data.0.latest_reading.kind', 'GPS_DISTANCE');
 
         $this->putJson("/api/v1/app/telematics-links/{$link->id}/calibration", ['actual_odometer_km' => 10100], $this->authHeaders($token))
-            ->assertOk()->assertJsonPath('data.calibrated', true)->assertJsonPath('data.odometer_offset_km', '9300.00');
+            ->assertOk()->assertJsonPath('data.calibrated', true)->assertJsonPath('data.needs_calibration', false)
+            ->assertJsonPath('data.odometer_offset_km', '9300.00');
 
         $this->assertSame('10100.00', $this->odometer());
+        $this->getJson('/api/v1/app/telematics-links?needs_calibration=true', $this->authHeaders($token))->assertOk()->assertJsonCount(0, 'data');
+    }
+
+    public function test_a_device_that_reports_a_real_odometer_does_not_need_calibration(): void
+    {
+        $token = $this->adminToken();
+        $this->service()->record($this->tenant->id, $this->item('10500', 'DEVICE_ODOMETER'));
+
+        $this->getJson('/api/v1/app/telematics-links', $this->authHeaders($token))
+            ->assertOk()->assertJsonPath('data.0.calibrated', false)->assertJsonPath('data.0.needs_calibration', false);
+        $this->getJson('/api/v1/app/telematics-links?needs_calibration=true', $this->authHeaders($token))->assertOk()->assertJsonCount(0, 'data');
     }
 
     public function test_calibration_api_requires_permission_and_respects_tenant_isolation(): void

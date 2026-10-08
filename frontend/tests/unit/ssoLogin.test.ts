@@ -29,8 +29,10 @@ test('the app switcher offers other openable apps and leaves out the current one
       { code: 'broken', name: 'Broken', launch_url: 'not a url' },
     ],
   };
-  assert.deepEqual(otherApps(sso, 'https://fleet.example.test').map((a) => a.code), ['optiradar']);
-  assert.deepEqual(otherApps(null, 'https://fleet.example.test'), []);
+  assert.deepEqual(otherApps(sso, 'https://fleet.example.test', 'optifleet').map((a) => a.code), ['optiradar']);
+  // The SPA and the launch URL may live on different origins: the application code still identifies this app.
+  assert.deepEqual(otherApps(sso, 'https://spa.example.test', 'optifleet').map((a) => a.code), ['optiradar']);
+  assert.deepEqual(otherApps(null, 'https://fleet.example.test', 'optifleet'), []);
 });
 
 test('SSO and telematics screens are translated in English and Indonesian', async () => {
@@ -38,7 +40,7 @@ test('SSO and telematics screens are translated in English and Indonesian', asyn
     'auth.actions.signInWithOptinexus', 'auth.actions.backToSignIn', 'auth.help.or', 'auth.help.completingSignIn', 'auth.apps.label',
     'auth.ssoErrors.accessDenied', 'auth.ssoErrors.tenantNotLinked', 'auth.ssoErrors.userNotProvisioned', 'auth.ssoErrors.emailNotVerified',
     'auth.ssoErrors.accountConflict', 'auth.ssoErrors.failed', 'auth.ssoErrors.ticketInvalid',
-    'telematics.titles.links', 'telematics.actions.calibrate', 'telematics.status.held', 'telematics.calibrate.title', 'nav.items.telematics',
+    'telematics.titles.links', 'telematics.actions.calibrate', 'telematics.status.held', 'telematics.status.needsCalibration', 'telematics.status.notNeeded', 'telematics.calibrate.title', 'nav.items.telematics',
   ];
   for (const locale of ['en', 'id'] as const) {
     await changeLocale(locale);

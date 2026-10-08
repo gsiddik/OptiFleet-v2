@@ -2,12 +2,15 @@ import { otherApps } from '../auth/ssoApps';
 import { t } from '../i18n/i18n';
 import type { SsoSession } from '../types';
 
+/** This app's code in OptiNexus; the switcher never lists it. */
+const CURRENT_APP_CODE: string = import.meta.env.VITE_OPTINEXUS_APP_CODE ?? 'optifleet';
+
 /**
  * Apps the user may open from here without signing in again (the same OptiNexus session carries over).
  * Only shown for sessions opened with "Sign in with OptiNexus"; the current app is left out.
  */
 export function AppSwitcher({ sso }: { sso: SsoSession | null }) {
-  const apps = otherApps(sso, window.location.origin);
+  const apps = otherApps(sso, window.location.origin, CURRENT_APP_CODE);
   if (apps.length === 0) return null;
 
   return (

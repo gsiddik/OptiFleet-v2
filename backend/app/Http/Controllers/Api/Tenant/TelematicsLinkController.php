@@ -28,8 +28,18 @@ class TelematicsLinkController extends Controller
             ->where('tenant_id', $this->context->tenantId())
             ->whereHas('vehicle', fn ($q) => $this->scope->applyBranchScope($q, $this->context->user(), $this->context->tenantId(), 'branch_id'));
 
-        if ($request->query('calibrated') === 'false') {
-            $query->whereNull('odometer_offset_km');
+        if ($request->boolean('needs_calibration')) {
+            $links = (new VehicleTelematicsLink)->getTable();
+            $readings = (new VehicleOdometerReading)->getTable();
+            // A device that has ever reported a real odometer needs no calibration.
+            $query->whereNull('odometer_offset_km')->whereNotExists(
+                fn ($q) => $q->selectRaw('1')->from($readings)
+                    ->whereColumn("$readings.tenant_id", "$links.tenant_id")
+                    ->whereColumn("$readings.vehicle_id", "$links.vehicle_id")
+                    ->whereColumn("$readings.source", "$links.source")
+                    ->whereColumn("$readings.device_ref", "$links.device_ref")
+                    ->where("$readings.odometer_kind", VehicleOdometerReading::KIND_DEVICE)
+            );
         }
 
         return $this->paginated($query->orderBy('created_at')->paginate($request->integer('per_page', 25)), fn (VehicleTelematicsLink $link) => $this->present($link));
@@ -63,6 +73,13 @@ class TelematicsLinkController extends Controller
         return $this->ok($this->present($link->load('vehicle:id,registration_number,branch_id,current_odometer')));
     }
 
+    private function reportsOdometer(VehicleTelematicsLink $link): bool
+    {
+        return VehicleOdometerReading::query()
+            ->where(['tenant_id' => $link->tenant_id, 'vehicle_id' => $link->vehicle_id, 'source' => $link->source, 'device_ref' => $link->device_ref, 'odometer_kind' => VehicleOdometerReading::KIND_DEVICE])
+            ->exists();
+    }
+
     private function present(VehicleTelematicsLink $link): array
     {
         $latest = VehicleOdometerReading::query()
@@ -77,6 +94,8 @@ class TelematicsLinkController extends Controller
             'device_ref' => $link->device_ref,
             'odometer_offset_km' => $link->odometer_offset_km,
             'calibrated' => $link->isCalibrated(),
+            // GPS distance is not an odometer: it needs calibration unless the device reports a real one.
+            'needs_calibration' => ! $link->isCalibrated() && ! $this->reportsOdometer($link),
             'calibrated_at' => $link->calibrated_at,
             'latest_reading' => $latest ? [
                 'kind' => $latest->odometer_kind,

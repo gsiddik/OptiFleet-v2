@@ -36,8 +36,9 @@
     "applied": "Applied",
     "calibrated": "Calibrated",
     "held": "Held until calibrated",
-    "notCalibrated": "Not calibrated",
-    "notHigher": "Not higher than current"
+    "needsCalibration": "Needs calibration",
+    "notHigher": "Not higher than current",
+    "notNeeded": "Not needed"
   },
   "titles": {
     "links": "Telematics Links"

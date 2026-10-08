@@ -30,7 +30,7 @@ command `optinexus:sync` (scheduled), migrations `2026_10_20_000001/2` (tables, 
 `config/optinexus.php`, env keys `OPTINEXUS_*` in `.env.example` (disabled by default).
 
 Routes: `GET /api/v1/auth/sso/{status,redirect,callback}`, `POST /api/v1/auth/sso/exchange`,
-`GET /api/v1/app/telematics-links`, `PUT /api/v1/app/telematics-links/{link}/calibration` (module `VEHICLE`).
+`GET /api/v1/app/telematics-links[?needs_calibration=true]`, `PUT /api/v1/app/telematics-links/{link}/calibration` (module `VEHICLE`).
 
 Frontend (`frontend/`): `LoginPage` SSO button (shown when `/auth/sso/status` is enabled; `?sso_error=` is translated),
 `SsoCallbackPage`, `AuthContext.completeSsoLogin` and `sso` session (logout also ends the OptiNexus session),
@@ -49,12 +49,13 @@ i18n rows in `docs/i18n/17-i18n-additions.csv` (generated resources regenerated)
 
 | Check | Result |
 |---|---|
-| `tests/Feature/Optinexus` (SSO 21, odometer sync + calibration 18) | PASS (executed) |
+| `tests/Feature/Optinexus` (SSO 21, odometer sync + calibration 19) | PASS (executed) |
 | Frontend `tsc -b`, `npm run build`, `npm run i18n:check` | PASS (executed) |
 | Frontend `npm run test:unit` | PASS 56/56 (executed) |
 | Frontend `oxlint` | exit 0, no errors; the only warnings in touched files (`AuthContext.tsx`) were already there |
 | Backend full regression | NOT RUN to completion: 5 tests fail with `imagejpeg()` undefined (PHP built locally without GD JPEG), unrelated to this change; the rest of the suite was green |
-| Browser (manual) check of the new screens | NOT RUN (no live OptiNexus / OptiRadar in this environment) |
+| Browser (manual) check of the new screens | NOT RUN (no browser session; the API side was exercised below) |
+| End-to-end against a live OptiNexus + OptiRadar (Traccar) + this backend (throw-away databases, scripted browser): SSO both ways without a second login prompt, ticket replay refused, odometer from a device (applied), GPS distance (held, then calibrated through the API with an SSO token and applied) | PASS (executed, scripted; not part of the test suite) |
 | Tests use FerretDB (Mongo wire protocol on Postgres) as the Mongo server | environment caveat |
 
 ## Open

@@ -36,8 +36,9 @@
     "applied": "Diterapkan",
     "calibrated": "Terkalibrasi",
     "held": "Ditahan sampai dikalibrasi",
-    "notCalibrated": "Belum dikalibrasi",
-    "notHigher": "Tidak lebih tinggi dari saat ini"
+    "needsCalibration": "Perlu kalibrasi",
+    "notHigher": "Tidak lebih tinggi dari saat ini",
+    "notNeeded": "Tidak diperlukan"
   },
   "titles": {
     "links": "Tautan Telematika"
