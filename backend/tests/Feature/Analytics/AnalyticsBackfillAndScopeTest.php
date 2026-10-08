@@ -156,9 +156,11 @@ class AnalyticsBackfillAndScopeTest extends TestCase
         $workshopA = $this->makeWorkshop($tenant, $branch, ['code' => 'WS-A']);
         $workshopB = $this->makeWorkshop($tenant, $branch, ['code' => 'WS-B']);
 
+        // The endpoints default to the last 30 days, so the documents must be dated relative to today.
+        $snapshotDate = CarbonImmutable::now()->subDay()->toDateString();
         DB::connection('mongodb')->getDatabase()->selectCollection('daily_workshop_metrics')->insertMany([
-            ['tenant_id' => $tenant->id, 'snapshot_date' => '2026-09-06', 'workshop_id' => $workshopA->id, 'wo_throughput' => 5],
-            ['tenant_id' => $tenant->id, 'snapshot_date' => '2026-09-06', 'workshop_id' => $workshopB->id, 'wo_throughput' => 9],
+            ['tenant_id' => $tenant->id, 'snapshot_date' => $snapshotDate, 'workshop_id' => $workshopA->id, 'wo_throughput' => 5],
+            ['tenant_id' => $tenant->id, 'snapshot_date' => $snapshotDate, 'workshop_id' => $workshopB->id, 'wo_throughput' => 9],
         ]);
 
         [, $token] = $this->makeTenantUser($tenant, ['analytics.workshop.view'], ['WORKSHOP' => $workshopA->id]);
@@ -177,9 +179,11 @@ class AnalyticsBackfillAndScopeTest extends TestCase
         $warehouseA = $this->makeWarehouse($tenant);
         $warehouseB = $this->makeWarehouse($tenant);
 
+        // The endpoints default to the last 30 days, so the documents must be dated relative to today.
+        $snapshotDate = CarbonImmutable::now()->subDay()->toDateString();
         DB::connection('mongodb')->getDatabase()->selectCollection('daily_inventory_metrics')->insertMany([
-            ['tenant_id' => $tenant->id, 'snapshot_date' => '2026-09-06', 'warehouse_id' => $warehouseA->id, 'inventory_value' => 100],
-            ['tenant_id' => $tenant->id, 'snapshot_date' => '2026-09-06', 'warehouse_id' => $warehouseB->id, 'inventory_value' => 200],
+            ['tenant_id' => $tenant->id, 'snapshot_date' => $snapshotDate, 'warehouse_id' => $warehouseA->id, 'inventory_value' => 100],
+            ['tenant_id' => $tenant->id, 'snapshot_date' => $snapshotDate, 'warehouse_id' => $warehouseB->id, 'inventory_value' => 200],
         ]);
 
         [, $token] = $this->makeTenantUser($tenant, ['analytics.inventory.view'], ['WAREHOUSE' => $warehouseA->id]);
