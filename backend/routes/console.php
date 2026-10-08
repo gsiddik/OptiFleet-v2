@@ -38,3 +38,7 @@ Schedule::command('intelligence:health')->dailyAt(config('intelligence.schedule.
 Schedule::command('intelligence:diagnostics')->dailyAt(config('intelligence.schedule.diagnostics_time', '04:00'))->withoutOverlapping();
 Schedule::command('intelligence:recommendations')->dailyAt(config('intelligence.schedule.recommendations_time', '04:15'))->withoutOverlapping();
 Schedule::command('intelligence:evaluate-outcomes')->dailyAt(config('intelligence.schedule.outcomes_time', '04:30'))->withoutOverlapping();
+
+// OptiNexus integration: publish vehicles and pull telematics odometer readings.
+// A no-op unless OPTINEXUS_ENABLED=true; every step is idempotent.
+Schedule::command('optinexus:sync')->everyMinute()->withoutOverlapping()->when(fn () => config('optinexus.enabled'));
