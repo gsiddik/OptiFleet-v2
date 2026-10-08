@@ -52,7 +52,7 @@ i18n rows in `docs/i18n/17-i18n-additions.csv` (generated resources regenerated)
 | `tests/Feature/Optinexus` (SSO 21, odometer sync + calibration 18) | PASS (executed) |
 | Frontend `tsc -b`, `npm run build`, `npm run i18n:check` | PASS (executed) |
 | Frontend `npm run test:unit` | PASS 56/56 (executed) |
-| Frontend `oxlint` | 0 errors; warnings are pre-existing apart from none new in the added files |
+| Frontend `oxlint` | exit 0, no errors; the only warnings in touched files (`AuthContext.tsx`) were already there |
 | Backend full regression | NOT RUN to completion: 5 tests fail with `imagejpeg()` undefined (PHP built locally without GD JPEG), unrelated to this change; the rest of the suite was green |
 | Browser (manual) check of the new screens | NOT RUN (no live OptiNexus / OptiRadar in this environment) |
 | Tests use FerretDB (Mongo wire protocol on Postgres) as the Mongo server | environment caveat |
