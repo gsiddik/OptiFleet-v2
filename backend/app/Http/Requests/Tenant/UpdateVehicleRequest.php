@@ -40,7 +40,9 @@ class UpdateVehicleRequest extends FormRequest
             'purchase_year' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
             'fuel_type' => ['nullable', 'string', 'max:50'],
             'transmission_type' => ['nullable', 'string', 'max:50'],
-            'current_odometer' => ['sometimes', 'numeric', 'min:0'],
+            'current_odometer' => ['sometimes', 'numeric', 'min:0', 'max:99999999'],
+            // Needed only to LOWER the odometer (a correction); the reason is kept with the reading and in the audit trail.
+            'odometer_correction_reason' => ['nullable', 'string', 'max:500'],
             'engine_hour' => ['nullable', 'numeric', 'min:0'],
             'operational_status' => ['nullable', 'in:AVAILABLE,IN_USE,ON_HOLD'],
             'color' => ['nullable', 'string', 'max:50'],

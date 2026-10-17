@@ -100,6 +100,7 @@ use App\Http\Controllers\Api\Tenant\VehicleController;
 use App\Http\Controllers\Api\Tenant\VehicleDocumentController;
 use App\Http\Controllers\Api\Tenant\VehicleImportController;
 use App\Http\Controllers\Api\Tenant\VehicleModelController;
+use App\Http\Controllers\Api\Tenant\VehicleOdometerController;
 use App\Http\Controllers\Api\Tenant\VehiclePhotoController;
 use App\Http\Controllers\Api\Tenant\VehicleReleaseController;
 use App\Http\Controllers\Api\Tenant\VehicleTransferController;
@@ -258,8 +259,14 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update'])->middleware('permission:vehicle.update');
             Route::post('/vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])->middleware('permission:vehicle.status.update');
             Route::post('/vehicles/{vehicle}/assign', [VehicleController::class, 'assign'])->middleware('permission:vehicle.assign');
+            Route::get('/telematics/status', [TelematicsLinkController::class, 'status'])->middleware('permission:telematics_link.view');
+            Route::put('/telematics/activation', [TelematicsLinkController::class, 'activation'])->middleware('permission:telematics_link.manage');
             Route::get('/telematics-links', [TelematicsLinkController::class, 'index'])->middleware('permission:telematics_link.view');
             Route::put('/telematics-links/{link}/calibration', [TelematicsLinkController::class, 'calibrate'])->middleware('permission:telematics_link.manage');
+            Route::post('/telematics-links/{link}/review', [TelematicsLinkController::class, 'review'])->middleware('permission:telematics_link.manage');
+            Route::get('/vehicles/{vehicle}/odometer', [VehicleOdometerController::class, 'show'])->middleware('permission:vehicle.view');
+            Route::get('/vehicles/{vehicle}/odometer-readings', [VehicleOdometerController::class, 'index'])->middleware('permission:vehicle.view');
+            Route::post('/vehicles/{vehicle}/odometer-readings', [VehicleOdometerController::class, 'store'])->middleware('permission:vehicle.update');
             Route::get('/vehicles/{vehicle}/assignments', [VehicleController::class, 'assignmentHistory'])->middleware('permission:vehicle.view');
             Route::get('/vehicles/{vehicle}/history', [VehicleController::class, 'history'])->middleware('permission:maintenance_history.view');
             // Maintenance History across every vehicle in the user's data scope (no vehicle selection needed).

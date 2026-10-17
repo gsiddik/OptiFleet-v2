@@ -80,4 +80,31 @@ return [
         // A feed fact missing this long after its outbox row is reported by accounting-feed:monitor.
         'missed_after_minutes' => (int) env('ACCOUNTING_FEED_MISSED_AFTER_MINUTES', 2),
     ],
+
+    /*
+    | Telematics odometer feed (audit A10), read through the OptiNexus API Gateway. A tenant is synced only when ALL hold:
+    | OptiNexus is enabled, the tenant is ACTIVE and linked, the tenant switched the feed on (tenants.telematics_activated_at), and
+    | OptiNexus says the tenant has a live subscription that includes the telematics application (commercial context, cached at most
+    | `governance.ttl_seconds`). Anything else is skipped and the reason is stored and shown; nothing is requested for such a tenant.
+    |
+    | A reading is judged against the last one accepted from the same device and kind. It is held for a person (quarantined, never
+    | applied, the odometer is never lowered by it) when it is older than the device clock allows, lower than the last value, further
+    | away than a vehicle could have driven, or comes from a different device than the vehicle had before. The limits are plain
+    | physical bounds, not business rules; they only decide what a person must look at.
+    */
+    'telematics' => [
+        'application_code' => env('OPTINEXUS_TELEMATICS_APPLICATION', 'optiradar'),
+        // A reading measured later than this many seconds after it was received is a device clock fault (quarantined).
+        'future_tolerance_seconds' => (int) env('OPTINEXUS_TELEMATICS_FUTURE_TOLERANCE', 300),
+        // A device counter may fall by this much (km) before it counts as a decrease (rounding / display jitter).
+        'decrease_tolerance_km' => env('OPTINEXUS_TELEMATICS_DECREASE_TOLERANCE_KM', '1.00'),
+        // Largest distance (km) a vehicle may cover, on top of what its speed explains, between two readings of one device.
+        'jump_slack_km' => env('OPTINEXUS_TELEMATICS_JUMP_SLACK_KM', '50'),
+        'jump_max_average_kmh' => env('OPTINEXUS_TELEMATICS_JUMP_MAX_KMH', '160'),
+        // Status labels (they never drop or hide data): no successful sync for this long, or no new reading from a device for this long.
+        'sync_stale_minutes' => max(1, (int) env('OPTINEXUS_TELEMATICS_SYNC_STALE_MINUTES', 15)),
+        'reading_stale_hours' => max(1, (int) env('OPTINEXUS_TELEMATICS_READING_STALE_HOURS', 24)),
+        // Distinct problems kept per run for the status screen.
+        'rejected_sample' => 5,
+    ],
 ];

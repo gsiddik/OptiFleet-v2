@@ -43,6 +43,7 @@ class Tenant extends Model
 
     protected $casts = [
         'workshop_working_days' => 'integer',
+        'telematics_activated_at' => 'datetime',
     ];
 
     public function users(): BelongsToMany

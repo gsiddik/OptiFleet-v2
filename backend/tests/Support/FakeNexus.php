@@ -43,6 +43,14 @@ class FakeNexus
 
     public ?string $failTokenWith = null;
 
+    /** The API Gateway part (vehicle directory, odometer feed). */
+    public FakeNexusGateway $gateway;
+
+    public function __construct()
+    {
+        $this->gateway = new FakeNexusGateway;
+    }
+
     public function install(): self
     {
         config([
@@ -148,6 +156,7 @@ class FakeNexus
             $path === '/api/v1/authorization/effective-permissions' => $this->effectivePermissions($body),
             $path === '/api/v1/authorization/product-context' => $this->productContext($body),
             (bool) preg_match('#^/api/v1/tenants/([^/]+)/commercial-context$#', $path, $m) => $this->commercialContext($m[1]),
+            str_starts_with($path, '/api/gateway/v1/') => $this->gateway->handle($request, $path, $query, $body),
             str_starts_with($path, '/api/v1/delegation/tenants/') => (new FakeNexusDelegation($this))->handle($request, $path, $query, $body),
             default => $this->fail('RESOURCE_NOT_FOUND', 'The requested resource could not be found.', 404),
         };

@@ -24,6 +24,7 @@ class VehicleCreationService
     public function __construct(
         private readonly CapacityService $capacity,
         private readonly DataScopeService $scope,
+        private readonly OdometerService $odometer,
     ) {}
 
     /**
@@ -51,11 +52,16 @@ class VehicleCreationService
             throw ValidationException::withMessages(['branch_id' => Messages::localized('vehicle.import.branchOutOfScope')]);
         }
 
-        return Vehicle::query()->create(array_merge($validated, [
+        $vehicle = Vehicle::query()->create(array_merge($validated, [
             'brand' => VehicleBrand::query()->findOrFail($validated['vehicle_brand_id'])->name,
             'model' => VehicleModelMaster::query()->findOrFail($validated['vehicle_model_id'])->name,
             'status' => 'ACTIVE',
             'operational_status' => $validated['operational_status'] ?? 'AVAILABLE',
         ]));
+
+        // A typed-in starting odometer is a manual reading (ledger + provenance); the default 0 is not a reading.
+        $this->odometer->recordInitial($vehicle, $user->id);
+
+        return $vehicle;
     }
 }

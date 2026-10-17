@@ -38,6 +38,7 @@ class Vehicle extends Model
 
     protected $casts = [
         'current_odometer' => 'decimal:2',
+        'odometer_measured_at' => 'datetime',
         'engine_hour' => 'decimal:2',
         'length_mm' => 'decimal:1',
         'width_mm' => 'decimal:1',
