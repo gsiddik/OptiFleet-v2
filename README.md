@@ -329,35 +329,32 @@ backend/    Laravel API (Platform + Tenant portals, same codebase)
 frontend/   React SPA (routes under /platform/* and /app/*)
 docker/     Dockerfiles + nginx configs
 docker-compose.yml
-.env.example  Docker Compose environment (copy to .env)
+.env.example  Docker Compose interpolation values (copy to .env)
 ```
 
 ## Running with Docker Compose
 
 ```bash
-cp .env.example .env
+cp .env.example .env          # set APP_KEY and DB_PASSWORD (see the file)
 docker compose up -d --build
-docker compose exec backend php artisan db:seed --class=DevDemoSeeder --force
+docker compose exec api php artisan platform:create-admin   # first platform administrator (README, "Seed data")
 ```
 
-The backend image runs every PHP process as `www-data` — the owner of `storage/` — so
-`docker compose exec backend php artisan …` already runs as the right user. Do not add
-`--user root` to artisan commands: files a root process writes under `storage/app/private`
-(e.g. seeded demo documents) are not accessible to the web process, and uploads then fail with
-"Unable to create a directory …". Uploaded documents live in the `optifleet_storage` volume
-(`storage/app`). If an older deployment left root-owned files behind, the backend refuses to
-start and prints the fix: `docker compose run --rm --user root backend true` (repairs ownership
-once, then continues as `www-data`). Never use `chmod -R 777`.
+One `bootstrap` job waits for PostgreSQL, Redis and MongoDB, migrates and seeds the production-safe system and reference data
+(`FLEET_SEED=catalog`; `demo` adds the demo layer, never for production). `api`, `worker` and `scheduler` start after it and never
+migrate. The images carry no environment: the console proxies `/api` and `/storage` on its own origin, and the runtime settings are the
+`environment:` block of `docker-compose.yml`, so a changed value needs `docker compose up -d`, not a rebuild.
 
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000/api/v1
-- Postgres: localhost:5432 (user/pass/db: `optifleet`)
-- Redis: localhost:6379
-- MongoDB (Phase 6 analytics projection only): localhost:27017
+Every PHP process runs as `www-data`, the owner of `storage/`, so `docker compose exec api php artisan …` already runs as the right
+user. Do not add `--user root` to artisan commands: files a root process writes under `storage/app/private` are not accessible to the
+web process and uploads then fail. Uploaded documents live in the `optifleet_storage` volume (`storage/app`); the entrypoint repairs
+ownership of a mounted volume when started as root. Never use `chmod -R 777`.
 
-Migrations run automatically on backend container start
-(`docker/backend/entrypoint.sh`). Seeding is a one-time manual step so
-restarting the stack never silently re-seeds demo data.
+- Console: http://localhost:5173 (also serves `/api` and `/storage`); API: http://localhost:8000/api/v1
+- PostgreSQL, Redis and MongoDB are not published on the host (`docker compose exec postgres psql -U optifleet`).
+- Ports are published on `127.0.0.1` only (`BIND_ADDRESS`). Upgrading an installation from the former compose file: set `DB_PASSWORD` to the
+  password already in use (the former default was `optifleet`); the project name and volumes are unchanged, so no data moves. To run next
+  to OptiNexus, OptiEntry and OptiRadar use `deploy/ecosystem` in the OptiNexus repository.
 
 > Note: this sandboxed development session could not execute `docker build`
 > because its network egress policy blocks the Docker Hub CDN

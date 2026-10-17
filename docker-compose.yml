@@ -1,41 +1,106 @@
+# OptiFleet: PostgreSQL, Redis, MongoDB (analytics projection only), one-shot bootstrap job, API (php-fpm + nginx), queue worker,
+# scheduler and the console (SPA behind nginx).
+#
+# Two kinds of settings, kept apart on purpose:
+#   * the root .env is read by Compose for ${...} interpolation only (copy .env.example; never commit it);
+#   * the runtime environment of the containers is exactly the `environment:` blocks below, identical for every PHP role (x-fleet-env),
+#     so a changed secret needs `docker compose up -d` (containers re-created), never an image rebuild. A setting that is not listed here
+#     (analytics or intelligence tuning, for example) is added to x-fleet-env, not to a per-service block.
+# Only the `bootstrap` job migrates. api, worker and scheduler wait for it (service_completed_successfully, and the entrypoint also
+# waits for a current schema) and never touch the schema themselves.
+# The project name and the volume keys below are unchanged so existing installations keep their data.
+name: optifleet-v2
+
+x-fleet-env: &fleet-env
+  APP_NAME: OptiFleet
+  APP_ENV: ${APP_ENV:-production}
+  APP_KEY: ${APP_KEY:?set APP_KEY in .env (see .env.example)}
+  APP_DEBUG: ${APP_DEBUG:-false}
+  APP_URL: ${FLEET_PUBLIC_URL:-http://localhost:5173}
+  FRONTEND_URL: ${FLEET_PUBLIC_URL:-http://localhost:5173}
+  DB_CONNECTION: pgsql
+  DB_HOST: postgres
+  DB_PORT: 5432
+  DB_DATABASE: ${DB_DATABASE:-optifleet}
+  DB_USERNAME: ${DB_USERNAME:-optifleet}
+  DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env (an existing installation keeps the password already in use)}
+  REDIS_CLIENT: predis
+  REDIS_HOST: redis
+  REDIS_PORT: 6379
+  CACHE_STORE: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  LOG_CHANNEL: stderr
+  # Analytics / data-warehouse projection only, never the transactional source of truth (backend config/database.php).
+  MONGO_HOST: mongo
+  MONGO_PORT: 27017
+  MONGO_DATABASE: ${MONGO_DATABASE:-optifleet_analytics}
+  MONGO_USERNAME: ${MONGO_USERNAME:-}
+  MONGO_PASSWORD: ${MONGO_PASSWORD:-}
+  ANALYTICS_DEFAULT_TIMEZONE: ${ANALYTICS_DEFAULT_TIMEZONE:-UTC}
+  ANALYTICS_SCHEDULE_TIME: ${ANALYTICS_SCHEDULE_TIME:-02:00}
+  FLEET_SEED: ${FLEET_SEED:-catalog}
+  # OptiNexus adapter: read only when OPTINEXUS_ENABLED=true. The OIDC redirect is the console origin + /api/v1/auth/sso/callback
+  # (the console proxies /api), so it is registered once and never contains an internal host name.
+  OPTINEXUS_ENABLED: ${OPTINEXUS_ENABLED:-false}
+  OPTINEXUS_BASE_URL: ${OPTINEXUS_BASE_URL:-}
+  OPTINEXUS_SSO_CLIENT_ID: ${OPTINEXUS_SSO_CLIENT_ID:-}
+  OPTINEXUS_SSO_CLIENT_SECRET: ${OPTINEXUS_SSO_CLIENT_SECRET:-}
+  OPTINEXUS_SSO_REDIRECT_URI: ${FLEET_PUBLIC_URL:-http://localhost:5173}/api/v1/auth/sso/callback
+  OPTINEXUS_SSO_FRONTEND_URL: ${FLEET_PUBLIC_URL:-http://localhost:5173}
+  OPTINEXUS_EVENTS_ENABLED: ${OPTINEXUS_EVENTS_ENABLED:-false}
+  OPTINEXUS_GATEWAY_CLIENT_ID: ${OPTINEXUS_GATEWAY_CLIENT_ID:-}
+  OPTINEXUS_GATEWAY_CLIENT_SECRET: ${OPTINEXUS_GATEWAY_CLIENT_SECRET:-}
+  OPTINEXUS_GATEWAY_TIMEOUT: ${OPTINEXUS_GATEWAY_TIMEOUT:-20}
+
+x-php: &php
+  image: ${FLEET_IMAGE:-optifleet-backend:local}
+  restart: unless-stopped
+  environment: *fleet-env
+  # Uploaded documents (private disk) persist across container re-creation and are shared by every PHP role.
+  volumes:
+    - optifleet_storage:/var/www/html/storage/app
+
+x-after-bootstrap: &after-bootstrap
+  postgres:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  mongo:
+    condition: service_healthy
+  bootstrap:
+    condition: service_completed_successfully
+
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_DATABASE:-optifleet}
       POSTGRES_USER: ${DB_USERNAME:-optifleet}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-optifleet}
-    ports:
-      - "${DB_PORT:-5432}:5432"
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
     volumes:
       - optifleet_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-optifleet}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-optifleet} -d ${DB_DATABASE:-optifleet}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
   redis:
-    image: redis:7-alpine
+    image: ${REDIS_IMAGE:-redis:7-alpine}
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
       retries: 10
 
-  # Phase 6: analytics / data-warehouse projection store. PostgreSQL remains
-  # the transactional source of truth for every module — this service is
-  # read/written only by the Analytics domain (ETL jobs + read-only
-  # analytics APIs), never by operational mutations.
+  # Analytics / data-warehouse projection store. PostgreSQL remains the transactional source of truth for every module; this service is
+  # read and written only by the Analytics domain (ETL jobs + read-only analytics APIs), never by operational mutations.
   mongo:
-    image: mongo:7
+    image: ${MONGO_IMAGE:-mongo:7}
     restart: unless-stopped
-    ports:
-      - "${MONGO_PORT:-27017}:27017"
     volumes:
       - optifleet_mongo_data:/data/db
     healthcheck:
@@ -44,12 +109,15 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
+  bootstrap:
+    <<: *php
     build:
       context: .
       dockerfile: docker/backend/Dockerfile
-    image: optifleet-backend:local
-    restart: unless-stopped
+      args:
+        PHP_IMAGE: ${PHP_IMAGE:-php:8.4-fpm-alpine}
+        COMPOSER_INSTALL_FLAGS: ${COMPOSER_INSTALL_FLAGS:---prefer-dist}
+    restart: "no"
     depends_on:
       postgres:
         condition: service_healthy
@@ -57,160 +125,73 @@ services:
         condition: service_healthy
       mongo:
         condition: service_healthy
-    environment:
-      APP_NAME: OptiFleet
-      APP_ENV: ${APP_ENV:-local}
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: ${APP_URL:-http://localhost:8000}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE:-optifleet}
-      DB_USERNAME: ${DB_USERNAME:-optifleet}
-      DB_PASSWORD: ${DB_PASSWORD:-optifleet}
-      REDIS_CLIENT: predis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      LOG_CHANNEL: stderr
-      # Phase 6: analytics/data-warehouse projection only — never the
-      # transactional source of truth (see backend config/database.php).
-      MONGO_HOST: mongo
-      MONGO_PORT: 27017
-      MONGO_DATABASE: ${MONGO_DATABASE:-optifleet_analytics}
-      MONGO_USERNAME: ${MONGO_USERNAME:-}
-      MONGO_PASSWORD: ${MONGO_PASSWORD:-}
-      ANALYTICS_DEFAULT_TIMEZONE: ${ANALYTICS_DEFAULT_TIMEZONE:-UTC}
-      ANALYTICS_SCHEDULE_TIME: ${ANALYTICS_SCHEDULE_TIME:-02:00}
-    # Uploaded documents (private disk) persist across container re-creation and are shared with
-    # queue-worker / scheduler. The image runs as www-data, which owns this volume.
-    volumes:
-      - optifleet_storage:/var/www/html/storage/app
+    command: ["bootstrap"]
 
-  # Phase 5 Section 34: notifications are dispatched as queued jobs
-  # (SendNotificationJob) so delivery never blocks the request that raised
-  # the event — something has to actually process that queue. Phase 2's
-  # scheduled commands (billing:generate etc.) had the same latent gap;
-  # Phase 5's notification requirement is what makes it acute enough to
-  # fix here. Same image as `backend`, only the container command differs.
-  queue-worker:
-    # Same image as `backend`, which is the only service that builds it.
-    # Declaring `build` here as well made compose run three identical
-    # PHP-extension compiles in parallel, exhausting RAM on small dev VMs.
-    image: optifleet-backend:local
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      mongo:
-        condition: service_healthy
-    environment:
-      APP_NAME: OptiFleet
-      APP_ENV: ${APP_ENV:-local}
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: ${APP_URL:-http://localhost:8000}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE:-optifleet}
-      DB_USERNAME: ${DB_USERNAME:-optifleet}
-      DB_PASSWORD: ${DB_PASSWORD:-optifleet}
-      REDIS_CLIENT: predis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      LOG_CHANNEL: stderr
-      # Phase 6: analytics/data-warehouse projection only — never the
-      # transactional source of truth (see backend config/database.php).
-      MONGO_HOST: mongo
-      MONGO_PORT: 27017
-      MONGO_DATABASE: ${MONGO_DATABASE:-optifleet_analytics}
-      MONGO_USERNAME: ${MONGO_USERNAME:-}
-      MONGO_PASSWORD: ${MONGO_PASSWORD:-}
-      ANALYTICS_DEFAULT_TIMEZONE: ${ANALYTICS_DEFAULT_TIMEZONE:-UTC}
-      ANALYTICS_SCHEDULE_TIME: ${ANALYTICS_SCHEDULE_TIME:-02:00}
-    volumes:
-      - optifleet_storage:/var/www/html/storage/app
-    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600"]
+  api:
+    <<: *php
+    depends_on: *after-bootstrap
+    healthcheck:
+      test: ["CMD-SHELL", "php -r 'exit(@fsockopen(\"127.0.0.1\", 9000) ? 0 : 1);'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  # Notifications are dispatched as queued jobs (SendNotificationJob), so something must process the queue.
+  worker:
+    <<: *php
+    depends_on: *after-bootstrap
+    command: ["php", "artisan", "queue:work", "--tries=3", "--max-time=3600", "--sleep=3"]
 
   scheduler:
-    # Same image as `backend`, which is the only service that builds it.
-    # Declaring `build` here as well made compose run three identical
-    # PHP-extension compiles in parallel, exhausting RAM on small dev VMs.
-    image: optifleet-backend:local
-    restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      mongo:
-        condition: service_healthy
-    environment:
-      APP_NAME: OptiFleet
-      APP_ENV: ${APP_ENV:-local}
-      APP_KEY: ${APP_KEY}
-      APP_DEBUG: ${APP_DEBUG:-true}
-      APP_URL: ${APP_URL:-http://localhost:8000}
-      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
-      DB_CONNECTION: pgsql
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE:-optifleet}
-      DB_USERNAME: ${DB_USERNAME:-optifleet}
-      DB_PASSWORD: ${DB_PASSWORD:-optifleet}
-      REDIS_CLIENT: predis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      QUEUE_CONNECTION: redis
-      LOG_CHANNEL: stderr
-      # Phase 6: analytics/data-warehouse projection only — never the
-      # transactional source of truth (see backend config/database.php).
-      MONGO_HOST: mongo
-      MONGO_PORT: 27017
-      MONGO_DATABASE: ${MONGO_DATABASE:-optifleet_analytics}
-      MONGO_USERNAME: ${MONGO_USERNAME:-}
-      MONGO_PASSWORD: ${MONGO_PASSWORD:-}
-      ANALYTICS_DEFAULT_TIMEZONE: ${ANALYTICS_DEFAULT_TIMEZONE:-UTC}
-      ANALYTICS_SCHEDULE_TIME: ${ANALYTICS_SCHEDULE_TIME:-02:00}
-    volumes:
-      - optifleet_storage:/var/www/html/storage/app
+    <<: *php
+    depends_on: *after-bootstrap
     command: ["php", "artisan", "schedule:work"]
 
-  nginx:
-    image: nginx:alpine
+  web:
+    image: ${NGINX_IMAGE:-nginx:1.27-alpine}
     restart: unless-stopped
     depends_on:
-      - backend
-    ports:
-      - "${APP_PORT:-8000}:80"
+      api:
+        condition: service_healthy
+    environment:
+      BACKEND_HOST: api
+      LISTEN_PORT: ${FLEET_API_PORT:-8000}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-20m}
     volumes:
-      - ./backend:/var/www/html:ro
-      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/nginx/api.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - optifleet_storage:/var/www/html/storage/app:ro
+    ports:
+      - "${BIND_ADDRESS:-127.0.0.1}:${FLEET_API_PORT:-8000}:${FLEET_API_PORT:-8000}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${FLEET_API_PORT:-8000}/up || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
-  frontend:
+  ui:
+    image: ${FLEET_UI_IMAGE:-optifleet-ui:local}
     build:
       context: .
       dockerfile: docker/frontend/Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000/api/v1}
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-alpine}
+        NGINX_IMAGE: ${NGINX_IMAGE:-nginx:1.27-alpine}
     restart: unless-stopped
     depends_on:
-      - nginx
+      web:
+        condition: service_healthy
+    environment:
+      LISTEN_PORT: ${FLEET_UI_PORT:-5173}
+      API_UPSTREAM: http://web:${FLEET_API_PORT:-8000}
     ports:
-      - "${FRONTEND_PORT:-5173}:80"
+      - "${BIND_ADDRESS:-127.0.0.1}:${FLEET_UI_PORT:-5173}:${FLEET_UI_PORT:-5173}"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:${FLEET_UI_PORT:-5173}/nginx-health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
 
 volumes:
   optifleet_postgres_data:

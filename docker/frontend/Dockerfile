@@ -1,19 +1,19 @@
-# Build context: repository root
-FROM node:22-alpine AS build
+# OptiFleet console image: the built SPA behind nginx. Build context: repository root.
+# The API is called on the same origin (/api/ is proxied to the API), so the image has no environment-specific URL baked in.
+ARG NODE_IMAGE=node:22-alpine
+ARG NGINX_IMAGE=nginx:1.27-alpine
 
+FROM ${NODE_IMAGE} AS build
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-
 COPY frontend/. .
-
-ARG VITE_API_BASE_URL=http://localhost:8000/api/v1
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-
+ENV VITE_API_BASE_URL=/api/v1
 RUN npm run build
 
-FROM nginx:alpine
-COPY docker/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+FROM ${NGINX_IMAGE}
+COPY docker/frontend/nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
-
+ENV API_UPSTREAM=http://web:8000 \
+    LISTEN_PORT=80
 EXPOSE 80
