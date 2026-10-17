@@ -213,7 +213,7 @@ class CentralGovernance
             ->pluck('code')->values();
     }
 
-    /** @return array{tenant_status: ?string, capabilities: array<int, string>, fetched_at: int, expires_at: int} */
+    /** @return array{tenant_status: ?string, capabilities: array<int, string>, applications: array<int, string>, live_subscriptions: int, fetched_at: int, expires_at: int} */
     public function entitlements(string $tenantId): array
     {
         $link = $this->link($tenantId);
@@ -221,14 +221,34 @@ class CentralGovernance
             throw new GovernanceContractException('The tenant is not governed by OptiNexus.');
         }
 
-        $key = 'gov:entitlements:'.hash('sha256', $link['nexus_tenant_id']);
+        return $this->commercial($tenantId);
+    }
+
+    /**
+     * What OptiNexus says the tenant has bought (tenant status, live subscriptions, applications, capabilities), whatever the
+     * governance mode of the tenant is: the accounting feed asks it for tenants that are only linked (audit A19). Same freshness
+     * rules as every other answer: at most `ttl_seconds`, one call per window and tenant, nothing kept past a failure.
+     *
+     * @return array{tenant_status: ?string, capabilities: array<int, string>, applications: array<int, string>, live_subscriptions: int, fetched_at: int, expires_at: int}
+     *
+     * @throws GovernanceUnavailableException
+     * @throws GovernanceContractException when the tenant is not linked to OptiNexus
+     */
+    public function commercial(string $tenantId): array
+    {
+        $link = $this->link($tenantId);
+        if (! $link || ! $link['nexus_tenant_id']) {
+            throw new GovernanceContractException('The tenant is not linked to OptiNexus.');
+        }
+
+        $key = 'gov:commercial:'.hash('sha256', $link['nexus_tenant_id']);
 
         return $this->remember($key, $this->entitlementMemo, function () use ($link): array {
             $context = $this->client->commercialContext($link['nexus_tenant_id']);
             $now = now()->getTimestamp();
 
-            return ['tenant_status' => $context['tenant_status'], 'capabilities' => $context['capabilities'], 'fetched_at' => $now,
-                'expires_at' => $now + (int) config('optinexus.governance.ttl_seconds')];
+            return ['tenant_status' => $context['tenant_status'], 'capabilities' => $context['capabilities'], 'applications' => $context['applications'],
+                'live_subscriptions' => $context['live_subscriptions'], 'fetched_at' => $now, 'expires_at' => $now + (int) config('optinexus.governance.ttl_seconds')];
         }, fn (array $a) => $a, fn (array $a) => $a, fn (array $a) => (int) $a['expires_at']);
     }
 
@@ -285,7 +305,7 @@ class CentralGovernance
     {
         $nexusTenant = Tenant::query()->whereKey($tenantId)->value('optinexus_tenant_id');
         if ($nexusTenant) {
-            $key = 'gov:entitlements:'.hash('sha256', $nexusTenant);
+            $key = 'gov:commercial:'.hash('sha256', $nexusTenant);
             Cache::forget($key);
             unset($this->entitlementMemo[$key]);
         }

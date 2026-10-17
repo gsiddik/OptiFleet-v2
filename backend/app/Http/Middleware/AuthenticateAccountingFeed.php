@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Integration\AccountingFeed\AccountingFeedCredential;
+use App\Domain\Integration\AccountingFeed\FeedPairingGate;
 use App\Domain\Subscription\Models\Subscription;
 use App\Support\TenantContext;
 use Closure;
@@ -15,13 +16,17 @@ use Symfony\Component\HttpFoundation\Response;
  * bound to exactly one tenant. The tenant comes from the credential row and nowhere else (never from the query,
  * body or a header), is put on the request attributes and in the shared TenantContext, and the credential needs the
  * route's scope. Unknown, revoked and expired tokens all answer the same 401 so a token cannot be probed.
+ * While pairing is enforced (FeedPairingGate, audit A19) the OptiNexus tenant pairing and the subscriptions of both products
+ * are checked as well.
  * Nothing is written here (no last-used stamp): the feed has no write side effects.
  */
 class AuthenticateAccountingFeed
 {
     public const TENANT_ATTRIBUTE = 'accounting_feed_tenant_id';
 
-    public function __construct(private readonly TenantContext $context) {}
+    public const PAIRING_ATTRIBUTE = 'accounting_feed_pairing';
+
+    public function __construct(private readonly TenantContext $context, private readonly FeedPairingGate $pairing) {}
 
     public function handle(Request $request, Closure $next, string $scope = AccountingFeedCredential::SCOPE_READ): Response
     {
@@ -46,9 +51,15 @@ class AuthenticateAccountingFeed
             return response()->json(['message' => 'The tenant subscription is suspended.', 'code' => 'FEED_SUBSCRIPTION_SUSPENDED'], 403);
         }
 
+        $pairing = $this->pairing->check($tenant, $credential);
+        if (! $pairing->allowed) {
+            return response()->json(['message' => $pairing->message, 'code' => $pairing->code], $pairing->status, $pairing->retryAfter ? ['Retry-After' => (string) $pairing->retryAfter] : []);
+        }
+
         $this->context->setTenantId($tenant->id);
         $this->context->setPlatformContext(false);
         $request->attributes->set(self::TENANT_ATTRIBUTE, $tenant->id);
+        $request->attributes->set(self::PAIRING_ATTRIBUTE, $pairing->describe());
 
         return $next($request);
     }

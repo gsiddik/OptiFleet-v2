@@ -38,7 +38,7 @@ class AccountingFeedService
     /** @return array<string, mixed> */
     private function envelope(AccountingFeedEvent $event): array
     {
-        return [
+        $envelope = [
             'sequence' => $event->sequence,
             'event_id' => $event->event_id,
             'event_type' => $event->event_type,
@@ -51,5 +51,14 @@ class AccountingFeedService
             'dimensions' => $event->dimensions,
             'payload' => $event->payload,
         ];
+
+        // Only an event rebuilt later from the current state of its source carries it (audit A17): quarantined, to be reviewed by the
+        // consumer and never posted automatically. Live events stay byte-for-byte what they always were, so a consumer that hashes
+        // an envelope does not see an event it already holds change.
+        if ($event->review !== null) {
+            $envelope['review'] = $event->review;
+        }
+
+        return $envelope;
     }
 }

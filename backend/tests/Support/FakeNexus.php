@@ -22,7 +22,7 @@ class FakeNexus
     /** @var array<string, array{permissions: array<string, string>, allowed: bool, deny_reason: ?string, session_reason: ?string}> */
     public array $users = [];
 
-    /** @var array<string, array{status: string, capabilities: array<int, string>}> */
+    /** @var array<string, array{status: string, capabilities: array<int, string>, applications: array<int, string>, subscriptions: array<int, string>}> */
     public array $tenants = [];
 
     /** @var array<int, array{method: string, path: string, query: array, body: array, scope: ?string}> */
@@ -58,9 +58,16 @@ class FakeNexus
 
     // ---------------------------------------------------------------- state
 
-    public function tenant(string $nexusTenantId, array $capabilities = [], string $status = 'ACTIVE'): self
+    /**
+     * @param  array<int, string>|null  $applications  application codes the tenant is entitled to (default: this application only)
+     * @param  array<int, string>|null  $subscriptions  statuses of the live-like subscriptions it has (default: one ACTIVE)
+     */
+    public function tenant(string $nexusTenantId, array $capabilities = [], string $status = 'ACTIVE', ?array $applications = null, ?array $subscriptions = null): self
     {
-        $this->tenants[$nexusTenantId] = ['status' => $status, 'capabilities' => $capabilities];
+        $this->tenants[$nexusTenantId] = [
+            'status' => $status, 'capabilities' => $capabilities,
+            'applications' => $applications ?? [self::APP], 'subscriptions' => $subscriptions ?? ['ACTIVE'],
+        ];
 
         return $this;
     }
@@ -209,10 +216,10 @@ class FakeNexus
         return $this->ok([
             'tenant_id' => $nexusTenantId,
             'tenant_status' => $tenant['status'],
-            'subscriptions' => [],
-            'applications_enabled' => [self::APP],
+            'subscriptions' => array_map(fn (string $status) => ['id' => self::uuid(), 'tenant_id' => $nexusTenantId, 'status' => $status], $tenant['subscriptions']),
+            'applications_enabled' => $tenant['applications'],
             'effective_entitlements' => array_merge(
-                [['entitlement_type' => 'APPLICATION', 'entitlement_key' => self::APP, 'value' => true, 'source' => 'PLAN']],
+                array_map(fn (string $code) => ['entitlement_type' => 'APPLICATION', 'entitlement_key' => $code, 'value' => true, 'source' => 'PLAN'], $tenant['applications']),
                 array_map(fn (string $code) => ['entitlement_type' => 'CAPABILITY', 'entitlement_key' => $code, 'value' => true, 'source' => 'PLAN'], $tenant['capabilities']),
                 [['entitlement_type' => 'LIMIT', 'entitlement_key' => 'max_vehicles', 'value' => 100, 'source' => 'PLAN']],
             ),

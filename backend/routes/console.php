@@ -43,3 +43,6 @@ Schedule::command('intelligence:evaluate-outcomes')->dailyAt(config('intelligenc
 // A no-op unless OPTINEXUS_ENABLED=true; every step is idempotent.
 Schedule::command('optinexus:sync')->everyMinute()->withoutOverlapping()->when(fn () => config('optinexus.enabled'));
 Schedule::command('optinexus:relay-events')->everyMinute()->withoutOverlapping()->when(fn () => config('optinexus.enabled') && config('optinexus.events.enabled'));
+
+// Accounting feed (audit A17): a financial fact without a feed event is a failure; report it (log critical, non-zero exit) every few minutes.
+Schedule::command('accounting-feed:monitor')->everyFiveMinutes()->withoutOverlapping();

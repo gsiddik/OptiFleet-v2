@@ -83,7 +83,11 @@ class NexusGovernanceClient
     /**
      * Capability (module/feature) entitlements of one tenant.
      *
-     * @return array{tenant_status: ?string, capabilities: array<int, string>, applications: array<int, string>}
+     * `live_subscriptions` counts the subscriptions OptiNexus lists as commercially live (it only lists live-like ones) whose status is
+     * in `optinexus.feed.live_subscription_statuses`. The context does not say which subscription covers which application, so the
+     * applications come from the APPLICATION entitlements (`applications_enabled`).
+     *
+     * @return array{tenant_status: ?string, capabilities: array<int, string>, applications: array<int, string>, live_subscriptions: int}
      */
     public function commercialContext(string $nexusTenantId): array
     {
@@ -100,10 +104,14 @@ class NexusGovernanceClient
             }
         }
 
+        $live = array_map('strtoupper', (array) config('optinexus.feed.live_subscription_statuses'));
+        $liveSubscriptions = count(array_filter((array) ($r['data']['subscriptions'] ?? []), fn ($row) => is_array($row) && in_array(strtoupper((string) ($row['status'] ?? '')), $live, true)));
+
         return [
             'tenant_status' => isset($r['data']['tenant_status']) ? (string) $r['data']['tenant_status'] : null,
             'capabilities' => array_values(array_unique($capabilities)),
             'applications' => array_values(array_filter((array) ($r['data']['applications_enabled'] ?? []), 'is_string')),
+            'live_subscriptions' => $liveSubscriptions,
         ];
     }
 

@@ -57,4 +57,27 @@ return [
         // Most members asked per approval step when a permission has to be matched against OptiNexus (no bulk "who holds it").
         'approver_scan_limit' => 200,
     ],
+
+    /*
+    | Accounting feed access (audit A19). The feed is served to OptiEntry only for the pair of products OptiNexus says the
+    | tenant has: the credential is bound to the tenant's OptiNexus identity at issue time, and on every request (answer cached
+    | for at most `governance.ttl_seconds`) OptiNexus must report the tenant ACTIVE with a live subscription that entitles BOTH
+    | this application and the consumer application, plus the consumer's connector capabilities. Anything else is denied; an
+    | unreachable OptiNexus answers 503 (the consumer keeps its cursor). Fleet itself keeps recording and projecting facts.
+    |
+    |   pairing: `auto` enforces it whenever OPTINEXUS_ENABLED is true (legacy installs without OptiNexus keep the old
+    |            credential-only behaviour); `required` enforces it always (fails closed without OptiNexus).
+    */
+    'feed' => [
+        'pairing' => in_array(env('OPTINEXUS_FEED_PAIRING', 'auto'), ['auto', 'required'], true) ? env('OPTINEXUS_FEED_PAIRING', 'auto') : 'required',
+        'consumer_application' => env('OPTINEXUS_FEED_CONSUMER_APPLICATION', 'optiaccounting'),
+        // OptiEntry projects its module/feature codes 1:1 as OptiNexus capability codes (docs/architecture/OPTINEXUS_ADAPTER.md there).
+        'consumer_capabilities' => array_values(array_filter(array_map('trim', explode(',', (string) env('OPTINEXUS_FEED_CONSUMER_CAPABILITIES', 'ACCOUNTING_INTEGRATION,OPTIFLEET_CONNECTOR'))))),
+        // Optional capability of this application that sells the feed separately; empty = the application subscription is enough.
+        'own_capability' => env('OPTINEXUS_FEED_OWN_CAPABILITY'),
+        // Subscription statuses OptiNexus itself treats as commercially live.
+        'live_subscription_statuses' => ['ACTIVE', 'TRIAL', 'GRACE_PERIOD', 'PAST_DUE'],
+        // A feed fact missing this long after its outbox row is reported by accounting-feed:monitor.
+        'missed_after_minutes' => (int) env('ACCOUNTING_FEED_MISSED_AFTER_MINUTES', 2),
+    ],
 ];
