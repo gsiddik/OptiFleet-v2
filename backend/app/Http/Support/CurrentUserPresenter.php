@@ -55,6 +55,8 @@ class CurrentUserPresenter
                     'tenant_code' => $membership->tenant->code,
                     'tenant_name' => $membership->tenant->name,
                     'tenant_logo_url' => $membership->tenant->logo_url,
+                    // The tenant's identity at OptiNexus (null when not linked): the product switcher's `tenant_hint` is compared with it.
+                    'optinexus_tenant_id' => $membership->tenant->optinexus_tenant_id,
                     'status' => $membership->status,
                     'roles' => $roles,
                 ];

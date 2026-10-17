@@ -56,7 +56,7 @@ const ACCESS_NAV = [
 ];
 
 export function TenantLayout() {
-  const { user, logout, hasPermission, activeTenantId, switchTenant, sso } = useAuth();
+  const { user, logout, hasPermission, activeTenantId, switchTenant } = useAuth();
   const [activeModules, setActiveModules] = useState<string[] | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -191,7 +191,7 @@ export function TenantLayout() {
                 ))}
               </select>
             )}
-            <AppSwitcher sso={sso} />
+            <AppSwitcher />
             <LanguageSelector compact />
             <span style={{ fontSize: 14, color: '#374151' }}>{user?.name}</span>
             <button className="btn-secondary" onClick={() => logout()}>

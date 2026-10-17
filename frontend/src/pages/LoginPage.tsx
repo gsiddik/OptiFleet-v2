@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL, apiClient } from '../api/client';
+import { tenantHintFrom } from '../api/productRules';
 import { useAuth } from '../auth/AuthContext';
 import { ssoErrorKey } from '../auth/ssoErrors';
 import { inputStyle } from '../components/FormField';
@@ -9,7 +10,7 @@ import { LanguageSelector } from '../components/LanguageSelector';
 
 export function LoginPage() {
   const { t } = useTranslation();
-  const { user, login } = useAuth();
+  const { user, activeTenantId, login } = useAuth();
   const [params] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +18,19 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(ssoErrorMessageKey ? t(ssoErrorMessageKey) : null);
   const [submitting, setSubmitting] = useState(false);
   const [ssoEnabled, setSsoEnabled] = useState(false);
+
+  // Arriving from another product's switcher (audit A29): `?tenant_hint=<OptiNexus tenant id>`. The existing OptiNexus session
+  // signs the person in again, to that tenant, without a password. Only a UUID counts and an SSO failure (`sso_error`) never
+  // starts it again, so there is no loop.
+  const tenantHint = tenantHintFrom(params.get('tenant_hint'));
+  const activeNexusTenant = user?.memberships.find((m) => m.tenant_id === activeTenantId)?.optinexus_tenant_id ?? null;
+  const switchingIn = tenantHint !== null && ssoEnabled && !ssoErrorMessageKey && (!user || activeNexusTenant !== tenantHint);
+
+  useEffect(() => {
+    if (switchingIn && tenantHint) {
+      window.location.assign(`${API_BASE_URL}/auth/sso/redirect?tenant_hint=${encodeURIComponent(tenantHint)}`);
+    }
+  }, [switchingIn, tenantHint]);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,7 +47,7 @@ export function LoginPage() {
     };
   }, []);
 
-  if (user) {
+  if (user && !switchingIn) {
     return <Navigate to={user.scope === 'platform' ? '/platform/dashboard' : '/app/dashboard'} replace />;
   }
 
@@ -61,6 +75,12 @@ export function LoginPage() {
           <LanguageSelector compact />
         </div>
         <p style={{ color: '#6b7280', marginTop: 0, marginBottom: 24, fontSize: 13 }}>{t('auth.help.signInToContinue')}</p>
+
+        {switchingIn && (
+          <div role="status" style={{ background: '#eff6ff', color: '#1d4ed8', padding: 10, borderRadius: 6, marginBottom: 16, fontSize: 13 }}>
+            {t('auth.help.continuingToOptinexus')}
+          </div>
+        )}
 
         {error && (
           <div style={{ background: '#fef2f2', color: '#b91c1c', padding: 10, borderRadius: 6, marginBottom: 16, fontSize: 13 }}>

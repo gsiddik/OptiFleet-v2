@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\Auth\AuthController;
+use App\Http\Controllers\Api\Auth\ProductSwitcherController;
 use App\Http\Controllers\Api\Auth\SsoController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,6 +20,10 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
         Route::patch('/auth/me/preferences', [AuthController::class, 'updatePreferences']);
         Route::post('/auth/switch-tenant', [AuthController::class, 'switchTenant']);
+
+        // Product switcher (audit A29): what OptiNexus offers this session, and the checked hand-over to one product.
+        Route::get('/auth/products', [ProductSwitcherController::class, 'index']);
+        Route::post('/auth/products/launch', [ProductSwitcherController::class, 'launch'])->middleware('throttle:30,1');
 
         require __DIR__.'/api/platform.php';
         require __DIR__.'/api/app.php';

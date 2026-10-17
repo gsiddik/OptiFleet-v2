@@ -1,0 +1,18 @@
+{
+  "success": true,
+  "data": {
+    "schema_version": "1.0",
+    "user_id": "8f1c1d3a-0b0e-4f55-9c1d-0d0f6f6f0001",
+    "tenant": { "id": "3d2b6f0e-6a58-4c7e-b6b1-5f1d2c9a0001", "code": "ACME", "name": "Acme Logistics" },
+    "application_code": "optifleet",
+    "allowed": true,
+    "deny_reason": null,
+    "products": [
+      { "code": "optifleet", "name": "OptiFleet", "launch_url": "https://fleet.example.test/login", "current": true },
+      { "code": "optiradar", "name": "OptiRadar", "launch_url": "https://radar.example.test/app?lang=id", "current": false },
+      { "code": "optientry", "name": "OptiEntry", "launch_url": "https://entry.example.test/login", "current": false }
+    ],
+    "evaluated_at": "2026-10-17T08:00:00+00:00",
+    "ttl_seconds": 300
+  }
+}

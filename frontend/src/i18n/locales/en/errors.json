@@ -150,6 +150,7 @@
     "identityNotLinked": "Your account is not linked to OptiNexus. Ask your administrator to link it.",
     "moduleNotEntitledModuleCode": "Module not entitled: {{moduleCode}}",
     "platformAccessRequired": "Platform access required.",
+    "productNotAvailable": "That product is not available to you from here. The list has been refreshed.",
     "resourceNotFound": "Resource not found.",
     "ssoRequired": "Sign in with OptiNexus: access for this organization is managed centrally.",
     "subscriptionSuspendedDueOutstandingBalancePlease": "Your subscription is suspended due to an outstanding balance. Please settle your invoice to restore access.",

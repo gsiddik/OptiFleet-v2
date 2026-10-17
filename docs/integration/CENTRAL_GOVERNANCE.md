@@ -81,6 +81,29 @@ copy of users, roles or assignments: `Api/Tenant/DelegationController` (thin) ->
 - Local data scope stays local: the users page opens it for people who already signed in here (`local_member_id`).
 - Gap (to OptiNexus): the delegation API does not enforce the plan's user limit; Fleet's local capacity check applies to LOCAL tenants only.
 
+## Product switcher and switching sign-in (audit A29/R06)
+
+The switcher in the header is what OptiNexus answers to `POST /authorization/product-context`, never a list kept here
+(`ProductSwitcher`, `ProductSwitcherController`; own-account routes, session only, token ability `sso`):
+
+| Route (`/api/v1/auth/...`) | Behaviour |
+|---|---|
+| `GET products` | `{available, reason, products[{code,name}], expires_at}`; no link is sent. Cached at most `min(ttl, 300 s)` per OptiNexus tenant + subject. `available:false` with `reason` `not_sso_session` / `not_linked` / `provider_unavailable` (fail closed: nothing listed while OptiNexus cannot answer, no stale list past its expiry) |
+| `POST products/launch {code}` | Always asks OptiNexus again, then returns `{code,url}` = the product's `launch_url` + `tenant_hint=<OptiNexus tenant id>` (existing query kept). A code that is not in that fresh answer: `403 PRODUCT_NOT_AVAILABLE` (direct targets refused). OptiNexus unreachable: `503 GOVERNANCE_UNAVAILABLE`, no URL |
+
+- `allowed=false` (reason in the logout vocabulary) ends the local session on either call: token deleted, caches dropped,
+  `401 SESSION_ENDED_CENTRALLY` with `reason`. For a CENTRAL tenant the same check also runs on every request (access answer, <= 300 s).
+- Never offered: the current product, `cgo` (governance portal, also filtered here in case the answer ever contained it), links that point
+  to this application's frontend or to the OptiNexus origin, non-http(s) / credential-bearing / unparsable links, plain http outside
+  `local`/`testing`. Audit: `product.launched`, `product.launch_refused` (resource type `product`).
+- Receiving side: `GET /api/v1/auth/sso/redirect?tenant_hint=` and the SPA `/login?tenant_hint=` forward the hint to `/oidc/authorize`
+  only when it is a UUID (anything else is dropped). The login page starts SSO by itself for a valid hint (also for a person signed in
+  to another tenant: memberships carry `optinexus_tenant_id`); `?sso_error=` never restarts it, so there is no loop. Register Fleet's
+  `launch_url` in OptiNexus as the SPA `/login` address.
+- The static `apps` list of the ID token is still returned by `/auth/sso/exchange` for compatibility but is no longer used for switching.
+- Tests: `tests/Feature/Governance/ProductSwitcherTest.php` (FakeNexus + JSON fixtures in `tests/fixtures/nexus/` written from
+  GOVERNANCE_CONTRACTS.md section 3, including unsupported `schema_version` and an unbound service account).
+
 ## Legacy installs: inventory, linking, migration plan (no automatic migration)
 
 1. Inventory (read only): `php artisan optinexus:governance:inventory [--tenant=CODE] [--json]` lists per tenant: mode, linked

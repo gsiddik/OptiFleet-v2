@@ -13,6 +13,8 @@ export interface TenantMembership {
   tenant_code: string;
   tenant_name: string;
   tenant_logo_url: string | null;
+  /** The tenant's identity at OptiNexus (null when the tenant is not linked). */
+  optinexus_tenant_id?: string | null;
   status: 'active' | 'inactive';
   roles: string[];
 }
@@ -41,7 +43,10 @@ export interface Governance {
   expires_at: string | null;
 }
 
-/** What OptiNexus told us about an SSO session: the tenant it signed in to and the apps the user may open. */
+/**
+ * What OptiNexus told us when the SSO session was opened: the tenant it signed in to. `apps` is the list as of sign-in and is
+ * NOT used for switching: the product switcher asks the server (GET /auth/products) every time it is shown.
+ */
 export interface SsoSession {
   tenant_id: string;
   apps: { code: string; name: string; launch_url: string | null }[];

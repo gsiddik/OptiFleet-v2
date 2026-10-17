@@ -150,6 +150,7 @@
     "identityNotLinked": "Akun Anda belum ditautkan ke OptiNexus. Minta administrator Anda untuk menautkannya.",
     "moduleNotEntitledModuleCode": "Modul tidak termasuk hak akses: {{moduleCode}}",
     "platformAccessRequired": "Diperlukan akses platform.",
+    "productNotAvailable": "Produk itu tidak tersedia untuk Anda dari sini. Daftar telah dimuat ulang.",
     "resourceNotFound": "Data tidak ditemukan.",
     "ssoRequired": "Masuk dengan OptiNexus: akses untuk organisasi ini dikelola secara terpusat.",
     "subscriptionSuspendedDueOutstandingBalancePlease": "Langganan Anda ditangguhkan karena ada tagihan yang belum dibayar. Silakan lunasi faktur Anda untuk memulihkan akses.",

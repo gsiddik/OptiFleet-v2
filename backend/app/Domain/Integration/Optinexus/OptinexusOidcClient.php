@@ -28,8 +28,13 @@ class OptinexusOidcClient
             && config('optinexus.sso.client_secret');
     }
 
+    /**
+     * @param  ?string  $tenantHint  the OptiNexus tenant the person is switching into (product switcher, audit A29). Forwarded to
+     *                               /oidc/authorize as `tenant_hint` only when it is a UUID; anything else is ignored, never echoed.
+     */
     public function authorizationUrl(?string $tenantHint = null): string
     {
+        $tenantHint = is_string($tenantHint) && Str::isUuid($tenantHint) ? strtolower($tenantHint) : null;
         $state = Str::random(40);
         $verifier = Str::random(64);
         $nonce = Str::random(32);

@@ -34,6 +34,9 @@ class CentralGovernance
     /** @var array<string, array{tenant_status: ?string, capabilities: array<int, string>, fetched_at: int, expires_at: int}> */
     private array $entitlementMemo = [];
 
+    /** @var array<string, array<string, mixed>> */
+    private array $productMemo = [];
+
     /** @var ?array{at: int, rows: Collection<int, object>} */
     private ?array $modules = null;
 
@@ -153,6 +156,42 @@ class CentralGovernance
         ];
     }
 
+    // --------------------------------------------------------- product context
+
+    /**
+     * What OptiNexus says about this person's session and the products they may open from here (audit A29): the answer of
+     * POST /authorization/product-context, kept at most min(ttl, 300 s). `$fresh` skips the cache (every navigation to another
+     * product is checked against a fresh answer). Null when there is nothing to ask: the tenant is not linked to OptiNexus or the
+     * person has no OptiNexus identity.
+     *
+     * @return ?array{allowed: bool, deny_reason: ?string, nexus_tenant_id: string, products: array<int, array{code: string, name: string, launch_url: ?string, current: bool}>, fetched_at: int, expires_at: int}
+     *
+     * @throws GovernanceUnavailableException when OptiNexus cannot answer (the caller shows no products and opens nothing)
+     */
+    public function productContext(User $user, string $tenantId, bool $fresh = false): ?array
+    {
+        $link = $this->link($tenantId);
+        if (! $link || ! $link['nexus_tenant_id'] || ! $user->optinexus_subject) {
+            return null;
+        }
+
+        $key = 'gov:products:'.hash('sha256', $link['nexus_tenant_id'].'|'.$user->optinexus_subject);
+        if ($fresh) {
+            Cache::forget($key);
+            unset($this->productMemo[$key]);
+        }
+
+        return $this->remember($key, $this->productMemo, function () use ($user, $link): array {
+            $context = $this->client->productContext($user->optinexus_subject, $link['nexus_tenant_id']);
+            $now = now()->getTimestamp();
+
+            return [
+                'allowed' => $context['allowed'], 'deny_reason' => $context['deny_reason'], 'nexus_tenant_id' => $link['nexus_tenant_id'],
+                'products' => $context['products'], 'fetched_at' => $now, 'expires_at' => $now + $context['ttl_seconds'],
+            ];
+        }, fn (array $a) => $a, fn (array $a) => $a, fn (array $a) => (int) $a['expires_at']);
+    }
+
     // ------------------------------------------------------ tenant entitlement
 
     /**
@@ -219,6 +258,9 @@ class CentralGovernance
                 $key = 'gov:access:'.hash('sha256', $nexusTenant.'|'.$user->optinexus_subject);
                 Cache::forget($key);
                 unset($this->snapshots[$key]);
+                $productKey = 'gov:products:'.hash('sha256', $nexusTenant.'|'.$user->optinexus_subject);
+                Cache::forget($productKey);
+                unset($this->productMemo[$productKey]);
             }
         }
     }
@@ -256,6 +298,7 @@ class CentralGovernance
         $this->links = [];
         $this->snapshots = [];
         $this->entitlementMemo = [];
+        $this->productMemo = [];
         $this->modules = null;
     }
 
