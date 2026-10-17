@@ -54,6 +54,13 @@ class FleetManifest
             'manifest_version' => self::VERSION,
             'revision' => $revision,
             'application_code' => GovernanceCatalog::application(),
+            // Lets `ecosystem:import-manifest --create-application` register the product in OptiNexus (like the OptiEntry manifest).
+            'application' => [
+                'application_code' => GovernanceCatalog::application(),
+                'name' => 'OptiFleet',
+                'description' => 'Fleet, workshop and work-order operations.',
+                'frontend_url' => (string) config('optinexus.sso.frontend_url'),
+            ],
             'capabilities' => $capabilities,
             'permissions' => $permissions,
         ];

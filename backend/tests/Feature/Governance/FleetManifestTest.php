@@ -45,6 +45,9 @@ class FleetManifestTest extends TestCase
         $this->assertSame([], $validator->errors()->all());
         $this->assertSame('2.0', $manifest['manifest_version']);
         $this->assertSame('optifleet', $manifest['application_code']);
+        // `ecosystem:import-manifest --create-application` in OptiNexus registers the product from this block.
+        $this->assertSame('optifleet', $manifest['application']['application_code']);
+        $this->assertSame('OptiFleet', $manifest['application']['name']);
     }
 
     public function test_every_key_is_in_the_application_namespace_and_unique(): void
