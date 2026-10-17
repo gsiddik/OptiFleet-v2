@@ -32,6 +32,7 @@ use App\Http\Controllers\Api\Tenant\ConfigurationController;
 use App\Http\Controllers\Api\Tenant\DashboardController;
 use App\Http\Controllers\Api\Tenant\DashboardWidgetController;
 use App\Http\Controllers\Api\Tenant\DataScopeController;
+use App\Http\Controllers\Api\Tenant\DelegationController;
 use App\Http\Controllers\Api\Tenant\EquipmentTypeController;
 use App\Http\Controllers\Api\Tenant\ExternalWorkOrderController;
 use App\Http\Controllers\Api\Tenant\ExternalWorkOrderInvoiceController;
@@ -881,6 +882,19 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::post('/roles/{role}/permissions', [RoleController::class, 'assignPermissions'])->middleware('permission:role.assign_permission');
 
             Route::get('/permissions', [PermissionController::class, 'index'])->middleware('permission:role.view');
+
+            // Centrally governed tenants (audit R08/A25): users and custom roles are managed in OptiNexus through its delegation API,
+            // with the signed-in person as the acting user. OptiNexus decides who is an Admin Tenant and what is delegable.
+            Route::prefix('delegation')->group(function () {
+                Route::get('/catalog', [DelegationController::class, 'catalog'])->middleware('permission:role.view');
+                Route::get('/users', [DelegationController::class, 'users'])->middleware('permission:user.view');
+                Route::post('/users', [DelegationController::class, 'addUser'])->middleware('permission:user.create');
+                Route::put('/users/{nexusUserId}/roles', [DelegationController::class, 'setUserRoles'])->middleware('permission:user.assign');
+                Route::delete('/users/{nexusUserId}', [DelegationController::class, 'revokeUser'])->middleware('permission:user.update');
+                Route::post('/roles', [DelegationController::class, 'createRole'])->middleware('permission:role.create');
+                Route::put('/roles/{roleId}', [DelegationController::class, 'updateRole'])->middleware('permission:role.update');
+                Route::delete('/roles/{roleId}', [DelegationController::class, 'deleteRole'])->middleware('permission:role.update');
+            });
         });
 
         Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:audit.view');

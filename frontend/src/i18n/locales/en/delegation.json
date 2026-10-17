@@ -1,0 +1,53 @@
+{
+  "banner": {
+    "managedCentrally": "Access for this organization is managed centrally in OptiNexus. Changes made here are saved there and take effect right away."
+  },
+  "roles": {
+    "delegableCount": "{{count}} permissions can be given to custom roles of this organization.",
+    "deleteConfirm": "Delete the role \"{{name}}\"? People who hold it must be changed first.",
+    "deleteTitle": "Delete role",
+    "droppedWarning": "This role holds {{count}} permission(s) that can no longer be delegated. Saving removes them.",
+    "editTitle": "Edit role {{name}}",
+    "empty": "No roles yet. Create the first role.",
+    "newTitle": "New role",
+    "notEditable": "Provided by the platform operator; it cannot be changed here.",
+    "nothingDelegable": "No permission can be delegated to this organization yet.",
+    "onlyDelegable": "Only permissions that can be delegated to this organization are listed.",
+    "selectedOf": "({{selected}} of {{total}} selected)",
+    "template": "Provided by the platform"
+  },
+  "state": {
+    "error": "Something went wrong",
+    "forbidden": "Not allowed",
+    "offline": "The service cannot be reached. Check your connection and try again.",
+    "outcomeUnknown": "Your last change may or may not have been saved. Check the list before trying again.",
+    "reference": "Reference: {{id}}",
+    "retry": "Try again",
+    "unavailable": "Temporarily unavailable"
+  },
+  "users": {
+    "addUser": "Add user",
+    "administrator": "Administrator",
+    "dataScope": "Data scope",
+    "dataScopeHint": "The data scope only limits what this person sees here (for example one branch). It never adds permissions.",
+    "dataScopeOf": "Data scope of {{name}}",
+    "empty": "No users yet. Add the first user.",
+    "emptySearch": "No user matches your search.",
+    "keptRoles": "Kept as they are: {{roles}}.",
+    "manageRoles": "Roles",
+    "noAssignableRoles": "No roles can be assigned from here yet.",
+    "noPasswordHere": "The person signs in with OptiNexus. OptiFleet never sees or stores a password.",
+    "noRoles": "No roles",
+    "outcome": {
+      "created": "{{name}} was added and can sign in with OptiNexus.",
+      "existing": "{{name}} already had access here.",
+      "linked": "{{name}} already had an OptiNexus account and now has access here."
+    },
+    "removeAccess": "Remove access",
+    "removeConfirm": "Remove the access of {{name}} to this application? Their sessions end and their roles here are removed. Their OptiNexus account stays.",
+    "revoked": "The access of {{name}} was removed.",
+    "rolesHint": "Only roles that can be delegated are listed. Roles assigned by the platform operator are not changed here.",
+    "rolesOf": "Roles of {{name}}",
+    "rolesOptional": "Roles (optional)"
+  }
+}

@@ -108,6 +108,28 @@
     "unitPriceUnitPriceProductType": "Unit price ({{unitPrice}}) for {{productType}} '{{product_reference}}' cannot be lower than the active price ({{activePrice}}).",
     "unsupportedProductTypeProductType": "Unsupported product type: {{productType}}."
   },
+  "delegation": {
+    "actorNotTenantAdmin": "Only an administrator of this organization can manage its users and roles. Ask your organization administrator.",
+    "applicationNotActive": "This application is not active for the organization.",
+    "applicationNotSubscribed": "This organization has no active subscription to this application.",
+    "identityNotLinkable": "This e-mail address belongs to an account that cannot be added here.",
+    "membershipNotActive": "The membership of this person in the organization is suspended. Contact the platform operator.",
+    "misconfigured": "User management is not configured correctly. Contact support and quote the reference shown.",
+    "notCentral": "Users and roles of this organization are managed inside this application.",
+    "notFound": "The item was not found.",
+    "permissionNotDelegable": "One or more of the selected permissions cannot be given to a custom role.",
+    "roleInUse": "This role is still assigned to users. Remove it from them first.",
+    "roleNotAssignable": "A selected role is unknown or cannot be assigned from here.",
+    "roleNotEditable": "This role cannot be changed here. Roles provided by the platform are managed by the platform operator.",
+    "selfRevocationDenied": "You cannot remove your own access.",
+    "tenantAdminProtected": "An organization administrator can only be changed by the platform operator.",
+    "tenantNotActive": "This organization is not active.",
+    "unavailable": "User management is temporarily unavailable. Try again in a moment.",
+    "unavailableChange": "User management is temporarily unavailable and your change may or may not have been saved. Check the list before trying again.",
+    "unexpected": "The authorization service gave an unexpected answer. Contact support and quote the reference shown.",
+    "userNotInTenant": "This person is not a user of this organization.",
+    "validation": "Some of the data is not valid. Check the marked fields."
+  },
   "entitlement": {
     "cannotDisableModuleWithList": "Cannot disable module {{moduleCode}}: still required by active module(s): {{modules}}",
     "cannotEnableModuleWithList": "Cannot enable module {{moduleCode}}: missing required module(s): {{modules}}",

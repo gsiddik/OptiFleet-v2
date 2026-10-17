@@ -52,6 +52,35 @@ First SSO sign-in creates a projection: no usable password, TENANT data scope on
 local account is linked once by verified e-mail; an account bound to another OptiNexus subject is never rebound; an unverified
 e-mail creates nothing; a membership an administrator switched off stays off.
 
+## Users and roles from the OptiFleet UI (delegation, audit R08/A25)
+
+In a CENTRAL tenant `/app/access/users` and `/app/access/roles` show the central pages instead of the local ones. OptiFleet keeps no
+copy of users, roles or assignments: `Api/Tenant/DelegationController` (thin) -> `TenantDelegationService` -> `NexusDelegationClient`
+(`tenant.delegate`, 5 s / 3 s timeouts, no retry of a change after a lost connection) -> OptiNexus delegation API.
+
+| Route (`/api/v1/app/delegation/...`) | Fleet gate | Delegation call |
+|---|---|---|
+| `GET catalog` | `role.view` | catalog: delegable permissions (grouped Module > Feature > Action) + assignable roles |
+| `GET users` | `user.view` | list (search, paging) |
+| `POST users` | `user.create` | add or link by e-mail (`created`/`linked`/`existing`); no password field exists |
+| `PUT users/{id}/roles` | `user.assign` | replace the delegated roles |
+| `DELETE users/{id}` | `user.update` | remove the application from the person |
+| `POST roles`, `PUT roles/{id}`, `DELETE roles/{id}` | `role.create`, `role.update` (+ `role.assign_permission` to change permissions) | custom roles |
+
+- Acting user = the signed-in person's OptiNexus subject, taken server-side; a value in the request is ignored. The tenant is the
+  session's tenant. Ids that go into a URL must be UUIDs.
+- OptiNexus decides Admin Tenant, delegable set, assignable roles and every protection; OptiFleet only adds its own permission gate in front
+  (`user.*` / `role.*` are not delegable, so an operator grants them to the organization administrators).
+- Every documented refusal is mapped to a status and a translated message (`App\Domain\Governance\Delegation\DelegationErrors`, en + id);
+  the English `code` stays in the body with `correlation_id`, `retryable`, `outcome_unknown`. A lost connection during a change answers
+  `503 DELEGATION_UNAVAILABLE` with `outcome_unknown: true`; the UI tells the person to check the list before retrying.
+- Audit (`audit_logs`, resource type `delegation`): `delegation.user_created|linked|existing`, `user_roles_set`, `user_access_revoked`,
+  `role_created|updated|deleted`, and `delegation.refused` (code + correlation id) for every refusal by OptiNexus; outages are only logged.
+- After a change the cached access answers of the people it affects are dropped (single person or all members), so a revocation is
+  in force on the next request instead of within one TTL.
+- Local data scope stays local: the users page opens it for people who already signed in here (`local_member_id`).
+- Gap (to OptiNexus): the delegation API does not enforce the plan's user limit; Fleet's local capacity check applies to LOCAL tenants only.
+
 ## Legacy installs: inventory, linking, migration plan (no automatic migration)
 
 1. Inventory (read only): `php artisan optinexus:governance:inventory [--tenant=CODE] [--json]` lists per tenant: mode, linked

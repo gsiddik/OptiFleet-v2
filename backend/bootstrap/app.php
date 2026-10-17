@@ -11,6 +11,7 @@ use App\Domain\Contract\Services\AmendmentException;
 use App\Domain\Contract\Services\ContractException;
 use App\Domain\Entitlement\Services\CapacityExceededException;
 use App\Domain\Entitlement\Services\EntitlementException;
+use App\Domain\Governance\Delegation\DelegationException;
 use App\Domain\Governance\Exceptions\GovernanceContractException;
 use App\Domain\Governance\Exceptions\GovernanceUnavailableException;
 use App\Domain\Inspection\Services\InspectionException;
@@ -140,12 +141,26 @@ return Application::configure(basePath: dirname(__DIR__))
         // Central governance (audit A02/R05): OptiNexus could not answer, so access is denied rather than guessed. The code lets
         // the UI show "authorization service unavailable" instead of a permission error; Retry-After is advice, not a grant.
         $exceptions->dontReport(GovernanceUnavailableException::class);
+        $exceptions->dontReport(DelegationException::class);
 
         $exceptions->render(function (GovernanceUnavailableException|GovernanceContractException $e, Request $request) {
             return response()->json([
                 'message' => Messages::localized('errors.http.governanceUnavailable'),
                 'code' => GovernanceUnavailableException::CODE,
             ], 503, ['Retry-After' => (string) (($e instanceof GovernanceUnavailableException ? $e->retryAfterSeconds : null) ?? 30)]);
+        });
+
+        $exceptions->render(function (DelegationException $e, Request $request) {
+            $body = ['message' => Messages::localized($e->messageKey), 'code' => $e->errorCode];
+            foreach (['errors' => $e->fieldErrors, 'correlation_id' => $e->correlationId, 'details' => $e->details] as $key => $value) {
+                if ($value !== null) {
+                    $body[$key] = $value;
+                }
+            }
+            $body['retryable'] = $e->retryable;
+            $body['outcome_unknown'] = $e->outcomeUnknown;
+
+            return response()->json($body, $e->httpStatus, $e->retryable ? ['Retry-After' => '30'] : []);
         });
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {

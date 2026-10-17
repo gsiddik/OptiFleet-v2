@@ -108,6 +108,28 @@
     "unitPriceUnitPriceProductType": "Harga satuan ({{unitPrice}}) untuk {{productType}} '{{product_reference}}' tidak boleh lebih rendah dari harga aktif ({{activePrice}}).",
     "unsupportedProductTypeProductType": "Jenis produk tidak didukung: {{productType}}."
   },
+  "delegation": {
+    "actorNotTenantAdmin": "Hanya administrator organisasi ini yang dapat mengelola pengguna dan perannya. Hubungi administrator organisasi Anda.",
+    "applicationNotActive": "Aplikasi ini tidak aktif untuk organisasi.",
+    "applicationNotSubscribed": "Organisasi ini tidak memiliki langganan aktif untuk aplikasi ini.",
+    "identityNotLinkable": "Alamat email ini milik akun yang tidak dapat ditambahkan di sini.",
+    "membershipNotActive": "Keanggotaan orang ini di organisasi ditangguhkan. Hubungi operator platform.",
+    "misconfigured": "Pengelolaan pengguna belum dikonfigurasi dengan benar. Hubungi dukungan dan sebutkan referensi yang ditampilkan.",
+    "notCentral": "Pengguna dan peran organisasi ini dikelola di dalam aplikasi ini.",
+    "notFound": "Data tidak ditemukan.",
+    "permissionNotDelegable": "Satu atau beberapa izin yang dipilih tidak dapat diberikan ke peran khusus.",
+    "roleInUse": "Peran ini masih ditetapkan kepada pengguna. Cabut dari mereka terlebih dahulu.",
+    "roleNotAssignable": "Peran yang dipilih tidak dikenal atau tidak dapat ditetapkan dari sini.",
+    "roleNotEditable": "Peran ini tidak dapat diubah di sini. Peran bawaan platform dikelola oleh operator platform.",
+    "selfRevocationDenied": "Anda tidak dapat mencabut akses Anda sendiri.",
+    "tenantAdminProtected": "Administrator organisasi hanya dapat diubah oleh operator platform.",
+    "tenantNotActive": "Organisasi ini tidak aktif.",
+    "unavailable": "Pengelolaan pengguna sementara tidak tersedia. Coba lagi sebentar lagi.",
+    "unavailableChange": "Pengelolaan pengguna sementara tidak tersedia dan perubahan Anda mungkin sudah atau belum tersimpan. Periksa daftar sebelum mencoba lagi.",
+    "unexpected": "Layanan otorisasi memberikan jawaban yang tidak terduga. Hubungi dukungan dan sebutkan referensi yang ditampilkan.",
+    "userNotInTenant": "Orang ini bukan pengguna organisasi ini.",
+    "validation": "Sebagian data tidak valid. Periksa kolom yang ditandai."
+  },
   "entitlement": {
     "cannotDisableModuleWithList": "Tidak dapat menonaktifkan modul {{moduleCode}}: masih diwajibkan oleh modul aktif: {{modules}}",
     "cannotEnableModuleWithList": "Tidak dapat mengaktifkan modul {{moduleCode}}: modul yang diwajibkan belum ada: {{modules}}",
