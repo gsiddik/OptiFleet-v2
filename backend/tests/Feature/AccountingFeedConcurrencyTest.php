@@ -205,7 +205,10 @@ class AccountingFeedConcurrencyTest extends TestCase
             }
             $slowDone = collect($this->lines($output['slow'] ?? ''))->firstWhere('phase', 'done');
             if (! $slowDone) {
-                $sawBeforeSlowCommitted[] = count($this->read($tenantId, 0, 10)['data']);
+                // Timestamped: under load the writer's "done" line can reach this loop after its commit, so a sample is judged
+                // against the writer's own clock below, not against whether the line has been read yet.
+                $sampledAt = microtime(true);
+                $sawBeforeSlowCommitted[] = [$sampledAt, count($this->read($tenantId, 0, 10)['data'])];
             }
             usleep(5000);
         } while ($running && microtime(true) < $deadline);
@@ -220,7 +223,10 @@ class AccountingFeedConcurrencyTest extends TestCase
 
         $this->assertSame(1, $slowLines->firstWhere('phase', 'allocated')['sequence']);
         $this->assertSame(2, $sameLines->firstWhere('phase', 'allocated')['sequence']);
-        $this->assertSame([0], array_values(array_unique($sawBeforeSlowCommitted)), 'while the first writer is uncommitted the consumer sees nothing, not even the later event');
+        $slowCommittedAt = $slowLines->firstWhere('phase', 'done')['t'];
+        $uncommitted = array_values(array_unique(array_column(array_filter($sawBeforeSlowCommitted, fn (array $s) => $s[0] < $slowCommittedAt - 0.25), 1)));
+        $this->assertGreaterThan(10, count(array_filter($sawBeforeSlowCommitted, fn (array $s) => $s[0] < $slowCommittedAt - 0.25)), 'the consumer sampled while the first writer was uncommitted');
+        $this->assertSame([0], $uncommitted, 'while the first writer is uncommitted the consumer sees nothing, not even the later event');
 
         // The later writer of the SAME tenant could only allocate after the earlier one committed (lock held until commit) ...
         $this->assertGreaterThanOrEqual($slowLines->firstWhere('phase', 'done')['t'] - 0.05, $sameLines->firstWhere('phase', 'allocated')['t']);
