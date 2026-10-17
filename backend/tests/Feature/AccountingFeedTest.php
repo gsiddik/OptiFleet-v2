@@ -208,6 +208,10 @@ class AccountingFeedTest extends TestCase
         $this->assertSame('2', $empty->json('next_cursor'));
         $this->assertFalse($empty->json('has_more'));
 
+        // high_water is the newest committed sequence, on every page and also on a page that is behind it or empty
+        $this->assertSame(['2', '2', '2'], [$first->json('high_water'), $second->json('high_water'), $empty->json('high_water')]);
+        $this->assertSame('2', $this->getJson(self::FEED.'?after=999999999', $headers)->json('high_water'));
+
         $this->assertSame([1, 2], array_column($this->getJson(self::FEED.'?after=0', $headers)->json('data'), 'sequence'));
         $this->assertSame([], $this->getJson(self::FEED.'?after=999999999', $headers)->json('data'));
     }

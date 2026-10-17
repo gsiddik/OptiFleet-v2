@@ -34,12 +34,17 @@ Only `GET` exists (other verbs: 405). The call is read-only: no row is inserted,
               "dimensions": {"vehicle": "uuid", "vehicle_registration_number": "B 1234 XY", "work_order": "uuid",
                              "work_order_number": "WO-...", "branch": "uuid", "branch_code": "JKT"},
               "payload": { } } ],
-  "next_cursor": "12", "has_more": false }
+  "next_cursor": "12", "has_more": false, "high_water": "12" }
 ```
 
 - Ordered by `sequence`, never by timestamp. `sequence` is a per-tenant counter: starts at 1, no gaps, assigned in commit order
   (a counter row lock is held until the business transaction commits), so a consumer that has seen N never misses an in-flight N-1.
   A rolled-back business change consumes no number.
+- `high_water` is the newest committed `sequence` of the tenant, as a string, read after the page (so never behind an event of the page).
+  Because the numbering is gap-free and in commit order, a consumer that holds everything up to `high_water` holds every fact committed so far.
+  OptiEntry uses it to bound the time it was not listening (pause or disconnect) and to refuse a cursor that is ahead of the source (a restored or reset
+  source). Consumers should validate pages strictly: sequences are exactly `after+1, after+2, ...`, `next_cursor` equals the last sequence, an empty page
+  does not advance and is not `has_more`, and nothing lies beyond `high_water`.
 - `next_cursor` is the last returned `sequence` as a string; with an empty page it echoes `after` (default `"0"`). `has_more` says whether
   another page follows. Delivery is at-least-once: dedupe on `(source_system, event_id)`; `event_id` is the integration outbox row id,
   the same id sent to OptiNexus.
