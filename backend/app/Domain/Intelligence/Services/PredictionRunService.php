@@ -5,6 +5,7 @@ namespace App\Domain\Intelligence\Services;
 use App\Domain\Analytics\Models\EtlRun;
 use App\Domain\Analytics\Services\EtlRunService;
 use App\Domain\Analytics\Support\BusinessDateResolver;
+use App\Domain\Analytics\Support\EtlDatasetResult;
 use App\Domain\Entitlement\Services\EntitlementService;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Intelligence\Risk\RiskScorerRegistry;
@@ -37,7 +38,7 @@ class PredictionRunService
             $query->where('id', $tenantId);
         }
 
-        return $query->get()->filter(fn (Tenant $t) => $this->entitlements->tenantHasModule($t->id, 'MAINTENANCE_INTELLIGENCE'))->values();
+        return $query->get()->filter(fn (Tenant $t) => $this->entitlements->centralModuleStillHeld($t->id, 'MAINTENANCE_INTELLIGENCE') && $this->entitlements->tenantHasModule($t->id, 'MAINTENANCE_INTELLIGENCE'))->values();
     }
 
     public function run(?string $dateOverride, ?string $tenantId, ?string $target, bool $sync = false): array
@@ -88,7 +89,7 @@ class PredictionRunService
                 $count++;
             }
 
-            $result = new \App\Domain\Analytics\Support\EtlDatasetResult;
+            $result = new EtlDatasetResult;
             $result->sourceCount = $documents->count();
             $result->processedCount = $count;
             $result->insertedCount = $count;

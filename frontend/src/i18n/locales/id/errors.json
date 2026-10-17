@@ -121,10 +121,15 @@
     "noWorkAuthorizationLetterBeenGenerated": "Work Authorization Letter belum dibuat."
   },
   "http": {
+    "accessWithdrawnCentrally": "Akses Anda ke OptiFleet telah dicabut. Silakan masuk kembali.",
     "forbidden": "Akses ditolak.",
+    "governanceUnavailable": "Layanan otorisasi (OptiNexus) sedang tidak tersedia. Coba lagi sebentar lagi.",
+    "governedCentrally": "Hal ini dikelola di OptiNexus untuk organisasi ini.",
+    "identityNotLinked": "Akun Anda belum ditautkan ke OptiNexus. Minta administrator Anda untuk menautkannya.",
     "moduleNotEntitledModuleCode": "Modul tidak termasuk hak akses: {{moduleCode}}",
     "platformAccessRequired": "Diperlukan akses platform.",
     "resourceNotFound": "Data tidak ditemukan.",
+    "ssoRequired": "Masuk dengan OptiNexus: akses untuk organisasi ini dikelola secara terpusat.",
     "subscriptionSuspendedDueOutstandingBalancePlease": "Langganan Anda ditangguhkan karena ada tagihan yang belum dibayar. Silakan lunasi faktur Anda untuk memulihkan akses.",
     "tenantAccessRequired": "Diperlukan akses penyewa.",
     "tenantContextRequired": "Diperlukan konteks penyewa.",

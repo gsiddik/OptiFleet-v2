@@ -37,7 +37,7 @@ class FeatureRunService
             $query->where('id', $tenantId);
         }
 
-        return $query->get()->filter(fn (Tenant $tenant) => $this->entitlements->tenantHasModule($tenant->id, 'MAINTENANCE_INTELLIGENCE'))->values();
+        return $query->get()->filter(fn (Tenant $tenant) => $this->entitlements->centralModuleStillHeld($tenant->id, 'MAINTENANCE_INTELLIGENCE') && $this->entitlements->tenantHasModule($tenant->id, 'MAINTENANCE_INTELLIGENCE'))->values();
     }
 
     /** @return string[] */

@@ -3,6 +3,7 @@
 namespace App\Jobs\Analytics;
 
 use App\Domain\Analytics\Services\AnalyticsRunService;
+use App\Jobs\Concerns\ChecksCentralEntitlement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -25,7 +26,7 @@ use Throwable;
  */
 class RunDatasetEtlJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use ChecksCentralEntitlement, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries;
 
@@ -46,6 +47,10 @@ class RunDatasetEtlJob implements ShouldQueue
 
     public function handle(AnalyticsRunService $runner): void
     {
+        if (! $this->stillEntitled($this->tenantId, 'ANALYTICS')) {
+            return;
+        }
+
         $runner->runDataset($this->tenantId, $this->datasetKey, $this->businessDate, $this->trigger);
     }
 

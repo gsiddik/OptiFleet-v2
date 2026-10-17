@@ -3,6 +3,8 @@
 namespace App\Domain\Entitlement\Services;
 
 use App\Domain\Entitlement\Models\TenantModuleEntitlement;
+use App\Domain\Governance\CentralGovernance;
+use App\Domain\Governance\Exceptions\GovernanceUnavailableException;
 use App\Domain\ProductCatalog\Models\Module;
 use App\Domain\ProductCatalog\Services\ModuleDependencyService;
 use App\Domain\Shared\Support\Messages;
@@ -11,15 +13,27 @@ use Illuminate\Support\Facades\Cache;
 
 class EntitlementService
 {
-    public function __construct(private readonly ModuleDependencyService $dependencies) {}
+    public function __construct(
+        private readonly ModuleDependencyService $dependencies,
+        private readonly CentralGovernance $central,
+    ) {}
 
     public function tenantHasModule(string $tenantId, string $moduleCode): bool
     {
         return $this->activeModuleCodes($tenantId)->contains($moduleCode);
     }
 
+    /**
+     * The modules the tenant holds. In a tenant governed centrally (audit A02/R05) this is what OptiNexus entitles it to (the
+     * local entitlement rows are not consulted); if OptiNexus cannot answer GovernanceUnavailableException is raised and the
+     * caller denies.
+     */
     public function activeModuleCodes(string $tenantId): Collection
     {
+        if ($this->central->governs($tenantId)) {
+            return $this->central->tenantModules($tenantId);
+        }
+
         return Cache::remember("entitlements:tenant:{$tenantId}", 60, function () use ($tenantId) {
             return TenantModuleEntitlement::query()
                 ->where('tenant_id', $tenantId)
@@ -34,6 +48,23 @@ class EntitlementService
                 ->get()
                 ->pluck('module.code');
         });
+    }
+
+    /**
+     * Whether work of a module may still run: always true for a tenant that is not centrally governed (nothing changes for
+     * legacy tenants), and for a CENTRAL tenant what OptiNexus says right now; an OptiNexus that cannot answer means no.
+     */
+    public function centralModuleStillHeld(string $tenantId, string $moduleCode): bool
+    {
+        if (! $this->central->governs($tenantId)) {
+            return true;
+        }
+
+        try {
+            return $this->central->tenantModules($tenantId)->contains($moduleCode);
+        } catch (GovernanceUnavailableException|\App\Domain\Governance\Exceptions\GovernanceContractException) {
+            return false;
+        }
     }
 
     public function forgetCache(string $tenantId): void

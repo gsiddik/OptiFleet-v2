@@ -2,6 +2,8 @@
 
 namespace App\Domain\Integration\Optinexus;
 
+use App\Domain\AccessControl\Models\DataScopeAssignment;
+use App\Domain\Audit\Services\AuditService;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Models\User;
@@ -11,15 +13,22 @@ use Illuminate\Support\Str;
 /**
  * Turns verified OptiNexus claims into a local OptiFleet session.
  *
- * Authorization stays local: the tenant is taken from the verified
- * `tenant_id` claim only, the user must already exist here (matched on the
- * stable OptiNexus subject, else on a verified e-mail) with an active
- * membership of that tenant, and the user keeps their local roles and data
- * scope. OptiNexus decides *who may enter*; OptiFleet decides *what they may do*.
+ * The tenant is taken from the verified `tenant_id` claim only; the user is matched on the stable OptiNexus subject, else
+ * linked once by a verified e-mail (never re-bound to another subject).
+ *
+ *  - LEGACY tenant (governance_mode LOCAL): the user must already exist here with an active membership and keeps their local
+ *    roles and data scope; OptiNexus decides who may enter, OptiFleet what they may do.
+ *  - CENTRAL tenant (audit A02/R05): OptiNexus decides both. A person it lets in, who has no local record yet (for example one
+ *    an Admin Tenant created from this application through the delegation API), gets a local projection: a record for
+ *    ownership, audit and data scope, without a usable password and without any grant of its own. What the person may do is
+ *    asked from OptiNexus on every request window (CentralGovernance). A membership an administrator switched off stays off.
  */
 class SsoLoginService
 {
-    public function __construct(private readonly BackchannelLogoutService $lifecycle) {}
+    public function __construct(
+        private readonly BackchannelLogoutService $lifecycle,
+        private readonly AuditService $audit,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $claims
@@ -76,6 +85,7 @@ class SsoLoginService
             throw new SsoException('tenant_inactive');
         }
 
+        $central = $tenant->governance_mode === 'CENTRAL';
         $user = User::query()->where('optinexus_subject', $claims['sub'])->first();
 
         if (! $user) {
@@ -85,17 +95,27 @@ class SsoLoginService
 
             $user = User::query()->whereRaw('lower(email) = ?', [Str::lower($claims['email'])])->first();
             if (! $user) {
-                throw new SsoException('user_not_provisioned');
-            }
-            if ($user->optinexus_subject !== null) {
-                // Same e-mail but already bound to a different OptiNexus identity: never re-bind.
-                throw new SsoException('account_conflict');
-            }
-            if ($user->user_type !== 'tenant') {
-                throw new SsoException('user_not_provisioned');
-            }
+                if (! $central) {
+                    throw new SsoException('user_not_provisioned');
+                }
 
-            $user->forceFill(['optinexus_subject' => $claims['sub']])->save();
+                $user = $this->provision($claims, $tenant);
+            } else {
+                if ($user->optinexus_subject !== null) {
+                    // Same e-mail but already bound to a different OptiNexus identity: never re-bind.
+                    throw new SsoException('account_conflict');
+                }
+                if ($user->user_type !== 'tenant') {
+                    throw new SsoException('user_not_provisioned');
+                }
+
+                $user->forceFill(['optinexus_subject' => $claims['sub']])->save();
+                $this->audit->log('User', $user->id, 'optinexus_identity_linked', null, ['optinexus_subject' => $claims['sub']], $tenant->id);
+            }
+        }
+
+        if ($central) {
+            $this->ensureMembership($user, $tenant);
         }
 
         // OptiNexus has just let this user in. If an earlier logout event from OptiNexus is what
@@ -115,5 +135,48 @@ class SsoLoginService
         $user->forceFill(['last_login_at' => now()])->save();
 
         return [$user, $tenant];
+    }
+
+    /**
+     * Local projection of a central identity (CENTRAL tenants only): no usable password, no role. The e-mail was verified by
+     * OptiNexus; a platform user or any other e-mail owner is never touched (the lookup above already ruled those out).
+     *
+     * @param  array<string, mixed>  $claims
+     */
+    private function provision(array $claims, Tenant $tenant): User
+    {
+        $email = Str::lower(trim((string) $claims['email']));
+        $name = trim((string) ($claims['name'] ?? '')) !== '' ? (string) $claims['name'] : Str::before($email, '@');
+
+        $user = User::query()->create([
+            'name' => $name,
+            'email' => $email,
+            'password' => Str::random(64),
+            'user_type' => 'tenant',
+            'status' => 'active',
+            'optinexus_subject' => $claims['sub'],
+        ]);
+        $this->audit->log('User', $user->id, 'provisioned_from_optinexus', null, ['optinexus_subject' => $claims['sub']], $tenant->id);
+
+        return $user;
+    }
+
+    /**
+     * A person OptiNexus lets into a CENTRAL tenant is a member of it here. Only a missing membership is created; one that
+     * exists is left exactly as it is (an administrator's switch-off is honoured; OptiNexus-driven marks are undone by
+     * reactivate()). A new member gets the tenant-wide data scope, which local assignments may narrow afterwards (an existing member's scopes are never touched).
+     */
+    private function ensureMembership(User $user, Tenant $tenant): void
+    {
+        $existing = TenantUser::query()->where('user_id', $user->id)->where('tenant_id', $tenant->id)->first();
+
+        if (! $existing) {
+            TenantUser::query()->create(['tenant_id' => $tenant->id, 'user_id' => $user->id, 'status' => 'active', 'joined_at' => now()]);
+            $this->audit->log('TenantUser', $user->id, 'membership_created_from_optinexus', null, ['tenant_id' => $tenant->id], $tenant->id);
+
+            if (! DataScopeAssignment::query()->where('user_id', $user->id)->where('tenant_id', $tenant->id)->exists()) {
+                DataScopeAssignment::query()->create(['user_id' => $user->id, 'tenant_id' => $tenant->id, 'scope_type' => 'TENANT', 'scope_resource_id' => null]);
+            }
+        }
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Jobs\Intelligence;
 
 use App\Domain\Intelligence\Services\TrainingPipelineService;
+use App\Jobs\Concerns\ChecksCentralEntitlement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -18,7 +19,7 @@ use Throwable;
  */
 class TrainModelJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use ChecksCentralEntitlement, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries;
 
@@ -39,6 +40,10 @@ class TrainModelJob implements ShouldQueue
 
     public function handle(TrainingPipelineService $pipeline): void
     {
+        if (! $this->stillEntitled($this->tenantId, 'MAINTENANCE_INTELLIGENCE')) {
+            return;
+        }
+
         $model = $pipeline->train($this->tenantId, $this->target, $this->scope, $this->createdBy);
 
         Log::info('intelligence.training.completed', [

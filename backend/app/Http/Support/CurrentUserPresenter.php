@@ -4,6 +4,7 @@ namespace App\Http\Support;
 
 use App\Domain\AccessControl\Models\RoleAssignment;
 use App\Domain\AccessControl\Services\PermissionService;
+use App\Domain\Governance\CentralGovernance;
 use App\Domain\Identity\Models\Tenant;
 use App\Models\User;
 use App\Support\TenantContext;
@@ -13,6 +14,7 @@ class CurrentUserPresenter
     public function __construct(
         private readonly PermissionService $permissions,
         private readonly TenantContext $context,
+        private readonly CentralGovernance $governance,
     ) {}
 
     public function present(User $user): array
@@ -30,6 +32,8 @@ class CurrentUserPresenter
             'tenant_default_locale' => $tenantId ? Tenant::query()->whereKey($tenantId)->value('default_locale') : null,
             'permissions' => $this->permissions->permissionsFor($user, $tenantId)->values(),
             'memberships' => $isPlatform ? [] : $this->memberships($user),
+            // Who decides what this person may do: OptiNexus (CENTRAL) or this application (LOCAL, legacy).
+            'governance' => $tenantId ? $this->governance->describe($user, $tenantId) : null,
         ];
     }
 

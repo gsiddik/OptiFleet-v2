@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\Auth;
 
+use App\Domain\Governance\CentralGovernance;
 use App\Domain\Integration\Optinexus\BackchannelLogoutService;
 use App\Domain\Integration\Optinexus\OptinexusOidcClient;
 use App\Domain\Integration\Optinexus\SsoException;
 use App\Domain\Integration\Optinexus\SsoLoginService;
+use App\Domain\Shared\Support\Messages;
 use App\Http\Controllers\Controller;
 use App\Http\Support\CurrentUserPresenter;
 use App\Support\TenantContext;
@@ -29,6 +31,7 @@ class SsoController extends Controller
         private readonly CurrentUserPresenter $presenter,
         private readonly TenantContext $context,
         private readonly BackchannelLogoutService $lifecycle,
+        private readonly CentralGovernance $governance,
     ) {}
 
     public function status()
@@ -83,7 +86,13 @@ class SsoController extends Controller
 
         ['user' => $user, 'tenant' => $tenant, 'apps' => $apps] = $session;
 
-        $token = $user->createToken('tenant-session', ['tenant:'.$tenant->id])->plainTextToken;
+        // A centrally governed tenant: ask OptiNexus before a token exists (this also warms the cache for the first requests). An
+        // unreachable OptiNexus is a 503, not a half-open session.
+        if ($this->governance->governs($tenant->id) && ! $this->governance->snapshot($user, $tenant->id)->sessionAllowed) {
+            abort(403, Messages::localized('errors.http.accessWithdrawnCentrally'));
+        }
+
+        $token = $user->createToken('tenant-session', ['tenant:'.$tenant->id, 'sso'])->plainTextToken;
         $this->context->setTenantId($tenant->id);
         $this->context->setUser($user);
 

@@ -2,17 +2,20 @@
 
 use App\Http\Controllers\Api\Platform\Analytics\EtlAdminController;
 use App\Http\Controllers\Api\Platform\Analytics\ReconciliationController;
-use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceModelController;
-use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceMonitoringController;
-use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceRunController;
-use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceTrainingController;
 use App\Http\Controllers\Api\Platform\AuditLogController;
 use App\Http\Controllers\Api\Platform\BillingController;
 use App\Http\Controllers\Api\Platform\BundleController;
+use App\Http\Controllers\Api\Platform\ComponentCategoryController as PlatformComponentCategoryController;
+use App\Http\Controllers\Api\Platform\ComponentGroupController as PlatformComponentGroupController;
+use App\Http\Controllers\Api\Platform\ComponentSubcategoryController as PlatformComponentSubcategoryController;
 use App\Http\Controllers\Api\Platform\ContractAmendmentController;
 use App\Http\Controllers\Api\Platform\ContractController;
 use App\Http\Controllers\Api\Platform\ContractRenewalController;
 use App\Http\Controllers\Api\Platform\DashboardController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceModelController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceMonitoringController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceRunController;
+use App\Http\Controllers\Api\Platform\Intelligence\IntelligenceTrainingController;
 use App\Http\Controllers\Api\Platform\InvoiceController;
 use App\Http\Controllers\Api\Platform\ModuleController;
 use App\Http\Controllers\Api\Platform\ModuleDependencyController;
@@ -20,9 +23,6 @@ use App\Http\Controllers\Api\Platform\PaymentController;
 use App\Http\Controllers\Api\Platform\PermissionController;
 use App\Http\Controllers\Api\Platform\PlatformUserController;
 use App\Http\Controllers\Api\Platform\PricingController;
-use App\Http\Controllers\Api\Platform\ComponentCategoryController as PlatformComponentCategoryController;
-use App\Http\Controllers\Api\Platform\ComponentGroupController as PlatformComponentGroupController;
-use App\Http\Controllers\Api\Platform\ComponentSubcategoryController as PlatformComponentSubcategoryController;
 use App\Http\Controllers\Api\Platform\ProductCategoryController;
 use App\Http\Controllers\Api\Platform\RoleController;
 use App\Http\Controllers\Api\Platform\SubscriptionController;
@@ -44,13 +44,13 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::post('/tenants/{tenant}/deactivate', [TenantController::class, 'deactivate'])->middleware('permission:tenant.deactivate');
 
     Route::get('/tenants/{tenant}/users', [TenantUserController::class, 'index'])->middleware('permission:user.view');
-    Route::post('/tenants/{tenant}/users', [TenantUserController::class, 'store'])->middleware('permission:user.create');
+    Route::post('/tenants/{tenant}/users', [TenantUserController::class, 'store'])->middleware(['not.central', 'permission:user.create']);
     Route::patch('/tenants/{tenant}/users/{tenantUser}', [TenantUserController::class, 'update'])->middleware('permission:user.update');
     Route::post('/tenants/{tenant}/users/{tenantUser}/roles', [TenantUserController::class, 'assignRole'])->middleware('permission:user.assign');
     Route::delete('/tenants/{tenant}/users/{tenantUser}/roles/{roleId}', [TenantUserController::class, 'revokeRole'])->middleware('permission:user.assign');
 
     Route::get('/tenants/{tenant}/entitlements', [TenantEntitlementController::class, 'index'])->middleware('permission:entitlement.view');
-    Route::post('/tenants/{tenant}/entitlements', [TenantEntitlementController::class, 'update'])->middleware('permission:entitlement.manage');
+    Route::post('/tenants/{tenant}/entitlements', [TenantEntitlementController::class, 'update'])->middleware(['not.central', 'permission:entitlement.manage']);
 
     Route::get('/tenants/{tenant}/capacity-limits', [TenantCapacityController::class, 'index'])->middleware('permission:entitlement.view');
     Route::put('/tenants/{tenant}/capacity-limits', [TenantCapacityController::class, 'update'])->middleware('permission:entitlement.manage');

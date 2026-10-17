@@ -42,15 +42,18 @@ class AuthController extends Controller
         if ($user->isPlatformUser()) {
             $token = $user->createToken('platform-session', ['platform'])->plainTextToken;
         } else {
-            $membership = TenantUser::query()
+            // A tenant governed centrally (audit A02/R05) is entered through OptiNexus only: a local password never opens it.
+            $memberships = TenantUser::query()
                 ->where('user_id', $user->id)
                 ->where('status', 'active')
-                ->whereHas('tenant', fn ($q) => $q->where('status', 'ACTIVE'))
-                ->first();
+                ->whereHas('tenant', fn ($q) => $q->where('status', 'ACTIVE'));
+            $membership = (clone $memberships)->whereHas('tenant', fn ($q) => $q->where('governance_mode', '!=', 'CENTRAL'))->first();
 
             if (! $membership) {
                 throw ValidationException::withMessages([
-                    'email' => [Messages::localized('validation.auth.noActiveTenantMembershipFoundAccount')],
+                    'email' => [(clone $memberships)->exists()
+                        ? Messages::localized('errors.http.ssoRequired')
+                        : Messages::localized('validation.auth.noActiveTenantMembershipFoundAccount')],
                 ]);
             }
 
@@ -104,6 +107,7 @@ class AuthController extends Controller
             ->where('tenant_id', $tenantId)
             ->where('status', 'active')
             ->whereHas('tenant', fn ($q) => $q->where('status', 'ACTIVE'))
+            ->with('tenant')
             ->first();
 
         if (! $membership) {
@@ -112,7 +116,19 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('tenant-session', ['tenant:'.$tenantId])->plainTextToken;
+        // Entering a centrally governed tenant needs an OptiNexus sign-in behind the current session (it carries the `sso`
+        // ability); a password session never switches into it. OptiNexus is asked about the person on the first request.
+        $abilities = ['tenant:'.$tenantId];
+        if ($membership->tenant->governance_mode === 'CENTRAL') {
+            if (! $user->currentAccessToken()?->can('sso')) {
+                throw ValidationException::withMessages(['tenant_id' => [Messages::localized('errors.http.ssoRequired')]]);
+            }
+            $abilities[] = 'sso';
+        } elseif ($user->currentAccessToken()?->can('sso')) {
+            $abilities[] = 'sso';
+        }
+
+        $token = $user->createToken('tenant-session', $abilities)->plainTextToken;
 
         return $this->ok(['token' => $token]);
     }

@@ -38,4 +38,23 @@ return [
         'timeout_seconds' => (int) env('OPTINEXUS_GATEWAY_TIMEOUT', 20),
         'feed_page_size' => 200,
     ],
+
+    /*
+    | Central governance (audit A02, R05). OptiNexus is the only authority for tenants in CENTRAL mode: what a user may do
+    | (POST /authorization/effective-permissions) and which modules the tenant holds (commercial context) are read from it,
+    | cached for at most `ttl_seconds` (never above 300) and never used after that. If OptiNexus cannot answer, access is
+    | denied (HTTP 503 GOVERNANCE_UNAVAILABLE); there is no local fallback. Tenants stay LOCAL (legacy) until an operator
+    | runs `optinexus:governance:enable`.
+    */
+    'governance' => [
+        'ttl_seconds' => max(1, min(300, (int) env('OPTINEXUS_GOVERNANCE_TTL', 300))),
+        // The product's own application code in OptiNexus; permission keys are "<code>.<local permission name>".
+        'application_code' => env('OPTINEXUS_APPLICATION_CODE', 'optifleet'),
+        'timeout_seconds' => max(1, (int) env('OPTINEXUS_GOVERNANCE_TIMEOUT', 5)),
+        'connect_timeout_seconds' => max(1, (int) env('OPTINEXUS_GOVERNANCE_CONNECT_TIMEOUT', 3)),
+        // One short wait is honoured after HTTP 429 (Retry-After); anything longer fails closed immediately.
+        'max_retry_after_seconds' => 2,
+        // Most members asked per approval step when a permission has to be matched against OptiNexus (no bulk "who holds it").
+        'approver_scan_limit' => 200,
+    ],
 ];

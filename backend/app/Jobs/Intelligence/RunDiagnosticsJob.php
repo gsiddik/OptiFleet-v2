@@ -3,6 +3,7 @@
 namespace App\Jobs\Intelligence;
 
 use App\Domain\Intelligence\Services\DiagnosticsRunService;
+use App\Jobs\Concerns\ChecksCentralEntitlement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,7 +14,7 @@ use Throwable;
 
 class RunDiagnosticsJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use ChecksCentralEntitlement, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries;
 
@@ -32,6 +33,10 @@ class RunDiagnosticsJob implements ShouldQueue
 
     public function handle(DiagnosticsRunService $service): void
     {
+        if (! $this->stillEntitled($this->tenantId, 'MAINTENANCE_INTELLIGENCE')) {
+            return;
+        }
+
         $result = $service->runForTenant($this->tenantId, $this->businessDate);
         Log::info('intelligence.diagnostics.completed', ['tenant_id' => $this->tenantId, 'business_date' => $this->businessDate, 'result' => $result]);
     }

@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Optinexus;
 
+use App\Domain\Governance\CentralGovernance;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Models\User;
@@ -25,6 +26,8 @@ class BackchannelLogoutService
     public const EVENT_BACKCHANNEL_LOGOUT = 'http://schemas.openid.net/event/backchannel-logout';
 
     public const EVENT_ACCESS_REVOKED = 'https://schemas.optinexus.io/event/access-revoked';
+
+    public function __construct(private readonly CentralGovernance $governance) {}
 
     /**
      * @param  array<string, mixed>  $claims  a verified logout token
@@ -65,6 +68,9 @@ class BackchannelLogoutService
                 $deactivated = 'user';
             }
         });
+
+        // Central governance: what OptiNexus said about this person is stale the moment it reports a logout or a revocation.
+        $this->governance->forgetUser($user, $tenant?->id);
 
         return ['matched' => true, 'sessions_ended' => $this->endSessions($user, $tenant), 'deactivated' => $deactivated];
     }
