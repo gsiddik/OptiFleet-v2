@@ -28,6 +28,17 @@ export interface CurrentUser {
   preferred_locale?: string | null;
   /** i18n: the active tenant's default language, if any. */
   tenant_default_locale?: string | null;
+  /** Who decides what this person may do in the active tenant: OptiNexus (CENTRAL) or this application (LOCAL, legacy). */
+  governance?: Governance | null;
+}
+
+export interface Governance {
+  mode: 'LOCAL' | 'CENTRAL';
+  source: 'local' | 'optinexus';
+  /** CENTRAL only: OK, NO_PERMISSIONS or the reason access was withdrawn. */
+  status: string | null;
+  refreshed_at: string | null;
+  expires_at: string | null;
 }
 
 /** What OptiNexus told us about an SSO session: the tenant it signed in to and the apps the user may open. */
