@@ -56,6 +56,21 @@ Missing (deferred): Fleet UI for the odometer entry modal and history, telematic
 (EN/ID strings for these are not added yet); `.env` values of a real deployment; any run against real OptiRadar/OptiNexus; owner decision on
 stricter first-contact confirmation of the first device; Nexus-side gateway dedup on fix time (see TELEMATICS_ODOMETER.md).
 
+## Invitations consumer
+
+Consumer side of OptiNexus contract section 2b (onboarding by invitation link); details in `docs/integration/CENTRAL_GOVERNANCE.md`.
+Status: FIXED_AND_TESTED against FakeNexus (no real OptiNexus; browser check is mocked-API only, not end-to-end).
+
+- Backend: `GET|POST app/delegation/invitations`, `POST .../{id}/resend|revoke` (`NexusDelegationClient`, `TenantDelegationService`, `DelegationController`);
+  new codes mapped en + id; 429 `Retry-After` passed through (`NexusApiClient` `answerRateLimitCodes`); changes never retried after a lost connection;
+  invitation view is a whitelist (no token/hash field passes). `POST users` kept, marked deprecated; `DIRECT_USER_CREATION_DISABLED` mapped (410).
+- Frontend: Users / Invitations tabs on `CentralUsersPage`; "Invite user" (e-mail, name, roles, invitation language defaulting to the UI language) replaced "Add user";
+  status chips, delivery (queued / sent / failed with recovery hint), expiry, invited by, Resend / Revoke by `can_resend` / `can_revoke` + `hasPermission`;
+  messages for expired, revoked, used and cooldown. Pure rules in `invitationPresentation.ts`.
+- Tests: `InvitationDelegationTest` (17), `invitations.test.ts` (10, node:test: the frontend has no vitest/DOM test setup); fake extended in `FakeNexusDelegation`.
+- Open points of the contract (ambiguous, assumed): whether an EXPIRED invitation blocks a new one for the same e-mail (`INVITATION_PENDING`); the UI copes with both.
+  Seat limits are not enforced by invitations (Nexus decision, gap 4 below). Revoke sends no reason from the UI (the API accepts one).
+
 ## Contract gaps needed from OptiNexus
 
 1. App-scoped bulk entitlement: OptiNexus 4eda307 now returns `entitled_capabilities` on effective-permissions (closes it); Fleet still reads `commercial-context` (optional follow-up).

@@ -62,7 +62,11 @@ copy of users, roles or assignments: `Api/Tenant/DelegationController` (thin) ->
 |---|---|---|
 | `GET catalog` | `role.view` | catalog: delegable permissions (grouped Module > Feature > Action) + assignable roles |
 | `GET users` | `user.view` | list (search, paging) |
-| `POST users` | `user.create` | add or link by e-mail (`created`/`linked`/`existing`); no password field exists |
+| `POST users` | `user.create` | **deprecated** (see Invitations below): add or link by e-mail (`created`/`linked`/`existing`); no password field exists |
+| `GET invitations` | `user.view` | invitations of this organization and application (`status`, `search`, `per_page`), newest first |
+| `POST invitations` | `user.create` | invite a NEW person: `email`, `name`, `role_ids[]`, `locale` (`en`/`id`, defaults to the UI language) |
+| `POST invitations/{id}/resend` | `user.create` | new link (the old one stops working), PENDING or EXPIRED only |
+| `POST invitations/{id}/revoke` | `user.update` | `reason?`; already revoked answers unchanged |
 | `PUT users/{id}/roles` | `user.assign` | replace the delegated roles |
 | `DELETE users/{id}` | `user.update` | remove the application from the person |
 | `POST roles`, `PUT roles/{id}`, `DELETE roles/{id}` | `role.create`, `role.update` (+ `role.assign_permission` to change permissions) | custom roles |
@@ -80,6 +84,25 @@ copy of users, roles or assignments: `Api/Tenant/DelegationController` (thin) ->
   in force on the next request instead of within one TTL.
 - Local data scope stays local: the users page opens it for people who already signed in here (`local_member_id`).
 - Gap (to OptiNexus): the delegation API does not enforce the plan's user limit; Fleet's local capacity check applies to LOCAL tenants only.
+
+### Invitations (OptiNexus contract GOVERNANCE_CONTRACTS.md section 2b)
+
+A new person is invited, not created: OptiNexus e-mails the link, the person sets their own password on an OptiNexus page (which also
+verifies the e-mail; Fleet keeps requiring a verified e-mail at SSO) and then signs in here with OptiNexus. Nothing is granted until
+they accept. Fleet keeps no copy of identities or invitations; no password and no link or token passes through Fleet.
+
+- Same rules as the other delegated routes: Fleet permission gate first, CENTRAL tenants only, acting user = the signed-in person's
+  OptiNexus subject, tenant from the session; `{id}` must be a UUID (anything else is a 404 without a call). An invitation of another
+  organization is `404 INVITATION_NOT_FOUND` (OptiNexus decides; the path always carries the session's own OptiNexus tenant).
+- The view is a whitelist of the documented fields (`DelegatedInvitation`): a token field would never reach the browser, the audit trail or the logs.
+- Codes mapped (en + id): `INVITATION_PENDING` (409, `details.invitation_id`), `ALREADY_MEMBER` (409), `ROLE_NOT_ASSIGNABLE` (422),
+  `INVITATION_NOT_FOUND` (404), `INVITATION_NOT_PENDING` (409, `details.status`), `INVITATION_RESEND_COOLDOWN` and `INVITATION_RATE_LIMITED`
+  (429 with `Retry-After` and `retry_after_seconds`; `NexusApiClient` returns these two instead of sleeping, nothing is retried),
+  `INVITATION_RESEND_LIMIT` (409), and `DIRECT_USER_CREATION_DISABLED` (410) for the deprecated add-user route.
+- Audit: `delegation.invitation_created|resent|revoked`, `delegation.refused` for refusals (a 429 decided nothing and is only logged).
+  Logs carry codes and ids only, never an e-mail address.
+- UI: `/app/access/users` has Users and Invitations tabs; "Invite user" replaced "Add user". Resend / Revoke follow `can_resend` / `can_revoke`
+  from OptiNexus and the `user.create` / `user.update` permissions; after a cooldown refusal Resend stays off for the wait OptiNexus asked for.
 
 ## Product switcher and switching sign-in (audit A29/R06)
 
