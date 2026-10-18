@@ -159,8 +159,12 @@ return Application::configure(basePath: dirname(__DIR__))
             }
             $body['retryable'] = $e->retryable;
             $body['outcome_unknown'] = $e->outcomeUnknown;
+            if ($e->retryAfterSeconds !== null) {
+                $body['retry_after_seconds'] = $e->retryAfterSeconds;
+            }
 
-            return response()->json($body, $e->httpStatus, $e->retryable ? ['Retry-After' => '30'] : []);
+            // The wait OptiNexus asked for (invitation cooldown) is passed on as it is; any other retryable answer says 30 s.
+            return response()->json($body, $e->httpStatus, $e->retryAfterSeconds !== null ? ['Retry-After' => (string) $e->retryAfterSeconds] : ($e->retryable ? ['Retry-After' => '30'] : []));
         });
 
         $exceptions->render(function (AuthenticationException $e, Request $request) {

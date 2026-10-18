@@ -11,7 +11,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Users and roles of a centrally governed tenant, managed from OptiFleet through the OptiNexus delegation API (audit R08/A25).
+ * Users, invitations and roles of a centrally governed tenant, managed from OptiFleet through the OptiNexus delegation API (audit R08/A25).
  * OptiNexus keeps the identities, the roles and the assignments; OptiFleet keeps no copy: it renders what OptiNexus answers
  * (read-through, nothing cached beyond one request), sends changes with the signed-in person as the acting user, writes its own
  * audit entry for every change and every refusal, and drops the cached access answers of the people a change affects so it is
@@ -20,6 +20,10 @@ use Illuminate\Support\Facades\Log;
  * What OptiNexus decides, and OptiFleet therefore never re-implements: who is an Admin Tenant, which permissions are delegable,
  * which roles are assignable, and every protection (Admin Tenant, self revocation, roles in use). OptiFleet only adds the
  * permission gate of its own routes (user.* / role.*) in front.
+ *
+ * A new person is invited (section 2b of the contract): OptiNexus e-mails the link, the person sets their own password there (which
+ * also verifies the e-mail OptiFleet requires at sign-in) and only then gets membership, access and roles. No password and no link
+ * or token passes through here: OptiNexus never returns one, and the views below are whitelists, so nothing else rides along.
  */
 class TenantDelegationService
 {
@@ -122,11 +126,33 @@ class TenantDelegationService
         ];
     }
 
+    /**
+     * @return array{items: array<int, array<string, mixed>>, pagination: array<string, mixed>}
+     */
+    public function invitations(User $actor, string $tenantId, ?string $status, ?string $search, int $perPage): array
+    {
+        $ctx = $this->context($actor, $tenantId);
+        $response = $this->read(fn () => $this->client->invitations($ctx['nexus_tenant'], $ctx['subject'], $status, $search, max(1, min(100, $perPage))), 'invitations', $actor, $tenantId);
+        if (! is_array($response['data'])) {
+            throw $this->unexpected($response['correlation_id']);
+        }
+
+        $rows = collect($response['data'])->filter(fn ($v) => is_array($v))->values();
+
+        return [
+            'items' => $rows->map(fn (array $i) => $this->invitationView($i))->all(),
+            'pagination' => is_array($response['meta']['pagination'] ?? null) ? $response['meta']['pagination'] : ['current_page' => 1, 'per_page' => $perPage, 'total' => $rows->count(), 'last_page' => 1],
+        ];
+    }
+
     // ---------------------------------------------------------------- changes
 
     /**
      * @param  array{email: string, name: string, role_ids?: array<int, string>}  $input
      * @return array<string, mixed>
+     *
+     * @deprecated Direct creation is deprecated by OptiNexus (and can be switched off per deployment): the person has no verified
+     *             e-mail and cannot sign in here. Use {@see self::invite()}. Kept only for compatibility.
      */
     public function addUser(User $actor, string $tenantId, array $input): array
     {
@@ -142,6 +168,64 @@ class TenantDelegationService
         $this->forgetSubject($data['id']);
 
         return ['outcome' => $data['outcome']] + $this->userView($data, null);
+    }
+
+    /**
+     * Invites a NEW person. Nothing is granted now: OptiNexus e-mails the link and grants membership, access and exactly these
+     * roles when the person accepts, after re-validating everything.
+     *
+     * @param  array{email: string, name: string, role_ids?: array<int, string>, locale?: ?string}  $input
+     * @return array<string, mixed>
+     */
+    public function invite(User $actor, string $tenantId, array $input): array
+    {
+        $ctx = $this->context($actor, $tenantId);
+        $locale = $input['locale'] ?? app()->getLocale();
+        $payload = ['email' => $input['email'], 'name' => $input['name'], 'locale' => in_array($locale, ['en', 'id'], true) ? $locale : 'en']
+            + (empty($input['role_ids']) ? [] : ['role_ids' => array_values($input['role_ids'])]);
+        $response = $this->change(fn () => $this->client->createInvitation($ctx['nexus_tenant'], $ctx['subject'], $payload), 'invitation_create', $actor, $tenantId, null);
+        $this->expectArray($response['data'], ['id', 'status'], $response['correlation_id']);
+
+        $view = $this->invitationView($response['data']);
+        $this->recordAudit($actor, $tenantId, 'delegation.invitation_created', $view['id'], [
+            'email' => $view['email'] ?? $input['email'], 'role_ids' => $payload['role_ids'] ?? [], 'locale' => $payload['locale'], 'correlation_id' => $response['correlation_id'],
+        ]);
+
+        return $view;
+    }
+
+    /**
+     * A new link replaces the old one at once; OptiNexus allows it for PENDING and EXPIRED invitations, after a cooldown and up to a limit.
+     *
+     * @return array<string, mixed>
+     */
+    public function resendInvitation(User $actor, string $tenantId, string $invitationId): array
+    {
+        $ctx = $this->context($actor, $tenantId);
+        $response = $this->change(fn () => $this->client->resendInvitation($ctx['nexus_tenant'], $ctx['subject'], $invitationId), 'invitation_resend', $actor, $tenantId, $invitationId);
+        $this->expectArray($response['data'], ['id', 'status'], $response['correlation_id']);
+
+        $view = $this->invitationView($response['data']);
+        $this->recordAudit($actor, $tenantId, 'delegation.invitation_resent', $invitationId, ['email' => $view['email'], 'send_count' => $view['send_count'], 'correlation_id' => $response['correlation_id']]);
+
+        return $view;
+    }
+
+    /**
+     * The link stops working. An invitation that is already revoked answers unchanged (idempotent).
+     *
+     * @return array<string, mixed>
+     */
+    public function revokeInvitation(User $actor, string $tenantId, string $invitationId, ?string $reason): array
+    {
+        $ctx = $this->context($actor, $tenantId);
+        $response = $this->change(fn () => $this->client->revokeInvitation($ctx['nexus_tenant'], $ctx['subject'], $invitationId, $reason), 'invitation_revoke', $actor, $tenantId, $invitationId);
+        $this->expectArray($response['data'], ['id', 'status'], $response['correlation_id']);
+
+        $view = $this->invitationView($response['data']);
+        $this->recordAudit($actor, $tenantId, 'delegation.invitation_revoked', $invitationId, ['email' => $view['email'], 'reason' => $reason, 'correlation_id' => $response['correlation_id']]);
+
+        return $view;
     }
 
     /**
@@ -250,13 +334,16 @@ class TenantDelegationService
         }
     }
 
-    /** A refusal by OptiNexus is an authorization event worth keeping; an outage is only logged (nothing was decided). */
+    /**
+     * A refusal by OptiNexus is an authorization event worth keeping; an outage or a rate limit (the invitation cooldown) is only
+     * logged: nothing was decided. Only codes and ids are logged, never a request body (an e-mail address, a link).
+     */
     private function noteFailure(DelegationException $e, string $operation, User $actor, string $tenantId, ?string $target, bool $audit): void
     {
-        $unavailable = $e->errorCode === DelegationErrors::UNAVAILABLE[0] || $e->httpStatus >= 500;
+        $notADecision = $e->errorCode === DelegationErrors::UNAVAILABLE[0] || $e->httpStatus >= 500 || $e->httpStatus === 429;
         Log::warning('Delegation call did not succeed.', ['operation' => $operation, 'code' => $e->errorCode, 'correlation_id' => $e->correlationId, 'tenant_id' => $tenantId]);
 
-        if ($audit && ! $unavailable) {
+        if ($audit && ! $notADecision) {
             $this->recordAudit($actor, $tenantId, 'delegation.refused', $target ?? $tenantId, ['operation' => $operation, 'code' => $e->errorCode, 'correlation_id' => $e->correlationId]);
         }
     }
@@ -308,6 +395,46 @@ class TenantDelegationService
             'roles' => collect($u['roles'] ?? [])->filter(fn ($v) => is_array($v))->map(fn (array $r) => $this->roleView($r))->values()->all(),
             // The local membership, if the person already signed in here: needed for the local data scope only.
             'local_member_id' => $localMemberId,
+        ];
+    }
+
+    /**
+     * The invitation as the screen needs it, field by field: the token (and its hash) is not part of any OptiNexus answer, and a
+     * whitelist makes sure that a field that should not be there could never reach the browser, the audit trail or the logs.
+     *
+     * @param  array<string, mixed>  $i
+     * @return array<string, mixed>
+     */
+    private function invitationView(array $i): array
+    {
+        $text = fn (mixed $v): ?string => is_string($v) ? $v : null;
+        $delivery = is_array($i['delivery'] ?? null) ? $i['delivery'] : [];
+        $by = is_array($i['invited_by'] ?? null) ? $i['invited_by'] : null;
+
+        return [
+            'id' => (string) ($i['id'] ?? ''),
+            'email' => $text($i['email'] ?? null),
+            'name' => $text($i['name'] ?? null),
+            'status' => $text($i['status'] ?? null),
+            'locale' => $text($i['locale'] ?? null),
+            'role_ids' => array_values(array_filter((array) ($i['role_ids'] ?? []), 'is_string')),
+            'roles' => collect($i['roles'] ?? [])->filter(fn ($v) => is_array($v))->map(fn (array $r) => [
+                'id' => (string) ($r['id'] ?? ''), 'code' => $text($r['code'] ?? null), 'name' => $text($r['name'] ?? null),
+            ])->values()->all(),
+            'invited_by' => $by === null ? null : ['id' => $text($by['id'] ?? null), 'name' => $text($by['name'] ?? null)],
+            'created_at' => $text($i['created_at'] ?? null),
+            'expires_at' => $text($i['expires_at'] ?? null),
+            'last_sent_at' => $text($i['last_sent_at'] ?? null),
+            'send_count' => (int) ($i['send_count'] ?? 0),
+            'delivery' => [
+                'status' => $text($delivery['status'] ?? null),
+                'attempted_at' => $text($delivery['attempted_at'] ?? null),
+                'error_code' => $text($delivery['error_code'] ?? null),
+            ],
+            'accepted_at' => $text($i['accepted_at'] ?? null),
+            'revoked_at' => $text($i['revoked_at'] ?? null),
+            'can_resend' => (bool) ($i['can_resend'] ?? false),
+            'can_revoke' => (bool) ($i['can_revoke'] ?? false),
         ];
     }
 

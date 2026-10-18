@@ -3,7 +3,7 @@
 namespace App\Domain\Governance\Delegation;
 
 /**
- * Every refusal the OptiNexus delegation API documents (GOVERNANCE_CONTRACTS.md section 2), mapped to the HTTP status and the
+ * Every refusal the OptiNexus delegation API documents (GOVERNANCE_CONTRACTS.md sections 2 and 2b), mapped to the HTTP status and the
  * translated message OptiFleet answers with. The code itself stays the English OptiNexus code (the UI branches on it, the
  * audit trail stores it); only the message is translated. Anything not listed is an unexpected answer (HTTP 502).
  */
@@ -30,9 +30,22 @@ final class DelegationErrors
         'APPLICATION_NOT_DELEGABLE' => [503, 'errors.delegation.misconfigured'],
         'INSUFFICIENT_SCOPE' => [503, 'errors.delegation.misconfigured'],
         'FORBIDDEN' => [503, 'errors.delegation.misconfigured'],
+        // Invitations (section 2b). The 429 pair carries the wait OptiNexus asks for (Retry-After).
+        'INVITATION_PENDING' => [409, 'errors.delegation.invitationPending'],
+        'ALREADY_MEMBER' => [409, 'errors.delegation.alreadyMember'],
+        'INVITATION_NOT_FOUND' => [404, 'errors.delegation.invitationNotFound'],
+        'INVITATION_NOT_PENDING' => [409, 'errors.delegation.invitationNotPending'],
+        'INVITATION_RESEND_COOLDOWN' => [429, 'errors.delegation.invitationResendCooldown'],
+        'INVITATION_RESEND_LIMIT' => [409, 'errors.delegation.invitationResendLimit'],
+        'INVITATION_RATE_LIMITED' => [429, 'errors.delegation.invitationRateLimited'],
+        // The deprecated direct creation switched off by the deployment (NEXUS_DELEGATION_DIRECT_USERS=false).
+        'DIRECT_USER_CREATION_DISABLED' => [410, 'errors.delegation.directCreationDisabled'],
         'RESOURCE_NOT_FOUND' => [404, 'errors.delegation.notFound'],
         'VALIDATION_ERROR' => [422, 'errors.delegation.validation'],
     ];
+
+    /** Refusals whose `details` are passed on: the UI needs them (offending role ids, the open invitation, the status that blocks). */
+    private const WITH_DETAILS = ['PERMISSION_NOT_DELEGABLE', 'ROLE_NOT_ASSIGNABLE', 'INVITATION_PENDING', 'INVITATION_NOT_PENDING'];
 
     /** Raised before any call is made. */
     public const NOT_CENTRAL = ['NOT_CENTRALLY_GOVERNED', 409, 'errors.delegation.notCentral'];
@@ -62,7 +75,7 @@ final class DelegationErrors
     }
 
     /**
-     * @param  array{status: int, error: ?array{code: ?string, message: ?string, details: mixed}, correlation_id: string}  $response
+     * @param  array{status: int, error: ?array{code: ?string, message: ?string, details: mixed}, correlation_id: string, retry_after?: ?int}  $response
      */
     public static function fromResponse(array $response, bool $mutation): DelegationException
     {
@@ -73,7 +86,8 @@ final class DelegationErrors
             [$status, $key] = self::MAP[$code];
 
             return new DelegationException($code, $status, $key, $code === 'VALIDATION_ERROR' && is_array($details) ? self::fieldErrors($details) : null,
-                $response['correlation_id'], retryable: $status === 503, details: $code === 'PERMISSION_NOT_DELEGABLE' || $code === 'ROLE_NOT_ASSIGNABLE' ? $details : null);
+                $response['correlation_id'], retryable: $status === 503 || $status === 429, details: in_array($code, self::WITH_DETAILS, true) ? self::safeDetails($details) : null,
+                retryAfterSeconds: $status === 429 ? ($response['retry_after'] ?? null) : null);
         }
 
         // 401 / 403 without a documented code: the service account is not accepted (expired credential, wrong scope).
@@ -105,6 +119,28 @@ final class DelegationErrors
         [$code, $status, $key] = self::IDENTITY_NOT_LINKED;
 
         return new DelegationException($code, $status, $key);
+    }
+
+    /**
+     * Details of a refusal go to the browser: only scalars and lists of scalars, so nothing unexpected (a token, an object) rides along.
+     *
+     * @return array<string, mixed>|null
+     */
+    private static function safeDetails(mixed $details): ?array
+    {
+        if (! is_array($details)) {
+            return null;
+        }
+        $out = [];
+        foreach ($details as $key => $value) {
+            if (is_string($key) && (is_scalar($value) || $value === null)) {
+                $out[$key] = $value;
+            } elseif (is_string($key) && is_array($value) && array_is_list($value) && array_filter($value, fn ($v) => ! is_scalar($v)) === []) {
+                $out[$key] = $value;
+            }
+        }
+
+        return $out === [] ? null : $out;
     }
 
     /**

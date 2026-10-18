@@ -10,9 +10,13 @@ use Illuminate\Support\Str;
  * It enforces the documented rules, so a test of OptiFleet's screens and mapping meets the same refusals the real service gives:
  * the acting user must be an Admin Tenant, only the delegable set may be handed out, roles from other tenants are not
  * assignable, an Admin Tenant is protected, a user cannot remove their own access, identities are linked by e-mail not copied.
+ * Invitations follow section 2b: one open invitation per e-mail, no invitation for an active member, resend only for PENDING and
+ * EXPIRED invitations (cooldown 429 with Retry-After, limit 409), revoke is idempotent, EXPIRED is derived from `expires_at`, and the
+ * token never appears in an answer (unless a test sets `leak_token` to prove that OptiFleet would not pass it on).
  *
  * State (per OptiNexus tenant id), seeded by FakeNexus::delegationTenant():
- *   admins: subjects of Admin Tenants; delegable: the explicit delegable catalog; roles; users; identities (e-mail => subject).
+ *   admins: subjects of Admin Tenants; delegable: the explicit delegable catalog; roles; users; identities (e-mail => subject);
+ *   invitations (id => row); knobs `invite_cooldown` (s), `invite_resend_limit`, `invite_rate_limit` (null or max creations), `leak_token`.
  */
 class FakeNexusDelegation
 {
@@ -22,7 +26,7 @@ class FakeNexusDelegation
     {
         $nexus->delegation[$tenant] = [
             'status' => $status, 'subscribed' => $subscribed, 'admins' => $admins,
-            'delegable' => $delegable, 'roles' => [], 'users' => [], 'identities' => [],
+            'delegable' => $delegable, 'roles' => [], 'users' => [], 'identities' => [], 'invitations' => [],
         ];
     }
 
@@ -60,6 +64,10 @@ class FakeNexusDelegation
             $method === 'GET' && $rest === '/catalog' => $this->catalog($state, $tenant),
             $method === 'GET' && $rest === '/users' => $this->listUsers($state, $input),
             $method === 'POST' && $rest === '/users' => $this->addUser($state, $input),
+            $method === 'GET' && $rest === '/invitations' => $this->listInvitations($state, $input),
+            $method === 'POST' && $rest === '/invitations' => $this->createInvitation($state, $input, $actor),
+            $method === 'POST' && (bool) preg_match('#^/invitations/([^/]+)/resend$#', $rest, $inv) => $this->resendInvitation($state, $inv[1]),
+            $method === 'POST' && (bool) preg_match('#^/invitations/([^/]+)/revoke$#', $rest, $inv) => $this->revokeInvitation($state, $inv[1], $input),
             $method === 'PUT' && (bool) preg_match('#^/users/([^/]+)/roles$#', $rest, $u) => $this->setRoles($state, $u[1], $input),
             $method === 'DELETE' && (bool) preg_match('#^/users/([^/]+)$#', $rest, $u) => $this->revoke($state, $u[1], $actor),
             $method === 'POST' && $rest === '/roles' => $this->createRole($state, $input),
@@ -119,6 +127,9 @@ class FakeNexusDelegation
 
     private function addUser(array &$state, array $input)
     {
+        if (! empty($state['direct_users_disabled'])) {
+            return $this->nexus->fail('DIRECT_USER_CREATION_DISABLED', 'Direct user creation is switched off for this deployment. Invite the person instead.', 410);
+        }
         foreach (['email', 'name'] as $field) {
             if (empty($input[$field])) {
                 return $this->nexus->fail('VALIDATION_ERROR', 'The request contains invalid data.', 422, [$field => ["The {$field} field is required."]]);
@@ -163,6 +174,139 @@ class FakeNexusDelegation
         }
 
         return $this->nexus->ok(['outcome' => $outcome] + $this->userView($state, $user), $outcome === 'created' ? 201 : 200);
+    }
+
+    // ------------------------------------------------------------ invitations
+
+    private function invitationStatus(array $row): string
+    {
+        if ($row['status'] === 'PENDING' && strtotime($row['expires_at']) <= now()->getTimestamp()) {
+            return 'EXPIRED';
+        }
+
+        return $row['status'];
+    }
+
+    private function invitationView(array $state, array $row): array
+    {
+        $status = $this->invitationStatus($row);
+        $open = in_array($status, ['PENDING', 'EXPIRED'], true);
+        $roles = array_values(array_map(fn (string $id) => ['id' => $id, 'code' => $state['roles'][$id]['code'], 'name' => $state['roles'][$id]['name']], array_filter($row['role_ids'], fn ($id) => isset($state['roles'][$id]))));
+
+        return [
+            'id' => $row['id'], 'email' => $row['email'], 'name' => $row['name'], 'status' => $status, 'locale' => $row['locale'],
+            'role_ids' => $row['role_ids'], 'roles' => $roles, 'invited_by' => $row['invited_by'],
+            'created_at' => $row['created_at'], 'expires_at' => $row['expires_at'], 'last_sent_at' => $row['last_sent_at'], 'send_count' => $row['send_count'],
+            'delivery' => $row['delivery'], 'accepted_at' => $row['accepted_at'], 'revoked_at' => $row['revoked_at'],
+            'can_resend' => $open && $row['send_count'] < ($state['invite_resend_limit'] ?? 5), 'can_revoke' => $open,
+        ] + (! empty($state['leak_token']) ? ['token' => $row['token'], 'token_hash' => hash('sha256', $row['token'])] : []);
+    }
+
+    private function createInvitation(array &$state, array $input, string $actor)
+    {
+        foreach (['email', 'name'] as $field) {
+            if (empty($input[$field])) {
+                return $this->nexus->fail('VALIDATION_ERROR', 'The request contains invalid data.', 422, [$field => ["The {$field} field is required."]]);
+            }
+        }
+        if (! filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
+            return $this->nexus->fail('VALIDATION_ERROR', 'The request contains invalid data.', 422, ['email' => ['The email field must be a valid email address.']]);
+        }
+        if (isset($input['locale']) && ! in_array($input['locale'], ['en', 'id'], true)) {
+            return $this->nexus->fail('VALIDATION_ERROR', 'The request contains invalid data.', 422, ['locale' => ['The selected locale is invalid.']]);
+        }
+        $roleIds = array_values(array_unique($input['role_ids'] ?? []));
+        if ($refused = $this->resolveRoles($state, $roleIds)) {
+            return $this->nexus->fail('ROLE_NOT_ASSIGNABLE', 'A role is unknown, belongs to another tenant or application, or carries permissions that are not delegable.', 422, ['role_ids' => $refused]);
+        }
+
+        $email = strtolower(trim($input['email']));
+        $memberId = $state['identities'][$email] ?? null;
+        if ($memberId && (($state['users'][$memberId]['application_access'] ?? null) === 'ACTIVE')) {
+            return $this->nexus->fail('ALREADY_MEMBER', 'This person is already a member with access to this application.', 409);
+        }
+        foreach ($state['invitations'] as $row) {
+            if ($row['email'] === $email && $this->invitationStatus($row) === 'PENDING') {
+                return $this->nexus->fail('INVITATION_PENDING', 'There is already an open invitation for this e-mail address.', 409, ['invitation_id' => $row['id']]);
+            }
+        }
+        if (isset($state['invite_rate_limit']) && count($state['invitations']) >= $state['invite_rate_limit']) {
+            return $this->nexus->fail('INVITATION_RATE_LIMITED', 'Too many invitations were created in a short time.', 429, null, ['Retry-After' => '120']);
+        }
+
+        $id = FakeNexus::uuid();
+        $state['invitations'][$id] = [
+            'id' => $id, 'email' => $email, 'name' => $input['name'], 'status' => 'PENDING', 'locale' => $input['locale'] ?? 'en', 'role_ids' => $roleIds,
+            'invited_by' => ['id' => $actor, 'name' => $state['users'][$actor]['name'] ?? 'Administrator'],
+            'created_at' => now()->toIso8601String(), 'expires_at' => now()->addHours(72)->toIso8601String(), 'last_sent_at' => now()->toIso8601String(), 'send_count' => 1,
+            'delivery' => ['status' => 'QUEUED', 'attempted_at' => null, 'error_code' => null], 'accepted_at' => null, 'revoked_at' => null,
+            'token' => bin2hex(random_bytes(32)),
+        ];
+
+        return $this->nexus->ok($this->invitationView($state, $state['invitations'][$id]), 201);
+    }
+
+    private function listInvitations(array $state, array $input)
+    {
+        $status = strtoupper((string) ($input['status'] ?? ''));
+        if ($status !== '' && ! in_array($status, ['PENDING', 'ACCEPTED', 'REVOKED', 'EXPIRED'], true)) {
+            return $this->nexus->fail('VALIDATION_ERROR', 'The request contains invalid data.', 422, ['status' => ['The selected status is invalid.']]);
+        }
+        $search = strtolower((string) ($input['search'] ?? ''));
+        $rows = array_reverse(array_values($state['invitations']));
+        $rows = array_values(array_filter($rows, fn ($r) => ($status === '' || $this->invitationStatus($r) === $status)
+            && ($search === '' || str_contains(strtolower($r['name'].' '.$r['email']), $search))));
+        $per = max(1, min(100, (int) ($input['per_page'] ?? 25)));
+
+        return $this->nexus->ok(array_map(fn ($r) => $this->invitationView($state, $r), array_slice($rows, 0, $per)), 200, [
+            'pagination' => ['current_page' => 1, 'per_page' => $per, 'total' => count($rows), 'last_page' => max(1, (int) ceil(count($rows) / $per))],
+        ]);
+    }
+
+    private function resendInvitation(array &$state, string $id)
+    {
+        if (! isset($state['invitations'][$id])) {
+            return $this->nexus->fail('INVITATION_NOT_FOUND', 'The invitation was not found.', 404);
+        }
+        $row = &$state['invitations'][$id];
+        $status = $this->invitationStatus($row);
+        if (! in_array($status, ['PENDING', 'EXPIRED'], true)) {
+            return $this->nexus->fail('INVITATION_NOT_PENDING', 'The invitation is not pending.', 409, ['status' => $status]);
+        }
+        if ($row['send_count'] >= ($state['invite_resend_limit'] ?? 5)) {
+            return $this->nexus->fail('INVITATION_RESEND_LIMIT', 'This invitation was resent the maximum number of times.', 409);
+        }
+        $wait = ($state['invite_cooldown'] ?? 60) - (now()->getTimestamp() - strtotime($row['last_sent_at']));
+        if ($wait > 0) {
+            return $this->nexus->fail('INVITATION_RESEND_COOLDOWN', 'This invitation was sent a moment ago.', 429, null, ['Retry-After' => (string) $wait]);
+        }
+
+        $row['token'] = bin2hex(random_bytes(32)); // the old link stops working at once
+        $row['status'] = 'PENDING';
+        $row['expires_at'] = now()->addHours(72)->toIso8601String();
+        $row['last_sent_at'] = now()->toIso8601String();
+        $row['send_count']++;
+        $row['delivery'] = ['status' => 'QUEUED', 'attempted_at' => null, 'error_code' => null];
+
+        return $this->nexus->ok($this->invitationView($state, $row));
+    }
+
+    private function revokeInvitation(array &$state, string $id, array $input)
+    {
+        if (! isset($state['invitations'][$id])) {
+            return $this->nexus->fail('INVITATION_NOT_FOUND', 'The invitation was not found.', 404);
+        }
+        $row = &$state['invitations'][$id];
+        if ($row['status'] === 'ACCEPTED') {
+            return $this->nexus->fail('INVITATION_NOT_PENDING', 'The invitation is not pending.', 409, ['status' => 'ACCEPTED']);
+        }
+        if ($row['status'] !== 'REVOKED') {
+            $row['status'] = 'REVOKED';
+            $row['revoked_at'] = now()->toIso8601String();
+            $row['revoke_reason'] = $input['reason'] ?? null;
+        }
+
+        return $this->nexus->ok($this->invitationView($state, $row));
     }
 
     private function target(array &$state, string $userId)

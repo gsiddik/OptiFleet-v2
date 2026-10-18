@@ -242,9 +242,9 @@ class FakeNexus
         return Http::response(['success' => true, 'data' => $data] + ($meta ? ['meta' => $meta] : []), $status);
     }
 
-    public function fail(string $code, string $message, int $status, mixed $details = null)
+    public function fail(string $code, string $message, int $status, mixed $details = null, array $headers = [])
     {
-        return Http::response(['success' => false, 'error' => ['code' => $code, 'message' => $message, 'details' => $details]], $status);
+        return Http::response(['success' => false, 'error' => ['code' => $code, 'message' => $message, 'details' => $details]], $status, $headers);
     }
 
     public static function uuid(): string

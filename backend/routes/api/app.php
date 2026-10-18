@@ -895,7 +895,13 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::prefix('delegation')->group(function () {
                 Route::get('/catalog', [DelegationController::class, 'catalog'])->middleware('permission:role.view');
                 Route::get('/users', [DelegationController::class, 'users'])->middleware('permission:user.view');
+                // Deprecated: a new person is invited (below). Kept for compatibility; OptiNexus can switch it off per deployment.
                 Route::post('/users', [DelegationController::class, 'addUser'])->middleware('permission:user.create');
+                // Invitations (GOVERNANCE_CONTRACTS.md section 2b): OptiNexus e-mails the link; nothing is granted until it is accepted.
+                Route::get('/invitations', [DelegationController::class, 'invitations'])->middleware('permission:user.view');
+                Route::post('/invitations', [DelegationController::class, 'invite'])->middleware('permission:user.create');
+                Route::post('/invitations/{invitationId}/resend', [DelegationController::class, 'resendInvitation'])->whereUuid('invitationId')->middleware('permission:user.create');
+                Route::post('/invitations/{invitationId}/revoke', [DelegationController::class, 'revokeInvitation'])->whereUuid('invitationId')->middleware('permission:user.update');
                 Route::put('/users/{nexusUserId}/roles', [DelegationController::class, 'setUserRoles'])->middleware('permission:user.assign');
                 Route::delete('/users/{nexusUserId}', [DelegationController::class, 'revokeUser'])->middleware('permission:user.update');
                 Route::post('/roles', [DelegationController::class, 'createRole'])->middleware('permission:role.create');
