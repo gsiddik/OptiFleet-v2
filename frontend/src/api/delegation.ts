@@ -95,19 +95,50 @@ export interface DelegatedInvitation {
   can_revoke: boolean;
 }
 
+/**
+ * The user seats of this tenant for this product as OptiNexus counted them (contract 2d). `available` is never negative: a limit below
+ * usage is `over_limit` (with `over_by`). Any state but NOT_CONTROLLED / LIMITED / UNLIMITED means the limit is not decided and additions are
+ * refused; it never means unlimited. `null` where an older OptiNexus sends no figures.
+ */
+export type SeatState = 'NOT_CONTROLLED' | 'LIMITED' | 'UNLIMITED' | 'ENTITLEMENT_MISSING' | 'ENTITLEMENT_INVALID' | 'ENTITLEMENT_UNAVAILABLE';
+
+export interface DelegationSeats {
+  state: SeatState;
+  controlled: boolean;
+  limit: number | null;
+  unlimited: boolean;
+  used: number;
+  reserved: number;
+  available: number | null;
+  over_limit: boolean;
+  over_by: number;
+  can_add: boolean;
+  blocked_reason: string | null;
+}
+
+/** A list with the seats OptiNexus counted for the same tenant and product. */
+export interface WithSeats<T> {
+  items: T[];
+  seats: DelegationSeats | null;
+}
+
 export const delegationApi = {
   catalog: async () => (await apiClient.get<{ data: DelegationCatalog }>('/app/delegation/catalog')).data.data,
-  users: async (search: string) =>
-    (await apiClient.get<{ data: DelegatedUser[] }>('/app/delegation/users', { params: { search: search || undefined, per_page: 100 } })).data.data,
+  users: async (search: string): Promise<WithSeats<DelegatedUser>> => {
+    const body = (await apiClient.get<{ data: DelegatedUser[]; seats?: DelegationSeats | null }>('/app/delegation/users', { params: { search: search || undefined, per_page: 100 } })).data;
+    return { items: body.data, seats: body.seats ?? null };
+  },
   /** @deprecated OptiNexus deprecates direct creation (the person would have no verified e-mail and could not sign in): use `invite`. */
   addUser: async (input: { name: string; email: string; role_ids: string[] }) =>
     (await apiClient.post<{ data: DelegatedUser & { outcome: AddUserOutcome } }>('/app/delegation/users', input)).data.data,
-  invitations: async (filter: { status?: InvitationStatus | ''; search?: string }) =>
-    (
-      await apiClient.get<{ data: DelegatedInvitation[] }>('/app/delegation/invitations', {
+  invitations: async (filter: { status?: InvitationStatus | ''; search?: string }): Promise<WithSeats<DelegatedInvitation>> => {
+    const body = (
+      await apiClient.get<{ data: DelegatedInvitation[]; seats?: DelegationSeats | null }>('/app/delegation/invitations', {
         params: { status: filter.status || undefined, search: filter.search || undefined, per_page: 100 },
       })
-    ).data.data,
+    ).data;
+    return { items: body.data, seats: body.seats ?? null };
+  },
   invite: async (input: { name: string; email: string; role_ids: string[]; locale: InvitationLocale }) =>
     (await apiClient.post<{ data: DelegatedInvitation }>('/app/delegation/invitations', input)).data.data,
   resendInvitation: async (invitationId: string) =>

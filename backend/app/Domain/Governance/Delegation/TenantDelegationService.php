@@ -107,7 +107,7 @@ class TenantDelegationService
     }
 
     /**
-     * @return array{items: array<int, array<string, mixed>>, pagination: array<string, mixed>}
+     * @return array{items: array<int, array<string, mixed>>, pagination: array<string, mixed>, seats: array<string, mixed>|null}
      */
     public function users(User $actor, string $tenantId, ?string $search, int $perPage): array
     {
@@ -123,11 +123,12 @@ class TenantDelegationService
         return [
             'items' => $rows->map(fn (array $u) => $this->userView($u, $localByNexus[$u['id'] ?? ''] ?? null))->all(),
             'pagination' => is_array($response['meta']['pagination'] ?? null) ? $response['meta']['pagination'] : ['current_page' => 1, 'per_page' => $perPage, 'total' => $rows->count(), 'last_page' => 1],
+            'seats' => $this->seatsOf($response['meta']),
         ];
     }
 
     /**
-     * @return array{items: array<int, array<string, mixed>>, pagination: array<string, mixed>}
+     * @return array{items: array<int, array<string, mixed>>, pagination: array<string, mixed>, seats: array<string, mixed>|null}
      */
     public function invitations(User $actor, string $tenantId, ?string $status, ?string $search, int $perPage): array
     {
@@ -142,6 +143,38 @@ class TenantDelegationService
         return [
             'items' => $rows->map(fn (array $i) => $this->invitationView($i))->all(),
             'pagination' => is_array($response['meta']['pagination'] ?? null) ? $response['meta']['pagination'] : ['current_page' => 1, 'per_page' => $perPage, 'total' => $rows->count(), 'last_page' => 1],
+            'seats' => $this->seatsOf($response['meta']),
+        ];
+    }
+
+    /**
+     * The seat picture OptiNexus counted for this tenant and product (section 2d), reduced to the facts the screen shows. These are OptiNexus'
+     * figures, never a count made here; an answer that does not look like the contract (an older OptiNexus, an unknown state) is absent.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function seatsOf(mixed $meta): ?array
+    {
+        $seats = is_array($meta) ? ($meta['seats'] ?? null) : null;
+        $known = ['NOT_CONTROLLED', 'LIMITED', 'UNLIMITED', 'ENTITLEMENT_MISSING', 'ENTITLEMENT_INVALID', 'ENTITLEMENT_UNAVAILABLE'];
+        if (! is_array($seats) || ! in_array($seats['state'] ?? null, $known, true)) {
+            return null;
+        }
+
+        $number = fn (mixed $value): ?int => is_int($value) || (is_string($value) && ctype_digit($value)) ? max(0, (int) $value) : null;
+
+        return [
+            'state' => $seats['state'],
+            'controlled' => (bool) ($seats['controlled'] ?? false),
+            'limit' => $number($seats['limit'] ?? null),
+            'unlimited' => (bool) ($seats['unlimited'] ?? false),
+            'used' => $number($seats['used'] ?? null) ?? 0,
+            'reserved' => $number($seats['reserved'] ?? null) ?? 0,
+            'available' => $number($seats['available'] ?? null),
+            'over_limit' => (bool) ($seats['over_limit'] ?? false),
+            'over_by' => $number($seats['over_by'] ?? null) ?? 0,
+            'can_add' => (bool) ($seats['can_add'] ?? false),
+            'blocked_reason' => is_string($seats['blocked_reason'] ?? null) ? $seats['blocked_reason'] : null,
         ];
     }
 

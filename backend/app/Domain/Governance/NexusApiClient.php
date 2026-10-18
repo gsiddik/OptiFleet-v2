@@ -15,7 +15,8 @@ use Illuminate\Support\Str;
  * 429 beyond the wait, 5xx) is reported as GovernanceUnavailableException so authorization callers deny. 2xx and 4xx are returned
  * as they are for the caller to interpret against the documented contract. A caller that knows a 429 carries a documented business
  * refusal (the invitation cooldown and rate limit) names its codes: such an answer is returned as it is, with the `Retry-After` the
- * person has to wait, instead of blocking the request or being reported as an outage.
+ * person has to wait, instead of blocking the request or being reported as an outage. The same holds for the two 503 seat answers
+ * (the limit could not be read, the seat lock was busy): they say that nothing was changed and when to retry.
  */
 class NexusApiClient
 {
@@ -24,11 +25,12 @@ class NexusApiClient
     /**
      * @param  array<string, mixed>  $payload  query string for GET/DELETE, JSON body otherwise
      * @param  list<string>  $answerRateLimitCodes  error codes whose 429 answer is returned (with `retry_after`) rather than waited for
+     * @param  list<string>  $answerUnavailableCodes  error codes whose 503 answer is a documented refusal (a change that was NOT made, with `retry_after`), returned instead of reported as an outage
      * @return array{status: int, data: mixed, meta: mixed, error: ?array{code: ?string, message: ?string, details: mixed}, correlation_id: string, retry_after: ?int}
      *
      * @throws GovernanceUnavailableException
      */
-    public function send(string $scopes, string $method, string $path, array $payload = [], array $answerRateLimitCodes = []): array
+    public function send(string $scopes, string $method, string $path, array $payload = [], array $answerRateLimitCodes = [], array $answerUnavailableCodes = []): array
     {
         $correlationId = (string) Str::uuid();
         $refreshed = false;
@@ -60,6 +62,10 @@ class NexusApiClient
                 throw new GovernanceUnavailableException('The authorization service is rate limiting this application.', $retryAfter ?: null);
             }
 
+            if ($response->status() === 503 && in_array($this->errorCode($response), $answerUnavailableCodes, true)) {
+                return $this->answer($response, $correlationId);
+            }
+
             if ($response->status() >= 500 || $response->status() === 408) {
                 throw new GovernanceUnavailableException('The authorization service answered with an error ('.$response->status().').');
             }
@@ -86,7 +92,7 @@ class NexusApiClient
             'error' => $error,
             'correlation_id' => $correlationId,
             // Seconds only (an HTTP-date is not used by OptiNexus); bounded so a faulty value cannot freeze a screen.
-            'retry_after' => $response->status() === 429 && is_numeric($retryAfter) ? max(1, min(86400, (int) $retryAfter)) : null,
+            'retry_after' => in_array($response->status(), [429, 503], true) && is_numeric($retryAfter) ? max(1, min(86400, (int) $retryAfter)) : null,
         ];
     }
 

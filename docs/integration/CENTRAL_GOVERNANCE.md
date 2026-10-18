@@ -83,7 +83,7 @@ copy of users, roles or assignments: `Api/Tenant/DelegationController` (thin) ->
 - After a change the cached access answers of the people it affects are dropped (single person or all members), so a revocation is
   in force on the next request instead of within one TTL.
 - Local data scope stays local: the users page opens it for people who already signed in here (`local_member_id`).
-- Gap (to OptiNexus): the delegation API does not enforce the plan's user limit; Fleet's local capacity check applies to LOCAL tenants only.
+- Seats are counted and enforced by OptiNexus (contract section 2d, see Seats below); Fleet's local capacity check applies to LOCAL tenants only.
 
 ### Invitations (OptiNexus contract GOVERNANCE_CONTRACTS.md section 2b)
 
@@ -103,6 +103,19 @@ they accept. Fleet keeps no copy of identities or invitations; no password and n
   Logs carry codes and ids only, never an e-mail address.
 - UI: `/app/access/users` has Users and Invitations tabs; "Invite user" replaced "Add user". Resend / Revoke follow `can_resend` / `can_revoke`
   from OptiNexus and the `user.create` / `user.update` permissions; after a cooldown refusal Resend stays off for the wait OptiNexus asked for.
+
+### Seats (OptiNexus contract GOVERNANCE_CONTRACTS.md section 2d, owner decision 2026-10-18)
+
+OptiNexus counts seats per tenant and application and refuses an addition that does not fit; Fleet keeps no counter (a test fails if `user_limit` appears in the app,
+routes or database folders). Fleet declares **no `user_limit` entitlement**, so for Fleet OptiNexus answers `NOT_CONTROLLED`: no limit is applied and none is invented here.
+Fleet still passes the picture on, so the day a tenant's Fleet subscription carries one nothing needs to change:
+
+- `GET users` and `GET invitations` return `seats` next to `data` and `meta` (state, limit, used, reserved by open invitations, available, over_limit, over_by, can_add,
+  blocked_reason; an answer that does not look like the contract is `null`). The Users and Invitations tabs show it (used, reserved, available, limit; over-limit as "over by n", never a negative number;
+  a missing, invalid or unreadable limit blocks additions and is never shown as unlimited; `NOT_CONTROLLED` says no seat limit applies to this product).
+- Refusals are passed through with OptiNexus' own figures (`details`: `limit`, `used`, `reserved`, `available`, `over_limit`, `recovery`): `SEAT_LIMIT_REACHED`, `SEAT_OVER_LIMIT`,
+  `SEAT_ENTITLEMENT_MISSING`, `SEAT_ENTITLEMENT_INVALID` (409) and the transient `SEAT_ENTITLEMENT_UNAVAILABLE`, `SEAT_CONTENTION` (503 with `Retry-After` / `retry_after_seconds`; `outcome_unknown` is false:
+  nothing was added; `NexusApiClient` returns these two 503 answers instead of reporting an outage). Messages en + id (`errors.delegation.seat*`, `delegation.seats.*`).
 
 ## Product switcher and switching sign-in (audit A29/R06)
 

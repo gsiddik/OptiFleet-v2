@@ -2,6 +2,8 @@ import type { ApiErrorShape } from '../../api/client';
 import { classifyFailure, type FailureKind } from '../../api/delegation';
 import { t } from '../../i18n/i18n';
 import { invitationRefusalMessage } from './invitationPresentation';
+import { seatsView } from './seatsPresentation';
+import type { DelegationSeats } from '../../api/delegation';
 
 /** Says that access here is managed centrally and where a change is saved. Shown on both delegation pages. */
 export function CentralNotice() {
@@ -11,6 +13,25 @@ export function CentralNotice() {
       style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: '#1e3a8a', borderRadius: 8, padding: '10px 14px', fontSize: 13, marginBottom: 14 }}
     >
       {t('delegation.banner.managedCentrally')}
+    </div>
+  );
+}
+
+/** The user seats of this organization for this product, as OptiNexus counted them (used, reserved by open invitations, limit, available). */
+export function SeatsNotice({ seats }: { seats: DelegationSeats | null | undefined }) {
+  const view = seatsView(seats);
+  if (view === null) return null;
+  const warning = view.tone === 'warning';
+  return (
+    <div
+      role={warning ? 'alert' : 'status'}
+      style={{
+        background: warning ? '#fffbeb' : '#eff6ff', border: `1px solid ${warning ? '#fde68a' : '#bfdbfe'}`, color: warning ? '#92400e' : '#1e3a8a',
+        borderRadius: 8, padding: '10px 14px', fontSize: 13, marginBottom: 14,
+      }}
+    >
+      {view.title && <strong>{view.title} </strong>}
+      {view.text}
     </div>
   );
 }

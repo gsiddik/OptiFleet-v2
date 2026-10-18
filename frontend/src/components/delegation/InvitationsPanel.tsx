@@ -8,7 +8,7 @@ import { Table, type Column } from '../Table';
 import { useDelegationResource } from '../../hooks/useDelegationResource';
 import { t } from '../../i18n/i18n';
 import { formatDateTime } from '../../utils/date';
-import { ActionFailure, FailurePanel } from './DelegationPanels';
+import { ActionFailure, FailurePanel, SeatsNotice } from './DelegationPanels';
 import { cooldownDeadline, invitationActions, invitationDeliveryView, invitationStatusView, secondsLeft, TONE_STYLES, type Tone } from './invitationPresentation';
 
 function Chip({ tone, children }: { tone: Tone; children: string }) {
@@ -189,10 +189,11 @@ export function InvitationsPanel({
       )}
       {list.status === 'loading' && <LoadingState label={t('common.actions.loading')} />}
       {(list.status === 'forbidden' || list.status === 'unavailable' || list.status === 'error') && <FailurePanel kind={list.status} error={list.error} onRetry={list.reload} />}
-      {list.status === 'ready' && list.data.length === 0 && (
+      {list.status === 'ready' && <SeatsNotice seats={list.data.seats} />}
+      {list.status === 'ready' && list.data.items.length === 0 && (
         <EmptyState label={search ? t('delegation.invitations.emptySearch') : status ? t('delegation.invitations.emptyStatus') : t('delegation.invitations.empty')} />
       )}
-      {list.status === 'ready' && list.data.length > 0 && <Table columns={columns} rows={list.data} />}
+      {list.status === 'ready' && list.data.items.length > 0 && <Table columns={columns} rows={list.data.items} />}
       <ConfirmDialog
         open={revoking !== null}
         title={t('delegation.invitations.actions.revokeTitle')}

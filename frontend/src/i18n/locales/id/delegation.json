@@ -70,6 +70,22 @@
     "selectedOf": "({{selected}} dari {{total}} dipilih)",
     "template": "Disediakan platform"
   },
+  "seats": {
+    "figures": "{{used}} terpakai dan {{reserved}} dicadangkan dari batas {{limit}}.",
+    "full": "Tidak ada kursi tersisa: orang baru tidak dapat ditambahkan atau diundang. Cabut undangan terbuka atau hapus akses seseorang, atau minta administrator platform menambah batas.",
+    "notControlled": "OptiNexus tidak menerapkan batas kursi untuk produk ini ({{used}} pengguna dengan akses).",
+    "overBody": "{{used}} terpakai dan {{reserved}} dicadangkan terhadap batas {{limit}}. Tidak ada akses yang dicabut otomatis. Orang baru tidak dapat ditambahkan sampai pemakaian turun di bawah batas atau administrator platform menaikkan batas.",
+    "overTitle": "Melebihi batas kursi sebanyak {{overBy}}.",
+    "retryIn": "Coba lagi dalam {{seconds}} dtk.",
+    "summary": "Kursi pengguna: {{used}} terpakai, {{reserved}} dicadangkan undangan terbuka, {{available}} tersedia dari batas {{limit}}.",
+    "undecided": {
+      "entitlementInvalid": "Batas kursi pada langganan tidak valid, jadi orang baru tidak dapat ditambahkan. Akses yang sudah ada tidak terpengaruh. Hubungi administrator platform.",
+      "entitlementMissing": "Langganan belum menetapkan batas kursi untuk produk ini, jadi orang baru tidak dapat ditambahkan. Akses yang sudah ada tidak terpengaruh. Hubungi administrator platform.",
+      "entitlementUnavailable": "Batas kursi tidak dapat dibaca saat ini, jadi orang baru tidak dapat ditambahkan. Akses yang sudah ada tidak terpengaruh. Muat ulang sebentar lagi."
+    },
+    "unlimited": "Kursi pengguna: {{used}} terpakai, {{reserved}} dicadangkan undangan terbuka (tanpa batas).",
+    "usedOnly": "Kursi pengguna: {{used}} terpakai, {{reserved}} dicadangkan."
+  },
   "state": {
     "error": "Terjadi kesalahan",
     "forbidden": "Tidak diizinkan",

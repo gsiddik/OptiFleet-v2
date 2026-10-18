@@ -71,12 +71,17 @@ Status: FIXED_AND_TESTED against FakeNexus (no real OptiNexus; browser check is 
 - Open points of the contract (ambiguous, assumed): whether an EXPIRED invitation blocks a new one for the same e-mail (`INVITATION_PENDING`); the UI copes with both.
   Seat limits are not enforced by invitations (Nexus decision, gap 4 below). Revoke sends no reason from the UI (the API accepts one).
 
+## Seat limit consumer (OptiNexus contract 2d, owner decision 2026-10-18 09:11Z)
+- Fleet declares no `user_limit`, so OptiNexus answers `NOT_CONTROLLED` for it (no limit applied, none invented). Fleet passes `seats` (users and invitations lists) and the `SEAT_*` refusals through
+  (409 four; 503 pair returned as refusals, not outages), keeps no counter; Users and Invitations tabs show used / reserved / available / limit / over-limit / undecided; texts en + id from `docs/i18n/17-i18n-additions.csv`.
+- Tests: `SeatsDelegationTest` 8 new, `tests/Feature/Governance` 133 passed; `tests/unit` 87 passed (`seats.test.ts` new), `tsc -b`, `oxlint` (0 errors), `i18n:check` clean. See `CENTRAL_GOVERNANCE.md` Seats.
+
 ## Contract gaps needed from OptiNexus
 
 1. App-scoped bulk entitlement: OptiNexus 4eda307 now returns `entitled_capabilities` on effective-permissions (closes it); Fleet still reads `commercial-context` (optional follow-up).
 2. Bulk "who holds permission X" (approver resolution scans <= 200 linked members).
 3. Per-service-account scope allow-list: closed by OptiNexus 4eda307 (`403 SCOPE_NOT_ALLOWED`; `ecosystem:register-service-account` grants the product scopes, gateway scopes only via `--scopes`).
-4. The delegation API does not enforce the plan's user limit.
+4. Seats: closed on the OptiNexus side by contract 2d (decision 2026-10-18); Fleet declares no `user_limit`, so none is applied to Fleet.
 5. `commercial-context` does not map subscriptions to applications: Fleet infers it from APPLICATION entitlements plus one live subscription
    (a MANUAL_OVERRIDE entitlement can mask the plan source). Proposal: additive `subscriptions[].application_codes`.
 6. Fleet's service account must be bound to `optifleet` with `authorization.check`, `commercial.read`, `tenant.delegate` (+ gateway scopes).

@@ -70,6 +70,22 @@
     "selectedOf": "({{selected}} of {{total}} selected)",
     "template": "Provided by the platform"
   },
+  "seats": {
+    "figures": "{{used}} used and {{reserved}} reserved of a limit of {{limit}}.",
+    "full": "No seat is left: nobody new can be added or invited. Revoke an open invitation or remove someone's access, or ask the platform administrator to raise the limit.",
+    "notControlled": "OptiNexus does not apply a seat limit to this product ({{used}} users with access).",
+    "overBody": "{{used}} used and {{reserved}} reserved against a limit of {{limit}}. No access is removed automatically. Nobody new can be added until usage drops below the limit or the platform administrator raises it.",
+    "overTitle": "Over the seat limit by {{overBy}}.",
+    "retryIn": "Try again in {{seconds}} s.",
+    "summary": "User seats: {{used}} used, {{reserved}} reserved by open invitations, {{available}} available of a limit of {{limit}}.",
+    "undecided": {
+      "entitlementInvalid": "The seat limit on the subscription is not valid, so nobody new can be added. Existing access is not affected. Contact the platform administrator.",
+      "entitlementMissing": "The subscription does not set a seat limit for this product, so nobody new can be added. Existing access is not affected. Contact the platform administrator.",
+      "entitlementUnavailable": "The seat limit cannot be read right now, so nobody new can be added. Existing access is not affected. Reload in a moment."
+    },
+    "unlimited": "User seats: {{used}} used, {{reserved}} reserved by open invitations (no limit).",
+    "usedOnly": "User seats: {{used}} used, {{reserved}} reserved."
+  },
   "state": {
     "error": "Something went wrong",
     "forbidden": "Not allowed",

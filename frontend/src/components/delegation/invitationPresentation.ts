@@ -7,6 +7,7 @@ import type { ApiErrorShape } from '../../api/client';
 import type { DelegatedInvitation, InvitationLocale, InvitationStatus } from '../../api/delegation';
 import { hasKey, t } from '../../i18n/i18n';
 import { formatDateTime } from '../../utils/date';
+import { SEAT_REFUSALS, seatRefusalMessage } from './seatsPresentation';
 
 export type Tone = 'info' | 'success' | 'warning' | 'danger' | 'neutral';
 
@@ -97,6 +98,8 @@ export const INVITATION_REFUSALS: readonly string[] = [
  * The server already translated its message; the cases that need the details (which status blocks, how long to wait) say more.
  */
 export function invitationRefusalMessage(error: ApiErrorShape): string | null {
+  // A seat refusal (contract 2d) is also a plain notice: nothing was added, and OptiNexus' own figures say why.
+  if (error.code && SEAT_REFUSALS.includes(error.code)) return seatRefusalMessage(error);
   if (!error.code || !INVITATION_REFUSALS.includes(error.code)) return null;
 
   const wait = typeof error.retry_after_seconds === 'number' && error.retry_after_seconds > 0 ? error.retry_after_seconds : null;

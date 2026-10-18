@@ -38,6 +38,13 @@ final class DelegationErrors
         'INVITATION_RESEND_COOLDOWN' => [429, 'errors.delegation.invitationResendCooldown'],
         'INVITATION_RESEND_LIMIT' => [409, 'errors.delegation.invitationResendLimit'],
         'INVITATION_RATE_LIMITED' => [429, 'errors.delegation.invitationRateLimited'],
+        // Seats (section 2d): OptiNexus counts them and refuses an addition that does not fit; nothing was granted. The 503 pair is transient and carries the wait.
+        'SEAT_LIMIT_REACHED' => [409, 'errors.delegation.seatLimitReached'],
+        'SEAT_OVER_LIMIT' => [409, 'errors.delegation.seatOverLimit'],
+        'SEAT_ENTITLEMENT_MISSING' => [409, 'errors.delegation.seatEntitlementMissing'],
+        'SEAT_ENTITLEMENT_INVALID' => [409, 'errors.delegation.seatEntitlementInvalid'],
+        'SEAT_ENTITLEMENT_UNAVAILABLE' => [503, 'errors.delegation.seatEntitlementUnavailable'],
+        'SEAT_CONTENTION' => [503, 'errors.delegation.seatContention'],
         // The deprecated direct creation switched off by the deployment (NEXUS_DELEGATION_DIRECT_USERS=false).
         'DIRECT_USER_CREATION_DISABLED' => [410, 'errors.delegation.directCreationDisabled'],
         'RESOURCE_NOT_FOUND' => [404, 'errors.delegation.notFound'],
@@ -45,7 +52,8 @@ final class DelegationErrors
     ];
 
     /** Refusals whose `details` are passed on: the UI needs them (offending role ids, the open invitation, the status that blocks). */
-    private const WITH_DETAILS = ['PERMISSION_NOT_DELEGABLE', 'ROLE_NOT_ASSIGNABLE', 'INVITATION_PENDING', 'INVITATION_NOT_PENDING'];
+    private const WITH_DETAILS = ['PERMISSION_NOT_DELEGABLE', 'ROLE_NOT_ASSIGNABLE', 'INVITATION_PENDING', 'INVITATION_NOT_PENDING',
+        'SEAT_LIMIT_REACHED', 'SEAT_OVER_LIMIT', 'SEAT_ENTITLEMENT_MISSING', 'SEAT_ENTITLEMENT_INVALID', 'SEAT_ENTITLEMENT_UNAVAILABLE', 'SEAT_CONTENTION'];
 
     /** Raised before any call is made. */
     public const NOT_CENTRAL = ['NOT_CENTRALLY_GOVERNED', 409, 'errors.delegation.notCentral'];
@@ -87,7 +95,7 @@ final class DelegationErrors
 
             return new DelegationException($code, $status, $key, $code === 'VALIDATION_ERROR' && is_array($details) ? self::fieldErrors($details) : null,
                 $response['correlation_id'], retryable: $status === 503 || $status === 429, details: in_array($code, self::WITH_DETAILS, true) ? self::safeDetails($details) : null,
-                retryAfterSeconds: $status === 429 ? ($response['retry_after'] ?? null) : null);
+                retryAfterSeconds: $status === 429 || in_array($code, ['SEAT_ENTITLEMENT_UNAVAILABLE', 'SEAT_CONTENTION'], true) ? ($response['retry_after'] ?? null) : null);
         }
 
         // 401 / 403 without a documented code: the service account is not accepted (expired credential, wrong scope).

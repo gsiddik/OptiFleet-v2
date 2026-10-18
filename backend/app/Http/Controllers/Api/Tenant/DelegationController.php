@@ -32,7 +32,7 @@ class DelegationController extends Controller
     {
         $result = $this->delegation->users($request->user(), $this->context->tenantId(), $request->string('search')->trim()->value() ?: null, $request->integer('per_page', 25));
 
-        return response()->json(['data' => $result['items'], 'meta' => $result['pagination']]);
+        return response()->json(['data' => $result['items'], 'meta' => $result['pagination'], 'seats' => $result['seats']]);
     }
 
     /** @deprecated A new person is invited (see invite()): the person sets their own password in OptiNexus. Kept for compatibility. */
@@ -49,7 +49,7 @@ class DelegationController extends Controller
             $request->user(), $this->context->tenantId(), $request->input('status') ?: null, $request->string('search')->trim()->value() ?: null, $request->integer('per_page', 25),
         );
 
-        return response()->json(['data' => $result['items'], 'meta' => $result['pagination']]);
+        return response()->json(['data' => $result['items'], 'meta' => $result['pagination'], 'seats' => $result['seats']]);
     }
 
     public function invite(InviteDelegatedUserRequest $request): JsonResponse

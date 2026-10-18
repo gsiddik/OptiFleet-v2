@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { classifyFailure, delegationApi, extractApiError, type DelegatedRole, type DelegatedUser, type InvitationStatus } from '../../../api/delegation';
 import type { ApiErrorShape } from '../../../api/client';
 import { useAuth } from '../../../auth/AuthContext';
-import { ActionFailure, CentralNotice, FailurePanel } from '../../../components/delegation/DelegationPanels';
+import { ActionFailure, CentralNotice, FailurePanel, SeatsNotice } from '../../../components/delegation/DelegationPanels';
 import { InvitationsPanel } from '../../../components/delegation/InvitationsPanel';
 import { defaultInvitationLocale, INVITATION_FILTER_OPTIONS } from '../../../components/delegation/invitationPresentation';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
@@ -179,8 +179,9 @@ export function CentralUsersPage() {
           {(users.status === 'forbidden' || users.status === 'unavailable' || users.status === 'error') && (
             <FailurePanel kind={users.status} error={users.error} onRetry={users.reload} />
           )}
-          {users.status === 'ready' && users.data.length === 0 && <EmptyState label={search ? t('delegation.users.emptySearch') : t('delegation.users.empty')} />}
-          {users.status === 'ready' && users.data.length > 0 && <Table columns={columns} rows={users.data} />}
+          {users.status === 'ready' && <SeatsNotice seats={users.data.seats} />}
+          {users.status === 'ready' && users.data.items.length === 0 && <EmptyState label={search ? t('delegation.users.emptySearch') : t('delegation.users.empty')} />}
+          {users.status === 'ready' && users.data.items.length > 0 && <Table columns={columns} rows={users.data.items} />}
         </>
       )}
       {tab === 'invitations' && <InvitationsPanel search={search} status={invitationStatus} version={invitationsVersion} onNotice={setNotice} />}

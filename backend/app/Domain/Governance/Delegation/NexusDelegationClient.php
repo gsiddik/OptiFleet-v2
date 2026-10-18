@@ -18,6 +18,9 @@ class NexusDelegationClient
     /** 429 answers that are business refusals of the invitation API: returned with their Retry-After, never waited for or retried. */
     private const RATE_LIMIT_ANSWERS = ['INVITATION_RESEND_COOLDOWN', 'INVITATION_RATE_LIMITED'];
 
+    /** 503 answers that are seat refusals (contract 2d): nothing was added, and OptiNexus says when to try again. Returned, not reported as an outage. */
+    private const SEAT_UNAVAILABLE_ANSWERS = ['SEAT_ENTITLEMENT_UNAVAILABLE', 'SEAT_CONTENTION'];
+
     public function __construct(private readonly NexusApiClient $api) {}
 
     /** @return array{data: mixed, meta: mixed, correlation_id: string, status: int} */
@@ -122,7 +125,7 @@ class NexusDelegationClient
         $mutation = $method !== 'GET';
 
         try {
-            $response = $this->api->send(NexusTokenProvider::SCOPES_DELEGATION, $method, 'delegation/tenants/'.$this->id($nexusTenantId).$path, array_merge($payload, ['acting_user_id' => $actingUserId]), self::RATE_LIMIT_ANSWERS);
+            $response = $this->api->send(NexusTokenProvider::SCOPES_DELEGATION, $method, 'delegation/tenants/'.$this->id($nexusTenantId).$path, array_merge($payload, ['acting_user_id' => $actingUserId]), self::RATE_LIMIT_ANSWERS, self::SEAT_UNAVAILABLE_ANSWERS);
         } catch (GovernanceUnavailableException $e) {
             throw DelegationErrors::unavailable((string) Str::uuid(), $mutation);
         }

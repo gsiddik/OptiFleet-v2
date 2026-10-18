@@ -17,6 +17,8 @@ use Illuminate\Support\Str;
  * State (per OptiNexus tenant id), seeded by FakeNexus::delegationTenant():
  *   admins: subjects of Admin Tenants; delegable: the explicit delegable catalog; roles; users; identities (e-mail => subject);
  *   invitations (id => row); knobs `invite_cooldown` (s), `invite_resend_limit`, `invite_rate_limit` (null or max creations), `leak_token`.
+ * Seats (section 2d): `seat` is ['state' => NOT_CONTROLLED|LIMITED|UNLIMITED|ENTITLEMENT_*, 'limit' => n]; OptiFleet declares no `user_limit`, so a seeded tenant
+ * is NOT_CONTROLLED until a test says otherwise. Used = people holding ACTIVE access; reserved = open, unexpired invitations of people holding none.
  */
 class FakeNexusDelegation
 {
@@ -114,6 +116,7 @@ class FakeNexusDelegation
 
         return $this->nexus->ok(array_map(fn ($u) => $this->userView($state, $u), array_slice($items, 0, $per)), 200, [
             'pagination' => ['current_page' => 1, 'per_page' => $per, 'total' => count($items), 'last_page' => max(1, (int) ceil(count($items) / $per))],
+            'seats' => $this->seatStatus($state),
         ]);
     }
 
@@ -150,6 +153,9 @@ class FakeNexusDelegation
 
         $existingId = $state['identities'][$email] ?? null;
         $existing = $existingId ? ($state['users'][$existingId] ?? null) : null;
+        if (! ($existing && $existing['application_access'] === 'ACTIVE') && ($refusal = $this->seatRefusal($state, take: true, email: $email))) {
+            return $refusal;
+        }
         if ($existing) {
             $outcome = $existing['application_access'] === 'ACTIVE' ? 'existing' : 'linked';
             $state['users'][$existingId]['application_access'] = 'ACTIVE';
@@ -233,6 +239,9 @@ class FakeNexusDelegation
         if (isset($state['invite_rate_limit']) && count($state['invitations']) >= $state['invite_rate_limit']) {
             return $this->nexus->fail('INVITATION_RATE_LIMITED', 'Too many invitations were created in a short time.', 429, null, ['Retry-After' => '120']);
         }
+        if ($refusal = $this->seatRefusal($state, take: false, email: $email)) {
+            return $refusal;
+        }
 
         $id = FakeNexus::uuid();
         $state['invitations'][$id] = [
@@ -260,6 +269,7 @@ class FakeNexusDelegation
 
         return $this->nexus->ok(array_map(fn ($r) => $this->invitationView($state, $r), array_slice($rows, 0, $per)), 200, [
             'pagination' => ['current_page' => 1, 'per_page' => $per, 'total' => count($rows), 'last_page' => max(1, (int) ceil(count($rows) / $per))],
+            'seats' => $this->seatStatus($state),
         ]);
     }
 
@@ -279,6 +289,10 @@ class FakeNexusDelegation
         $wait = ($state['invite_cooldown'] ?? 60) - (now()->getTimestamp() - strtotime($row['last_sent_at']));
         if ($wait > 0) {
             return $this->nexus->fail('INVITATION_RESEND_COOLDOWN', 'This invitation was sent a moment ago.', 429, null, ['Retry-After' => (string) $wait]);
+        }
+
+        if ($status === 'EXPIRED' && ($refusal = $this->seatRefusal($state, take: false, email: $row['email']))) {
+            return $refusal; // an expired invitation holds no seat: opening it again must find one
         }
 
         $row['token'] = bin2hex(random_bytes(32)); // the old link stops working at once
@@ -307,6 +321,81 @@ class FakeNexusDelegation
         }
 
         return $this->nexus->ok($this->invitationView($state, $row));
+    }
+
+    // ------------------------------------------------------------ seats (section 2d)
+
+    private function holdsSeat(array $state, string $email): bool
+    {
+        $id = $state['identities'][$email] ?? null;
+
+        return $id !== null && (($state['users'][$id]['application_access'] ?? null) === 'ACTIVE');
+    }
+
+    /** @return list<string> */
+    private function reservedEmails(array $state): array
+    {
+        $emails = [];
+        foreach ($state['invitations'] as $row) {
+            if ($this->invitationStatus($row) === 'PENDING' && ! $this->holdsSeat($state, $row['email'])) {
+                $emails[$row['email']] = true;
+            }
+        }
+
+        return array_keys($emails);
+    }
+
+    /** @return array<string, mixed> what OptiNexus answers in `meta.seats` */
+    private function seatStatus(array $state): array
+    {
+        $seat = $state['seat'] ?? ['state' => 'NOT_CONTROLLED'];
+        $limited = $seat['state'] === 'LIMITED';
+        $limit = $limited ? (int) $seat['limit'] : null;
+        $used = count(array_filter($state['users'], fn ($u) => ($u['application_access'] ?? null) === 'ACTIVE'));
+        $reserved = count($this->reservedEmails($state));
+        $overBy = $limited ? max(0, $used + $reserved - $limit) : 0;
+        $available = $limited ? max(0, $limit - $used - $reserved) : null;
+        $blocked = match (true) {
+            $seat['state'] === 'ENTITLEMENT_MISSING' => 'SEAT_ENTITLEMENT_MISSING',
+            $seat['state'] === 'ENTITLEMENT_INVALID' => 'SEAT_ENTITLEMENT_INVALID',
+            $seat['state'] === 'ENTITLEMENT_UNAVAILABLE' => 'SEAT_ENTITLEMENT_UNAVAILABLE',
+            $limited && $overBy > 0 => 'SEAT_OVER_LIMIT',
+            $limited && $available === 0 => 'SEAT_LIMIT_REACHED',
+            default => null,
+        };
+
+        return ['application_code' => FakeNexus::APP, 'controlled' => $seat['state'] !== 'NOT_CONTROLLED', 'state' => $seat['state'], 'limit' => $limit, 'unlimited' => $seat['state'] === 'UNLIMITED',
+            'used' => $used, 'reserved' => $reserved, 'available' => $available, 'over_limit' => $overBy > 0, 'over_by' => $overBy, 'can_add' => $blocked === null, 'blocked_reason' => $blocked];
+    }
+
+    /** The refusal OptiNexus gives an addition that does not fit, or null. `take` = access now (direct add); otherwise an invitation reserving a seat. */
+    private function seatRefusal(array $state, bool $take, string $email)
+    {
+        $status = $this->seatStatus($state);
+        if (! in_array($status['state'], ['NOT_CONTROLLED', 'LIMITED', 'UNLIMITED'], true)) {
+            $code = $status['blocked_reason'];
+            $transient = $code === 'SEAT_ENTITLEMENT_UNAVAILABLE';
+
+            return $this->nexus->fail($code, 'The seat limit could not be decided.', $transient ? 503 : 409, ['recovery' => $transient ? 'RETRY' : 'SET_ENTITLEMENT'], $transient ? ['Retry-After' => '5'] : []);
+        }
+        if ($status['state'] !== 'LIMITED' || $this->holdsSeat($state, $email)) {
+            return null;
+        }
+
+        $reservedHere = in_array($email, $this->reservedEmails($state), true);
+        if (! $take && $reservedHere) {
+            return null;
+        }
+        $fits = $take && $reservedHere ? $status['limit'] >= $status['used'] + 1 : $status['limit'] >= $status['used'] + $status['reserved'] + 1;
+        if ($fits) {
+            return null;
+        }
+
+        $over = $status['limit'] < $status['used'] + $status['reserved'];
+
+        return $this->nexus->fail($over ? 'SEAT_OVER_LIMIT' : 'SEAT_LIMIT_REACHED', $over ? 'This application is over its seat limit.' : 'No seat is left for this application.', 409,
+            ['application_code' => FakeNexus::APP, 'limit' => $status['limit'], 'used' => $status['used'], 'reserved' => $status['reserved'], 'available' => $status['available'], 'over_limit' => $over,
+                'recovery' => $over ? 'REDUCE_USAGE_OR_RAISE_LIMIT' : 'FREE_SEAT_OR_RAISE_LIMIT']);
     }
 
     private function target(array &$state, string $userId)
