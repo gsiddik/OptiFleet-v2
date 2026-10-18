@@ -17,11 +17,11 @@ class AccountingFeedEvent extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'tenant_id', 'sequence', 'event_id', 'event_type', 'occurred_at', 'correlation_id', 'source', 'dimensions', 'payload',
+        'tenant_id', 'sequence', 'event_id', 'event_type', 'occurred_at', 'correlation_id', 'source', 'dimensions', 'payload', 'review',
     ];
 
     protected function casts(): array
     {
-        return ['sequence' => 'integer', 'occurred_at' => 'datetime', 'source' => 'array', 'dimensions' => 'array', 'payload' => 'array'];
+        return ['sequence' => 'integer', 'occurred_at' => 'datetime', 'source' => 'array', 'dimensions' => 'array', 'payload' => 'array', 'review' => 'array'];
     }
 }

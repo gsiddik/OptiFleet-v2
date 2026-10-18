@@ -6,11 +6,11 @@ use App\Domain\Identity\Models\Tenant;
 use App\Domain\Integration\AccountingFeed\AccountingFeedCredential;
 use App\Domain\Integration\AccountingFeed\AccountingFeedEvent;
 use App\Domain\Integration\Models\IntegrationOutboxEvent;
-use App\Domain\Partner\Models\Partner;
 use Illuminate\Database\QueryException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Concerns\BuildsFeedScenarios;
 use Tests\TestCase;
 
 /**
@@ -18,68 +18,9 @@ use Tests\TestCase;
  */
 class AccountingFeedTest extends TestCase
 {
+    use BuildsFeedScenarios;
+
     private const FEED = '/api/v1/integration/accounting-feed';
-
-    /** @return array{0: Tenant, 1: string, 2: array<string, mixed>} tenant, user token, scenario */
-    private function setUpTenant(): array
-    {
-        $tenant = $this->makeTenant(['code' => 'AF-'.Str::random(4)]);
-        foreach (['VEHICLE', 'WORKSHOP', 'WORK_ORDER'] as $module) {
-            $this->grantModule($tenant, $module);
-        }
-        $branch = $this->makeBranch($tenant);
-        $workshop = $this->makeWorkshop($tenant, $branch);
-        $vehicle = $this->makeVehicle($tenant, $branch, $this->makeVehicleCategory(), ['default_workshop_id' => $workshop->id]);
-        [, $token] = $this->makeTenantUser($tenant, $this->permissions());
-
-        return [$tenant, $token, compact('tenant', 'branch', 'workshop', 'vehicle')];
-    }
-
-    private function permissions(): array
-    {
-        return [
-            'work_order.view', 'work_order.create', 'work_order.submit', 'work_order.approve',
-            'work_order.assign', 'work_order.schedule', 'work_order.start', 'work_order.cancel',
-            'work_order_external_service.create', 'work_order_external_service.complete', 'work_order_external_service.cancel',
-            'workshop_invoice.record', 'workshop_invoice.view', 'workshop_invoice.upload_payment',
-            'workshop_invoice.request_correction', 'workshop_invoice.request_cancellation',
-            'workshop_invoice.verify_correction', 'workshop_invoice.verify_cancellation',
-            'workshop_invoice.view_settlement_history',
-        ];
-    }
-
-    /** @return array{0: string, 1: string} [workOrderId, memoId] with the memo COMPLETED */
-    private function completedMemo(array $scenario, string $token, ?Partner $partner = null): array
-    {
-        $headers = $this->authHeaders($token);
-        $partner ??= $this->makePartner($scenario['tenant'], ['partner_type' => 'EXTERNAL_WORKSHOP', 'tax_id' => '01.234.567.8-901.000']);
-
-        $woId = $this->postJson('/api/v1/app/work-orders', [
-            'vehicle_id' => $scenario['vehicle']->id, 'workshop_id' => $scenario['workshop']->id, 'maintenance_type' => 'CORRECTIVE', 'current_odometer' => 1000,
-        ], $headers)->assertStatus(201)->json('data.id');
-        foreach (['submit', 'approve', 'assign', 'schedule'] as $step) {
-            $this->postJson("/api/v1/app/work-orders/{$woId}/{$step}", [], $headers)->assertOk();
-        }
-        $this->withApprovedWorkspace($woId);
-        $this->postJson("/api/v1/app/work-orders/{$woId}/start", [], $headers)->assertOk();
-        $memoId = $this->postJson("/api/v1/app/work-orders/{$woId}/external-services", [
-            'partner_id' => $partner->id, 'description' => 'Engine overhaul', 'cost' => 1000000,
-        ], $headers)->assertStatus(201)->json('data.id');
-        $this->postJson("/api/v1/app/work-orders/{$woId}/external-services/{$memoId}/complete", [], $headers)->assertOk();
-
-        return [$woId, $memoId];
-    }
-
-    private function recordInvoice(string $woId, string $memoId, string $token, array $overrides = []): string
-    {
-        return $this->postJson("/api/v1/app/work-orders/{$woId}/external-services/{$memoId}/workshop-invoice", array_merge([
-            'external_invoice_number' => 'INV-'.Str::upper(Str::random(6)),
-            'invoice_date' => '2026-09-01', 'due_date' => '2026-09-15', 'currency' => 'IDR',
-            'subtotal' => 900000, 'tax_total' => 99000, 'discount_total' => 0, 'total_amount' => 999000,
-            'partner_reference' => 'PR-1',
-            'line_items' => [['description' => 'Overhaul labour', 'quantity' => 1, 'unit_price' => 900000, 'line_total' => 900000]],
-        ], $overrides), $this->authHeaders($token))->assertStatus(201)->json('data.id');
-    }
 
     /** Credential for the tenant; returns the Authorization headers. */
     private function feedHeaders(Tenant $tenant): array
@@ -207,6 +148,10 @@ class AccountingFeedTest extends TestCase
         $this->assertSame([], $empty->json('data'));
         $this->assertSame('2', $empty->json('next_cursor'));
         $this->assertFalse($empty->json('has_more'));
+
+        // high_water is the newest committed sequence, on every page and also on a page that is behind it or empty
+        $this->assertSame(['2', '2', '2'], [$first->json('high_water'), $second->json('high_water'), $empty->json('high_water')]);
+        $this->assertSame('2', $this->getJson(self::FEED.'?after=999999999', $headers)->json('high_water'));
 
         $this->assertSame([1, 2], array_column($this->getJson(self::FEED.'?after=0', $headers)->json('data'), 'sequence'));
         $this->assertSame([], $this->getJson(self::FEED.'?after=999999999', $headers)->json('data'));
@@ -380,7 +325,7 @@ class AccountingFeedTest extends TestCase
         DB::table('accounting_feed_events')->insert($row);
     }
 
-    public function test_backfill_adds_missing_events_once_and_marks_the_snapshot_basis(): void
+    public function test_backfill_adds_missing_events_once_quarantined_and_marks_the_snapshot_basis(): void
     {
         [$tenant, , , , , $invoiceId] = $this->tenantWithInvoice();
         // Rows that predate the feed: no feed events, no counter.
@@ -388,14 +333,17 @@ class AccountingFeedTest extends TestCase
         DB::table('accounting_feed_counters')->delete();
         $headers = $this->feedHeaders($tenant);
         $this->assertSame([], $this->getJson(self::FEED, $headers)->json('data'));
+        $repair = ['--by' => 'ops@example.test', '--reason' => 'Rebuild after deployment'];
 
-        $this->artisan('accounting-feed:backfill', ['--tenant' => $tenant->id])->expectsOutput('Projected 2, skipped 0.')->assertExitCode(0);
-        $this->artisan('accounting-feed:backfill')->expectsOutput('Projected 0, skipped 0.')->assertExitCode(0);
+        $this->artisan('accounting-feed:backfill', ['--tenant' => $tenant->id] + $repair)->assertExitCode(0);
+        $this->artisan('accounting-feed:backfill', $repair)->expectsOutput('Nothing is missing.')->assertExitCode(0);
 
         $data = $this->getJson(self::FEED, $headers)->json('data');
         $this->assertSame([1, 2], array_column($data, 'sequence'));
         $this->assertSame($invoiceId, $data[0]['source']['id']);
         $this->assertSame('backfill_current_state', $data[0]['payload']['snapshot_basis']);
+        $this->assertTrue($data[0]['review']['required'], 'a rebuilt fact is quarantined for the consumer');
+        $this->assertSame('backfill_current_state', $data[0]['review']['reason']);
     }
 
     public function test_credential_commands_issue_a_working_token_and_revoke_it(): void

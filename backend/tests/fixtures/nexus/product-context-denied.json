@@ -1,0 +1,14 @@
+{
+  "success": true,
+  "data": {
+    "schema_version": "1.0",
+    "user_id": "8f1c1d3a-0b0e-4f55-9c1d-0d0f6f6f0001",
+    "tenant": null,
+    "application_code": "optifleet",
+    "allowed": false,
+    "deny_reason": "application_access_revoked",
+    "products": [],
+    "evaluated_at": "2026-10-17T08:00:00+00:00",
+    "ttl_seconds": 300
+  }
+}

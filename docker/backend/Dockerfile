@@ -1,10 +1,15 @@
-# Build context: repository root
+# Build context: repository root. The root .dockerignore keeps .env files, vendor/, caches, logs, uploads, tests and docs out of the image.
 #
 # PHP 8.4, not 8.3: backend/composer.lock pins symfony/{clock,css-selector,
 # event-dispatcher,string,translation,yaml} v8.1.x, which require php >=8.4.1.
 # On 8.3 every one of those fails the platform check and `composer install`
 # aborts. Keep this image and the lockfile's PHP floor in step.
-FROM php:8.4-fpm-alpine
+ARG PHP_IMAGE=php:8.4-fpm-alpine
+ARG COMPOSER_IMAGE=composer:2
+
+FROM ${COMPOSER_IMAGE} AS composer-bin
+
+FROM ${PHP_IMAGE}
 
 # Building the PHP extensions below is the memory peak of this image, and
 # ext/opcache/jit/zend_jit.c alone needs ~1 GiB in a single cc1. Without -j1,
@@ -33,15 +38,17 @@ RUN apk add --no-cache \
     && pecl clear-cache \
     && apk del $PHPIZE_DEPS
 
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+COPY --from=composer-bin /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+# COMPOSER_INSTALL_FLAGS lets a mirror-only network use --prefer-source; the default is the normal path.
+ARG COMPOSER_INSTALL_FLAGS="--prefer-dist"
 COPY backend/composer.json backend/composer.lock ./
-RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
+RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction ${COMPOSER_INSTALL_FLAGS}
 
 COPY backend/. .
-RUN composer dump-autoload --optimize --no-dev
+RUN composer dump-autoload --optimize --no-dev --no-interaction
 
 COPY docker/backend/entrypoint.sh /usr/local/bin/entrypoint.sh
 
@@ -57,8 +64,7 @@ RUN apk add --no-cache su-exec \
         storage/framework/sessions storage/framework/views storage/logs bootstrap/cache \
     && chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache
 
-USER www-data
-
+# The entrypoint starts as root only to repair ownership of mounted volumes, then continues as www-data.
 EXPOSE 9000
 
 ENTRYPOINT ["entrypoint.sh"]

@@ -3,6 +3,7 @@
 namespace App\Jobs\Intelligence;
 
 use App\Domain\Intelligence\Services\OutcomeFeedbackService;
+use App\Jobs\Concerns\ChecksCentralEntitlement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -14,7 +15,7 @@ use Throwable;
 /** Queued form of `intelligence:evaluate-outcomes` for one tenant + target. */
 class EvaluateOutcomesJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use ChecksCentralEntitlement, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries;
 
@@ -33,6 +34,10 @@ class EvaluateOutcomesJob implements ShouldQueue
 
     public function handle(OutcomeFeedbackService $service): void
     {
+        if (! $this->stillEntitled($this->tenantId, 'MAINTENANCE_INTELLIGENCE')) {
+            return;
+        }
+
         $service->evaluateMaturedPredictions($this->tenantId, $this->target);
     }
 

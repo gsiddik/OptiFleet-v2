@@ -15,6 +15,7 @@ use App\Domain\Tire\Models\WheelConfigurationVersionPosition;
 use App\Domain\Tire\Support\TireOperationStatus;
 use App\Domain\Tire\Support\TireStatus;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\OdometerService;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Models\WorkOrderPartRequest;
 use App\Domain\WorkOrder\Models\WorkOrderPlannedPart;
@@ -60,6 +61,7 @@ class TireOperationService
         private readonly DataScopeService $scope,
         private readonly VehicleTireRegistrationService $registrations,
         private readonly UsedTireUsageRestrictions $restrictions,
+        private readonly OdometerService $odometer,
     ) {}
 
     // ---------------------------------------------------------------- reads
@@ -372,9 +374,7 @@ class TireOperationService
                     'complaint' => $this->summary($plan),
                     'current_odometer' => $plan['odometer'],
                 ]);
-                if ((float) $plan['odometer'] > (float) $vehicle->current_odometer) {
-                    $vehicle->update(['current_odometer' => $plan['odometer']]);
-                }
+                $this->odometer->raiseFromOperation($vehicle, $plan['odometer'], OdometerService::SOURCE_TIRE_OPERATION, 'tire_operation', $locked->id, null, $userId);
             }
 
             return $locked->fresh();

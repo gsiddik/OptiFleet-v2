@@ -29,6 +29,11 @@ class AccountingFeedController extends Controller
             (int) ($validated['limit'] ?? 100),
         );
 
+        // Additive: the OptiNexus pairing that was verified for this request, so the consumer can compare it with its own tenant's.
+        if ($pairing = $request->attributes->get(AuthenticateAccountingFeed::PAIRING_ATTRIBUTE)) {
+            $page['pairing'] = $pairing;
+        }
+
         return response()->json($page)->header('Cache-Control', 'no-store');
     }
 }

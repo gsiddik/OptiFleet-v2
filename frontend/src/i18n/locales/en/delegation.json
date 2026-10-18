@@ -1,0 +1,127 @@
+{
+  "banner": {
+    "managedCentrally": "Access for this organization is managed centrally in OptiNexus. Changes made here are saved there and take effect right away."
+  },
+  "invitations": {
+    "actions": {
+      "resend": "Resend",
+      "resendIn": "Resend in {{seconds}} s",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke the invitation of {{name}}? The link in the e-mail stops working at once.",
+      "revokeTitle": "Revoke invitation"
+    },
+    "columns": {
+      "delivery": "E-mail delivery",
+      "invitedBy": "Invited by",
+      "person": "Person"
+    },
+    "created": "Invitation created for {{email}}. OptiNexus e-mails the link; check the delivery status in the list.",
+    "delivery": {
+      "code": "Code: {{code}}",
+      "failed": "Failed",
+      "failedHint": "The e-mail could not be delivered. Check the address, then use Resend. If it keeps failing, contact support and quote the code shown.",
+      "queued": "Queued",
+      "queuedHint": "Waiting to be sent by OptiNexus.",
+      "sent": "Sent",
+      "sentHint": "Sent {{date}}."
+    },
+    "empty": "No invitations yet. Invite the first person.",
+    "emptySearch": "No invitation matches your search.",
+    "emptyStatus": "No invitation has this status.",
+    "errors": {
+      "alreadyAccepted": "This invitation was already accepted: the person has access and signs in with OptiNexus. It cannot be changed.",
+      "alreadyRevoked": "This invitation was revoked, so its link no longer works. Invite the person again if they still need access.",
+      "cooldown": "This invitation was sent a moment ago. You can resend it in {{seconds}} s.",
+      "rateLimited": "Too many invitations were sent in a short time. Try again in {{seconds}} s."
+    },
+    "filterStatus": "Filter by status",
+    "hint": {
+      "accepted": "Accepted on {{date}}. The link was used; the person signs in with OptiNexus.",
+      "expired": "Expired on {{date}}. Resend it to give the person a new link.",
+      "pending": "The link works until {{date}}.",
+      "revoked": "Revoked on {{date}}. The link no longer works."
+    },
+    "howItWorks": "OptiNexus e-mails the person a link. They set their own password there, which also confirms their e-mail, and then sign in. Nothing is granted until they accept. OptiFleet never sees a password or the link.",
+    "inviteUser": "Invite user",
+    "language": "Language of the invitation",
+    "languageHint": "The e-mail and the page where the person sets a password use this language.",
+    "resent": "A new invitation e-mail is queued for {{email}}. The previous link no longer works.",
+    "revoked": "The invitation of {{name}} was revoked.",
+    "send": "Send invitation",
+    "sending": "Sending…",
+    "status": {
+      "accepted": "Accepted",
+      "expired": "Expired",
+      "pending": "Pending",
+      "revoked": "Revoked"
+    }
+  },
+  "roles": {
+    "delegableCount": "{{count}} permissions can be given to custom roles of this organization.",
+    "deleteConfirm": "Delete the role \"{{name}}\"? People who hold it must be changed first.",
+    "deleteTitle": "Delete role",
+    "droppedWarning": "This role holds {{count}} permission(s) that can no longer be delegated. Saving removes them.",
+    "editTitle": "Edit role {{name}}",
+    "empty": "No roles yet. Create the first role.",
+    "newTitle": "New role",
+    "notEditable": "Provided by the platform operator; it cannot be changed here.",
+    "nothingDelegable": "No permission can be delegated to this organization yet.",
+    "onlyDelegable": "Only permissions that can be delegated to this organization are listed.",
+    "selectedOf": "({{selected}} of {{total}} selected)",
+    "template": "Provided by the platform"
+  },
+  "seats": {
+    "figures": "{{used}} used and {{reserved}} reserved of a limit of {{limit}}.",
+    "full": "No seat is left: nobody new can be added or invited. Revoke an open invitation or remove someone's access, or ask the platform administrator to raise the limit.",
+    "notControlled": "OptiNexus does not apply a seat limit to this product ({{used}} users with access).",
+    "overBody": "{{used}} used and {{reserved}} reserved against a limit of {{limit}}. No access is removed automatically. Nobody new can be added until usage drops below the limit or the platform administrator raises it.",
+    "overTitle": "Over the seat limit by {{overBy}}.",
+    "retryIn": "Try again in {{seconds}} s.",
+    "summary": "User seats: {{used}} used, {{reserved}} reserved by open invitations, {{available}} available of a limit of {{limit}}.",
+    "undecided": {
+      "entitlementInvalid": "The seat limit on the subscription is not valid, so nobody new can be added. Existing access is not affected. Contact the platform administrator.",
+      "entitlementMissing": "The subscription does not set a seat limit for this product, so nobody new can be added. Existing access is not affected. Contact the platform administrator.",
+      "entitlementUnavailable": "The seat limit cannot be read right now, so nobody new can be added. Existing access is not affected. Reload in a moment."
+    },
+    "unlimited": "User seats: {{used}} used, {{reserved}} reserved by open invitations (no limit).",
+    "usedOnly": "User seats: {{used}} used, {{reserved}} reserved."
+  },
+  "state": {
+    "error": "Something went wrong",
+    "forbidden": "Not allowed",
+    "offline": "The service cannot be reached. Check your connection and try again.",
+    "outcomeUnknown": "Your last change may or may not have been saved. Check the list before trying again.",
+    "reference": "Reference: {{id}}",
+    "retry": "Try again",
+    "unavailable": "Temporarily unavailable"
+  },
+  "tabs": {
+    "invitations": "Invitations",
+    "users": "Users"
+  },
+  "users": {
+    "addUser": "Add user",
+    "administrator": "Administrator",
+    "dataScope": "Data scope",
+    "dataScopeHint": "The data scope only limits what this person sees here (for example one branch). It never adds permissions.",
+    "dataScopeOf": "Data scope of {{name}}",
+    "empty": "No users yet. Add the first user.",
+    "emptySearch": "No user matches your search.",
+    "keptRoles": "Kept as they are: {{roles}}.",
+    "manageRoles": "Roles",
+    "noAssignableRoles": "No roles can be assigned from here yet.",
+    "noPasswordHere": "The person signs in with OptiNexus. OptiFleet never sees or stores a password.",
+    "noRoles": "No roles",
+    "outcome": {
+      "created": "{{name}} was added and can sign in with OptiNexus.",
+      "existing": "{{name}} already had access here.",
+      "linked": "{{name}} already had an OptiNexus account and now has access here."
+    },
+    "removeAccess": "Remove access",
+    "removeConfirm": "Remove the access of {{name}} to this application? Their sessions end and their roles here are removed. Their OptiNexus account stays.",
+    "revoked": "The access of {{name}} was removed.",
+    "rolesHint": "Only roles that can be delegated are listed. Roles assigned by the platform operator are not changed here.",
+    "rolesOf": "Roles of {{name}}",
+    "rolesOptional": "Roles (optional)"
+  }
+}

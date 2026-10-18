@@ -40,7 +40,7 @@ class AnalyticsRunService
             $query->where('id', $tenantId);
         }
 
-        return $query->get()->filter(fn (Tenant $tenant) => $this->entitlements->tenantHasModule($tenant->id, 'ANALYTICS'))->values();
+        return $query->get()->filter(fn (Tenant $tenant) => $this->entitlements->centralModuleStillHeld($tenant->id, 'ANALYTICS') && $this->entitlements->tenantHasModule($tenant->id, 'ANALYTICS'))->values();
     }
 
     /** @return string[] */

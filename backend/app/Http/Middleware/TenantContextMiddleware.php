@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Domain\DocumentGeneration\Support\DocumentLocale;
+use App\Domain\Governance\CentralGovernance;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Domain\Shared\Support\Messages;
@@ -23,7 +24,10 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class TenantContextMiddleware
 {
-    public function __construct(private readonly TenantContext $context) {}
+    public function __construct(
+        private readonly TenantContext $context,
+        private readonly CentralGovernance $governance,
+    ) {}
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -63,6 +67,22 @@ class TenantContextMiddleware
             $this->context->setTenantId($tenantId);
             $this->context->setTenantDefaultLocale($tenant->default_locale);
             $this->context->setPlatformContext(false);
+
+            // Central governance (audit A02/R05): OptiNexus decides whether this person may still use the application. Logout is
+            // exempt so a session can always be ended; an unreachable OptiNexus answers 503 (GovernanceUnavailableException).
+            if (! $user->isPlatformUser() && ! $request->is('api/v1/auth/logout') && $this->governance->governs($tenantId)) {
+                // The session itself must come from an OptiNexus sign-in (ability `sso`): a token minted by a local password
+                // before the tenant became CENTRAL does not carry over.
+                if (! $token?->can('sso')) {
+                    return $this->centralDenial($request, 'sso_required');
+                }
+
+                $snapshot = $this->governance->snapshot($user, $tenantId);
+
+                if (! $snapshot->sessionAllowed) {
+                    return $this->centralDenial($request, $snapshot->denyReason);
+                }
+            }
         } elseif (in_array('platform', $abilities, true)) {
             $this->context->setPlatformContext(true);
         } else {
@@ -70,6 +90,27 @@ class TenantContextMiddleware
         }
 
         return $next($request);
+    }
+
+    /**
+     * OptiNexus no longer lets this person in. A withdrawn access ends the session (the token is deleted, so it cannot be
+     * replayed); an identity that was never linked to OptiNexus is only refused.
+     */
+    private function centralDenial(Request $request, ?string $reason): Response
+    {
+        $locale = DocumentLocale::resolve($request->user()?->preferred_locale, null, DocumentLocale::fromLanguages($request->getLanguages()));
+
+        if ($reason === 'identity_not_linked') {
+            return response()->json(['message' => Messages::text('errors.http.identityNotLinked', [], $locale), 'code' => 'IDENTITY_NOT_LINKED'], 403);
+        }
+
+        $request->user()?->currentAccessToken()?->delete();
+
+        return response()->json([
+            'message' => Messages::text('errors.http.accessWithdrawnCentrally', [], $locale),
+            'code' => 'SESSION_ENDED_CENTRALLY',
+            'reason' => $reason,
+        ], 401);
     }
 
     /**

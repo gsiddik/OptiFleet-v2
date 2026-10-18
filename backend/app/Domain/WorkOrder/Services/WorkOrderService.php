@@ -8,6 +8,7 @@ use App\Domain\MaintenancePolicy\Services\MaintenanceScheduleService;
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\OdometerService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\Workshop\Models\WorkspaceReservation;
@@ -23,6 +24,7 @@ class WorkOrderService
         private readonly MaintenanceRequestService $requests,
         private readonly MaintenanceScheduleService $schedules,
         private readonly WorkflowEngine $workflow,
+        private readonly OdometerService $odometer,
     ) {}
 
     public function create(Vehicle $vehicle, array $attributes, ?string $createdByUserId = null): WorkOrder
@@ -49,10 +51,11 @@ class WorkOrderService
             // "Current KM diubah menjadi Mandatory dan akan mengupdate Current KM dari vehicle" /
             // "Current HM ... jika diisi akan mengupdate Current HM dari vehicle" — same
             // never-go-backwards floor guard VehicleReleaseService already uses for odometer.
-            $vehicleUpdate = [];
+            // The odometer goes through the ledger (OdometerService: raises only, records the work order as its source).
             if (isset($attributes['current_odometer'])) {
-                $vehicleUpdate['current_odometer'] = max((float) $vehicle->current_odometer, (float) $attributes['current_odometer']);
+                $this->odometer->raiseFromOperation($vehicle, $attributes['current_odometer'], OdometerService::SOURCE_WORK_ORDER, 'work_order', $workOrder->id, now(), $createdByUserId);
             }
+            $vehicleUpdate = [];
             if (isset($attributes['engine_hour'])) {
                 $vehicleUpdate['engine_hour'] = max((float) ($vehicle->engine_hour ?? 0), (float) $attributes['engine_hour']);
             }
@@ -244,7 +247,6 @@ class WorkOrderService
     {
         return $this->transitions->transition($workOrder, 'WAITING_PART');
     }
-
 
     public function submitToQc(WorkOrder $workOrder): WorkOrder
     {

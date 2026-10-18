@@ -8,7 +8,11 @@ namespace App\Domain\Integration\AccountingFeed;
 class AccountingFeedService
 {
     /**
-     * @return array{data: array<int, array<string, mixed>>, next_cursor: string, has_more: bool}
+     * `high_water` is the newest committed sequence of the tenant, read AFTER the page so that it is never behind an event of the page. The
+     * sequence is gap-free and assigned in commit order (see AccountingFeedProjector), so a consumer that has stored everything up to
+     * `high_water` has every fact committed so far; OptiEntry uses it to bound the time it was not listening (reconnect gap).
+     *
+     * @return array{data: array<int, array<string, mixed>>, next_cursor: string, has_more: bool, high_water: string}
      */
     public function page(string $tenantId, int $after, int $limit): array
     {
@@ -20,19 +24,21 @@ class AccountingFeedService
             ->get();
 
         $page = $rows->take($limit);
+        $highWater = (int) (AccountingFeedEvent::query()->where('tenant_id', $tenantId)->max('sequence') ?? 0);
 
         return [
             'data' => $page->map(fn (AccountingFeedEvent $event) => $this->envelope($event))->values()->all(),
             // With nothing new the cursor stays where the consumer already is.
             'next_cursor' => (string) ($page->last()?->sequence ?? $after),
             'has_more' => $rows->count() > $limit,
+            'high_water' => (string) max($highWater, (int) ($page->last()?->sequence ?? 0)),
         ];
     }
 
     /** @return array<string, mixed> */
     private function envelope(AccountingFeedEvent $event): array
     {
-        return [
+        $envelope = [
             'sequence' => $event->sequence,
             'event_id' => $event->event_id,
             'event_type' => $event->event_type,
@@ -45,5 +51,14 @@ class AccountingFeedService
             'dimensions' => $event->dimensions,
             'payload' => $event->payload,
         ];
+
+        // Only an event rebuilt later from the current state of its source carries it (audit A17): quarantined, to be reviewed by the
+        // consumer and never posted automatically. Live events stay byte-for-byte what they always were, so a consumer that hashes
+        // an envelope does not see an event it already holds change.
+        if ($event->review !== null) {
+            $envelope['review'] = $event->review;
+        }
+
+        return $envelope;
     }
 }

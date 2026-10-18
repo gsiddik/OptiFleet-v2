@@ -13,6 +13,8 @@ export interface TenantMembership {
   tenant_code: string;
   tenant_name: string;
   tenant_logo_url: string | null;
+  /** The tenant's identity at OptiNexus (null when the tenant is not linked). */
+  optinexus_tenant_id?: string | null;
   status: 'active' | 'inactive';
   roles: string[];
 }
@@ -28,9 +30,23 @@ export interface CurrentUser {
   preferred_locale?: string | null;
   /** i18n: the active tenant's default language, if any. */
   tenant_default_locale?: string | null;
+  /** Who decides what this person may do in the active tenant: OptiNexus (CENTRAL) or this application (LOCAL, legacy). */
+  governance?: Governance | null;
 }
 
-/** What OptiNexus told us about an SSO session: the tenant it signed in to and the apps the user may open. */
+export interface Governance {
+  mode: 'LOCAL' | 'CENTRAL';
+  source: 'local' | 'optinexus';
+  /** CENTRAL only: OK, NO_PERMISSIONS or the reason access was withdrawn. */
+  status: string | null;
+  refreshed_at: string | null;
+  expires_at: string | null;
+}
+
+/**
+ * What OptiNexus told us when the SSO session was opened: the tenant it signed in to. `apps` is the list as of sign-in and is
+ * NOT used for switching: the product switcher asks the server (GET /auth/products) every time it is shown.
+ */
 export interface SsoSession {
   tenant_id: string;
   apps: { code: string; name: string; launch_url: string | null }[];
@@ -2720,6 +2736,63 @@ export interface ExcelImportResult {
   failed: { row: number; values: Record<string, string | number | boolean | null>; status: ExcelImportRowStatus; reason: string }[];
 }
 
+export interface OdometerReadingItem {
+  id: string;
+  vehicle_id: string;
+  /** Who produced the value: manual, optinexus, inspection, work_order, tire_operation, vehicle_release. */
+  source: string;
+  origin: string | null;
+  kind: 'DEVICE_ODOMETER' | 'GPS_DISTANCE' | 'MANUAL_ENTRY' | null;
+  device_ref: string | null;
+  reported_km: string;
+  effective_km: string | null;
+  previous_odometer: string;
+  unit: 'km';
+  applied: boolean;
+  disposition: 'applied' | 'stored' | 'held' | 'late' | 'quarantined' | 'correction';
+  quality: 'OK' | 'SUSPECT' | 'LATE' | 'UNCALIBRATED';
+  anomaly_code: string | null;
+  review_status: 'pending' | 'rebased' | 'accepted' | 'dismissed' | null;
+  /** When the value was true (the device's clock or the person's reading). */
+  measured_at: string | null;
+  /** When OptiFleet stored it. */
+  received_at: string | null;
+  recorded_at: string | null;
+  note: string | null;
+  reference_type: string | null;
+  reference_id: string | null;
+  reviewed_at: string | null;
+  review_note: string | null;
+  entered_by?: { id: string; name: string } | null;
+  reviewed_by?: { id: string; name: string } | null;
+}
+
+/** Current odometer of a vehicle and where it came from; provenance_known is false for a value typed in before the ledger existed. */
+export interface OdometerCurrent {
+  value: string;
+  unit: 'km';
+  source: string | null;
+  measured_at: string | null;
+  reading_id: string | null;
+  provenance_known: boolean;
+}
+
+export interface OdometerDeviceItem {
+  id: string;
+  device_ref: string;
+  status: 'active' | 'review';
+  last_measured_at: string | null;
+  last_received_at: string | null;
+  age_seconds: number | null;
+  stale: boolean;
+}
+
+export interface TelematicsReview {
+  reason: string | null;
+  opened_at: string | null;
+  reading: OdometerReadingItem | null;
+}
+
 export interface TelematicsLinkItem {
   id: string;
   vehicle_id: string;
@@ -2727,15 +2800,69 @@ export interface TelematicsLinkItem {
   current_odometer: string;
   device_ref: string;
   odometer_offset_km: string | null;
+  rebase_offset_km: string | null;
   calibrated: boolean;
   /** GPS distance is not an odometer: true until calibrated, unless the device reports a real odometer. */
   needs_calibration: boolean;
   calibrated_at: string | null;
+  status: 'active' | 'review';
+  has_readings: boolean;
+  last_measured_at: string | null;
+  last_received_at: string | null;
+  /** Seconds since the device's newest reading was measured; null = it has never reported (not zero). */
+  age_seconds: number | null;
+  stale: boolean;
+  review: TelematicsReview | null;
   latest_reading: {
     kind: 'DEVICE_ODOMETER' | 'GPS_DISTANCE';
     reported_km: string;
     effective_km: string | null;
     applied: boolean;
+    unit: 'km';
+    disposition: OdometerReadingItem['disposition'];
+    quality: OdometerReadingItem['quality'];
+    anomaly_code: string | null;
+    measured_at: string | null;
+    received_at: string | null;
     recorded_at: string;
   } | null;
+}
+
+export interface TelematicsStatusData {
+  integration: {
+    enabled: boolean;
+    linked: boolean;
+    activated: boolean;
+    activated_at: string | null;
+    state: string;
+    last_attempted_at: string | null;
+    last_synced_at: string | null;
+    last_reading_received_at: string | null;
+    last_error: { code: string; message: string | null } | null;
+    consecutive_failures: number;
+    sync_stale_after_minutes: number;
+    last_stats: {
+      published?: number;
+      received?: number;
+      applied?: number;
+      stored?: number;
+      held?: number;
+      late?: number;
+      quarantined?: number;
+      duplicates?: number;
+      rejected?: number;
+      unknown?: number;
+      rejected_sample?: { reading_id: string | null; reason: string }[];
+    } | null;
+  };
+  devices: {
+    total: number;
+    with_readings: number;
+    without_readings: number;
+    stale: number;
+    stale_after_hours: number;
+    under_review: number;
+    needs_calibration: number;
+  };
+  quarantined_last_7_days: number;
 }

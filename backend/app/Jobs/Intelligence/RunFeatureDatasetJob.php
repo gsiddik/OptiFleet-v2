@@ -3,6 +3,7 @@
 namespace App\Jobs\Intelligence;
 
 use App\Domain\Intelligence\Services\FeatureRunService;
+use App\Jobs\Concerns\ChecksCentralEntitlement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -17,7 +18,7 @@ use Throwable;
  */
 class RunFeatureDatasetJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use ChecksCentralEntitlement, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries;
 
@@ -38,6 +39,10 @@ class RunFeatureDatasetJob implements ShouldQueue
 
     public function handle(FeatureRunService $runner): void
     {
+        if (! $this->stillEntitled($this->tenantId, 'MAINTENANCE_INTELLIGENCE')) {
+            return;
+        }
+
         $runner->runDataset($this->tenantId, $this->datasetKey, $this->businessDate, $this->trigger);
     }
 

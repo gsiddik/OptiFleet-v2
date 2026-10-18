@@ -45,8 +45,7 @@ import { ComponentSubcategoriesPage } from './pages/tenant/masterdata/ComponentS
 import { UomsPage } from './pages/tenant/masterdata/UomsPage';
 import { VehicleBrandsPage } from './pages/tenant/masterdata/VehicleBrandsPage';
 import { VehicleModelsPage } from './pages/tenant/masterdata/VehicleModelsPage';
-import { TenantUsersPage } from './pages/tenant/access/TenantUsersPage';
-import { TenantRolesPage } from './pages/tenant/access/TenantRolesPage';
+import { RolesPage, UsersPage } from './pages/tenant/access/AccessPages';
 import { TenantAuditLogPage } from './pages/tenant/audit/TenantAuditLogPage';
 import { NumberingConfigPage } from './pages/tenant/configuration/NumberingConfigPage';
 import { DocumentTemplateConfigPage } from './pages/tenant/configuration/DocumentTemplateConfigPage';
@@ -667,7 +666,7 @@ export default function App() {
               path="access/users"
               element={
                 <RequirePermission permission="user.view">
-                  <TenantUsersPage />
+                  <UsersPage />
                 </RequirePermission>
               }
             />
@@ -675,7 +674,7 @@ export default function App() {
               path="access/roles"
               element={
                 <RequirePermission permission="role.view">
-                  <TenantRolesPage />
+                  <RolesPage />
                 </RequirePermission>
               }
             />

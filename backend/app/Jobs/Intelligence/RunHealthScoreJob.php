@@ -3,6 +3,7 @@
 namespace App\Jobs\Intelligence;
 
 use App\Domain\Intelligence\Services\HealthScoreRunService;
+use App\Jobs\Concerns\ChecksCentralEntitlement;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,7 +14,7 @@ use Throwable;
 
 class RunHealthScoreJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use ChecksCentralEntitlement, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries;
 
@@ -32,6 +33,10 @@ class RunHealthScoreJob implements ShouldQueue
 
     public function handle(HealthScoreRunService $service): void
     {
+        if (! $this->stillEntitled($this->tenantId, 'MAINTENANCE_INTELLIGENCE')) {
+            return;
+        }
+
         $counts = $service->runForTenant($this->tenantId, $this->businessDate);
 
         Log::info('intelligence.health.completed', [

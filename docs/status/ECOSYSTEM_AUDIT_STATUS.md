@@ -1,0 +1,100 @@
+# Ecosystem audit fixes - OptiFleet status
+
+Branch `claude/project-thread-0cf20u`. Checkpoint between sessions; the repository is the source of truth.
+Statuses: CONFIRMED / ALREADY_FIXED / NOT_REPRODUCIBLE / FIXED_AND_TESTED / BLOCKED. Test commands run from `backend/` with
+`php artisan test` against PostgreSQL (port 55434) + MongoDB (27018).
+
+| Finding | Status | Evidence (file) | Tests | Commit | Remaining |
+|---|---|---|---|---|---|
+| F1 A02/R01/R05 central governance | FIXED_AND_TESTED (batch 1) | `app/Domain/Governance/CentralGovernance.php`, `PermissionService.php:28`, `EntitlementService.php:32`, `TenantContextMiddleware.php:73`, `routes/api/app.php:869` | `tests/Feature/Governance/*` | 4a85f7b (core), 7555b9a (operations) | Nexus gaps below; per-tenant cutover is an operator step |
+| F2 R08/A25 delegation from Fleet UI | FIXED_AND_TESTED (browser smoke NOT_RUN) | `Delegation/*`, `DelegationController.php`, `pages/tenant/access/Central*Page.tsx`, `FleetManifest.php` | `DelegationTest` (16), `FleetManifestTest`, `delegation.test.ts` | 38320a4 (API), 9105445 (UI) | Playwright 1440/820/390 (in F6) |
+| F3 A29/R06 product switcher | FIXED_AND_TESTED (browser smoke NOT_RUN) | `ProductSwitcher.php`, `ProductSwitcherController.php`, `OptinexusOidcClient::authorizationUrl`, `components/AppSwitcher.tsx`, `pages/LoginPage.tsx` | `ProductSwitcherTest` (26), `ssoLogin.test.ts` | 55a0334 | Playwright (in F6); real OptiNexus |
+| F4 A01/A17/A18/A19/A22 OA6 producer | FIXED_AND_TESTED (real OptiNexus/Entry NOT_RUN) | `FeedPairingGate.php:30`, `AccountingFeedProjector.php:66,167,198`, `AccountingFeedMonitor.php`, `AuthenticateAccountingFeed.php`, migration `2026_10_24_000001_*` | `AccountingFeed{,Pairing,Repair,Concurrency}Test` (42), `docs/integration/ACCOUNTING_SOURCE_COVERAGE.md` (A01 matrix) | 72b4541 (code), 31357af (docs) | owner decisions D1-D11; Entry must compare `pairing.nexus_tenant_id` and honour `review` |
+| F5 A10 telematics + manual odometer | PARTIAL / DEFERRED (owner scope update: radar work paused) | backend DONE: `OdometerService.php`, `VehicleOdometerService.php` (`judge`, `resolveReview`), `OptinexusSyncService.php`, `TelematicsEligibility.php`, `TelematicsStatus.php`, migration `2026_10_25_000001_*`; details `docs/integration/TELEMATICS_ODOMETER.md` | `ManualOdometerTest` (17), `OdometerSyncTest` (19), `TelematicsAnomalyTest` (21), `TelematicsSyncStateTest` (19), `OdometerMigrationBackfillTest` (2), `OdometerConcurrencyTest` (2, real parallel PHP processes), `telematicsRules.test.ts` (8) | 2fd906b (backend), 7533f95 (types and rules) | Fleet screens (below); real OptiRadar/OptiNexus NOT_RUN |
+| F6 A12/A15 frontend | DEFERRED, NOT STARTED (owner scope update) | baseline: single 2.37 MB main bundle, no error boundaries | - | - | everything: boundaries, async error paths, lazy routes with measurements, browser smoke (incl. F2/F3) |
+
+## F1 decisions
+
+- Mode per tenant (`tenants.governance_mode`, default LOCAL): a legacy install keeps working unchanged until an operator runs
+  `optinexus:governance:enable`; the decision is never automatic. Inventory, linking and migration plan: `docs/integration/CENTRAL_GOVERNANCE.md`.
+- CENTRAL: permissions = OptiNexus grants, narrowed (never widened) by local roles; modules = OptiNexus capabilities; the four core
+  modules come with the application. Password sessions cannot enter (SSO ability `sso` required).
+- Bulk only: one effective-permissions call per user and window, one commercial-context per tenant and window (tested); product-context
+  only when nothing was granted. TTL <= 300 s, hard freshness check on every read, cache dropped on failure, single-flight lock.
+- Fail closed: `503 GOVERNANCE_UNAVAILABLE` (+ Retry-After), `401 SESSION_ENDED_CENTRALLY`, `403 IDENTITY_NOT_LINKED`, `409 GOVERNED_CENTRALLY`.
+- Manifest v2: `optinexus:manifest`; `delegable` is an explicit reviewed list (148 of 259), default false for anything new.
+- Route matrix is generated from the live route table (`optinexus:route-matrix`, `--check` in a test).
+
+## F3 decisions
+
+- Server-side only: `GET /auth/products` (names, no links, cached <= 300 s) and `POST /auth/products/launch` (fresh answer, only a
+  code OptiNexus offers, URL + `tenant_hint`). `allowed=false` ends the session; outage lists nothing. Details: `CENTRAL_GOVERNANCE.md`.
+- The `launch_url` registered for Fleet in OptiNexus should be the SPA `/login`; `tenant_hint` is accepted only as a UUID.
+
+## F4 decisions
+
+- Pairing: with OptiNexus enabled (or `OPTINEXUS_FEED_PAIRING=required`) a feed credential works only while the tenant is linked, ACTIVE,
+  both products have a live subscription and the connector capability is held (`commercial-context`, cached <= 300 s). Legacy installs keep credential-only access.
+  The tenant is always the credential's, never a payload value; the response carries additive `pairing{nexus_tenant_id,...}`.
+- Credential lifecycle: issue / rotate / revoke / list commands, hashed at rest, plain secret shown once.
+- Rebuilt facts (`backfill_current_state`) are inserted only as new events with `review.required=true` (QUARANTINED); published events are
+  never rewritten. Missed projections are recorded, shown by `accounting-feed:monitor` (every 5 min), repaired by a bounded audited
+  `accounting-feed:backfill`, or waived with a reason. Repair is deliberate, never scheduled.
+- Sequence: per-tenant counter row lock held until the writer commits is kept; proved with parallel PHP processes on PostgreSQL (late
+  commit, rollback, killed writer; a naive MAX+1 design fails the same tests). No `lock_timeout` added (long transactions delay later invoices of the same tenant only).
+- No accounting treatment invented, no posting enabled: open questions D1-D11 are in the coverage document.
+
+## F5 state (PARTIAL / DEFERRED)
+
+Exists (backend, tested): one odometer ledger and single writer for manual, inspection, work order, tire, release and telematics sources;
+manual entry without OptiNexus/Radar (API + `PUT /vehicles/{id}`); provenance (`odometer_source`, `measured_at`, `received_at`, `unit`, quality);
+two-key eligibility (live OptiRadar subscription AND tenant activation) so non-subscribed tenants are never requested; quarantine and review
+of resets, jumps, device replacement and clock faults (never auto-lowering); persisted sync state, errors and staleness with
+`GET /telematics/status`; calibration kept; idempotency and concurrency proved on PostgreSQL; additive migration with backfill; EN/ID API errors.
+Frontend: types and pure rules (`telematicsRules.ts`) only, unit tested.
+Missing (deferred): Fleet UI for the odometer entry modal and history, telematics status banner/activation switch/stale labels/review panel
+(EN/ID strings for these are not added yet); `.env` values of a real deployment; any run against real OptiRadar/OptiNexus; owner decision on
+stricter first-contact confirmation of the first device; Nexus-side gateway dedup on fix time (see TELEMATICS_ODOMETER.md).
+
+## Invitations consumer
+
+Consumer side of OptiNexus contract section 2b (onboarding by invitation link); details in `docs/integration/CENTRAL_GOVERNANCE.md`.
+Status: FIXED_AND_TESTED against FakeNexus (no real OptiNexus; browser check is mocked-API only, not end-to-end).
+
+- Backend: `GET|POST app/delegation/invitations`, `POST .../{id}/resend|revoke` (`NexusDelegationClient`, `TenantDelegationService`, `DelegationController`);
+  new codes mapped en + id; 429 `Retry-After` passed through (`NexusApiClient` `answerRateLimitCodes`); changes never retried after a lost connection;
+  invitation view is a whitelist (no token/hash field passes). `POST users` kept, marked deprecated; `DIRECT_USER_CREATION_DISABLED` mapped (410).
+- Frontend: Users / Invitations tabs on `CentralUsersPage`; "Invite user" (e-mail, name, roles, invitation language defaulting to the UI language) replaced "Add user";
+  status chips, delivery (queued / sent / failed with recovery hint), expiry, invited by, Resend / Revoke by `can_resend` / `can_revoke` + `hasPermission`;
+  messages for expired, revoked, used and cooldown. Pure rules in `invitationPresentation.ts`.
+- Tests: `InvitationDelegationTest` (17), `invitations.test.ts` (10, node:test: the frontend has no vitest/DOM test setup); fake extended in `FakeNexusDelegation`.
+- Open points of the contract (ambiguous, assumed): whether an EXPIRED invitation blocks a new one for the same e-mail (`INVITATION_PENDING`); the UI copes with both.
+  Seat limits are not enforced by invitations (Nexus decision, gap 4 below). Revoke sends no reason from the UI (the API accepts one).
+
+## Seat limit consumer (OptiNexus contract 2d, owner decision 2026-10-18 09:11Z)
+- Fleet declares no `user_limit`, so OptiNexus answers `NOT_CONTROLLED` for it (no limit applied, none invented). Fleet passes `seats` (users and invitations lists) and the `SEAT_*` refusals through
+  (409 four; 503 pair returned as refusals, not outages), keeps no counter; Users and Invitations tabs show used / reserved / available / limit / over-limit / undecided; texts en + id from `docs/i18n/17-i18n-additions.csv`.
+- Tests: `SeatsDelegationTest` 8 new, `tests/Feature/Governance` 133 passed; `tests/unit` 87 passed (`seats.test.ts` new), `tsc -b`, `oxlint` (0 errors), `i18n:check` clean. See `CENTRAL_GOVERNANCE.md` Seats.
+
+## Contract gaps needed from OptiNexus
+
+1. App-scoped bulk entitlement: OptiNexus 4eda307 now returns `entitled_capabilities` on effective-permissions (closes it); Fleet still reads `commercial-context` (optional follow-up).
+2. Bulk "who holds permission X" (approver resolution scans <= 200 linked members).
+3. Per-service-account scope allow-list: closed by OptiNexus 4eda307 (`403 SCOPE_NOT_ALLOWED`; `ecosystem:register-service-account` grants the product scopes, gateway scopes only via `--scopes`).
+4. Seats: closed on the OptiNexus side by contract 2d (decision 2026-10-18); Fleet declares no `user_limit`, so none is applied to Fleet.
+5. `commercial-context` does not map subscriptions to applications: Fleet infers it from APPLICATION entitlements plus one live subscription
+   (a MANUAL_OVERRIDE entitlement can mask the plan source). Proposal: additive `subscriptions[].application_codes`.
+6. Fleet's service account must be bound to `optifleet` with `authorization.check`, `commercial.read`, `tenant.delegate` (+ gateway scopes).
+
+## Not run / limits
+
+- No real OptiNexus: all contract tests use FakeNexus built from the documented JSON.
+- No real OptiRadar or OptiNexus gateway (FakeNexusGateway only); no browser run of any Fleet UI (F2, F3 screens): Playwright smoke
+  at 1440/820/390 is part of the deferred F6.
+- Live Fleet to Entry test, Fleet side: service credential `OPTINEXUS_GATEWAY_CLIENT_ID` / `OPTINEXUS_GATEWAY_CLIENT_SECRET` (governance and
+  delegation use the same account, base `OPTINEXUS_BASE_URL`, `OPTINEXUS_ENABLED=true`, `OPTINEXUS_APPLICATION_CODE=optifleet`); SSO client
+  `OPTINEXUS_SSO_CLIENT_ID/SECRET`, `OPTINEXUS_SSO_REDIRECT_URI` (= `<api>/api/v1/auth/sso/callback`), `OPTINEXUS_SSO_FRONTEND_URL`;
+  feed credential issued per tenant with `php artisan accounting-feed:issue-credential <tenant>` (secret `ofaf_...`, shown once; Entry sends it
+  as `Authorization: Bearer`, feed `GET /api/v1/integration/accounting-feed?after=&limit=`); pairing `OPTINEXUS_FEED_PAIRING=auto|required`,
+  `OPTINEXUS_FEED_CONSUMER_APPLICATION=optiaccounting`; manifest `php artisan optinexus:manifest --output=fleet-manifest.json`;
+  launch URL registered in OptiNexus = the SPA `/login` address, product launch `POST /api/v1/auth/products/launch` adds `tenant_hint`.

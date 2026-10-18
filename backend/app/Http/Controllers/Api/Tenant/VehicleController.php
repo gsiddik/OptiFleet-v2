@@ -6,13 +6,17 @@ use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Entitlement\Services\CapacityService;
 use App\Domain\History\Services\HistoryService;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\OdometerRejected;
+use App\Domain\Vehicle\Services\OdometerService;
 use App\Domain\Vehicle\Services\VehicleAssignmentService;
 use App\Domain\Vehicle\Services\VehicleCreationService;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Tenant\StoreVehicleRequest;
 use App\Http\Requests\Tenant\UpdateVehicleRequest;
+use App\Http\Support\OdometerErrors;
 use App\Support\TenantContext;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class VehicleController extends Controller
 {
@@ -76,11 +80,28 @@ class VehicleController extends Controller
         return $this->ok($vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']));
     }
 
-    public function update(UpdateVehicleRequest $request, Vehicle $vehicle)
+    public function update(UpdateVehicleRequest $request, Vehicle $vehicle, OdometerService $odometer)
     {
         $this->authorizeScope($vehicle);
 
-        $vehicle->update($request->validated());
+        $data = $request->validated();
+        $newOdometer = $data['current_odometer'] ?? null;
+        $reason = $data['odometer_correction_reason'] ?? null;
+        unset($data['current_odometer'], $data['odometer_correction_reason']);
+
+        try {
+            DB::transaction(function () use ($vehicle, $data, $newOdometer, $reason, $odometer) {
+                $vehicle->update($data);
+
+                // The odometer is not a plain field: it only goes up by itself, a lower value is a correction with a reason, and
+                // every change is recorded with its source (OdometerService). An unchanged value records nothing.
+                if ($newOdometer !== null && OdometerService::normalize($newOdometer) !== OdometerService::normalize((string) $vehicle->current_odometer)) {
+                    $odometer->recordManual($vehicle, $newOdometer, null, $this->context->user()?->id, null, null, $reason);
+                }
+            });
+        } catch (OdometerRejected $e) {
+            return OdometerErrors::fromRejected($e, 'current_odometer');
+        }
 
         return $this->ok($vehicle->fresh(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']));
     }

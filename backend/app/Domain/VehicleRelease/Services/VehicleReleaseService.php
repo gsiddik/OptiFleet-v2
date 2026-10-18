@@ -3,9 +3,11 @@
 namespace App\Domain\VehicleRelease\Services;
 
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\OdometerService;
 use App\Domain\VehicleRelease\Models\VehicleRelease;
 use App\Domain\WorkOrder\Models\WorkOrder;
 use App\Domain\WorkOrder\Services\WorkOrderTransitionService;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -18,7 +20,7 @@ use Illuminate\Support\Facades\DB;
  */
 class VehicleReleaseService
 {
-    public function __construct(private readonly WorkOrderTransitionService $transitions) {}
+    public function __construct(private readonly WorkOrderTransitionService $transitions, private readonly OdometerService $odometer) {}
 
     private const BLOCKING_STATUSES = [
         'DRAFT', 'SUBMITTED', 'APPROVED', 'ASSIGNED', 'SCHEDULED', 'IN_PROGRESS',
@@ -52,16 +54,15 @@ class VehicleReleaseService
                     'released_at' => now(),
                     'released_by' => $releasedByUserId,
                 ]));
-            } catch (\Illuminate\Database\QueryException $e) {
+            } catch (QueryException $e) {
                 throw new VehicleReleaseException('This Work Order\'s vehicle has already been released.');
             }
 
             $this->transitions->transition($workOrder, 'CLOSED');
-            $vehicle->update([
-                'status' => 'ACTIVE',
-                'operational_status' => 'AVAILABLE',
-                'current_odometer' => max((float) $vehicle->current_odometer, (float) ($attributes['release_odometer'] ?? 0)),
-            ]);
+            $vehicle->update(['status' => 'ACTIVE', 'operational_status' => 'AVAILABLE']);
+            if (isset($attributes['release_odometer'])) {
+                $this->odometer->raiseFromOperation($vehicle, $attributes['release_odometer'], OdometerService::SOURCE_VEHICLE_RELEASE, 'vehicle_release', $release->id, now(), $releasedByUserId);
+            }
 
             return $release;
         });

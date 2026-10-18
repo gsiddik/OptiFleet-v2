@@ -7,6 +7,7 @@ use App\Domain\Inspection\Models\InspectionFinding;
 use App\Domain\Inspection\Models\InspectionResult;
 use App\Domain\Inspection\Models\InspectionTemplateItem;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\OdometerService;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -106,10 +107,11 @@ class InspectionService
             // reading — a lower value is either stale data or needs a
             // dedicated correction workflow, neither of which this endpoint is.
             $odometer = $submittedOdometer ?? $inspection->odometer_at_inspection;
-            if ($odometer !== null) {
-                $vehicle = Vehicle::query()->lockForUpdate()->find($inspection->vehicle_id);
-                if ($vehicle && $vehicle->tenant_id === $inspection->tenant_id && $odometer >= 0 && (float) $odometer > (float) $vehicle->current_odometer) {
-                    $vehicle->update(['current_odometer' => $odometer]);
+            if ($odometer !== null && $odometer >= 0) {
+                $vehicle = Vehicle::query()->find($inspection->vehicle_id);
+                if ($vehicle && $vehicle->tenant_id === $inspection->tenant_id) {
+                    // Raises it only when higher; the ledger records the inspection as the source (OdometerService).
+                    app(OdometerService::class)->raiseFromOperation($vehicle, $odometer, OdometerService::SOURCE_INSPECTION, 'inspection', $inspection->id);
                 }
             }
 

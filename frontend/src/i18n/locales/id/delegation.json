@@ -1,0 +1,127 @@
+{
+  "banner": {
+    "managedCentrally": "Akses untuk organisasi ini dikelola secara terpusat di OptiNexus. Perubahan yang dibuat di sini disimpan di sana dan langsung berlaku."
+  },
+  "invitations": {
+    "actions": {
+      "resend": "Kirim ulang",
+      "resendIn": "Kirim ulang dalam {{seconds}} dtk",
+      "revoke": "Cabut",
+      "revokeConfirm": "Cabut undangan untuk {{name}}? Tautan di email berhenti berlaku seketika.",
+      "revokeTitle": "Cabut undangan"
+    },
+    "columns": {
+      "delivery": "Pengiriman email",
+      "invitedBy": "Diundang oleh",
+      "person": "Orang"
+    },
+    "created": "Undangan dibuat untuk {{email}}. OptiNexus mengirim tautan melalui email; periksa status pengiriman di daftar.",
+    "delivery": {
+      "code": "Kode: {{code}}",
+      "failed": "Gagal",
+      "failedHint": "Email tidak dapat dikirim. Periksa alamatnya, lalu gunakan Kirim ulang. Jika terus gagal, hubungi dukungan dan sebutkan kode yang ditampilkan.",
+      "queued": "Dalam antrean",
+      "queuedHint": "Menunggu dikirim oleh OptiNexus.",
+      "sent": "Terkirim",
+      "sentHint": "Dikirim {{date}}."
+    },
+    "empty": "Belum ada undangan. Undang orang pertama.",
+    "emptySearch": "Tidak ada undangan yang cocok dengan pencarian Anda.",
+    "emptyStatus": "Tidak ada undangan dengan status ini.",
+    "errors": {
+      "alreadyAccepted": "Undangan ini sudah diterima: orang tersebut memiliki akses dan masuk melalui OptiNexus. Undangan tidak dapat diubah.",
+      "alreadyRevoked": "Undangan ini sudah dicabut, sehingga tautannya tidak berlaku lagi. Undang orang tersebut kembali jika masih memerlukan akses.",
+      "cooldown": "Undangan ini baru saja dikirim. Anda dapat mengirim ulang dalam {{seconds}} dtk.",
+      "rateLimited": "Terlalu banyak undangan dikirim dalam waktu singkat. Coba lagi dalam {{seconds}} dtk."
+    },
+    "filterStatus": "Saring menurut status",
+    "hint": {
+      "accepted": "Diterima pada {{date}}. Tautan sudah digunakan; orang tersebut masuk melalui OptiNexus.",
+      "expired": "Kedaluwarsa pada {{date}}. Kirim ulang untuk memberi orang tersebut tautan baru.",
+      "pending": "Tautan berlaku sampai {{date}}.",
+      "revoked": "Dicabut pada {{date}}. Tautan tidak berlaku lagi."
+    },
+    "howItWorks": "OptiNexus mengirim tautan melalui email kepada orang tersebut. Mereka membuat kata sandi sendiri di sana, yang sekaligus memverifikasi email mereka, lalu masuk. Tidak ada akses yang diberikan sebelum undangan diterima. OptiFleet tidak pernah melihat kata sandi atau tautannya.",
+    "inviteUser": "Undang pengguna",
+    "language": "Bahasa undangan",
+    "languageHint": "Email dan halaman tempat orang tersebut membuat kata sandi menggunakan bahasa ini.",
+    "resent": "Email undangan baru masuk antrean untuk {{email}}. Tautan sebelumnya tidak berlaku lagi.",
+    "revoked": "Undangan untuk {{name}} telah dicabut.",
+    "send": "Kirim undangan",
+    "sending": "Mengirim…",
+    "status": {
+      "accepted": "Diterima",
+      "expired": "Kedaluwarsa",
+      "pending": "Menunggu",
+      "revoked": "Dicabut"
+    }
+  },
+  "roles": {
+    "delegableCount": "{{count}} izin dapat diberikan ke peran khusus organisasi ini.",
+    "deleteConfirm": "Hapus peran \"{{name}}\"? Orang yang memiliki peran ini harus diubah terlebih dahulu.",
+    "deleteTitle": "Hapus peran",
+    "droppedWarning": "Peran ini memiliki {{count}} izin yang tidak dapat lagi didelegasikan. Menyimpan akan menghapusnya.",
+    "editTitle": "Ubah peran {{name}}",
+    "empty": "Belum ada peran. Buat peran pertama.",
+    "newTitle": "Peran baru",
+    "notEditable": "Disediakan oleh operator platform; tidak dapat diubah di sini.",
+    "nothingDelegable": "Belum ada izin yang dapat didelegasikan ke organisasi ini.",
+    "onlyDelegable": "Hanya izin yang dapat didelegasikan ke organisasi ini yang ditampilkan.",
+    "selectedOf": "({{selected}} dari {{total}} dipilih)",
+    "template": "Disediakan platform"
+  },
+  "seats": {
+    "figures": "{{used}} terpakai dan {{reserved}} dicadangkan dari batas {{limit}}.",
+    "full": "Tidak ada kursi tersisa: orang baru tidak dapat ditambahkan atau diundang. Cabut undangan terbuka atau hapus akses seseorang, atau minta administrator platform menambah batas.",
+    "notControlled": "OptiNexus tidak menerapkan batas kursi untuk produk ini ({{used}} pengguna dengan akses).",
+    "overBody": "{{used}} terpakai dan {{reserved}} dicadangkan terhadap batas {{limit}}. Tidak ada akses yang dicabut otomatis. Orang baru tidak dapat ditambahkan sampai pemakaian turun di bawah batas atau administrator platform menaikkan batas.",
+    "overTitle": "Melebihi batas kursi sebanyak {{overBy}}.",
+    "retryIn": "Coba lagi dalam {{seconds}} dtk.",
+    "summary": "Kursi pengguna: {{used}} terpakai, {{reserved}} dicadangkan undangan terbuka, {{available}} tersedia dari batas {{limit}}.",
+    "undecided": {
+      "entitlementInvalid": "Batas kursi pada langganan tidak valid, jadi orang baru tidak dapat ditambahkan. Akses yang sudah ada tidak terpengaruh. Hubungi administrator platform.",
+      "entitlementMissing": "Langganan belum menetapkan batas kursi untuk produk ini, jadi orang baru tidak dapat ditambahkan. Akses yang sudah ada tidak terpengaruh. Hubungi administrator platform.",
+      "entitlementUnavailable": "Batas kursi tidak dapat dibaca saat ini, jadi orang baru tidak dapat ditambahkan. Akses yang sudah ada tidak terpengaruh. Muat ulang sebentar lagi."
+    },
+    "unlimited": "Kursi pengguna: {{used}} terpakai, {{reserved}} dicadangkan undangan terbuka (tanpa batas).",
+    "usedOnly": "Kursi pengguna: {{used}} terpakai, {{reserved}} dicadangkan."
+  },
+  "state": {
+    "error": "Terjadi kesalahan",
+    "forbidden": "Tidak diizinkan",
+    "offline": "Layanan tidak dapat dijangkau. Periksa koneksi Anda lalu coba lagi.",
+    "outcomeUnknown": "Perubahan terakhir Anda mungkin sudah atau belum tersimpan. Periksa daftar sebelum mencoba lagi.",
+    "reference": "Referensi: {{id}}",
+    "retry": "Coba lagi",
+    "unavailable": "Sementara tidak tersedia"
+  },
+  "tabs": {
+    "invitations": "Undangan",
+    "users": "Pengguna"
+  },
+  "users": {
+    "addUser": "Tambah pengguna",
+    "administrator": "Administrator",
+    "dataScope": "Cakupan data",
+    "dataScopeHint": "Cakupan data hanya membatasi apa yang dilihat orang ini di sini (misalnya satu cabang). Cakupan data tidak pernah menambah izin.",
+    "dataScopeOf": "Cakupan data {{name}}",
+    "empty": "Belum ada pengguna. Tambahkan pengguna pertama.",
+    "emptySearch": "Tidak ada pengguna yang cocok dengan pencarian Anda.",
+    "keptRoles": "Tetap seperti semula: {{roles}}.",
+    "manageRoles": "Peran",
+    "noAssignableRoles": "Belum ada peran yang dapat ditetapkan dari sini.",
+    "noPasswordHere": "Orang tersebut masuk melalui OptiNexus. OptiFleet tidak pernah melihat atau menyimpan kata sandi.",
+    "noRoles": "Tanpa peran",
+    "outcome": {
+      "created": "{{name}} telah ditambahkan dan dapat masuk melalui OptiNexus.",
+      "existing": "{{name}} sudah memiliki akses di sini.",
+      "linked": "{{name}} sudah memiliki akun OptiNexus dan kini memiliki akses di sini."
+    },
+    "removeAccess": "Cabut akses",
+    "removeConfirm": "Cabut akses {{name}} ke aplikasi ini? Sesi mereka berakhir dan peran mereka di sini dihapus. Akun OptiNexus mereka tetap ada.",
+    "revoked": "Akses {{name}} telah dicabut.",
+    "rolesHint": "Hanya peran yang dapat didelegasikan yang ditampilkan. Peran yang ditetapkan oleh operator platform tidak diubah di sini.",
+    "rolesOf": "Peran {{name}}",
+    "rolesOptional": "Peran (opsional)"
+  }
+}

@@ -2,12 +2,11 @@
 
 namespace App\Domain\Integration\Optinexus;
 
+use App\Domain\Governance\NexusTokenProvider;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
-use RuntimeException;
 
 /**
  * OptiFleet's client of the OptiNexus API Gateway. One platform-level
@@ -16,7 +15,7 @@ use RuntimeException;
  */
 class OptinexusGatewayClient
 {
-    private const SCOPES = 'gateway.fleet.write gateway.fleet.read gateway.telematics.read event.write';
+    public function __construct(private readonly NexusTokenProvider $tokens) {}
 
     /**
      * @param  array<int, array{id: string, registration_number: string, vin: ?string, status: string}>  $vehicles
@@ -41,14 +40,14 @@ class OptinexusGatewayClient
      */
     public function publishEvent(array $envelope): Response
     {
-        $send = fn () => Http::withToken($this->token())
+        $send = fn () => Http::withToken($this->tokens->token(NexusTokenProvider::SCOPES_GATEWAY))
             ->acceptJson()
             ->timeout(config('optinexus.gateway.timeout_seconds'))
             ->post(config('optinexus.base_url').'/api/v1/events', $envelope);
 
         $response = $send();
         if ($response->status() === 401) {
-            Cache::forget('optinexus.gateway.token');
+            $this->tokens->forget(NexusTokenProvider::SCOPES_GATEWAY);
             $response = $send();
         }
 
@@ -57,28 +56,10 @@ class OptinexusGatewayClient
 
     private function request(string $optinexusTenantId): PendingRequest
     {
-        return Http::withToken($this->token())
+        return Http::withToken($this->tokens->token(NexusTokenProvider::SCOPES_GATEWAY))
             ->withHeaders(['X-Tenant-Id' => $optinexusTenantId, 'X-Correlation-Id' => (string) Str::uuid()])
             ->acceptJson()
             ->timeout(config('optinexus.gateway.timeout_seconds'))
             ->baseUrl(config('optinexus.base_url').'/api/gateway/v1');
-    }
-
-    private function token(): string
-    {
-        return Cache::remember('optinexus.gateway.token', 3000, function () {
-            $response = Http::asForm()->timeout(15)->post(config('optinexus.base_url').'/api/v1/oauth/token', [
-                'grant_type' => 'client_credentials',
-                'client_id' => config('optinexus.gateway.client_id'),
-                'client_secret' => config('optinexus.gateway.client_secret'),
-                'scope' => self::SCOPES,
-            ]);
-
-            if (! $response->ok() || ! $response->json('access_token')) {
-                throw new RuntimeException('OptiNexus gateway authentication failed.');
-            }
-
-            return $response->json('access_token');
-        });
     }
 }
