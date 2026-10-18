@@ -41,8 +41,10 @@ export interface ApiErrorShape {
   retryable?: boolean;
   /** A change was sent but no answer arrived: it may or may not have been applied. */
   outcome_unknown?: boolean;
-  /** Field-specific detail of a refusal (for example the permissions that cannot be delegated). */
+  /** Field-specific detail of a refusal (for example the permissions that cannot be delegated, or the status that blocks an invitation). */
   details?: Record<string, unknown>;
+  /** The wait OptiNexus asks for after a rate limit or an invitation cooldown (also the Retry-After header). */
+  retry_after_seconds?: number;
   /** HTTP status; absent when no answer arrived at all (offline, blocked, timeout). */
   status?: number;
 }

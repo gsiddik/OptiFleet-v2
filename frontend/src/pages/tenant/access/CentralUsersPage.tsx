@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { classifyFailure, delegationApi, extractApiError, type DelegatedRole, type DelegatedUser } from '../../../api/delegation';
+import { classifyFailure, delegationApi, extractApiError, type DelegatedRole, type DelegatedUser, type InvitationStatus } from '../../../api/delegation';
 import type { ApiErrorShape } from '../../../api/client';
 import { useAuth } from '../../../auth/AuthContext';
-import { CentralNotice, FailurePanel } from '../../../components/delegation/DelegationPanels';
+import { ActionFailure, CentralNotice, FailurePanel } from '../../../components/delegation/DelegationPanels';
+import { InvitationsPanel } from '../../../components/delegation/InvitationsPanel';
+import { defaultInvitationLocale, INVITATION_FILTER_OPTIONS } from '../../../components/delegation/invitationPresentation';
 import { ConfirmDialog } from '../../../components/ConfirmDialog';
 import { DataScopeModal } from '../../../components/DataScopeModal';
 import { FormField, inputStyle } from '../../../components/FormField';
@@ -13,16 +15,25 @@ import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
 import { useDelegationResource } from '../../../hooks/useDelegationResource';
 import { t } from '../../../i18n/i18n';
+import { appLocale } from '../../../i18n/locale';
+
+type Tab = 'users' | 'invitations';
 
 /**
  * Users of an organization whose access is managed centrally (OptiNexus). The list, the roles and every change come from the
  * OptiNexus delegation API through OptiFleet's backend; OptiFleet keeps no copy and no password. Who may do this is decided by
  * OptiNexus (organization administrators) on top of the user.* permissions checked here.
+ *
+ * A new person is invited, not created: OptiNexus e-mails the link, the person sets their own password there (which also verifies
+ * the e-mail OptiFleet requires at sign-in) and then signs in here with OptiNexus. The Invitations tab follows each invitation.
  */
 export function CentralUsersPage() {
   const { hasPermission } = useAuth();
   const [search, setSearch] = useState('');
-  const [adding, setAdding] = useState(false);
+  const [tab, setTab] = useState<Tab>('users');
+  const [inviting, setInviting] = useState(false);
+  const [invitationStatus, setInvitationStatus] = useState<InvitationStatus | ''>('');
+  const [invitationsVersion, setInvitationsVersion] = useState(0);
   const [editingRoles, setEditingRoles] = useState<DelegatedUser | null>(null);
   const [revoking, setRevoking] = useState<DelegatedUser | null>(null);
   const [scopeOf, setScopeOf] = useState<DelegatedUser | null>(null);
@@ -47,6 +58,30 @@ export function CentralUsersPage() {
       users.reload();
     }
   }
+
+  const tabButton = (value: Tab, text: string) => (
+    <button
+      role="tab"
+      aria-selected={tab === value}
+      onClick={() => {
+        setTab(value);
+        setNotice(null);
+        setActionError(null);
+      }}
+      style={{
+        padding: '8px 16px',
+        fontSize: 14,
+        fontWeight: 600,
+        background: 'none',
+        border: 'none',
+        borderBottom: tab === value ? '2px solid #1d4ed8' : '2px solid transparent',
+        color: tab === value ? '#1d4ed8' : '#6b7280',
+        cursor: 'pointer',
+      }}
+    >
+      {text}
+    </button>
+  );
 
   const columns: Column<DelegatedUser>[] = [
     { key: 'name', header: t('common.fields.name'), render: (u) => u.name ?? '—' },
@@ -96,17 +131,37 @@ export function CentralUsersPage() {
     <div>
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>{t('access.titles.users')}</h1>
       <CentralNotice />
+      <div role="tablist" aria-label={t('access.titles.users')} style={{ display: 'flex', marginBottom: 14, borderBottom: '1px solid #e5e7eb', flexWrap: 'wrap' }}>
+        {tabButton('users', t('delegation.tabs.users'))}
+        {tabButton('invitations', t('delegation.tabs.invitations'))}
+      </div>
       <Toolbar
         search={search}
         onSearchChange={setSearch}
         actions={
           hasPermission('user.create') && users.status !== 'forbidden' ? (
-            <button className="btn-primary" onClick={() => setAdding(true)}>
-              {t('delegation.users.addUser')}
+            <button className="btn-primary" onClick={() => setInviting(true)}>
+              {t('delegation.invitations.inviteUser')}
             </button>
           ) : null
         }
-      />
+      >
+        {tab === 'invitations' && (
+          <select
+            aria-label={t('delegation.invitations.filterStatus')}
+            value={invitationStatus}
+            onChange={(e) => setInvitationStatus(e.target.value as InvitationStatus | '')}
+            style={{ ...inputStyle, width: 'auto' }}
+          >
+            <option value="">{t('common.filters.allStatuses')}</option>
+            {INVITATION_FILTER_OPTIONS.map((value) => (
+              <option key={value} value={value}>
+                {t(`delegation.invitations.status.${value.toLowerCase()}`)}
+              </option>
+            ))}
+          </select>
+        )}
+      </Toolbar>
       {notice && (
         <div role="status" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', borderRadius: 8, padding: '8px 12px', fontSize: 13, marginBottom: 12 }}>
           {notice}
@@ -118,21 +173,27 @@ export function CentralUsersPage() {
         </div>
       )}
 
-      {users.status === 'loading' && <LoadingState label={t('common.actions.loading')} />}
-      {(users.status === 'forbidden' || users.status === 'unavailable' || users.status === 'error') && (
-        <FailurePanel kind={users.status} error={users.error} onRetry={users.reload} />
+      {tab === 'users' && (
+        <>
+          {users.status === 'loading' && <LoadingState label={t('common.actions.loading')} />}
+          {(users.status === 'forbidden' || users.status === 'unavailable' || users.status === 'error') && (
+            <FailurePanel kind={users.status} error={users.error} onRetry={users.reload} />
+          )}
+          {users.status === 'ready' && users.data.length === 0 && <EmptyState label={search ? t('delegation.users.emptySearch') : t('delegation.users.empty')} />}
+          {users.status === 'ready' && users.data.length > 0 && <Table columns={columns} rows={users.data} />}
+        </>
       )}
-      {users.status === 'ready' && users.data.length === 0 && <EmptyState label={search ? t('delegation.users.emptySearch') : t('delegation.users.empty')} />}
-      {users.status === 'ready' && users.data.length > 0 && <Table columns={columns} rows={users.data} />}
+      {tab === 'invitations' && <InvitationsPanel search={search} status={invitationStatus} version={invitationsVersion} onNotice={setNotice} />}
 
-      {adding && (
-        <AddUserModal
+      {inviting && (
+        <InviteUserModal
           roles={roles}
-          onClose={() => setAdding(false)}
-          onSaved={(message) => {
-            setAdding(false);
+          onClose={() => setInviting(false)}
+          onInvited={(message) => {
+            setInviting(false);
             setNotice(message);
-            users.reload();
+            setTab('invitations');
+            setInvitationsVersion((v) => v + 1);
           }}
         />
       )}
@@ -189,9 +250,10 @@ function toggled(set: Set<string>, id: string): Set<string> {
   return next;
 }
 
-function AddUserModal({ roles, onClose, onSaved }: { roles: DelegatedRole[]; onClose: () => void; onSaved: (message: string) => void }) {
+function InviteUserModal({ roles, onClose, onInvited }: { roles: DelegatedRole[]; onClose: () => void; onInvited: (message: string) => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [locale, setLocale] = useState(() => defaultInvitationLocale(appLocale()));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [failure, setFailure] = useState<ApiErrorShape | null>(null);
@@ -202,8 +264,8 @@ function AddUserModal({ roles, onClose, onSaved }: { roles: DelegatedRole[]; onC
     setErrors({});
     setFailure(null);
     try {
-      const user = await delegationApi.addUser({ name, email, role_ids: Array.from(selected) });
-      onSaved(t(`delegation.users.outcome.${user.outcome}`, { name: user.name ?? user.email ?? '' }));
+      const invitation = await delegationApi.invite({ name, email, role_ids: Array.from(selected), locale });
+      onInvited(t('delegation.invitations.created', { email: invitation.email ?? email }));
     } catch (err) {
       const error = extractApiError(err);
       setErrors(error.errors ?? {});
@@ -214,10 +276,10 @@ function AddUserModal({ roles, onClose, onSaved }: { roles: DelegatedRole[]; onC
   }
 
   return (
-    <Modal open title={t('delegation.users.addUser')} onClose={onClose}>
+    <Modal open title={t('delegation.invitations.inviteUser')} onClose={onClose}>
       {failure && !failure.errors && (
         <div style={{ marginBottom: 12 }}>
-          <FailurePanel kind={classifyFailure(failure)} error={failure} />
+          <ActionFailure error={failure} />
         </div>
       )}
       <FormField label={t('common.fields.name')} errors={errors.name} required>
@@ -229,13 +291,19 @@ function AddUserModal({ roles, onClose, onSaved }: { roles: DelegatedRole[]; onC
       <FormField label={t('delegation.users.rolesOptional')} errors={errors.role_ids}>
         <RoleChoices roles={roles} selected={selected} onToggle={(id) => setSelected((s) => toggled(s, id))} />
       </FormField>
-      <p style={{ fontSize: 12, color: '#6b7280' }}>{t('delegation.users.noPasswordHere')}</p>
+      <FormField label={t('delegation.invitations.language')} errors={errors.locale} hint={t('delegation.invitations.languageHint')}>
+        <select value={locale} onChange={(e) => setLocale(defaultInvitationLocale(e.target.value))} style={inputStyle}>
+          <option value="en">{t('common.language.en')}</option>
+          <option value="id">{t('common.language.id')}</option>
+        </select>
+      </FormField>
+      <p style={{ fontSize: 12, color: '#6b7280' }}>{t('delegation.invitations.howItWorks')}</p>
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
         <button className="btn-secondary" onClick={onClose} disabled={submitting}>
           {t('common.actions.cancel')}
         </button>
         <button className="btn-primary" disabled={submitting || !name || !email} onClick={submit}>
-          {submitting ? t('common.actions.adding') : t('delegation.users.addUser')}
+          {submitting ? t('delegation.invitations.sending') : t('delegation.invitations.send')}
         </button>
       </div>
     </Modal>

@@ -1,6 +1,7 @@
 import type { ApiErrorShape } from '../../api/client';
-import type { FailureKind } from '../../api/delegation';
+import { classifyFailure, type FailureKind } from '../../api/delegation';
 import { t } from '../../i18n/i18n';
+import { invitationRefusalMessage } from './invitationPresentation';
 
 /** Says that access here is managed centrally and where a change is saved. Shown on both delegation pages. */
 export function CentralNotice() {
@@ -40,6 +41,21 @@ export function FailurePanel({ kind, error, onRetry }: { kind: FailureKind; erro
           {t('delegation.state.retry')}
         </button>
       )}
+    </div>
+  );
+}
+
+/**
+ * A failed invitation request. A refusal of the invitation contract (already invited, already a member, wait before resending, a
+ * link that was already used) is an answer to read and act on, so it is shown as a plain notice with the sentence for that case;
+ * anything else (outage, not allowed, unexpected) keeps the usual panel with the reference to quote.
+ */
+export function ActionFailure({ error }: { error: ApiErrorShape }) {
+  const refusal = invitationRefusalMessage(error);
+  if (refusal === null) return <FailurePanel kind={classifyFailure(error)} error={error} />;
+  return (
+    <div role="alert" style={{ background: TONES.forbidden.background, border: `1px solid ${TONES.forbidden.border}`, color: TONES.forbidden.color, borderRadius: 8, padding: '10px 14px', fontSize: 13 }}>
+      {refusal}
     </div>
   );
 }
