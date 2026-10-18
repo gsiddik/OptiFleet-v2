@@ -2,6 +2,60 @@
   "banner": {
     "managedCentrally": "Akses untuk organisasi ini dikelola secara terpusat di OptiNexus. Perubahan yang dibuat di sini disimpan di sana dan langsung berlaku."
   },
+  "invitations": {
+    "actions": {
+      "resend": "Kirim ulang",
+      "resendIn": "Kirim ulang dalam {{seconds}} dtk",
+      "revoke": "Cabut",
+      "revokeConfirm": "Cabut undangan untuk {{name}}? Tautan di email berhenti berlaku seketika.",
+      "revokeTitle": "Cabut undangan"
+    },
+    "columns": {
+      "delivery": "Pengiriman email",
+      "invitedBy": "Diundang oleh",
+      "person": "Orang"
+    },
+    "created": "Undangan dibuat untuk {{email}}. OptiNexus mengirim tautan melalui email; periksa status pengiriman di daftar.",
+    "delivery": {
+      "code": "Kode: {{code}}",
+      "failed": "Gagal",
+      "failedHint": "Email tidak dapat dikirim. Periksa alamatnya, lalu gunakan Kirim ulang. Jika terus gagal, hubungi dukungan dan sebutkan kode yang ditampilkan.",
+      "queued": "Dalam antrean",
+      "queuedHint": "Menunggu dikirim oleh OptiNexus.",
+      "sent": "Terkirim",
+      "sentHint": "Dikirim {{date}}."
+    },
+    "empty": "Belum ada undangan. Undang orang pertama.",
+    "emptySearch": "Tidak ada undangan yang cocok dengan pencarian Anda.",
+    "emptyStatus": "Tidak ada undangan dengan status ini.",
+    "errors": {
+      "alreadyAccepted": "Undangan ini sudah diterima: orang tersebut memiliki akses dan masuk melalui OptiNexus. Undangan tidak dapat diubah.",
+      "alreadyRevoked": "Undangan ini sudah dicabut, sehingga tautannya tidak berlaku lagi. Undang orang tersebut kembali jika masih memerlukan akses.",
+      "cooldown": "Undangan ini baru saja dikirim. Anda dapat mengirim ulang dalam {{seconds}} dtk.",
+      "rateLimited": "Terlalu banyak undangan dikirim dalam waktu singkat. Coba lagi dalam {{seconds}} dtk."
+    },
+    "filterStatus": "Saring menurut status",
+    "hint": {
+      "accepted": "Diterima pada {{date}}. Tautan sudah digunakan; orang tersebut masuk melalui OptiNexus.",
+      "expired": "Kedaluwarsa pada {{date}}. Kirim ulang untuk memberi orang tersebut tautan baru.",
+      "pending": "Tautan berlaku sampai {{date}}.",
+      "revoked": "Dicabut pada {{date}}. Tautan tidak berlaku lagi."
+    },
+    "howItWorks": "OptiNexus mengirim tautan melalui email kepada orang tersebut. Mereka membuat kata sandi sendiri di sana, yang sekaligus memverifikasi email mereka, lalu masuk. Tidak ada akses yang diberikan sebelum undangan diterima. OptiFleet tidak pernah melihat kata sandi atau tautannya.",
+    "inviteUser": "Undang pengguna",
+    "language": "Bahasa undangan",
+    "languageHint": "Email dan halaman tempat orang tersebut membuat kata sandi menggunakan bahasa ini.",
+    "resent": "Email undangan baru masuk antrean untuk {{email}}. Tautan sebelumnya tidak berlaku lagi.",
+    "revoked": "Undangan untuk {{name}} telah dicabut.",
+    "send": "Kirim undangan",
+    "sending": "Mengirim…",
+    "status": {
+      "accepted": "Diterima",
+      "expired": "Kedaluwarsa",
+      "pending": "Menunggu",
+      "revoked": "Dicabut"
+    }
+  },
   "roles": {
     "delegableCount": "{{count}} izin dapat diberikan ke peran khusus organisasi ini.",
     "deleteConfirm": "Hapus peran \"{{name}}\"? Orang yang memiliki peran ini harus diubah terlebih dahulu.",
@@ -24,6 +78,10 @@
     "reference": "Referensi: {{id}}",
     "retry": "Coba lagi",
     "unavailable": "Sementara tidak tersedia"
+  },
+  "tabs": {
+    "invitations": "Undangan",
+    "users": "Pengguna"
   },
   "users": {
     "addUser": "Tambah pengguna",

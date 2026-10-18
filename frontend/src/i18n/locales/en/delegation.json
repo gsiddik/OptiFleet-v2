@@ -2,6 +2,60 @@
   "banner": {
     "managedCentrally": "Access for this organization is managed centrally in OptiNexus. Changes made here are saved there and take effect right away."
   },
+  "invitations": {
+    "actions": {
+      "resend": "Resend",
+      "resendIn": "Resend in {{seconds}} s",
+      "revoke": "Revoke",
+      "revokeConfirm": "Revoke the invitation of {{name}}? The link in the e-mail stops working at once.",
+      "revokeTitle": "Revoke invitation"
+    },
+    "columns": {
+      "delivery": "E-mail delivery",
+      "invitedBy": "Invited by",
+      "person": "Person"
+    },
+    "created": "Invitation created for {{email}}. OptiNexus e-mails the link; check the delivery status in the list.",
+    "delivery": {
+      "code": "Code: {{code}}",
+      "failed": "Failed",
+      "failedHint": "The e-mail could not be delivered. Check the address, then use Resend. If it keeps failing, contact support and quote the code shown.",
+      "queued": "Queued",
+      "queuedHint": "Waiting to be sent by OptiNexus.",
+      "sent": "Sent",
+      "sentHint": "Sent {{date}}."
+    },
+    "empty": "No invitations yet. Invite the first person.",
+    "emptySearch": "No invitation matches your search.",
+    "emptyStatus": "No invitation has this status.",
+    "errors": {
+      "alreadyAccepted": "This invitation was already accepted: the person has access and signs in with OptiNexus. It cannot be changed.",
+      "alreadyRevoked": "This invitation was revoked, so its link no longer works. Invite the person again if they still need access.",
+      "cooldown": "This invitation was sent a moment ago. You can resend it in {{seconds}} s.",
+      "rateLimited": "Too many invitations were sent in a short time. Try again in {{seconds}} s."
+    },
+    "filterStatus": "Filter by status",
+    "hint": {
+      "accepted": "Accepted on {{date}}. The link was used; the person signs in with OptiNexus.",
+      "expired": "Expired on {{date}}. Resend it to give the person a new link.",
+      "pending": "The link works until {{date}}.",
+      "revoked": "Revoked on {{date}}. The link no longer works."
+    },
+    "howItWorks": "OptiNexus e-mails the person a link. They set their own password there, which also confirms their e-mail, and then sign in. Nothing is granted until they accept. OptiFleet never sees a password or the link.",
+    "inviteUser": "Invite user",
+    "language": "Language of the invitation",
+    "languageHint": "The e-mail and the page where the person sets a password use this language.",
+    "resent": "A new invitation e-mail is queued for {{email}}. The previous link no longer works.",
+    "revoked": "The invitation of {{name}} was revoked.",
+    "send": "Send invitation",
+    "sending": "Sending…",
+    "status": {
+      "accepted": "Accepted",
+      "expired": "Expired",
+      "pending": "Pending",
+      "revoked": "Revoked"
+    }
+  },
   "roles": {
     "delegableCount": "{{count}} permissions can be given to custom roles of this organization.",
     "deleteConfirm": "Delete the role \"{{name}}\"? People who hold it must be changed first.",
@@ -24,6 +78,10 @@
     "reference": "Reference: {{id}}",
     "retry": "Try again",
     "unavailable": "Temporarily unavailable"
+  },
+  "tabs": {
+    "invitations": "Invitations",
+    "users": "Users"
   },
   "users": {
     "addUser": "Add user",
