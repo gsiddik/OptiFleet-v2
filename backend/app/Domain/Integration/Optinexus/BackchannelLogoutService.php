@@ -6,6 +6,7 @@ use App\Domain\Governance\CentralGovernance;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -72,7 +73,7 @@ class BackchannelLogoutService
         // Central governance: what OptiNexus said about this person is stale the moment it reports a logout or a revocation.
         $this->governance->forgetUser($user, $tenant?->id);
 
-        return ['matched' => true, 'sessions_ended' => $this->endSessions($user, $tenant), 'deactivated' => $deactivated];
+        return ['matched' => true, 'sessions_ended' => $this->endSessions($user, $tenant, is_array($revoked) ? null : ($claims['logout_at'] ?? null), is_array($revoked) ? null : ($claims['session_ids'] ?? null)), 'deactivated' => $deactivated];
     }
 
     /**
@@ -90,11 +91,27 @@ class BackchannelLogoutService
             ->each(fn (TenantUser $membership) => $membership->forceFill(['status' => 'active', 'optinexus_deactivated_at' => null])->save());
     }
 
-    private function endSessions(User $user, ?Tenant $tenant): int
+    private function endSessions(User $user, ?Tenant $tenant, ?string $logoutAt = null, ?array $sessionIds = null): int
     {
         $query = PersonalAccessToken::query()
             ->where('tokenable_type', $user->getMorphClass())
             ->where('tokenable_id', $user->getKey());
+
+        if ($sessionIds !== null) {
+            $query->where(function ($tokens) use ($sessionIds, $logoutAt): void {
+                foreach ($sessionIds as $sid) {
+                    $tokens->orWhereJsonContains('abilities', 'oidc-session:'.$sid);
+                }
+                $tokens->orWhere(function ($legacy) use ($logoutAt): void {
+                    $legacy->where('abilities', 'not like', '%"oidc-session:%');
+                    if ($logoutAt !== null) {
+                        $legacy->where('created_at', '<=', Carbon::parse($logoutAt));
+                    }
+                });
+            });
+        } elseif ($logoutAt !== null) {
+            $query->where('created_at', '<=', Carbon::parse($logoutAt));
+        }
 
         if ($tenant) {
             $query->where('abilities', 'like', '%"tenant:'.$tenant->id.'"%');
