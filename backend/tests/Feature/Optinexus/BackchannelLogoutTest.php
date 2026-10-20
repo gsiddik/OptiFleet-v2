@@ -58,6 +58,27 @@ class BackchannelLogoutTest extends TestCase
         $this->user->forceFill(['optinexus_subject' => $this->subject, 'password' => Hash::make('secret-pass')])->save();
     }
 
+    public function test_session_snapshot_preserves_a_new_sign_in_in_the_same_second(): void
+    {
+        $old = $this->user->createToken('old', ['oidc-session:old-session'])->accessToken;
+        $new = $this->user->createToken('new', ['oidc-session:new-session'])->accessToken;
+        $this->post('/api/v1/auth/sso/backchannel-logout', ['logout_token' => $this->logoutToken(['session_ids' => ['old-session'], 'logout_at' => now()->toIso8601String()])], ['Accept' => 'application/json'])->assertOk();
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $old->id]);
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $new->id]);
+    }
+
+    public function test_delayed_password_change_logout_preserves_sessions_created_after_the_event(): void
+    {
+        $old = $this->user->createToken('old-session')->accessToken;
+        $old->forceFill(['created_at' => now()->subMinutes(2)])->save();
+        $fresh = $this->user->createToken('new-password-session')->accessToken;
+        $cutoff = now()->subMinute()->toIso8601String();
+        $this->post('/api/v1/auth/sso/backchannel-logout', ['logout_token' => $this->logoutToken(['logout_at' => $cutoff])], ['Accept' => 'application/json'])->assertOk();
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $old->id]);
+        $this->assertDatabaseHas('personal_access_tokens', ['id' => $fresh->id]);
+        $this->assertSame('active', $this->user->fresh()->status);
+    }
+
     private function discoveryStubs(): array
     {
         return [

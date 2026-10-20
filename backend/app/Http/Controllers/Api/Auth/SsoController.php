@@ -92,14 +92,14 @@ class SsoController extends Controller
             abort(403, Messages::localized('errors.http.accessWithdrawnCentrally'));
         }
 
-        $token = $user->createToken('tenant-session', ['tenant:'.$tenant->id, 'sso'])->plainTextToken;
+        $token = $user->createToken('tenant-session', array_filter(['tenant:'.$tenant->id, 'sso', isset($session['sid']) ? 'oidc-session:'.$session['sid'] : null]))->plainTextToken;
         $this->context->setTenantId($tenant->id);
         $this->context->setUser($user);
 
         return $this->ok([
             'token' => $token,
             'user' => $this->presenter->present($user),
-            'sso' => ['tenant_id' => $tenant->id, 'apps' => $apps, 'logout_url' => $this->oidc->logoutUrl()],
+            'sso' => ['tenant_id' => $tenant->id, 'apps' => $apps, 'logout_url' => $this->oidc->logoutUrl($session['id_token_hint'] ?? null)],
         ]);
     }
 

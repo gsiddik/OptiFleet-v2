@@ -2,6 +2,7 @@
 
 namespace App\Domain\Integration\Optinexus;
 
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -95,7 +96,7 @@ class OptinexusOidcClient
             throw new SsoException('access_denied');
         }
 
-        return $claims;
+        return [...$claims, '_id_token_hint' => (string) $response->json('id_token')];
     }
 
     /**
@@ -143,14 +144,30 @@ class OptinexusOidcClient
             throw new SsoException('logout_token_replayed');
         }
 
+        if (isset($claims['session_ids']) && (! is_array($claims['session_ids'])
+            || count(array_filter($claims['session_ids'], fn ($id) => is_string($id) && preg_match('/^[A-Za-z0-9-]{1,128}$/D', $id))) !== count($claims['session_ids']))) {
+            throw new SsoException('logout_token_invalid');
+        }
+
+        if (isset($claims['logout_at'])) {
+            try {
+                $cutoff = Carbon::parse($claims['logout_at']);
+                if ($cutoff->timestamp > $claims['iat'] + 60) {
+                    throw new SsoException('logout_token_invalid');
+                }
+            } catch (\Throwable) {
+                throw new SsoException('logout_token_invalid');
+            }
+        }
+
         return $claims;
     }
 
-    public function logoutUrl(): ?string
+    public function logoutUrl(?string $idTokenHint = null): ?string
     {
         $endpoint = $this->discovery()['end_session_endpoint'] ?? null;
 
-        return $endpoint ? $endpoint.'?'.http_build_query(['client_id' => config('optinexus.sso.client_id')]) : null;
+        return $endpoint ? $endpoint.'?'.http_build_query(array_filter(['client_id' => config('optinexus.sso.client_id'), 'id_token_hint' => $idTokenHint])) : null;
     }
 
     private function discovery(): array

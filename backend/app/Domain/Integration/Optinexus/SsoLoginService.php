@@ -43,7 +43,7 @@ class SsoLoginService
         $ticket = Str::random(48);
         Cache::put(
             'optinexus.sso.ticket.'.hash('sha256', $ticket),
-            ['user_id' => $user->id, 'tenant_id' => $tenant->id, 'apps' => $claims['apps'] ?? []],
+            ['user_id' => $user->id, 'tenant_id' => $tenant->id, 'apps' => $claims['apps'] ?? [], 'id_token_hint' => $claims['_id_token_hint'] ?? null, 'sid' => $claims['sid'] ?? null],
             config('optinexus.sso.ticket_ttl_seconds'),
         );
 
@@ -66,7 +66,7 @@ class SsoLoginService
             return null;
         }
 
-        return ['user' => $user, 'tenant' => $tenant, 'apps' => $data['apps']];
+        return ['user' => $user, 'tenant' => $tenant, 'apps' => $data['apps'], 'id_token_hint' => $data['id_token_hint'] ?? null, 'sid' => $data['sid'] ?? null];
     }
 
     /**

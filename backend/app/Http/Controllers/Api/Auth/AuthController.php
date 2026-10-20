@@ -128,6 +128,7 @@ class AuthController extends Controller
             $abilities[] = 'sso';
         }
 
+        $abilities = [...$abilities, ...array_filter($user->currentAccessToken()?->abilities ?? [], fn ($ability) => str_starts_with($ability, 'oidc-session:'))];
         $token = $user->createToken('tenant-session', $abilities)->plainTextToken;
 
         return $this->ok(['token' => $token]);
