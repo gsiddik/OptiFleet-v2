@@ -14,6 +14,8 @@ class AccountSubscriptionController extends Controller
         private readonly TenantContext $context,
         private readonly EntitlementService $entitlements,
         private readonly CapacityService $capacity,
+        private readonly \App\Domain\Governance\CentralGovernance $central,
+        private readonly \App\Domain\Governance\NexusGovernanceClient $nexus,
     ) {}
 
     public function show()
@@ -42,9 +44,23 @@ class AccountSubscriptionController extends Controller
         $tenantId = $this->context->tenantId();
         $resourceTypes = ['vehicle', 'user', 'branch', 'workshop', 'warehouse'];
 
+        $centralLimits = null;
+        if ($this->central->governs($tenantId)) {
+            $link = $this->central->link($tenantId);
+            if (! $link['nexus_tenant_id']) {
+                throw new \App\Domain\Governance\Exceptions\GovernanceContractException('The tenant is not linked to OptiNexus.');
+            }
+            $commercial = $this->nexus->commercialContext($link['nexus_tenant_id']);
+            $centralLimits = $commercial['resource_limits'] ?? null;
+            if ($centralLimits === null) {
+                throw new \App\Domain\Governance\Exceptions\GovernanceContractException('Update OptiNexus to provide application resource limits.');
+            }
+        }
+        // Exact resource keys only: e.g. vehicle maps to vehicle, not vehicles or vehicle_limit.
+        // Missing keys are Unlimited for CENTRAL tenants. LOCAL capacity behavior is unchanged.
         $limits = collect($resourceTypes)->map(fn ($type) => [
             'resource_type' => $type,
-            'max_count' => $this->capacity->limitFor($tenantId, $type),
+            'max_count' => $centralLimits !== null ? ($centralLimits[$type] ?? null) : $this->capacity->limitFor($tenantId, $type),
             'current_count' => $this->capacity->currentCount($tenantId, $type),
         ]);
 

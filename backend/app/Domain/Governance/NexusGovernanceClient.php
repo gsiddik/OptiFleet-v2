@@ -104,6 +104,23 @@ class NexusGovernanceClient
             }
         }
 
+        $resourceLimits = null;
+        if (array_key_exists('resource_limits', $r['data'])) {
+            if (! is_array($r['data']['resource_limits'])) {
+                throw new GovernanceContractException('OptiNexus resource_limits must be an object.');
+            }
+            $resourceLimits = [];
+            foreach ($r['data']['resource_limits'] as $key => $value) {
+                if ($value === 'unlimited' || $value === null) {
+                    $resourceLimits[$key] = null;
+                } elseif (is_numeric($value) && is_finite((float) $value) && (float) $value >= 0 && (float) $value <= PHP_INT_MAX) {
+                    $resourceLimits[$key] = (int) floor((float) $value);
+                } else {
+                    throw new GovernanceContractException('OptiNexus returned an invalid resource limit.');
+                }
+            }
+        }
+
         $live = array_map('strtoupper', (array) config('optinexus.feed.live_subscription_statuses'));
         $liveSubscriptions = count(array_filter((array) ($r['data']['subscriptions'] ?? []), fn ($row) => is_array($row) && in_array(strtoupper((string) ($row['status'] ?? '')), $live, true)));
 
@@ -112,6 +129,7 @@ class NexusGovernanceClient
             'capabilities' => array_values(array_unique($capabilities)),
             'applications' => array_values(array_filter((array) ($r['data']['applications_enabled'] ?? []), 'is_string')),
             'live_subscriptions' => $liveSubscriptions,
+            'resource_limits' => $resourceLimits,
         ];
     }
 
