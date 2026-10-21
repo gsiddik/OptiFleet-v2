@@ -103,6 +103,26 @@ class SsoTenantProvisioningTest extends TestCase
         $this->assertDatabaseHas('tenants', ['optinexus_tenant_id' => $claims['tenant_id'], 'code' => 'ACME', 'name' => 'Acme']);
     }
 
+    public function test_a_response_for_another_tenant_or_another_current_product_is_refused(): void
+    {
+        $claims = $this->newCustomer();
+        $client = \Mockery::mock(\App\Domain\Governance\NexusGovernanceClient::class);
+        $client->shouldReceive('productContext')->once()->with($claims['sub'], $claims['tenant_id'])->andReturn([
+            'allowed' => true,
+            'tenant' => ['id' => (string) Str::uuid(), 'code' => 'OTHER', 'name' => 'Other customer'],
+            'products' => [['code' => 'optifleet', 'current' => true]],
+        ]);
+        $client->shouldReceive('productContext')->once()->with($claims['sub'], $claims['tenant_id'])->andReturn([
+            'allowed' => true,
+            'tenant' => ['id' => $claims['tenant_id'], 'code' => 'NEW', 'name' => 'New customer'],
+            'products' => [['code' => 'optifleet', 'current' => false], ['code' => 'optiaccounting', 'current' => true]],
+        ]);
+        $client->shouldNotReceive('commercialContext');
+        $this->app->instance(\App\Domain\Governance\NexusGovernanceClient::class, $client);
+        $this->refused($claims, 'access_denied');
+        $this->refused($claims, 'access_denied');
+    }
+
     public function test_operator_can_disable_provisioning(): void
     {
         config(['optinexus.sso.provision_tenants' => false]);

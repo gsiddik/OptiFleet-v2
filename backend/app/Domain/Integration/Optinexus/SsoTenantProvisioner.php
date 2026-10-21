@@ -17,7 +17,7 @@ class SsoTenantProvisioner
         private readonly AuditService $audit,
     ) {}
 
-    /** @param array<string, mixed> $claims Verified OIDC claims only. */
+    /** @param  array<string, mixed>  $claims  Verified OIDC claims only. */
     public function provision(array $claims): Tenant
     {
         if (! config('optinexus.enabled') || ! config('optinexus.sso.provision_tenants')) {
@@ -31,8 +31,9 @@ class SsoTenantProvisioner
         $application = (string) config('optinexus.governance.application_code');
         // Fresh server-to-server checks: a signed token alone does not establish current entitlement.
         $context = $this->nexus->productContext($claims['sub'], $nexusTenantId);
+        $currentProduct = collect($context['products'])->contains(fn (array $product) => $product['code'] === $application && $product['current']);
         if (! $context['allowed'] || ($context['tenant']['id'] ?? null) !== $nexusTenantId
-            || ! in_array($application, array_column($context['products'], 'code'), true)) {
+            || ! $currentProduct) {
             throw new SsoException('access_denied');
         }
         $commercial = $this->nexus->commercialContext($nexusTenantId);

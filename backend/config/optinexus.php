@@ -46,7 +46,7 @@ return [
     | (POST /authorization/effective-permissions) and which modules the tenant holds (commercial context) are read from it,
     | cached for at most `ttl_seconds` (never above 300) and never used after that. If OptiNexus cannot answer, access is
     | denied (HTTP 503 GOVERNANCE_UNAVAILABLE); there is no local fallback. Tenants stay LOCAL (legacy) until an operator
-    | runs `optinexus:governance:enable`.
+    | runs `optinexus:governance:enable`. New Nexus customers provisioned through SSO start CENTRAL.
     */
     'governance' => [
         'ttl_seconds' => max(1, min(300, (int) env('OPTINEXUS_GOVERNANCE_TTL', 300))),
