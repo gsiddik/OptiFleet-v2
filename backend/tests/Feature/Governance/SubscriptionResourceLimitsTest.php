@@ -20,7 +20,7 @@ class SubscriptionResourceLimitsTest extends TestCase
     {
         $tenant = $this->makeCentralTenant();
         $this->nexus->tenants[$tenant->optinexus_tenant_id]['resource_limits'] = [
-            'vehicle' => 12, 'user' => 0, 'warehouse' => 'unlimited', 'branches' => 99,
+            'vehicle' => 12, 'user' => 0, 'warehouse' => 'unlimited', 'branches' => 99, 'unrelated_limit' => -99,
         ];
         // This standalone limit must not leak into the centrally governed display.
         TenantCapacityLimit::create(['tenant_id' => $tenant->id, 'resource_type' => 'branch', 'max_count' => 1]);

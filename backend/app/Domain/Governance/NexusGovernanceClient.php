@@ -111,6 +111,9 @@ class NexusGovernanceClient
             }
             $resourceLimits = [];
             foreach ($r['data']['resource_limits'] as $key => $value) {
+                if (! in_array($key, ['vehicle', 'user', 'branch', 'workshop', 'warehouse'], true)) {
+                    continue;
+                }
                 if ($value === 'unlimited' || $value === null) {
                     $resourceLimits[$key] = null;
                 } elseif (is_numeric($value) && is_finite((float) $value) && (float) $value >= 0 && (float) $value <= PHP_INT_MAX) {
