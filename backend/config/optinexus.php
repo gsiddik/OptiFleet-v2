@@ -12,6 +12,8 @@ return [
 
     // SSO: OIDC client registered in OptiNexus (POST /api/v1/oidc-clients).
     'sso' => [
+        // New Nexus tenants are separate CENTRAL projections; legacy tenants are never relinked.
+        'provision_tenants' => (bool) env('OPTINEXUS_SSO_PROVISION_TENANTS', true),
         'client_id' => env('OPTINEXUS_SSO_CLIENT_ID'),
         'client_secret' => env('OPTINEXUS_SSO_CLIENT_SECRET'),
         // Must be registered exactly as a redirect URI on the OIDC client.

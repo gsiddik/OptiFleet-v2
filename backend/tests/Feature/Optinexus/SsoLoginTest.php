@@ -234,8 +234,9 @@ class SsoLoginTest extends TestCase
             ->assertRedirect('http://spa.test/login?sso_error=access_denied');
     }
 
-    public function test_unknown_tenant_claim_is_tenant_not_linked(): void
+    public function test_unknown_tenant_claim_is_tenant_not_linked_when_provisioning_is_disabled(): void
     {
+        config(['optinexus.sso.provision_tenants' => false]);
         [, $user] = $this->linkedTenantUser();
         [$state, $nonce] = $this->begin();
         $other = (string) Str::uuid();

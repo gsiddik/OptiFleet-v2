@@ -8,6 +8,7 @@ use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 /**
@@ -28,6 +29,7 @@ class SsoLoginService
     public function __construct(
         private readonly BackchannelLogoutService $lifecycle,
         private readonly AuditService $audit,
+        private readonly SsoTenantProvisioner $tenants,
     ) {}
 
     /**
@@ -38,7 +40,7 @@ class SsoLoginService
      */
     public function ticketFor(array $claims): string
     {
-        [$user, $tenant] = $this->resolve($claims);
+        [$user, $tenant] = DB::transaction(fn () => $this->resolve($claims));
 
         $ticket = Str::random(48);
         Cache::put(
@@ -77,11 +79,13 @@ class SsoLoginService
      */
     private function resolve(array $claims): array
     {
-        $tenant = Tenant::query()->where('optinexus_tenant_id', $claims['tenant_id'] ?? null)->first();
-        if (! $tenant) {
-            throw new SsoException('tenant_not_linked');
+        if (! is_string($claims['tenant_id'] ?? null) || ! Str::isUuid($claims['tenant_id'])
+            || ! is_string($claims['sub'] ?? null) || $claims['sub'] === '') {
+            throw new SsoException('access_denied');
         }
-        if ($tenant->status !== 'ACTIVE') {
+        $tenant = Tenant::withTrashed()->where('optinexus_tenant_id', $claims['tenant_id'])->first()
+            ?? $this->tenants->provision($claims);
+        if ($tenant->trashed() || $tenant->status !== 'ACTIVE') {
             throw new SsoException('tenant_inactive');
         }
 
