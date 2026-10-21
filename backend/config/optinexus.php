@@ -12,6 +12,8 @@ return [
 
     // SSO: OIDC client registered in OptiNexus (POST /api/v1/oidc-clients).
     'sso' => [
+        // New Nexus tenants are separate CENTRAL projections; legacy tenants are never relinked.
+        'provision_tenants' => (bool) env('OPTINEXUS_SSO_PROVISION_TENANTS', true),
         'client_id' => env('OPTINEXUS_SSO_CLIENT_ID'),
         'client_secret' => env('OPTINEXUS_SSO_CLIENT_SECRET'),
         // Must be registered exactly as a redirect URI on the OIDC client.
@@ -44,7 +46,7 @@ return [
     | (POST /authorization/effective-permissions) and which modules the tenant holds (commercial context) are read from it,
     | cached for at most `ttl_seconds` (never above 300) and never used after that. If OptiNexus cannot answer, access is
     | denied (HTTP 503 GOVERNANCE_UNAVAILABLE); there is no local fallback. Tenants stay LOCAL (legacy) until an operator
-    | runs `optinexus:governance:enable`.
+    | runs `optinexus:governance:enable`. New Nexus customers provisioned through SSO start CENTRAL.
     */
     'governance' => [
         'ttl_seconds' => max(1, min(300, (int) env('OPTINEXUS_GOVERNANCE_TTL', 300))),

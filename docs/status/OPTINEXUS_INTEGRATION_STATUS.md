@@ -1,5 +1,7 @@
 # OptiNexus Integration — Status
 
+Current new-customer SSO provisioning: see `SSO_NEW_TENANT_PROVISIONING_STATUS.md` and `docs/integration/CENTRAL_GOVERNANCE.md`. The original phase notes below describe the legacy existing-user-only flow.
+
 Branches: `claude/project-thread-bc4ya2` (SSO + odometer gateway, PR #32) and `claude/nexus-lifecycle-events` (stacked on it:
 central logout, deactivation, events). `main` is the baseline; new work starts from `main` on a new branch.
 Continuation checkpoint between sessions; the repository is the source of truth.

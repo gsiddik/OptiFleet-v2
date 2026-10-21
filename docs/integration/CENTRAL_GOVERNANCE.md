@@ -16,7 +16,21 @@ Route-by-route gates: [AUTHORIZATION_ROUTE_MATRIX.md](AUTHORIZATION_ROUTE_MATRIX
 | OptiNexus unreachable | n/a | fail closed, `503 GOVERNANCE_UNAVAILABLE` (+ `Retry-After`), nothing falls back |
 
 Fleet starts and runs without OptiNexus, OptiRadar and OptiEntry: `OPTINEXUS_ENABLED=false` keeps every tenant LOCAL and
-nothing in this document applies. A tenant only becomes CENTRAL through an explicit operator action (below).
+nothing in this document applies. Existing LOCAL tenants only become CENTRAL through an explicit operator action (below). New customers can be provisioned directly as CENTRAL through SSO (next section).
+
+## First SSO sign-in for a new customer
+
+With `OPTINEXUS_ENABLED=true`, `OPTINEXUS_SSO_PROVISION_TENANTS` defaults to `true`. An unknown Nexus tenant is created as a **separate** ACTIVE/CENTRAL Fleet tenant only after fresh service-account calls confirm:
+
+- product-context allows the verified subject in that exact tenant and includes the configured Fleet application;
+- commercial-context reports the tenant ACTIVE and the Fleet application enabled;
+- the sign-in email is verified.
+
+The service account must be bound to Fleet with `authorization.check commercial.read` and able to serve the new tenant (a credential bound to another tenant is refused). Names and codes come from product-context. A code collision never adopts an existing customer: a Nexus UUID code is used instead. Existing links, LOCAL governance, locally disabled memberships and deleted tenants are preserved. No local role grant or demo data is created; permissions remain central. Tenant/user/membership creation rolls back together if identity resolution fails.
+
+Set `OPTINEXUS_SSO_PROVISION_TENANTS=false` to require manual tenant provisioning. This setting does not disable sign-in for already-linked tenants. Assigning Fleet in Nexus alone does not provision anything until the first successful SSO callback.
+
+After deploying the new backend image, rebuild the configuration cache if used, then restart long-running workers. Sign out and start a new SSO login using the new customer's tenant. Acceptance: login succeeds, `/auth/me` reports CENTRAL and the assigned central permissions, the new tenant has its own `optinexus_tenant_id`, and the old customer's records are absent. There is no schema migration for this change. Never repair a new customer's login by replacing another customer's `optinexus_tenant_id`.
 
 ## What is asked of OptiNexus, and when
 

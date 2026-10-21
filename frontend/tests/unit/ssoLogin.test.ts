@@ -10,7 +10,7 @@ import { classifyLaunchFailure, isNavigableUrl, tenantHintFrom } from '../../src
 setupI18n();
 
 test('every sso_error code the backend can send maps to a message, unknown codes to the generic one', () => {
-  const codes = ['access_denied', 'no_membership', 'user_inactive', 'tenant_not_linked', 'tenant_inactive', 'user_not_provisioned', 'email_not_verified', 'account_conflict'];
+  const codes = ['access_denied', 'no_membership', 'user_inactive', 'tenant_not_linked', 'tenant_not_entitled', 'tenant_inactive', 'user_not_provisioned', 'email_not_verified', 'account_conflict'];
   for (const code of codes) assert.notEqual(ssoErrorKey(code), 'auth.ssoErrors.failed', code);
   assert.equal(ssoErrorKey('state_invalid'), 'auth.ssoErrors.failed');
   assert.equal(ssoErrorKey('something_new'), 'auth.ssoErrors.failed');

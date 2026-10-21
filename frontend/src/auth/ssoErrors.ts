@@ -4,6 +4,7 @@ const SSO_ERROR_KEYS: Record<string, string> = {
   no_membership: 'auth.ssoErrors.accessDenied',
   user_inactive: 'auth.ssoErrors.accessDenied',
   tenant_not_linked: 'auth.ssoErrors.tenantNotLinked',
+  tenant_not_entitled: 'auth.ssoErrors.accessDenied',
   tenant_inactive: 'auth.ssoErrors.tenantNotLinked',
   user_not_provisioned: 'auth.ssoErrors.userNotProvisioned',
   email_not_verified: 'auth.ssoErrors.emailNotVerified',
