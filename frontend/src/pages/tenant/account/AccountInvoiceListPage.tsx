@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { Table, type Column } from '../../../components/Table';
@@ -12,8 +12,10 @@ import { formatDate } from '../../../utils/date';
 const TABS = ['', 'ISSUED', 'OUTSTANDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'VOID'];
 
 export function AccountInvoiceListPage() {
+  const [reloadKey, setReloadKey] = useState(0);
+  useEffect(() => { const timer = window.setInterval(() => setReloadKey((k) => k + 1), 30000); return () => window.clearInterval(timer); }, []);
   const [tab, setTab] = useState('');
-  const { data, loading, error } = useApiList<InvoiceItem>('/app/account/invoices', { status: tab || undefined });
+  const { data, loading, error } = useApiList<InvoiceItem>('/app/account/invoices', { status: tab || undefined }, reloadKey);
 
   const columns: Column<InvoiceItem>[] = [
     { key: 'invoice_number', header: tt('common.fields.invoiceNumber'), render: (i) => <Link to={`/app/account/invoices/${i.id}`}>{i.invoice_number}</Link> },

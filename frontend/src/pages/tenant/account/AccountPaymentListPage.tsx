@@ -25,6 +25,8 @@ export function AccountPaymentListPage() {
   const [showSubmit, setShowSubmit] = useState(false);
   const { data, loading, error } = useApiList<PaymentItem>('/app/account/payments', { status: tab || undefined }, reloadKey);
 
+  useEffect(() => { const timer = window.setInterval(() => setReloadKey((k) => k + 1), 30000); return () => window.clearInterval(timer); }, []);
+
   const columns: Column<PaymentItem>[] = [
     { key: 'invoice', header: tt('common.fields.invoiceNumber'), render: (p) => p.invoice?.invoice_number ?? '—' },
     { key: 'payment_date', header: tt('common.fields.paymentDate'), render: (p) => formatDate(p.payment_date) },
@@ -72,6 +74,7 @@ export function AccountPaymentListPage() {
 }
 
 function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onSubmitted: () => void }) {
+  const [submissionKey] = useState(() => 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => { const n = Math.floor(Math.random() * 16); return (c === 'x' ? n : (n & 3) | 8).toString(16); }));
   const [invoices, setInvoices] = useState<InvoiceItem[]>([]);
   const [invoiceId, setInvoiceId] = useState('');
   const [paymentDate, setPaymentDate] = useState(new Date().toISOString().slice(0, 10));
@@ -86,11 +89,9 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    Promise.all([
-      apiClient.get('/app/account/invoices', { params: { status: 'OUTSTANDING' } }),
-      apiClient.get('/app/account/invoices', { params: { status: 'PARTIALLY_PAID' } }),
-      apiClient.get('/app/account/invoices', { params: { status: 'OVERDUE' } }),
-    ]).then(([a, b, c]) => setInvoices([...a.data.data, ...b.data.data, ...c.data.data]));
+    apiClient.get('/app/account/invoices', { params: { payable: true, per_page: 100 } })
+      .then((res) => setInvoices(res.data.data))
+      .catch((err) => setErrors({ invoice_id: [extractApiError(err).message] }));
   }, []);
 
   async function submit() {
@@ -101,6 +102,7 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
       // rejected proof never leaves a payment behind that a retry would duplicate.
       const form = new FormData();
       form.append('invoice_id', invoiceId);
+      form.append('submission_key', submissionKey);
       form.append('payment_date', paymentDate);
       form.append('amount', amount);
       form.append('payment_method', paymentMethod);
@@ -113,7 +115,7 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
       onSubmitted();
     } catch (err) {
       const apiError: ApiErrorShape = extractApiError(err);
-      setErrors(apiError.errors ?? {});
+      setErrors(apiError.errors ?? { invoice_id: [apiError.message] });
     } finally {
       setSubmitting(false);
     }
@@ -122,7 +124,7 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
   return (
     <Modal open title={tt('account.actions.submitPayment2')} onClose={onClose} width={560}>
       <FormField label={tt('account.fields.invoice')} errors={errors.invoice_id} required>
-        <select value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} style={inputStyle}>
+        <select value={invoiceId} onChange={(e) => { setInvoiceId(e.target.value); const inv = invoices.find((i) => i.id === e.target.value); if (inv?.source === 'OPTINEXUS') setAmount(String(inv.outstanding_amount)); }} style={inputStyle}>
           <option value="">{tt('account.fields.selectAnOutstandingInvoice')}</option>
           {invoices.map((inv) => (
             <option key={inv.id} value={inv.id}>
@@ -136,7 +138,7 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
           <input type="date" value={paymentDate} onChange={(e) => setPaymentDate(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label={tt('common.fields.amount')} errors={errors.amount} required>
-          <NumericInput value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
+          <NumericInput readOnly={invoices.find((i) => i.id === invoiceId)?.source === 'OPTINEXUS'} value={amount} onChange={(e) => setAmount(e.target.value)} style={inputStyle} />
         </FormField>
         <FormField label={tt('account.fields.paymentMethod')} errors={errors.payment_method} required>
           <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)} style={inputStyle}>

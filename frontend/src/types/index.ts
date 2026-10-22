@@ -421,6 +421,7 @@ export interface InvoiceItemRow {
 }
 
 export interface InvoiceItem {
+  source?: 'OPTINEXUS';
   id: string;
   invoice_number: string;
   tenant_id: string;
@@ -450,6 +451,7 @@ export interface PaymentProofItem {
 }
 
 export interface PaymentItem {
+  source?: 'OPTINEXUS';
   id: string;
   tenant_id: string;
   invoice_id: string;

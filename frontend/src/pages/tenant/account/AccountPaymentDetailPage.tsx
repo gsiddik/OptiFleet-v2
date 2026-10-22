@@ -24,7 +24,7 @@ export function AccountPaymentDetailPage() {
       .catch((err) => setError(extractApiError(err).message));
   }
 
-  useEffect(load, [id]);
+  useEffect(() => { load(); const timer = window.setInterval(load, 30000); return () => window.clearInterval(timer); }, [id]);
 
   async function viewProof(proofId: string, filename: string) {
     try {

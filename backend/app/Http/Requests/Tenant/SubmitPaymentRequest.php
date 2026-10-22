@@ -14,7 +14,8 @@ class SubmitPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'invoice_id' => ['required', 'uuid', 'exists:invoices,id'],
+            'invoice_id' => ['required', 'uuid', \Illuminate\Validation\Rule::when(! app(\App\Domain\Governance\NexusCommercialPortal::class)->active(), ['exists:invoices,id'])],
+            'submission_key' => [\Illuminate\Validation\Rule::requiredIf(fn () => app(\App\Domain\Governance\NexusCommercialPortal::class)->active()), 'uuid'],
             'payment_date' => ['required', 'date'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'payment_method' => ['required', 'string', 'max:50'],

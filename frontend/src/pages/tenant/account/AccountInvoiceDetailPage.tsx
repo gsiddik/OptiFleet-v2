@@ -20,10 +20,10 @@ export function AccountInvoiceDetailPage() {
   const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
-    apiClient
-      .get(`/app/account/invoices/${id}`)
-      .then((res) => setInvoice(res.data.data))
-      .catch((err) => setError(extractApiError(err).message));
+    let mounted = true;
+    const load = () => { apiClient.get(`/app/account/invoices/${id}`).then((res) => { if (mounted) { setInvoice(res.data.data); setError(null); } }).catch((err) => { if (mounted) setError(extractApiError(err).message); }); };
+    load(); const timer = window.setInterval(load, 30000);
+    return () => { mounted = false; window.clearInterval(timer); };
   }, [id]);
 
   useBreadcrumbLabel(invoice?.id, invoice?.invoice_number);
@@ -54,7 +54,7 @@ export function AccountInvoiceDetailPage() {
         <h1 style={{ fontSize: 22, margin: 0 }}>{invoice.invoice_number}</h1>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <StatusBadge status={invoice.status} />
-          {hasPermission('account.invoice.download') && (
+          {invoice.source !== 'OPTINEXUS' && hasPermission('account.invoice.download') && (
             <button className="btn-secondary" disabled={downloading} onClick={downloadPdf}>
               {downloading ? t('common.actions.loading') : t('platform.invoices.actions.downloadPdf')}
             </button>
