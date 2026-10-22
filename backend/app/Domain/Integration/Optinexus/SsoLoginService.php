@@ -132,6 +132,18 @@ class SsoLoginService
             }
         }
 
+        // Keep the local projection attached to the immutable subject when Nexus changes an email.
+        $newEmail = Str::lower(trim((string) ($claims['email'] ?? '')));
+        if ($newEmail !== '' && Str::lower($user->email) !== $newEmail) {
+            if (($claims['email_verified'] ?? false) !== true) {
+                throw new SsoException('email_not_verified');
+            }
+            if (User::whereKeyNot($user->id)->whereRaw('lower(email) = ?', [$newEmail])->exists()) {
+                throw new SsoException('account_conflict');
+            }
+            $user->forceFill(['email' => $newEmail])->save();
+        }
+
         if ($central) {
             $this->ensureMembership($user, $tenant);
         }
