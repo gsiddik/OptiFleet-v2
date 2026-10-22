@@ -4,6 +4,7 @@ import { apiClient, extractApiError, type ApiErrorShape } from '../../../api/cli
 import { FormField, inputStyle } from '../../../components/FormField';
 import { Modal } from '../../../components/Modal';
 import { StatusBadge } from '../../../components/StatusBadge';
+import { Pagination } from '../../../components/Pagination';
 import { Table, type Column } from '../../../components/Table';
 import { Toolbar } from '../../../components/Toolbar';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
@@ -20,10 +21,11 @@ const PAYMENT_METHODS = ['BANK_TRANSFER', 'VIRTUAL_ACCOUNT', 'CREDIT_CARD', 'E_W
 
 export function AccountPaymentListPage() {
   const { hasPermission } = useAuth();
+  const [page, setPage] = useState(1);
   const [tab, setTab] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showSubmit, setShowSubmit] = useState(false);
-  const { data, loading, error } = useApiList<PaymentItem>('/app/account/payments', { status: tab || undefined }, reloadKey);
+  const { data, meta, loading, error } = useApiList<PaymentItem>('/app/account/payments', { status: tab || undefined, page }, reloadKey);
 
   useEffect(() => { const timer = window.setInterval(() => setReloadKey((k) => k + 1), 30000); return () => window.clearInterval(timer); }, []);
 
@@ -41,7 +43,7 @@ export function AccountPaymentListPage() {
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('common.fields.payments')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
+          <button key={t} onClick={() => { setTab(t); setPage(1); }} className={tab === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
             {t || tt('common.actions.all')}
           </button>
         ))}
@@ -59,6 +61,7 @@ export function AccountPaymentListPage() {
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && <EmptyState label={tt('platform.payments.empty.noPaymentsFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
+      {!error && !loading && meta && <Pagination meta={meta} onPageChange={setPage} />}
 
       {showSubmit && (
         <SubmitPaymentModal
@@ -89,9 +92,18 @@ function SubmitPaymentModal({ onClose, onSubmitted }: { onClose: () => void; onS
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    apiClient.get('/app/account/invoices', { params: { payable: true, per_page: 100 } })
-      .then((res) => setInvoices(res.data.data))
-      .catch((err) => setErrors({ invoice_id: [extractApiError(err).message] }));
+    let mounted = true;
+    async function loadInvoices() {
+      const rows: InvoiceItem[] = [];
+      let page = 1; let lastPage = 1;
+      do {
+        const res = await apiClient.get('/app/account/invoices', { params: { payable: true, per_page: 100, page } });
+        rows.push(...res.data.data); lastPage = res.data.meta?.last_page ?? 1; page += 1;
+      } while (mounted && page <= lastPage);
+      if (mounted) setInvoices(rows);
+    }
+    void loadInvoices().catch((err) => { if (mounted) setErrors({ invoice_id: [extractApiError(err).message] }); });
+    return () => { mounted = false; };
   }, []);
 
   async function submit() {
