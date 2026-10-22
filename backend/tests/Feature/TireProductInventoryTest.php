@@ -108,6 +108,9 @@ class TireProductInventoryTest extends TestCase
 
     public function test_detail_counts_equal_inventory_tables_and_rows_carry_their_columns(): void
     {
+        // These fixtures model simultaneous operations; elapsed wall-clock seconds
+        // must not turn the expected unmeasurable usage time into rounded zero.
+        $this->freezeTime();
         [$tenant, $vehicle, $product, $headers] = $this->scenario();
         $tires = $this->stock($tenant, $vehicle, $product, $headers);
         TireInspection::query()->create(['tenant_id' => $tenant->id, 'tire_id' => $tires['removed']->id, 'tread_depth_mm' => 9.0, 'inspected_at' => now()->subDays(5)]);

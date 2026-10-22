@@ -1,3 +1,4 @@
+import './AccountSubscriptionPage.css';
 import { useEffect, useState } from 'react';
 import { apiClient, extractApiError } from '../../../api/client';
 import { ErrorState, LoadingState } from '../../../components/States';
@@ -62,7 +63,7 @@ export function AccountSubscriptionPage() {
 
       {subscription && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+          <div className="account-subscription-card-grid">
             <div className="card">
               <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 6 }}>{t('common.fields.status')}</div>
               <StatusBadge status={subscription.status} />
@@ -75,15 +76,15 @@ export function AccountSubscriptionPage() {
           {subscription.source === 'OPTINEXUS' && subscription.details && (
             <div className="card" style={{ marginBottom: 24 }}>
               <h2>{t('common.sections.details')}</h2>
-              <dl>
-                <dt>{t('account.fields.subscriptionNumber')}</dt><dd>{subscription.details.subscription_number}</dd>
-                <dt>{t('common.fields.product')}</dt><dd>{subscription.details.product_name ?? '—'}</dd>
-                <dt>{t('account.fields.plan')}</dt><dd>{subscription.details.plan_name ?? '—'}</dd>
-                <dt>{t('account.fields.billingInterval')}</dt><dd>{subscription.details.billing_interval}</dd>
-                <dt>{t('account.fields.currentPeriod')}</dt><dd>{formatDate(subscription.details.current_period_start)} — {formatDate(subscription.details.current_period_end)}</dd>
-                <dt>{t('platform.contracts.fields.gracePeriodDays')}</dt><dd>{subscription.details.grace_period_days}</dd>
-                <dt>{t('platform.contracts.fields.gracePeriodEnd')}</dt><dd>{formatDate(subscription.grace_period_end)}</dd>
-              </dl>
+              <div className="account-subscription-card-grid">
+                <SummaryCard label={t('account.fields.subscriptionNumber')} value={subscription.details.subscription_number} />
+                <SummaryCard label={t('common.fields.product')} value={subscription.details.product_name ?? '—'} />
+                <SummaryCard label={t('account.fields.plan')} value={subscription.details.plan_name ?? '—'} />
+                <SummaryCard label={t('account.fields.billingInterval')} value={subscription.details.billing_interval} />
+                <SummaryCard label={t('account.fields.currentPeriod')} value={`${formatDate(subscription.details.current_period_start)} — ${formatDate(subscription.details.current_period_end)}`} />
+                <SummaryCard label={t('platform.contracts.fields.gracePeriodDays')} value={String(subscription.details.grace_period_days)} />
+                <SummaryCard label={t('platform.contracts.fields.gracePeriodEnd')} value={formatDate(subscription.grace_period_end)} />
+              </div>
               <h3>{t('common.sections.items')}</h3>
               <table style={{ width: '100%' }}>
                 <thead><tr><th>{t('common.fields.type')}</th><th>{t('account.fields.planAddon')}</th><th>{t('common.fields.quantity')}</th><th>{t('account.fields.unitPrice')}</th><th>{t('account.fields.totalPrice')}</th></tr></thead>
@@ -146,9 +147,9 @@ export function AccountSubscriptionPage() {
 
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="card">
+    <div className="card account-subscription-summary-card">
       <div style={{ fontSize: 13, color: '#6b7280', marginBottom: 4 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 600 }}>{value}</div>
+      <div style={{ fontSize: 16, fontWeight: 500, overflowWrap: 'anywhere' }}>{value}</div>
     </div>
   );
 }
