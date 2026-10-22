@@ -167,4 +167,26 @@ class CentralSsoProvisioningTest extends TestCase
         $this->postJson('/api/v1/auth/sso/exchange', ['ticket' => $ticket])->assertStatus(503)->assertJsonPath('code', 'GOVERNANCE_UNAVAILABLE');
         $this->assertSame(0, PersonalAccessToken::query()->count());
     }
+
+    public function test_verified_email_change_preserves_subject_identity_and_rejects_conflicts(): void
+    {
+        $tenant = $this->makeCentralTenant();
+        $claims = $this->claims($tenant);
+        $service = app(SsoLoginService::class);
+        $service->ticketFor($claims);
+        $user = User::where('optinexus_subject', $claims['sub'])->firstOrFail();
+        $service->ticketFor([...$claims, 'email' => 'changed@example.test']);
+        $this->assertSame('changed@example.test', $user->fresh()->email);
+        $this->assertSame(1, User::where('optinexus_subject', $claims['sub'])->count());
+        [$other] = $this->makeTenantUser($tenant, []);
+        try {
+            $service->ticketFor([...$claims, 'email' => $other->email]);
+            $this->fail('Conflicting email must not be adopted.');
+        } catch (SsoException $e) {
+            $this->assertSame('account_conflict', $e->getMessage());
+        }
+        $this->assertSame('changed@example.test', $user->fresh()->email);
+        $this->expectExceptionMessage('email_not_verified');
+        $service->ticketFor([...$claims, 'email' => 'unverified@example.test', 'email_verified' => false]);
+    }
 }
