@@ -48,7 +48,7 @@ class NexusCommercialPortal
     public function invoice(array $row): array
     {
         return [...$row, 'tenant_id' => $this->context->tenantId(), 'source' => 'OPTINEXUS',
-            'status' => $row['status'] === 'ISSUED' ? 'OUTSTANDING' : $row['status'],
+            'status' => $row['status'],
             'invoice_date' => $row['issue_date'] ?? $row['created_at'], 'outstanding_amount' => $row['balance_due'],
             'items' => array_map(fn ($i) => [...$i, 'unit_price' => $i['unit_amount'], 'amount' => $i['total']], $row['items'] ?? [])];
     }
