@@ -226,6 +226,8 @@ class FakeNexus
             'tenant_id' => $nexusTenantId,
             'tenant_status' => $tenant['status'],
             'resource_limits' => $tenant['resource_limits'] ?? [],
+            'application_code' => self::APP,
+            'application_subscriptions' => $tenant['application_subscriptions'] ?? [],
             'subscriptions' => array_map(fn (string $status) => ['id' => self::uuid(), 'tenant_id' => $nexusTenantId, 'status' => $status], $tenant['subscriptions']),
             'applications_enabled' => $tenant['applications'],
             'effective_entitlements' => array_merge(

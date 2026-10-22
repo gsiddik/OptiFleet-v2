@@ -22,6 +22,29 @@ class AccountSubscriptionController extends Controller
     {
         $tenantId = $this->context->tenantId();
 
+        if ($this->central->governs($tenantId)) {
+            $link = $this->central->link($tenantId);
+            if (! $link['nexus_tenant_id']) {
+                throw new \App\Domain\Governance\Exceptions\GovernanceContractException('The tenant is not linked to OptiNexus.');
+            }
+            $context = $this->nexus->commercialContext($link['nexus_tenant_id']);
+            $rows = $context['application_subscriptions'];
+            if ($rows === null) {
+                throw new \App\Domain\Governance\Exceptions\GovernanceContractException('Update OptiNexus to provide application subscriptions.');
+            }
+            $row = $rows[0] ?? null;
+
+            return $this->ok($row ? [
+                'id' => $row['id'], 'tenant_id' => $tenantId, 'status' => $row['status'],
+                'start_date' => $row['start_at'] ?? null,
+                'end_date' => $row['current_period_end'] ?? null,
+                'next_billing_date' => $row['current_period_end'] ?? null,
+                'grace_period_end' => $row['grace_end_at'] ?? null,
+                'source' => 'OPTINEXUS', 'nexus_tenant_id' => $link['nexus_tenant_id'],
+                'details' => $row,
+            ] : null);
+        }
+
         $subscription = Subscription::query()
             ->where('tenant_id', $tenantId)
             ->whereNotIn('status', ['CANCELLED'])

@@ -68,6 +68,13 @@ class SsoLoginService
             return null;
         }
 
+        if ($tenant->governance_mode === 'CENTRAL') {
+            $context = app(\App\Domain\Governance\NexusGovernanceClient::class)->productContext($user->optinexus_subject, $tenant->optinexus_tenant_id);
+            if (! $context['allowed']) {
+                return null;
+            }
+        }
+
         return ['user' => $user, 'tenant' => $tenant, 'apps' => $data['apps'], 'id_token_hint' => $data['id_token_hint'] ?? null, 'sid' => $data['sid'] ?? null];
     }
 
@@ -90,6 +97,12 @@ class SsoLoginService
         }
 
         $central = $tenant->governance_mode === 'CENTRAL';
+        if ($central) {
+            $context = app(\App\Domain\Governance\NexusGovernanceClient::class)->productContext($claims['sub'], $claims['tenant_id']);
+            if (! $context['allowed']) {
+                throw new SsoException('access_denied');
+            }
+        }
         $user = User::query()->where('optinexus_subject', $claims['sub'])->first();
 
         if (! $user) {
