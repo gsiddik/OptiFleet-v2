@@ -34,6 +34,8 @@ class FakeNexus
     /** Products every allowed user sees in product-context besides the current one. */
     public array $products = [];
 
+    public ?\Closure $commercialPortal = null;
+
     public int $ttl = 300;
 
     /** @var array<string, array<string, mixed>> delegation state per nexus tenant */
@@ -150,6 +152,10 @@ class FakeNexus
                 'issuer' => self::BASE, 'authorization_endpoint' => self::BASE.'/oidc/authorize', 'token_endpoint' => self::BASE.'/api/oidc/token',
                 'userinfo_endpoint' => self::BASE.'/api/oidc/userinfo', 'jwks_uri' => self::BASE.'/oidc/jwks', 'end_session_endpoint' => self::BASE.'/oidc/logout',
             ]);
+        }
+
+        if (str_starts_with($path, '/api/v1/commercial-portal/') && $this->commercialPortal) {
+            return ($this->commercialPortal)($request, $path, $query, $body);
         }
 
         return match (true) {

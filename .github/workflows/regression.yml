@@ -111,7 +111,7 @@ jobs:
           php artisan key:generate --ansi
 
       - name: Subscription and SSO regression first
-        run: vendor/bin/phpunit --no-progress --filter 'CentralSsoProvisioningTest|CentralSubscriptionDetailsTest|SubscriptionResourceLimitsTest|SsoTenantProvisioningTest'
+        run: vendor/bin/phpunit --no-progress --filter 'CentralSsoProvisioningTest|CentralSubscriptionDetailsTest|CentralInvoicePaymentTest|SubscriptionResourceLimitsTest|SsoTenantProvisioningTest'
 
       - name: Run the test suite
         run: >-

@@ -42,7 +42,7 @@ class NexusCommercialPortal
     {
         if ($resource === 'invoices' && ($query['status'] ?? '') === 'OUTSTANDING') $query['status'] = 'ISSUED';
         $r = $this->request('GET', $resource, $query);
-        return response()->json(['data' => array_map(fn ($row) => $resource === 'invoices' ? $this->invoice($row) : $this->payment($row), $r['data']), 'meta' => $r['meta']]);
+        return response()->json(['data' => array_map(fn ($row) => $resource === 'invoices' ? $this->invoice($row) : $this->payment($row), $r['data']), 'meta' => $r['meta']['pagination'] ?? $r['meta']]);
     }
 
     public function invoice(array $row): array
