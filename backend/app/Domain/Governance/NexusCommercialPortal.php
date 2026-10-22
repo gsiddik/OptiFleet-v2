@@ -31,9 +31,15 @@ class NexusCommercialPortal
         if (in_array($r['status'], [403, 404, 409], true)) abort($r['status'], $r['error']['message'] ?? 'Commercial request refused.');
         if ($r['status'] < 200 || $r['status'] >= 300 || ! is_array($r['data'])) throw new GovernanceContractException('Invalid commercial portal response.');
         // Reject any cross-tenant document in lists or details.
-        $rows = array_is_list($r['data']) ? $r['data'] : (isset($r['data']['tenant_id']) ? [$r['data']] : []);
+        $rows = array_is_list($r['data']) ? $r['data'] : [$r['data']];
         foreach ($rows as $row) {
-            if (($row['tenant_id'] ?? null) !== $tenant) throw new GovernanceContractException('Commercial document tenant mismatch.');
+            if (! is_array($row) || ($row['tenant_id'] ?? null) !== $tenant) throw new GovernanceContractException('Commercial document tenant mismatch.');
+        }
+        if ($method === 'GET' && preg_match('~^(invoices|payments)/([^/]+)$~D', $path, $match) && ($r['data']['id'] ?? null) !== $match[2]) {
+            throw new GovernanceContractException('Commercial document identifier mismatch.');
+        }
+        if ($method === 'POST' && $path === 'payments' && ($r['data']['invoice_id'] ?? null) !== ($data['invoice_id'] ?? null)) {
+            throw new GovernanceContractException('Payment invoice mismatch.');
         }
         return $r;
     }
@@ -69,7 +75,7 @@ class NexusCommercialPortal
     public function download(string $payment, string $proof)
     {
         $row = $this->request('GET', 'payments/'.$payment.'/proof')['data'];
-        abort_unless(($row['id'] ?? null) === $proof, 404);
+        abort_unless(($row['id'] ?? null) === $proof && ($row['payment_id'] ?? null) === $payment, 404);
         $bytes = base64_decode($row['content'], true);
         if ($bytes === false) throw new GovernanceContractException('Invalid proof content.');
         return response($bytes, 200, ['Content-Type' => $row['mime_type'],
