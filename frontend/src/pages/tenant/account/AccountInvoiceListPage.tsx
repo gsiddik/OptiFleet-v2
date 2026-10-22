@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { StatusBadge } from '../../../components/StatusBadge';
+import { Pagination } from '../../../components/Pagination';
 import { Table, type Column } from '../../../components/Table';
 import { EmptyState, ErrorState, LoadingState } from '../../../components/States';
 import { useApiList } from '../../../hooks/useApiList';
@@ -12,8 +13,11 @@ import { formatDate } from '../../../utils/date';
 const TABS = ['', 'ISSUED', 'OUTSTANDING', 'PARTIALLY_PAID', 'PAID', 'OVERDUE', 'VOID'];
 
 export function AccountInvoiceListPage() {
+  const [reloadKey, setReloadKey] = useState(0);
+  useEffect(() => { const timer = window.setInterval(() => setReloadKey((k) => k + 1), 30000); return () => window.clearInterval(timer); }, []);
+  const [page, setPage] = useState(1);
   const [tab, setTab] = useState('');
-  const { data, loading, error } = useApiList<InvoiceItem>('/app/account/invoices', { status: tab || undefined });
+  const { data, meta, loading, error } = useApiList<InvoiceItem>('/app/account/invoices', { status: tab || undefined, page }, reloadKey);
 
   const columns: Column<InvoiceItem>[] = [
     { key: 'invoice_number', header: tt('common.fields.invoiceNumber'), render: (i) => <Link to={`/app/account/invoices/${i.id}`}>{i.invoice_number}</Link> },
@@ -29,7 +33,7 @@ export function AccountInvoiceListPage() {
       <h1 style={{ fontSize: 22, marginBottom: 16 }}>{tt('common.fields.invoices')}</h1>
       <div style={{ display: 'flex', gap: 4, marginBottom: 14, flexWrap: 'wrap' }}>
         {TABS.map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={tab === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
+          <button key={t} onClick={() => { setTab(t); setPage(1); }} className={tab === t ? 'btn-primary' : 'btn-secondary'} style={{ padding: '6px 12px', fontSize: 13 }}>
             {t || tt('common.actions.all')}
           </button>
         ))}
@@ -38,6 +42,7 @@ export function AccountInvoiceListPage() {
       {!error && loading && <LoadingState />}
       {!error && !loading && data.length === 0 && <EmptyState label={tt('platform.invoices.empty.noInvoicesFound')} />}
       {!error && !loading && data.length > 0 && <Table columns={columns} rows={data} />}
+      {!error && !loading && meta && <Pagination meta={meta} onPageChange={setPage} />}
     </div>
   );
 }

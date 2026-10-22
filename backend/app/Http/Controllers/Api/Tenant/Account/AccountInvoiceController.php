@@ -13,11 +13,16 @@ class AccountInvoiceController extends Controller
     public function __construct(
         private readonly TenantContext $context,
         private readonly InvoicePdfService $pdf,
+        private readonly \App\Domain\Governance\NexusCommercialPortal $portal,
     ) {}
 
     public function index(Request $request)
     {
+        if ($this->portal->active()) return $this->portal->listing('invoices', $request->only(['status', 'per_page', 'page', 'payable']));
+
         $query = Invoice::query()->where('tenant_id', $this->context->tenantId());
+
+        if ($request->boolean('payable')) $query->whereIn('status', ['OUTSTANDING', 'PARTIALLY_PAID', 'OVERDUE']);
 
         if ($status = $request->string('status')->value()) {
             $query->where('status', $status);
@@ -26,15 +31,19 @@ class AccountInvoiceController extends Controller
         return $this->paginated($query->latest('invoice_date')->paginate($request->integer('per_page', 15)));
     }
 
-    public function show(Invoice $invoice)
+    public function show(string $invoice)
     {
+        if ($this->portal->active()) return $this->ok($this->portal->invoice($this->portal->request('GET', 'invoices/'.$invoice)['data']));
+        $invoice = Invoice::findOrFail($invoice);
         $this->authorizeOwnership($invoice);
 
         return $this->ok($invoice->load(['items', 'payments']));
     }
 
-    public function downloadPdf(Invoice $invoice)
+    public function downloadPdf(string $invoice)
     {
+        abort_if($this->portal->active(), 404);
+        $invoice = Invoice::findOrFail($invoice);
         $this->authorizeOwnership($invoice);
 
         // Document locale: an explicit ?locale=, else the request locale (user → tenant → Accept-Language → en).
