@@ -4,6 +4,7 @@ namespace App\Domain\Integration\Optinexus;
 
 use App\Domain\AccessControl\Models\DataScopeAssignment;
 use App\Domain\Audit\Services\AuditService;
+use App\Domain\Governance\NexusGovernanceClient;
 use App\Domain\Identity\Models\Tenant;
 use App\Domain\Identity\Models\TenantUser;
 use App\Models\User;
@@ -69,9 +70,9 @@ class SsoLoginService
         }
 
         if ($tenant->governance_mode === 'CENTRAL') {
-            $context = app(\App\Domain\Governance\NexusGovernanceClient::class)->productContext($user->optinexus_subject, $tenant->optinexus_tenant_id);
+            $context = app(NexusGovernanceClient::class)->productContext($user->optinexus_subject, $tenant->optinexus_tenant_id);
             if (! $context['allowed']) {
-                return null;
+                throw new SsoException('access_denied');
             }
         }
 
@@ -98,7 +99,7 @@ class SsoLoginService
 
         $central = $tenant->governance_mode === 'CENTRAL';
         if ($central) {
-            $context = app(\App\Domain\Governance\NexusGovernanceClient::class)->productContext($claims['sub'], $claims['tenant_id']);
+            $context = app(NexusGovernanceClient::class)->productContext($claims['sub'], $claims['tenant_id']);
             if (! $context['allowed']) {
                 throw new SsoException('access_denied');
             }

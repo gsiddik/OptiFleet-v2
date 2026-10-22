@@ -28,10 +28,13 @@ class CentralSsoProvisioningTest extends TestCase
 
     private function claims($tenant, array $overrides = []): array
     {
-        return array_merge([
+        $claims = array_merge([
             'sub' => (string) Str::uuid(), 'email' => 'new.person@example.test', 'email_verified' => true, 'name' => 'New Person',
             'tenant_id' => $tenant->optinexus_tenant_id, 'apps' => [['code' => 'optifleet', 'name' => 'OptiFleet', 'launch_url' => 'http://fleet.test']],
         ], $overrides);
+        $this->nexus->grant($tenant->optinexus_tenant_id, $claims['sub'], ['vehicle.view']);
+
+        return $claims;
     }
 
     public function test_first_sign_in_creates_a_projection_without_a_grant_or_a_usable_password(): void
@@ -148,8 +151,8 @@ class CentralSsoProvisioningTest extends TestCase
     {
         $tenant = $this->makeCentralTenant();
         $claims = $this->claims($tenant);
-        $this->nexus->withdraw($tenant->optinexus_tenant_id, $claims['sub']);
         $ticket = app(SsoLoginService::class)->ticketFor($claims);
+        $this->nexus->withdraw($tenant->optinexus_tenant_id, $claims['sub']);
 
         $this->postJson('/api/v1/auth/sso/exchange', ['ticket' => $ticket])->assertForbidden();
         $this->assertSame(0, PersonalAccessToken::query()->count());
