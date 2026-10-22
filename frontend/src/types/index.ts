@@ -362,7 +362,21 @@ export interface ContractAmendmentItem {
   items?: ContractAmendmentLineItem[];
 }
 
+export interface NexusSubscriptionDetails {
+  subscription_number: string;
+  product_name: string | null;
+  plan_name: string | null;
+  currency: string;
+  billing_interval: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  grace_period_days: number;
+  items: { id: string; price_type: string | null; item_type: string; plan_name: string | null; addon_name: string | null; quantity: string; unit_price: string | null; total_price: string | null }[];
+}
+
 export interface SubscriptionItem {
+  source?: 'OPTINEXUS';
+  details?: NexusSubscriptionDetails;
   id: string;
   tenant_id: string;
   contract_id: string;
@@ -370,7 +384,7 @@ export interface SubscriptionItem {
   end_date: string;
   next_billing_date: string;
   grace_period_end: string | null;
-  status: 'PENDING' | 'ACTIVE' | 'EXPIRING' | 'PAST_DUE' | 'GRACE_PERIOD' | 'SUSPENDED' | 'EXPIRED' | 'CANCELLED';
+  status: 'PENDING' | 'ACTIVE' | 'EXPIRING' | 'PAST_DUE' | 'GRACE_PERIOD' | 'SUSPENDED' | 'EXPIRED' | 'CANCELLED' | 'TERMINATED';
   activated_at: string | null;
   suspended_at: string | null;
   contract?: ContractItem;

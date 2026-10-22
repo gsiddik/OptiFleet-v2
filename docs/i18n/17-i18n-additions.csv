@@ -1406,3 +1406,10 @@ delegation.seats.undecided.entitlementInvalid,"The seat limit on the subscriptio
 delegation.seats.undecided.entitlementUnavailable,"The seat limit cannot be read right now, so nobody new can be added. Existing access is not affected. Reload in a moment.","Batas kursi tidak dapat dibaca saat ini, jadi orang baru tidak dapat ditambahkan. Akses yang sudah ada tidak terpengaruh. Muat ulang sebentar lagi.",Central users page: user seats,delegation,ecosystem seat limit consumer
 delegation.seats.figures,{{used}} used and {{reserved}} reserved of a limit of {{limit}}.,{{used}} terpakai dan {{reserved}} dicadangkan dari batas {{limit}}.,Central users page: user seats,delegation,ecosystem seat limit consumer
 delegation.seats.retryIn,Try again in {{seconds}} s.,Coba lagi dalam {{seconds}} dtk.,Central users page: user seats,delegation,ecosystem seat limit consumer
+account.fields.subscriptionNumber,Subscription #,No. Langganan,Central subscription detail,account,Nexus subscription lifecycle
+account.fields.plan,Plan,Paket,Central subscription detail,account,Nexus subscription lifecycle
+account.fields.billingInterval,Billing Interval,Interval Penagihan,Central subscription detail,account,Nexus subscription lifecycle
+account.fields.currentPeriod,Current Period,Periode Berjalan,Central subscription detail,account,Nexus subscription lifecycle
+account.fields.planAddon,Plan/Add-on,Paket/Add-on,Central subscription detail,account,Nexus subscription lifecycle
+account.fields.unitPrice,Unit Price,Harga Satuan,Central subscription detail,account,Nexus subscription lifecycle
+account.fields.totalPrice,Total Price,Harga Total,Central subscription detail,account,Nexus subscription lifecycle
