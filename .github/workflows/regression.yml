@@ -110,6 +110,9 @@ jobs:
           cp .env.example .env
           php artisan key:generate --ansi
 
+      - name: Subscription and SSO regression first
+        run: vendor/bin/phpunit --no-progress --filter 'CentralSsoProvisioningTest|CentralSubscriptionDetailsTest|SubscriptionResourceLimitsTest|SsoTenantProvisioningTest'
+
       - name: Run the test suite
         run: >-
           vendor/bin/phpunit
