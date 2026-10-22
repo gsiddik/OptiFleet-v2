@@ -81,7 +81,11 @@ class SsoController extends Controller
     {
         $data = $request->validate(['ticket' => ['required', 'string', 'max:128']]);
 
-        $session = $this->login->redeemTicket($data['ticket']);
+        try {
+            $session = $this->login->redeemTicket($data['ticket']);
+        } catch (SsoException) {
+            abort(403, Messages::localized('errors.http.accessWithdrawnCentrally'));
+        }
         abort_unless($session, 422, 'This sign-in link is invalid or has expired. Please sign in again.');
 
         ['user' => $user, 'tenant' => $tenant, 'apps' => $apps] = $session;

@@ -97,6 +97,32 @@ class NexusGovernanceClient
             throw $this->contract('commercial-context', $r);
         }
 
+        $subscriptionDetails = null;
+        if (array_key_exists('application_subscriptions', $r['data'])) {
+            if (($r['data']['tenant_id'] ?? null) !== $nexusTenantId
+                || ($r['data']['application_code'] ?? null) !== config('optinexus.governance.application_code')
+                || ! is_array($r['data']['application_subscriptions'])) {
+                throw new GovernanceContractException('OptiNexus subscription context binding is invalid.');
+            }
+            $rows = $r['data']['application_subscriptions'];
+            foreach ($rows as $row) {
+                if (! is_array($row) || ($row['tenant_id'] ?? null) !== $nexusTenantId
+                    || ! is_string($row['id'] ?? null) || ! is_string($row['status'] ?? null)) {
+                    throw new GovernanceContractException('OptiNexus returned an invalid subscription.');
+                }
+            }
+            // The latest-ending ACTIVE subscription wins; otherwise show the latest updated subscription.
+            usort($rows, function (array $a, array $b): int {
+                $active = (int) ($b['status'] === 'ACTIVE') <=> (int) ($a['status'] === 'ACTIVE');
+                if ($active !== 0) {
+                    return $active;
+                }
+                $field = $a['status'] === 'ACTIVE' && $b['status'] === 'ACTIVE' ? 'current_period_end' : 'updated_at';
+                return strcmp((string) ($b[$field] ?? ''), (string) ($a[$field] ?? '')) ?: strcmp($a['id'], $b['id']);
+            });
+            $subscriptionDetails = $rows;
+        }
+
         $capabilities = [];
         foreach ((array) ($r['data']['effective_entitlements'] ?? []) as $row) {
             if (is_array($row) && ($row['entitlement_type'] ?? null) === 'CAPABILITY' && ($row['value'] ?? null) === true && is_string($row['entitlement_key'] ?? null)) {
@@ -133,6 +159,7 @@ class NexusGovernanceClient
             'applications' => array_values(array_filter((array) ($r['data']['applications_enabled'] ?? []), 'is_string')),
             'live_subscriptions' => $liveSubscriptions,
             'resource_limits' => $resourceLimits,
+            'application_subscriptions' => $subscriptionDetails,
         ];
     }
 
