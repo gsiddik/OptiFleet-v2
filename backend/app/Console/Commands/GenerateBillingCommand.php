@@ -15,7 +15,7 @@ class GenerateBillingCommand extends Command
 
     public function handle(BillingGenerationService $billing, InvoiceService $invoices): int
     {
-        $due = Subscription::query()
+        $due = Subscription::query()->locallyGoverned()
             ->whereIn('status', ['ACTIVE', 'EXPIRING'])
             ->where('next_billing_date', '<=', now()->toDateString())
             ->get();

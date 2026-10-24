@@ -131,45 +131,45 @@ Route::prefix('platform')->middleware('platform.scope')->group(function () {
     Route::delete('/tenants/{tenant}/custom-pricing/{tenantCustomPricing}', [TenantCustomPricingController::class, 'destroy'])->middleware('permission:pricing.update');
 
     Route::get('/contracts', [ContractController::class, 'index'])->middleware('permission:contract.view');
-    Route::post('/contracts', [ContractController::class, 'store'])->middleware('permission:contract.create');
-    Route::post('/tenants/{tenant}/contracts', [ContractController::class, 'storeForTenant'])->middleware('permission:contract.create');
+    Route::post('/contracts', [ContractController::class, 'store'])->middleware(['not.central', 'permission:contract.create']);
+    Route::post('/tenants/{tenant}/contracts', [ContractController::class, 'storeForTenant'])->middleware(['not.central', 'permission:contract.create']);
     Route::get('/contracts/{contract}', [ContractController::class, 'show'])->middleware('permission:contract.view');
-    Route::put('/contracts/{contract}', [ContractController::class, 'update'])->middleware('permission:contract.update');
-    Route::post('/contracts/{contract}/submit', [ContractController::class, 'submitForApproval'])->middleware('permission:contract.submit');
-    Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->middleware('permission:contract.approve');
-    Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->middleware('permission:contract.approve');
-    Route::post('/contracts/{contract}/terminate', [ContractController::class, 'terminate'])->middleware('permission:contract.terminate');
-    Route::post('/contracts/{contract}/renew', [ContractRenewalController::class, 'store'])->middleware('permission:contract.renew');
+    Route::put('/contracts/{contract}', [ContractController::class, 'update'])->middleware(['not.central', 'permission:contract.update']);
+    Route::post('/contracts/{contract}/submit', [ContractController::class, 'submitForApproval'])->middleware(['not.central', 'permission:contract.submit']);
+    Route::post('/contracts/{contract}/approve', [ContractController::class, 'approve'])->middleware(['not.central', 'permission:contract.approve']);
+    Route::post('/contracts/{contract}/reject', [ContractController::class, 'reject'])->middleware(['not.central', 'permission:contract.approve']);
+    Route::post('/contracts/{contract}/terminate', [ContractController::class, 'terminate'])->middleware(['not.central', 'permission:contract.terminate']);
+    Route::post('/contracts/{contract}/renew', [ContractRenewalController::class, 'store'])->middleware(['not.central', 'permission:contract.renew']);
 
     Route::get('/contracts/{contract}/amendments', [ContractAmendmentController::class, 'index'])->middleware('permission:contract.view');
-    Route::post('/contracts/{contract}/amendments', [ContractAmendmentController::class, 'store'])->middleware('permission:contract.amend');
-    Route::post('/contracts/{contract}/amendments/{amendment}/items', [ContractAmendmentController::class, 'addItem'])->middleware('permission:contract.amend');
-    Route::post('/contracts/{contract}/amendments/{amendment}/remove-item', [ContractAmendmentController::class, 'removeItem'])->middleware('permission:contract.amend');
-    Route::post('/contracts/{contract}/amendments/{amendment}/submit', [ContractAmendmentController::class, 'submitForApproval'])->middleware('permission:contract.amend');
-    Route::post('/contracts/{contract}/amendments/{amendment}/approve', [ContractAmendmentController::class, 'approve'])->middleware('permission:contract.approve');
-    Route::post('/contracts/{contract}/amendments/{amendment}/reject', [ContractAmendmentController::class, 'reject'])->middleware('permission:contract.approve');
+    Route::post('/contracts/{contract}/amendments', [ContractAmendmentController::class, 'store'])->middleware(['not.central', 'permission:contract.amend']);
+    Route::post('/contracts/{contract}/amendments/{amendment}/items', [ContractAmendmentController::class, 'addItem'])->middleware(['not.central', 'permission:contract.amend']);
+    Route::post('/contracts/{contract}/amendments/{amendment}/remove-item', [ContractAmendmentController::class, 'removeItem'])->middleware(['not.central', 'permission:contract.amend']);
+    Route::post('/contracts/{contract}/amendments/{amendment}/submit', [ContractAmendmentController::class, 'submitForApproval'])->middleware(['not.central', 'permission:contract.amend']);
+    Route::post('/contracts/{contract}/amendments/{amendment}/approve', [ContractAmendmentController::class, 'approve'])->middleware(['not.central', 'permission:contract.approve']);
+    Route::post('/contracts/{contract}/amendments/{amendment}/reject', [ContractAmendmentController::class, 'reject'])->middleware(['not.central', 'permission:contract.approve']);
 
     Route::get('/subscriptions', [SubscriptionController::class, 'index'])->middleware('permission:subscription.view');
     Route::get('/subscriptions/{subscription}', [SubscriptionController::class, 'show'])->middleware('permission:subscription.view');
-    Route::post('/subscriptions/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->middleware('permission:subscription.suspend');
-    Route::post('/subscriptions/{subscription}/activate', [SubscriptionController::class, 'activate'])->middleware('permission:subscription.activate');
-    Route::post('/subscriptions/{subscription}/reactivate', [SubscriptionController::class, 'reactivate'])->middleware('permission:subscription.reactivate');
+    Route::post('/subscriptions/{subscription}/suspend', [SubscriptionController::class, 'suspend'])->middleware(['not.central', 'permission:subscription.suspend']);
+    Route::post('/subscriptions/{subscription}/activate', [SubscriptionController::class, 'activate'])->middleware(['not.central', 'permission:subscription.activate']);
+    Route::post('/subscriptions/{subscription}/reactivate', [SubscriptionController::class, 'reactivate'])->middleware(['not.central', 'permission:subscription.reactivate']);
 
     Route::get('/billings', [BillingController::class, 'index'])->middleware('permission:billing.view');
     Route::get('/billings/{billing}', [BillingController::class, 'show'])->middleware('permission:billing.view');
     // Generating a billing also generates and issues its invoice, so all three actions are required.
-    Route::post('/subscriptions/{subscription}/generate-billing', [BillingController::class, 'generate'])->middleware(['permission:billing.generate', 'permission:invoice.generate', 'permission:invoice.issue']);
-    Route::post('/subscriptions/{subscription}/adjustment-invoices', [SubscriptionController::class, 'raiseAdjustment'])->middleware('permission:billing.adjust');
+    Route::post('/subscriptions/{subscription}/generate-billing', [BillingController::class, 'generate'])->middleware(['not.central', 'permission:billing.generate', 'permission:invoice.generate', 'permission:invoice.issue']);
+    Route::post('/subscriptions/{subscription}/adjustment-invoices', [SubscriptionController::class, 'raiseAdjustment'])->middleware(['not.central', 'permission:billing.adjust']);
 
     Route::get('/invoices', [InvoiceController::class, 'index'])->middleware('permission:invoice.view');
     Route::get('/invoices/{invoice}', [InvoiceController::class, 'show'])->middleware('permission:invoice.view');
-    Route::post('/invoices/{invoice}/void', [InvoiceController::class, 'void'])->middleware('permission:invoice.void');
+    Route::post('/invoices/{invoice}/void', [InvoiceController::class, 'void'])->middleware(['not.central', 'permission:invoice.void']);
     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->middleware('permission:invoice.view');
 
     Route::get('/payments', [PaymentController::class, 'index'])->middleware('permission:payment.view');
     Route::get('/payments/{payment}', [PaymentController::class, 'show'])->middleware('permission:payment.view');
-    Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->middleware('permission:payment.verify');
-    Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->middleware('permission:payment.reject');
+    Route::post('/payments/{payment}/verify', [PaymentController::class, 'verify'])->middleware(['not.central', 'permission:payment.verify']);
+    Route::post('/payments/{payment}/reject', [PaymentController::class, 'reject'])->middleware(['not.central', 'permission:payment.reject']);
     Route::get('/payments/{payment}/proofs/{proof}', [PaymentController::class, 'downloadProof'])->middleware('permission:payment.view');
 
     // Phase 6 Section 50: ETL administration is platform-scope (Section

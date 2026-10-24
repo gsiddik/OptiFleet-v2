@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Subscription extends Model
 {
+    use \App\Domain\Governance\Concerns\LocallyGoverned;
+
     use Auditable, HasUuids;
 
     public const OPERATIONAL_STATUSES = ['ACTIVE', 'EXPIRING', 'PAST_DUE', 'GRACE_PERIOD'];

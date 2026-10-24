@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Invoice extends Model
 {
+    use \App\Domain\Governance\Concerns\LocallyGoverned;
+
     use Auditable, HasUuids;
 
     protected $fillable = [

@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Contract extends Model
 {
+    use \App\Domain\Governance\Concerns\LocallyGoverned;
+
     use Auditable, HasUuids;
 
     public const ACTIVATABLE_STATUSES = ['APPROVED'];
