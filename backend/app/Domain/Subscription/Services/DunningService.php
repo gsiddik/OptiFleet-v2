@@ -33,7 +33,7 @@ class DunningService
         $overdueCount = 0;
         $pastDueCount = 0;
 
-        Invoice::query()
+        Invoice::query()->locallyGoverned()
             ->whereIn('status', ['OUTSTANDING', 'PARTIALLY_PAID'])
             ->where('due_date', '<', $asOf->toDateString())
             ->where('outstanding_amount', '>', 0)
@@ -73,7 +73,7 @@ class DunningService
         $graceCount = 0;
         $suspendedCount = 0;
 
-        Subscription::query()
+        Subscription::query()->locallyGoverned()
             ->whereIn('status', ['PAST_DUE', 'GRACE_PERIOD'])
             ->with('contract')
             ->chunkById(100, function ($subscriptions) use ($asOf, &$graceCount, &$suspendedCount) {
@@ -115,24 +115,24 @@ class DunningService
         $expiringThreshold = $asOf->copy()->addDays($expiringWindowDays)->toDateString();
         $counts = ['contracts_expiring' => 0, 'contracts_expired' => 0, 'subscriptions_expiring' => 0, 'subscriptions_expired' => 0];
 
-        Contract::query()->where('status', 'ACTIVE')
+        Contract::query()->locallyGoverned()->where('status', 'ACTIVE')
             ->where('end_date', '<=', $expiringThreshold)
             ->where('end_date', '>=', $asOf->toDateString())
             ->update(['status' => 'EXPIRING']);
-        $counts['contracts_expiring'] = Contract::query()->where('status', 'EXPIRING')->count();
+        $counts['contracts_expiring'] = Contract::query()->locallyGoverned()->where('status', 'EXPIRING')->count();
 
-        $counts['contracts_expired'] = Contract::query()
+        $counts['contracts_expired'] = Contract::query()->locallyGoverned()
             ->whereIn('status', ['ACTIVE', 'EXPIRING'])
             ->where('end_date', '<', $asOf->toDateString())
             ->update(['status' => 'EXPIRED']);
 
-        Subscription::query()->where('status', 'ACTIVE')
+        Subscription::query()->locallyGoverned()->where('status', 'ACTIVE')
             ->where('end_date', '<=', $expiringThreshold)
             ->where('end_date', '>=', $asOf->toDateString())
             ->update(['status' => 'EXPIRING']);
-        $counts['subscriptions_expiring'] = Subscription::query()->where('status', 'EXPIRING')->count();
+        $counts['subscriptions_expiring'] = Subscription::query()->locallyGoverned()->where('status', 'EXPIRING')->count();
 
-        $counts['subscriptions_expired'] = Subscription::query()
+        $counts['subscriptions_expired'] = Subscription::query()->locallyGoverned()
             ->whereIn('status', ['ACTIVE', 'EXPIRING'])
             ->where('end_date', '<', $asOf->toDateString())
             ->update(['status' => 'EXPIRED']);

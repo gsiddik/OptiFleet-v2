@@ -1222,21 +1222,21 @@ Routes with the check inside the controller (`IN_CONTROLLER`): 11 (configuration
 | Method | Path | Permission | Module | Gate | Notes |
 |---|---|---|---|---|---|
 | GET | `platform/contracts` | `contract.view` | - | platform session + permission | - |
-| POST | `platform/contracts` | `contract.create` | - | platform session + permission | - |
+| POST | `platform/contracts` | `contract.create` | - | platform session + permission | `not.central` |
 | GET | `platform/contracts/{contract}` | `contract.view` | - | platform session + permission | - |
-| PUT | `platform/contracts/{contract}` | `contract.update` | - | platform session + permission | - |
+| PUT | `platform/contracts/{contract}` | `contract.update` | - | platform session + permission | `not.central` |
 | GET | `platform/contracts/{contract}/amendments` | `contract.view` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/amendments` | `contract.amend` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/amendments/{amendment}/approve` | `contract.approve` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/amendments/{amendment}/items` | `contract.amend` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/amendments/{amendment}/reject` | `contract.approve` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/amendments/{amendment}/remove-item` | `contract.amend` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/amendments/{amendment}/submit` | `contract.amend` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/approve` | `contract.approve` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/reject` | `contract.approve` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/renew` | `contract.renew` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/submit` | `contract.submit` | - | platform session + permission | - |
-| POST | `platform/contracts/{contract}/terminate` | `contract.terminate` | - | platform session + permission | - |
+| POST | `platform/contracts/{contract}/amendments` | `contract.amend` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/amendments/{amendment}/approve` | `contract.approve` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/amendments/{amendment}/items` | `contract.amend` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/amendments/{amendment}/reject` | `contract.approve` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/amendments/{amendment}/remove-item` | `contract.amend` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/amendments/{amendment}/submit` | `contract.amend` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/approve` | `contract.approve` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/reject` | `contract.approve` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/renew` | `contract.renew` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/submit` | `contract.submit` | - | platform session + permission | `not.central` |
+| POST | `platform/contracts/{contract}/terminate` | `contract.terminate` | - | platform session + permission | `not.central` |
 
 ## platform/dashboard (1)
 
@@ -1265,7 +1265,7 @@ Routes with the check inside the controller (`IN_CONTROLLER`): 11 (configuration
 | GET | `platform/invoices` | `invoice.view` | - | platform session + permission | - |
 | GET | `platform/invoices/{invoice}` | `invoice.view` | - | platform session + permission | - |
 | GET | `platform/invoices/{invoice}/pdf` | `invoice.view` | - | platform session + permission | - |
-| POST | `platform/invoices/{invoice}/void` | `invoice.void` | - | platform session + permission | - |
+| POST | `platform/invoices/{invoice}/void` | `invoice.void` | - | platform session + permission | `not.central` |
 
 ## platform/modules (7)
 
@@ -1286,8 +1286,8 @@ Routes with the check inside the controller (`IN_CONTROLLER`): 11 (configuration
 | GET | `platform/payments` | `payment.view` | - | platform session + permission | - |
 | GET | `platform/payments/{payment}` | `payment.view` | - | platform session + permission | - |
 | GET | `platform/payments/{payment}/proofs/{proof}` | `payment.view` | - | platform session + permission | - |
-| POST | `platform/payments/{payment}/reject` | `payment.reject` | - | platform session + permission | - |
-| POST | `platform/payments/{payment}/verify` | `payment.verify` | - | platform session + permission | - |
+| POST | `platform/payments/{payment}/reject` | `payment.reject` | - | platform session + permission | `not.central` |
+| POST | `platform/payments/{payment}/verify` | `payment.verify` | - | platform session + permission | `not.central` |
 
 ## platform/permissions (1)
 
@@ -1332,11 +1332,11 @@ Routes with the check inside the controller (`IN_CONTROLLER`): 11 (configuration
 |---|---|---|---|---|---|
 | GET | `platform/subscriptions` | `subscription.view` | - | platform session + permission | - |
 | GET | `platform/subscriptions/{subscription}` | `subscription.view` | - | platform session + permission | - |
-| POST | `platform/subscriptions/{subscription}/activate` | `subscription.activate` | - | platform session + permission | - |
-| POST | `platform/subscriptions/{subscription}/adjustment-invoices` | `billing.adjust` | - | platform session + permission | - |
-| POST | `platform/subscriptions/{subscription}/generate-billing` | `billing.generate` | - | platform session + permission | - |
-| POST | `platform/subscriptions/{subscription}/reactivate` | `subscription.reactivate` | - | platform session + permission | - |
-| POST | `platform/subscriptions/{subscription}/suspend` | `subscription.suspend` | - | platform session + permission | - |
+| POST | `platform/subscriptions/{subscription}/activate` | `subscription.activate` | - | platform session + permission | `not.central` |
+| POST | `platform/subscriptions/{subscription}/adjustment-invoices` | `billing.adjust` | - | platform session + permission | `not.central` |
+| POST | `platform/subscriptions/{subscription}/generate-billing` | `billing.generate` | - | platform session + permission | `not.central` |
+| POST | `platform/subscriptions/{subscription}/reactivate` | `subscription.reactivate` | - | platform session + permission | `not.central` |
+| POST | `platform/subscriptions/{subscription}/suspend` | `subscription.suspend` | - | platform session + permission | `not.central` |
 
 ## platform/tenants (19)
 
@@ -1349,7 +1349,7 @@ Routes with the check inside the controller (`IN_CONTROLLER`): 11 (configuration
 | POST | `platform/tenants/{tenant}/activate` | `tenant.activate` | - | platform session + permission | - |
 | GET | `platform/tenants/{tenant}/capacity-limits` | `entitlement.view` | - | platform session + permission | - |
 | PUT | `platform/tenants/{tenant}/capacity-limits` | `entitlement.manage` | - | platform session + permission | - |
-| POST | `platform/tenants/{tenant}/contracts` | `contract.create` | - | platform session + permission | - |
+| POST | `platform/tenants/{tenant}/contracts` | `contract.create` | - | platform session + permission | `not.central` |
 | GET | `platform/tenants/{tenant}/custom-pricing` | `pricing.view` | - | platform session + permission | - |
 | POST | `platform/tenants/{tenant}/custom-pricing` | `pricing.update` | - | platform session + permission | - |
 | DELETE | `platform/tenants/{tenant}/custom-pricing/{tenantCustomPricing}` | `pricing.update` | - | platform session + permission | - |
