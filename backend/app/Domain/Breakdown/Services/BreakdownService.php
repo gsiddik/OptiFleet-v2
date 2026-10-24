@@ -6,6 +6,7 @@ use App\Domain\Breakdown\Models\Breakdown;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\Notification\Services\NotificationDispatchService;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\VehicleAvailabilityService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use Illuminate\Support\Facades\DB;
 
@@ -44,7 +45,7 @@ class BreakdownService
                 'status' => 'REPORTED',
             ]));
 
-            $vehicle->update(['status' => 'BREAKDOWN', 'operational_status' => 'ON_HOLD']);
+            app(VehicleAvailabilityService::class)->change($vehicle, ['status' => 'BREAKDOWN', 'operational_status' => 'ON_HOLD']);
 
             $this->notifications->dispatchEvent('breakdown.reported', $vehicle->tenant_id, [
                 'breakdown' => ['severity' => $breakdown->severity, 'location' => $breakdown->location, 'description' => $breakdown->description],
@@ -78,7 +79,7 @@ class BreakdownService
             $breakdown->update($attributes);
 
             if ($to === 'RESOLVED') {
-                Vehicle::query()->where('id', $breakdown->vehicle_id)->update(['status' => 'ACTIVE', 'operational_status' => 'AVAILABLE']);
+                app(VehicleAvailabilityService::class)->change($breakdown->vehicle_id, ['status' => 'ACTIVE', 'operational_status' => 'AVAILABLE']);
             }
 
             return $breakdown->fresh();
