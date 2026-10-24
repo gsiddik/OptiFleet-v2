@@ -8,6 +8,7 @@ use App\Domain\MaintenancePolicy\Services\MaintenanceScheduleService;
 use App\Domain\MaintenanceRequest\Models\MaintenanceRequest;
 use App\Domain\MaintenanceRequest\Services\MaintenanceRequestService;
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\VehicleAvailabilityService;
 use App\Domain\Vehicle\Services\OdometerService;
 use App\Domain\Workflow\Services\WorkflowEngine;
 use App\Domain\WorkOrder\Models\WorkOrder;
@@ -225,7 +226,7 @@ class WorkOrderService
     {
         $updated = $this->transitions->transition($workOrder, 'IN_PROGRESS');
 
-        Vehicle::query()->where('id', $updated->vehicle_id)->update([
+        app(VehicleAvailabilityService::class)->change($updated->vehicle_id, [
             'status' => 'IN_MAINTENANCE',
             'operational_status' => 'ON_HOLD',
         ]);

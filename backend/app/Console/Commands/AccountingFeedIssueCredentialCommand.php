@@ -11,7 +11,7 @@ use Illuminate\Support\Str;
 
 class AccountingFeedIssueCredentialCommand extends Command
 {
-    protected $signature = 'accounting-feed:issue-credential {tenant : Tenant id or code} {--name=OptiEntry : Label of the credential} {--expires-in-days= : Optional lifetime in days} {--by= : Who issues it (kept in the audit trail)}';
+    protected $signature = 'accounting-feed:issue-credential {tenant : Tenant id or code} {--name=OptiEntry : Label of the credential} {--expires-in-days= : Optional lifetime in days} {--by= : Who issues it (kept in the audit trail)} {--availability : Issue a vehicle availability credential (scope fleet.availability.read) for the transport system instead of an accounting feed credential} {--consumer= : Consumer application code (default optiaccounting, or optideli with --availability)}';
 
     protected $description = 'Issue a read-only accounting feed credential (scope accounting.feed.read) for one tenant, paired to its OptiNexus tenant; the token is shown once';
 
@@ -33,7 +33,13 @@ class AccountingFeedIssueCredentialCommand extends Command
 
         $days = $this->option('expires-in-days');
         $by = trim((string) $this->option('by')) ?: null;
-        [$credential, $token] = AccountingFeedCredential::issue($tenant, (string) $this->option('name'), $days ? now()->addDays((int) $days) : null, $by);
+        $availability = (bool) $this->option('availability');
+        $name = $this->option('name') === 'OptiEntry' && $availability ? 'OptiDeli' : (string) $this->option('name');
+        $consumer = trim((string) $this->option('consumer')) ?: ($availability ? (string) config('optinexus.availability.consumer_application') : null);
+        [$credential, $token] = AccountingFeedCredential::issue(
+            $tenant, $name, $days ? now()->addDays((int) $days) : null, $by, null,
+            $availability ? AccountingFeedCredential::SCOPE_AVAILABILITY : null, $consumer,
+        );
         $audit->log('accounting_feed_credential', $credential->id, 'accounting_feed.credential_issued', null, [
             'name' => $credential->name, 'prefix' => $credential->token_prefix, 'nexus_tenant_id' => $credential->nexus_tenant_id,
             'consumer_application' => $credential->consumer_application, 'expires_at' => $credential->expires_at?->toIso8601String(), 'by' => $by,

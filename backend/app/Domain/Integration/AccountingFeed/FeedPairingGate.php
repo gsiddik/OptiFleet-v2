@@ -70,8 +70,11 @@ class FeedPairingGate
         }
 
         $capabilities = $commercial['capabilities'] ?? [];
-        $required = (array) config('optinexus.feed.consumer_capabilities');
-        if ($ownCapability = config('optinexus.feed.own_capability')) {
+        // The accounting feed sells connector capabilities; vehicle availability for a transport system needs only the two subscriptions.
+        $required = $credential->hasScope(AccountingFeedCredential::SCOPE_AVAILABILITY)
+            ? (array) config('optinexus.availability.consumer_capabilities')
+            : (array) config('optinexus.feed.consumer_capabilities');
+        if (! $credential->hasScope(AccountingFeedCredential::SCOPE_AVAILABILITY) && $ownCapability = config('optinexus.feed.own_capability')) {
             $required[] = (string) $ownCapability;
         }
         $missing = array_values(array_diff($required, $capabilities));

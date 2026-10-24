@@ -84,6 +84,16 @@ return [
     ],
 
     /*
+    | Vehicle availability for a transport system (OptiDeli, wave 3): `GET /api/v1/integration/availability`, read with the same kind
+    | of tenant-bound machine credential as the accounting feed but its own scope (fleet.availability.read) and the same pairing
+    | check (both products subscribed in OptiNexus). `consumer_capabilities` are held by the consumer in OptiNexus; empty = none needed.
+    */
+    'availability' => [
+        'consumer_application' => env('OPTINEXUS_AVAILABILITY_CONSUMER_APPLICATION', 'optideli'),
+        'consumer_capabilities' => array_values(array_filter(array_map('trim', explode(',', (string) env('OPTINEXUS_AVAILABILITY_CONSUMER_CAPABILITIES', ''))))),
+    ],
+
+    /*
     | Telematics odometer feed (audit A10), read through the OptiNexus API Gateway. A tenant is synced only when ALL hold:
     | OptiNexus is enabled, the tenant is ACTIVE and linked, the tenant switched the feed on (tenants.telematics_activated_at), and
     | OptiNexus says the tenant has a live subscription that includes the telematics application (commercial context, cached at most

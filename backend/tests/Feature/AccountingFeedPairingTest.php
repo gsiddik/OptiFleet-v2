@@ -6,6 +6,7 @@ use App\Domain\Audit\Models\AuditLog;
 use App\Domain\Integration\AccountingFeed\AccountingFeedCredential;
 use App\Domain\Integration\AccountingFeed\AccountingFeedEvent;
 use App\Domain\Integration\Models\IntegrationOutboxEvent;
+use App\Domain\Vehicle\Services\VehicleAvailabilityService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -205,7 +206,8 @@ class AccountingFeedPairingTest extends TestCase
         $invoiceId = $this->recordInvoice($woId, $memoId, $token);
 
         $this->assertNotNull($invoiceId, 'the invoice was recorded');
-        $this->assertSame(2, IntegrationOutboxEvent::query()->where('tenant_id', $tenant->id)->count(), 'the outbox kept the facts');
+        // The workshop flow also announces vehicle availability changes; only the financial facts matter here.
+        $this->assertSame(2, IntegrationOutboxEvent::query()->where('tenant_id', $tenant->id)->where('event_type', '!=', VehicleAvailabilityService::EVENT_TYPE)->count(), 'the outbox kept the facts');
         $this->assertSame([1, 2], AccountingFeedEvent::query()->where('tenant_id', $tenant->id)->orderBy('sequence')->pluck('sequence')->all(), 'and they are projected, waiting in the feed');
         $this->assertSame(1, $this->nexus->callsTo('commercial-context'), 'recording and projecting asked OptiNexus nothing (only the one feed pull did)');
 

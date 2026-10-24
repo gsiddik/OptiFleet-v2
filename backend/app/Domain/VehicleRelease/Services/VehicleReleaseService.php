@@ -3,6 +3,7 @@
 namespace App\Domain\VehicleRelease\Services;
 
 use App\Domain\Vehicle\Models\Vehicle;
+use App\Domain\Vehicle\Services\VehicleAvailabilityService;
 use App\Domain\Vehicle\Services\OdometerService;
 use App\Domain\VehicleRelease\Models\VehicleRelease;
 use App\Domain\WorkOrder\Models\WorkOrder;
@@ -59,7 +60,7 @@ class VehicleReleaseService
             }
 
             $this->transitions->transition($workOrder, 'CLOSED');
-            $vehicle->update(['status' => 'ACTIVE', 'operational_status' => 'AVAILABLE']);
+            app(VehicleAvailabilityService::class)->change($vehicle, ['status' => 'ACTIVE', 'operational_status' => 'AVAILABLE']);
             if (isset($attributes['release_odometer'])) {
                 $this->odometer->raiseFromOperation($vehicle, $attributes['release_odometer'], OdometerService::SOURCE_VEHICLE_RELEASE, 'vehicle_release', $release->id, now(), $releasedByUserId);
             }

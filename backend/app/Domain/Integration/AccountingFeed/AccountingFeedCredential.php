@@ -18,6 +18,9 @@ class AccountingFeedCredential extends Model
 
     public const SCOPE_READ = 'accounting.feed.read';
 
+    /** Read-only vehicle availability for a transport system (OptiDeli); same credential kind, never valid on the accounting feed. */
+    public const SCOPE_AVAILABILITY = 'fleet.availability.read';
+
     public const TOKEN_PREFIX = 'ofaf_';
 
     protected $fillable = [
@@ -36,19 +39,22 @@ class AccountingFeedCredential extends Model
      *
      * @return array{0: self, 1: string} the stored credential and the plain token (not recoverable later)
      */
-    public static function issue(Tenant $tenant, string $name, ?\DateTimeInterface $expiresAt = null, ?string $issuedBy = null, ?self $replaces = null): array
+    public static function issue(Tenant $tenant, string $name, ?\DateTimeInterface $expiresAt = null, ?string $issuedBy = null, ?self $replaces = null, ?string $scope = null, ?string $consumerApplication = null): array
     {
         $plain = self::TOKEN_PREFIX.Str::random(48);
+        // A rotation keeps what the credential was for; a new one is the accounting feed unless another scope is asked for.
+        $scope ??= $replaces?->scopes[0] ?? self::SCOPE_READ;
+        $consumerApplication ??= $replaces?->consumer_application;
 
         $credential = self::query()->create([
             'tenant_id' => $tenant->id,
             'nexus_tenant_id' => $tenant->optinexus_tenant_id,
-            'consumer_application' => $tenant->optinexus_tenant_id ? (string) config('optinexus.feed.consumer_application') : null,
+            'consumer_application' => $tenant->optinexus_tenant_id ? ($consumerApplication ?: (string) config('optinexus.feed.consumer_application')) : null,
             'name' => $name,
             'issued_by' => $issuedBy,
             'token_prefix' => substr($plain, 0, 12),
             'token_hash' => self::hash($plain),
-            'scopes' => [self::SCOPE_READ],
+            'scopes' => [$scope],
             'expires_at' => $expiresAt,
             'rotated_from_id' => $replaces?->id,
         ]);
