@@ -354,7 +354,7 @@ ownership of a mounted volume when started as root. Never use `chmod -R 777`.
 - PostgreSQL, Redis and MongoDB are not published on the host (`docker compose exec postgres psql -U optifleet`).
 - Ports are published on `127.0.0.1` only (`BIND_ADDRESS`). Upgrading an installation from the former compose file: set `DB_PASSWORD` to the
   password already in use (the former default was `optifleet`); the project name and volumes are unchanged, so no data moves. To run next
-  to OptiNexus, OptiEntry and OptiRadar use `deploy/ecosystem` in the OptiNexus repository.
+  to OptiNexus, OptiEntry and OptiRadar use `deploy/optiecosystem` (OptiEcosystem, Podman Desktop guide in Indonesian) in the OptiNexus repository.
 
 > Note: this sandboxed development session could not execute `docker build`
 > because its network egress policy blocks the Docker Hub CDN
