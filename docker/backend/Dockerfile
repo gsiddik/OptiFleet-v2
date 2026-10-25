@@ -48,7 +48,7 @@ COPY backend/composer.json backend/composer.lock ./
 RUN composer install --no-dev --no-scripts --no-autoloader --no-interaction ${COMPOSER_INSTALL_FLAGS}
 
 COPY backend/. .
-RUN composer dump-autoload --optimize --no-dev --no-interaction
+RUN mkdir -p bootstrap/cache && composer dump-autoload --optimize --no-dev --no-interaction
 
 COPY docker/backend/entrypoint.sh /usr/local/bin/entrypoint.sh
 
