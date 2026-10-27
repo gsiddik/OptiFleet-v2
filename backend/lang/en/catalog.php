@@ -6131,6 +6131,7 @@ return [
     'vehicle.fields.purchaseYear' => 'Purchase Year',
     'vehicle.fields.seats' => 'Seats',
     'vehicle.fields.suspension' => 'Suspension',
+    'vehicle.fields.telematicsFromOptiradar' => 'Tracking device (OptiRadar)',
     'vehicle.fields.toBranch' => 'To Branch',
     'vehicle.fields.transmission' => 'Transmission',
     'vehicle.fields.transportFromOptideli' => 'Transport data (OptiDeli)',

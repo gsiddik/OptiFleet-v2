@@ -86,6 +86,8 @@ class VehicleController extends Controller
         $vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']);
         // What OptiDeli keeps about the vehicle (transport type, capacity, box size), read-only here.
         $vehicle->setAttribute('transport_profile', DB::table('vehicle_transport_profiles')->where('vehicle_id', $vehicle->id)->first());
+        // Which tracking device OptiRadar reports for it.
+        $vehicle->setAttribute('telematics_profile', DB::table('vehicle_telematics_profiles')->where('vehicle_id', $vehicle->id)->first());
 
         return $this->ok($vehicle);
     }

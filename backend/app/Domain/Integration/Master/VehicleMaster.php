@@ -21,6 +21,8 @@ final class VehicleMaster
 
     public const RECEIVED = 'optideli.vehicle.upserted';
 
+    public const RECEIVED_TELEMATICS = 'optiradar.vehicle.upserted';
+
     public function __construct(private readonly IntegrationOutboxService $outbox) {}
 
     /** Queues the vehicle's asset data for the other platforms. Does nothing for an unlinked tenant or a draft. Call inside the caller's transaction. */
@@ -57,29 +59,39 @@ final class VehicleMaster
         return $count;
     }
 
-    /** @return 'applied'|'created'|'stale'|'ignored' */
+    /**
+     * Applies what another platform owns about a vehicle: the transport group of OptiDeli, the telematics group of OptiRadar.
+     *
+     * @return 'applied'|'created'|'stale'|'ignored'
+     */
     public function apply(array $event): string
     {
+        $type = $event['event_type'] ?? null;
+        $source = match ($type) {
+            self::RECEIVED => ['system' => 'optideli', 'source' => 'OPTIDELI', 'group' => 'transport'],
+            self::RECEIVED_TELEMATICS => ['system' => 'optiradar', 'source' => 'OPTIRADAR', 'group' => 'telematics'],
+            default => null,
+        };
         $payload = $event['data']['payload'] ?? null;
-        if (($event['event_type'] ?? null) !== self::RECEIVED || ($event['source_system'] ?? null) !== 'optideli' || ! is_array($payload)) {
+        if ($source === null || ($event['source_system'] ?? null) !== $source['system'] || ! is_array($payload)) {
             return 'ignored';
         }
         $plate = trim((string) ($payload['registration_number'] ?? ''));
         $key = self::key($plate);
         $version = $payload['version'] ?? null;
-        $transport = $payload['transport'] ?? null;
+        $group = $payload[$source['group']] ?? null;
         $tenant = Tenant::query()->where('optinexus_tenant_id', (string) ($event['tenant_id'] ?? ''))->first();
-        if ($key === '' || ! is_int($version) || ! is_array($transport) || ! $tenant) {
+        if ($key === '' || ! is_int($version) || ! is_array($group) || ! $tenant) {
             return 'ignored';
         }
 
-        return DB::transaction(function () use ($tenant, $key, $plate, $version, $transport) {
+        return DB::transaction(function () use ($tenant, $key, $plate, $version, $group, $source) {
             DB::table('tenants')->where('id', $tenant->id)->lockForUpdate()->first();
-            $seen = DB::table('master_versions')->where(['tenant_id' => $tenant->id, 'registration_key' => $key, 'source' => 'OPTIDELI'])->value('version');
+            $seen = DB::table('master_versions')->where(['tenant_id' => $tenant->id, 'registration_key' => $key, 'source' => $source['source']])->value('version');
             if ($seen !== null && $seen >= $version) {
                 return 'stale';
             }
-            DB::table('master_versions')->upsert([['tenant_id' => $tenant->id, 'registration_key' => $key, 'source' => 'OPTIDELI', 'version' => $version]], ['tenant_id', 'registration_key', 'source'], ['version']);
+            DB::table('master_versions')->upsert([['tenant_id' => $tenant->id, 'registration_key' => $key, 'source' => $source['source'], 'version' => $version]], ['tenant_id', 'registration_key', 'source'], ['version']);
 
             $vehicle = DB::table('vehicles')->where('tenant_id', $tenant->id)
                 ->whereRaw("regexp_replace(upper(registration_number), '[^A-Z0-9]', '', 'g') = ?", [$key])->first();
@@ -91,19 +103,25 @@ final class VehicleMaster
                 $id = (string) Str::uuid();
                 DB::table('vehicles')->insert([
                     'id' => $id, 'tenant_id' => $tenant->id, 'registration_number' => $plate, 'status' => 'DRAFT', 'operational_status' => 'AVAILABLE',
-                    'source_application' => 'OPTIDELI', 'created_at' => now(), 'updated_at' => now(),
+                    'source_application' => $source['source'], 'created_at' => now(), 'updated_at' => now(),
                 ]);
                 $vehicle = (object) ['id' => $id];
                 $result = 'created';
             }
 
-            $values = [
-                'carrier_type_code' => $this->text($transport['carrier_type_code'] ?? null, 80),
-                'capacity_g' => $this->number($transport['capacity_g'] ?? null), 'length_mm' => $this->number($transport['length_mm'] ?? null),
-                'width_mm' => $this->number($transport['width_mm'] ?? null), 'height_mm' => $this->number($transport['height_mm'] ?? null),
-                'source_version' => $version, 'updated_at' => now(),
-            ];
-            DB::table('vehicle_transport_profiles')->upsert(
+            if ($source['group'] === 'transport') {
+                $table = 'vehicle_transport_profiles';
+                $values = [
+                    'carrier_type_code' => $this->text($group['carrier_type_code'] ?? null, 80),
+                    'capacity_g' => $this->number($group['capacity_g'] ?? null), 'length_mm' => $this->number($group['length_mm'] ?? null),
+                    'width_mm' => $this->number($group['width_mm'] ?? null), 'height_mm' => $this->number($group['height_mm'] ?? null),
+                ];
+            } else {
+                $table = 'vehicle_telematics_profiles';
+                $values = ['device_ref' => $this->text($group['device_ref'] ?? null, 120), 'device_name' => $this->text($group['device_name'] ?? null, 150)];
+            }
+            $values += ['source_version' => $version, 'updated_at' => now()];
+            DB::table($table)->upsert(
                 [$values + ['id' => (string) Str::uuid(), 'tenant_id' => $tenant->id, 'vehicle_id' => $vehicle->id, 'created_at' => now()]],
                 ['tenant_id', 'vehicle_id'], array_keys($values),
             );

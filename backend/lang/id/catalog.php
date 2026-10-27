@@ -6131,6 +6131,7 @@ return [
     'vehicle.fields.purchaseYear' => 'Tahun Pembelian',
     'vehicle.fields.seats' => 'Kursi',
     'vehicle.fields.suspension' => 'Suspensi',
+    'vehicle.fields.telematicsFromOptiradar' => 'Perangkat pelacak (OptiRadar)',
     'vehicle.fields.toBranch' => 'Ke Cabang',
     'vehicle.fields.transmission' => 'Transmisi',
     'vehicle.fields.transportFromOptideli' => 'Data angkutan (OptiDeli)',

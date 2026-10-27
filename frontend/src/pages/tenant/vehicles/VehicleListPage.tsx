@@ -114,6 +114,7 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
   const [vehicleBrandId, setVehicleBrandId] = useState('');
   const [vehicleModelId, setVehicleModelId] = useState('');
   const [transport, setTransport] = useState<TransportProfile | null>(null);
+  const [device, setDevice] = useState<{ device_ref: string | null; device_name: string | null } | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -122,7 +123,14 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
     apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data));
     apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
     apiClient.get('/app/vehicle-brands', { params: { per_page: 100 } }).then((res) => setVehicleBrands(res.data.data)).catch(() => setVehicleBrands([]));
-    apiClient.get(`/app/vehicles/${vehicle.id}`).then((res) => setTransport(res.data.data.transport_profile ?? null)).catch(() => setTransport(null));
+    apiClient.get(`/app/vehicles/${vehicle.id}`).then((res) => {
+        setTransport(res.data.data.transport_profile ?? null);
+        setDevice(res.data.data.telematics_profile ?? null);
+      })
+      .catch(() => {
+        setTransport(null);
+        setDevice(null);
+      });
   }, [vehicle.id]);
 
   useEffect(() => {
@@ -171,6 +179,11 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
           ]
             .filter(Boolean)
             .join(' · ')}
+        </p>
+      )}
+      {device && (device.device_ref || device.device_name) && (
+        <p>
+          <strong>{t('vehicle.fields.telematicsFromOptiradar')}:</strong> {[device.device_name, device.device_ref].filter(Boolean).join(' · ')}
         </p>
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

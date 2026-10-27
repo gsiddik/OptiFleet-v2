@@ -1418,3 +1418,4 @@ vehicle.actions.completeDraftSubmit,Complete Vehicle,Lengkapi Kendaraan,Complete
 vehicle.modals.completeDraft,Complete Draft Vehicle,Lengkapi Kendaraan Draf,Draft vehicle created from another platform,vehicle,Master data sync
 vehicle.help.draftIntro,"This vehicle was created automatically from another platform. Choose its branch, category, brand and model to make it an ordinary vehicle.","Kendaraan ini dibuat otomatis dari platform lain. Pilih cabang, kategori, merek, dan model agar menjadi kendaraan biasa.",Draft vehicle created from another platform,vehicle,Master data sync
 vehicle.fields.transportFromOptideli,Transport data (OptiDeli),Data angkutan (OptiDeli),Read-only transport profile kept by OptiDeli,vehicle,Master data sync
+vehicle.fields.telematicsFromOptiradar,Tracking device (OptiRadar),Perangkat pelacak (OptiRadar),Read-only telematics profile kept by OptiRadar,vehicle,Master data sync

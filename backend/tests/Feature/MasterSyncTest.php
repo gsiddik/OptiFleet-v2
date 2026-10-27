@@ -194,4 +194,42 @@ class MasterSyncTest extends TestCase
         $this->deliver($this->event($tenant->optinexus_tenant_id, 1))->assertStatus(202)->assertJson(['result' => 'ignored']);
         $this->assertSame(0, DB::table('vehicle_transport_profiles')->where('tenant_id', $tenant->id)->count());
     }
+
+    private function radarEvent(string $nexusTenant, int $version, string $plate = 'b-1234-xy', array $telematics = ['device_ref' => 'IMEI10', 'device_name' => 'Truck 10']): array
+    {
+        return [
+            'event_id' => (string) Str::uuid(), 'event_type' => 'optiradar.vehicle.upserted', 'schema_version' => '1', 'source_system' => 'optiradar',
+            'tenant_id' => $nexusTenant, 'occurred_at' => now()->toIso8601String(), 'correlation_id' => (string) Str::uuid(),
+            'data' => ['aggregate_type' => 'vehicle', 'aggregate_id' => '10', 'correlation' => [], 'payload' => [
+                'key' => 'B1234XY', 'registration_number' => $plate, 'version' => $version, 'changed_at' => now()->toIso8601String(), 'telematics' => $telematics,
+            ]],
+        ];
+    }
+
+    public function test_a_device_of_optiradar_creates_a_draft_or_attaches_to_the_vehicle_and_never_touches_the_asset(): void
+    {
+        [$tenant, $branch, $category] = $this->tenant();
+
+        $this->deliver($this->radarEvent($tenant->optinexus_tenant_id, 1, 'D 8101 AH'))->assertStatus(202)->assertJson(['result' => 'created']);
+        $draft = DB::table('vehicles')->where('tenant_id', $tenant->id)->sole();
+        $this->assertSame(['DRAFT', 'OPTIRADAR', null], [$draft->status, $draft->source_application, $draft->brand]);
+        $this->assertSame('IMEI10', DB::table('vehicle_telematics_profiles')->where('vehicle_id', $draft->id)->value('device_ref'));
+        $this->assertCount(0, $this->published($tenant->id), 'what came from another platform is not sent back');
+
+        $known = $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'B 1234 XY', 'brand' => 'Hino', 'model' => 'Dutro']);
+        $this->deliver($this->radarEvent($tenant->optinexus_tenant_id, 2))->assertJson(['result' => 'applied']);
+        $this->deliver($this->radarEvent($tenant->optinexus_tenant_id, 1, telematics: ['device_ref' => 'OLD']))->assertJson(['result' => 'stale']);
+        $this->assertSame(['Hino', 'Dutro', 'ACTIVE'], [$known->fresh()->brand, $known->fresh()->model, $known->fresh()->status]);
+        $this->assertSame('IMEI10', DB::table('vehicle_telematics_profiles')->where('vehicle_id', $known->id)->value('device_ref'));
+    }
+
+    public function test_the_producer_of_a_group_must_be_its_owner(): void
+    {
+        [$tenant] = $this->tenant();
+        $forged = $this->radarEvent($tenant->optinexus_tenant_id, 1);
+        $forged['source_system'] = 'optideli'; // OptiDeli claiming the telematics group of OptiRadar
+
+        $this->deliver($forged)->assertJson(['result' => 'ignored']);
+        $this->assertSame(0, DB::table('vehicles')->where('tenant_id', $tenant->id)->count());
+    }
 }
