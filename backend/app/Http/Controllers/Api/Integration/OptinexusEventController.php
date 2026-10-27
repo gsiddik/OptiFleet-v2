@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Integration;
 
+use App\Domain\Integration\Master\VehicleDrivers;
 use App\Domain\Integration\Master\VehicleMaster;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\JsonResponse;
@@ -15,7 +16,7 @@ use Illuminate\Http\Request;
  */
 class OptinexusEventController extends Controller
 {
-    public function receive(Request $request, VehicleMaster $master): JsonResponse
+    public function receive(Request $request, VehicleMaster $master, VehicleDrivers $drivers): JsonResponse
     {
         $secret = (string) config('optinexus.events.webhook_secret');
         $id = (string) $request->header('Opti-Webhook-Id');
@@ -35,6 +36,8 @@ class OptinexusEventController extends Controller
             return response()->json(['message' => 'Invalid body.', 'code' => 'WEBHOOK_BODY_INVALID'], 400);
         }
 
-        return response()->json(['result' => $master->apply($event)], 202);
+        $result = ($event['event_type'] ?? null) === VehicleDrivers::RECEIVED ? $drivers->apply($event) : $master->apply($event);
+
+        return response()->json(['result' => $result], 202);
     }
 }

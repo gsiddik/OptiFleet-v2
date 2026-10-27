@@ -127,6 +127,7 @@
     "issueFromWarehouse": "Keluarkan dari gudang",
     "job": "Pekerjaan",
     "jobOptional": "Pekerjaan (opsional)",
+    "lastDriver": "Pengemudi Terakhir Sebelum Perawatan",
     "lastHm": "HM Terakhir",
     "lastOdometer": "Odometer Terakhir",
     "linkToDiagnosisOptional": "Tautkan ke diagnosis (opsional)",

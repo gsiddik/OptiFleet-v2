@@ -268,6 +268,7 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/vehicles/{vehicle}/odometer', [VehicleOdometerController::class, 'show'])->middleware('permission:vehicle.view');
             Route::get('/vehicles/{vehicle}/odometer-readings', [VehicleOdometerController::class, 'index'])->middleware('permission:vehicle.view');
             Route::post('/vehicles/{vehicle}/odometer-readings', [VehicleOdometerController::class, 'store'])->middleware('permission:vehicle.update');
+            Route::get('/vehicles/{vehicle}/drivers', [VehicleController::class, 'drivers'])->middleware('permission:vehicle.view');
             Route::get('/vehicles/{vehicle}/assignments', [VehicleController::class, 'assignmentHistory'])->middleware('permission:vehicle.view');
             Route::get('/vehicles/{vehicle}/history', [VehicleController::class, 'history'])->middleware('permission:maintenance_history.view');
             // Maintenance History across every vehicle in the user's data scope (no vehicle selection needed).

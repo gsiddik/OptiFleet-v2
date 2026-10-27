@@ -510,6 +510,9 @@ function OverviewTab({ wo, onChanged }: { wo: WorkOrderItem; onChanged: () => vo
 
   const rows: [string, string][] = [
     [tt('common.fields.vehicle'), wo.vehicle?.registration_number ?? wo.vehicle_id],
+    ...(wo.last_driver
+      ? ([[tt('workOrder.fields.lastDriver'), `${wo.last_driver.driver_name}${wo.last_driver.license_masked ? ` (${wo.last_driver.license_masked})` : ''} · ${formatDateTime(wo.last_driver.assigned_at)}`]] as [string, string][])
+      : []),
     [tt('common.fields.branch'), wo.branch?.name ?? '—'],
     [tt('common.fields.workshop'), wo.workshop?.name ?? '—'],
     [tt('maintenance.fields.maintenanceType'), wo.maintenance_type],

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Tenant;
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Entitlement\Services\CapacityService;
 use App\Domain\History\Services\HistoryService;
+use App\Domain\Integration\Master\VehicleDrivers;
 use App\Domain\Integration\Master\VehicleMaster;
 use App\Domain\MasterData\Models\VehicleBrand;
 use App\Domain\MasterData\Models\VehicleModel as VehicleModelMaster;
@@ -31,6 +32,7 @@ class VehicleController extends Controller
         private readonly VehicleAssignmentService $assignments,
         private readonly HistoryService $historyService,
         private readonly VehicleMaster $master,
+        private readonly VehicleDrivers $drivers,
     ) {}
 
     public function index(Request $request)
@@ -87,9 +89,20 @@ class VehicleController extends Controller
         // What OptiDeli keeps about the vehicle (transport type, capacity, box size), read-only here.
         $vehicle->setAttribute('transport_profile', DB::table('vehicle_transport_profiles')->where('vehicle_id', $vehicle->id)->first());
         // Which tracking device OptiRadar reports for it.
+        // The drivers tab exists only for a tenant that has bought OptiDeli (OptiNexus answers, the browser is not trusted).
+        $vehicle->setAttribute('driver_history_available', $this->drivers->available($vehicle->tenant_id));
         $vehicle->setAttribute('telematics_profile', DB::table('vehicle_telematics_profiles')->where('vehicle_id', $vehicle->id)->first());
 
         return $this->ok($vehicle);
+    }
+
+    /** Who drove the vehicle, as OptiDeli reports it. 404 when the tenant has not bought OptiDeli. */
+    public function drivers(Vehicle $vehicle)
+    {
+        $this->authorizeScope($vehicle);
+        abort_unless($this->drivers->available($vehicle->tenant_id), 404);
+
+        return $this->ok($this->drivers->history($vehicle));
     }
 
     public function update(UpdateVehicleRequest $request, Vehicle $vehicle, OdometerService $odometer)

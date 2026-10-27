@@ -11,7 +11,7 @@ import { useTabParam } from '../../../hooks/useTabParam';
 import type { TabDef } from '../../../utils/tabs';
 import { useWorkflowTransitions, workflowButtons } from '../../../hooks/useWorkflowTransitions';
 import { useBreadcrumbLabel } from '../../../navigation/BreadcrumbLabelContext';
-import type { HistoryEventItem, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
+import type { HistoryEventItem, VehicleDriverPeriod, VehicleAssignmentItem, VehicleDocumentItem, VehicleItem, VehicleTransferItem } from '../../../types';
 import { NumericInput } from '../../../components/NumericInput';
 import { VEHICLE_TYPES, resolveVehicleType, vehicleTypeOption } from '../tires/wheel-configuration/vehicleTypes';
 import { VehicleWheelsConfigurationTab } from '../tires/wheel-configuration/VehicleWheelsConfigurationTab';
@@ -20,7 +20,7 @@ import { DetailsWithImage, ImageContainer } from '../../../components/ImageConta
 import { formatNumber } from '../../../utils/number';
 import { labelText, t as tt, translatedRecord, withLabels } from '../../../i18n/i18n';
 
-type Tab = 'overview' | 'assignment' | 'transfer' | 'documents' | 'wheels' | 'history';
+type Tab = 'overview' | 'assignment' | 'transfer' | 'documents' | 'wheels' | 'drivers' | 'history';
 // Stable ids drive state, ?tab= and permission gating; labels are display only.
 // `wheels` keeps the existing ?tab=wheels deep links; legacy label links still resolve.
 const TABS: readonly TabDef<Tab>[] = withLabels([
@@ -29,6 +29,7 @@ const TABS: readonly TabDef<Tab>[] = withLabels([
   { id: 'transfer', label: 'Transfer', labelKey: 'vehicle.sections.transfer' },
   { id: 'documents', label: 'Documents', labelKey: 'vehicle.sections.documents' },
   { id: 'wheels', label: 'Wheels Configuration', labelKey: 'vehicle.fields.wheelsConfiguration' },
+  { id: 'drivers', label: 'Drivers', labelKey: 'vehicle.sections.drivers' },
   { id: 'history', label: 'History', labelKey: 'vehicle.sections.history' },
 ]);
 /** Tabs that need more than vehicle.view. */
@@ -57,7 +58,8 @@ export function VehicleDetailPage() {
   if (!vehicle) return <LoadingState />;
 
   // A deep-linked tab the user may not see (e.g. ?tab=wheels without tire.view) falls back to Overview.
-  const permittedTab = (t: Tab) => !TAB_PERMISSION[t] || hasPermission(TAB_PERMISSION[t]);
+  // The drivers tab exists only for a tenant that has bought OptiDeli (the backend decides and says so on the vehicle).
+  const permittedTab = (t: Tab) => (t !== 'drivers' || vehicle.driver_history_available === true) && (!TAB_PERMISSION[t] || hasPermission(TAB_PERMISSION[t]));
   const activeTab: Tab = permittedTab(tab) ? tab : 'overview';
 
   return (
@@ -103,6 +105,7 @@ export function VehicleDetailPage() {
       {activeTab === 'transfer' && <TransferTab vehicle={vehicle} onChanged={load} />}
       {activeTab === 'documents' && <DocumentsTab vehicle={vehicle} />}
       {activeTab === 'wheels' && <VehicleWheelsConfigurationTab vehicleId={vehicle.id} />}
+      {activeTab === 'drivers' && <DriversTab vehicleId={vehicle.id} />}
       {activeTab === 'history' && <HistoryTab vehicleId={vehicle.id} />}
     </div>
   );
@@ -889,6 +892,57 @@ function DocumentsTab({ vehicle }: { vehicle: VehicleItem }) {
             {missingDate && <span style={{ fontSize: 12, color: '#b45309' }}>{tt('vehicle.help.fillDateEveryCheckedBoxBefore')}</span>}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+function DriversTab({ vehicleId }: { vehicleId: string }) {
+  const [periods, setPeriods] = useState<VehicleDriverPeriod[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    apiClient
+      .get(`/app/vehicles/${vehicleId}/drivers`)
+      .then((res) => setPeriods(res.data.data))
+      .catch((err) => setError(extractApiError(err).message));
+  }, [vehicleId]);
+
+  if (error) return <ErrorState message={error} />;
+  if (!periods) return <LoadingState />;
+
+  return (
+    <div className="card">
+      <p style={{ marginTop: 0, color: '#6b7280', fontSize: 13 }}>{tt('vehicle.help.driversNote')}</p>
+      {periods.length === 0 ? (
+        <p style={{ color: '#9ca3af', fontSize: 13 }}>{tt('vehicle.empty.noDriversYet')}</p>
+      ) : (
+        <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+          <thead>
+            <tr style={{ textAlign: 'left', color: '#6b7280' }}>
+              <th>{tt('vehicle.drivers.driver')}</th>
+              <th>{tt('vehicle.drivers.phone')}</th>
+              <th>{tt('vehicle.drivers.license')}</th>
+              <th>{tt('vehicle.drivers.firstUsed')}</th>
+              <th>{tt('vehicle.drivers.lastUsed')}</th>
+              <th>{tt('vehicle.drivers.trips')}</th>
+              <th>{tt('vehicle.drivers.reference')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {periods.map((p) => (
+              <tr key={`${p.first_assigned_at}-${p.driver_name}`} style={{ borderTop: '1px solid #f3f4f6' }}>
+                <td>{p.driver_name}</td>
+                <td>{p.driver_phone ?? '—'}</td>
+                <td>{p.license_masked ?? '—'}</td>
+                <td>{formatDateTime(p.first_assigned_at)}</td>
+                <td>{formatDateTime(p.last_assigned_at)}</td>
+                <td>{formatNumber(p.assignments)}</td>
+                <td>{p.last_reference ?? '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

@@ -21,9 +21,19 @@
     "vehicleTax": "Pajak Kendaraan",
     "warranty": "Garansi"
   },
+  "drivers": {
+    "driver": "Pengemudi",
+    "firstUsed": "Sejak",
+    "lastUsed": "Terakhir Dipakai",
+    "license": "SIM",
+    "phone": "Telepon",
+    "reference": "Referensi Terakhir",
+    "trips": "Kali"
+  },
   "empty": {
     "noAssignmentHistoryYet": "Belum ada riwayat penugasan.",
     "noDocumentsUploaded": "Belum ada dokumen yang diunggah.",
+    "noDriversYet": "Belum ada pengemudi yang dilaporkan untuk kendaraan ini.",
     "noHistoryEventsVehicle": "Tidak ada riwayat untuk kendaraan ini.",
     "noTransfersYet": "Belum ada transfer.",
     "noVehiclesFound": "Tidak ada kendaraan.",
@@ -74,6 +84,7 @@
   },
   "help": {
     "draftIntro": "Kendaraan ini dibuat otomatis dari platform lain. Pilih cabang, kategori, merek, dan model agar menjadi kendaraan biasa.",
+    "driversNote": "Siapa yang mengemudikan kendaraan ini menurut OptiDeli. Daftar pengemudi dikelola di OptiDeli; pemakaian berurutan oleh pengemudi yang sama dihitung satu periode.",
     "emptyLoadWeightKg": "Berat Kosong / Muatan (kg)",
     "fillDateEveryCheckedBoxBefore": "Isi tanggal untuk setiap kotak yang dicentang sebelum memilih file.",
     "fleetWideViewVehicleTransfersOpen": "Tampilan seluruh armada untuk transfer kendaraan. Buka kendaraan untuk membuat atau memproses Transfer-nya.",
@@ -130,6 +141,7 @@
     "assignment": "Penugasan",
     "assignmentHistory": "Riwayat Penugasan",
     "documents": "Dokumen",
+    "drivers": "Pengemudi",
     "history": "Riwayat",
     "maintenanceHistory": "Riwayat Pemeliharaan",
     "transfer": "Transfer",

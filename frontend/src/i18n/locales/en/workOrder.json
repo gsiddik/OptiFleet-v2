@@ -127,6 +127,7 @@
     "issueFromWarehouse": "Issue from warehouse",
     "job": "Job",
     "jobOptional": "Job (optional)",
+    "lastDriver": "Last Driver Before Maintenance",
     "lastHm": "Last HM",
     "lastOdometer": "Last Odometer",
     "linkToDiagnosisOptional": "Link to diagnosis (optional)",

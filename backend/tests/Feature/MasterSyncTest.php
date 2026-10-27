@@ -2,10 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Domain\Governance\CentralGovernance;
+use App\Domain\Integration\Master\VehicleDrivers;
 use App\Domain\Integration\Master\VehicleMaster;
 use App\Domain\Integration\Models\IntegrationOutboxEvent;
 use App\Domain\Integration\Optinexus\OptinexusEventRelay;
 use App\Domain\Vehicle\Models\Vehicle;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -231,5 +234,82 @@ class MasterSyncTest extends TestCase
 
         $this->deliver($forged)->assertJson(['result' => 'ignored']);
         $this->assertSame(0, DB::table('vehicles')->where('tenant_id', $tenant->id)->count());
+    }
+
+    private function driverEvent(string $nexusTenant, string $at, string $name, string $referenceId, string $plate = 'B 1234 XY', string $type = 'SPM_TRIP'): array
+    {
+        return [
+            'event_id' => (string) Str::uuid(), 'event_type' => 'optideli.vehicle.driver_assigned', 'schema_version' => '1', 'source_system' => 'optideli',
+            'tenant_id' => $nexusTenant, 'occurred_at' => now()->toIso8601String(), 'correlation_id' => (string) Str::uuid(),
+            'data' => ['aggregate_type' => 'vehicle', 'aggregate_id' => (string) Str::uuid(), 'correlation' => [], 'payload' => [
+                'key' => 'B1234XY', 'registration_number' => $plate, 'assigned_at' => $at,
+                'reference' => ['type' => $type, 'id' => $referenceId, 'number' => 'PJ-1'],
+                'driver' => ['name' => $name, 'phone' => '0812', 'license_masked' => '****4567'],
+            ]],
+        ];
+    }
+
+    public function test_driver_facts_become_periods_per_vehicle_in_any_order_and_twice_and_without_a_driver_register(): void
+    {
+        [$tenant, $branch, $category] = $this->tenant();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'B 1234 XY']);
+        $nexus = $tenant->optinexus_tenant_id;
+        $facts = [
+            ['2026-10-01T08:00:00Z', 'Budi', (string) Str::uuid()], ['2026-10-02T08:00:00Z', 'Budi', (string) Str::uuid()],
+            ['2026-10-03T08:00:00Z', 'Andi', (string) Str::uuid()], ['2026-10-04T08:00:00Z', 'Budi', (string) Str::uuid()],
+        ];
+        foreach (array_reverse($facts) as $f) { // newest first: facts are unordered
+            $this->deliver($this->driverEvent($nexus, $f[0], $f[1], $f[2]))->assertStatus(202)->assertJson(['result' => 'applied']);
+        }
+        $this->deliver($this->driverEvent($nexus, $facts[0][0], 'Budi', $facts[0][2]))->assertJson(['result' => 'applied']); // a repeat
+
+        $this->assertSame(4, DB::table('vehicle_driver_assignments')->where('tenant_id', $tenant->id)->count());
+        $periods = app(VehicleDrivers::class)->history($vehicle);
+        $this->assertSame(['Budi', 'Andi', 'Budi'], array_column($periods, 'driver_name'));
+        $this->assertSame([1, 1, 2], array_column($periods, 'assignments'));
+        $this->assertSame('2026-10-01T08:00:00Z', $periods[2]['first_assigned_at']);
+        $this->assertSame('Andi', app(VehicleDrivers::class)->lastBefore($vehicle, CarbonImmutable::parse('2026-10-03T12:00:00Z'))['driver_name']);
+        $this->assertNull(app(VehicleDrivers::class)->lastBefore($vehicle, CarbonImmutable::parse('2026-09-01T00:00:00Z')));
+        $this->assertCount(0, $this->published($tenant->id));
+        $this->assertSame(0, DB::table('vehicles')->where('tenant_id', $tenant->id)->count() - 1, 'a driver fact never creates a vehicle');
+    }
+
+    public function test_a_driver_fact_needs_the_producer_a_valid_reference_and_a_name(): void
+    {
+        [$tenant] = $this->tenant();
+        $nexus = $tenant->optinexus_tenant_id;
+        $forged = $this->driverEvent($nexus, '2026-10-01T08:00:00Z', 'Budi', (string) Str::uuid());
+        $forged['source_system'] = 'optiradar';
+
+        $this->deliver($forged)->assertJson(['result' => 'ignored']);
+        $this->deliver($this->driverEvent($nexus, 'not a date', 'Budi', (string) Str::uuid()))->assertJson(['result' => 'ignored']);
+        $this->deliver($this->driverEvent($nexus, '2026-10-01T08:00:00Z', '  ', (string) Str::uuid()))->assertJson(['result' => 'ignored']);
+        $this->deliver($this->driverEvent($nexus, '2026-10-01T08:00:00Z', 'Budi', 'not-a-uuid'))->assertJson(['result' => 'ignored']);
+        $this->deliver($this->driverEvent($nexus, '2026-10-01T08:00:00Z', 'Budi', (string) Str::uuid(), type: 'OTHER'))->assertJson(['result' => 'ignored']);
+        $this->assertSame(0, DB::table('vehicle_driver_assignments')->count());
+    }
+
+    public function test_the_drivers_tab_exists_only_for_a_tenant_that_bought_optideli_and_the_work_order_shows_the_last_driver(): void
+    {
+        [$tenant, $branch, $category] = $this->tenant();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'B 1234 XY']);
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.view']);
+        $this->deliver($this->driverEvent($tenant->optinexus_tenant_id, '2026-10-01T08:00:00Z', 'Budi', (string) Str::uuid()));
+        $headers = $this->authHeaders($token);
+
+        // What OptiNexus says the tenant bought. A controller instance lives as long as the app of the test, so the answer is switched here.
+        $apps = ['optifleet'];
+        $this->partialMock(CentralGovernance::class, function ($mock) use (&$apps) {
+            $mock->shouldReceive('commercial')->andReturnUsing(function () use (&$apps) {
+                return ['applications' => $apps];
+            });
+        });
+        $this->getJson("/api/v1/app/vehicles/{$vehicle->id}", $headers)->assertOk()->assertJsonPath('data.driver_history_available', false);
+        $this->getJson("/api/v1/app/vehicles/{$vehicle->id}/drivers", $headers)->assertNotFound();
+
+        $apps = ['optifleet', 'optideli'];
+        $this->getJson("/api/v1/app/vehicles/{$vehicle->id}", $headers)->assertOk()->assertJsonPath('data.driver_history_available', true);
+        $rows = $this->getJson("/api/v1/app/vehicles/{$vehicle->id}/drivers", $headers)->assertOk()->json('data');
+        $this->assertSame([['Budi', '****4567', 1]], array_map(fn ($r) => [$r['driver_name'], $r['license_masked'], $r['assignments']], $rows));
     }
 }

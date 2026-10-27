@@ -485,7 +485,18 @@ export interface AuditLogEntry {
 
 // --- Phase 3: Core VMS Operations ---
 
+export interface VehicleDriverPeriod {
+  driver_name: string;
+  driver_phone: string | null;
+  license_masked: string | null;
+  first_assigned_at: string;
+  last_assigned_at: string;
+  assignments: number;
+  last_reference: string | null;
+}
+
 export interface VehicleItem {
+  driver_history_available?: boolean;
   id: string;
   branch_id: string | null;
   default_workshop_id: string | null;
@@ -1128,6 +1139,7 @@ export interface WorkOrderMechanicAssignmentItem {
 }
 
 export interface WorkOrderItem {
+  last_driver?: { driver_name: string; driver_phone: string | null; license_masked: string | null; assigned_at: string } | null;
   id: string;
   wo_number: string;
   branch_id: string;

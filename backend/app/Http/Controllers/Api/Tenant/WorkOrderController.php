@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Tenant;
 
+use App\Domain\Integration\Master\VehicleDrivers;
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Configuration\Services\DocumentTemplateContextBuilder;
 use App\Domain\DocumentGeneration\Support\DocumentSource;
@@ -112,6 +113,10 @@ class WorkOrderController extends Controller
         $workOrder->setAttribute('estimated_total_hours', $workOrder->estimatedTotalHours());
         $workOrder->setAttribute('estimated_number_of_mechanics', $workOrder->estimatedNumberOfMechanics());
         $workOrder->setAttribute('estimated_parts_cost_computed', $workOrder->computedEstimatedPartsCost());
+        // Information only: the driver who last had the vehicle before this work order was opened (a tenant with OptiDeli).
+        $drivers = app(VehicleDrivers::class);
+        $workOrder->setAttribute('last_driver', $workOrder->vehicle && $workOrder->created_at && $drivers->available($workOrder->tenant_id)
+            ? $drivers->lastBefore($workOrder->vehicle, $workOrder->created_at) : null);
 
         return $this->ok($workOrder);
     }
