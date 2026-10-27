@@ -31,6 +31,9 @@ return [
         'batch_size' => 100,
         // After this many failed attempts an event is parked as FAILED (optinexus:relay-events --retry-failed puts it back).
         'max_attempts' => 20,
+        // Events OptiNexus delivers to this application (vehicle master data): the signing secret of its event subscription.
+        'webhook_secret' => env('OPTINEXUS_EVENTS_WEBHOOK_SECRET'),
+        'webhook_tolerance_seconds' => 300,
     ],
 
     // API Gateway: platform-level service account (acts per tenant via X-Tenant-Id).

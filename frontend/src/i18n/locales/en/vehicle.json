@@ -2,6 +2,8 @@
   "actions": {
     "backToList": "← Back to List",
     "changeStatus": "Change Status",
+    "completeDraft": "Complete",
+    "completeDraftSubmit": "Complete Vehicle",
     "createVehicle": "Create Vehicle",
     "dispatch": "Dispatch",
     "editSpecifications": "Edit Specifications",
@@ -62,6 +64,7 @@
     "suspension": "Suspension",
     "toBranch": "To Branch",
     "transmission": "Transmission",
+    "transportFromOptideli": "Transport data (OptiDeli)",
     "valueLegacy": "{{value}} (legacy)",
     "vinOptional": "VIN (optional)",
     "wheelsConfiguration": "Wheels Configuration",
@@ -69,6 +72,7 @@
     "year": "Year"
   },
   "help": {
+    "draftIntro": "This vehicle was created automatically from another platform. Choose its branch, category, brand and model to make it an ordinary vehicle.",
     "emptyLoadWeightKg": "Empty / Load Weight (kg)",
     "fillDateEveryCheckedBoxBefore": "Fill in the date for every checked box before choosing the file.",
     "fleetWideViewVehicleTransfersOpen": "Fleet-wide view of vehicle transfers. Open a vehicle to create or act on its Transfer.",
@@ -107,6 +111,7 @@
   },
   "modals": {
     "changeVehicleStatus": "Change Vehicle Status",
+    "completeDraft": "Complete Draft Vehicle",
     "editVehicleSpecifications": "Edit Vehicle Specifications",
     "importVehicles": "Import Vehicles",
     "newVehicle": "New Vehicle",

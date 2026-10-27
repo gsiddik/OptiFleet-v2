@@ -29,7 +29,7 @@ class Vehicle extends Model
         'color', 'doors', 'seats', 'length_mm', 'width_mm', 'height_mm',
         'fuel_tank_capacity_liters', 'engine_capacity_cc', 'suspension_type', 'axle_count',
         'empty_weight_kg', 'load_weight_kg', 'wheel_count', 'photo_url',
-        'photo_disk', 'photo_path', 'photo_mime_type', 'photo_size',
+        'photo_disk', 'photo_path', 'photo_mime_type', 'photo_size', 'source_application',
     ];
 
     protected $hidden = ['photo_disk', 'photo_path'];

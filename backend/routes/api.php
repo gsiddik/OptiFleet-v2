@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Auth\AuthController;
 use App\Http\Controllers\Api\Auth\ProductSwitcherController;
 use App\Http\Controllers\Api\Auth\SsoController;
+use App\Http\Controllers\Api\Integration\OptinexusEventController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -12,6 +13,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/auth/sso/status', [SsoController::class, 'status']);
     Route::get('/auth/sso/redirect', [SsoController::class, 'redirect'])->middleware('throttle:20,1');
     Route::get('/auth/sso/callback', [SsoController::class, 'callback'])->middleware('throttle:20,1');
+    Route::post('/integration/optinexus/events', [OptinexusEventController::class, 'receive'])->middleware('throttle:600,1');
     Route::post('/auth/sso/backchannel-logout', [SsoController::class, 'backchannelLogout'])->middleware('throttle:120,1');
     Route::post('/auth/sso/exchange', [SsoController::class, 'exchange'])->middleware(['request.locale', 'throttle:20,1']);
 

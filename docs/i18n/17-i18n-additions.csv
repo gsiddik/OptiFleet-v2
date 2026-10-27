@@ -1413,3 +1413,8 @@ account.fields.currentPeriod,Current Period,Periode Berjalan,Central subscriptio
 account.fields.planAddon,Plan/Add-on,Paket/Add-on,Central subscription detail,account,Nexus subscription lifecycle
 account.fields.unitPrice,Unit Price,Harga Satuan,Central subscription detail,account,Nexus subscription lifecycle
 account.fields.totalPrice,Total Price,Harga Total,Central subscription detail,account,Nexus subscription lifecycle
+vehicle.actions.completeDraft,Complete,Lengkapi,Complete a draft vehicle (list row button),vehicle,Master data sync
+vehicle.actions.completeDraftSubmit,Complete Vehicle,Lengkapi Kendaraan,Complete a draft vehicle (submit),vehicle,Master data sync
+vehicle.modals.completeDraft,Complete Draft Vehicle,Lengkapi Kendaraan Draf,Draft vehicle created from another platform,vehicle,Master data sync
+vehicle.help.draftIntro,"This vehicle was created automatically from another platform. Choose its branch, category, brand and model to make it an ordinary vehicle.","Kendaraan ini dibuat otomatis dari platform lain. Pilih cabang, kategori, merek, dan model agar menjadi kendaraan biasa.",Draft vehicle created from another platform,vehicle,Master data sync
+vehicle.fields.transportFromOptideli,Transport data (OptiDeli),Data angkutan (OptiDeli),Read-only transport profile kept by OptiDeli,vehicle,Master data sync

@@ -32,7 +32,7 @@ class CapacityService
             'workshop' => Workshop::query()->where('tenant_id', $tenantId)->where('status', '!=', 'CLOSED')->count(),
             'warehouse' => Warehouse::query()->where('tenant_id', $tenantId)->where('status', '!=', 'CLOSED')->count(),
             'user' => TenantUser::query()->where('tenant_id', $tenantId)->where('status', 'active')->count(),
-            'vehicle' => Vehicle::query()->where('tenant_id', $tenantId)->where('status', '!=', 'DISPOSED')->count(),
+            'vehicle' => Vehicle::query()->where('tenant_id', $tenantId)->whereNotIn('status', ['DISPOSED', 'DRAFT'])->count(),
             default => 0,
         };
     }

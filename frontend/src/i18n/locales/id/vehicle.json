@@ -2,6 +2,8 @@
   "actions": {
     "backToList": "← Kembali ke Daftar",
     "changeStatus": "Ubah Status",
+    "completeDraft": "Lengkapi",
+    "completeDraftSubmit": "Lengkapi Kendaraan",
     "createVehicle": "Buat Kendaraan",
     "dispatch": "Kirim",
     "editSpecifications": "Ubah Spesifikasi",
@@ -62,6 +64,7 @@
     "suspension": "Suspensi",
     "toBranch": "Ke Cabang",
     "transmission": "Transmisi",
+    "transportFromOptideli": "Data angkutan (OptiDeli)",
     "valueLegacy": "{{value}} (lama)",
     "vinOptional": "VIN (opsional)",
     "wheelsConfiguration": "Konfigurasi Roda",
@@ -69,6 +72,7 @@
     "year": "Tahun"
   },
   "help": {
+    "draftIntro": "Kendaraan ini dibuat otomatis dari platform lain. Pilih cabang, kategori, merek, dan model agar menjadi kendaraan biasa.",
     "emptyLoadWeightKg": "Berat Kosong / Muatan (kg)",
     "fillDateEveryCheckedBoxBefore": "Isi tanggal untuk setiap kotak yang dicentang sebelum memilih file.",
     "fleetWideViewVehicleTransfersOpen": "Tampilan seluruh armada untuk transfer kendaraan. Buka kendaraan untuk membuat atau memproses Transfer-nya.",
@@ -107,6 +111,7 @@
   },
   "modals": {
     "changeVehicleStatus": "Ubah Status Kendaraan",
+    "completeDraft": "Lengkapi Kendaraan Draf",
     "editVehicleSpecifications": "Ubah Spesifikasi Kendaraan",
     "importVehicles": "Impor Kendaraan",
     "newVehicle": "Kendaraan Baru",

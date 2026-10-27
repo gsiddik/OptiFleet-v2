@@ -487,7 +487,7 @@ export interface AuditLogEntry {
 
 export interface VehicleItem {
   id: string;
-  branch_id: string;
+  branch_id: string | null;
   default_workshop_id: string | null;
   vehicle_category_id: string;
   brand: string;
@@ -506,7 +506,7 @@ export interface VehicleItem {
   transmission_type: string | null;
   current_odometer: string;
   engine_hour: string | null;
-  status: 'ACTIVE' | 'IN_MAINTENANCE' | 'BREAKDOWN' | 'OUT_OF_SERVICE' | 'INACTIVE' | 'DISPOSED';
+  status: 'DRAFT' | 'ACTIVE' | 'IN_MAINTENANCE' | 'BREAKDOWN' | 'OUT_OF_SERVICE' | 'INACTIVE' | 'DISPOSED';
   operational_status: 'AVAILABLE' | 'IN_USE' | 'ON_HOLD';
   color: string | null;
   doors: number | null;

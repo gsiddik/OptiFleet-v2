@@ -5,12 +5,14 @@ namespace App\Domain\Vehicle\Services;
 use App\Domain\AccessControl\Services\DataScopeService;
 use App\Domain\Entitlement\Services\CapacityExceededException;
 use App\Domain\Entitlement\Services\CapacityService;
+use App\Domain\Integration\Master\VehicleMaster;
 use App\Domain\MasterData\Models\VehicleBrand;
 use App\Domain\MasterData\Models\VehicleModel as VehicleModelMaster;
 use App\Domain\Shared\Support\Messages;
 use App\Domain\Vehicle\Models\Vehicle;
 use App\Http\Requests\Tenant\StoreVehicleRequest;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -25,6 +27,7 @@ class VehicleCreationService
         private readonly CapacityService $capacity,
         private readonly DataScopeService $scope,
         private readonly OdometerService $odometer,
+        private readonly VehicleMaster $master,
     ) {}
 
     /**
@@ -61,6 +64,7 @@ class VehicleCreationService
 
         // A typed-in starting odometer is a manual reading (ledger + provenance); the default 0 is not a reading.
         $this->odometer->recordInitial($vehicle, $user->id);
+        DB::transaction(fn () => $this->master->publish($vehicle));
 
         return $vehicle;
     }

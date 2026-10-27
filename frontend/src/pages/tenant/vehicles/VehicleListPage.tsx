@@ -17,7 +17,7 @@ import { formatNumber } from '../../../utils/number';
 import { monthNames } from '../../../i18n/locale';
 import { t } from '../../../i18n/i18n';
 
-const STATUSES = ['', 'ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'];
+const STATUSES = ['', 'DRAFT', 'ACTIVE', 'IN_MAINTENANCE', 'BREAKDOWN', 'OUT_OF_SERVICE', 'INACTIVE', 'DISPOSED'];
 
 
 export function VehicleListPage() {
@@ -26,17 +26,28 @@ export function VehicleListPage() {
   const [status, setStatus] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
+  const [completing, setCompleting] = useState<VehicleItem | null>(null);
   const [showImport, setShowImport] = useState(false);
   const { data, loading, error } = useApiList<VehicleItem>('/app/vehicles', { search, status: status || undefined }, reloadKey);
 
   const columns: Column<VehicleItem>[] = [
     { key: 'registration_number', header: t('tire.fields.registration'), render: (v) => <Link to={`/app/vehicles/${v.id}`}>{v.registration_number}</Link> },
-    { key: 'brand', header: t('common.fields.vehicle'), render: (v) => `${v.brand} ${v.model}` },
+    { key: 'brand', header: t('common.fields.vehicle'), render: (v) => [v.brand, v.model].filter(Boolean).join(' ') || '—' },
     { key: 'branch', header: t('common.fields.branch'), render: (v) => v.branch?.name ?? '—' },
     { key: 'category', header: t('common.fields.category'), render: (v) => v.vehicle_category?.name ?? '—' },
     { key: 'odometer', header: t('inspection.labels.odometer'), render: (v) => formatNumber(v.current_odometer) },
     { key: 'status', header: t('common.fields.status'), render: (v) => <StatusBadge status={v.status} /> },
     { key: 'operational_status', header: t('vehicle.fields.operational'), render: (v) => statusLabel(v.operational_status) },
+    {
+      key: 'actions',
+      header: '',
+      render: (v) =>
+        v.status === 'DRAFT' && hasPermission('vehicle.update') ? (
+          <button className="btn-primary" style={{ padding: '4px 10px', fontSize: 13 }} onClick={() => setCompleting(v)}>
+            {t('vehicle.actions.completeDraft')}
+          </button>
+        ) : null,
+    },
   ];
 
   return (
@@ -82,8 +93,134 @@ export function VehicleListPage() {
           onImported={() => setReloadKey((k) => k + 1)}
         />
       )}
+      {completing && (
+        <CompleteDraftModal vehicle={completing} onClose={() => setCompleting(null)} onCompleted={() => { setCompleting(null); setReloadKey((k) => k + 1); }} />
+      )}
       <CreateVehicleModal open={showCreate} onClose={() => setShowCreate(false)} onCreated={() => setReloadKey((k) => k + 1)} />
     </div>
+  );
+}
+
+type TransportProfile = { carrier_type_code: string | null; capacity_g: number | null; length_mm: number | null; width_mm: number | null; height_mm: number | null };
+
+/** A vehicle another platform created as a draft: staff choose the data OptiFleet owns, then it becomes an ordinary vehicle. */
+function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: VehicleItem; onClose: () => void; onCompleted: () => void }) {
+  const [branches, setBranches] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [vehicleBrands, setVehicleBrands] = useState<VehicleBrandItem[]>([]);
+  const [vehicleModels, setVehicleModels] = useState<VehicleModelItem[]>([]);
+  const [branchId, setBranchId] = useState('');
+  const [categoryId, setCategoryId] = useState('');
+  const [vehicleBrandId, setVehicleBrandId] = useState('');
+  const [vehicleModelId, setVehicleModelId] = useState('');
+  const [transport, setTransport] = useState<TransportProfile | null>(null);
+  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    apiClient.get('/app/branches', { params: { per_page: 100 } }).then((res) => setBranches(res.data.data));
+    apiClient.get('/app/vehicle-categories', { params: { per_page: 100 } }).then((res) => setCategories(res.data.data));
+    apiClient.get('/app/vehicle-brands', { params: { per_page: 100 } }).then((res) => setVehicleBrands(res.data.data)).catch(() => setVehicleBrands([]));
+    apiClient.get(`/app/vehicles/${vehicle.id}`).then((res) => setTransport(res.data.data.transport_profile ?? null)).catch(() => setTransport(null));
+  }, [vehicle.id]);
+
+  useEffect(() => {
+    if (!vehicleBrandId) {
+      setVehicleModels([]);
+      setVehicleModelId('');
+      return;
+    }
+    apiClient
+      .get('/app/vehicle-models', { params: { vehicle_brand_id: vehicleBrandId, per_page: 100 } })
+      .then((res) => setVehicleModels(res.data.data))
+      .catch(() => setVehicleModels([]));
+  }, [vehicleBrandId]);
+
+  async function submit() {
+    setSubmitting(true);
+    setErrors({});
+    try {
+      await apiClient.post(`/app/vehicles/${vehicle.id}/complete`, {
+        branch_id: branchId,
+        vehicle_category_id: categoryId,
+        vehicle_brand_id: vehicleBrandId,
+        vehicle_model_id: vehicleModelId,
+      });
+      onCompleted();
+    } catch (err) {
+      const apiError: ApiErrorShape = extractApiError(err);
+      setErrors(apiError.errors ?? {});
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <Modal open title={`${t('vehicle.modals.completeDraft')} · ${vehicle.registration_number}`} onClose={onClose} width={520}>
+      <p style={{ marginTop: 0 }}>{t('vehicle.help.draftIntro')}</p>
+      {transport && (
+        <p>
+          <strong>{t('vehicle.fields.transportFromOptideli')}:</strong>{' '}
+          {[
+            transport.carrier_type_code,
+            transport.capacity_g != null ? `${formatNumber(transport.capacity_g / 1000)} kg` : null,
+            transport.length_mm != null ? `${transport.length_mm} × ${transport.width_mm} × ${transport.height_mm} mm` : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </p>
+      )}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <FormField label={t('common.fields.branch')} errors={errors.branch_id} required>
+          <select value={branchId} onChange={(e) => setBranchId(e.target.value)} style={inputStyle}>
+            <option value="">{t('common.fields.select')}</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label={t('common.fields.category')} errors={errors.vehicle_category_id} required>
+          <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} style={inputStyle}>
+            <option value="">{t('common.fields.select')}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label={t('common.fields.brand')} errors={errors.vehicle_brand_id} required>
+          <select value={vehicleBrandId} onChange={(e) => setVehicleBrandId(e.target.value)} style={inputStyle}>
+            <option value="">{t('common.fields.select')}</option>
+            {vehicleBrands.map((b) => (
+              <option key={b.id} value={b.id}>
+                {b.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField label={t('common.fields.model')} errors={errors.vehicle_model_id} required>
+          <select value={vehicleModelId} onChange={(e) => setVehicleModelId(e.target.value)} style={inputStyle} disabled={!vehicleBrandId}>
+            <option value="">{t('common.fields.select')}</option>
+            {vehicleModels.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
+        <button className="btn-secondary" onClick={onClose}>
+          {t('common.actions.cancel')}
+        </button>
+        <button className="btn-primary" disabled={submitting || !branchId || !categoryId || !vehicleBrandId || !vehicleModelId} onClick={submit}>
+          {t('vehicle.actions.completeDraftSubmit')}
+        </button>
+      </div>
+    </Modal>
   );
 }
 

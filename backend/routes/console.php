@@ -1,5 +1,6 @@
 <?php
 
+use App\Domain\Integration\Master\VehicleMaster;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -46,3 +47,7 @@ Schedule::command('optinexus:relay-events')->everyMinute()->withoutOverlapping()
 
 // Accounting feed (audit A17): a financial fact without a feed event is a failure; report it (log critical, non-zero exit) every few minutes.
 Schedule::command('accounting-feed:monitor')->everyFiveMinutes()->withoutOverlapping();
+
+Artisan::command('optifleet:master:publish {--tenant=}', function (VehicleMaster $master) {
+    $this->info($master->publishAll($this->option('tenant') ?: null).' vehicle(s) queued for the other platforms.');
+})->purpose('Queue every complete vehicle of the linked tenants for the other platforms (first start-up of the sync, or after an outage)');
