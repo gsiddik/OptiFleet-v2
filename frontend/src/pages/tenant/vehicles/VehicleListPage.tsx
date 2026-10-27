@@ -115,6 +115,7 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
   const [vehicleModelId, setVehicleModelId] = useState('');
   const [transport, setTransport] = useState<TransportProfile | null>(null);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -140,6 +141,7 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
     setSubmitting(true);
     setErrors({});
     try {
+      setMessage('');
       await apiClient.post(`/app/vehicles/${vehicle.id}/complete`, {
         branch_id: branchId,
         vehicle_category_id: categoryId,
@@ -150,6 +152,7 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
     } catch (err) {
       const apiError: ApiErrorShape = extractApiError(err);
       setErrors(apiError.errors ?? {});
+      setMessage(apiError.errors ? '' : apiError.message);
     } finally {
       setSubmitting(false);
     }
@@ -164,7 +167,7 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
           {[
             transport.carrier_type_code,
             transport.capacity_g != null ? `${formatNumber(transport.capacity_g / 1000)} kg` : null,
-            transport.length_mm != null ? `${transport.length_mm} × ${transport.width_mm} × ${transport.height_mm} mm` : null,
+            [transport.length_mm, transport.width_mm, transport.height_mm].every((d) => d != null) ? `${transport.length_mm} × ${transport.width_mm} × ${transport.height_mm} mm` : null,
           ]
             .filter(Boolean)
             .join(' · ')}
@@ -212,6 +215,7 @@ function CompleteDraftModal({ vehicle, onClose, onCompleted }: { vehicle: Vehicl
           </select>
         </FormField>
       </div>
+      {message && <ErrorState message={message} />}
       <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 20 }}>
         <button className="btn-secondary" onClick={onClose}>
           {t('common.actions.cancel')}

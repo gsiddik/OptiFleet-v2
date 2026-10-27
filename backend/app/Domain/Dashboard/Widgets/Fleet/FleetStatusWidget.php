@@ -53,7 +53,7 @@ class FleetStatusWidget extends Widget
 
     protected function vehicles(DashboardContext $context): Builder
     {
-        $query = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at')
+        $query = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at')->where('v.status', '<>', 'DRAFT')
             ->whereIn('v.status', self::STATUSES);
 
         return $context->scopeBranch($query, 'v.branch_id');

@@ -34,6 +34,15 @@ class Vehicle extends Model
 
     protected $hidden = ['photo_disk', 'photo_path'];
 
+    /**
+     * A DRAFT (created from another platform, branch/category/brand/model still missing) is outside every ordinary query, picker,
+     * count and analytics read. Only the vehicle list, the draft screens and the master sync ask for it explicitly.
+     */
+    protected static function booted(): void
+    {
+        static::addGlobalScope('operational', fn ($query) => $query->where($query->getModel()->getTable().'.status', '<>', 'DRAFT'));
+    }
+
     protected $appends = ['photo_available'];
 
     protected $casts = [

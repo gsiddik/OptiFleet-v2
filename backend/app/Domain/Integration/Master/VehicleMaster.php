@@ -81,8 +81,11 @@ final class VehicleMaster
             }
             DB::table('master_versions')->upsert([['tenant_id' => $tenant->id, 'registration_key' => $key, 'source' => 'OPTIDELI', 'version' => $version]], ['tenant_id', 'registration_key', 'source'], ['version']);
 
-            $vehicle = DB::table('vehicles')->where('tenant_id', $tenant->id)->whereNull('deleted_at')
+            $vehicle = DB::table('vehicles')->where('tenant_id', $tenant->id)
                 ->whereRaw("regexp_replace(upper(registration_number), '[^A-Z0-9]', '', 'g') = ?", [$key])->first();
+            if ($vehicle && $vehicle->deleted_at !== null) {
+                return 'ignored'; // the tenant removed this vehicle; the plate stays taken, nothing is revived
+            }
             $result = 'applied';
             if (! $vehicle) {
                 $id = (string) Str::uuid();

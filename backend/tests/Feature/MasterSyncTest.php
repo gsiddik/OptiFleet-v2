@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Domain\Integration\Master\VehicleMaster;
 use App\Domain\Integration\Models\IntegrationOutboxEvent;
 use App\Domain\Integration\Optinexus\OptinexusEventRelay;
+use App\Domain\Vehicle\Models\Vehicle;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -168,5 +169,29 @@ class MasterSyncTest extends TestCase
         $this->assertSame(1, app(VehicleMaster::class)->publishAll());
         $this->assertCount(1, $this->published($linked->id));
         $this->assertCount(0, $this->published($other->id));
+    }
+
+    public function test_a_draft_is_outside_ordinary_queries_and_cannot_be_given_a_status(): void
+    {
+        [$tenant, $branch, $category] = $this->tenant();
+        [, $token] = $this->makeTenantUser($tenant, ['vehicle.view', 'vehicle.update', 'vehicle.status.update']);
+        $this->makeVehicle($tenant, $branch, $category);
+        $this->deliver($this->event($tenant->optinexus_tenant_id, 1, 'B 5 DRAFT'));
+        $draft = DB::table('vehicles')->where('tenant_id', $tenant->id)->where('status', 'DRAFT')->sole();
+
+        $this->assertSame(1, Vehicle::query()->where('tenant_id', $tenant->id)->count());
+        $this->postJson("/api/v1/app/vehicles/{$draft->id}/status", ['status' => 'ACTIVE'], $this->authHeaders($token))->assertNotFound();
+        $this->putJson("/api/v1/app/vehicles/{$draft->id}", ['fuel_type' => 'Diesel'], $this->authHeaders($token))->assertNotFound();
+        $this->getJson('/api/v1/app/vehicles?status=DRAFT', $this->authHeaders($token))->assertOk()->assertJsonCount(1, 'data');
+    }
+
+    public function test_a_plate_the_tenant_deleted_is_not_revived_by_an_event(): void
+    {
+        [$tenant, $branch, $category] = $this->tenant();
+        $vehicle = $this->makeVehicle($tenant, $branch, $category, ['registration_number' => 'B 1234 XY']);
+        $vehicle->delete();
+
+        $this->deliver($this->event($tenant->optinexus_tenant_id, 1))->assertStatus(202)->assertJson(['result' => 'ignored']);
+        $this->assertSame(0, DB::table('vehicle_transport_profiles')->where('tenant_id', $tenant->id)->count());
     }
 }

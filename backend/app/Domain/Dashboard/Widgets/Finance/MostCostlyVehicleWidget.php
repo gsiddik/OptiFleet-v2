@@ -162,7 +162,7 @@ class MostCostlyVehicleWidget extends Widget
     {
         $coverage ??= $this->coverage($context, $lines);
         $perVehicle = OperatingCostQuery::perVehicle($lines);
-        $inScope = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at')
+        $inScope = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at')->where('v.status', '<>', 'DRAFT')
             ->when($context->filters->param('vehicle_category_id'), fn ($q, $id) => $q->where('v.vehicle_category_id', $id))
             ->when($context->filters->param('vehicle_id'), fn ($q, $id) => $q->where('v.id', $id));
         $context->scopeBranch($inScope, 'v.branch_id');

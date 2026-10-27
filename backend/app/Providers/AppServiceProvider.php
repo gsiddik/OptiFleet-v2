@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Domain\Governance\CentralGovernance;
+use App\Domain\Vehicle\Models\Vehicle;
 use App\Support\TenantContext;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -23,6 +25,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // {draftVehicle}: the routes that must also reach a draft (detail, complete); every other vehicle route 404s on one.
+        Route::bind('draftVehicle', fn (string $id) => Vehicle::query()->withoutGlobalScope('operational')->findOrFail($id));
+
         //
     }
 }

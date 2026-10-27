@@ -38,7 +38,7 @@ class VehicleController extends Controller
         $user = $this->context->user();
         $tenantId = $this->context->tenantId();
 
-        $query = Vehicle::query()->with(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']);
+        $query = Vehicle::query()->withoutGlobalScope('operational')->with(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']);
         $this->scope->applyBranchScope($query, $user, $tenantId, 'branch_id');
 
         if ($search = $request->string('search')->trim()->value()) {
@@ -78,8 +78,9 @@ class VehicleController extends Controller
         return $this->ok($vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']), 201);
     }
 
-    public function show(Vehicle $vehicle)
+    public function show(Vehicle $draftVehicle)
     {
+        $vehicle = $draftVehicle;
         $this->authorizeScope($vehicle);
 
         $vehicle->load(['branch', 'defaultWorkshop', 'vehicleCategory', 'vehicleBrand', 'vehicleModel']);
@@ -117,8 +118,9 @@ class VehicleController extends Controller
     }
 
     /** A vehicle another platform announced is a DRAFT; completing it gives it a branch, category, brand and model and makes it an ordinary vehicle. */
-    public function complete(Request $request, Vehicle $vehicle)
+    public function complete(Request $request, Vehicle $draftVehicle)
     {
+        $vehicle = $draftVehicle;
         $this->authorizeScope($vehicle);
         abort_unless($vehicle->status === 'DRAFT', 422, 'Only a draft vehicle can be completed.');
 
@@ -131,9 +133,12 @@ class VehicleController extends Controller
             'vehicle_model_id' => ['required', 'uuid', Rule::exists('vehicle_models', 'id')->where(fn ($q) => $own($q)->where('vehicle_brand_id', $request->input('vehicle_brand_id')))],
         ]);
         abort_unless($this->scope->canAccessBranch($this->context->user(), $tenantId, $data['branch_id']), 403, 'This branch is outside your assigned data scope.');
-        $this->capacity->assertCanCreate($tenantId, 'vehicle');
-
-        DB::transaction(function () use ($vehicle, $data) {
+        DB::transaction(function () use ($vehicle, $data, $tenantId) {
+            // Two people completing the same draft, or two drafts for the last free slot, are serialised on the draft row.
+            $locked = Vehicle::query()->withoutGlobalScope('operational')->whereKey($vehicle->id)->lockForUpdate()->firstOrFail();
+            abort_unless($locked->status === 'DRAFT', 422, 'Only a draft vehicle can be completed.');
+            DB::table('tenants')->where('id', $tenantId)->lockForUpdate()->first();
+            $this->capacity->assertCanCreate($tenantId, 'vehicle');
             $vehicle->update($data + [
                 'brand' => VehicleBrand::query()->findOrFail($data['vehicle_brand_id'])->name,
                 'model' => VehicleModelMaster::query()->findOrFail($data['vehicle_model_id'])->name,

@@ -255,9 +255,9 @@ Route::prefix('app')->middleware('tenant.scope')->group(function () {
             Route::get('/vehicles/import-template', [VehicleImportController::class, 'template'])->middleware('permission:vehicle.create');
             Route::post('/vehicles/import/preview', [VehicleImportController::class, 'preview'])->middleware('permission:vehicle.create');
             Route::post('/vehicles/import', [VehicleImportController::class, 'import'])->middleware('permission:vehicle.create');
-            Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show'])->middleware('permission:vehicle.view');
+            Route::get('/vehicles/{draftVehicle}', [VehicleController::class, 'show'])->middleware('permission:vehicle.view');
             Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update'])->middleware('permission:vehicle.update');
-            Route::post('/vehicles/{vehicle}/complete', [VehicleController::class, 'complete'])->middleware('permission:vehicle.update');
+            Route::post('/vehicles/{draftVehicle}/complete', [VehicleController::class, 'complete'])->middleware('permission:vehicle.update');
             Route::post('/vehicles/{vehicle}/status', [VehicleController::class, 'updateStatus'])->middleware('permission:vehicle.status.update');
             Route::post('/vehicles/{vehicle}/assign', [VehicleController::class, 'assign'])->middleware('permission:vehicle.assign');
             Route::get('/telematics/status', [TelematicsLinkController::class, 'status'])->middleware('permission:telematics_link.view');

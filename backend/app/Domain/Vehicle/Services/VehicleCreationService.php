@@ -55,17 +55,19 @@ class VehicleCreationService
             throw ValidationException::withMessages(['branch_id' => Messages::localized('vehicle.import.branchOutOfScope')]);
         }
 
-        $vehicle = Vehicle::query()->create(array_merge($validated, [
-            'brand' => VehicleBrand::query()->findOrFail($validated['vehicle_brand_id'])->name,
-            'model' => VehicleModelMaster::query()->findOrFail($validated['vehicle_model_id'])->name,
-            'status' => 'ACTIVE',
-            'operational_status' => $validated['operational_status'] ?? 'AVAILABLE',
-        ]));
+        return DB::transaction(function () use ($validated, $user) {
+            $vehicle = Vehicle::query()->create(array_merge($validated, [
+                'brand' => VehicleBrand::query()->findOrFail($validated['vehicle_brand_id'])->name,
+                'model' => VehicleModelMaster::query()->findOrFail($validated['vehicle_model_id'])->name,
+                'status' => 'ACTIVE',
+                'operational_status' => $validated['operational_status'] ?? 'AVAILABLE',
+            ]));
 
-        // A typed-in starting odometer is a manual reading (ledger + provenance); the default 0 is not a reading.
-        $this->odometer->recordInitial($vehicle, $user->id);
-        DB::transaction(fn () => $this->master->publish($vehicle));
+            // A typed-in starting odometer is a manual reading (ledger + provenance); the default 0 is not a reading.
+            $this->odometer->recordInitial($vehicle, $user->id);
+            $this->master->publish($vehicle);
 
-        return $vehicle;
+            return $vehicle;
+        });
     }
 }

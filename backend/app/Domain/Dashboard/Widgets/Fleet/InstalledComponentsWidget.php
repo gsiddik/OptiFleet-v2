@@ -134,7 +134,7 @@ class InstalledComponentsWidget extends Widget
      */
     private function untracked(DashboardContext $context): array
     {
-        $vehicles = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at');
+        $vehicles = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at')->where('v.status', '<>', 'DRAFT');
         $context->scopeBranch($vehicles, 'v.branch_id');
         $rows = DB::table('work_order_planned_parts as pp')->join('work_orders as wo', 'wo.id', '=', 'pp.work_order_id')->join('products as p', 'p.id', '=', 'pp.product_id')
             ->leftJoin('uoms as u', 'u.id', '=', 'p.uom_id')
@@ -169,7 +169,7 @@ class InstalledComponentsWidget extends Widget
     /** Installed items (open installations) on vehicles in the user's branch scope. */
     private function items(DashboardContext $context): Collection
     {
-        $vehicles = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at');
+        $vehicles = DB::table('vehicles as v')->where('v.tenant_id', $context->tenantId)->whereNull('v.deleted_at')->where('v.status', '<>', 'DRAFT');
         $context->scopeBranch($vehicles, 'v.branch_id');
         $vehicleIds = $vehicles->select('v.id');
         $out = collect();
