@@ -156,7 +156,8 @@ class AuthorizationRouteMatrixTest extends TestCase
         $this->assertSame([
             'GET api/v1/auth/sso/callback', 'GET api/v1/auth/sso/redirect', 'GET api/v1/auth/sso/status',
             'POST api/v1/auth/login', 'POST api/v1/auth/sso/backchannel-logout', 'POST api/v1/auth/sso/exchange',
-        ], $public, 'The only routes without a session are sign-in and the signed back-channel logout (the accounting feed has its own credential).');
+            'POST api/v1/integration/optinexus/events',
+        ], $public, 'The only routes without a session are sign-in, the signed back-channel logout and the signed OptiNexus event webhook (the accounting feed has its own credential).');
 
         $feed = RouteFacade::getRoutes()->match(Request::create('/api/v1/integration/accounting-feed', 'GET'));
         $this->assertContains(AuthenticateAccountingFeed::class.':accounting.feed.read', $feed->gatherMiddleware());
